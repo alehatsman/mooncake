@@ -15,4 +15,4 @@
     command: |
       echo "Hello World From Shell"
 
-- include: ./test/config2.yml
+- include: ./test_config/config2.yml
