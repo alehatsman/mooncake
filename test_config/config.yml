@@ -1,0 +1,17 @@
+---
+- name: Make sure folder is created
+  file:
+    path: "{{ dest_dir }}"
+    state: directory
+
+- name: Make sure file is created
+  template:
+    src: ./test/template.j2
+    dest: "{{dest_dir}}/file_from_template"
+  when: os == "linux"
+
+- name: Make sure commands are executed in shell
+  shell: |
+    echo "Hello World From Shell"
+
+- include: ./test/config2.yml
