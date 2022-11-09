@@ -11,7 +11,8 @@
   when: os == "linux"
 
 - name: Make sure commands are executed in shell
-  shell: |
-    echo "Hello World From Shell"
+  shell:
+    command: |
+      echo "Hello World From Shell"
 
 - include: ./test/config2.yml

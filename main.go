@@ -22,20 +22,27 @@ func check(e error) {
 	}
 }
 
-type Step struct {
-	Name     string
-	When     string
-	Template *struct {
-		Src  string
-		Dest string
-	}
-	File *struct {
-		Path  string
-		State string
-	}
-	Shell string
+type File struct {
+	Path  string `yaml:"path"`
+	State string `yaml:"state"`
+}
 
-	Include string
+type Template struct {
+	Src  string `yaml:"src"`
+	Dest string `yaml:"dest"`
+}
+
+type Shell struct {
+	Command string `yaml:"command"`
+}
+
+type Step struct {
+	Name     string    `yaml:"name"`
+	When     string    `yaml:"when"`
+	Template *Template `yaml:"template"`
+	File     *File     `yaml:"file"`
+	Shell    *Shell    `yaml:"shell"`
+	Include  string    `yaml:"include"`
 }
 
 func readConfig(path string) ([]Step, error) {
@@ -49,8 +56,6 @@ func readConfig(path string) ([]Step, error) {
 	fmt.Println("Opened file: ", f.Name())
 
 	r := bufio.NewReader(f)
-	check(err)
-
 	config := make([]Step, 0)
 
 	decoder := yaml.NewDecoder(r)
@@ -64,45 +69,70 @@ func readConfig(path string) ([]Step, error) {
 
 type Context = map[string]interface{}
 
+func addGlobalVariables(variables Context) {
+	variables["os"] = runtime.GOOS
+}
+
 func readVariables(path string) (Context, error) {
 	fmt.Println("Variables file: ", path)
 
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("Opened file: ", f.Name())
+	fmt.Println("Opened file: ", file.Name())
 
-	r := bufio.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
+	reader := bufio.NewReader(file)
 
 	variables := make(map[string]interface{})
 
-	decoder := yaml.NewDecoder(r)
+	decoder := yaml.NewDecoder(reader)
 	err = decoder.Decode(&variables)
-
-	variables["os"] = runtime.GOOS
+	if err != nil {
+		return nil, err
+	}
 
 	return variables, nil
+}
+
+func renderTemplate(template string, variables Context) (string, error) {
+	pongoTemplate, err := pongo2.FromString(template)
+
+	if err != nil {
+		return "", err
+	}
+
+	output, err := pongoTemplate.Execute(variables)
+
+	if err != nil {
+		return "", err
+	}
+
+	return output, nil
+}
+
+func evaluateExpression(expression string, variables Context) (interface{}, error) {
+	evaluableExpression, err := govaluate.NewEvaluableExpression(expression)
+	if err != nil {
+		return nil, err
+	}
+
+	evalResult, err := evaluableExpression.Evaluate(variables)
+	if err != nil {
+		return nil, err
+	}
+
+	return evalResult, nil
 }
 
 func executeSteps(steps []Step, variables Context) {
 	for _, step := range steps {
 		if step.When != "" {
-			tpl, err := pongo2.FromString(step.When)
+			expressionString, err := renderTemplate(step.When, variables)
 			check(err)
 
-			expressionString, err := tpl.Execute(variables)
-			check(err)
-
-			expression, err := govaluate.NewEvaluableExpression(expressionString)
-			check(err)
-
-			evalResult, err := expression.Evaluate(variables)
-			check(err)
+			evalResult, err := evaluateExpression(expressionString, variables)
 
 			if evalResult == false {
 				fmt.Println("Skipping step: ", step.Name)
@@ -114,10 +144,10 @@ func executeSteps(steps []Step, variables Context) {
 		case step.Template != nil:
 			template := step.Template
 
-			src, err := pongo2.RenderTemplateString(template.Src, variables)
+			src, err := renderTemplate(template.Src, variables)
 			check(err)
 
-			dest, err := pongo2.RenderTemplateString(template.Dest, variables)
+			dest, err := renderTemplate(template.Dest, variables)
 
 			fmt.Println("Rendering template: ", src, dest)
 
@@ -127,10 +157,8 @@ func executeSteps(steps []Step, variables Context) {
 			templateBytes, err := ioutil.ReadAll(templateFile)
 			check(err)
 
-			tpl, err := pongo2.FromBytes(templateBytes)
+			output, err := renderTemplate(string(templateBytes), variables)
 			check(err)
-
-			output, err := tpl.Execute(variables)
 
 			err = ioutil.WriteFile(dest, []byte(output), 0644)
 
@@ -138,7 +166,7 @@ func executeSteps(steps []Step, variables Context) {
 			file := step.File
 
 			if file.State == "directory" {
-				renderedPath, err := pongo2.RenderTemplateString(file.Path, variables)
+				renderedPath, err := renderTemplate(file.Path, variables)
 				check(err)
 
 				file.Path = renderedPath
@@ -153,8 +181,12 @@ func executeSteps(steps []Step, variables Context) {
 
 				os.MkdirAll(file.Path, 0755)
 			}
-		case step.Shell != "":
-			renderedCommand, err := pongo2.RenderTemplateString(step.Shell, variables)
+
+		case step.Shell != nil:
+			shell := step.Shell
+
+			renderedCommand, err := renderTemplate(shell.Command, variables)
+			check(err)
 
 			fmt.Println("Running shell command: ", renderedCommand)
 
@@ -166,7 +198,7 @@ func executeSteps(steps []Step, variables Context) {
 			fmt.Println(string(output))
 
 		case step.Include != "":
-			renderedPath, err := pongo2.RenderTemplateString(step.Include, variables)
+			renderedPath, err := renderTemplate(step.Include, variables)
 			check(err)
 
 			fmt.Println("Including file: ", renderedPath)
@@ -203,6 +235,8 @@ func run(c *cli.Context) error {
 
 	variables, err := readVariables(variablesFile)
 	check(err)
+
+	addGlobalVariables(variables)
 
 	steps, err := readConfig(configFile)
 	check(err)
