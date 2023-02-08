@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -41,8 +44,9 @@ type Step struct {
 	When     string    `yaml:"when"`
 	Template *Template `yaml:"template"`
 	File     *File     `yaml:"file"`
-	Shell    *Shell    `yaml:"shell"`
+	Shell    *string   `yaml:"shell"`
 	Include  string    `yaml:"include"`
+	Become   bool      `yaml:"become"`
 }
 
 func readConfig(path string) ([]Step, error) {
@@ -126,7 +130,29 @@ func evaluateExpression(expression string, variables Context) (interface{}, erro
 	return evalResult, nil
 }
 
-func executeSteps(steps []Step, variables Context) {
+func expandPath(originalPath string, currentDir string, context Context) (string, error) {
+	expandedPath, err := renderTemplate(originalPath, context)
+	if err != nil {
+		return "", nil
+	}
+
+	expandedPath = strings.Trim(expandedPath, " ")
+
+	if strings.HasPrefix(expandedPath, ".") {
+		expandedPath = path.Join(currentDir, expandedPath[1:])
+	}
+
+	if strings.HasPrefix(expandedPath, "~/") {
+		home := os.Getenv("HOME")
+		expandedPath = home + expandedPath[1:]
+	}
+
+	return expandedPath, nil
+}
+
+func executeSteps(steps []Step, currentDir string, variables Context) {
+	fmt.Println("Executing steps, currentDir: ", currentDir)
+
 	for _, step := range steps {
 		if step.When != "" {
 			expressionString, err := renderTemplate(step.When, variables)
@@ -144,10 +170,11 @@ func executeSteps(steps []Step, variables Context) {
 		case step.Template != nil:
 			template := step.Template
 
-			src, err := renderTemplate(template.Src, variables)
+			src, err := expandPath(template.Src, currentDir, variables)
 			check(err)
 
-			dest, err := renderTemplate(template.Dest, variables)
+			dest, err := expandPath(template.Dest, currentDir, variables)
+			check(err)
 
 			fmt.Println("Rendering template: ", src, dest)
 
@@ -166,11 +193,10 @@ func executeSteps(steps []Step, variables Context) {
 			file := step.File
 
 			if file.State == "directory" {
-				renderedPath, err := renderTemplate(file.Path, variables)
+				renderedPath, err := expandPath(file.Path, currentDir, variables)
 				check(err)
 
 				file.Path = renderedPath
-				file.Path = strings.Trim(file.Path, " ")
 
 				fmt.Println("Creating directory: ", file.Path)
 
@@ -185,20 +211,41 @@ func executeSteps(steps []Step, variables Context) {
 		case step.Shell != nil:
 			shell := step.Shell
 
-			renderedCommand, err := renderTemplate(shell.Command, variables)
+			renderedCommand, err := renderTemplate(*shell, variables)
 			check(err)
 
-			fmt.Println("Running shell command: ", renderedCommand)
+			var command *exec.Cmd
 
-			command := exec.Command("bash", "-c", renderedCommand)
+			if step.Become {
+				command = exec.Command("sudo", "bash")
+				command.Stdin = bytes.NewBuffer([]byte(renderedCommand))
+			} else {
+				command = exec.Command("bash", "-c", renderedCommand)
+			}
 
-			output, err := command.Output()
+			stdout, err := command.StdoutPipe()
 			check(err)
 
-			fmt.Println(string(output))
+			if err := command.Start(); err != nil {
+				log.Fatal(err)
+			}
+
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				m := scanner.Text()
+				fmt.Println(m)
+			}
+
+			if err := scanner.Err(); err != nil {
+				log.Fatal(err)
+			}
+
+			if err := command.Wait(); err != nil {
+				log.Fatal(err)
+			}
 
 		case step.Include != "":
-			renderedPath, err := renderTemplate(step.Include, variables)
+			renderedPath, err := expandPath(step.Include, currentDir, variables)
 			check(err)
 
 			fmt.Println("Including file: ", renderedPath)
@@ -206,42 +253,37 @@ func executeSteps(steps []Step, variables Context) {
 			includeSteps, err := readConfig(renderedPath)
 			check(err)
 
-			executeSteps(includeSteps, variables)
+			currentDir := getDirectoryOfFile(renderedPath)
+
+			executeSteps(includeSteps, currentDir, variables)
 		}
 	}
 }
 
-// func run(c *cli.Context) error {
-// 	bar := progressbar.NewOptions(-1,
-// 		progressbar.OptionSetDescription("Fighter provisioning..."),
-// 		progressbar.OptionSetPredictTime(false),
-// 		progressbar.OptionSpinnerType(76),
-// 		progressbar.OptionClearOnFinish(),
-// 		progressbar.OptionEnableColorCodes(true),
-// 	)
-// 	for i := 0; i < 100; i++ {
-// 		bar.Add(1)
-// 		time.Sleep(40 * time.Millisecond)
-// 	}
-// 	bar.Finish()
-//
-// 	fmt.Println("Chookity!")
-// 	return nil
-// }
+func getDirectoryOfFile(path string) string {
+	return path[0:strings.LastIndex(path, "/")]
+}
 
 func run(c *cli.Context) error {
-	configFile := c.String("config")
+	configFilePath := c.String("config")
 	variablesFile := c.String("variables")
 
 	variables, err := readVariables(variablesFile)
-	check(err)
+	if err != nil {
+		variables = make(map[string]interface{})
+	}
 
 	addGlobalVariables(variables)
 
-	steps, err := readConfig(configFile)
+	configFilePath, err = filepath.Abs(configFilePath)
 	check(err)
 
-	executeSteps(steps, variables)
+	steps, err := readConfig(configFilePath)
+	check(err)
+
+	currentDir := getDirectoryOfFile(configFilePath)
+
+	executeSteps(steps, currentDir, variables)
 	return nil
 }
 
