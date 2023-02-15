@@ -1,0 +1,5 @@
+---
+- name: Make sure git is installed
+  shell: |
+    apt-get install -y git
+  become: true

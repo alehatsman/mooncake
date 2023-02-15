@@ -1,0 +1,16 @@
+---
+# - include: ./packages/main.yml
+
+- include: ./alacritty/main.yml
+  when: os == "darwin"
+
+- include: ./git/main.yml
+
+- include: ./clojure/main.yml
+
+- include: ./golang/main.yml
+
+- include: ./macos/main.yml
+  when: os == "darwin"
+
+- include: ./node/main.yml

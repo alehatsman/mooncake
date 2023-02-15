@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -40,13 +41,15 @@ type Shell struct {
 }
 
 type Step struct {
-	Name     string    `yaml:"name"`
-	When     string    `yaml:"when"`
-	Template *Template `yaml:"template"`
-	File     *File     `yaml:"file"`
-	Shell    *string   `yaml:"shell"`
-	Include  string    `yaml:"include"`
-	Become   bool      `yaml:"become"`
+	Name        string                  `yaml:"name"`
+	When        string                  `yaml:"when"`
+	Template    *Template               `yaml:"template"`
+	File        *File                   `yaml:"file"`
+	Shell       *string                 `yaml:"shell"`
+	Include     *string                 `yaml:"include"`
+	IncludeVars *string                 `yaml:"include_vars"`
+	Become      bool                    `yaml:"become"`
+	Vars        *map[string]interface{} `yaml:"vars"`
 }
 
 func readConfig(path string) ([]Step, error) {
@@ -150,6 +153,17 @@ func expandPath(originalPath string, currentDir string, context Context) (string
 	return expandedPath, nil
 }
 
+func printCommandOutputPipe(pipe io.Reader) {
+	scanner := bufio.NewScanner(pipe)
+	for scanner.Scan() {
+		fmt.Println("Output: ", scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal("Error: ", err)
+	}
+}
+
 func executeSteps(steps []Step, currentDir string, variables Context) {
 	fmt.Println("Executing steps, currentDir: ", currentDir)
 
@@ -167,6 +181,26 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 		}
 
 		switch {
+		case step.IncludeVars != nil:
+			includeVars := step.IncludeVars
+
+			expandedPath, err := expandPath(*includeVars, currentDir, variables)
+			check(err)
+
+			vars, err := readVariables(expandedPath)
+			check(err)
+
+			newVariables := make(map[string]interface{})
+			for k, v := range variables {
+				newVariables[k] = v
+			}
+
+			for k, v := range vars {
+				newVariables[k] = v
+			}
+
+			variables = newVariables
+
 		case step.Template != nil:
 			template := step.Template
 
@@ -214,6 +248,8 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 			renderedCommand, err := renderTemplate(*shell, variables)
 			check(err)
 
+			fmt.Println("Executing shell command: ", renderedCommand)
+
 			var command *exec.Cmd
 
 			if step.Become {
@@ -223,6 +259,9 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 				command = exec.Command("bash", "-c", renderedCommand)
 			}
 
+			stderr, err := command.StderrPipe()
+			check(err)
+
 			stdout, err := command.StdoutPipe()
 			check(err)
 
@@ -230,22 +269,15 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 				log.Fatal(err)
 			}
 
-			scanner := bufio.NewScanner(stdout)
-			for scanner.Scan() {
-				m := scanner.Text()
-				fmt.Println(m)
-			}
-
-			if err := scanner.Err(); err != nil {
-				log.Fatal(err)
-			}
+			go printCommandOutputPipe(stdout)
+			go printCommandOutputPipe(stderr)
 
 			if err := command.Wait(); err != nil {
 				log.Fatal(err)
 			}
 
-		case step.Include != "":
-			renderedPath, err := expandPath(step.Include, currentDir, variables)
+		case step.Include != nil:
+			renderedPath, err := expandPath(*step.Include, currentDir, variables)
 			check(err)
 
 			fmt.Println("Including file: ", renderedPath)

@@ -1,0 +1,8 @@
+---
+- include: ./ubuntu.yml
+  when: os == "linux"
+
+- name: Make sure golang workspace is present
+  file:
+    path: '{{ GOPATH }}'
+    state: directory

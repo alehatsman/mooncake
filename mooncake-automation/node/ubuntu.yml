@@ -1,0 +1,4 @@
+---
+- name: Make sure nvm is installed
+  shell: |
+    apt-get install -y nvm
