@@ -1,3 +1,6 @@
 ---
 - include: ./ubuntu/main.yml
   when: os == "linux"
+
+- include: ./darwin.yml
+  when: os == "darwin"

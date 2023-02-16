@@ -1,0 +1,24 @@
+---
+- name: Make sure google gpg key is present
+  shell: |
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg -o /usr/share/keyrings/cloud.google.gpg
+  become: true
+  when: os == 'linux'
+
+- name: Make sure google apt-repository is present
+  shell: |
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    apt-get update
+  become: true
+  when: os == 'linux'
+
+- name: Make sure google cloud cli is present
+  shell: |
+    apt-get install -y google-cloud-cli
+  become: true
+  when: os == 'linux'
+
+- name: Make sure google cloud cli is present
+  shell: |
+    brew cask install google-cloud-sdk
+  when: os == 'darwin'
