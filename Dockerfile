@@ -5,6 +5,9 @@ RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get -y install sudo
 
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+
+ENV DEBIAN_FRONTEND noninteractive
 ENV PATH /tmp/bin:$PATH
 ENV HOME /tmp/home
 RUN mkdir /tmp/home
@@ -24,7 +27,10 @@ RUN mooncake run -c ./packages/ubuntu/basics.yml -v ./global_variables.yml
 COPY ./mooncake-automation/golang/ /tmp/mooncake-automation/golang/
 RUN mooncake run -c ./golang/main.yml -v ./global_variables.yml
 
-# Node installation
+# Zsh installation
+COPY ./mooncake-automation/zsh/ /tmp/mooncake-automation/zsh/
+RUN mooncake run -c ./zsh/main.yml -v ./global_variables.yml
 
+# Node installation
 COPY ./mooncake-automation/node/ /tmp/mooncake-automation/node/
 RUN mooncake run -c ./node/main.yml -v ./global_variables.yml

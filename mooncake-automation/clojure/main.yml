@@ -1,4 +1,8 @@
 ---
+- name: Make sure clojure is installed (Ubuntu)
+  include: ./install/ubuntu.yml
+  when: os == "linux"
+
 - name: Make sure .lein folder is present
   file:
     path: ~/.lein

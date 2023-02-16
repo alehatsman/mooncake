@@ -113,7 +113,7 @@ alias r="source ~/.zshrc"
 
 alias e="$EDITOR"
 
-{% if ansible_distribution == 'MacOSX' %}
+{% if os == 'darwin' %}
 alias sed=gsed
 {% endif %}
 
@@ -257,7 +257,7 @@ alias my_ip="curl ifconfig.me/ip"
 # npm / yarn
 
 # search for file recursively up
-{% raw %}
+{% verbatim %}
 upsearch() {
   slashes=${PWD//[^\/]/}
   directory="$PWD"
@@ -267,7 +267,7 @@ upsearch() {
     directory="$directory/.."
   done
 }
-{% endraw %}
+{% endverbatim %}
 
 # fzf_npm_script - opens fzf for npm script
 # selection. Prints selected script back

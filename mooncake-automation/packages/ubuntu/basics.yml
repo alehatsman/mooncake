@@ -6,10 +6,18 @@
     apt-get upgrade -y \
   become: true
 
+- name: Define basic packages
+  vars:
+    basic_packages:
+      - gnupg
+      - software-properties-common
+      - curl
+      - ca-certificates 
+      - apt-transport-https
+
 - name: Make sure basics are installed
   shell: |
-    apt-get install -y gnupg software-properties-common curl \
-      ca-certificates apt-transport-https
+    apt-get install -y {{  basic_packages | join: " " }}
   become: true
 
 - name: Make sure keyserver is updated

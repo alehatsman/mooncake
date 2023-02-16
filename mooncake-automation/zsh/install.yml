@@ -1,0 +1,6 @@
+---
+- name: Make sure zsh is installed
+  shell: |
+    apt-get install -y zsh
+  become: true
+  when: os == "linux"
