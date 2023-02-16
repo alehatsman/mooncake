@@ -19,7 +19,7 @@
   when: os == 'linux'
 
 - include_vars: ./vars/macos_vars.yml
-  when: os == 'darwin'
+  when: os == "darwin"
 
 - name: Make sure .zshrc is present
   template:
