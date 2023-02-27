@@ -12,7 +12,7 @@ Space fighters provisioning tool, **Chookity!**
 - [x]  Conditioning via (https://github.com/Knetic/govaluate)
 - [x]  Facts (OS)
 - [x]  Render configuration values (https://github.com/flosch/pongo2)
-- [ ]  Relative paths
+- [x]  Relative paths
 - [ ]  apt
 - [ ]  brew
 - [ ]  git (via https://github.com/go-git/go-git or command-line)

@@ -113,10 +113,10 @@ func readConfig(path string) ([]Step, error) {
 
 	fmt.Println("Opened file: ", f.Name())
 
-	r := bufio.NewReader(f)
 	config := make([]Step, 0)
 
-	decoder := yaml.NewDecoder(r)
+	decoder := yaml.NewDecoder(f)
+
 	err = decoder.Decode(&config)
 	if err != nil {
 		return nil, err
@@ -204,6 +204,121 @@ func expandPath(originalPath string, currentDir string, context Context) (string
 	return expandedPath, nil
 }
 
+func handleWhenExpression(step Step, ec ExecutionContext) (bool, error) {
+	whenString := strings.Trim(step.When, " ")
+
+	whenExpression, err := renderTemplate(whenString, ec.Variables)
+	if err != nil {
+		return false, err
+	}
+
+	evalResult, err := evaluateExpression(whenExpression, ec.Variables)
+	return !evalResult.(bool), err
+}
+
+func handleIncludeVars(step Step, ec *ExecutionContext) error {
+	includeVars := step.IncludeVars
+
+	expandedPath, err := expandPath(*includeVars, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	vars, err := readVariables(expandedPath)
+	if err != nil {
+		return err
+	}
+
+	newVariables := make(map[string]interface{})
+	for k, v := range ec.Variables {
+		newVariables[k] = v
+	}
+
+	for k, v := range vars {
+		newVariables[k] = v
+	}
+
+	ec.Variables = newVariables
+
+	return nil
+}
+
+func handleVars(step Step, ec *ExecutionContext) error {
+	vars := step.Vars
+
+	fmt.Println("Adding variables: ", vars)
+
+	newVariables := make(map[string]interface{})
+	for k, v := range ec.Variables {
+		newVariables[k] = v
+	}
+
+	for k, v := range *vars {
+		newVariables[k] = v
+	}
+
+	ec.Variables = newVariables
+	return nil
+}
+
+func handleTemplate(step Step, ec ExecutionContext) error {
+	template := step.Template
+
+	src, err := expandPath(template.Src, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	dest, err := expandPath(template.Dest, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Rendering template: ", src, dest)
+
+	templateFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	templateBytes, err := ioutil.ReadAll(templateFile)
+	if err != nil {
+		return err
+	}
+
+	output, err := renderTemplate(string(templateBytes), ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dest, []byte(output), 0644)
+	return err
+}
+
+func handleFile(step Step, ec ExecutionContext) error {
+	file := step.File
+
+	if file.State == "directory" {
+		renderedPath, err := expandPath(file.Path, ec.CurrentDir, ec.Variables)
+		if err != nil {
+			return err
+		}
+
+		file.Path = renderedPath
+
+		fmt.Println("Creating directory: ", file.Path)
+
+		if file.Path == "" {
+			fmt.Println("Skipping empty path")
+			return nil
+		}
+
+		os.MkdirAll(file.Path, 0755)
+	}
+
+	return nil
+}
+
 func printCommandOutputPipe(pipe io.Reader) {
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
@@ -211,8 +326,94 @@ func printCommandOutputPipe(pipe io.Reader) {
 	}
 }
 
-func executeSteps(steps []Step, currentDir string, variables Context) {
-	fmt.Println("Executing steps, currentDir: ", currentDir)
+func handleShell(step Step, ec ExecutionContext) error {
+	shell := step.Shell
+
+	fmt.Println("Rendering command: ", *shell, "with vars: ", ec.Variables)
+
+	renderedCommand, err := renderTemplate(*shell, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Executing shell command: ", renderedCommand)
+
+	var command *exec.Cmd
+
+	if step.Become {
+		command = exec.Command("sudo", "bash")
+		command.Stdin = bytes.NewBuffer([]byte(renderedCommand))
+	} else {
+		command = exec.Command("bash", "-c", renderedCommand)
+	}
+
+	stderr, err := command.StderrPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := command.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	go printCommandOutputPipe(stdout)
+	go printCommandOutputPipe(stderr)
+
+	if err := command.Wait(); err != nil {
+		log.Fatal(err)
+	}
+
+	return err
+}
+
+func handleInclude(step Step, ec ExecutionContext) error {
+	renderedPath, err := expandPath(*step.Include, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Including file: ", renderedPath)
+
+	includeSteps, err := readConfig(renderedPath)
+	if err != nil {
+		return err
+	}
+
+	newCurrentDir := getDirectoryOfFile(renderedPath)
+
+	newExecutionContext := ec.Copy()
+	newExecutionContext.CurrentDir = newCurrentDir
+
+	executeSteps(includeSteps, newExecutionContext)
+	return nil
+}
+
+type ExecutionContext struct {
+	Variables  Context
+	CurrentDir string
+}
+
+func (ec *ExecutionContext) Copy() ExecutionContext {
+	newVariables := make(map[string]interface{})
+	for k, v := range ec.Variables {
+		newVariables[k] = v
+	}
+
+	currentDir := ec.CurrentDir
+
+	return ExecutionContext{
+		Variables:  newVariables,
+		CurrentDir: currentDir,
+	}
+}
+
+func executeSteps(steps []Step, ec ExecutionContext) {
+	fmt.Println("Executing steps, currentDir: ", ec.CurrentDir)
 
 	for _, step := range steps {
 		err := step.Validate()
@@ -221,12 +422,9 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 		fmt.Println("Executing step: ", step.Name)
 
 		if step.When != "" {
-			expressionString, err := renderTemplate(step.When, variables)
+			shouldSkip, err := handleWhenExpression(step, ec)
 			check(err)
-
-			evalResult, err := evaluateExpression(expressionString, variables)
-
-			if evalResult == false {
+			if shouldSkip {
 				fmt.Println("Skipping step: ", step.Name)
 				continue
 			}
@@ -234,132 +432,28 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 
 		switch {
 		case step.IncludeVars != nil:
-			includeVars := step.IncludeVars
-
-			expandedPath, err := expandPath(*includeVars, currentDir, variables)
+			err := handleIncludeVars(step, &ec)
 			check(err)
-
-			vars, err := readVariables(expandedPath)
-			check(err)
-
-			fmt.Println("Adding variables: ", vars)
-
-			newVariables := make(map[string]interface{})
-			for k, v := range variables {
-				newVariables[k] = v
-			}
-
-			for k, v := range vars {
-				newVariables[k] = v
-			}
-
-			variables = newVariables
 
 		case step.Vars != nil:
-			vars := step.Vars
-
-			fmt.Println("Adding variables: ", vars)
-
-			newVariables := make(map[string]interface{})
-			for k, v := range variables {
-				newVariables[k] = v
-			}
-
-			for k, v := range *vars {
-				newVariables[k] = v
-			}
-
-			variables = newVariables
+			err := handleVars(step, &ec)
+			check(err)
 
 		case step.Template != nil:
-			template := step.Template
-
-			src, err := expandPath(template.Src, currentDir, variables)
+			err := handleTemplate(step, ec)
 			check(err)
-
-			dest, err := expandPath(template.Dest, currentDir, variables)
-			check(err)
-
-			fmt.Println("Rendering template: ", src, dest)
-
-			templateFile, err := os.Open(src)
-			check(err)
-
-			templateBytes, err := ioutil.ReadAll(templateFile)
-			check(err)
-
-			output, err := renderTemplate(string(templateBytes), variables)
-			check(err)
-
-			err = ioutil.WriteFile(dest, []byte(output), 0644)
 
 		case step.File != nil:
-			file := step.File
-
-			if file.State == "directory" {
-				renderedPath, err := expandPath(file.Path, currentDir, variables)
-				check(err)
-
-				file.Path = renderedPath
-
-				fmt.Println("Creating directory: ", file.Path)
-
-				if file.Path == "" {
-					fmt.Println("Skipping empty directory")
-					continue
-				}
-
-				os.MkdirAll(file.Path, 0755)
-			}
+			err := handleFile(step, ec)
+			check(err)
 
 		case step.Shell != nil:
-			shell := step.Shell
-
-			fmt.Println("Rendering command: ", *shell, "with vars: ", variables)
-
-			renderedCommand, err := renderTemplate(*shell, variables)
+			err := handleShell(step, ec)
 			check(err)
-
-			fmt.Println("Executing shell command: ", renderedCommand)
-
-			var command *exec.Cmd
-
-			if step.Become {
-				command = exec.Command("sudo", "bash")
-				command.Stdin = bytes.NewBuffer([]byte(renderedCommand))
-			} else {
-				command = exec.Command("bash", "-c", renderedCommand)
-			}
-
-			stderr, err := command.StderrPipe()
-			check(err)
-
-			stdout, err := command.StdoutPipe()
-			check(err)
-
-			if err := command.Start(); err != nil {
-				log.Fatal(err)
-			}
-
-			go printCommandOutputPipe(stdout)
-			go printCommandOutputPipe(stderr)
-
-			if err := command.Wait(); err != nil {
-				log.Fatal(err)
-			}
 
 		case step.Include != nil:
-			renderedPath, err := expandPath(*step.Include, currentDir, variables)
+			err := handleInclude(step, ec)
 			check(err)
-
-			fmt.Println("Including file: ", renderedPath)
-
-			includeSteps, err := readConfig(renderedPath)
-			check(err)
-
-			currentDir := getDirectoryOfFile(renderedPath)
-
-			executeSteps(includeSteps, currentDir, variables)
 		}
 	}
 }
@@ -387,7 +481,12 @@ func run(c *cli.Context) error {
 
 	currentDir := getDirectoryOfFile(configFilePath)
 
-	executeSteps(steps, currentDir, variables)
+	executionContext := ExecutionContext{
+		Variables:  variables,
+		CurrentDir: currentDir,
+	}
+
+	executeSteps(steps, executionContext)
 	return nil
 }
 
