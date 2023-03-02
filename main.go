@@ -26,14 +26,18 @@ func check(e error) {
 	}
 }
 
+// TODO: add owner, group, mode, etc
 type File struct {
-	Path  string `yaml:"path"`
-	State string `yaml:"state"`
+	Path    string `yaml:"path"`
+	State   string `yaml:"state"`
+	Content string `yaml:"content"`
 }
 
+// TODO: add owner, group, mode, etc
 type Template struct {
-	Src  string `yaml:"src"`
-	Dest string `yaml:"dest"`
+	Src  string                  `yaml:"src"`
+	Dest string                  `yaml:"dest"`
+	Vars *map[string]interface{} `yaml:"vars"`
 }
 
 type Shell struct {
@@ -286,7 +290,18 @@ func handleTemplate(step Step, ec ExecutionContext) error {
 		return err
 	}
 
-	output, err := renderTemplate(string(templateBytes), ec.Variables)
+	variables := make(map[string]interface{})
+	for k, v := range ec.Variables {
+		variables[k] = v
+	}
+
+	if template.Vars != nil {
+		for k, v := range *template.Vars {
+			variables[k] = v
+		}
+	}
+
+	output, err := renderTemplate(string(templateBytes), variables)
 	if err != nil {
 		return err
 	}
@@ -298,22 +313,36 @@ func handleTemplate(step Step, ec ExecutionContext) error {
 func handleFile(step Step, ec ExecutionContext) error {
 	file := step.File
 
+	if file.Path == "" {
+		fmt.Println("Skipping empty path")
+		return nil
+	}
+
+	renderedPath, err := expandPath(file.Path, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
 	if file.State == "directory" {
-		renderedPath, err := expandPath(file.Path, ec.CurrentDir, ec.Variables)
-		if err != nil {
+		fmt.Println("Creating directory: ", renderedPath)
+		os.MkdirAll(renderedPath, 0755)
+	}
+
+	if file.State == "file" {
+		fmt.Println("Creating file: ", renderedPath)
+
+		if file.Content == "" {
+			err := ioutil.WriteFile(renderedPath, []byte(""), 0644)
+			return err
+		} else {
+			renderedContent, err := renderTemplate(file.Content, ec.Variables)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(renderedPath, []byte(renderedContent), 0644)
 			return err
 		}
-
-		file.Path = renderedPath
-
-		fmt.Println("Creating directory: ", file.Path)
-
-		if file.Path == "" {
-			fmt.Println("Skipping empty path")
-			return nil
-		}
-
-		os.MkdirAll(file.Path, 0755)
 	}
 
 	return nil
