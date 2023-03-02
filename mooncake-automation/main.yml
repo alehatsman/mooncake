@@ -14,3 +14,5 @@
   when: os == "darwin"
 
 - include: ./node/main.yml
+
+- include: ./nvim/tasks/main.yml
