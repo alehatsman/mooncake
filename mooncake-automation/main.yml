@@ -17,4 +17,4 @@
 
 - include: ./zsh/main.yml
 
-- include: ./nvim/tasks/main.yml
+- include: ./nvim/main.yml
