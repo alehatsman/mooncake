@@ -1,5 +1,0 @@
----
-- include_vars: ./redhat_packages.yml
-
-- name: Make sure all the packages are installed
-

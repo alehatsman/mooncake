@@ -1,0 +1,7 @@
+---
+- name: Make unstable nvim is installed
+  shell: |
+    add-apt-repository ppa:neovim-ppa/unstable;
+    apt-get update;
+    apt-get install neovim;
+  become: true

@@ -1,0 +1,12 @@
+---
+- name: Make sure hashicorp gpg key is present
+  shell: |
+    curl https://apt.releases.hashicorp.com/gpg -o /usr/share/keyrings/hashicorp.gpg
+  become: true
+  when: os == 'linux'
+
+- name: Make sure terraform is installed
+  shell: |
+    apt-get install terraform
+  become: true
+  when: os == 'linux'
