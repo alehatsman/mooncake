@@ -189,6 +189,8 @@ func evaluateExpression(expression string, variables Context) (interface{}, erro
 }
 
 func expandPath(originalPath string, currentDir string, context Context) (string, error) {
+	fmt.Println("Expanding path: ", originalPath, " in ", currentDir, " with context ", context)
+
 	expandedPath, err := renderTemplate(originalPath, context)
 	if err != nil {
 		return "", nil
