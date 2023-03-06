@@ -13,4 +13,4 @@
 
 - name: Make sure rust cargo packages are installed
   shell: |
-    cargo install {{ cargo_packages | join " " }}
+    cargo install {{ cargo_packages | join: " " }}
