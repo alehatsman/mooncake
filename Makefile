@@ -6,3 +6,6 @@ run-basic-test-in-ubuntu:
 
 run-test-in-ubuntu:
 	docker build -t mooncake-test . --progress=plain
+
+run-ubuntu:
+	./out/mooncake run -c ./mooncake-automation/main.yml -v ./mooncake-automation/global_variables.yml
