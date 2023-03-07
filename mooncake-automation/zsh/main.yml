@@ -35,6 +35,10 @@
   shell: |
     [ ! -d ~/.zplug ] && git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug; exit 0;
 
+- name: Make sure oh-my-zsh are installed
+  shell: |
+    git clone --depth 1 https://github.com/robbyrussel/ohmyzsh.git ~/.zplug/repos/robbyrussell/oh-my-zsh; exit 0;
+
 - name: Make sure zsh is default shell
   shell: |
     chsh -s $(which zsh) {{ OS_USERNAME }}
