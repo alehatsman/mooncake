@@ -81,7 +81,7 @@
 # - include: python_venv.yml
 
 - include: ./win32yank.yml
-  when: os == "windows" && use_win32yank
+  when: use_win32yank
 
 - name: Make sure plugins are installed
   shell:
