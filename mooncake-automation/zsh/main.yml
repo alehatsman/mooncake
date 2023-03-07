@@ -33,7 +33,7 @@
 
 - name: Make sure zplug is installed
   shell: |
-    [ ! -d ~/.zplug ] && git clone --depth 1 ~/.zplug; exit 0;
+    [ ! -d ~/.zplug ] && git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug; exit 0;
 
 - name: Make sure zsh is default shell
   shell: |
