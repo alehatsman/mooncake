@@ -36,7 +36,8 @@ export JAVA_HOME={{ JAVA_HOME }}
 export CARGO_HOME=~/.cargo
 export ZPLUG_HOME={{ ZPLUG_HOME }}
 export RVM_HOME=~/.rvm/
-export PATH=$HOME/bin:/usr/local/bin:$PATH:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$PATH
+export FZF_BASE=~/.fzf/
+export PATH=$HOME/bin:/usr/local/bin:$PATH:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
 
 if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
     alias nvim=nvr -cc split --remote-wait +'set bufhidden=wipe'
@@ -55,8 +56,10 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/rsa_id
 
-export FZF_BASE={{ FZF_BASE }}
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
+
+source ~/.fzf/shell/key-bindings.zsh
+source ~/.fzf/shell/completion.zsh
 
 {% if ansible_distribution != 'MacOSX' %}
 export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
@@ -72,7 +75,6 @@ source $ZPLUG_HOME/init.zsh
 
 zplug 'zplug/zplug', hook-build:'zplug --self-manage'
 zplug "plugins/vi-mode", from:oh-my-zsh
-zplug "plugins/fzf", from:oh-my-zsh
 zplug "plugins/dotenv", from:oh-my-zsh
 
 zplug "zsh-users/zsh-autosuggestions"
