@@ -238,6 +238,7 @@ vim.g.completion_matching_strategy_list = { 'exact', 'substring', 'fuzzy' }
 vim.g.vim_json_syntax_conceal = 0
 
 vim.g.mouse = nil
+vim.opt.mouse = nil
 
 
 ---------------------------------------------
