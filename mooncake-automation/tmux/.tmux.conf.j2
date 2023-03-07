@@ -83,7 +83,7 @@ set-option -g prefix C-t
 bind-key C-t send-prefix
 
 # reload config
-bind r source-file {{ tmux_config_path }} \; display-message "{{ tmux_config_path }} reloaded"
+bind r source-file ~/.tmux.conf \; display-message "~/.tmux.conf reloaded"
 
 # split window vertically
 bind v split-window -h -c "#{pane_current_path}"
