@@ -384,7 +384,7 @@ lspconfig.gopls.setup(setup_config)
 lspconfig.tsserver.setup(setup_config)
 lspconfig.clojure_lsp.setup(setup_config)
 lspconfig.rust_analyzer.setup(setup_config)
-lspconfig.sumneko_lua.setup {
+lspconfig.lua_ls.setup {
   settings = {
     Lua = {
       runtime = {
