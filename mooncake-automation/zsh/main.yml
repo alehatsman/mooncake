@@ -30,3 +30,7 @@
   template:
     src: ./templates/.ignore.j2
     dest: ~/.ignore
+
+- name: Make sure zsh is default shell
+  shell: |
+    chsh -s $(which zsh)
