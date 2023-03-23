@@ -1,0 +1,4 @@
+---
+- name: Make sure the node version 17.9.1 is installed for copilot
+  shell: |
+    nvm install 17.9.1
