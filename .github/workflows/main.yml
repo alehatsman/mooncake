@@ -21,17 +21,18 @@ jobs:
       - name: Test
         run: go test -v ./...
 
-      - name: Build binary for linux
+      - name: Build binaries
         env:
-          GOOS: linux
-          GOARCH: amd64
-        run: go build -o ./out/mooncake -v
+          
+        run: |
+          env GOOS=linux GOARCH=amd64 go build -o ./out/mooncake-linux -v
+          env GOOS=darwin GOARCH=amd64 go build -o ./out/mooncake-darwin -v
 
       - uses: actions/upload-artifact@v3
         with:
-          name: mooncake
-          path: ./out/mooncake
+          name: binaries
+          path: "./out/"
 
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: "./out/mooncake"
+          artifacts: "./out/mooncake-linux,./out/mooncake-darwin"
