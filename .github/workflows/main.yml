@@ -33,3 +33,5 @@ jobs:
           path: ./out/mooncake
 
       - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "./out/mooncake"
