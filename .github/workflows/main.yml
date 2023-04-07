@@ -32,7 +32,4 @@ jobs:
           name: mooncake
           path: ./out/mooncake
 
-      # - uses: ncipollo/release-action@v1
-      #   if: startsWith(github.event.ref, 'refs/tags/')
-      #   with:
-      #     artifacts: "/out"
+      - uses: ncipollo/release-action@v1
