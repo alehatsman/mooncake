@@ -23,4 +23,11 @@ jobs:
       - name: Test
         run: go test -v ./...
 
+      - name: Build binary for linux
+        run: env GOOS=linux GOARCH=amd64 go build -o out/mooncake -v
 
+      - uses: ncipollo/release-action@v1
+        if: startsWith(github.event.ref, 'refs/tags/')
+        with:
+          artifacts: "./out/mooncake"
+          bodyFile: "./out/mooncake"
