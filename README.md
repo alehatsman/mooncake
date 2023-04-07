@@ -1,4 +1,4 @@
-# Mooncake
+# Mooncake [![main](https://github.com/alehatsman/mooncake/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/main.yml)
 
 Space fighters provisioning tool, **Chookity!**
 
