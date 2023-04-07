@@ -9,3 +9,8 @@ run-test-in-ubuntu:
 
 run-ubuntu:
 	./out/mooncake run -c ./mooncake-automation/main.yml -v ./mooncake-automation/global_variables.yml
+
+
+release-latest:
+	git tag latest -f
+	git push --tags --force
