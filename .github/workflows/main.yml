@@ -25,12 +25,12 @@ jobs:
         env:
           GOOS: linux
           GOARCH: amd64
-        run: go build -o /out/mooncake -v
+        run: go build -o ./out/mooncake -v
 
       - uses: actions/upload-artifact@v3
         with:
           name: mooncake
-          path: /out/mooncake
+          path: ./out/mooncake
 
       # - uses: ncipollo/release-action@v1
       #   if: startsWith(github.event.ref, 'refs/tags/')
