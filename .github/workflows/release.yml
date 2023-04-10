@@ -1,4 +1,4 @@
-name: main
+name: release
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -32,4 +31,4 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           tag: latest
-          artifacts: "./out/mooncake-linux,./out/mooncake-darwin"
+          artifacts: "./out/*"
