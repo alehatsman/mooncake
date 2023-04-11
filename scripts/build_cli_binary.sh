@@ -11,5 +11,5 @@ for pair in "${pairs[@]}"; do
   os=$(echo $pair | cut -d'/' -f1)
   arch=$(echo $pair | cut -d'/' -f2)
   echo "Building for $os/$arch"
-  GOOS=$os GOARCH=$arch go build -o ./out/mooncake-${os}-${arch} ./cmd/mooncake.go
+  GOOS=$os GOARCH=$arch go build -o ./out/mooncake-$os-$arch ./cmd/mooncake.go &
 done
