@@ -1,5 +1,0 @@
----
-- name: Make sure clojure is installed
-  shell: |
-    apt-get install -y clojure rlwrap
-  become: true

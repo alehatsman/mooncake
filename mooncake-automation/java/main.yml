@@ -1,3 +1,0 @@
----
-- include: ./ubuntu.yml
-  when: os == "linux"
