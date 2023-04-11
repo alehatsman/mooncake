@@ -19,9 +19,7 @@ jobs:
         run: go test -v ./...
 
       - name: Build binaries
-        run: |
-          env GOOS=linux GOARCH=amd64 go build -o ./out/mooncake-linux -v
-          env GOOS=darwin GOARCH=amd64 go build -o ./out/mooncake-darwin -v
+        run: "make build-binaries"
 
       - uses: actions/upload-artifact@v3
         with:
