@@ -3,6 +3,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -107,14 +108,12 @@ func (s *Step) Validate() error {
 }
 
 func readConfig(path string) ([]Step, error) {
-	fmt.Println("Config file: ", path)
+	fmt.Println("Reading configuration from file:", path)
 
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("Opened file: ", f.Name())
 
 	config := make([]Step, 0)
 
@@ -124,6 +123,8 @@ func readConfig(path string) ([]Step, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("Read configuration with", len(config), "steps")
 
 	return config, nil
 }
@@ -135,14 +136,16 @@ func addGlobalVariables(variables Context) {
 }
 
 func readVariables(path string) (Context, error) {
-	fmt.Println("Variables file: ", path)
+	if path == "" {
+		return make(Context), nil
+	}
+
+	fmt.Println("Reading variables from file: ", path)
 
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("Opened file: ", file.Name())
 
 	reader := bufio.NewReader(file)
 
@@ -153,6 +156,8 @@ func readVariables(path string) (Context, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("Read variables: ", variables)
 
 	return variables, nil
 }
@@ -188,7 +193,7 @@ func evaluateExpression(expression string, variables Context) (interface{}, erro
 }
 
 func expandPath(originalPath string, currentDir string, context Context) (string, error) {
-	fmt.Println("Expanding path: ", originalPath, " in ", currentDir, " with context ", context)
+	fmt.Println("Expanding path:", originalPath, "in", currentDir, "with context ", context)
 
 	expandedPath, err := renderTemplate(originalPath, context)
 	if err != nil {
@@ -424,8 +429,9 @@ func handleInclude(step Step, ec ExecutionContext) error {
 }
 
 type ExecutionContext struct {
-	Variables  Context
-	CurrentDir string
+	Variables   Context
+	CurrentDir  string
+	CurrentFile string
 }
 
 func (ec *ExecutionContext) Copy() ExecutionContext {
@@ -434,22 +440,21 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		newVariables[k] = v
 	}
 
-	currentDir := ec.CurrentDir
-
 	return ExecutionContext{
-		Variables:  newVariables,
-		CurrentDir: currentDir,
+		Variables:   newVariables,
+		CurrentDir:  ec.CurrentDir,
+		CurrentFile: ec.CurrentFile,
 	}
 }
 
 func executeSteps(steps []Step, ec ExecutionContext) {
-	fmt.Println("Executing steps, currentDir: ", ec.CurrentDir)
+	fmt.Println("Executing steps from file", ec.CurrentFile)
 
-	for _, step := range steps {
+	for i, step := range steps {
 		err := step.Validate()
 		check(err)
 
-		fmt.Println("Executing step: ", step.Name)
+		fmt.Println("Step", i, step.Name)
 
 		if step.When != "" {
 			shouldSkip, err := handleWhenExpression(step, ec)
@@ -498,6 +503,10 @@ type StartConfig struct {
 }
 
 func Start(config StartConfig) error {
+	if config.ConfigFilePath == "" {
+		return errors.New("Config file path is empty")
+	}
+
 	variables, err := readVariables(config.VarsFilePath)
 	if err != nil {
 		variables = make(map[string]interface{})
@@ -514,8 +523,9 @@ func Start(config StartConfig) error {
 	currentDir := GetDirectoryOfFile(configFilePath)
 
 	executionContext := ExecutionContext{
-		Variables:  variables,
-		CurrentDir: currentDir,
+		Variables:   variables,
+		CurrentDir:  currentDir,
+		CurrentFile: configFilePath,
 	}
 
 	executeSteps(steps, executionContext)
