@@ -20,6 +20,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var logger = NewLogger()
+
 func check(e error) {
 	if e != nil {
 		panic(e)
@@ -108,7 +110,7 @@ func (s *Step) Validate() error {
 }
 
 func readConfig(path string) ([]Step, error) {
-	fmt.Println("Reading configuration from file:", path)
+	logger.Info("Reading configuration from file:", path)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -124,7 +126,7 @@ func readConfig(path string) ([]Step, error) {
 		return nil, err
 	}
 
-	fmt.Println("Read configuration with", len(config), "steps")
+	logger.Info("Read configuration with", len(config), "steps")
 
 	return config, nil
 }
@@ -357,7 +359,7 @@ func handleFile(step Step, ec ExecutionContext) error {
 func printCommandOutputPipe(pipe io.Reader) {
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
-		fmt.Println("Output: ", scanner.Text())
+		logger.Info("Output: ", scanner.Text())
 	}
 }
 

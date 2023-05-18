@@ -1,34 +1,37 @@
 package internal
 
 import (
-	"io"
-	"log"
-	"os"
+	"github.com/fatih/color"
 )
 
-type Logger struct {
-	info *log.Logger
-	err  *log.Logger
+type Colors struct {
+	Red   func(...interface{})
+	Green func(...interface{})
+	Grey  func(...interface{})
 }
 
-func NewLoggerWithHandles(infoHandle, errHandle io.Writer) *Logger {
-	return &Logger{
-		info: log.New(infoHandle, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
-		err:  log.New(errHandle, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
-	}
+type Logger struct {
+	colors *Colors
 }
 
 func (l *Logger) Info(v ...interface{}) {
-	l.info.Println(v...)
+	l.colors.Green(v...)
 }
 
 func (l *Logger) Error(v ...interface{}) {
-	l.err.Println(v...)
+	l.colors.Red(v...)
+}
+
+func (l *Logger) Debug(v ...interface{}) {
+	l.colors.Grey(v...)
 }
 
 func NewLogger() *Logger {
 	return &Logger{
-		info: log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
-		err:  log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
+		colors: &Colors{
+			Red:   color.New(color.FgRed).PrintlnFunc(),
+			Green: color.New(color.FgGreen).PrintlnFunc(),
+			Grey:  color.New(color.FgHiBlack).PrintlnFunc(),
+		},
 	}
 }
