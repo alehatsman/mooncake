@@ -1,0 +1,20 @@
+---
+- vars:
+    key1: value1
+
+- name: Run command in shell with output
+  shell: |
+    echo "Hello world"
+
+- name: Run multiple commands 
+  shell: |
+    echo "Hello world"
+    echo "Hello world"
+
+- name: Add extra variables
+  vars:
+    key: value
+
+- name: Skip step
+  when: "key1 != 'value1'"
+  shell: echo "test"

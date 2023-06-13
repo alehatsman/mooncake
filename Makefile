@@ -1,8 +1,12 @@
 build-binaries:
 	bash ./scripts/build_cli_binary.sh
+	sudo cp ./out/mooncake /usr/local/bin/mooncake
+	sudo chmod +x /usr/local/bin/mooncake
 
 build-ubuntu-binary:
 	env GOOS=linux GOARCH=amd64 go build -v -o out/mooncake ./cmd 
+	sudo cp ./out/mooncake /usr/local/bin/mooncake
+	sudo chmod +x /usr/local/bin/mooncake
 
 build-darwin-binary:
 	env GOOS=darwin GOARCH=amd64 go build -v -o out/mooncake ./cmd 
