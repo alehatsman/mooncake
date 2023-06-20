@@ -34,8 +34,13 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	var command *exec.Cmd
 
 	if step.Become {
-		command = exec.Command("sudo", "bash")
-		command.Stdin = bytes.NewBuffer([]byte(renderedCommand))
+		if ec.SudoPass == "" {
+			command = exec.Command("sudo", "bash")
+			command.Stdin = bytes.NewBuffer([]byte(renderedCommand))
+		} else {
+			command = exec.Command("sudo", "-S", "--", "bash", "-c", renderedCommand)
+			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass))
+		}
 	} else {
 		command = exec.Command("bash", "-c", renderedCommand)
 	}

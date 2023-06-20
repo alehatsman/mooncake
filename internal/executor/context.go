@@ -8,6 +8,7 @@ type ExecutionContext struct {
 	CurrentFile string
 	Level       int
 	Logger      *logger.Logger
+	SudoPass    string
 }
 
 func (ec *ExecutionContext) Copy() ExecutionContext {
@@ -22,5 +23,6 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		CurrentFile: ec.CurrentFile,
 		Level:       ec.Level,
 		Logger:      ec.Logger,
+		SudoPass:    ec.SudoPass,
 	}
 }

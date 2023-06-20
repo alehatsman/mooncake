@@ -149,6 +149,7 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) {
 type StartConfig struct {
 	ConfigFilePath string
 	VarsFilePath   string
+	SudoPass       string
 }
 
 func Start(startConfig StartConfig) error {
@@ -187,6 +188,7 @@ func Start(startConfig StartConfig) error {
 		CurrentFile: configFilePath,
 		Level:       0,
 		Logger:      logger.WithPadLevel(0),
+		SudoPass:    startConfig.SudoPass,
 	}
 
 	ExecuteSteps(steps, &executionContext)
