@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Knetic/govaluate"
@@ -31,6 +32,44 @@ func ExpandPath(originalPath string, currentDir string, context map[string]inter
 
 func GetDirectoryOfFile(path string) string {
 	return path[0:strings.LastIndex(path, "/")]
+}
+
+type FileTreeItem struct {
+	Src   string `yaml:"src"`
+	Path  string `yaml:"path"`
+	State string `yaml:"state"`
+}
+
+func GetFileTree(path string, currentDir string, context map[string]interface{}) ([]FileTreeItem, error) {
+	files := make([]FileTreeItem, 0)
+
+	root, err := ExpandPath(path, currentDir, context)
+	if err != nil {
+		return files, err
+	}
+
+	err = filepath.Walk(root, func(relativePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		state := "file"
+		if info.IsDir() {
+			state = "directory"
+		}
+
+		path := strings.Replace(relativePath, root, "", 1)
+
+		files = append(files, FileTreeItem{
+			Path:  path,
+			Src:   relativePath,
+			State: state,
+		})
+
+		return nil
+	})
+
+	return files, nil
 }
 
 func Evaluate(expression string, variables map[string]interface{}) (interface{}, error) {

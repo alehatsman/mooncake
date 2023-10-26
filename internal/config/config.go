@@ -22,16 +22,17 @@ type Shell struct {
 }
 
 type Step struct {
-	Name        string                  `yaml:"name"`
-	When        string                  `yaml:"when"`
-	Template    *Template               `yaml:"template"`
-	File        *File                   `yaml:"file"`
-	Shell       *string                 `yaml:"shell"`
-	Include     *string                 `yaml:"include"`
-	IncludeVars *string                 `yaml:"include_vars"`
-	Become      bool                    `yaml:"become"`
-	Vars        *map[string]interface{} `yaml:"vars"`
-	Tags        []string                `yaml:"tags"`
+	Name         string                  `yaml:"name"`
+	When         string                  `yaml:"when"`
+	Template     *Template               `yaml:"template"`
+	File         *File                   `yaml:"file"`
+	Shell        *string                 `yaml:"shell"`
+	Include      *string                 `yaml:"include"`
+	IncludeVars  *string                 `yaml:"include_vars"`
+	Become       bool                    `yaml:"become"`
+	Vars         *map[string]interface{} `yaml:"vars"`
+	Tags         []string                `yaml:"tags"`
+	WithFileTree *string                 `yaml:"with_filetree"`
 }
 
 func (s *Step) ValidateOneAction() error {
@@ -82,4 +83,20 @@ func (s *Step) Validate() error {
 	}
 
 	return nil
+}
+
+func (s *Step) Copy() *Step {
+	return &Step{
+		Name:         s.Name,
+		When:         s.When,
+		Template:     s.Template,
+		File:         s.File,
+		Shell:        s.Shell,
+		Include:      s.Include,
+		IncludeVars:  s.IncludeVars,
+		Become:       s.Become,
+		Vars:         s.Vars,
+		Tags:         s.Tags,
+		WithFileTree: s.WithFileTree,
+	}
 }

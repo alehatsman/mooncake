@@ -82,65 +82,118 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-func ExecuteSteps(steps []config.Step, ec *ExecutionContext) {
-	ec.Logger.Infof(color.CyanString("[0/%d]", len(steps))+" Executing: %v", ec.CurrentFile)
+func ExecuteStep(step config.Step, ec *ExecutionContext) error {
+	err := step.Validate()
+	check(err)
 
-	for i, step := range steps {
-		err := step.Validate()
+	shouldSkip := false
+	if step.When != "" {
+		shouldSkip, err = handleWhenExpression(step, ec)
+		check(err)
+	}
+
+	if step.Include == nil {
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
+		message := tag + " " + step.Name
+		if step.When != "" {
+			message += " when: " + step.When
+			shouldSkip, err := handleWhenExpression(step, ec)
+			check(err)
+			if shouldSkip {
+				message += " (skipped)"
+			}
+		}
+		ec.Logger.Infof(message)
+	}
+
+	if shouldSkip {
+		return nil
+	}
+
+	switch {
+	case step.IncludeVars != nil:
+		err := HandleIncludeVars(step, ec)
 		check(err)
 
-		shouldSkip := false
-		if step.When != "" {
-			shouldSkip, err = handleWhenExpression(step, ec)
+	case step.Vars != nil:
+		err := handleVars(step, ec)
+		check(err)
+
+	case step.Template != nil:
+		err := HandleTemplate(step, ec)
+		check(err)
+
+	case step.File != nil:
+		err := HandleFile(step, ec)
+		check(err)
+
+	case step.Shell != nil:
+		err := HandleShell(step, ec)
+		check(err)
+
+	case step.Include != nil:
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex, ec.TotalSteps)
+		ec.Logger.Infof(tag+" Including: %v", *step.Include)
+
+		err := handleInclude(step, ec)
+		check(err)
+	}
+
+	return nil
+}
+
+func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
+	ec.Logger.Debugf("Handling with_filetree: %+v", step.WithFileTree)
+
+	withFileTree := step.WithFileTree
+
+	ec.Logger.Infof("with_filetree: %v", *withFileTree)
+
+	path, err := utils.ExpandPath(*withFileTree, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	fileTree, err := utils.GetFileTree(path, ec.CurrentDir, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	ec.Logger.Debugf("fileTree: %+v", fileTree)
+
+	curEc := ec.Copy()
+	curEc.Level += 1
+	curEc.Logger = logger.WithPadLevel(curEc.Level)
+	curEc.TotalSteps = len(fileTree)
+
+	for i, item := range fileTree {
+		curEc = curEc.Copy()
+		curEc.CurrentIndex = i
+		curEc.Variables["item"] = item
+
+		err := ExecuteStep(step, &curEc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ExecuteSteps(steps []config.Step, ec *ExecutionContext) {
+	ec.Logger.Infof(color.CyanString("[1/%d]", ec.TotalSteps)+" Executing: %v", ec.CurrentFile)
+
+	for i, step := range steps {
+		ec.CurrentIndex = i
+
+		if step.WithFileTree != nil {
+			err := HandleWithFileTree(step, ec)
 			check(err)
-		}
-
-		if step.Include == nil {
-			tag := color.CyanString("[%d/%d]", i+1, len(steps))
-			message := tag + " " + step.Name
-			if step.When != "" {
-				message += " when: " + step.When
-				shouldSkip, err := handleWhenExpression(step, ec)
-				check(err)
-				if shouldSkip {
-					message += " (skipped)"
-				}
-			}
-			ec.Logger.Infof(message)
-		}
-
-		if shouldSkip {
 			continue
 		}
 
-		switch {
-		case step.IncludeVars != nil:
-			err := HandleIncludeVars(step, ec)
-			check(err)
-
-		case step.Vars != nil:
-			err := handleVars(step, ec)
-			check(err)
-
-		case step.Template != nil:
-			err := HandleTemplate(step, ec)
-			check(err)
-
-		case step.File != nil:
-			err := HandleFile(step, ec)
-			check(err)
-
-		case step.Shell != nil:
-			err := HandleShell(step, ec)
-			check(err)
-
-		case step.Include != nil:
-			tag := color.CyanString("[%d/%d]", i, len(steps))
-			ec.Logger.Infof(tag+" Including: %v", *step.Include)
-
-			err := handleInclude(step, ec)
-			check(err)
-		}
+		err := ExecuteStep(step, ec)
+		check(err)
 
 		logger.Infof("\n")
 	}
@@ -183,12 +236,14 @@ func Start(startConfig StartConfig) error {
 	logger.Debugf("variables: %v", variables)
 
 	executionContext := ExecutionContext{
-		Variables:   variables,
-		CurrentDir:  currentDir,
-		CurrentFile: configFilePath,
-		Level:       0,
-		Logger:      logger.WithPadLevel(0),
-		SudoPass:    startConfig.SudoPass,
+		Variables:    variables,
+		CurrentDir:   currentDir,
+		CurrentFile:  configFilePath,
+		Level:        0,
+		CurrentIndex: 0,
+		TotalSteps:   len(steps),
+		Logger:       logger.WithPadLevel(0),
+		SudoPass:     startConfig.SudoPass,
 	}
 
 	ExecuteSteps(steps, &executionContext)

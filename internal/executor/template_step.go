@@ -18,10 +18,14 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
+	ec.Logger.Debugf("src: %s", src)
+
 	dest, err := utils.ExpandPath(template.Dest, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
+
+	ec.Logger.Debugf("dest: %s", dest)
 
 	tag := color.New(color.BgMagenta).Sprintf(" tmpl ")
 	message := fmt.Sprintf("Rendering template: %s", dest)
