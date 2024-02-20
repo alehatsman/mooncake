@@ -20,7 +20,7 @@ jobs:
         run: go test -v ./...
 
       - name: Build binaries
-        run: "make build-binaries"
+        run: "./scripts/build_cli_binary.sh"
 
       - uses: actions/upload-artifact@v3
         with:
