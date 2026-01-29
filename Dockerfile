@@ -34,3 +34,9 @@ RUN mooncake run -c ./zsh/main.yml -v ./global_variables.yml
 # Node installation
 COPY ./mooncake-automation/node/ /tmp/mooncake-automation/node/
 RUN mooncake run -c ./node/main.yml -v ./global_variables.yml
+
+COPY ./mooncake-automation/git/ /tmp/mooncake-automation/git/
+RUN mooncake run -c ./git/main.yml -v ./global_variables.yml
+
+COPY ./mooncake-automation/tmux/ /tmp/mooncake-automation/tmux/
+RUN mooncake run -c ./tmux/main.yml -v ./global_variables.yml

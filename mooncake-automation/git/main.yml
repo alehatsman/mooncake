@@ -1,6 +1,9 @@
 ---
-- include: ./ubuntu.yml
-  when: os == "linux"
+- name: Make sure git is installed (ubuntu)
+  shell: |
+    apt-get install -y git
+  become: true
+  when: os == 'linux'
 
 - name: Make sure .gitconfig file is present
   template:
