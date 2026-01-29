@@ -1,0 +1,10 @@
+---
+- name: Make sure alacritty config directory is present
+  file:
+    path: ~/.config/alacritty
+    state: directory
+
+- name: Make sure alacritty config file is present
+  template:
+    src: ./alacritty.yml.j2
+    dest: ~/.config/alacritty/alacritty.yml

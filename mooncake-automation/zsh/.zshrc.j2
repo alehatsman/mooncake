@@ -1,0 +1,419 @@
+#---------------------------------------------
+# Command history configuration
+#---------------------------------------------
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE=~/.zsh_history
+
+#---------------------------------------------
+# Basic zsh configuration
+#---------------------------------------------
+CASE_SENSITIVE=false
+HYPHEN_INSENSITIVE=false
+DISABLE_AUTO_UPDATE=false
+DISABLE_LS_COLORS=true
+DISABLE_AUTO_TITLE=false
+ENABLE_CORRECTION=false
+COMPLETION_WAITING_DOTS=true
+ZSH_DOTENV_PROMPT=false
+
+setopt ignore_eof # don't exit on ctrl-d
+setopt share_history # share history between zsh sessions
+
+#---------------------------------------------
+# Exports
+#---------------------------------------------
+export GPG_TTY=$(tty)
+export LANG=en_US.UTF-8
+export PIPENV_VENV_IN_PROJECT=1
+
+export PIPENV_VENV_IN_PROJECT=true
+
+export NODE_MODULES_BIN=./node_modules/.bin
+export GOPATH={{ GOPATH }}
+export GCPATH={{ GCP_PATH }}
+export JAVA_HOME={{ JAVA_HOME }}
+export CARGO_HOME=~/.cargo
+export ZPLUG_HOME={{ ZPLUG_HOME }}
+export RVM_HOME=~/.rvm/
+export PATH=$HOME/bin:/usr/local/bin:$PATH:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$PATH
+
+if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
+    alias nvim=nvr -cc split --remote-wait +'set bufhidden=wipe'
+fi
+
+if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
+    export VISUAL="nvr -cc split --remote-wait +'set bufhidden=wipe'"
+    export EDITOR="nvr -cc split --remote-wait +'set bufhidden=wipe'"
+elif [[ -n $SSH_CONNECTION ]]; then
+  export EDITOR="vim"
+  export EDITOR="vim"
+else
+  export VISUAL="nvim"
+  export EDITOR="nvim"
+fi
+
+export SSH_KEY_PATH=~/.ssh/rsa_id
+
+export FZF_BASE={{ FZF_BASE }}
+export FZF_DEFAULT_COMMAND="rg --files --hidden"
+
+{% if ansible_distribution != 'MacOSX' %}
+export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+{% endif %}
+
+export WINDOWS_TERMINAL_CONFIG_LOCATION="/mnt/c/Users/aleha/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+
+#---------------------------------------------
+# Plugins
+#---------------------------------------------
+export NVM_LAZY_LOAD=false
+source $ZPLUG_HOME/init.zsh
+
+zplug 'zplug/zplug', hook-build:'zplug --self-manage'
+zplug "plugins/vi-mode", from:oh-my-zsh
+zplug "plugins/fzf", from:oh-my-zsh
+zplug "plugins/dotenv", from:oh-my-zsh
+
+zplug "zsh-users/zsh-autosuggestions"
+zplug "zsh-users/zsh-completions"
+zplug "zsh-users/zsh-history-substring-search"
+
+zplug "lukechilds/zsh-nvm"
+zplug "Aloxaf/fzf-tab"
+
+if ! zplug check; then
+    printf "Install? [y/N]: "
+    if read -q; then
+        echo; zplug install
+    fi
+fi
+
+zplug load
+
+enable-fzf-tab
+
+#---------------------------------------------
+# Bindings
+#---------------------------------------------
+bindkey '^ ' fzf-history-widget
+bindkey '^F' fzf-file-widget
+
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+
+#---------------------------------------------
+# Aliases
+#---------------------------------------------
+
+alias ag="ag --path-to-ignore ~/.ignore"
+alias n="cd ~/Projects/atsman/notes; e"
+alias vimdiff="nvim -d"
+alias r="source ~/.zshrc"
+
+alias e="$EDITOR"
+
+{% if ansible_distribution == 'MacOSX' %}
+alias sed=gsed
+{% endif %}
+
+alias cat="bat --theme 'Monokai Extended Origin'"
+alias ls=exa
+
+alias l="ls -1"
+alias c="clear"
+alias md="mkdir -p"
+
+# Docker
+alias docker_clean="docker system prune --all --volumes"
+
+# Git
+g() {
+  if [[ $# > 0 ]]; then
+    git $@
+  else
+    git status
+  fi
+}
+compdef g=git
+
+alias ga="git add"
+alias gaa="git add --all"
+alias gai="git add --interactive"
+
+alias gb="git branch"
+
+alias gc="git commit -v"
+alias gca="git commit -v --amend"
+alias gcm="git commit -v -m"
+
+alias gc!="git commit --no-verify -v"
+alias gca!="git commit --amend --no-verify -v"
+alias gcm!="git commit --no-verify -v -m"
+
+alias gct="git checkout"
+
+gcb() {
+  if [[ $# > 0 ]]; then
+    git checkout $@
+  else
+    fgcb
+  fi
+}
+alias gcbb="git checkout -b"
+
+alias gcp="git cherry-pick"
+alias gcpa="git cherry-pick --abort"
+alias gcpc="git cherry-pick --continue"
+
+alias gpr="git pull -r"
+alias gl="git log"
+alias glm="git log --author='{{ FULLNAME }}'"
+
+alias gp="git push -u origin HEAD"
+alias gp!="gp --no-verify"
+alias gpf="gp --force-with-lease"
+alias gpf!="gp! --force-with-lease"
+
+gsh() {
+  git show -- $@ ':!Pipfile.lock' ':!package-lock.json' ':!yarn.lock'
+}
+
+alias gs="git stash"
+alias gsp="git stash pop"
+
+alias gd="git diff"
+alias gds="git diff --staged"
+
+alias gf="git fetch"
+alias gfa="git fetch --all"
+alias gfo="git fetch origin"
+
+alias gra="git reset ."
+alias grh="git reset --hard"
+
+alias gmt="git mergetool"
+
+alias gr="git rebase"
+alias gri="git rebase --interactive"
+alias grc="git rebase --continue"
+alias gra="git rebase --abort"
+
+gbd() { # git delete branch
+  git branch -d $@
+  git push origin --delete $@
+}
+
+gbd!() { # git delete branch force
+  git branch -D $@
+  git push origin --delete --force $@
+}
+
+fgcb() {
+  local branches branch
+  branches=$(git branch --all | rg -v HEAD) &&
+  branch=$(echo "$branches" |
+           fzf-tmux --height 40% -d $(( 2 + $(wc -l <<< "$branches") )) +m) &&
+  git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
+}
+
+# Lastpass
+flpass() {
+  lpass login {{ EMAIL }}
+  lpass show -c --password $(lpass ls  | fzf | awk "{print $(NF)}" | sed "s/\]//g")
+}
+
+fkill() {
+  local pid
+  if [ "$UID" != "0" ]; then
+      pid=$(ps -f -u $UID | sed 1d | fzf -m | awk "{print $2}")
+  else
+      pid=$(ps -ef | sed 1d | fzf -m | awk "{print $2}")
+  fi
+
+  if [ "x$pid" != "x" ]
+  then
+      echo $pid | xargs kill -${1:-9}
+  fi
+}
+
+tm() {
+  tmux attach || tmux new
+}
+
+alias tmks="tmux kill-server"
+
+cheat() {
+  curl cheat.sh/$@
+}
+
+if type "$kubectl" > /dev/null; then
+  alias k8s="kubectl"
+  compdef k8s=kubectl
+fi
+
+alias my_ip="curl ifconfig.me/ip"
+
+# npm / yarn
+
+# search for file recursively up
+{% raw %}
+upsearch() {
+  slashes=${PWD//[^\/]/}
+  directory="$PWD"
+  for (( n=${#slashes}; n>0; --n ))
+  do
+    test -e "$directory/$1" && echo "$directory/$1" && return
+    directory="$directory/.."
+  done
+}
+{% endraw %}
+
+# fzf_npm_script - opens fzf for npm script
+# selection. Prints selected script back
+_fzf_npm_script() {
+  if [[ ! -f './package.json' ]]; then
+    echo "no package.json file!"
+    return 0
+  fi
+
+  local npm_script
+  npm_script=$(cat ./package.json | jq -r '.scripts | keys | .[]' | fzf)
+  echo "$npm_script"
+}
+
+_get_npm_client() {
+  if [[ $(upsearch 'yarn.lock') ]]; then
+    echo 'yarn'
+    return 1
+  fi
+
+  if [[ $(upsearch 'package-lock.json') ]]; then
+    echo 'npm'
+    return 1
+  fi
+
+  return 0
+}
+
+# nr - npm run script
+# Opens fzf with list of available scripts
+# runs selected script
+nr() {
+  local npm_client
+  npm_client=$(_get_npm_client)
+  if [ -z "$npm_client" ]; then
+    echo "no package-lock.json or yarn.lock"
+    return 0
+  fi
+
+  local npm_script
+  npm_script=$(_fzf_npm_script)
+  if [ -z "$npm_script" ]; then
+    return 0
+  fi
+  echo "$npm_client run $npm_script"
+  "$npm_client" run "$npm_script"
+}
+
+ni() {
+  local npm_client
+  npm_client=$(_get_npm_client)
+  if [ -z "$npm_client" ]; then
+    echo "no package-lock.json or yarn.lock"
+    return 0
+  fi
+
+  echo "$npm_client" install
+  "$npm_client" install
+}
+
+npm_uninstall_globals() {
+  npm ls -gp --depth=0 | awk -F/ '/node_modules/ && !/\/npm$/ {print $NF}' | xargs npm -g rm
+}
+
+# Docker
+
+alias dps="docker ps"
+
+alias ..='cd ..'
+alias ....='cd ../../'
+
+# Fzf roles select
+
+run_ansible_role() {
+  local role
+  role=$(l ./roles | fzf)
+  make install-only tags="$role"
+}
+
+ar() {
+  run_ansible_role
+}
+
+alias serve='browser-sync start -s -f . --no-notify --host $LOCAL_IP --port 9000'
+
+alias uuid='uuidgen'
+alias cargo_installed='cargo install --list'
+
+#---------------------------------------------
+# Color scheme
+#---------------------------------------------
+setopt PROMPT_SUBST
+
+export COLOR_SCHEME='molokai'
+
+# Molokai
+if [ $COLOR_SCHEME = "molokai" ]
+then
+  RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
+  PROMPT="%(?:%F{green}:%F{red})"
+  PROMPT+='${RUNO_ARROW_ICON}'
+  PROMPT+="%F{red}%B%c "
+  PROMPT+='%f%b'
+  export FZF_DEFAULT_OPTS='
+    --reverse
+    --color fg:#F8F8F2,bg:#272822,hl:67,fg+:252,bg+:235,hl+:81
+    --color info:144,prompt:161,spinner:135,pointer:135,marker:118
+  '
+  export FZF_PREVIEW_COMMAND='bat --theme Monokai Extended Origin {}'
+elif [ $COLOR_SCHEME = "runo" ]
+then
+  RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
+  PROMPT="%(?:%F{green}:%F{red})"
+  PROMPT+='${RUNO_ARROW_ICON}'
+  PROMPT+="%F{blue}%B%c "
+  PROMPT+='%f%b'
+  export FZF_DEFAULT_OPTS='
+    --color=fg:#313232,bg:#f8f9f9,hl:#FFBC5D
+    --color=fg+:#313232,bg+:#eeefef,hl+:#FFBC5D
+    --color=info:#313232,border:#313232,prompt:#313232
+    --color=pointer:#313232,marker:#313232,spinner:#313232
+    --color=header:#FFFABC
+  '
+elif [ $COLOR_SCHEME = "github-light" ]
+then
+  RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
+  PROMPT="%(?:%F{green}:%F{red})"
+  PROMPT+='${RUNO_ARROW_ICON}'
+  PROMPT+="%F{red}%B%c "
+  PROMPT+='%f%b'
+export FZF_DEFAULT_OPTS='--color=fg:#24292f,bg:#ffffff,hl:#0366d6 --color=fg+:#24292f,bg+:#ffffff,hl+:#0366d6 --color=info:#24292f,prompt:#d73a49,pointer:#24292f --color=marker:#28a745,spinner:#5a32a3,header:#24292f'
+fi
+
+{% if ansible_distribution != 'MacOSX' %}
+alias pbcopy='xclip -selection clipboard'
+alias pbpaste='xclip -selection clipboard -o'
+{% endif %}
+
+# vi mode
+bindkey -v
+
+# Yank to the system clipboard
+function vi-yank-xclip {
+    zle vi-yank
+   echo "$CUTBUFFER" | pbcopy -i
+}
+
+zle -N vi-yank-xclip
+bindkey -M vicmd 'y' vi-yank-xclip

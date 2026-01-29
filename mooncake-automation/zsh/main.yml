@@ -1,0 +1,16 @@
+---
+- name: Make sure zsh config directory is present
+  file:
+    path: ~/.config/zsh
+    state: directory
+
+- include_vars: ./ubuntu_vars.yml
+  when: os == 'linux'
+
+- include_vars: ./macos_vars.yml
+  when: os == 'darwin'
+
+- name: Make sure .zshrc is present
+  template:
+    src: ./.zshrc.j2
+    dest: ~/.zshrc

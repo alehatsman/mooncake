@@ -1,0 +1,10 @@
+---
+- name: Make sure golang repo is present
+  shell: |
+    add-apt-repository ppa:longsleep/golang-backports
+  become: true
+
+- name: Make sure golang is installed
+  shell: |
+    apt-get install -y golang-go
+  become: true
