@@ -30,3 +30,4 @@
 - name: Make sure apps are installed
   shell: |
     apt-get install -y {{  apps | join: " " }}
+  become: true
