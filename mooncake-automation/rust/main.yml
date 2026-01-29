@@ -1,0 +1,16 @@
+---
+- name: Make sure rust tools are installed
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+- define_vars:
+    cargo_packages:
+      - exa
+      - bat
+      - git-delta
+      - xsv
+      - code-minimap
+
+- name: Make sure rust cargo packages are installed
+  shell: |
+    cargo install {{ cargo_packages | join " " }}

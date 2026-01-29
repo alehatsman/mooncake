@@ -1,5 +1,7 @@
 ---
-# - include: ./packages/main.yml
+- include: ./packages/main.yml
+
+- include: ./rust/main.yml
 
 - include: ./alacritty/main.yml
   when: os == "darwin"
