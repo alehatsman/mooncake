@@ -23,57 +23,57 @@
 
 - name: Make sure ftplugin for clojure
   template:
-    src: './templates/ftplugin/clojure.vim'
+    src: '../templates/ftplugin/clojure.vim'
     dest: '{{ config_path }}/ftplugin/clojure.vim'
 
 - name: Make sure ftplugin for go
   template:
-    src: './templates/ftplugin/go.vim'
+    src: '../templates/ftplugin/go.vim'
     dest: '{{ config_path }}/ftplugin/go.vim'
 
 - name: Make sure ftplugin for help
   template:
-    src: './templates/ftplugin/help.vim'
+    src: '../templates/ftplugin/help.vim'
     dest: '{{ config_path }}/ftplugin/help.vim'
 
 - name: Make sure ftplugin for javascript
   template:
-    src: './templates/ftplugin/javascript.vim'
+    src: '../templates/ftplugin/javascript.vim'
     dest: '{{ config_path }}/ftplugin/javascript.vim'
 
 - name: Make sure ftplugin for json
   template:
-    src: './templates/ftplugin/json.vim'
+    src: '../templates/ftplugin/json.vim'
     dest: '{{ config_path }}/ftplugin/json.vim'
 
 - name: Make sure ftplugin for markdown
   template:
-    src: './templates/ftplugin/markdown.vim'
+    src: '../templates/ftplugin/markdown.vim'
     dest: '{{ config_path }}/ftplugin/markdown.vim'
 
 - name: Make sure ftplugin for rust
   template:
-    src: './templates/ftplugin/rust.vim'
+    src: '../templates/ftplugin/rust.vim'
     dest: '{{ config_path }}/ftplugin/rust.vim'
 
 - name: Make sure ftplugin for typescript
   template:
-    src: './templates/ftplugin/typescript.vim'
+    src: '../templates/ftplugin/typescript.vim'
     dest: '{{ config_path }}/ftplugin/typescript.vim'
 
 - name: Make sure ftplugin for typescriptreact
   template:
-    src: './templates/ftplugin/typescriptreact.vim'
+    src: '../templates/ftplugin/typescriptreact.vim'
     dest: '{{ config_path }}/ftplugin/typescriptreact.vim'
 
 - name: Make sure ftplugin for yaml
   template:
-    src: './templates/ftplugin/yaml.vim'
+    src: '../templates/ftplugin/yaml.vim'
     dest: '{{ config_path }}/ftplugin/yaml.vim'
 
 - name: Make sure init.lua
   template:
-    src: './templates/init.lua'
+    src: '../templates/init.lua'
     dest: '{{ config_path }}/init.lua'
 
 # - include: python_venv.yml
