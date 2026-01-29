@@ -15,4 +15,6 @@
 
 - include: ./node/main.yml
 
+- include: ./zsh/main.yml
+
 - include: ./nvim/tasks/main.yml

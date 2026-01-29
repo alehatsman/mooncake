@@ -47,8 +47,6 @@ apps:
   - httpie
 
   - terraform
-  - google-cloud-cli
-  - weechat
   - hexyl
   - ruby-full
   - lazygit
