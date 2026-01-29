@@ -26,3 +26,7 @@
   shell: |
     apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
   become: true
+
+- name: Make sure apps are installed
+  shell: |
+    apt-get install -y {{  apps | join: " " }}
