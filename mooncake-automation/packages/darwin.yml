@@ -1,0 +1,20 @@
+---
+- name: Make sure xcode is installed
+  shell: |
+    if ! type "make" > /dev/null; then
+      echo "xcode tools are not installed."
+      xcode-select --install
+    else
+      echo "xcode tools are alredy installed. Skipping..."
+    fi
+  when: os == "darwin"
+
+- name: Make sure brew is installed
+  shell: |
+    if ! type "brew" > /dev/null; then
+      echo "brew is not installed."
+      /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    else
+      echo "brew is already installed. Skipping..."
+    fi
+  when: os == "darwin"

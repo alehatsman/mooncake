@@ -40,3 +40,6 @@ RUN mooncake run -c ./git/main.yml -v ./global_variables.yml
 
 COPY ./mooncake-automation/tmux/ /tmp/mooncake-automation/tmux/
 RUN mooncake run -c ./tmux/main.yml -v ./global_variables.yml
+
+COPY ./mooncake-automation/google-cloud/ /tmp/mooncake-automation/google-cloud/
+RUN mooncake run -c ./google-cloud/main.yml -v ./global_variables.yml
