@@ -2,17 +2,24 @@ package main
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestRenderTemplate(t *testing.T) {
+func TestRenderTemplateSuccess(t *testing.T) {
 	result, err := renderTemplate("{{ foo }}", Context{"foo": "bar"})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "bar", result)
+}
 
-	if result != "bar" {
-		t.Errorf("Expected 'bar', got '%s'", result)
-	}
+func TestRenderTemplateError(t *testing.T) {
+	_, err := renderTemplate("{{ foo }", Context{"foo": "bar"})
+	assert.Error(t, err)
+}
+
+func TestRenderTemplateExecutionError(t *testing.T) {
+	_, err := renderTemplate("{{ foo }}", Context{})
+	assert.Error(t, err)
 }
 
 func TestEvaluateExpression(t *testing.T) {

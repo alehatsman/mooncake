@@ -99,6 +99,8 @@ Make sure to wrap the value into `"value"` for variable expansion to work.
   template:
     src: ./template.j2
     dest: ~/.config/nvim/init.lua
+    vars:
+      port: 8080
 ```
 
 ### Shell
