@@ -50,6 +50,57 @@ type Step struct {
 	IncludeVars *string                 `yaml:"include_vars"`
 	Become      bool                    `yaml:"become"`
 	Vars        *map[string]interface{} `yaml:"vars"`
+	Tags        []string                `yaml:"tags"`
+}
+
+func (s *Step) ValidateOneAction() error {
+	actionsCount := 0
+	if s.Template != nil {
+		actionsCount++
+	}
+	if s.File != nil {
+		actionsCount++
+	}
+	if s.Shell != nil {
+		actionsCount++
+	}
+	if s.Include != nil {
+		actionsCount++
+	}
+	if s.IncludeVars != nil {
+		actionsCount++
+	}
+	if s.Vars != nil {
+		actionsCount++
+	}
+
+	if actionsCount > 1 {
+		return fmt.Errorf("Step %s has more than one action", s.Name)
+	}
+
+	return nil
+}
+
+func (s *Step) ValidateHasAction() error {
+	if s.Template == nil && s.File == nil && s.Shell == nil &&
+		s.Include == nil && s.IncludeVars == nil && s.Vars == nil {
+		return fmt.Errorf("Step %s has no action", s.Name)
+	}
+	return nil
+}
+
+func (s *Step) Validate() error {
+	err := s.ValidateHasAction()
+	if err != nil {
+		return err
+	}
+
+	err = s.ValidateOneAction()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func readConfig(path string) ([]Step, error) {
@@ -158,16 +209,17 @@ func printCommandOutputPipe(pipe io.Reader) {
 	for scanner.Scan() {
 		fmt.Println("Output: ", scanner.Text())
 	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal("Error: ", err)
-	}
 }
 
 func executeSteps(steps []Step, currentDir string, variables Context) {
 	fmt.Println("Executing steps, currentDir: ", currentDir)
 
 	for _, step := range steps {
+		err := step.Validate()
+		check(err)
+
+		fmt.Println("Executing step: ", step.Name)
+
 		if step.When != "" {
 			expressionString, err := renderTemplate(step.When, variables)
 			check(err)
@@ -190,12 +242,30 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 			vars, err := readVariables(expandedPath)
 			check(err)
 
+			fmt.Println("Adding variables: ", vars)
+
 			newVariables := make(map[string]interface{})
 			for k, v := range variables {
 				newVariables[k] = v
 			}
 
 			for k, v := range vars {
+				newVariables[k] = v
+			}
+
+			variables = newVariables
+
+		case step.Vars != nil:
+			vars := step.Vars
+
+			fmt.Println("Adding variables: ", vars)
+
+			newVariables := make(map[string]interface{})
+			for k, v := range variables {
+				newVariables[k] = v
+			}
+
+			for k, v := range *vars {
 				newVariables[k] = v
 			}
 
@@ -244,6 +314,8 @@ func executeSteps(steps []Step, currentDir string, variables Context) {
 
 		case step.Shell != nil:
 			shell := step.Shell
+
+			fmt.Println("Rendering command: ", *shell, "with vars: ", variables)
 
 			renderedCommand, err := renderTemplate(*shell, variables)
 			check(err)

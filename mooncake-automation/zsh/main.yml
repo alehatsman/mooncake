@@ -1,16 +1,32 @@
 ---
+- name: Make sure zsh is installed (ubuntu)
+  shell: |
+    apt-get install -y zsh
+  become: true
+  when: os == "linux"
+
+- name: Make sure zsh is installed (macos)
+  shell: |
+    brew install zsh
+  when: os == "darwin"
+  
 - name: Make sure zsh config directory is present
   file:
     path: ~/.config/zsh
     state: directory
 
-- include_vars: ./ubuntu_vars.yml
+- include_vars: ./vars/ubuntu_vars.yml
   when: os == 'linux'
 
-- include_vars: ./macos_vars.yml
+- include_vars: ./vars/macos_vars.yml
   when: os == 'darwin'
 
 - name: Make sure .zshrc is present
   template:
-    src: ./.zshrc.j2
+    src: ./templates/.zshrc.j2
     dest: ~/.zshrc
+
+- name: Make sure .ignore is present
+  template:
+    src: ./templates/.ignore.j2
+    dest: ~/.ignore
