@@ -19,4 +19,6 @@
 
 - include: ./zsh/main.yml
 
+- include: ./tmux/main.yml
+
 - include: ./nvim/main.yml
