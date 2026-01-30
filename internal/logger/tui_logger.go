@@ -139,18 +139,11 @@ func (l *TUILogger) LogStep(info StepInfo) {
 	}
 }
 
-// Infof logs an info message (for non-step messages)
+// Infof logs an info message (ignored in TUI mode - use LogStep for steps)
 func (l *TUILogger) Infof(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if l.logLevel > InfoLevel {
-		return
-	}
-
-	// Just add as debug message - steps should use LogStep now
-	message := fmt.Sprintf(format, v...)
-	l.buffer.AddDebug(message)
+	// Info messages are ignored in TUI mode
+	// Steps should use LogStep() instead
+	// This prevents cluttering the TUI with non-step messages
 }
 
 // Debugf logs a debug message
