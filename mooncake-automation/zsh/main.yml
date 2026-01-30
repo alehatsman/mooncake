@@ -31,6 +31,10 @@
     src: ./templates/.ignore.j2
     dest: ~/.ignore
 
+- name: Make sure zplug is installed
+  shell: |
+    [ ! -d ~/.zplug ] && git clone --depth 1 ~/.zplug; exit 0;
+
 - name: Make sure zsh is default shell
   shell: |
     chsh -s $(which zsh)
