@@ -21,7 +21,7 @@
 
 - name: Make sure tmp is present
   shell: |
-    git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/tmp
+    [ ! -d ~/.config/tmux/tmp ] && git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/tmp; exit 0;
 
 - name: Make sure .tmux.conf is present
   template:
