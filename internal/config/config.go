@@ -36,6 +36,7 @@ type Step struct {
 	Tags         []string                `yaml:"tags"`
 	WithFileTree *string                 `yaml:"with_filetree"`
 	WithItems    *string                 `yaml:"with_items"`
+	Register     string                  `yaml:"register"`
 }
 
 func (s *Step) ValidateOneAction() error {
@@ -102,5 +103,6 @@ func (s *Step) Copy() *Step {
 		Tags:         s.Tags,
 		WithFileTree: s.WithFileTree,
 		WithItems:    s.WithItems,
+		Register:     s.Register,
 	}
 }

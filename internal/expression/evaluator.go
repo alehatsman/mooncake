@@ -1,7 +1,7 @@
 package expression
 
 import (
-	"github.com/Knetic/govaluate"
+	"github.com/expr-lang/expr"
 )
 
 // Evaluator defines the interface for evaluating expressions
@@ -9,31 +9,37 @@ type Evaluator interface {
 	Evaluate(expression string, variables map[string]interface{}) (interface{}, error)
 }
 
-// GovaluateEvaluator implements Evaluator using the govaluate library
-type GovaluateEvaluator struct {
+// ExprEvaluator implements Evaluator using the expr-lang library
+type ExprEvaluator struct {
 	// Store any evaluator-specific state here if needed
 }
 
-// NewGovaluateEvaluator creates a new GovaluateEvaluator
+// NewExprEvaluator creates a new ExprEvaluator
+func NewExprEvaluator() Evaluator {
+	return &ExprEvaluator{}
+}
+
+// NewGovaluateEvaluator is kept for backwards compatibility, now returns ExprEvaluator
 func NewGovaluateEvaluator() Evaluator {
-	return &GovaluateEvaluator{}
+	return NewExprEvaluator()
 }
 
 // Evaluate evaluates an expression with the given variables
-func (e *GovaluateEvaluator) Evaluate(expression string, variables map[string]interface{}) (interface{}, error) {
+func (e *ExprEvaluator) Evaluate(expression string, variables map[string]interface{}) (interface{}, error) {
 	if variables == nil {
 		variables = make(map[string]interface{})
 	}
 
-	evaluableExpression, err := govaluate.NewEvaluableExpression(expression)
+	// Compile and evaluate the expression
+	program, err := expr.Compile(expression, expr.Env(variables))
 	if err != nil {
 		return nil, err
 	}
 
-	evalResult, err := evaluableExpression.Evaluate(variables)
+	result, err := expr.Run(program, variables)
 	if err != nil {
 		return nil, err
 	}
 
-	return evalResult, nil
+	return result, nil
 }

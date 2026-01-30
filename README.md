@@ -372,6 +372,73 @@ Each iteration provides:
 - `item.name`: File name
 - `item.is_dir`: Boolean indicating if item is directory
 
+### Register - Capture Command Output
+
+Capture output from commands and use it in subsequent steps:
+
+```yaml
+- name: Check if git is installed
+  shell: which git
+  register: git_check
+
+- name: Show git location (nested access)
+  shell: echo "Git is at {{ git_check.stdout }}"
+  when: git_check.rc == 0
+
+- name: Get current user
+  shell: whoami
+  register: current_user
+
+- name: Create user-specific config
+  file:
+    path: "/tmp/{{ current_user.stdout }}_config.txt"
+    state: file
+    content: "Config for {{ current_user.stdout }}"
+```
+
+**Available fields:**
+
+Use nested access (recommended):
+- `{name}.stdout`: Standard output from the command
+- `{name}.stderr`: Standard error from the command
+- `{name}.rc`: Return code (exit status)
+- `{name}.failed`: Boolean indicating if step failed
+- `{name}.changed`: Boolean indicating if step made changes
+
+Or flat access (also supported):
+- `{name}_stdout`, `{name}_stderr`, `{name}_rc`, `{name}_failed`, `{name}_changed`
+
+**Works with:**
+- `shell`: Captures command output
+- `file`: Detects if file was created/modified
+- `template`: Detects if template output changed
+
+**Change detection:**
+- Shell commands: Always `changed=true`
+- File operations: `changed=true` only if file created or content modified
+- Templates: `changed=true` only if rendered output differs from existing file
+
+**Expression features:**
+
+Thanks to [expr-lang](https://github.com/expr-lang/expr), you can use powerful expressions:
+
+```yaml
+# Complex conditions
+- name: Check multiple conditions
+  shell: echo "Valid"
+  when: user.name == "admin" and git_check.rc == 0
+
+# Built-in functions
+- name: Check list length
+  shell: echo "Many items"
+  when: len(packages) > 5
+
+# String operations
+- name: Check string contains
+  shell: echo "Found"
+  when: '"docker" in git_check.stdout'
+```
+
 ### List Iteration
 
 Iterate over a list of items using `with_items`:
