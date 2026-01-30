@@ -57,7 +57,7 @@ mooncake run --config config.yml --log-level debug
 - File tree iteration with with_filetree
 - List iteration with with_items
 - Relative path resolution
-- Global system facts (os, arch)
+- Comprehensive system facts (OS, distribution, package manager, hardware, network)
 - Animated TUI with live progress tracking
 - Dry-run mode for safe preview and validation
 
@@ -238,12 +238,47 @@ Load variables from external YAML files:
   include_vars: ./env.yml
 ```
 
-### Global Variables
+### Global Variables (System Facts)
 
-Available in all steps:
+Mooncake automatically collects system facts and makes them available in all steps:
 
-- `os`: linux | darwin | windows
-- `arch`: amd64 | arm64 | etc
+**Basic Facts:**
+- `os`: Operating system (linux | darwin | windows)
+- `arch`: Architecture (amd64 | arm64 | etc)
+- `hostname`: System hostname
+- `user_home`: Current user's home directory
+- `cpu_cores`: Number of CPU cores
+- `memory_total_mb`: Total system memory in megabytes
+
+**Distribution (Linux/macOS):**
+- `distribution`: Distribution name (ubuntu | debian | centos | rhel | fedora | arch | macos)
+- `distribution_version`: Full version (e.g., "22.04", "15.7.3")
+- `distribution_major`: Major version number (e.g., "22", "15")
+
+**Software:**
+- `package_manager`: Detected package manager (apt | yum | dnf | brew | pacman | zypper | apk)
+- `python_version`: Installed Python version (e.g., "3.11.4")
+
+**Network:**
+- `ip_addresses`: Array of all non-loopback IP addresses
+- `ip_addresses_string`: Comma-separated string of IP addresses
+
+**Example usage:**
+```yaml
+- name: Install package using detected package manager
+  shell: "{{ package_manager }} install neovim"
+  become: true
+  when: os == "linux"
+
+- name: Configure for high-memory systems
+  shell: echo "Using high memory settings"
+  when: memory_total_mb >= 16000
+
+- name: Ubuntu-specific configuration
+  shell: apt update
+  become: true
+  when: distribution == "ubuntu" and distribution_major >= "20"
+```
 
 ### File
 
