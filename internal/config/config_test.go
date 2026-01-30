@@ -281,3 +281,69 @@ func TestStep_CopyWithModification(t *testing.T) {
 func stringPtr(s string) *string {
 	return &s
 }
+
+func TestStep_CountActions(t *testing.T) {
+	tests := []struct {
+		name string
+		step Step
+		want int
+	}{
+		{
+			name: "no actions",
+			step: Step{Name: "test"},
+			want: 0,
+		},
+		{
+			name: "one action - shell",
+			step: Step{Name: "test", Shell: strPtr("echo test")},
+			want: 1,
+		},
+		{
+			name: "one action - template",
+			step: Step{Name: "test", Template: &Template{Src: "src", Dest: "dest"}},
+			want: 1,
+		},
+		{
+			name: "one action - file",
+			step: Step{Name: "test", File: &File{Path: "/path"}},
+			want: 1,
+		},
+		{
+			name: "one action - include",
+			step: Step{Name: "test", Include: strPtr("file.yml")},
+			want: 1,
+		},
+		{
+			name: "one action - includeVars",
+			step: Step{Name: "test", IncludeVars: strPtr("vars.yml")},
+			want: 1,
+		},
+		{
+			name: "one action - vars",
+			step: Step{Name: "test", Vars: &map[string]interface{}{"key": "value"}},
+			want: 1,
+		},
+		{
+			name: "two actions - shell and template",
+			step: Step{
+				Name:     "test",
+				Shell:    strPtr("echo test"),
+				Template: &Template{Src: "src", Dest: "dest"},
+			},
+			want: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.step.countActions()
+			if got != tt.want {
+				t.Errorf("Step.countActions() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}

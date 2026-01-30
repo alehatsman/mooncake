@@ -39,37 +39,39 @@ type Step struct {
 	Register     string                  `yaml:"register"`
 }
 
-func (s *Step) ValidateOneAction() error {
-	actionsCount := 0
+// countActions returns the number of non-nil action fields in this step.
+func (s *Step) countActions() int {
+	count := 0
 	if s.Template != nil {
-		actionsCount++
+		count++
 	}
 	if s.File != nil {
-		actionsCount++
+		count++
 	}
 	if s.Shell != nil {
-		actionsCount++
+		count++
 	}
 	if s.Include != nil {
-		actionsCount++
+		count++
 	}
 	if s.IncludeVars != nil {
-		actionsCount++
+		count++
 	}
 	if s.Vars != nil {
-		actionsCount++
+		count++
 	}
+	return count
+}
 
-	if actionsCount > 1 {
+func (s *Step) ValidateOneAction() error {
+	if s.countActions() > 1 {
 		return errors.New(fmt.Sprintf("Step %s has more than one action", s.Name))
 	}
-
 	return nil
 }
 
 func (s *Step) ValidateHasAction() error {
-	if s.Template == nil && s.File == nil && s.Shell == nil &&
-		s.Include == nil && s.IncludeVars == nil && s.Vars == nil {
+	if s.countActions() == 0 {
 		return fmt.Errorf("Step %s has no action", s.Name)
 	}
 	return nil

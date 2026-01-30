@@ -24,6 +24,87 @@ func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	return os.FileMode(mode)
 }
 
+// handleDirectoryState creates a directory at the specified path.
+func handleDirectoryState(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
+	mode := parseFileMode(file.Mode, 0755)
+
+	if ec.DryRun {
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogFileOperation("directory", renderedPath, mode)
+		dryRun.LogRegister(step)
+		return nil
+	}
+
+	// Check if directory already exists
+	if _, err := os.Stat(renderedPath); os.IsNotExist(err) {
+		result.Changed = true
+	}
+
+	ec.Logger.Debugf("  Creating directory: %s", renderedPath)
+	if err := os.MkdirAll(renderedPath, mode); err != nil {
+		markStepFailed(result, step, ec)
+		return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
+	}
+
+	return nil
+}
+
+// handleFileState creates a file at the specified path, with optional content.
+func handleFileState(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
+	mode := parseFileMode(file.Mode, 0644)
+
+	// Handle empty file
+	if file.Content == "" {
+		if ec.DryRun {
+			dryRun := newDryRunLogger(ec.Logger)
+			dryRun.LogFileOperation("file", renderedPath, mode)
+			dryRun.LogRegister(step)
+			return nil
+		}
+
+		// Check if file already exists
+		if _, err := os.Stat(renderedPath); os.IsNotExist(err) {
+			result.Changed = true
+		}
+
+		ec.Logger.Debugf("  Creating file: %s", renderedPath)
+		if err := os.WriteFile(renderedPath, []byte(""), mode); err != nil {
+			markStepFailed(result, step, ec)
+			return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
+		}
+
+		return nil
+	}
+
+	// Handle file with content
+	renderedContent, err := ec.Template.Render(file.Content, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	if ec.DryRun {
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogFileOperation("file", renderedPath, mode)
+		ec.Logger.Debugf("  Content preview (first 100 chars): %.100s", renderedContent)
+		dryRun.LogRegister(step)
+		return nil
+	}
+
+	// Check if file content would change
+	existingContent, err := os.ReadFile(renderedPath)
+	if err != nil || string(existingContent) != renderedContent {
+		result.Changed = true
+	}
+
+	ec.Logger.Debugf("  Creating file: %s", renderedPath)
+	if err := os.WriteFile(renderedPath, []byte(renderedContent), mode); err != nil {
+		markStepFailed(result, step, ec)
+		return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
+	}
+
+	return nil
+}
+
 func HandleFile(step config.Step, ec *ExecutionContext) error {
 	file := step.File
 
@@ -41,74 +122,14 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 	result := NewResult()
 	result.Changed = false // Will be set to true if we create/modify
 
+	// Dispatch to appropriate handler based on state
 	if file.State == "directory" {
-		mode := parseFileMode(file.Mode, 0755)
-
-		if ec.DryRun {
-			dryRun := newDryRunLogger(ec.Logger)
-			dryRun.LogFileOperation("directory", renderedPath, mode)
-			dryRun.LogRegister(step)
-			return nil
+		if err := handleDirectoryState(file, renderedPath, result, step, ec); err != nil {
+			return err
 		}
-
-		// Check if directory already exists
-		if _, err := os.Stat(renderedPath); os.IsNotExist(err) {
-			result.Changed = true
-		}
-
-		ec.Logger.Debugf("  Creating directory: %s", renderedPath)
-		if err := os.MkdirAll(renderedPath, mode); err != nil {
-			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
-		}
-	}
-
-	if file.State == "file" {
-		mode := parseFileMode(file.Mode, 0644)
-
-		if file.Content == "" {
-			if ec.DryRun {
-				dryRun := newDryRunLogger(ec.Logger)
-				dryRun.LogFileOperation("file", renderedPath, mode)
-				dryRun.LogRegister(step)
-				return nil
-			}
-
-			// Check if file already exists with same content
-			if _, err := os.Stat(renderedPath); os.IsNotExist(err) {
-				result.Changed = true
-			}
-
-			ec.Logger.Debugf("  Creating file: %s", renderedPath)
-			if err := os.WriteFile(renderedPath, []byte(""), mode); err != nil {
-				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
-			}
-		} else {
-			renderedContent, err := ec.Template.Render(file.Content, ec.Variables)
-			if err != nil {
-				return err
-			}
-
-			if ec.DryRun {
-				dryRun := newDryRunLogger(ec.Logger)
-				dryRun.LogFileOperation("file", renderedPath, mode)
-				ec.Logger.Debugf("  Content preview (first 100 chars): %.100s", renderedContent)
-				dryRun.LogRegister(step)
-				return nil
-			}
-
-			// Check if file content would change
-			existingContent, err := os.ReadFile(renderedPath)
-			if err != nil || string(existingContent) != renderedContent {
-				result.Changed = true
-			}
-
-			ec.Logger.Debugf("  Creating file: %s", renderedPath)
-			if err := os.WriteFile(renderedPath, []byte(renderedContent), mode); err != nil {
-				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
-			}
+	} else if file.State == "file" {
+		if err := handleFileState(file, renderedPath, result, step, ec); err != nil {
+			return err
 		}
 	}
 
