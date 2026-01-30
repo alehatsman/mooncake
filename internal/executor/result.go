@@ -44,3 +44,10 @@ func (r *Result) ToMap() map[string]interface{} {
 		"skipped": r.Skipped,
 	}
 }
+
+// RegisterTo registers this result to the variables map under the given name.
+// The result can be accessed using nested field syntax (e.g., "result.stdout", "result.rc")
+// in templates and when conditions.
+func (r *Result) RegisterTo(variables map[string]interface{}, name string) {
+	variables[name] = r.ToMap()
+}

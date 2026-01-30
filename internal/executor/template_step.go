@@ -106,12 +106,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 
 	// Register the result if register is specified
 	if step.Register != "" {
-		ec.Variables[step.Register] = result.ToMap()
-		ec.Variables[step.Register+"_stdout"] = result.Stdout
-		ec.Variables[step.Register+"_stderr"] = result.Stderr
-		ec.Variables[step.Register+"_rc"] = result.Rc
-		ec.Variables[step.Register+"_failed"] = result.Failed
-		ec.Variables[step.Register+"_changed"] = result.Changed
+		result.RegisterTo(ec.Variables, step.Register)
 		ec.Logger.Debugf("  Registered result as: %s (changed=%v)", step.Register, result.Changed)
 	}
 

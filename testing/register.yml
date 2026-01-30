@@ -4,16 +4,8 @@
   register: git_check
 
 - name: Show git path
-  shell: echo "Git is at {{ git_check_stdout }}"
-  when: git_check_rc == 0
-
-- name: Check nonexistent command
-  shell: which nonexistent_command_xyz
-  register: missing_check
-
-- name: Handle missing command
-  shell: echo "Command not found (exit code {{ missing_check_rc }})"
-  when: missing_check_rc != 0
+  shell: echo "Git is at {{ git_check.stdout }}"
+  when: git_check.rc == 0
 
 - name: Get current user
   shell: whoami
@@ -24,7 +16,7 @@
   register: user_home
 
 - name: Show user info
-  shell: echo "User {{ current_user_stdout }} has home {{ user_home_stdout }}"
+  shell: echo "User {{ current_user.stdout }} has home {{ user_home.stdout }}"
 
 - name: Create test file
   file:
@@ -35,7 +27,7 @@
 
 - name: Show if file changed
   shell: |
-    if [ "{{ file_result_changed }}" = "true" ]; then
+    if [ "{{ file_result.changed }}" = "true" ]; then
       echo "File was created or modified"
     else
       echo "File already existed"
@@ -46,4 +38,4 @@
   register: dir_list
 
 - name: Show directory output
-  shell: 'echo "First line was: {{ dir_list_stdout }}"'
+  shell: 'echo "First line was: {{ dir_list.stdout }}"'
