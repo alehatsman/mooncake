@@ -34,8 +34,8 @@
 - name: Make sure zplug is installed
   shell: |
     [ ! -d ~/.zplug ] && git clone --depth 1 ~/.zplug; exit 0;
-  become: true
 
 - name: Make sure zsh is default shell
   shell: |
     chsh -s $(which zsh)
+  become: true
