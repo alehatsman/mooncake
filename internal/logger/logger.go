@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/fatih/color"
 )
@@ -21,36 +20,49 @@ const (
 	ErrorLevel
 )
 
-type Logger struct {
+// Logger interface defines the logging contract
+type Logger interface {
+	Infof(format string, v ...interface{})
+	Debugf(format string, v ...interface{})
+	Errorf(format string, v ...interface{})
+	Codef(format string, v ...interface{})
+	Textf(format string, v ...interface{})
+	Mooncake()
+	SetLogLevel(logLevel int)
+	SetLogLevelStr(logLevel string) error
+	WithPadLevel(padLevel int) Logger
+}
+
+// ConsoleLogger implements Logger interface with colored console output
+type ConsoleLogger struct {
 	logLevel int
 	padLevel int
 	pad      string
 }
 
-var logger *Logger
-var once sync.Once
-
-// start loggeando
-func GetInstance() *Logger {
-	once.Do(func() {
-		logger = NewLogger(InfoLevel)
-	})
-	return logger
-}
-
-func NewLogger(logLevel int) *Logger {
-	return &Logger{
+// NewLogger creates a new ConsoleLogger with the specified log level
+func NewLogger(logLevel int) Logger {
+	return &ConsoleLogger{
 		logLevel: logLevel,
 		padLevel: 0,
 		pad:      "",
 	}
 }
 
-func (l *Logger) SetLogLevel(logLevel int) {
+// NewConsoleLogger creates a ConsoleLogger directly (for type-specific needs)
+func NewConsoleLogger(logLevel int) *ConsoleLogger {
+	return &ConsoleLogger{
+		logLevel: logLevel,
+		padLevel: 0,
+		pad:      "",
+	}
+}
+
+func (l *ConsoleLogger) SetLogLevel(logLevel int) {
 	l.logLevel = logLevel
 }
 
-func (l *Logger) SetLogLevelStr(logLevel string) error {
+func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error {
 	switch logLevel {
 	case "debug":
 		l.logLevel = DebugLevel
@@ -64,34 +76,30 @@ func (l *Logger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
-func (l *Logger) Infof(format string, v ...interface{}) {
+func (l *ConsoleLogger) Infof(format string, v ...interface{}) {
 	if l.logLevel <= InfoLevel {
 		color.White(l.pad+format, v...)
 	}
 }
 
-func (l *Logger) Errorf(format string, v ...interface{}) {
+func (l *ConsoleLogger) Errorf(format string, v ...interface{}) {
 	if l.logLevel <= ErrorLevel {
 		color.Red(l.pad+format, v...)
 	}
 }
 
-func (l *Logger) Debugf(format string, v ...interface{}) {
+func (l *ConsoleLogger) Debugf(format string, v ...interface{}) {
 	if l.logLevel <= DebugLevel {
 		color.Yellow(l.pad+format, v...)
 	}
 }
 
-func (l *Logger) Textf(format string, v ...interface{}) {
+func (l *ConsoleLogger) Textf(format string, v ...interface{}) {
 	pad := strings.Repeat(" ", l.padLevel)
 	color.WhiteString(pad+format, v...)
 }
 
-func padEveryLine(pad string, text string) string {
-	return strings.Replace(text, "\n", "\n"+pad, -1)
-}
-
-func (l *Logger) Codef(format string, v ...interface{}) {
+func (l *ConsoleLogger) Codef(format string, v ...interface{}) {
 	lines := strings.Split(format, "\n")
 
 	for _, line := range lines {
@@ -99,7 +107,7 @@ func (l *Logger) Codef(format string, v ...interface{}) {
 	}
 }
 
-func (l *Logger) Mooncake() {
+func (l *ConsoleLogger) Mooncake() {
 	mk1 := color.CyanString(`٩     ۶  `)
 	mk2 := color.CyanString(`( ⦿ _ ⦿ )`)
 	mk3 := color.CyanString(` ◡   ◡   `)
@@ -113,39 +121,16 @@ func (l *Logger) Mooncake() {
 	fmt.Println()
 }
 
-func Debugf(format string, v ...interface{}) {
-	GetInstance().Debugf(format, v...)
-}
-
-func Infof(format string, v ...interface{}) {
-	GetInstance().Infof(format, v...)
-}
-
-func Errorf(format string, v ...interface{}) {
-	GetInstance().Errorf(format, v...)
-}
-
-func Fatalf(format string, v ...interface{}) {
-	GetInstance().Errorf(format, v...)
-	os.Exit(1)
-}
-
-func Mooncake() {
-	GetInstance().Mooncake()
-}
-
-func SetLogLevel(logLevel int) {
-	GetInstance().SetLogLevel(logLevel)
-}
-
-func WithPadLevel(padLevel int) *Logger {
-	return &Logger{
-		logLevel: GetInstance().logLevel,
+func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger {
+	return &ConsoleLogger{
+		logLevel: l.logLevel,
 		padLevel: padLevel,
 		pad:      strings.Repeat("  ", padLevel),
 	}
 }
 
-func SetLogLevelStr(logLevel string) error {
-	return GetInstance().SetLogLevelStr(logLevel)
+// Fatalf logs an error and exits the program
+func Fatalf(logger Logger, format string, v ...interface{}) {
+	logger.Errorf(format, v...)
+	os.Exit(1)
 }

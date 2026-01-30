@@ -4,13 +4,10 @@ import (
 	"bufio"
 	"os"
 
-	"github.com/alehatsman/mooncake/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
 func ReadConfig(path string) ([]Step, error) {
-	logger.Debugf("Reading configuration from file: %v", path)
-
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -26,8 +23,6 @@ func ReadConfig(path string) ([]Step, error) {
 		return nil, err
 	}
 
-	logger.Debugf("Read configuration with %v steps", len(config))
-
 	return config, nil
 }
 
@@ -35,8 +30,6 @@ func ReadVariables(path string) (map[string]interface{}, error) {
 	if path == "" {
 		return make(map[string]interface{}), nil
 	}
-
-	logger.Debugf("Reading variables from file: %v", path)
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -53,8 +46,6 @@ func ReadVariables(path string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	logger.Debugf("Read variables: %v", variables)
 
 	return variables, nil
 }

@@ -11,11 +11,11 @@ import (
 )
 
 func run(c *cli.Context) error {
-	logger := logger.GetInstance()
+	log := logger.NewLogger(logger.InfoLevel)
 
 	logLevel := c.String("log-level")
 
-	if err := logger.SetLogLevelStr(logLevel); err != nil {
+	if err := log.SetLogLevelStr(logLevel); err != nil {
 		return err
 	}
 
@@ -23,7 +23,7 @@ func run(c *cli.Context) error {
 		ConfigFilePath: c.String("config"),
 		VarsFilePath:   c.String("variables"),
 		SudoPass:       c.String("sudo"),
-	})
+	}, log)
 }
 
 func createApp() *cli.App {
