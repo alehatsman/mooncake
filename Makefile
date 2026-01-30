@@ -14,5 +14,9 @@ run-ubuntu:
 	./out/mooncake run -c ./mooncake-automation/main.yml -v ./mooncake-automation/global_variables.yml
 
 release-latest:
-	git tag latest -f
-	git push --tags --force
+	git tag --delete -f latest
+	git push --delete origin latest
+	gh release delete latest -y
+
+	git tag latest
+	git push origin latest
