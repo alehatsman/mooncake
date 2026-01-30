@@ -12,9 +12,15 @@ import (
 
 func run(c *cli.Context) error {
 	raw := c.Bool("raw")
+	dryRun := c.Bool("dry-run")
 	logLevel := c.String("log-level")
 
 	var log logger.Logger
+
+	// Force raw mode for dry-run
+	if dryRun {
+		raw = true
+	}
 
 	// Use animated TUI by default if supported, unless --raw is specified
 	if !raw && logger.IsTUISupported() {
@@ -53,6 +59,7 @@ func run(c *cli.Context) error {
 		VarsFilePath:   c.String("vars"),
 		SudoPass:       c.String("sudo-pass"),
 		Tags:           tags,
+		DryRun:         dryRun,
 	}, log)
 }
 
@@ -99,6 +106,11 @@ func createApp() *cli.App {
 						Aliases: []string{"r"},
 						Value:   false,
 						Usage:   "Disable animated TUI and use raw console output",
+					},
+					&cli.BoolFlag{
+						Name:  "dry-run",
+						Value: false,
+						Usage: "Preview what would be executed without making changes",
 					},
 				},
 				Action: run,

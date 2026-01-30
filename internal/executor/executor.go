@@ -31,6 +31,11 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Debugf("  %v: %v", k, v)
 	}
 
+	if ec.DryRun {
+		ec.Logger.Infof("  [DRY-RUN] Would set %d variables", len(*vars))
+		// Still set variables in dry-run mode so subsequent steps can use them
+	}
+
 	newVariables := make(map[string]interface{})
 	for k, v := range ec.Variables {
 		newVariables[k] = v
@@ -114,6 +119,10 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 	ec.Logger.Debugf("Read configuration with %v steps", len(includeSteps))
+
+	if ec.DryRun {
+		ec.Logger.Debugf("  [DRY-RUN] Would include %d steps from: %s", len(includeSteps), renderedPath)
+	}
 
 	newCurrentDir := pathutil.GetDirectoryOfFile(renderedPath)
 
@@ -389,6 +398,7 @@ type StartConfig struct {
 	VarsFilePath   string
 	SudoPass       string
 	Tags           []string
+	DryRun         bool
 }
 
 func Start(startConfig StartConfig, log logger.Logger) error {
@@ -447,6 +457,7 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		Logger:       log.WithPadLevel(0),
 		SudoPass:     startConfig.SudoPass,
 		Tags:         startConfig.Tags,
+		DryRun:       startConfig.DryRun,
 
 		// Inject dependencies
 		Template:  renderer,

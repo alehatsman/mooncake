@@ -24,6 +24,15 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
+	// Check for dry-run mode
+	if ec.DryRun {
+		ec.Logger.Infof("  [DRY-RUN] Would execute: %s", renderedCommand)
+		if step.Become {
+			ec.Logger.Infof("  [DRY-RUN] With sudo privileges")
+		}
+		return nil
+	}
+
 	ec.Logger.Debugf("  Executing: %s", renderedCommand)
 
 	var command *exec.Cmd

@@ -18,6 +18,7 @@ type ExecutionContext struct {
 	Logger       logger.Logger
 	SudoPass     string
 	Tags         []string
+	DryRun       bool
 
 	// Injected dependencies
 	Template   template.Renderer
@@ -42,6 +43,7 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		Logger:       ec.Logger,
 		SudoPass:     ec.SudoPass,
 		Tags:         ec.Tags,
+		DryRun:       ec.DryRun,
 
 		// Share the same dependency instances
 		Template:  ec.Template,
