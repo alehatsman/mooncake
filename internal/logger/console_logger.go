@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -39,16 +38,11 @@ func (l *ConsoleLogger) SetLogLevel(logLevel int) {
 }
 
 func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error {
-	switch logLevel {
-	case "debug":
-		l.logLevel = DebugLevel
-	case "info":
-		l.logLevel = InfoLevel
-	case "error":
-		l.logLevel = ErrorLevel
-	default:
-		return errors.New("invalid logLevel")
+	level, err := ParseLogLevel(logLevel)
+	if err != nil {
+		return err
 	}
+	l.logLevel = level
 	return nil
 }
 

@@ -226,7 +226,7 @@ func (l *TUILogger) SetLogLevel(logLevel int) {
 
 // SetLogLevelStr sets the log level from a string
 func (l *TUILogger) SetLogLevelStr(logLevel string) error {
-	level, err := parseLogLevel(logLevel)
+	level, err := ParseLogLevel(logLevel)
 	if err != nil {
 		return err
 	}
@@ -261,22 +261,3 @@ func (l *TUILogger) Complete(stats ExecutionStats) {
 }
 
 // parseLogLevel parses a log level string
-func parseLogLevel(level string) (int, error) {
-	switch strings.ToLower(level) {
-	case "debug":
-		return DebugLevel, nil
-	case "info":
-		return InfoLevel, nil
-	case "error":
-		return ErrorLevel, nil
-	default:
-		return 0, fmt.Errorf("invalid log level: %s (valid: debug, info, error)", level)
-	}
-}
-
-// atoi converts string to int, returns 0 on error
-func atoi(s string) int {
-	var result int
-	fmt.Sscanf(s, "%d", &result)
-	return result
-}
