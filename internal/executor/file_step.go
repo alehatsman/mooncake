@@ -2,13 +2,29 @@ package executor
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
+	"strconv"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/utils"
 	"github.com/fatih/color"
 )
+
+// parseFileMode parses a mode string (e.g., "0644") into os.FileMode
+// Returns default mode if mode is empty or invalid
+func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
+	if modeStr == "" {
+		return defaultMode
+	}
+
+	// Parse as octal
+	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		return defaultMode
+	}
+
+	return os.FileMode(mode)
+}
 
 func HandleFile(step config.Step, ec *ExecutionContext) error {
 	file := step.File
@@ -28,7 +44,10 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 		message := fmt.Sprintf("Creating directory: %s", renderedPath)
 		ec.Logger.Infof("%s %s", tag, message)
 
-		os.MkdirAll(renderedPath, 0755)
+		mode := parseFileMode(file.Mode, 0755)
+		if err := os.MkdirAll(renderedPath, mode); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
+		}
 	}
 
 	if file.State == "file" {
@@ -36,17 +55,21 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 		message := fmt.Sprintf("Creating file: %s", renderedPath)
 		ec.Logger.Infof("%s %s", tag, message)
 
+		mode := parseFileMode(file.Mode, 0644)
+
 		if file.Content == "" {
-			err := ioutil.WriteFile(renderedPath, []byte(""), 0644)
-			return err
+			if err := os.WriteFile(renderedPath, []byte(""), mode); err != nil {
+				return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
+			}
 		} else {
 			renderedContent, err := utils.Render(file.Content, ec.Variables)
 			if err != nil {
 				return err
 			}
 
-			err = ioutil.WriteFile(renderedPath, []byte(renderedContent), 0644)
-			return err
+			if err := os.WriteFile(renderedPath, []byte(renderedContent), mode); err != nil {
+				return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
+			}
 		}
 	}
 

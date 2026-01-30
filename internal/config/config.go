@@ -9,12 +9,14 @@ type File struct {
 	Path    string `yaml:"path"`
 	State   string `yaml:"state"`
 	Content string `yaml:"content"`
+	Mode    string `yaml:"mode"` // Octal file permissions (e.g., "0644", "0755")
 }
 
 type Template struct {
 	Src  string                  `yaml:"src"`
 	Dest string                  `yaml:"dest"`
 	Vars *map[string]interface{} `yaml:"vars"`
+	Mode string                  `yaml:"mode"` // Octal file permissions (e.g., "0644", "0755")
 }
 
 type Shell struct {
