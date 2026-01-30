@@ -7,7 +7,6 @@ apps:
   - make
   - cmake
   - ctags
-  - fzf
   - dos2unix
   - git
   - graphviz

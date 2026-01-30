@@ -3,6 +3,8 @@
 
 - include: ./rust/main.yml
 
+- include: ./fzf/main.yml
+
 - include: ./alacritty/main.yml
   when: os == "darwin"
 
