@@ -2,31 +2,36 @@
 
 Space fighters provisioning tool, **Chookity!**
 
+## TODO
+
+1. Create a script to build all possible binaries to out.
+2. Use that script in github.
+
 ## Progress
 
-- [x]  Cli commands and help via ([https://github.com/spf13/cobra](https://github.com/spf13/cobra))
-- [x]  Include
-- [x]  Dir
-- [x]  Template via (https://github.com/flosch/pongo2)
-- [x]  Shell
-- [x]  Conditioning via (https://github.com/Knetic/govaluate)
-- [x]  Facts (OS)
-- [x]  Render configuration values (https://github.com/flosch/pongo2)
-- [x]  Relative paths
-- [ ]  apt
-- [ ]  brew
-- [ ]  git (via https://github.com/go-git/go-git or command-line)
-- [ ]  pip
-- [ ]  pipenv
-- [ ]  cargo
-- [ ]  sudo
-- [ ]  1password
-- [ ]  openssh keypair
-- [ ]  make
-- [ ]  http
-- [ ]  with_items
-- [ ]  with_filetree
-- [ ]  Watch (https://github.com/fsnotify/fsnotify)
+- [x] Cli commands and help via ([https://github.com/spf13/cobra](https://github.com/spf13/cobra))
+- [x] Include another file
+- [x] Dir - create directive
+- [x] Template - create a file by rendering a template via (https://github.com/flosch/pongo2)
+- [x] Shell - execute a shell command, passing the script with templating
+- [x] When - conditions, for example step only for specific os (https://github.com/Knetic/govaluate)
+- [x] Facts - global variables with facts about system (OS)
+- [x] Templating for config values - variables are available from facts and defined by user. (https://github.com/flosch/pongo2)
+- [x] Supports relatives paths - node like file resolution.
+- [ ] OpenSsh - generate keys
+- [ ] Http - make http calls, download files etc.
+- [ ] with_items - pass list and it will execute the command with each item
+- [ ] with_filetree - point to a folder with files or tree of files, and it will execute the task with each file/dir.
+- [ ] Apt - yml directive
+- [ ] Brew - yml directive
+- [ ] Git - clone repos (via https://github.com/go-git/go-git or command-line)
+- [ ] pip
+- [ ] pipenv
+- [ ] cargo
+- [ ] sudo
+- [ ] 1password
+- [ ] make
+- [ ] watch (https://github.com/fsnotify/fsnotify)
 
 ## Configuration
 
