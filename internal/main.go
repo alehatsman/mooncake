@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"bufio"
@@ -16,7 +16,6 @@ import (
 
 	"github.com/Knetic/govaluate"
 	"github.com/flosch/pongo2/v6"
-	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -415,7 +414,7 @@ func handleInclude(step Step, ec ExecutionContext) error {
 		return err
 	}
 
-	newCurrentDir := getDirectoryOfFile(renderedPath)
+	newCurrentDir := GetDirectoryOfFile(renderedPath)
 
 	newExecutionContext := ec.Copy()
 	newExecutionContext.CurrentDir = newCurrentDir
@@ -489,30 +488,30 @@ func executeSteps(steps []Step, ec ExecutionContext) {
 	}
 }
 
-func getDirectoryOfFile(path string) string {
+func GetDirectoryOfFile(path string) string {
 	return path[0:strings.LastIndex(path, "/")]
 }
 
-func run(c *cli.Context) error {
-	fmt.Println("Chookity!")
+type StartConfig struct {
+	ConfigFilePath string
+	VarsFilePath   string
+}
 
-	configFilePath := c.String("config")
-	variablesFile := c.String("variables")
-
-	variables, err := readVariables(variablesFile)
+func Start(config StartConfig) error {
+	variables, err := readVariables(config.VarsFilePath)
 	if err != nil {
 		variables = make(map[string]interface{})
 	}
 
 	addGlobalVariables(variables)
 
-	configFilePath, err = filepath.Abs(configFilePath)
+	configFilePath, err := filepath.Abs(config.ConfigFilePath)
 	check(err)
 
 	steps, err := readConfig(configFilePath)
 	check(err)
 
-	currentDir := getDirectoryOfFile(configFilePath)
+	currentDir := GetDirectoryOfFile(configFilePath)
 
 	executionContext := ExecutionContext{
 		Variables:  variables,
@@ -521,41 +520,4 @@ func run(c *cli.Context) error {
 
 	executeSteps(steps, executionContext)
 	return nil
-}
-
-func main() {
-	app := &cli.App{
-		Name:                 "mooncake",
-		Usage:                "Space fighters provisioning tool, Chookity!",
-		EnableBashCompletion: true,
-		Commands: []*cli.Command{
-			{
-				Name:  "run",
-				Usage: "Run a space fighter",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "config",
-						Aliases: []string{"c"},
-					},
-					&cli.StringFlag{
-						Name:    "variables",
-						Aliases: []string{"v"},
-					},
-				},
-				Action: run,
-			},
-			{
-				Name:  "watch",
-				Usage: "Watch a space fighter",
-				Action: func(c *cli.Context) error {
-					fmt.Println("Running space fighter...")
-					return nil
-				},
-			},
-		},
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
-	}
 }
