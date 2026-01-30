@@ -23,16 +23,7 @@ func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 		// Still load variables in dry-run mode so subsequent steps can use them
 	}
 
-	newVariables := make(map[string]interface{})
-	for k, v := range ec.Variables {
-		newVariables[k] = v
-	}
-
-	for k, v := range vars {
-		newVariables[k] = v
-	}
-
-	ec.Variables = newVariables
+	ec.Variables = mergeVariables(ec.Variables, vars)
 
 	return nil
 }
