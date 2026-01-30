@@ -17,18 +17,16 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	ec.Logger.Debugf("src: %s", src)
-
 	dest, err := ec.PathUtil.ExpandPath(template.Dest, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
 
-	ec.Logger.Debugf("dest: %s", dest)
-
-	tag := color.New(color.BgMagenta).Sprintf(" tmpl ")
-	message := fmt.Sprintf("Rendering template: %s", dest)
-	ec.Logger.Infof("%s %s", tag, message)
+	// Only show detailed templating line when in with_filetree iteration
+	if _, inFileTree := ec.Variables["item"]; inFileTree {
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
+		ec.Logger.Infof("%s templating src=\"%s\" dest=\"%s\"", tag, src, dest)
+	}
 
 	templateFile, err := os.Open(src)
 	if err != nil {
