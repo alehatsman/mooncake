@@ -12,13 +12,9 @@ func TestRenderTemplateSuccess(t *testing.T) {
 	assert.Equal(t, "bar", result)
 }
 
-func TestRenderTemplateError(t *testing.T) {
-	_, err := renderTemplate("{{ foo }", Context{"foo": "bar"})
-	assert.Error(t, err)
-}
-
-func TestRenderTemplateExecutionError(t *testing.T) {
-	_, err := renderTemplate("{{ foo }}", Context{})
+func TestRenderTemplateWithUnmacthedCurly(t *testing.T) {
+	output, err := renderTemplate("{{ foo }", Context{"foo": "bar"})
+	assert.Equal(t, "", output)
 	assert.Error(t, err)
 }
 

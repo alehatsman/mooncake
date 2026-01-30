@@ -526,7 +526,6 @@ func main() {
 		Name:                 "mooncake",
 		Usage:                "Space fighters provisioning tool, Chookity!",
 		EnableBashCompletion: true,
-		Action:               run,
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
