@@ -10,7 +10,7 @@ This project uses automated security scanning to ensure code quality and safety:
 - **Trivy**: Comprehensive vulnerability scanner for dependencies and packages
 - **Gosec**: Go-specific security scanner for common security issues
 
-All security scans run automatically on every commit and pull request. Builds will fail if critical or high-severity issues are detected.
+All security scans run automatically on every push to the master branch and on all pull requests. Builds will fail if critical or high-severity issues are detected.
 
 ### Security Scan Results
 
@@ -23,6 +23,9 @@ You can view security scan results in the [Security tab](../../security) of this
 ### Interpreting Security Results
 
 - **Critical/High Severity**: These issues will fail the build and must be fixed before merging
+  - Trivy: Fails on CRITICAL and HIGH severity vulnerabilities
+  - Gosec: Fails on HIGH severity security issues (with medium or higher confidence)
+  - CodeQL: Reports findings but does not fail the build by default
 - **Medium/Low Severity**: These are reported but won't block the build
 - **False Positives**: If you believe a finding is a false positive, document it in the PR description
 
