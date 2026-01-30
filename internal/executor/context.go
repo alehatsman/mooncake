@@ -17,6 +17,7 @@ type ExecutionContext struct {
 	TotalSteps   int
 	Logger       logger.Logger
 	SudoPass     string
+	Tags         []string
 
 	// Injected dependencies
 	Template   template.Renderer
@@ -40,6 +41,7 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		TotalSteps:   ec.TotalSteps,
 		Logger:       ec.Logger,
 		SudoPass:     ec.SudoPass,
+		Tags:         ec.Tags,
 
 		// Share the same dependency instances
 		Template:  ec.Template,

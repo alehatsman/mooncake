@@ -62,6 +62,30 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !evalResult.(bool), err
 }
 
+func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
+	// If no tags filter specified, execute all steps
+	if len(ec.Tags) == 0 {
+		return false
+	}
+
+	// If step has no tags and tags filter is specified, skip it
+	if len(step.Tags) == 0 {
+		return true
+	}
+
+	// Check if step has any of the requested tags
+	for _, stepTag := range step.Tags {
+		for _, filterTag := range ec.Tags {
+			if stepTag == filterTag {
+				return false // Found a match, don't skip
+			}
+		}
+	}
+
+	// No matching tags found, skip the step
+	return true
+}
+
 func handleInclude(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Expanding path: %v in %v with context: %v", step.Include, ec.CurrentDir, ec.Variables)
 
@@ -93,12 +117,24 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	shouldSkip := false
+	skipReason := ""
 	var err error
+
+	// Check when condition
 	if step.When != "" {
 		shouldSkip, err = handleWhenExpression(step, ec)
 		if err != nil {
 			return err
 		}
+		if shouldSkip {
+			skipReason = "when"
+		}
+	}
+
+	// Check tags filter
+	if !shouldSkip && shouldSkipByTags(step, ec) {
+		shouldSkip = true
+		skipReason = "tags"
 	}
 
 	if step.Include == nil {
@@ -106,9 +142,12 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		message := tag + " " + step.Name
 		if step.When != "" {
 			message += " when: " + step.When
-			if shouldSkip {
-				message += " (skipped)"
-			}
+		}
+		if len(step.Tags) > 0 {
+			message += " tags: [" + strings.Join(step.Tags, ", ") + "]"
+		}
+		if shouldSkip {
+			message += " (skipped by " + skipReason + ")"
 		}
 		ec.Logger.Infof(message)
 	}
@@ -219,6 +258,7 @@ type StartConfig struct {
 	ConfigFilePath string
 	VarsFilePath   string
 	SudoPass       string
+	Tags           []string
 }
 
 func Start(startConfig StartConfig, log logger.Logger) error {
@@ -276,6 +316,7 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		TotalSteps:   len(steps),
 		Logger:       log.WithPadLevel(0),
 		SudoPass:     startConfig.SudoPass,
+		Tags:         startConfig.Tags,
 
 		// Inject dependencies
 		Template:  renderer,

@@ -266,3 +266,78 @@ func TestParseFileMode(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldSkipByTags(t *testing.T) {
+	tests := []struct {
+		name       string
+		stepTags   []string
+		filterTags []string
+		wantSkip   bool
+	}{
+		{
+			name:       "no filter tags - execute all",
+			stepTags:   []string{"dev"},
+			filterTags: []string{},
+			wantSkip:   false,
+		},
+		{
+			name:       "no step tags with filter - skip",
+			stepTags:   []string{},
+			filterTags: []string{"dev"},
+			wantSkip:   true,
+		},
+		{
+			name:       "matching single tag",
+			stepTags:   []string{"dev"},
+			filterTags: []string{"dev"},
+			wantSkip:   false,
+		},
+		{
+			name:       "non-matching single tag",
+			stepTags:   []string{"prod"},
+			filterTags: []string{"dev"},
+			wantSkip:   true,
+		},
+		{
+			name:       "matching one of multiple step tags",
+			stepTags:   []string{"dev", "test"},
+			filterTags: []string{"dev"},
+			wantSkip:   false,
+		},
+		{
+			name:       "matching one of multiple filter tags",
+			stepTags:   []string{"dev"},
+			filterTags: []string{"dev", "prod"},
+			wantSkip:   false,
+		},
+		{
+			name:       "matching any tag",
+			stepTags:   []string{"dev", "test", "deploy"},
+			filterTags: []string{"prod", "deploy"},
+			wantSkip:   false,
+		},
+		{
+			name:       "no matching tags",
+			stepTags:   []string{"dev", "test"},
+			filterTags: []string{"prod", "deploy"},
+			wantSkip:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := config.Step{
+				Name: "test step",
+				Tags: tt.stepTags,
+			}
+			ec := &ExecutionContext{
+				Tags: tt.filterTags,
+			}
+
+			got := shouldSkipByTags(step, ec)
+			if got != tt.wantSkip {
+				t.Errorf("shouldSkipByTags() = %v, want %v", got, tt.wantSkip)
+			}
+		})
+	}
+}
