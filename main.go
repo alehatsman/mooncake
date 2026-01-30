@@ -494,6 +494,8 @@ func getDirectoryOfFile(path string) string {
 }
 
 func run(c *cli.Context) error {
+	fmt.Println("Chookity!")
+
 	configFilePath := c.String("config")
 	variablesFile := c.String("variables")
 
