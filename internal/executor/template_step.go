@@ -6,21 +6,20 @@ import (
 	"os"
 
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/utils"
 	"github.com/fatih/color"
 )
 
 func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	template := step.Template
 
-	src, err := utils.ExpandPath(template.Src, ec.CurrentDir, ec.Variables)
+	src, err := ec.PathUtil.ExpandPath(template.Src, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
 
 	ec.Logger.Debugf("src: %s", src)
 
-	dest, err := utils.ExpandPath(template.Dest, ec.CurrentDir, ec.Variables)
+	dest, err := ec.PathUtil.ExpandPath(template.Dest, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
@@ -53,7 +52,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		}
 	}
 
-	output, err := utils.Render(string(templateBytes), variables)
+	output, err := ec.Template.Render(string(templateBytes), variables)
 	if err != nil {
 		return err
 	}

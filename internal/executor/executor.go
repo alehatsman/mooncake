@@ -7,8 +7,11 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
-	"github.com/alehatsman/mooncake/internal/utils"
+	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/fatih/color"
 )
 
@@ -45,14 +48,14 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 
 	ec.Logger.Debugf("variables: %v", ec.Variables)
 
-	whenExpression, err := utils.Render(whenString, ec.Variables)
+	whenExpression, err := ec.Template.Render(whenString, ec.Variables)
 	if err != nil {
 		return false, err
 	}
 
 	ec.Logger.Debugf("whenExpression: %v", whenExpression)
 
-	evalResult, err := utils.Evaluate(whenExpression, ec.Variables)
+	evalResult, err := ec.Evaluator.Evaluate(whenExpression, ec.Variables)
 
 	ec.Logger.Debugf("evalResult: %v", evalResult)
 
@@ -62,7 +65,7 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 func handleInclude(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Expanding path: %v in %v with context: %v", step.Include, ec.CurrentDir, ec.Variables)
 
-	renderedPath, err := utils.ExpandPath(*step.Include, ec.CurrentDir, ec.Variables)
+	renderedPath, err := ec.PathUtil.ExpandPath(*step.Include, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
@@ -74,7 +77,7 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	}
 	ec.Logger.Debugf("Read configuration with %v steps", len(includeSteps))
 
-	newCurrentDir := utils.GetDirectoryOfFile(renderedPath)
+	newCurrentDir := pathutil.GetDirectoryOfFile(renderedPath)
 
 	newExecutionContext := ec.Copy()
 	newExecutionContext.CurrentDir = newCurrentDir
@@ -159,12 +162,12 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Infof("with_filetree: %v", *withFileTree)
 
-	path, err := utils.ExpandPath(*withFileTree, ec.CurrentDir, ec.Variables)
+	path, err := ec.PathUtil.ExpandPath(*withFileTree, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
 
-	fileTree, err := utils.GetFileTree(path, ec.CurrentDir, ec.Variables)
+	fileTree, err := ec.FileTree.GetFileTree(path, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
@@ -227,12 +230,18 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		return errors.New("config file path is empty")
 	}
 
+	// Create dependencies
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+	pathExpander := pathutil.NewPathExpander(renderer)
+	fileTreeWalker := filetree.NewWalker(pathExpander)
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	expandedPath, err := utils.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
+	expandedPath, err := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
 	if err != nil {
 		return err
 	}
@@ -246,7 +255,7 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 
 	addGlobalVariables(variables)
 
-	configFilePath, err := utils.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
+	configFilePath, err := pathExpander.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
 	if err != nil {
 		return err
 	}
@@ -267,6 +276,12 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		TotalSteps:   len(steps),
 		Logger:       log.WithPadLevel(0),
 		SudoPass:     startConfig.SudoPass,
+
+		// Inject dependencies
+		Template:  renderer,
+		Evaluator: evaluator,
+		PathUtil:  pathExpander,
+		FileTree:  fileTreeWalker,
 	}
 
 	return ExecuteSteps(steps, &executionContext)

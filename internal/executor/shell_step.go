@@ -11,7 +11,6 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/logger"
-	"github.com/alehatsman/mooncake/internal/utils"
 	"github.com/fatih/color"
 )
 
@@ -25,7 +24,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	shell = strings.Trim(shell, " ")
 	shell = strings.Trim(shell, "\n")
 
-	renderedCommand, err := utils.Render(shell, ec.Variables)
+	renderedCommand, err := ec.Template.Render(shell, ec.Variables)
 	if err != nil {
 		return err
 	}

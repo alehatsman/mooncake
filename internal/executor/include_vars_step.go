@@ -2,13 +2,12 @@ package executor
 
 import (
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 	includeVars := step.IncludeVars
 
-	expandedPath, err := utils.ExpandPath(*includeVars, ec.CurrentDir, ec.Variables)
+	expandedPath, err := ec.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ReadConfig(path string) ([]Step, error) {
+// ConfigReader defines the interface for reading configuration and variables
+type ConfigReader interface {
+	ReadConfig(path string) ([]Step, error)
+	ReadVariables(path string) (map[string]interface{}, error)
+}
+
+// YAMLConfigReader implements ConfigReader for YAML files
+type YAMLConfigReader struct {
+	// Can add dependencies here if needed (e.g., FileSystem interface)
+}
+
+// NewYAMLConfigReader creates a new YAMLConfigReader
+func NewYAMLConfigReader() ConfigReader {
+	return &YAMLConfigReader{}
+}
+
+// ReadConfig reads configuration steps from a YAML file
+func (r *YAMLConfigReader) ReadConfig(path string) ([]Step, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -26,7 +43,8 @@ func ReadConfig(path string) ([]Step, error) {
 	return config, nil
 }
 
-func ReadVariables(path string) (map[string]interface{}, error) {
+// ReadVariables reads variables from a YAML file
+func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, error) {
 	if path == "" {
 		return make(map[string]interface{}), nil
 	}
@@ -48,4 +66,17 @@ func ReadVariables(path string) (map[string]interface{}, error) {
 	}
 
 	return variables, nil
+}
+
+// Package-level functions for backward compatibility
+var defaultReader = NewYAMLConfigReader()
+
+// ReadConfig is a convenience function using the default YAML reader
+func ReadConfig(path string) ([]Step, error) {
+	return defaultReader.ReadConfig(path)
+}
+
+// ReadVariables is a convenience function using the default YAML reader
+func ReadVariables(path string) (map[string]interface{}, error) {
+	return defaultReader.ReadVariables(path)
 }
