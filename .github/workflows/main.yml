@@ -18,17 +18,21 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: Build
-        run: go build -v ./...
-
       - name: Test
         run: go test -v ./...
 
       - name: Build binary for linux
-        run: env GOOS=linux GOARCH=amd64 go build -o out/mooncake -v
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -o out/mooncake -v
 
-      - uses: ncipollo/release-action@v1
-        if: startsWith(github.event.ref, 'refs/tags/')
+      - uses: actions/upload-artifact@v3
         with:
-          artifacts: "./out/mooncake"
-          bodyFile: "./out/mooncake"
+          name: mooncake
+          path: /out/mooncake
+
+      # - uses: ncipollo/release-action@v1
+      #   if: startsWith(github.event.ref, 'refs/tags/')
+      #   with:
+      #     artifacts: "/out"
