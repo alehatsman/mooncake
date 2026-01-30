@@ -1,5 +1,0 @@
----
-- name: Make sure java packages are installed
-  shell: |
-    apt-get install -y default-jdk maven
-  become: true
