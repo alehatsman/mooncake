@@ -127,3 +127,48 @@ func TestEvaluate_AllErrorPaths(t *testing.T) {
 		t.Error("Should error on type mismatch")
 	}
 }
+
+func TestEvaluate_RuntimeErrors(t *testing.T) {
+	evaluator := NewExprEvaluator()
+
+	tests := []struct {
+		name       string
+		expression string
+		variables  map[string]interface{}
+		wantErr    bool
+	}{
+		{
+			name:       "array index out of bounds",
+			expression: "arr[10]",
+			variables:  map[string]interface{}{"arr": []int{1, 2, 3}},
+			wantErr:    true,
+		},
+		{
+			name:       "nil pointer access",
+			expression: "obj.field",
+			variables:  map[string]interface{}{"obj": nil},
+			wantErr:    true,
+		},
+		{
+			name:       "undefined function call",
+			expression: "unknownFunc(x)",
+			variables:  map[string]interface{}{"x": 5},
+			wantErr:    true,
+		},
+		{
+			name:       "invalid method call on string",
+			expression: "str.nonExistentMethod()",
+			variables:  map[string]interface{}{"str": "test"},
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := evaluator.Evaluate(tt.expression, tt.variables)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Evaluate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
