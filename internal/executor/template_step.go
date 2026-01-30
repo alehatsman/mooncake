@@ -36,13 +36,12 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 			return fmt.Errorf("template source file not found: %s", src)
 		}
 		mode := parseFileMode(template.Mode, 0644)
-		ec.Logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %04o)", src, dest, mode)
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogTemplateRender(src, dest, mode)
 		if template.Vars != nil && len(*template.Vars) > 0 {
 			ec.Logger.Debugf("  Additional variables: %v", *template.Vars)
 		}
-		if step.Register != "" {
-			ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
-		}
+		dryRun.LogRegister(step)
 		return nil
 	}
 

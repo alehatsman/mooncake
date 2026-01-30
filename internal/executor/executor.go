@@ -37,7 +37,8 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 	}
 
 	if ec.DryRun {
-		ec.Logger.Infof("  [DRY-RUN] Would set %d variables", len(*vars))
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogVariableSet(len(*vars))
 		// Still set variables in dry-run mode so subsequent steps can use them
 	}
 
@@ -126,7 +127,8 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Read configuration with %v steps", len(includeSteps))
 
 	if ec.DryRun {
-		ec.Logger.Debugf("  [DRY-RUN] Would include %d steps from: %s", len(includeSteps), renderedPath)
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogInclude(len(includeSteps), renderedPath)
 	}
 
 	newCurrentDir := pathutil.GetDirectoryOfFile(renderedPath)

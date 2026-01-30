@@ -45,10 +45,9 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 		mode := parseFileMode(file.Mode, 0755)
 
 		if ec.DryRun {
-			ec.Logger.Infof("  [DRY-RUN] Would create directory: %s (mode: %04o)", renderedPath, mode)
-			if step.Register != "" {
-				ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
-			}
+			dryRun := newDryRunLogger(ec.Logger)
+			dryRun.LogFileOperation("directory", renderedPath, mode)
+			dryRun.LogRegister(step)
 			return nil
 		}
 
@@ -73,10 +72,9 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 
 		if file.Content == "" {
 			if ec.DryRun {
-				ec.Logger.Infof("  [DRY-RUN] Would create empty file: %s (mode: %04o)", renderedPath, mode)
-				if step.Register != "" {
-					ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
-				}
+				dryRun := newDryRunLogger(ec.Logger)
+				dryRun.LogFileOperation("file", renderedPath, mode)
+				dryRun.LogRegister(step)
 				return nil
 			}
 
@@ -101,11 +99,10 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 			}
 
 			if ec.DryRun {
-				ec.Logger.Infof("  [DRY-RUN] Would create file: %s (mode: %04o)", renderedPath, mode)
+				dryRun := newDryRunLogger(ec.Logger)
+				dryRun.LogFileOperation("file", renderedPath, mode)
 				ec.Logger.Debugf("  Content preview (first 100 chars): %.100s", renderedContent)
-				if step.Register != "" {
-					ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
-				}
+				dryRun.LogRegister(step)
 				return nil
 			}
 
