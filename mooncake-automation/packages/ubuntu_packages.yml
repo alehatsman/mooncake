@@ -46,8 +46,8 @@ apps:
 
   - httpie
 
-  - terraform
+  # - terraform
   - hexyl
   - ruby-full
-  - lazygit
+  # - lazygit
   - postgresql-client
