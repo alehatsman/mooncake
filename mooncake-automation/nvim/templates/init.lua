@@ -733,7 +733,7 @@ for _, language in ipairs({ "typescript", "javascript" }) do
   }
 end
 
-{% if os == "windows" && use_win32yank %}
+{% if use_win32yank %}
 vim.g.clipboard = {
   name = "win32yank-wsl",
   copy = {
