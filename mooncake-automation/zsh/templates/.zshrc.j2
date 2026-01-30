@@ -35,9 +35,10 @@ export GCPATH={{ GCP_PATH }}
 export JAVA_HOME={{ JAVA_HOME }}
 export CARGO_HOME=~/.cargo
 export ZPLUG_HOME={{ ZPLUG_HOME }}
-export RVM_HOME=~/.rvm/
-export FZF_BASE=~/.fzf/
-export PATH=$HOME/bin:/usr/local/bin:$PATH:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
+export RVM_HOME=~/.rvm
+export FZF_BASE=~/.fzf
+export PYENV_ROOT=~/.pyenv
+export PATH=$HOME/bin:/usr/local/bin:$PATH:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PYENV_ROOT/bin:$PATH
 
 if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
     alias nvim=nvr -cc split --remote-wait +'set bufhidden=wipe'
@@ -420,3 +421,5 @@ function vi-yank-xclip {
 
 zle -N vi-yank-xclip
 bindkey -M vicmd 'y' vi-yank-xclip
+
+eval "$(pyenv init -)"

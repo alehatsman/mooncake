@@ -1,5 +1,7 @@
 ---
 - include: ./packages/main.yml
+- include: ./java/main.yml
+- include: ./python/main.yml
 
 - include: ./rust/main.yml
 
