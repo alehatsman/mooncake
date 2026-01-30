@@ -141,57 +141,87 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	return ExecuteSteps(includeSteps, &newExecutionContext)
 }
 
-func ExecuteStep(step config.Step, ec *ExecutionContext) error {
-	if err := step.Validate(); err != nil {
-		return err
-	}
-
-	shouldSkip := false
-	skipReason := ""
-	var err error
-
+// checkSkipConditions determines if a step should be skipped based on when conditions and tags.
+// Returns: (shouldSkip bool, skipReason string, error)
+func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check when condition
 	if step.When != "" {
-		shouldSkip, err = handleWhenExpression(step, ec)
+		shouldSkip, err := handleWhenExpression(step, ec)
 		if err != nil {
-			return err
+			return false, "", err
 		}
 		if shouldSkip {
-			skipReason = "when"
+			return true, "when", nil
 		}
 	}
 
 	// Check tags filter
-	if !shouldSkip && shouldSkipByTags(step, ec) {
-		shouldSkip = true
-		skipReason = "tags"
+	if shouldSkipByTags(step, ec) {
+		return true, "tags", nil
 	}
 
-	// Determine step name
-	var hasStepName bool
-	stepName := step.Name
+	return false, "", nil
+}
 
+// getStepDisplayName determines the display name for a step.
+// Priority: with_filetree item name > with_items value > step.Name
+// Returns: (displayName string, hasName bool)
+func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	// For with_filetree, show the actual file name instead of generic step name
 	if item, ok := ec.Variables["item"].(filetree.FileTreeItem); ok {
 		if item.Name != "" {
-			stepName = item.Name
-			hasStepName = true
+			return item.Name, true
 		}
-	} else if item, ok := ec.Variables["item"]; ok {
-		// For with_items, show the item value
-		stepName = fmt.Sprintf("%v", item)
-		hasStepName = true
-	} else if step.Name != "" {
-		hasStepName = true
 	}
 
-	// Log skipped steps
-	if shouldSkip && step.Include == nil && hasStepName {
+	// For with_items, show the item value
+	if item, ok := ec.Variables["item"]; ok {
+		return fmt.Sprintf("%v", item), true
+	}
+
+	// Use configured step name
+	if step.Name != "" {
+		return step.Name, true
+	}
+
+	return "", false
+}
+
+// shouldLogStep returns true if the step should be logged (not all step types log).
+func shouldLogStep(step config.Step, hasStepName bool, ec *ExecutionContext) bool {
+	// Don't log if no name
+	if !hasStepName {
+		return false
+	}
+
+	// Don't log includes (they have their own logging)
+	if step.Include != nil {
+		return false
+	}
+
+	// Don't log template steps in with_filetree (handler logs them)
+	_, inFileTree := ec.Variables["item"].(filetree.FileTreeItem)
+	if step.Template != nil && inFileTree {
+		return false
+	}
+
+	return true
+}
+
+// logStepStatus logs step status (running, success, error, skipped) and updates statistics.
+// For skipped status, pass "skipped:when" or "skipped:tags" to include the skip reason.
+func logStepStatus(stepName string, status string, step config.Step, ec *ExecutionContext) {
+	// Handle skipped status (may include reason like "skipped:when" or "skipped:tags")
+	if strings.HasPrefix(status, "skipped") {
 		skipInfo := ""
-		if skipReason == "when" {
-			skipInfo = fmt.Sprintf(" (when: %s)", step.When)
-		} else if skipReason == "tags" {
-			if len(ec.Tags) > 0 {
+
+		// Parse skip reason from status if present
+		parts := strings.SplitN(status, ":", 2)
+		if len(parts) == 2 {
+			skipReason := parts[1]
+			if skipReason == "when" && step.When != "" {
+				skipInfo = fmt.Sprintf(" (when: %s)", step.When)
+			} else if skipReason == "tags" && len(ec.Tags) > 0 {
 				skipInfo = fmt.Sprintf(" (tags filter: %s)", strings.Join(ec.Tags, ", "))
 			}
 		}
@@ -203,73 +233,58 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 			Status:     "skipped",
 		})
 
-		// Increment skipped counter
 		if ec.StatsSkipped != nil {
 			*ec.StatsSkipped++
 		}
-
-		return nil
+		return
 	}
 
-	// Debug level: show tags even when not skipped
-	if !shouldSkip && len(step.Tags) > 0 {
-		ec.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
-	}
-
-	if shouldSkip {
-		return nil
-	}
-
-	// Increment global step counter for non-skipped steps
+	// For running/success/error, log with global step number
+	globalStep := 0
 	if ec.GlobalStepsExecuted != nil {
-		*ec.GlobalStepsExecuted++
+		globalStep = *ec.GlobalStepsExecuted
 	}
 
-	// Log running step for non-include steps with names
-	// Skip printing for template steps in with_filetree - let the handler print the action instead
-	_, inFileTree := ec.Variables["item"].(filetree.FileTreeItem)
-	if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
-		globalStep := 0
-		if ec.GlobalStepsExecuted != nil {
-			globalStep = *ec.GlobalStepsExecuted
+	ec.Logger.LogStep(logger.StepInfo{
+		Name:       stepName,
+		Level:      ec.Level,
+		GlobalStep: globalStep,
+		Status:     status,
+	})
+
+	// Update statistics
+	switch status {
+	case "success":
+		if ec.StatsExecuted != nil {
+			*ec.StatsExecuted++
 		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       stepName,
-			Level:      ec.Level,
-			GlobalStep: globalStep,
-			Status:     "running",
-		})
-	}
-
-	// Debug: show what action is being performed for steps without names
-	if step.Name == "" {
-		if step.Vars != nil {
-			ec.Logger.Debugf("Setting variables")
-		} else if step.IncludeVars != nil {
-			ec.Logger.Debugf("Loading variables from %s", *step.IncludeVars)
+	case "error":
+		if ec.StatsFailed != nil {
+			*ec.StatsFailed++
 		}
 	}
+}
 
-	var stepErr error
-
+// dispatchStepAction executes the appropriate handler based on step type.
+func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	switch {
 	case step.IncludeVars != nil:
-		stepErr = HandleIncludeVars(step, ec)
+		return HandleIncludeVars(step, ec)
 
 	case step.Vars != nil:
-		stepErr = handleVars(step, ec)
+		return handleVars(step, ec)
 
 	case step.Template != nil:
-		stepErr = HandleTemplate(step, ec)
+		return HandleTemplate(step, ec)
 
 	case step.File != nil:
-		stepErr = HandleFile(step, ec)
+		return HandleFile(step, ec)
 
 	case step.Shell != nil:
-		stepErr = HandleShell(step, ec)
+		return HandleShell(step, ec)
 
 	case step.Include != nil:
+		// Include steps log themselves
 		globalStep := 0
 		if ec.GlobalStepsExecuted != nil {
 			globalStep = *ec.GlobalStepsExecuted
@@ -282,54 +297,76 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 			Status:     "running",
 		})
 
-		stepErr = handleInclude(step, ec)
+		return handleInclude(step, ec)
+
+	default:
+		return nil
 	}
+}
+
+func ExecuteStep(step config.Step, ec *ExecutionContext) error {
+	// Validate step configuration
+	if err := step.Validate(); err != nil {
+		return err
+	}
+
+	// Check if step should be skipped (when conditions, tags)
+	shouldSkip, skipReason, err := checkSkipConditions(step, ec)
+	if err != nil {
+		return err
+	}
+
+	// Determine step display name
+	stepName, hasStepName := getStepDisplayName(step, ec)
+
+	// Handle skipped steps
+	if shouldSkip {
+		// Log skipped steps (only for named, non-include steps)
+		if hasStepName && step.Include == nil {
+			logStepStatus(stepName, "skipped:"+skipReason, step, ec)
+		}
+		return nil
+	}
+
+	// Debug: show tags for non-skipped steps
+	if len(step.Tags) > 0 {
+		ec.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
+	}
+
+	// Debug: show action for unnamed steps
+	if step.Name == "" {
+		if step.Vars != nil {
+			ec.Logger.Debugf("Setting variables")
+		} else if step.IncludeVars != nil {
+			ec.Logger.Debugf("Loading variables from %s", *step.IncludeVars)
+		}
+	}
+
+	// Increment global step counter for non-skipped steps
+	if ec.GlobalStepsExecuted != nil {
+		*ec.GlobalStepsExecuted++
+	}
+
+	// Log running status
+	if shouldLogStep(step, hasStepName, ec) {
+		logStepStatus(stepName, "running", step, ec)
+	}
+
+	// Execute the appropriate handler
+	stepErr := dispatchStepAction(step, ec)
 
 	// Handle errors
 	if stepErr != nil {
 		ec.Logger.Errorf("%v", stepErr)
-
-		// Mark step as failed
-		if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
-			globalStep := 0
-			if ec.GlobalStepsExecuted != nil {
-				globalStep = *ec.GlobalStepsExecuted
-			}
-
-			ec.Logger.LogStep(logger.StepInfo{
-				Name:       stepName,
-				Level:      ec.Level,
-				GlobalStep: globalStep,
-				Status:     "error",
-			})
-
-			// Increment failed counter
-			if ec.StatsFailed != nil {
-				*ec.StatsFailed++
-			}
+		if shouldLogStep(step, hasStepName, ec) {
+			logStepStatus(stepName, "error", step, ec)
 		}
-
 		return stepErr
 	}
 
-	// Mark step as successful
-	if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
-		globalStep := 0
-		if ec.GlobalStepsExecuted != nil {
-			globalStep = *ec.GlobalStepsExecuted
-		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       stepName,
-			Level:      ec.Level,
-			GlobalStep: globalStep,
-			Status:     "success",
-		})
-
-		// Increment executed counter
-		if ec.StatsExecuted != nil {
-			*ec.StatsExecuted++
-		}
+	// Log success
+	if shouldLogStep(step, hasStepName, ec) {
+		logStepStatus(stepName, "success", step, ec)
 	}
 
 	return nil
