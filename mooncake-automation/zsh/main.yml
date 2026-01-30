@@ -38,4 +38,3 @@
 - name: Make sure zsh is default shell
   shell: |
     chsh -s $(which zsh)
-  become: true
