@@ -23,6 +23,11 @@ type ExecutionContext struct {
 	// Global progress tracking (shared across all contexts)
 	GlobalStepsExecuted *int // Pointer so it's shared across copies
 
+	// Statistics tracking (shared across all contexts)
+	StatsExecuted *int // Pointer so it's shared across copies
+	StatsSkipped  *int // Pointer so it's shared across copies
+	StatsFailed   *int // Pointer so it's shared across copies
+
 	// Injected dependencies
 	Template  template.Renderer
 	Evaluator expression.Evaluator
@@ -50,6 +55,11 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 
 		// Share the same global counter pointer
 		GlobalStepsExecuted: ec.GlobalStepsExecuted,
+
+		// Share the same statistics pointers
+		StatsExecuted: ec.StatsExecuted,
+		StatsSkipped:  ec.StatsSkipped,
+		StatsFailed:   ec.StatsFailed,
 
 		// Share the same dependency instances
 		Template:  ec.Template,

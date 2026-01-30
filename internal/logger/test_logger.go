@@ -109,6 +109,14 @@ func (t *TestLogger) LogStep(info StepInfo) {
 	t.Logs = append(t.Logs, LogEntry{"STEP", message})
 }
 
+func (t *TestLogger) Complete(stats ExecutionStats) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	message := fmt.Sprintf("Completed: %d executed, %d skipped, %d failed, duration: %v",
+		stats.Executed, stats.Skipped, stats.Failed, stats.Duration)
+	t.Logs = append(t.Logs, LogEntry{"COMPLETE", message})
+}
+
 // Helper methods for assertions in tests
 
 // Contains checks if any log message contains the substring

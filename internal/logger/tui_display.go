@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -61,6 +62,14 @@ func (d *TUIDisplay) Render() string {
 	// Render debug/error messages
 	output.WriteString(d.renderMessages(snapshot))
 	output.WriteString("\n")
+
+	// Render completion stats if available
+	if snapshot.Completion != nil {
+		output.WriteString(d.renderSeparator())
+		output.WriteString("\n")
+		output.WriteString(d.renderCompletion(snapshot.Completion))
+		output.WriteString("\n")
+	}
 
 	return output.String()
 }
@@ -223,4 +232,27 @@ func (d *TUIDisplay) truncate(s string, maxWidth int) string {
 	}
 
 	return s[:maxWidth-3] + "..."
+}
+
+// renderCompletion renders execution completion statistics
+func (d *TUIDisplay) renderCompletion(stats *ExecutionStats) string {
+	var output strings.Builder
+
+	if stats.Failed > 0 {
+		output.WriteString(color.RedString("✗ Execution failed") + "\n\n")
+	} else {
+		output.WriteString(color.GreenString("✓ Execution completed successfully") + "\n\n")
+	}
+
+	output.WriteString(fmt.Sprintf("  Executed: %s\n", color.GreenString("%d", stats.Executed)))
+	if stats.Skipped > 0 {
+		output.WriteString(fmt.Sprintf("  Skipped:  %s\n", color.YellowString("%d", stats.Skipped)))
+	}
+	if stats.Failed > 0 {
+		output.WriteString(fmt.Sprintf("  Failed:   %s\n", color.RedString("%d", stats.Failed)))
+	}
+	output.WriteString("\n")
+	output.WriteString(fmt.Sprintf("  Duration: %s\n", color.CyanString("%v", stats.Duration.Round(10*time.Millisecond))))
+
+	return output.String()
 }
