@@ -33,4 +33,5 @@ jobs:
 
       - uses: ncipollo/release-action@v1
         with:
+          tag: latest
           artifacts: "./out/mooncake-linux,./out/mooncake-darwin"
