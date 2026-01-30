@@ -37,4 +37,5 @@
 
 - name: Make sure zsh is default shell
   shell: |
-    chsh -s $(which zsh) $(whoami)
+    chsh -s $(which zsh) {{ OS_USERNAME }}
+  become: true
