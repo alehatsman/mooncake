@@ -1,6 +1,35 @@
-# Mooncake [![build](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml)
+# Mooncake [![build](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml) [![CodeQL](https://github.com/alehatsman/mooncake/actions/workflows/codeql.yml/badge.svg)](https://github.com/alehatsman/mooncake/actions/workflows/codeql.yml)
 
 Space fighters provisioning tool, **Chookity!**
+
+## Security
+
+This project uses automated security scanning to ensure code quality and safety:
+
+- **CodeQL**: Advanced semantic code analysis for detecting security vulnerabilities
+- **Trivy**: Comprehensive vulnerability scanner for dependencies and packages
+- **Gosec**: Go-specific security scanner for common security issues
+
+All security scans run automatically on every commit and pull request. Builds will fail if critical or high-severity issues are detected.
+
+### Security Scan Results
+
+You can view security scan results in the [Security tab](../../security) of this repository. The following scans are performed:
+
+1. **CodeQL Analysis**: Runs on every push to master and all pull requests, plus weekly scheduled scans
+2. **Trivy Vulnerability Scan**: Checks for known vulnerabilities in dependencies on every push and pull request
+3. **Gosec Security Scan**: Analyzes Go code for common security issues on every push and pull request
+
+### Interpreting Security Results
+
+- **Critical/High Severity**: These issues will fail the build and must be fixed before merging
+- **Medium/Low Severity**: These are reported but won't block the build
+- **False Positives**: If you believe a finding is a false positive, document it in the PR description
+
+For detailed information about a specific finding:
+1. Go to the repository's Security tab
+2. Click on "Code scanning alerts" or "Dependabot alerts"
+3. Review the finding details, severity, and recommended fixes
 
 ## Installation
 
