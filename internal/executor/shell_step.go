@@ -30,12 +30,10 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 	if step.Become {
 		if ec.SudoPass == "" {
-			command = exec.Command("sudo", "bash")
-			command.Stdin = bytes.NewBuffer([]byte(renderedCommand))
-		} else {
-			command = exec.Command("sudo", "-S", "--", "bash", "-c", renderedCommand)
-			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass))
+			return fmt.Errorf("step requires sudo but no password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
 		}
+		command = exec.Command("sudo", "-S", "--", "bash", "-c", renderedCommand)
+		command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
 	} else {
 		command = exec.Command("bash", "-c", renderedCommand)
 	}
