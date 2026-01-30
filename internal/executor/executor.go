@@ -13,7 +13,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/template"
-	"github.com/fatih/color"
 )
 
 
@@ -160,8 +159,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		skipReason = "tags"
 	}
 
-	// Print step info before execution
-	var stepPrefix string
+	// Determine step name
 	var hasStepName bool
 	stepName := step.Name
 
@@ -179,48 +177,64 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		hasStepName = true
 	}
 
-	if step.Include == nil && hasStepName {
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		stepPrefix = tag + " " + stepName
-
-		if shouldSkip {
-			skipInfo := ""
-			if skipReason == "when" {
-				skipInfo = fmt.Sprintf("when: %s", step.When)
-			} else if skipReason == "tags" {
-				if len(ec.Tags) > 0 {
-					skipInfo = fmt.Sprintf("tags filter: %s", strings.Join(ec.Tags, ", "))
-				} else {
-					skipInfo = "tags"
-				}
+	// Log skipped steps
+	if shouldSkip && step.Include == nil && hasStepName {
+		skipInfo := ""
+		if skipReason == "when" {
+			skipInfo = fmt.Sprintf(" (when: %s)", step.When)
+		} else if skipReason == "tags" {
+			if len(ec.Tags) > 0 {
+				skipInfo = fmt.Sprintf(" (tags filter: %s)", strings.Join(ec.Tags, ", "))
 			}
-			stepPrefix += color.New(color.FgYellow).Sprintf(" [skipped - %s]", skipInfo)
-			ec.Logger.Infof(stepPrefix)
 		}
 
-		// Debug level: show tags even when not skipped
-		if !shouldSkip && len(step.Tags) > 0 {
-			ec.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
-		}
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       stepName + skipInfo,
+			Level:      ec.Level,
+			GlobalStep: 0,
+			Status:     "skipped",
+		})
+
+		return nil
+	}
+
+	// Debug level: show tags even when not skipped
+	if !shouldSkip && len(step.Tags) > 0 {
+		ec.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
 	}
 
 	if shouldSkip {
 		return nil
 	}
 
-	// Print step name for non-skipped steps with names
+	// Increment global step counter for non-skipped steps
+	if ec.GlobalStepsExecuted != nil {
+		*ec.GlobalStepsExecuted++
+	}
+
+	// Log running step for non-include steps with names
 	// Skip printing for template steps in with_filetree - let the handler print the action instead
 	_, inFileTree := ec.Variables["item"].(filetree.FileTreeItem)
 	if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
-		ec.Logger.Infof(stepPrefix)
+		globalStep := 0
+		if ec.GlobalStepsExecuted != nil {
+			globalStep = *ec.GlobalStepsExecuted
+		}
+
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       stepName,
+			Level:      ec.Level,
+			GlobalStep: globalStep,
+			Status:     "running",
+		})
 	}
 
 	// Debug: show what action is being performed for steps without names
 	if step.Name == "" {
 		if step.Vars != nil {
-			ec.Logger.Debugf("[%d/%d] Setting variables", ec.CurrentIndex+1, ec.TotalSteps)
+			ec.Logger.Debugf("Setting variables")
 		} else if step.IncludeVars != nil {
-			ec.Logger.Debugf("[%d/%d] Loading variables from %s", ec.CurrentIndex+1, ec.TotalSteps, *step.IncludeVars)
+			ec.Logger.Debugf("Loading variables from %s", *step.IncludeVars)
 		}
 	}
 
@@ -243,21 +257,58 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		stepErr = HandleShell(step, ec)
 
 	case step.Include != nil:
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		ec.Logger.Infof(tag + " Including: " + *step.Include)
+		globalStep := 0
+		if ec.GlobalStepsExecuted != nil {
+			globalStep = *ec.GlobalStepsExecuted
+		}
+
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       "Including: " + *step.Include,
+			Level:      ec.Level,
+			GlobalStep: globalStep,
+			Status:     "running",
+		})
 
 		stepErr = handleInclude(step, ec)
 	}
 
-	// Show status indicator for non-include steps
+	// Handle errors
 	if stepErr != nil {
-		if step.Include == nil {
-			ec.Logger.Errorf(color.RedString(" ✗ %v", stepErr))
+		ec.Logger.Errorf("%v", stepErr)
+
+		// Mark step as failed
+		if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
+			globalStep := 0
+			if ec.GlobalStepsExecuted != nil {
+				globalStep = *ec.GlobalStepsExecuted
+			}
+
+			ec.Logger.LogStep(logger.StepInfo{
+				Name:       stepName,
+				Level:      ec.Level,
+				GlobalStep: globalStep,
+				Status:     "error",
+			})
 		}
+
 		return stepErr
 	}
 
-	// Don't show checkmark, step completion is implicit
+	// Mark step as successful
+	if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
+		globalStep := 0
+		if ec.GlobalStepsExecuted != nil {
+			globalStep = *ec.GlobalStepsExecuted
+		}
+
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       stepName,
+			Level:      ec.Level,
+			GlobalStep: globalStep,
+			Status:     "success",
+		})
+	}
+
 	return nil
 }
 
@@ -297,10 +348,19 @@ func HandleWithItems(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Debugf("list has %d items", len(list))
 
-	// Print the step name once before iterating through list
+	// Log the step name once before iterating through list
 	if step.Name != "" {
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		ec.Logger.Infof(tag + " " + step.Name)
+		globalStep := 0
+		if ec.GlobalStepsExecuted != nil {
+			globalStep = *ec.GlobalStepsExecuted
+		}
+
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       step.Name,
+			Level:      ec.Level,
+			GlobalStep: globalStep,
+			Status:     "running",
+		})
 	}
 
 	curEc := ec.Copy()
@@ -341,10 +401,19 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Debugf("fileTree: %+v", fileTree)
 
-	// Print the step name once before iterating through files
+	// Log the step name once before iterating through files
 	if step.Name != "" {
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		ec.Logger.Infof(tag + " " + step.Name)
+		globalStep := 0
+		if ec.GlobalStepsExecuted != nil {
+			globalStep = *ec.GlobalStepsExecuted
+		}
+
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       step.Name,
+			Level:      ec.Level,
+			GlobalStep: globalStep,
+			Status:     "running",
+		})
 	}
 
 	curEc := ec.Copy()
@@ -368,6 +437,9 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Executing: %v", ec.CurrentFile)
+
+	// Set total steps for this execution context
+	ec.TotalSteps = len(steps)
 
 	for i, step := range steps {
 		ec.CurrentIndex = i
@@ -447,6 +519,9 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 	}
 	log.Debugf("Read configuration with %v steps", len(steps))
 
+	// Initialize global step counter (shared across all contexts via pointer)
+	globalExecuted := 0
+
 	executionContext := ExecutionContext{
 		Variables:    variables,
 		CurrentDir:   currentDir,
@@ -458,6 +533,9 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		SudoPass:     startConfig.SudoPass,
 		Tags:         startConfig.Tags,
 		DryRun:       startConfig.DryRun,
+
+		// Global progress tracking
+		GlobalStepsExecuted: &globalExecuted,
 
 		// Inject dependencies
 		Template:  renderer,

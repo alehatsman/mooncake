@@ -20,11 +20,14 @@ type ExecutionContext struct {
 	Tags         []string
 	DryRun       bool
 
+	// Global progress tracking (shared across all contexts)
+	GlobalStepsExecuted *int // Pointer so it's shared across copies
+
 	// Injected dependencies
-	Template   template.Renderer
-	Evaluator  expression.Evaluator
-	PathUtil   *pathutil.PathExpander
-	FileTree   *filetree.Walker
+	Template  template.Renderer
+	Evaluator expression.Evaluator
+	PathUtil  *pathutil.PathExpander
+	FileTree  *filetree.Walker
 }
 
 func (ec *ExecutionContext) Copy() ExecutionContext {
@@ -44,6 +47,9 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		SudoPass:     ec.SudoPass,
 		Tags:         ec.Tags,
 		DryRun:       ec.DryRun,
+
+		// Share the same global counter pointer
+		GlobalStepsExecuted: ec.GlobalStepsExecuted,
 
 		// Share the same dependency instances
 		Template:  ec.Template,
