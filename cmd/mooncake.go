@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -34,8 +33,8 @@ func run(c *cli.Context) error {
 
 	return executor.Start(executor.StartConfig{
 		ConfigFilePath: c.String("config"),
-		VarsFilePath:   c.String("variables"),
-		SudoPass:       c.String("sudo"),
+		VarsFilePath:   c.String("vars"),
+		SudoPass:       c.String("sudo-pass"),
 		Tags:           tags,
 	}, log)
 }
@@ -52,22 +51,26 @@ func createApp() *cli.App {
 				Usage: "Run a space fighter",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:    "config",
-						Aliases: []string{"c"},
+						Name:     "config",
+						Aliases:  []string{"c"},
+						Required: true,
+						Usage:    "Path to configuration file",
 					},
 					&cli.StringFlag{
-						Name:    "variables",
+						Name:    "vars",
 						Aliases: []string{"v"},
+						Usage:   "Path to variables file",
 					},
 					&cli.StringFlag{
 						Name:    "log-level",
 						Aliases: []string{"l"},
 						Value:   "info",
+						Usage:   "Log level (debug, info, error)",
 					},
 					&cli.StringFlag{
-						Name:    "sudo",
+						Name:    "sudo-pass",
 						Aliases: []string{"s"},
-						Value:   "false",
+						Usage:   "Sudo password for steps with become: true",
 					},
 					&cli.StringFlag{
 						Name:    "tags",
@@ -76,14 +79,6 @@ func createApp() *cli.App {
 					},
 				},
 				Action: run,
-			},
-			{
-				Name:  "watch",
-				Usage: "Watch a space fighter",
-				Action: func(c *cli.Context) error {
-					fmt.Println("Running space fighter...")
-					return nil
-				},
 			},
 		},
 	}

@@ -1,0 +1,9 @@
+- name: Update package lists
+  shell: echo "apt update"
+  become: true
+
+- name: Install packages
+  shell: echo "apt install -y git curl wget"
+  become: true
+  tags:
+    - install

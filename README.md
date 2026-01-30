@@ -11,10 +11,30 @@ go install github.com/alehatsman/mooncake@latest
 ## Usage
 
 ```bash
-mooncake run config.yml
-mooncake run config.yml --vars vars.yml
-mooncake run config.yml --sudo-pass <password>
+# Run configuration
+mooncake run --config config.yml
+
+# With variables file
+mooncake run --config config.yml --vars vars.yml
+
+# With sudo password
+mooncake run --config config.yml --sudo-pass <password>
+
+# Filter by tags
+mooncake run --config config.yml --tags dev
+mooncake run --config config.yml --tags dev,prod,test
+
+# With debug logging
+mooncake run --config config.yml --log-level debug
 ```
+
+### CLI Flags
+
+- `--config, -c`: Path to configuration file (required)
+- `--vars, -v`: Path to variables file
+- `--log-level, -l`: Log level - debug, info, or error (default: info)
+- `--sudo-pass, -s`: Sudo password for steps with `become: true`
+- `--tags, -t`: Filter steps by tags (comma-separated)
 
 ## Features
 
@@ -305,9 +325,12 @@ Each iteration provides:
 
 ### Tags
 
-Filter steps by tags:
+Filter execution by tags. When tags filter is specified, only steps with matching tags are executed:
 
 ```yaml
+- name: Step without tags
+  shell: echo "Always runs when no filter specified"
+
 - name: Install development tools
   shell: brew install neovim ripgrep
   tags:
@@ -318,12 +341,29 @@ Filter steps by tags:
   shell: setup-production.sh
   tags:
     - prod
+
+- name: Deploy to staging
+  shell: deploy-staging.sh
+  tags:
+    - deploy
+    - staging
 ```
+
+**Behavior:**
+- **No tags filter**: All steps execute (including untagged steps)
+- **With tags filter**: Only steps with matching tags execute; untagged steps are skipped
+- **Multiple tags**: Step executes if it has ANY of the specified tags
 
 Run with tags:
 ```bash
-mooncake run config.yml --tags dev
-mooncake run config.yml --tags prod,tools
+# Run only dev-tagged steps
+mooncake run --config config.yml --tags dev
+
+# Run dev OR prod tagged steps
+mooncake run --config config.yml --tags dev,prod
+
+# Run steps tagged with deploy OR staging
+mooncake run --config config.yml --tags deploy,staging
 ```
 
 ### Sudo/Become
@@ -338,8 +378,10 @@ Execute commands with sudo:
 
 Provide sudo password:
 ```bash
-mooncake run config.yml --sudo-pass <password>
+mooncake run --config config.yml --sudo-pass <password>
 ```
+
+Note: Only steps with `become: true` will use sudo.
 
 ### File Permissions
 
@@ -359,6 +401,12 @@ Specify file permissions in octal format:
     dest: ~/.config/secret.yml
     mode: "0600"
 ```
+
+## Examples
+
+See the [examples/](examples/) directory for complete working examples:
+- **Basic examples**: Hello world, files, conditionals, tags
+- **Advanced examples**: Multi-file configurations, includes, variables
 
 ## Example Configuration
 

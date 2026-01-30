@@ -1,0 +1,34 @@
+# Example showing file and template operations
+- vars:
+    app_dir: /tmp/myapp
+    app_name: MyApplication
+
+- name: Create application directory
+  file:
+    path: "{{app_dir}}"
+    state: directory
+    mode: "0755"
+
+- name: Create config directory
+  file:
+    path: "{{app_dir}}/config"
+    state: directory
+
+- name: Create a simple file with content
+  file:
+    path: "{{app_dir}}/README.txt"
+    state: file
+    content: |
+      Welcome to {{app_name}}!
+      
+      This is a simple application.
+    mode: "0644"
+
+- name: Create an executable script
+  file:
+    path: "{{app_dir}}/run.sh"
+    state: file
+    content: |
+      #!/bin/bash
+      echo "Running {{app_name}}"
+    mode: "0755"

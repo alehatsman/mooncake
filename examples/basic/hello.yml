@@ -1,0 +1,11 @@
+# Basic example - Hello World
+- name: Print hello message
+  shell: echo "Hello from Mooncake!"
+
+- name: Print system info
+  shell: |
+    echo "OS: $(uname -s)"
+    echo "Arch: $(uname -m)"
+
+- name: Show global variables
+  shell: echo "Running on {{os}}/{{arch}}"

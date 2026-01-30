@@ -1,0 +1,10 @@
+- name: Install development tools
+  shell: echo "Installing neovim, ripgrep, fd"
+  tags:
+    - dev
+
+- name: Setup git hooks
+  shell: echo "Setting up git hooks"
+  tags:
+    - dev
+    - git
