@@ -12,7 +12,9 @@ import (
 type FileTreeItem struct {
 	Src   string `yaml:"src"`
 	Path  string `yaml:"path"`
+	Name  string `yaml:"name"`
 	State string `yaml:"state"`
+	IsDir bool   `yaml:"is_dir"`
 }
 
 // Walker handles file tree operations
@@ -42,16 +44,21 @@ func (w *Walker) GetFileTree(path string, currentDir string, context map[string]
 		}
 
 		state := "file"
+		isDir := false
 		if info.IsDir() {
 			state = "directory"
+			isDir = true
 		}
 
 		path := strings.Replace(relativePath, root, "", 1)
+		name := info.Name()
 
 		files = append(files, FileTreeItem{
 			Path:  path,
 			Src:   relativePath,
+			Name:  name,
 			State: state,
+			IsDir: isDir,
 		})
 
 		return nil

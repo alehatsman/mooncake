@@ -11,15 +11,10 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/logger"
-	"github.com/fatih/color"
 )
 
 func HandleShell(step config.Step, ec *ExecutionContext) error {
 	shell := *step.Shell
-
-	tag := color.New(color.BgMagenta).Sprintf(" shell ")
-	message := fmt.Sprintf("Executing shell:")
-	ec.Logger.Infof("%s %s", tag, message)
 
 	shell = strings.Trim(shell, " ")
 	shell = strings.Trim(shell, "\n")
@@ -29,7 +24,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	ec.Logger.Codef(renderedCommand)
+	ec.Logger.Debugf("  Executing: %s", renderedCommand)
 
 	var command *exec.Cmd
 
@@ -59,25 +54,38 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
 
+	// Capture output
+	var stdoutBuf, stderrBuf bytes.Buffer
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go printCommandOutputPipe(stdout, ec.Logger, &wg)
-	go printCommandOutputPipe(stderr, ec.Logger, &wg)
+	go captureOutput(stdout, &stdoutBuf, ec.Logger, true, &wg)
+	go captureOutput(stderr, &stderrBuf, ec.Logger, false, &wg)
 
 	// Wait for all output to be processed
 	wg.Wait()
 
 	if err := command.Wait(); err != nil {
+		// On error, show captured output for debugging
+		if stdoutBuf.Len() > 0 {
+			ec.Logger.Errorf("Command output:\n%s", stdoutBuf.String())
+		}
+		if stderrBuf.Len() > 0 {
+			ec.Logger.Errorf("Error output:\n%s", stderrBuf.String())
+		}
 		return fmt.Errorf("command execution failed: %w", err)
 	}
 
 	return nil
 }
 
-func printCommandOutputPipe(pipe io.Reader, log logger.Logger, wg *sync.WaitGroup) {
+func captureOutput(pipe io.Reader, buf *bytes.Buffer, log logger.Logger, isStdout bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
-		log.Codef("%v", scanner.Text())
+		line := scanner.Text()
+		buf.WriteString(line + "\n")
+
+		// Only show in debug mode (both stdout and stderr)
+		log.Debugf(" %v", line)
 	}
 }

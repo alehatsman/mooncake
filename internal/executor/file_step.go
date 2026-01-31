@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/fatih/color"
 )
 
 // parseFileMode parses a mode string (e.g., "0644") into os.FileMode
@@ -39,9 +38,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 	}
 
 	if file.State == "directory" {
-		tag := color.New(color.BgMagenta).Sprintf(" dir ")
-		message := fmt.Sprintf("Creating directory: %s", renderedPath)
-		ec.Logger.Infof("%s %s", tag, message)
+		ec.Logger.Debugf("  Creating directory: %s", renderedPath)
 
 		mode := parseFileMode(file.Mode, 0755)
 		if err := os.MkdirAll(renderedPath, mode); err != nil {
@@ -50,9 +47,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 	}
 
 	if file.State == "file" {
-		tag := color.New(color.BgMagenta).Sprintf(" file ")
-		message := fmt.Sprintf("Creating file: %s", renderedPath)
-		ec.Logger.Infof("%s %s", tag, message)
+		ec.Logger.Debugf("  Creating file: %s", renderedPath)
 
 		mode := parseFileMode(file.Mode, 0644)
 

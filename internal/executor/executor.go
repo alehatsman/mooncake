@@ -2,6 +2,7 @@ package executor
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -27,7 +28,7 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 	vars := step.Vars
 
 	for k, v := range *vars {
-		ec.Logger.Infof("  %v: %v", k, v)
+		ec.Logger.Debugf("  %v: %v", k, v)
 	}
 
 	newVariables := make(map[string]interface{})
@@ -56,10 +57,23 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	ec.Logger.Debugf("whenExpression: %v", whenExpression)
 
 	evalResult, err := ec.Evaluator.Evaluate(whenExpression, ec.Variables)
+	if err != nil {
+		return false, err
+	}
 
 	ec.Logger.Debugf("evalResult: %v", evalResult)
 
-	return !evalResult.(bool), err
+	// Handle nil or non-bool results
+	if evalResult == nil {
+		return true, nil // Skip if expression evaluates to nil
+	}
+
+	boolResult, ok := evalResult.(bool)
+	if !ok {
+		return false, fmt.Errorf("when expression did not evaluate to boolean: %v", evalResult)
+	}
+
+	return !boolResult, nil
 }
 
 func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
@@ -137,60 +151,100 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		skipReason = "tags"
 	}
 
-	if step.Include == nil {
+	// Print step info before execution
+	var stepPrefix string
+	var hasStepName bool
+	stepName := step.Name
+
+	// For with_filetree, show the actual file name instead of generic step name
+	if item, ok := ec.Variables["item"].(filetree.FileTreeItem); ok {
+		if item.Name != "" {
+			stepName = item.Name
+			hasStepName = true
+		}
+	} else if step.Name != "" {
+		hasStepName = true
+	}
+
+	if step.Include == nil && hasStepName {
 		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		message := tag + " " + step.Name
-		if step.When != "" {
-			message += " when: " + step.When
-		}
-		if len(step.Tags) > 0 {
-			message += " tags: [" + strings.Join(step.Tags, ", ") + "]"
-		}
+		stepPrefix = tag + " " + stepName
+
 		if shouldSkip {
-			message += " (skipped by " + skipReason + ")"
+			skipInfo := ""
+			if skipReason == "when" {
+				skipInfo = fmt.Sprintf("when: %s", step.When)
+			} else if skipReason == "tags" {
+				if len(ec.Tags) > 0 {
+					skipInfo = fmt.Sprintf("tags filter: %s", strings.Join(ec.Tags, ", "))
+				} else {
+					skipInfo = "tags"
+				}
+			}
+			stepPrefix += color.New(color.FgYellow).Sprintf(" [skipped - %s]", skipInfo)
+			ec.Logger.Infof(stepPrefix)
 		}
-		ec.Logger.Infof(message)
+
+		// Debug level: show tags even when not skipped
+		if !shouldSkip && len(step.Tags) > 0 {
+			ec.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
+		}
 	}
 
 	if shouldSkip {
 		return nil
 	}
 
-	switch {
-	case step.IncludeVars != nil:
-		if err := HandleIncludeVars(step, ec); err != nil {
-			return err
-		}
+	// Print step name for non-skipped steps with names
+	// Skip printing for template steps in with_filetree - let the handler print the action instead
+	_, inFileTree := ec.Variables["item"].(filetree.FileTreeItem)
+	if step.Include == nil && hasStepName && !(step.Template != nil && inFileTree) {
+		ec.Logger.Infof(stepPrefix)
+	}
 
-	case step.Vars != nil:
-		if err := handleVars(step, ec); err != nil {
-			return err
-		}
-
-	case step.Template != nil:
-		if err := HandleTemplate(step, ec); err != nil {
-			return err
-		}
-
-	case step.File != nil:
-		if err := HandleFile(step, ec); err != nil {
-			return err
-		}
-
-	case step.Shell != nil:
-		if err := HandleShell(step, ec); err != nil {
-			return err
-		}
-
-	case step.Include != nil:
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		ec.Logger.Infof(tag+" Including: %v", *step.Include)
-
-		if err := handleInclude(step, ec); err != nil {
-			return err
+	// Debug: show what action is being performed for steps without names
+	if step.Name == "" {
+		if step.Vars != nil {
+			ec.Logger.Debugf("[%d/%d] Setting variables", ec.CurrentIndex+1, ec.TotalSteps)
+		} else if step.IncludeVars != nil {
+			ec.Logger.Debugf("[%d/%d] Loading variables from %s", ec.CurrentIndex+1, ec.TotalSteps, *step.IncludeVars)
 		}
 	}
 
+	var stepErr error
+
+	switch {
+	case step.IncludeVars != nil:
+		stepErr = HandleIncludeVars(step, ec)
+
+	case step.Vars != nil:
+		stepErr = handleVars(step, ec)
+
+	case step.Template != nil:
+		stepErr = HandleTemplate(step, ec)
+
+	case step.File != nil:
+		stepErr = HandleFile(step, ec)
+
+	case step.Shell != nil:
+		stepErr = HandleShell(step, ec)
+
+	case step.Include != nil:
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
+		ec.Logger.Infof(tag + " Including: " + *step.Include)
+
+		stepErr = handleInclude(step, ec)
+	}
+
+	// Show status indicator for non-include steps
+	if stepErr != nil {
+		if step.Include == nil {
+			ec.Logger.Errorf(color.RedString(" ✗ %v", stepErr))
+		}
+		return stepErr
+	}
+
+	// Don't show checkmark, step completion is implicit
 	return nil
 }
 
@@ -199,7 +253,7 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 	withFileTree := step.WithFileTree
 
-	ec.Logger.Infof("with_filetree: %v", *withFileTree)
+	ec.Logger.Debugf("with_filetree: %v", *withFileTree)
 
 	path, err := ec.PathUtil.ExpandPath(*withFileTree, ec.CurrentDir, ec.Variables)
 	if err != nil {
@@ -212,6 +266,12 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 	}
 
 	ec.Logger.Debugf("fileTree: %+v", fileTree)
+
+	// Print the step name once before iterating through files
+	if step.Name != "" {
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
+		ec.Logger.Infof(tag + " " + step.Name)
+	}
 
 	curEc := ec.Copy()
 	curEc.Level += 1
@@ -233,7 +293,7 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 }
 
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
-	ec.Logger.Infof(color.CyanString("[1/%d]", ec.TotalSteps)+" Executing: %v", ec.CurrentFile)
+	ec.Logger.Debugf("Executing: %v", ec.CurrentFile)
 
 	for i, step := range steps {
 		ec.CurrentIndex = i
@@ -248,8 +308,6 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 		if err := ExecuteStep(step, ec); err != nil {
 			return err
 		}
-
-		ec.Logger.Infof("\n")
 	}
 	return nil
 }
