@@ -18,3 +18,6 @@ run-ubuntu:
 
 release-latest:
 	bash ./scripts/release_latest.sh
+
+test-essentials:
+	docker build -t mooncake-essential-test -f ./testing/essentials/Dockerfile .

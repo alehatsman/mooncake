@@ -1,0 +1,8 @@
+---
+- name: Create a file
+  file:
+    path: /tmp/file1
+    state: file
+
+- name: Make sure file exists
+  shell: test -f /tmp/file2
