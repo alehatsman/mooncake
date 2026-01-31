@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -200,6 +201,11 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 			Status:     "skipped",
 		})
 
+		// Increment skipped counter
+		if ec.StatsSkipped != nil {
+			*ec.StatsSkipped++
+		}
+
 		return nil
 	}
 
@@ -294,6 +300,11 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 				GlobalStep: globalStep,
 				Status:     "error",
 			})
+
+			// Increment failed counter
+			if ec.StatsFailed != nil {
+				*ec.StatsFailed++
+			}
 		}
 
 		return stepErr
@@ -312,6 +323,11 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 			GlobalStep: globalStep,
 			Status:     "success",
 		})
+
+		// Increment executed counter
+		if ec.StatsExecuted != nil {
+			*ec.StatsExecuted++
+		}
 	}
 
 	return nil
@@ -479,6 +495,9 @@ type StartConfig struct {
 }
 
 func Start(startConfig StartConfig, log logger.Logger) error {
+	// Start timing
+	startTime := time.Now()
+
 	log.Mooncake()
 
 	log.Debugf("config: %v", startConfig)
@@ -524,8 +543,11 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 	}
 	log.Debugf("Read configuration with %v steps", len(steps))
 
-	// Initialize global step counter (shared across all contexts via pointer)
+	// Initialize global step counter and statistics (shared across all contexts via pointers)
 	globalExecuted := 0
+	statsExecuted := 0
+	statsSkipped := 0
+	statsFailed := 0
 
 	executionContext := ExecutionContext{
 		Variables:    variables,
@@ -542,6 +564,11 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		// Global progress tracking
 		GlobalStepsExecuted: &globalExecuted,
 
+		// Statistics tracking
+		StatsExecuted: &statsExecuted,
+		StatsSkipped:  &statsSkipped,
+		StatsFailed:   &statsFailed,
+
 		// Inject dependencies
 		Template:  renderer,
 		Evaluator: evaluator,
@@ -549,5 +576,18 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		FileTree:  fileTreeWalker,
 	}
 
-	return ExecuteSteps(steps, &executionContext)
+	execErr := ExecuteSteps(steps, &executionContext)
+
+	// Calculate duration
+	duration := time.Since(startTime)
+
+	// Show completion message
+	log.Complete(logger.ExecutionStats{
+		Duration: duration,
+		Executed: statsExecuted,
+		Skipped:  statsSkipped,
+		Failed:   statsFailed,
+	})
+
+	return execErr
 }

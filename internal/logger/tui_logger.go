@@ -259,6 +259,14 @@ func (l *TUILogger) WithPadLevel(padLevel int) Logger {
 	return newLogger
 }
 
+func (l *TUILogger) Complete(stats ExecutionStats) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// Add completion info to buffer for final display
+	l.buffer.SetCompletion(stats)
+}
+
 // parseLogLevel parses a log level string
 func parseLogLevel(level string) (int, error) {
 	switch strings.ToLower(level) {

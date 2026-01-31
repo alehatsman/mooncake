@@ -2,6 +2,7 @@ package logger
 
 import (
 	"os"
+	"time"
 )
 
 const (
@@ -23,6 +24,14 @@ type StepInfo struct {
 	Status     string // "running", "success", "error", "skipped"
 }
 
+// ExecutionStats contains execution statistics
+type ExecutionStats struct {
+	Duration time.Duration
+	Executed int
+	Skipped  int
+	Failed   int
+}
+
 // Logger interface defines the logging contract
 type Logger interface {
 	Infof(format string, v ...interface{})
@@ -35,6 +44,7 @@ type Logger interface {
 	SetLogLevelStr(logLevel string) error
 	WithPadLevel(padLevel int) Logger
 	LogStep(info StepInfo)
+	Complete(stats ExecutionStats)
 }
 
 // Fatalf logs an error and exits the program

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -148,4 +149,28 @@ func (l *ConsoleLogger) LogStep(info StepInfo) {
 	icon := color.CyanString(statusIcon)
 	output := fmt.Sprintf("%s%s %s", indent, icon, info.Name)
 	fmt.Println(output)
+}
+
+func (l *ConsoleLogger) Complete(stats ExecutionStats) {
+	fmt.Println()
+	fmt.Println(color.CyanString("════════════════════════════════════════"))
+
+	if stats.Failed > 0 {
+		fmt.Println(color.RedString("✗ Execution failed"))
+	} else {
+		fmt.Println(color.GreenString("✓ Execution completed successfully"))
+	}
+
+	fmt.Println()
+	fmt.Printf("  Executed: %s\n", color.GreenString("%d", stats.Executed))
+	if stats.Skipped > 0 {
+		fmt.Printf("  Skipped:  %s\n", color.YellowString("%d", stats.Skipped))
+	}
+	if stats.Failed > 0 {
+		fmt.Printf("  Failed:   %s\n", color.RedString("%d", stats.Failed))
+	}
+	fmt.Println()
+	fmt.Printf("  Duration: %s\n", color.CyanString("%v", stats.Duration.Round(10*time.Millisecond)))
+	fmt.Println(color.CyanString("════════════════════════════════════════"))
+	fmt.Println()
 }

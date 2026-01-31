@@ -26,6 +26,7 @@ type BufferSnapshot struct {
 	Progress      ProgressInfo
 	DebugMessages []string
 	ErrorMessages []string
+	Completion    *ExecutionStats
 }
 
 // TUIBuffer manages step history and message buffering
@@ -41,6 +42,8 @@ type TUIBuffer struct {
 	debugMessages []string
 	errorMessages []string
 	maxMessages   int
+
+	completion *ExecutionStats
 
 	mu sync.RWMutex
 }
@@ -81,6 +84,14 @@ func (b *TUIBuffer) SetCurrentStep(name string, progress ProgressInfo) {
 
 	b.currentStep = name
 	b.progress = progress
+}
+
+// SetCompletion sets execution completion statistics
+func (b *TUIBuffer) SetCompletion(stats ExecutionStats) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.completion = &stats
 }
 
 // AddDebug adds a debug message to the buffer
@@ -132,5 +143,6 @@ func (b *TUIBuffer) GetSnapshot() BufferSnapshot {
 		Progress:      b.progress,
 		DebugMessages: debug,
 		ErrorMessages: errors,
+		Completion:    b.completion,
 	}
 }
