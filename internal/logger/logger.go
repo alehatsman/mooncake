@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -15,6 +16,22 @@ const (
 	// it shouldn't generate any error-logLevel logs.
 	ErrorLevel
 )
+
+// ParseLogLevel converts a log level string to its integer constant.
+// Valid values are "debug", "info", and "error" (case-insensitive).
+// Returns an error if the level string is not recognized.
+func ParseLogLevel(level string) (int, error) {
+	switch level {
+	case "debug", "DEBUG":
+		return DebugLevel, nil
+	case "info", "INFO":
+		return InfoLevel, nil
+	case "error", "ERROR":
+		return ErrorLevel, nil
+	default:
+		return 0, fmt.Errorf("invalid log level: %s (valid: debug, info, error)", level)
+	}
+}
 
 // StepInfo contains structured information about a step execution
 type StepInfo struct {

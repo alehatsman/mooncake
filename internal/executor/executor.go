@@ -193,8 +193,20 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	return ExecuteSteps(includeSteps, &newExecutionContext)
 }
 
-// checkSkipConditions determines if a step should be skipped based on when conditions and tags.
-// Returns: (shouldSkip bool, skipReason string, error)
+// checkSkipConditions evaluates whether a step should be skipped based on conditional
+// expressions and tag filters.
+//
+// It first evaluates the step's "when" condition (if present), which is an expression
+// that must evaluate to true for the step to execute. If the condition evaluates to false,
+// the step is skipped with reason "when".
+//
+// Next, it checks if the step should be skipped based on tag filtering. If the execution
+// context has a tags filter and the step's tags don't match, it's skipped with reason "tags".
+//
+// Returns:
+//   - shouldSkip: true if the step should be skipped
+//   - skipReason: "when" or "tags" indicating why the step was skipped (empty if not skipped)
+//   - error: any error encountered while evaluating conditions
 func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check when condition
 	if step.When != "" {
@@ -215,9 +227,16 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 	return false, "", nil
 }
 
-// getStepDisplayName determines the display name for a step.
-// Priority: with_filetree item name > with_items value > step.Name
-// Returns: (displayName string, hasName bool)
+// getStepDisplayName determines the display name to show for a step in logs and output.
+//
+// The function follows a priority order to determine the name:
+//  1. If executing within a with_filetree loop, uses the file's name (FileTreeItem.Name)
+//  2. If executing within a with_items loop, uses the string representation of the item
+//  3. Otherwise, uses the step's configured Name field
+//
+// Returns:
+//   - displayName: the name to display for this step
+//   - hasName: true if a name was found, false if the step is anonymous
 func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	// For with_filetree, show the actual file name instead of generic step name
 	if item, ok := ec.Variables["item"].(filetree.FileTreeItem); ok {
@@ -239,7 +258,19 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	return "", false
 }
 
-// shouldLogStep returns true if the step should be logged (not all step types log).
+// shouldLogStep determines whether a step should have its status logged to the output.
+//
+// Not all steps are logged individually:
+//   - Anonymous steps (no name) are not logged
+//   - Include steps have their own specialized logging
+//   - Template steps within with_filetree loops are logged by the handler, not here
+//
+// Parameters:
+//   - step: the step configuration
+//   - hasStepName: whether the step has a display name (from getStepDisplayName)
+//   - ec: execution context (used to detect with_filetree loops)
+//
+// Returns true if the step's status (running/success/error) should be logged.
 func shouldLogStep(step config.Step, hasStepName bool, ec *ExecutionContext) bool {
 	// Don't log if no name
 	if !hasStepName {
