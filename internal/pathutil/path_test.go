@@ -321,6 +321,17 @@ func TestPathExpander_ExpandPathWithInvalidTemplate(t *testing.T) {
 	}
 }
 
+func TestPathExpander_SafeExpandPathWithInvalidTemplate(t *testing.T) {
+	renderer := template.NewPongo2Renderer()
+	expander := NewPathExpander(renderer)
+
+	// Test with invalid template syntax in SafeExpandPath
+	_, err := expander.SafeExpandPath("/tmp/{{ unclosed", "/work", nil, "/work")
+	if err == nil {
+		t.Error("SafeExpandPath() should return error for invalid template")
+	}
+}
+
 func TestValidatePathWithinBase_RelativePaths(t *testing.T) {
 	// Get current directory for relative path tests
 	cwd, err := os.Getwd()
@@ -393,5 +404,61 @@ func TestPathExpander_ExpandPathEdgeCases(t *testing.T) {
 		if !strings.HasPrefix(path, home) {
 			t.Errorf("ExpandPath() home expansion = %v, should start with %v", path, home)
 		}
+	}
+}
+
+func TestValidatePathWithinBase_ExtremelyLongPaths(t *testing.T) {
+	// Attempt to trigger filepath.Abs or filepath.Rel errors with extremely long paths
+	// Note: These may not trigger errors on all systems
+
+	// Create an extremely long path (> 4096 chars)
+	longDir := "/tmp/" + strings.Repeat("a", 5000)
+	longTarget := longDir + "/file.txt"
+
+	// This should either succeed or return an error
+	// We're just checking that it doesn't panic
+	_ = ValidatePathWithinBase(longTarget, "/tmp")
+
+	// Test with very long base directory
+	longBase := "/tmp/" + strings.Repeat("b", 5000)
+	_ = ValidatePathWithinBase("/tmp/test.txt", longBase)
+}
+
+func TestValidatePathWithinBase_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name       string
+		targetPath string
+		baseDir    string
+		shouldTest bool // Some tests might not be valid on all OS
+	}{
+		{
+			name:       "path with unicode",
+			targetPath: "/tmp/测试/file.txt",
+			baseDir:    "/tmp",
+			shouldTest: true,
+		},
+		{
+			name:       "path with spaces",
+			targetPath: "/tmp/my folder/file.txt",
+			baseDir:    "/tmp",
+			shouldTest: true,
+		},
+		{
+			name:       "path with special chars",
+			targetPath: "/tmp/test!@#$%/file.txt",
+			baseDir:    "/tmp",
+			shouldTest: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.shouldTest {
+				t.Skip("Test not applicable on this OS")
+			}
+
+			// Just verify it doesn't panic - error or success are both acceptable
+			_ = ValidatePathWithinBase(tt.targetPath, tt.baseDir)
+		})
 	}
 }
