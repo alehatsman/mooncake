@@ -35,6 +35,7 @@ type Step struct {
 	Vars         *map[string]interface{} `yaml:"vars"`
 	Tags         []string                `yaml:"tags"`
 	WithFileTree *string                 `yaml:"with_filetree"`
+	WithItems    *string                 `yaml:"with_items"`
 }
 
 func (s *Step) ValidateOneAction() error {
@@ -100,5 +101,6 @@ func (s *Step) Copy() *Step {
 		Vars:         s.Vars,
 		Tags:         s.Tags,
 		WithFileTree: s.WithFileTree,
+		WithItems:    s.WithItems,
 	}
 }

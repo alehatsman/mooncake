@@ -53,20 +53,39 @@ func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error {
 
 func (l *ConsoleLogger) Infof(format string, v ...interface{}) {
 	if l.logLevel <= InfoLevel {
-		color.White(l.pad+format, v...)
+		msg := fmt.Sprintf(format, v...)
+		msg = l.addPaddingToLines(msg)
+		color.White(msg)
 	}
 }
 
 func (l *ConsoleLogger) Errorf(format string, v ...interface{}) {
 	if l.logLevel <= ErrorLevel {
-		color.Red(l.pad+format, v...)
+		msg := fmt.Sprintf(format, v...)
+		msg = l.addPaddingToLines(msg)
+		color.Red(msg)
 	}
 }
 
 func (l *ConsoleLogger) Debugf(format string, v ...interface{}) {
 	if l.logLevel <= DebugLevel {
-		color.Yellow(l.pad+format, v...)
+		msg := fmt.Sprintf(format, v...)
+		msg = l.addPaddingToLines(msg)
+		color.Yellow(msg)
 	}
+}
+
+func (l *ConsoleLogger) addPaddingToLines(msg string) string {
+	if l.pad == "" {
+		return msg
+	}
+	lines := strings.Split(msg, "\n")
+	for i := range lines {
+		if lines[i] != "" || i < len(lines)-1 {
+			lines[i] = l.pad + lines[i]
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (l *ConsoleLogger) Textf(format string, v ...interface{}) {

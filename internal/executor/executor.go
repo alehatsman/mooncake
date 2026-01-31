@@ -162,6 +162,10 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 			stepName = item.Name
 			hasStepName = true
 		}
+	} else if item, ok := ec.Variables["item"]; ok {
+		// For with_items, show the item value
+		stepName = fmt.Sprintf("%v", item)
+		hasStepName = true
 	} else if step.Name != "" {
 		hasStepName = true
 	}
@@ -248,6 +252,67 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
+func HandleWithItems(step config.Step, ec *ExecutionContext) error {
+	ec.Logger.Debugf("Handling with_items: %+v", step.WithItems)
+
+	withItems := step.WithItems
+	ec.Logger.Debugf("with_items: %v", *withItems)
+
+	// Extract variable name from template syntax: "{{ varname }}" -> "varname"
+	varName := strings.TrimSpace(*withItems)
+	varName = strings.TrimPrefix(varName, "{{")
+	varName = strings.TrimSuffix(varName, "}}")
+	varName = strings.TrimSpace(varName)
+
+	ec.Logger.Debugf("looking up variable: %s", varName)
+
+	// Look up the variable
+	listValue, exists := ec.Variables[varName]
+	if !exists {
+		return fmt.Errorf("with_items variable not found: %s", varName)
+	}
+
+	// Convert to slice
+	var list []interface{}
+	switch v := listValue.(type) {
+	case []interface{}:
+		list = v
+	case []string:
+		list = make([]interface{}, len(v))
+		for i, s := range v {
+			list[i] = s
+		}
+	default:
+		return fmt.Errorf("with_items value is not a list: %T", listValue)
+	}
+
+	ec.Logger.Debugf("list has %d items", len(list))
+
+	// Print the step name once before iterating through list
+	if step.Name != "" {
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
+		ec.Logger.Infof(tag + " " + step.Name)
+	}
+
+	curEc := ec.Copy()
+	curEc.Level += 1
+	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
+	curEc.TotalSteps = len(list)
+
+	for i, item := range list {
+		curEc = curEc.Copy()
+		curEc.CurrentIndex = i
+		curEc.Variables["item"] = item
+
+		err := ExecuteStep(step, &curEc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling with_filetree: %+v", step.WithFileTree)
 
@@ -300,6 +365,13 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 
 		if step.WithFileTree != nil {
 			if err := HandleWithFileTree(step, ec); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if step.WithItems != nil {
+			if err := HandleWithItems(step, ec); err != nil {
 				return err
 			}
 			continue
