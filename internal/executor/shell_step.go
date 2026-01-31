@@ -26,13 +26,9 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 	// Check for dry-run mode
 	if ec.DryRun {
-		ec.Logger.Infof("  [DRY-RUN] Would execute: %s", renderedCommand)
-		if step.Become {
-			ec.Logger.Infof("  [DRY-RUN] With sudo privileges")
-		}
-		if step.Register != "" {
-			ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
-		}
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogShellExecution(renderedCommand, step.Become)
+		dryRun.LogRegister(step)
 		return nil
 	}
 

@@ -18,7 +18,8 @@ func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 	}
 
 	if ec.DryRun {
-		ec.Logger.Infof("  [DRY-RUN] Would load %d variables from: %s", len(vars), expandedPath)
+		dryRun := newDryRunLogger(ec.Logger)
+		dryRun.LogVariableLoad(len(vars), expandedPath)
 		// Still load variables in dry-run mode so subsequent steps can use them
 	}
 
