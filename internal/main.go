@@ -135,6 +135,7 @@ type Context = map[string]interface{}
 
 func addGlobalVariables(variables Context) {
 	variables["os"] = runtime.GOOS
+	variables["arch"] = runtime.GOARCH
 }
 
 func readVariables(path string) (Context, error) {
