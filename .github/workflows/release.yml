@@ -3,31 +3,30 @@ name: release
 
 on:
   push:
-    tags: "*"
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  goreleaser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.23'
 
-      - name: Test
-        run: go test -v ./...
-
-      - name: Build binaries
-        run: "./scripts/build_cli_binary.sh"
-
-      - uses: actions/upload-artifact@v4
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          name: binaries
-          path: "./out/"
-
-      - uses: ncipollo/release-action@v1
-        with:
-          tag: latest
-          artifacts: "./out/*"
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
