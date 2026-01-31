@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/fatih/color"
 )
 
 func HandleTemplate(step config.Step, ec *ExecutionContext) error {
@@ -22,11 +21,8 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	// Only show detailed templating line when in with_filetree iteration
-	if _, inFileTree := ec.Variables["item"]; inFileTree {
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
-		ec.Logger.Infof("%s templating src=\"%s\" dest=\"%s\"", tag, src, dest)
-	}
+	// Step is already logged via LogStep in executor, no need to log again
+	ec.Logger.Debugf("Templating src=\"%s\" dest=\"%s\"", src, dest)
 
 	// Create result object
 	result := NewResult()
