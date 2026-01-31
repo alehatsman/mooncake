@@ -1,119 +1,398 @@
 # Mooncake [![build](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml)
 
-Space fighters provisioning tool, **Chookity!**
+Space fighters provisioning tool, **Chookity!**
 
-## In progress
+## Installation
 
-- [ ] Nice output, info, log, error
+```bash
+go install github.com/alehatsman/mooncake@latest
+```
 
-## Progress
+## Usage
 
-- [x] Cli commands and help via ([https://github.com/spf13/cobra](https://github.com/spf13/cobra))
-- [x] Include another file
-- [x] Dir - create directive
-- [x] Template - create a file by rendering a template via (https://github.com/flosch/pongo2)
-- [x] Shell - execute a shell command, passing the script with templating
-- [x] When - conditions, for example step only for specific os (https://github.com/Knetic/govaluate)
-- [x] Facts - global variables with facts about system (OS)
-- [x] Templating for config values - variables are available from facts and defined by user. (https://github.com/flosch/pongo2)
-- [x] Supports relatives paths - node like file resolution.
-- [x] Sudo argument or prompt by default
-- [x] WithFileTree support
+```bash
+mooncake run config.yml
+mooncake run config.yml --vars vars.yml
+mooncake run config.yml --sudo-pass <password>
+```
 
-- [ ] OpenSsh - generate keys
-- [ ] Http - make http calls, download files etc.
-- [ ] with_items - pass list and it will execute the command with each item
-- [ ] with_filetree - point to a folder with files or tree of files, and it will execute the task with each file/dir.
-- [ ] Apt - yml directive
-- [ ] Brew - yml directive
-- [ ] Git - clone repos (via https://github.com/go-git/go-git or command-line)
-- [ ] pip
-- [ ] pipenv
-- [ ] cargo
-- [ ] 1password
-- [ ] make
-- [ ] watch (https://github.com/fsnotify/fsnotify)
+## Features
+
+- Execute shell commands with templating
+- Create files and directories with configurable permissions
+- Render templates using pongo2
+- Conditional execution with expressions
+- Include other configuration files
+- Load variables from external files
+- File tree iteration
+- Relative path resolution
+- Global system facts (os, arch)
+
+## File Structure
+
+### YAML Format
+
+Configuration files are YAML arrays of steps. Each step must have exactly one action:
+
+```yaml
+- name: First step
+  shell: echo "hello"
+
+- name: Second step
+  file:
+    path: /tmp/test
+    state: directory
+```
+
+### Path Resolution
+
+Mooncake uses Node.js-like relative path resolution. All relative paths are resolved relative to the **current configuration file**, not the working directory.
+
+```
+project/
+├── main.yml
+├── configs/
+│   ├── neovim.yml
+│   └── templates/
+│       └── init.lua.j2
+└── dotfiles/
+    └── .bashrc
+```
+
+**main.yml:**
+```yaml
+- name: Include neovim config
+  include: ./configs/neovim.yml  # Relative to main.yml
+```
+
+**configs/neovim.yml:**
+```yaml
+- name: Render init.lua
+  template:
+    src: ./templates/init.lua.j2  # Relative to neovim.yml
+    dest: ~/.config/nvim/init.lua
+```
+
+### Organizing Configurations
+
+You can organize your configuration in multiple ways:
+
+**Flat structure:**
+```
+provisioning/
+├── main.yml
+├── linux.yml
+├── macos.yml
+└── common.yml
+```
+
+**Nested structure:**
+```
+provisioning/
+├── main.yml
+├── os/
+│   ├── linux.yml
+│   └── macos.yml
+├── apps/
+│   ├── neovim.yml
+│   ├── tmux.yml
+│   └── zsh.yml
+└── templates/
+    ├── init.lua.j2
+    ├── tmux.conf.j2
+    └── zshrc.j2
+```
+
+**main.yml:**
+```yaml
+- vars:
+    config_dir: ~/.config
+
+- name: Load OS-specific configuration
+  include: ./os/linux.yml
+  when: os == "linux"
+
+- name: Load OS-specific configuration
+  include: ./os/macos.yml
+  when: os == "darwin"
+
+- name: Setup neovim
+  include: ./apps/neovim.yml
+
+- name: Setup tmux
+  include: ./apps/tmux.yml
+```
+
+### Path Types
+
+**Relative paths** (start with `./` or `../`):
+```yaml
+include: ./configs/app.yml
+src: ../templates/config.j2
+```
+
+**Absolute paths**:
+```yaml
+dest: /etc/nginx/nginx.conf
+path: /var/log/app
+```
+
+**Home directory paths** (use `~` or template filter):
+```yaml
+dest: ~/.config/nvim/init.lua
+dest: "{{ '~/.config' | expanduser }}/nvim/init.lua"
+```
 
 ## Configuration
 
-### Example
-
-```yaml
-- variables:
-    config_dir: ~/.config
-    nvim_config_dir: "{{config_dir}}/nvim"
-
-- name: Make sure neovim config folder exists
-  file:
-    path: "{{nvim_config_dir}}"
-    state: directory
-
-- name: Render init.lua template
-  template:
-    src: ./init.lua
-    dest: "{{nvim_config_dir}}/init.lua"
-```
-
-### Global variables
-
-```yaml
-os: linux | windows | darwin
-```
-
-### Conditioning
-
-```yaml
-- name: Include file if linux
-  include: ./linux.yml
-  when: os == "linux"
-```
-
 ### Variables
 
-Make sure to wrap the value into `"value"` for variable expansion to work.
+Define and use variables throughout your configuration:
 
 ```yaml
-- variables:
+- vars:
     config_dir: ~/.config
     nvim_dir: "{{config_dir}}/nvim"
 
-- template:
-    src: ./init.lua.j2
-    dest: "{{nvim_dir}}/init.lua"
+- name: Create nvim directory
+  file:
+    path: "{{nvim_dir}}"
+    state: directory
 ```
 
-### Include
+### Include Variables
+
+Load variables from external YAML files:
 
 ```yaml
-- name: Include provisioning file
-  include: ./someprov.yml
+- name: Load environment variables
+  include_vars: ./env.yml
 ```
+
+### Global Variables
+
+Available in all steps:
+
+- `os`: linux | darwin | windows
+- `arch`: amd64 | arm64 | etc
 
 ### File
 
+Create files or directories with optional permissions:
+
 ```yaml
-- name: Make sure file or directory exists
+- name: Create directory
   file:
-    path: <Path>
-    state: directory | file
+    path: ~/.config/nvim
+    state: directory
+    mode: "0755"
+
+- name: Create empty file
+  file:
+    path: ~/.config/nvim/init.lua
+    state: file
+    mode: "0644"
+
+- name: Create file with content
+  file:
+    path: /tmp/test.txt
+    state: file
+    content: "Hello World"
 ```
 
 ### Template
 
+Render templates using pongo2 syntax:
+
 ```yaml
-- name: Make sure template rendered into file
+- name: Render config file
   template:
-    src: ./template.j2
+    src: ./init.lua.j2
     dest: ~/.config/nvim/init.lua
+    mode: "0644"
     vars:
       port: 8080
+      debug: true
+```
+
+Template supports pongo2 features:
+
+```jinja
+# Variables
+{{ variable_name }}
+
+# Conditionals
+{% if debug %}
+debug_mode = true
+{% endif %}
+
+# Loops
+{% for item in items %}
+- {{ item }}
+{% endfor %}
+
+# Filters
+{{ path|expanduser }}  # Expands ~ to home directory
+{{ text|upper }}
 ```
 
 ### Shell
 
+Execute shell commands:
+
 ```yaml
-- name: Make sure c ommands are executed
-  shell:
-    command: |
-      echo "Hello World"
+- name: Install packages
+  shell: brew install neovim ripgrep
+
+- name: Run multiple commands
+  shell: |
+    echo "Starting setup"
+    mkdir -p ~/.local/bin
+    echo "Setup complete"
+```
+
+### Include
+
+Include other configuration files:
+
+```yaml
+- name: Include Linux configuration
+  include: ./linux.yml
+
+- name: Include with relative path
+  include: ./configs/neovim.yml
+```
+
+### Conditional Execution
+
+Use `when` to conditionally execute steps:
+
+```yaml
+- name: Install Linux packages
+  shell: apt install neovim
+  when: os == "linux"
+
+- name: Install macOS packages
+  shell: brew install neovim
+  when: os == "darwin"
+
+- name: Complex condition
+  shell: echo "ARM Mac"
+  when: os == "darwin" && arch == "arm64"
+```
+
+Supported operators:
+- Comparison: `==`, `!=`, `>`, `<`, `>=`, `<=`
+- Logical: `&&`, `||`, `!`
+- Arithmetic: `+`, `-`, `*`, `/`, `%`
+
+### File Tree Iteration
+
+Iterate over files in a directory:
+
+```yaml
+- name: Copy dotfiles
+  template:
+    src: "{{ item.src }}"
+    dest: "~/.config/{{ item.name }}"
+  with_filetree: ./dotfiles
+```
+
+Each iteration provides:
+- `item.src`: Source file path
+- `item.name`: File name
+- `item.is_dir`: Boolean indicating if item is directory
+
+### Tags
+
+Filter steps by tags:
+
+```yaml
+- name: Install development tools
+  shell: brew install neovim ripgrep
+  tags:
+    - dev
+    - tools
+
+- name: Setup production
+  shell: setup-production.sh
+  tags:
+    - prod
+```
+
+Run with tags:
+```bash
+mooncake run config.yml --tags dev
+mooncake run config.yml --tags prod,tools
+```
+
+### Sudo/Become
+
+Execute commands with sudo:
+
+```yaml
+- name: Install system package
+  shell: apt install neovim
+  become: true
+```
+
+Provide sudo password:
+```bash
+mooncake run config.yml --sudo-pass <password>
+```
+
+### File Permissions
+
+Specify file permissions in octal format:
+
+```yaml
+- name: Create executable script
+  file:
+    path: ~/.local/bin/script.sh
+    state: file
+    content: "#!/bin/bash\necho hello"
+    mode: "0755"
+
+- name: Create private config
+  template:
+    src: ./secret.yml.j2
+    dest: ~/.config/secret.yml
+    mode: "0600"
+```
+
+## Example Configuration
+
+```yaml
+- vars:
+    config_dir: ~/.config
+    nvim_dir: "{{config_dir}}/nvim"
+    nvim_config: "{{nvim_dir}}/init.lua"
+
+- name: Ensure neovim config directory exists
+  file:
+    path: "{{nvim_dir}}"
+    state: directory
+    mode: "0755"
+
+- name: Render neovim configuration
+  template:
+    src: ./init.lua.j2
+    dest: "{{nvim_config}}"
+    mode: "0644"
+
+- name: Install neovim on macOS
+  shell: brew install neovim
+  when: os == "darwin"
+
+- name: Install neovim on Linux
+  shell: apt install neovim
+  become: true
+  when: os == "linux"
+
+- name: Copy plugin configs
+  template:
+    src: "{{item.src}}"
+    dest: "{{nvim_dir}}/lua/{{item.name}}"
+  with_filetree: ./nvim/lua
+  when: item.is_dir == false
 ```
