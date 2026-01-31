@@ -49,12 +49,19 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
+	ec.Logger.Debugf("variables: %v", ec.Variables)
+
 	whenExpression, err := utils.Render(whenString, ec.Variables)
 	if err != nil {
 		return false, err
 	}
 
+	ec.Logger.Debugf("whenExpression: %v", whenExpression)
+
 	evalResult, err := utils.Evaluate(whenExpression, ec.Variables)
+
+	ec.Logger.Debugf("evalResult: %v", evalResult)
+
 	return !evalResult.(bool), err
 }
 

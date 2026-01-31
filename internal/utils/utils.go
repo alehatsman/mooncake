@@ -18,6 +18,11 @@ func ExpandPath(originalPath string, currentDir string, context map[string]inter
 
 	expandedPath = strings.Trim(expandedPath, " ")
 
+	if strings.HasPrefix(expandedPath, "../") {
+		expandedPath = path.Join(currentDir, expandedPath)
+		return expandedPath, nil
+	}
+
 	if strings.HasPrefix(expandedPath, ".") {
 		expandedPath = path.Join(currentDir, expandedPath[1:])
 	}
@@ -87,6 +92,19 @@ func Evaluate(expression string, variables map[string]interface{}) (interface{},
 }
 
 func Render(template string, variables map[string]interface{}) (string, error) {
+	pongo2.RegisterFilter("expanduser", func(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+		expandedPath, err := ExpandPath(in.String(), "", variables)
+
+		if err != nil {
+			return nil, &pongo2.Error{
+				Sender:    "filter:expanduser",
+				OrigError: err,
+			}
+		}
+
+		return pongo2.AsValue(expandedPath), nil
+	})
+
 	pongoTemplate, err := pongo2.FromString(template)
 
 	if err != nil {
