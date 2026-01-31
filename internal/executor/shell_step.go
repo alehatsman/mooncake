@@ -92,12 +92,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 		// Register the result even on failure if register is specified
 		if step.Register != "" {
-			ec.Variables[step.Register] = result.ToMap()
-			ec.Variables[step.Register+"_stdout"] = result.Stdout
-			ec.Variables[step.Register+"_stderr"] = result.Stderr
-			ec.Variables[step.Register+"_rc"] = result.Rc
-			ec.Variables[step.Register+"_failed"] = result.Failed
-			ec.Variables[step.Register+"_changed"] = result.Changed
+			result.RegisterTo(ec.Variables, step.Register)
 			ec.Logger.Debugf("  Registered result as: %s (failed with rc=%d)", step.Register, result.Rc)
 		}
 
@@ -116,16 +111,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 	// Register the result if register is specified
 	if step.Register != "" {
-		// Store both the full result map and flattened fields for easy access
-		resultMap := result.ToMap()
-		ec.Variables[step.Register] = resultMap
-
-		// Also register flattened fields for use in when conditions
-		ec.Variables[step.Register+"_stdout"] = result.Stdout
-		ec.Variables[step.Register+"_stderr"] = result.Stderr
-		ec.Variables[step.Register+"_rc"] = result.Rc
-		ec.Variables[step.Register+"_failed"] = result.Failed
-		ec.Variables[step.Register+"_changed"] = result.Changed
+		result.RegisterTo(ec.Variables, step.Register)
 
 		ec.Logger.Debugf("  Registered result as: %s", step.Register)
 	}
