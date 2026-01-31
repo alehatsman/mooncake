@@ -30,6 +30,9 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 		if step.Become {
 			ec.Logger.Infof("  [DRY-RUN] With sudo privileges")
 		}
+		if step.Register != "" {
+			ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
+		}
 		return nil
 	}
 
@@ -71,15 +74,60 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	// Wait for all output to be processed
 	wg.Wait()
 
-	if err := command.Wait(); err != nil {
+	// Create result object
+	result := NewResult()
+	result.Stdout = strings.TrimSpace(stdoutBuf.String())
+	result.Stderr = strings.TrimSpace(stderrBuf.String())
+	result.Changed = true // Commands always count as changed
+
+	err = command.Wait()
+	if err != nil {
+		// Extract exit code
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			result.Rc = exitErr.ExitCode()
+		} else {
+			result.Rc = 1
+		}
+		result.Failed = true
+
+		// Register the result even on failure if register is specified
+		if step.Register != "" {
+			ec.Variables[step.Register] = result.ToMap()
+			ec.Variables[step.Register+"_stdout"] = result.Stdout
+			ec.Variables[step.Register+"_stderr"] = result.Stderr
+			ec.Variables[step.Register+"_rc"] = result.Rc
+			ec.Variables[step.Register+"_failed"] = result.Failed
+			ec.Variables[step.Register+"_changed"] = result.Changed
+			ec.Logger.Debugf("  Registered result as: %s (failed with rc=%d)", step.Register, result.Rc)
+		}
+
 		// On error, show captured output for debugging
 		if stdoutBuf.Len() > 0 {
-			ec.Logger.Errorf("Command output:\n%s", stdoutBuf.String())
+			ec.Logger.Errorf("Command output:\n%s", result.Stdout)
 		}
 		if stderrBuf.Len() > 0 {
-			ec.Logger.Errorf("Error output:\n%s", stderrBuf.String())
+			ec.Logger.Errorf("Error output:\n%s", result.Stderr)
 		}
 		return fmt.Errorf("command execution failed: %w", err)
+	}
+
+	result.Rc = 0
+	result.Failed = false
+
+	// Register the result if register is specified
+	if step.Register != "" {
+		// Store both the full result map and flattened fields for easy access
+		resultMap := result.ToMap()
+		ec.Variables[step.Register] = resultMap
+
+		// Also register flattened fields for use in when conditions
+		ec.Variables[step.Register+"_stdout"] = result.Stdout
+		ec.Variables[step.Register+"_stderr"] = result.Stderr
+		ec.Variables[step.Register+"_rc"] = result.Rc
+		ec.Variables[step.Register+"_failed"] = result.Failed
+		ec.Variables[step.Register+"_changed"] = result.Changed
+
+		ec.Logger.Debugf("  Registered result as: %s", step.Register)
 	}
 
 	return nil

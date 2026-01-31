@@ -28,6 +28,10 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Infof("%s templating src=\"%s\" dest=\"%s\"", tag, src, dest)
 	}
 
+	// Create result object
+	result := NewResult()
+	result.Changed = false
+
 	// Check for dry-run mode
 	if ec.DryRun {
 		// Check if source file exists
@@ -40,17 +44,30 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		if template.Vars != nil && len(*template.Vars) > 0 {
 			ec.Logger.Debugf("  Additional variables: %v", *template.Vars)
 		}
+		if step.Register != "" {
+			ec.Logger.Debugf("  [DRY-RUN] Would register result as: %s", step.Register)
+		}
 		return nil
 	}
 
 	templateFile, err := os.Open(src)
 	if err != nil {
+		result.Failed = true
+		result.Rc = 1
+		if step.Register != "" {
+			ec.Variables[step.Register] = result.ToMap()
+		}
 		return err
 	}
 	defer templateFile.Close()
 
 	templateBytes, err := io.ReadAll(templateFile)
 	if err != nil {
+		result.Failed = true
+		result.Rc = 1
+		if step.Register != "" {
+			ec.Variables[step.Register] = result.ToMap()
+		}
 		return err
 	}
 
@@ -67,12 +84,39 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 
 	output, err := ec.Template.Render(string(templateBytes), variables)
 	if err != nil {
+		result.Failed = true
+		result.Rc = 1
+		if step.Register != "" {
+			ec.Variables[step.Register] = result.ToMap()
+		}
 		return err
+	}
+
+	// Check if content would change
+	existingContent, err := os.ReadFile(dest)
+	if err != nil || string(existingContent) != output {
+		result.Changed = true
 	}
 
 	mode := parseFileMode(template.Mode, 0644)
 	if err := os.WriteFile(dest, []byte(output), mode); err != nil {
+		result.Failed = true
+		result.Rc = 1
+		if step.Register != "" {
+			ec.Variables[step.Register] = result.ToMap()
+		}
 		return fmt.Errorf("failed to write template output to %s: %w", dest, err)
+	}
+
+	// Register the result if register is specified
+	if step.Register != "" {
+		ec.Variables[step.Register] = result.ToMap()
+		ec.Variables[step.Register+"_stdout"] = result.Stdout
+		ec.Variables[step.Register+"_stderr"] = result.Stderr
+		ec.Variables[step.Register+"_rc"] = result.Rc
+		ec.Variables[step.Register+"_failed"] = result.Failed
+		ec.Variables[step.Register+"_changed"] = result.Changed
+		ec.Logger.Debugf("  Registered result as: %s (changed=%v)", step.Register, result.Changed)
 	}
 
 	return nil

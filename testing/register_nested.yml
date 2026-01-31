@@ -1,0 +1,30 @@
+---
+# Test nested field access with expr-lang
+- name: Get current user
+  shell: whoami
+  register: current_user
+
+# Test nested access: current_user.stdout instead of current_user_stdout
+- name: Show user with nested access
+  shell: echo "User is {{ current_user.stdout }}"
+
+# Test in when condition with nested access
+- name: Check if git exists
+  shell: which git
+  register: git_check
+
+- name: Show git if found (nested rc check)
+  shell: echo "Git found at {{ git_check.stdout }}"
+  when: git_check.rc == 0
+
+# Test boolean fields with nested access
+- name: Create test file
+  file:
+    path: /tmp/mooncake_nested_test.txt
+    state: file
+    content: "Testing nested access"
+  register: file_result
+
+- name: Check if file changed (nested boolean)
+  shell: echo "File was changed"
+  when: file_result.changed == true
