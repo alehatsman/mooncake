@@ -11,9 +11,26 @@ import (
 )
 
 func run(c *cli.Context) error {
-	log := logger.NewLogger(logger.InfoLevel)
-
+	raw := c.Bool("raw")
 	logLevel := c.String("log-level")
+
+	var log logger.Logger
+
+	// Use animated TUI by default if supported, unless --raw is specified
+	if !raw && logger.IsTUISupported() {
+		tuiLogger, err := logger.NewTUILogger(logger.InfoLevel)
+		if err != nil {
+			// Fallback to console logger if TUI initialization fails
+			log = logger.NewLogger(logger.InfoLevel)
+		} else {
+			log = tuiLogger
+			tuiLogger.Start()
+			defer tuiLogger.Stop()
+		}
+	} else {
+		// Use console logger for raw output or when TUI is not supported
+		log = logger.NewLogger(logger.InfoLevel)
+	}
 
 	if err := log.SetLogLevelStr(logLevel); err != nil {
 		return err
@@ -76,6 +93,12 @@ func createApp() *cli.App {
 						Name:    "tags",
 						Aliases: []string{"t"},
 						Usage:   "Filter steps by tags (comma-separated)",
+					},
+					&cli.BoolFlag{
+						Name:    "raw",
+						Aliases: []string{"r"},
+						Value:   false,
+						Usage:   "Disable animated TUI and use raw console output",
 					},
 				},
 				Action: run,
