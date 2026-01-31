@@ -24,7 +24,7 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 	vars := step.Vars
 
 	for k, v := range *vars {
-		logger.Infof("  %v: %v", k, v)
+		ec.Logger.Infof("  %v: %v", k, v)
 	}
 
 	newVariables := make(map[string]interface{})
@@ -67,17 +67,19 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
+	ec.Logger.Debugf("Reading configuration from file: %v", renderedPath)
 	includeSteps, err := config.ReadConfig(renderedPath)
 	if err != nil {
 		return err
 	}
+	ec.Logger.Debugf("Read configuration with %v steps", len(includeSteps))
 
 	newCurrentDir := utils.GetDirectoryOfFile(renderedPath)
 
 	newExecutionContext := ec.Copy()
 	newExecutionContext.CurrentDir = newCurrentDir
 	newExecutionContext.Level = ec.Level + 1
-	newExecutionContext.Logger = logger.WithPadLevel(ec.Level + 1)
+	newExecutionContext.Logger = ec.Logger.WithPadLevel(ec.Level + 1)
 
 	return ExecuteSteps(includeSteps, &newExecutionContext)
 }
@@ -171,7 +173,7 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 	curEc := ec.Copy()
 	curEc.Level += 1
-	curEc.Logger = logger.WithPadLevel(curEc.Level)
+	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
 	curEc.TotalSteps = len(fileTree)
 
 	for i, item := range fileTree {
@@ -205,7 +207,7 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 			return err
 		}
 
-		logger.Infof("\n")
+		ec.Logger.Infof("\n")
 	}
 	return nil
 }
@@ -216,10 +218,10 @@ type StartConfig struct {
 	SudoPass       string
 }
 
-func Start(startConfig StartConfig) error {
-	logger.Mooncake()
+func Start(startConfig StartConfig, log logger.Logger) error {
+	log.Mooncake()
 
-	logger.Debugf("config: %v", startConfig)
+	log.Debugf("config: %v", startConfig)
 
 	if startConfig.ConfigFilePath == "" {
 		return errors.New("config file path is empty")
@@ -235,10 +237,12 @@ func Start(startConfig StartConfig) error {
 		return err
 	}
 
+	log.Debugf("Reading variables from file: %v", expandedPath)
 	variables, err := config.ReadVariables(expandedPath)
 	if err != nil {
 		variables = make(map[string]interface{})
 	}
+	log.Debugf("Read variables: %v", variables)
 
 	addGlobalVariables(variables)
 
@@ -247,12 +251,12 @@ func Start(startConfig StartConfig) error {
 		return err
 	}
 
+	log.Debugf("Reading configuration from file: %v", configFilePath)
 	steps, err := config.ReadConfig(configFilePath)
 	if err != nil {
 		return err
 	}
-
-	logger.Debugf("variables: %v", variables)
+	log.Debugf("Read configuration with %v steps", len(steps))
 
 	executionContext := ExecutionContext{
 		Variables:    variables,
@@ -261,7 +265,7 @@ func Start(startConfig StartConfig) error {
 		Level:        0,
 		CurrentIndex: 0,
 		TotalSteps:   len(steps),
-		Logger:       logger.WithPadLevel(0),
+		Logger:       log.WithPadLevel(0),
 		SudoPass:     startConfig.SudoPass,
 	}
 

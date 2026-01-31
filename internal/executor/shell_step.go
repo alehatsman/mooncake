@@ -75,10 +75,10 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-func printCommandOutputPipe(pipe io.Reader, logger *logger.Logger, wg *sync.WaitGroup) {
+func printCommandOutputPipe(pipe io.Reader, log logger.Logger, wg *sync.WaitGroup) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
-		logger.Codef("%v", scanner.Text())
+		log.Codef("%v", scanner.Text())
 	}
 }

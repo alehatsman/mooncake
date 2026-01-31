@@ -9,7 +9,7 @@ type ExecutionContext struct {
 	Level        int
 	CurrentIndex int
 	TotalSteps   int
-	Logger       *logger.Logger
+	Logger       logger.Logger
 	SudoPass     string
 }
 
