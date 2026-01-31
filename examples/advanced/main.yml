@@ -1,0 +1,24 @@
+# Advanced example - Multi-file configuration
+- vars:
+    project_name: MyProject
+    env: development
+
+- name: Load environment variables
+  include_vars: ./vars/{{env}}.yml
+
+- name: Setup common configuration
+  include: ./tasks/common.yml
+
+- name: Setup OS-specific configuration
+  include: ./tasks/macos.yml
+  when: os == "darwin"
+
+- name: Setup OS-specific configuration
+  include: ./tasks/linux.yml
+  when: os == "linux"
+
+- name: Setup development tools
+  include: ./tasks/dev-tools.yml
+  when: env == "development"
+  tags:
+    - dev

@@ -1,0 +1,33 @@
+# Example showing conditionals and tags
+- name: Always runs
+  shell: echo "This always runs"
+
+- name: macOS only
+  shell: echo "Running on macOS"
+  when: os == "darwin"
+
+- name: Linux only
+  shell: echo "Running on Linux"
+  when: os == "linux"
+
+- name: ARM architecture
+  shell: echo "ARM processor detected"
+  when: arch == "arm64"
+
+- name: Development setup
+  shell: echo "Setting up development environment"
+  tags:
+    - dev
+    - setup
+
+- name: Production deployment
+  shell: echo "Deploying to production"
+  tags:
+    - prod
+    - deploy
+
+- name: Run tests
+  shell: echo "Running test suite"
+  tags:
+    - dev
+    - test
