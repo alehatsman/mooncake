@@ -38,4 +38,13 @@ func TestEvaluateExpression(t *testing.T) {
 	if result != false {
 		t.Errorf("Expected 'false', got '%v'", result)
 	}
+
+	result, err = Evaluate("item.Foo == 'bar'", Context{"item": struct{ Foo string }{Foo: "bar"}})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if result != true {
+		t.Errorf("Expected 'true', got '%v'", result)
+	}
 }

@@ -3,7 +3,7 @@ module github.com/alehatsman/mooncake
 go 1.19
 
 require (
-	github.com/Knetic/govaluate v3.0.0+incompatible
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/stretchr/testify v1.8.2
 	github.com/urfave/cli/v2 v2.23.5

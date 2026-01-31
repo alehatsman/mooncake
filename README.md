@@ -17,7 +17,8 @@ Space fighters provisioning tool, **Chookity!**
 - [x] Facts - global variables with facts about system (OS)
 - [x] Templating for config values - variables are available from facts and defined by user. (https://github.com/flosch/pongo2)
 - [x] Supports relatives paths - node like file resolution.
-- [x] sudo argument or prompt by default 
+- [x] Sudo argument or prompt by default
+- [x] WithFileTree support
 
 - [ ] OpenSsh - generate keys
 - [ ] Http - make http calls, download files etc.

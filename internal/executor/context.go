@@ -3,12 +3,14 @@ package executor
 import "github.com/alehatsman/mooncake/internal/logger"
 
 type ExecutionContext struct {
-	Variables   map[string]interface{}
-	CurrentDir  string
-	CurrentFile string
-	Level       int
-	Logger      *logger.Logger
-	SudoPass    string
+	Variables    map[string]interface{}
+	CurrentDir   string
+	CurrentFile  string
+	Level        int
+	CurrentIndex int
+	TotalSteps   int
+	Logger       *logger.Logger
+	SudoPass     string
 }
 
 func (ec *ExecutionContext) Copy() ExecutionContext {
@@ -22,6 +24,8 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		CurrentDir:  ec.CurrentDir,
 		CurrentFile: ec.CurrentFile,
 		Level:       ec.Level,
+		CurrentIndex: ec.CurrentIndex,
+		TotalSteps:  ec.TotalSteps,
 		Logger:      ec.Logger,
 		SudoPass:    ec.SudoPass,
 	}
