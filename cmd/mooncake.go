@@ -18,9 +18,11 @@ func run(c *cli.Context) error {
 	if err := logger.SetLogLevelStr(logLevel); err != nil {
 		return err
 	}
+
 	return executor.Start(executor.StartConfig{
 		ConfigFilePath: c.String("config"),
 		VarsFilePath:   c.String("variables"),
+		SudoPass:       c.String("sudo"),
 	})
 }
 
@@ -47,6 +49,11 @@ func createApp() *cli.App {
 						Name:    "log-level",
 						Aliases: []string{"l"},
 						Value:   "info",
+					},
+					&cli.StringFlag{
+						Name:    "sudo",
+						Aliases: []string{"s"},
+						Value:   "false",
 					},
 				},
 				Action: run,
