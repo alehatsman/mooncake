@@ -360,3 +360,74 @@ func TestTestLogger_ContainsLevel_NotFound(t *testing.T) {
 		t.Error("ContainsLevel() should return false when nothing matches")
 	}
 }
+
+func TestParseLogLevel(t *testing.T) {
+	tests := []struct {
+		name    string
+		level   string
+		want    int
+		wantErr bool
+	}{
+		{
+			name:    "debug lowercase",
+			level:   "debug",
+			want:    DebugLevel,
+			wantErr: false,
+		},
+		{
+			name:    "debug uppercase",
+			level:   "DEBUG",
+			want:    DebugLevel,
+			wantErr: false,
+		},
+		{
+			name:    "info lowercase",
+			level:   "info",
+			want:    InfoLevel,
+			wantErr: false,
+		},
+		{
+			name:    "info uppercase",
+			level:   "INFO",
+			want:    InfoLevel,
+			wantErr: false,
+		},
+		{
+			name:    "error lowercase",
+			level:   "error",
+			want:    ErrorLevel,
+			wantErr: false,
+		},
+		{
+			name:    "error uppercase",
+			level:   "ERROR",
+			want:    ErrorLevel,
+			wantErr: false,
+		},
+		{
+			name:    "invalid level",
+			level:   "invalid",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			level:   "",
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseLogLevel(tt.level)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseLogLevel() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ParseLogLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
