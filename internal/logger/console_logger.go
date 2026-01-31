@@ -1,3 +1,4 @@
+// Package logger provides logging interfaces and implementations for mooncake.
 package logger
 
 import (
@@ -8,14 +9,14 @@ import (
 	"github.com/fatih/color"
 )
 
-// ConsoleLogger implements Logger interface with colored console output
+// ConsoleLogger implements Logger interface with colored console output.
 type ConsoleLogger struct {
 	logLevel int
 	padLevel int
 	pad      string
 }
 
-// NewLogger creates a new ConsoleLogger with the specified log level
+// NewLogger creates a new ConsoleLogger with the specified log level.
 func NewLogger(logLevel int) Logger {
 	return &ConsoleLogger{
 		logLevel: logLevel,
@@ -24,7 +25,7 @@ func NewLogger(logLevel int) Logger {
 	}
 }
 
-// NewConsoleLogger creates a ConsoleLogger directly (for type-specific needs)
+// NewConsoleLogger creates a ConsoleLogger directly (for type-specific needs).
 func NewConsoleLogger(logLevel int) *ConsoleLogger {
 	return &ConsoleLogger{
 		logLevel: logLevel,
@@ -33,10 +34,12 @@ func NewConsoleLogger(logLevel int) *ConsoleLogger {
 	}
 }
 
+// SetLogLevel sets the logging level for the logger.
 func (l *ConsoleLogger) SetLogLevel(logLevel int) {
 	l.logLevel = logLevel
 }
 
+// SetLogLevelStr sets the logging level from a string value.
 func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error {
 	level, err := ParseLogLevel(logLevel)
 	if err != nil {
@@ -46,6 +49,7 @@ func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
+// Infof logs an informational message.
 func (l *ConsoleLogger) Infof(format string, v ...interface{}) {
 	if l.logLevel <= InfoLevel {
 		msg := fmt.Sprintf(format, v...)
@@ -54,6 +58,7 @@ func (l *ConsoleLogger) Infof(format string, v ...interface{}) {
 	}
 }
 
+// Errorf logs an error message.
 func (l *ConsoleLogger) Errorf(format string, v ...interface{}) {
 	if l.logLevel <= ErrorLevel {
 		msg := fmt.Sprintf(format, v...)
@@ -62,6 +67,7 @@ func (l *ConsoleLogger) Errorf(format string, v ...interface{}) {
 	}
 }
 
+// Debugf logs a debug message.
 func (l *ConsoleLogger) Debugf(format string, v ...interface{}) {
 	if l.logLevel <= DebugLevel {
 		msg := fmt.Sprintf(format, v...)
@@ -83,11 +89,13 @@ func (l *ConsoleLogger) addPaddingToLines(msg string) string {
 	return strings.Join(lines, "\n")
 }
 
+// Textf logs a plain text message.
 func (l *ConsoleLogger) Textf(format string, v ...interface{}) {
 	pad := strings.Repeat(" ", l.padLevel)
 	color.WhiteString(pad+format, v...)
 }
 
+// Codef logs a code snippet message.
 func (l *ConsoleLogger) Codef(format string, v ...interface{}) {
 	lines := strings.Split(format, "\n")
 
@@ -96,6 +104,7 @@ func (l *ConsoleLogger) Codef(format string, v ...interface{}) {
 	}
 }
 
+// Mooncake displays the mooncake banner.
 func (l *ConsoleLogger) Mooncake() {
 	mk1 := color.CyanString(`٩     ۶  `)
 	mk2 := color.CyanString(`( ⦿ _ ⦿ )`)
@@ -110,6 +119,7 @@ func (l *ConsoleLogger) Mooncake() {
 	fmt.Println()
 }
 
+// WithPadLevel creates a new logger with the specified padding level.
 func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger {
 	return &ConsoleLogger{
 		logLevel: l.logLevel,
@@ -118,6 +128,7 @@ func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger {
 	}
 }
 
+// LogStep logs a step execution with status.
 func (l *ConsoleLogger) LogStep(info StepInfo) {
 	if l.logLevel > InfoLevel {
 		return
@@ -127,13 +138,13 @@ func (l *ConsoleLogger) LogStep(info StepInfo) {
 	var statusIcon string
 
 	switch info.Status {
-	case "running":
+	case StatusRunning:
 		statusIcon = "▶"
-	case "success":
+	case StatusSuccess:
 		statusIcon = "✓"
-	case "error":
+	case StatusError:
 		statusIcon = "✗"
-	case "skipped":
+	case StatusSkipped:
 		statusIcon = "⊘"
 	default:
 		statusIcon = "•"
@@ -145,6 +156,7 @@ func (l *ConsoleLogger) LogStep(info StepInfo) {
 	fmt.Println(output)
 }
 
+// Complete logs the execution completion summary with statistics.
 func (l *ConsoleLogger) Complete(stats ExecutionStats) {
 	fmt.Println()
 	fmt.Println(color.CyanString("════════════════════════════════════════"))

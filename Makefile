@@ -35,3 +35,29 @@ release-latest:
 
 test-essentials:
 	docker build -t mooncake-essential-test -f ./testing/essentials/Dockerfile .
+
+# CI targets
+.PHONY: lint test scan ci
+
+lint:
+	@echo "Running golangci-lint..."
+	@golangci-lint run ./...
+
+test:
+	@echo "Running tests..."
+	@go test -v ./...
+
+test-race:
+	@echo "Running tests with race detector..."
+	@go test -race ./...
+
+scan: lint
+	@echo "Running gosec security scan..."
+	@gosec -exclude-generated ./...
+	@echo ""
+	@echo "Running govulncheck..."
+	@govulncheck ./...
+
+ci: lint test-race scan
+	@echo ""
+	@echo "✓ All CI checks passed!"

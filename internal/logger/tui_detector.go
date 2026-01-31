@@ -6,7 +6,7 @@ import (
 	"golang.org/x/term"
 )
 
-// TerminalInfo contains information about terminal capabilities
+// TerminalInfo contains information about terminal capabilities.
 type TerminalInfo struct {
 	IsTerminal   bool
 	SupportsANSI bool
@@ -14,7 +14,7 @@ type TerminalInfo struct {
 	Height       int
 }
 
-// DetectTerminal detects terminal capabilities and returns terminal information
+// DetectTerminal detects terminal capabilities and returns terminal information.
 func DetectTerminal() TerminalInfo {
 	fd := int(os.Stdout.Fd())
 	isTerminal := term.IsTerminal(fd)
@@ -52,8 +52,8 @@ func DetectTerminal() TerminalInfo {
 	}
 }
 
-// IsTUISupported checks if the terminal supports TUI mode
-// Returns true if terminal is detected, supports ANSI codes, and meets minimum size requirements
+// IsTUISupported checks if the terminal supports TUI mode.
+// Returns true if terminal is detected, supports ANSI codes, and meets minimum size requirements.
 func IsTUISupported() bool {
 	info := DetectTerminal()
 
@@ -69,8 +69,8 @@ func IsTUISupported() bool {
 	return true
 }
 
-// GetTerminalSize returns the current terminal size
-// Returns default 80x24 if detection fails
+// GetTerminalSize returns the current terminal size.
+// Returns default 80x24 if detection fails.
 func GetTerminalSize() (width, height int) {
 	info := DetectTerminal()
 

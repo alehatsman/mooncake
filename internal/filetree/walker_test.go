@@ -3,6 +3,7 @@ package filetree
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/pathutil"
@@ -99,7 +100,7 @@ func TestWalker_GetFileTree(t *testing.T) {
 
 		// All items should be within subdir
 		for _, item := range items {
-			if item.Src != "" && !filepath.HasPrefix(item.Src, subdir) {
+			if item.Src != "" && !strings.HasPrefix(item.Src, subdir) {
 				t.Errorf("GetFileTree() item %s not within subdir %s", item.Src, subdir)
 			}
 		}
@@ -150,16 +151,16 @@ func TestWalker_GetFileTreeStructure(t *testing.T) {
 		t.Fatalf("GetFileTree() error = %v", err)
 	}
 
-	// Verify FileTreeItem structure
+	// Verify Item structure
 	for _, item := range items {
 		// Check that Src is populated
 		if item.Src == "" {
-			t.Error("FileTreeItem.Src should not be empty")
+			t.Error("Item.Src should not be empty")
 		}
 
 		// Check that State is either "file" or "directory"
 		if item.State != "file" && item.State != "directory" {
-			t.Errorf("FileTreeItem.State = %q, want 'file' or 'directory'", item.State)
+			t.Errorf("Item.State = %q, want 'file' or 'directory'", item.State)
 		}
 
 		// Path should be relative to root
@@ -261,7 +262,7 @@ func TestWalker_GetFileTreeFileProperties(t *testing.T) {
 	}
 
 	// Find the specific file and directory
-	var fileItem, dirItem *FileTreeItem
+	var fileItem, dirItem *Item
 	for i := range items {
 		if items[i].Src == testFile {
 			fileItem = &items[i]

@@ -53,13 +53,13 @@ func executeLoopStep(items []interface{}, step config.Step, ec *ExecutionContext
 			Name:       step.Name,
 			Level:      ec.Level,
 			GlobalStep: globalStep,
-			Status:     "running",
+			Status:     logger.StatusRunning,
 		})
 	}
 
 	// Create nested execution context
 	curEc := ec.Copy()
-	curEc.Level += 1
+	curEc.Level++
 	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
 	curEc.TotalSteps = len(items)
 
@@ -184,11 +184,10 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 			formatted := config.FormatDiagnosticsWithContext(diagnostics)
 			ec.Logger.Errorf("%s", formatted)
 			return fmt.Errorf("included file validation failed")
-		} else {
-			// Just warnings - show them but continue
-			for _, diag := range diagnostics {
-				ec.Logger.Errorf(diag.String())
-			}
+		}
+		// Just warnings - show them but continue
+		for _, diag := range diagnostics {
+			ec.Logger.Errorf(diag.String())
 		}
 	}
 
@@ -246,7 +245,7 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 // getStepDisplayName determines the display name to show for a step in logs and output.
 //
 // The function follows a priority order to determine the name:
-//  1. If executing within a with_filetree loop, uses the file's name (FileTreeItem.Name)
+//  1. If executing within a with_filetree loop, uses the file's name (Item.Name)
 //  2. If executing within a with_items loop, uses the string representation of the item
 //  3. Otherwise, uses the step's configured Name field
 //
@@ -255,7 +254,7 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 //   - hasName: true if a name was found, false if the step is anonymous
 func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	// For with_filetree, show the actual file name instead of generic step name
-	if item, ok := ec.Variables["item"].(filetree.FileTreeItem); ok {
+	if item, ok := ec.Variables["item"].(filetree.Item); ok {
 		if item.Name != "" {
 			return item.Name, true
 		}
@@ -299,7 +298,7 @@ func shouldLogStep(step config.Step, hasStepName bool, ec *ExecutionContext) boo
 	}
 
 	// Don't log template steps in with_filetree (handler logs them)
-	_, inFileTree := ec.Variables["item"].(filetree.FileTreeItem)
+	_, inFileTree := ec.Variables["item"].(filetree.Item)
 	if step.Template != nil && inFileTree {
 		return false
 	}
@@ -329,7 +328,7 @@ func logStepStatus(stepName string, status string, step config.Step, ec *Executi
 			Name:       stepName + skipInfo,
 			Level:      ec.Level,
 			GlobalStep: 0,
-			Status:     "skipped",
+			Status:     logger.StatusSkipped,
 		})
 
 		if ec.StatsSkipped != nil {
@@ -353,11 +352,11 @@ func logStepStatus(stepName string, status string, step config.Step, ec *Executi
 
 	// Update statistics
 	switch status {
-	case "success":
+	case logger.StatusSuccess:
 		if ec.StatsExecuted != nil {
 			*ec.StatsExecuted++
 		}
-	case "error":
+	case logger.StatusError:
 		if ec.StatsFailed != nil {
 			*ec.StatsFailed++
 		}
@@ -393,7 +392,7 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 			Name:       "Including: " + *step.Include,
 			Level:      ec.Level,
 			GlobalStep: globalStep,
-			Status:     "running",
+			Status:     logger.StatusRunning,
 		})
 
 		return handleInclude(step, ec)
@@ -403,6 +402,7 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	}
 }
 
+// ExecuteStep executes a single configuration step within the given execution context.
 func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// Validate step configuration
 	if err := step.Validate(); err != nil {
@@ -448,7 +448,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Log running status
 	if shouldLogStep(step, hasStepName, ec) {
-		logStepStatus(stepName, "running", step, ec)
+		logStepStatus(stepName, logger.StatusRunning, step, ec)
 	}
 
 	// Execute the appropriate handler
@@ -458,19 +458,20 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	if stepErr != nil {
 		ec.Logger.Errorf("%v", stepErr)
 		if shouldLogStep(step, hasStepName, ec) {
-			logStepStatus(stepName, "error", step, ec)
+			logStepStatus(stepName, logger.StatusError, step, ec)
 		}
 		return stepErr
 	}
 
 	// Log success
 	if shouldLogStep(step, hasStepName, ec) {
-		logStepStatus(stepName, "success", step, ec)
+		logStepStatus(stepName, logger.StatusSuccess, step, ec)
 	}
 
 	return nil
 }
 
+// HandleWithItems executes a step for each item in a list specified by with_items.
 func HandleWithItems(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling with_items: %+v", step.WithItems)
 
@@ -510,6 +511,7 @@ func HandleWithItems(step config.Step, ec *ExecutionContext) error {
 	return executeLoopStep(list, step, ec)
 }
 
+// HandleWithFileTree executes a step for each file in a directory tree specified by with_filetree.
 func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling with_filetree: %+v", step.WithFileTree)
 
@@ -529,7 +531,7 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Debugf("fileTree: %+v", fileTree)
 
-	// Convert FileTreeItem slice to []interface{} for executeLoopStep
+	// Convert Item slice to []interface{} for executeLoopStep
 	items := make([]interface{}, len(fileTree))
 	for i, item := range fileTree {
 		items[i] = item
@@ -538,6 +540,7 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 	return executeLoopStep(items, step, ec)
 }
 
+// ExecuteSteps executes a sequence of configuration steps within the given execution context.
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Executing: %v", ec.CurrentFile)
 
@@ -568,6 +571,7 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
+// StartConfig contains configuration for starting a mooncake execution.
 type StartConfig struct {
 	ConfigFilePath string
 	VarsFilePath   string
@@ -576,6 +580,7 @@ type StartConfig struct {
 	DryRun         bool
 }
 
+// Start begins execution of a mooncake configuration with the given settings.
 func Start(startConfig StartConfig, log logger.Logger) error {
 	// Start timing
 	startTime := time.Now()
@@ -631,11 +636,10 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 			formatted := config.FormatDiagnosticsWithContext(diagnostics)
 			log.Errorf("%s", formatted)
 			return fmt.Errorf("configuration validation failed")
-		} else {
-			// Just warnings - show them but continue
-			for _, diag := range diagnostics {
-				log.Errorf(diag.String())
-			}
+		}
+		// Just warnings - show them but continue
+		for _, diag := range diagnostics {
+			log.Errorf(diag.String())
 		}
 	}
 

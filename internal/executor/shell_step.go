@@ -13,6 +13,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/logger"
 )
 
+// HandleShell executes a shell command step.
 func HandleShell(step config.Step, ec *ExecutionContext) error {
 	shell := *step.Shell
 
@@ -40,9 +41,15 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 		if ec.SudoPass == "" {
 			return fmt.Errorf("step requires sudo but no password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
 		}
+		// #nosec G204 - This is a provisioning tool designed to execute shell commands.
+		// Command execution is the core functionality. The command comes from user-provided
+		// YAML configuration files, and users are expected to validate and trust their configs.
 		command = exec.Command("sudo", "-S", "--", "bash", "-c", renderedCommand)
 		command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
 	} else {
+		// #nosec G204 - This is a provisioning tool designed to execute shell commands.
+		// Command execution is the core functionality. The command comes from user-provided
+		// YAML configuration files, and users are expected to validate and trust their configs.
 		command = exec.Command("bash", "-c", renderedCommand)
 	}
 
@@ -56,7 +63,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
-	if err := command.Start(); err != nil {
+	if err = command.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
 
@@ -115,7 +122,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-func captureOutput(pipe io.Reader, buf *bytes.Buffer, log logger.Logger, isStdout bool, wg *sync.WaitGroup) {
+func captureOutput(pipe io.Reader, buf *bytes.Buffer, log logger.Logger, _ bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {

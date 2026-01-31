@@ -164,6 +164,7 @@ func detectLinuxGPUs() []GPU {
 
 	// Try NVIDIA first
 	if nvidiaSmi, err := exec.LookPath("nvidia-smi"); err == nil {
+		// #nosec G204 -- nvidia-smi path is validated via exec.LookPath and used for system GPU detection
 		out, err := exec.Command(nvidiaSmi, "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader").Output()
 		if err == nil {
 			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
@@ -184,6 +185,7 @@ func detectLinuxGPUs() []GPU {
 
 	// Try AMD
 	if rocmSmi, err := exec.LookPath("rocm-smi"); err == nil {
+		// #nosec G204 -- rocm-smi path is validated via exec.LookPath and used for system GPU detection
 		out, err := exec.Command(rocmSmi, "--showproductname").Output()
 		if err == nil {
 			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
@@ -205,6 +207,7 @@ func detectLinuxGPUs() []GPU {
 	// Fallback: Try lspci for basic GPU detection
 	if len(gpus) == 0 {
 		if lspci, err := exec.LookPath("lspci"); err == nil {
+			// #nosec G204 -- lspci path is validated via exec.LookPath and used for system hardware detection
 			out, err := exec.Command(lspci).Output()
 			if err == nil {
 				lines := strings.Split(string(out), "\n")
@@ -212,11 +215,12 @@ func detectLinuxGPUs() []GPU {
 					lower := strings.ToLower(line)
 					if strings.Contains(lower, "vga") || strings.Contains(lower, "3d controller") {
 						var vendor string
-						if strings.Contains(lower, "nvidia") {
+						switch {
+						case strings.Contains(lower, "nvidia"):
 							vendor = "nvidia"
-						} else if strings.Contains(lower, "amd") || strings.Contains(lower, "ati") {
+						case strings.Contains(lower, "amd") || strings.Contains(lower, "ati"):
 							vendor = "amd"
-						} else if strings.Contains(lower, "intel") {
+						case strings.Contains(lower, "intel"):
 							vendor = "intel"
 						}
 

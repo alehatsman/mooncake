@@ -91,6 +91,7 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 	}
 
 	// Check if file content would change
+	// #nosec G304 -- File path from user config is intentional functionality for provisioning
 	existingContent, err := os.ReadFile(renderedPath)
 	if err != nil || string(existingContent) != renderedContent {
 		result.Changed = true
@@ -105,6 +106,7 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 	return nil
 }
 
+// HandleFile creates or manages a file or directory step.
 func HandleFile(step config.Step, ec *ExecutionContext) error {
 	file := step.File
 
@@ -123,11 +125,12 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 	result.Changed = false // Will be set to true if we create/modify
 
 	// Dispatch to appropriate handler based on state
-	if file.State == "directory" {
+	switch file.State {
+	case "directory":
 		if err := handleDirectoryState(file, renderedPath, result, step, ec); err != nil {
 			return err
 		}
-	} else if file.State == "file" {
+	case "file":
 		if err := handleFileState(file, renderedPath, result, step, ec); err != nil {
 			return err
 		}

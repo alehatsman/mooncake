@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Facts contains collected system information
+// Facts contains collected system information.
 type Facts struct {
 	// Basic
 	OS       string
@@ -36,7 +36,7 @@ type Facts struct {
 	PackageManager string
 }
 
-// NetworkInterface represents a network interface
+// NetworkInterface represents a network interface.
 type NetworkInterface struct {
 	Name       string
 	MACAddress string
@@ -45,7 +45,7 @@ type NetworkInterface struct {
 	Up         bool
 }
 
-// Disk represents a storage device
+// Disk represents a storage device.
 type Disk struct {
 	Device     string
 	MountPoint string
@@ -56,7 +56,7 @@ type Disk struct {
 	UsedPct    int
 }
 
-// GPU represents a graphics card
+// GPU represents a graphics card.
 type GPU struct {
 	Vendor string // nvidia, amd, intel
 	Model  string
@@ -64,7 +64,7 @@ type GPU struct {
 	Driver string
 }
 
-// Collect gathers all system facts
+// Collect gathers all system facts.
 func Collect() *Facts {
 	f := &Facts{
 		OS:   runtime.GOOS,
@@ -92,7 +92,7 @@ func Collect() *Facts {
 	return f
 }
 
-// ToMap converts Facts to a map for use in templates
+// ToMap converts Facts to a map for use in templates.
 func (f *Facts) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"os":                   f.OS,
@@ -190,6 +190,7 @@ func collectNetworkInterfaces() []NetworkInterface {
 func detectPythonVersion() string {
 	// Try python3 first
 	for _, cmd := range []string{"python3", "python"} {
+		// #nosec G204 -- cmd is from a trusted list of Python executable names used for version detection
 		out, err := exec.Command(cmd, "--version").CombinedOutput()
 		if err == nil {
 			// Parse "Python 3.11.5" -> "3.11.5"

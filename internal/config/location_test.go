@@ -199,49 +199,6 @@ func TestEscapeJSONPointer(t *testing.T) {
 	}
 }
 
-func TestUnescapeJSONPointer(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"simple", "simple"},
-		{"with~0tilde", "with~tilde"},
-		{"with~1slash", "with/slash"},
-		{"~0both~1chars~0", "~both/chars~"},
-		{"", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := unescapeJSONPointer(tt.input)
-			if got != tt.want {
-				t.Errorf("unescapeJSONPointer(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestEscapeUnescapeRoundTrip(t *testing.T) {
-	tests := []string{
-		"simple",
-		"with~tilde",
-		"with/slash",
-		"~both/chars~",
-		"",
-		"complex~field/name~",
-	}
-
-	for _, input := range tests {
-		t.Run(input, func(t *testing.T) {
-			escaped := escapeJSONPointer(input)
-			unescaped := unescapeJSONPointer(escaped)
-			if unescaped != input {
-				t.Errorf("Round trip failed: %q -> escape -> %q -> unescape -> %q", input, escaped, unescaped)
-			}
-		})
-	}
-}
-
 // TestBuildLocationMap_RealWorldExample tests with a realistic configuration
 func TestBuildLocationMap_RealWorldExample(t *testing.T) {
 	yamlContent := `- name: Create directory

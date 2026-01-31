@@ -1,3 +1,4 @@
+// Package main provides the mooncake CLI application.
 package main
 
 import (
@@ -65,7 +66,7 @@ func run(c *cli.Context) error {
 	}, log)
 }
 
-func explainCommand(c *cli.Context) error {
+func explainCommand(_ *cli.Context) error {
 	// Collect system facts
 	f := facts.Collect()
 

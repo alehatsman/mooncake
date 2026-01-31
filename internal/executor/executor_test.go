@@ -1106,7 +1106,7 @@ func TestShouldLogStep_AllCases(t *testing.T) {
 			name:        "template with filetree",
 			hasStepName: true,
 			step:        config.Step{Template: &config.Template{Src: "src", Dest: "dest"}},
-			itemVar:     filetree.FileTreeItem{Name: "file.txt"},
+			itemVar:     filetree.Item{Name: "file.txt"},
 			want:        false,
 		},
 	}

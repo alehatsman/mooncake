@@ -2,13 +2,12 @@ package logger
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
 
-// TUILogger implements Logger interface with animated TUI display
+// TUILogger implements Logger interface with animated TUI display.
 type TUILogger struct {
 	buffer   *TUIBuffer
 	display  *TUIDisplay
@@ -23,10 +22,7 @@ type TUILogger struct {
 	lastStepInfo *StepInfo
 }
 
-// ansiPattern matches ANSI escape codes
-var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
-
-// NewTUILogger creates a new TUI logger
+// NewTUILogger creates a new TUI logger.
 func NewTUILogger(logLevel int) (*TUILogger, error) {
 	// Load animation frames from embedded content
 	animator, err := LoadEmbeddedFrames()
@@ -53,7 +49,7 @@ func NewTUILogger(logLevel int) (*TUILogger, error) {
 	}, nil
 }
 
-// Start begins the animation and rendering loop
+// Start begins the animation and rendering loop.
 func (l *TUILogger) Start() {
 	l.ticker = time.NewTicker(150 * time.Millisecond)
 	go func() {
@@ -70,7 +66,7 @@ func (l *TUILogger) Start() {
 	}()
 }
 
-// Stop stops the animation and shows final render
+// Stop stops the animation and shows final render.
 func (l *TUILogger) Stop() {
 	if l.ticker != nil {
 		l.ticker.Stop()
@@ -86,12 +82,7 @@ func (l *TUILogger) Stop() {
 	fmt.Println() // Add newline for shell prompt
 }
 
-// stripANSI removes ANSI color codes from a string
-func stripANSI(s string) string {
-	return ansiPattern.ReplaceAllString(s, "")
-}
-
-// LogStep handles structured step logging
+// LogStep handles structured step logging.
 func (l *TUILogger) LogStep(info StepInfo) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -102,34 +93,34 @@ func (l *TUILogger) LogStep(info StepInfo) {
 
 	// Handle different statuses
 	switch info.Status {
-	case "skipped":
+	case StatusSkipped:
 		// Add directly to history as skipped
 		l.buffer.AddStep(StepEntry{
 			Name:      info.Name,
-			Status:    "skipped",
+			Status:    StatusSkipped,
 			Level:     info.Level,
 			Timestamp: time.Now(),
 		})
 		l.lastStepInfo = nil
-	case "error":
+	case StatusError:
 		// Add directly to history as error
 		l.buffer.AddStep(StepEntry{
 			Name:      info.Name,
-			Status:    "error",
+			Status:    StatusError,
 			Level:     info.Level,
 			Timestamp: time.Now(),
 		})
 		l.lastStepInfo = nil
-	case "success":
+	case StatusSuccess:
 		// Add directly to history as success
 		l.buffer.AddStep(StepEntry{
 			Name:      info.Name,
-			Status:    "success",
+			Status:    StatusSuccess,
 			Level:     info.Level,
 			Timestamp: time.Now(),
 		})
 		l.lastStepInfo = nil
-	case "running":
+	case StatusRunning:
 		// Set as current step, store for later completion
 		l.buffer.SetCurrentStep(info.Name, ProgressInfo{
 			Current: info.GlobalStep,
@@ -139,14 +130,14 @@ func (l *TUILogger) LogStep(info StepInfo) {
 	}
 }
 
-// Infof logs an info message (ignored in TUI mode - use LogStep for steps)
-func (l *TUILogger) Infof(format string, v ...interface{}) {
+// Infof logs an info message (ignored in TUI mode - use LogStep for steps).
+func (l *TUILogger) Infof(_ string, _ ...interface{}) {
 	// Info messages are ignored in TUI mode
 	// Steps should use LogStep() instead
 	// This prevents cluttering the TUI with non-step messages
 }
 
-// Debugf logs a debug message
+// Debugf logs a debug message.
 func (l *TUILogger) Debugf(format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -159,7 +150,7 @@ func (l *TUILogger) Debugf(format string, v ...interface{}) {
 	l.buffer.AddDebug(message)
 }
 
-// Errorf logs an error message
+// Errorf logs an error message.
 func (l *TUILogger) Errorf(format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -171,7 +162,7 @@ func (l *TUILogger) Errorf(format string, v ...interface{}) {
 	if l.lastStepInfo != nil {
 		l.buffer.AddStep(StepEntry{
 			Name:      l.lastStepInfo.Name,
-			Status:    "error",
+			Status:    StatusError,
 			Level:     l.lastStepInfo.Level,
 			Timestamp: time.Now(),
 		})
@@ -179,7 +170,7 @@ func (l *TUILogger) Errorf(format string, v ...interface{}) {
 	}
 }
 
-// Codef logs formatted code
+// Codef logs formatted code.
 func (l *TUILogger) Codef(format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -197,7 +188,7 @@ func (l *TUILogger) Codef(format string, v ...interface{}) {
 	}
 }
 
-// Textf logs plain text
+// Textf logs plain text.
 func (l *TUILogger) Textf(format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -210,13 +201,13 @@ func (l *TUILogger) Textf(format string, v ...interface{}) {
 	l.buffer.AddDebug(message)
 }
 
-// Mooncake displays the mooncake banner (initializes display)
+// Mooncake displays the mooncake banner (initializes display).
 func (l *TUILogger) Mooncake() {
 	// In TUI mode, the animation is always running
 	// No special action needed for banner
 }
 
-// SetLogLevel sets the log level
+// SetLogLevel sets the log level.
 func (l *TUILogger) SetLogLevel(logLevel int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -224,7 +215,7 @@ func (l *TUILogger) SetLogLevel(logLevel int) {
 	l.logLevel = logLevel
 }
 
-// SetLogLevelStr sets the log level from a string
+// SetLogLevelStr sets the log level from a string.
 func (l *TUILogger) SetLogLevelStr(logLevel string) error {
 	level, err := ParseLogLevel(logLevel)
 	if err != nil {
@@ -235,7 +226,7 @@ func (l *TUILogger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
-// WithPadLevel creates a new logger with the specified padding level
+// WithPadLevel creates a new logger with the specified padding level.
 func (l *TUILogger) WithPadLevel(padLevel int) Logger {
 	// Create a new TUILogger that shares the same buffer and display
 	newLogger := &TUILogger{
@@ -252,6 +243,7 @@ func (l *TUILogger) WithPadLevel(padLevel int) Logger {
 	return newLogger
 }
 
+// Complete logs the execution completion summary with statistics.
 func (l *TUILogger) Complete(stats ExecutionStats) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

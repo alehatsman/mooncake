@@ -1,0 +1,124 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  enable:
+    - gosec
+    - gocritic
+    - errcheck
+    - staticcheck
+    - govet
+    - ineffassign
+    - unused
+    - gocyclo
+    - misspell
+    - unparam
+    - unconvert
+    - goconst
+    - dupl
+    - prealloc
+    - bodyclose
+    - revive
+  disable:
+    - errname
+    - exhaustive
+    - wrapcheck
+
+  settings:
+    gosec:
+      severity: "medium"
+      confidence: "medium"
+      excludes:
+        - G104
+
+    gocritic:
+      enabled-checks:
+        - appendCombine
+        - boolExprSimplify
+        - dupImport
+        - nilValReturn
+        - weakCond
+      disabled-checks:
+        - ifElseChain
+
+    # gocyclo:
+    #   min-complexity: 15
+
+    cyclop:
+      max-complexity: 15
+
+    dupl:
+      threshold: 100
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+
+    govet:
+      enable:
+        - shadow
+
+    revive:
+      enable-all-rules: false
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    staticcheck:
+      checks: ["all"]
+
+  exclusions:
+    rules:
+      - path: internal/executor/shell_step\.go
+        linters: [gosec]
+        text: "G204"
+
+      - path: '(^|/).*_test\.go$'
+        linters:
+          - errcheck
+          - goconst
+          - gosec
+          - revive
+          - staticcheck
+          - gocyclo
+          - cyclop
+          - dupl
+          - gocritic
+          - ineffassign
+          - unused
+
+      - path: cmd/mooncake\.go
+        linters: [errcheck]
+        text: "Error return value of `app.Run` is not checked"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

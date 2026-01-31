@@ -17,6 +17,14 @@ const (
 	ErrorLevel
 )
 
+// Step status constants used across all logger implementations
+const (
+	StatusRunning = "running"
+	StatusSuccess = "success"
+	StatusError   = "error"
+	StatusSkipped = "skipped"
+)
+
 // ParseLogLevel converts a log level string to its integer constant.
 // Valid values are "debug", "info", and "error" (case-insensitive).
 // Returns an error if the level string is not recognized.
@@ -33,7 +41,7 @@ func ParseLogLevel(level string) (int, error) {
 	}
 }
 
-// StepInfo contains structured information about a step execution
+// StepInfo contains structured information about a step execution.
 type StepInfo struct {
 	Name       string
 	Level      int    // Nesting level for indentation
@@ -41,7 +49,7 @@ type StepInfo struct {
 	Status     string // "running", "success", "error", "skipped"
 }
 
-// ExecutionStats contains execution statistics
+// ExecutionStats contains execution statistics.
 type ExecutionStats struct {
 	Duration time.Duration
 	Executed int
@@ -49,7 +57,7 @@ type ExecutionStats struct {
 	Failed   int
 }
 
-// Logger interface defines the logging contract
+// Logger interface defines the logging contract.
 type Logger interface {
 	Infof(format string, v ...interface{})
 	Debugf(format string, v ...interface{})
@@ -64,7 +72,7 @@ type Logger interface {
 	Complete(stats ExecutionStats)
 }
 
-// Fatalf logs an error and exits the program
+// Fatalf logs an error and exits the program.
 func Fatalf(logger Logger, format string, v ...interface{}) {
 	logger.Errorf(format, v...)
 	os.Exit(1)

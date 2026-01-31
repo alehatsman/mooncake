@@ -53,21 +53,22 @@ const embeddedAnimationFrames = `٩     ۶
  ◡  ◡
 `
 
-// AnimationFrames manages animation frames for the mooncake character
+// AnimationFrames manages animation frames for the mooncake character.
 type AnimationFrames struct {
 	frames     [][]string // Each frame is a slice of 3 lines
 	currentIdx int
 	mu         sync.RWMutex
 }
 
-// LoadEmbeddedFrames loads animation frames from the embedded content
+// LoadEmbeddedFrames loads animation frames from the embedded content.
 func LoadEmbeddedFrames() (*AnimationFrames, error) {
 	return LoadFramesFromString(embeddedAnimationFrames)
 }
 
-// LoadFramesFromFile loads animation frames from a file
-// Frames are expected to be 3 lines each, separated by blank lines
+// LoadFramesFromFile loads animation frames from a file.
+// Frames are expected to be 3 lines each, separated by blank lines.
 func LoadFramesFromFile(path string) (*AnimationFrames, error) {
+	// #nosec G304 -- User-provided animation file path is intentional functionality
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read animation file: %w", err)
@@ -76,8 +77,8 @@ func LoadFramesFromFile(path string) (*AnimationFrames, error) {
 	return LoadFramesFromString(string(content))
 }
 
-// LoadFramesFromString loads animation frames from a string
-// Frames are expected to be 3 lines each, separated by blank lines
+// LoadFramesFromString loads animation frames from a string.
+// Frames are expected to be 3 lines each, separated by blank lines.
 func LoadFramesFromString(content string) (*AnimationFrames, error) {
 	lines := strings.Split(content, "\n")
 	var frames [][]string

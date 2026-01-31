@@ -1,4 +1,8 @@
-# Mooncake [![build](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/build_test.yml)
+# Mooncake
+
+[![CI](https://github.com/alehatsman/mooncake/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/ci.yml)
+[![Security](https://github.com/alehatsman/mooncake/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/security.yml)
+[![codecov](https://codecov.io/gh/alehatsman/mooncake/branch/master/graph/badge.svg)](https://codecov.io/gh/alehatsman/mooncake)
 
 Space fighters provisioning tool, **Chookity!**
 

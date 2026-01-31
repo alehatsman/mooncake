@@ -55,7 +55,7 @@ type Result struct {
 	Skipped bool `json:"skipped"`
 }
 
-// NewResult creates a new Result with default values
+// NewResult creates a new Result with default values.
 func NewResult() *Result {
 	return &Result{
 		Stdout:  "",
@@ -67,7 +67,7 @@ func NewResult() *Result {
 	}
 }
 
-// ToMap converts Result to a map for use in template variables
+// ToMap converts Result to a map for use in template variables.
 func (r *Result) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"stdout":  r.Stdout,
@@ -80,8 +80,7 @@ func (r *Result) ToMap() map[string]interface{} {
 }
 
 // RegisterTo registers this result to the variables map under the given name.
-// The result can be accessed using nested field syntax (e.g., "result.stdout", "result.rc")
-// in templates and when conditions.
+// The result can be accessed using nested field syntax (e.g., "result.stdout", "result.rc") in templates and when conditions.
 func (r *Result) RegisterTo(variables map[string]interface{}, name string) {
 	variables[name] = r.ToMap()
 }

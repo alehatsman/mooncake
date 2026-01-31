@@ -8,6 +8,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
+// HandleTemplate renders a template file and writes it to a destination.
 func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	template := step.Template
 
@@ -31,7 +32,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	// Check for dry-run mode
 	if ec.DryRun {
 		// Check if source file exists
-		if _, err := os.Stat(src); os.IsNotExist(err) {
+		if _, err = os.Stat(src); os.IsNotExist(err) {
 			ec.Logger.Errorf("  [DRY-RUN] Template source file does not exist: %s", src)
 			return fmt.Errorf("template source file not found: %s", src)
 		}
@@ -45,12 +46,17 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		return nil
 	}
 
+	// #nosec G304 -- Template source path from user config is intentional functionality
 	templateFile, err := os.Open(src)
 	if err != nil {
 		markStepFailed(result, step, ec)
 		return err
 	}
-	defer templateFile.Close()
+	defer func() {
+		if err = templateFile.Close(); err != nil {
+			ec.Logger.Errorf("failed to close template file %s: %v", src, err)
+		}
+	}()
 
 	templateBytes, err := io.ReadAll(templateFile)
 	if err != nil {
@@ -70,6 +76,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Check if content would change
+	// #nosec G304 -- Template destination path from user config is intentional functionality
 	existingContent, err := os.ReadFile(dest)
 	if err != nil || string(existingContent) != output {
 		result.Changed = true

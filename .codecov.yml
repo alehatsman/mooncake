@@ -1,0 +1,23 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 60%        # Overall project coverage target
+        threshold: 5%      # Allow 5% drop
+    patch:
+      default:
+        target: 70%        # New code should have higher coverage
+
+  # Packages that need higher coverage (security-critical)
+  precision: 2
+  round: down
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "**/*_test.go"
+  - "**/mock_*.go"
+  - "cmd/mooncake.go"  # CLI entry point

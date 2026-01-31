@@ -1,3 +1,4 @@
+// Package filetree provides directory tree walking functionality for with_filetree operations.
 package filetree
 
 import (
@@ -8,8 +9,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/pathutil"
 )
 
-// FileTreeItem represents a single item in a file tree
-type FileTreeItem struct {
+// Item represents a single item in a file tree.
+type Item struct {
 	Src   string `yaml:"src"`
 	Path  string `yaml:"path"`
 	Name  string `yaml:"name"`
@@ -17,21 +18,21 @@ type FileTreeItem struct {
 	IsDir bool   `yaml:"is_dir"`
 }
 
-// Walker handles file tree operations
+// Walker handles file tree operations.
 type Walker struct {
 	pathExpander *pathutil.PathExpander
 }
 
-// NewWalker creates a new file tree walker
+// NewWalker creates a new file tree walker.
 func NewWalker(pathExpander *pathutil.PathExpander) *Walker {
 	return &Walker{
 		pathExpander: pathExpander,
 	}
 }
 
-// GetFileTree walks a directory tree and returns all files and directories
-func (w *Walker) GetFileTree(path string, currentDir string, context map[string]interface{}) ([]FileTreeItem, error) {
-	files := make([]FileTreeItem, 0)
+// GetFileTree walks a directory tree and returns all files and directories.
+func (w *Walker) GetFileTree(path string, currentDir string, context map[string]interface{}) ([]Item, error) {
+	files := make([]Item, 0)
 
 	root, err := w.pathExpander.ExpandPath(path, currentDir, context)
 	if err != nil {
@@ -53,7 +54,7 @@ func (w *Walker) GetFileTree(path string, currentDir string, context map[string]
 		path := strings.Replace(relativePath, root, "", 1)
 		name := info.Name()
 
-		files = append(files, FileTreeItem{
+		files = append(files, Item{
 			Path:  path,
 			Src:   relativePath,
 			Name:  name,

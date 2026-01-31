@@ -1,3 +1,4 @@
+// Package facts provides system information collection for different operating systems.
 package facts
 
 import (
@@ -149,13 +150,14 @@ func detectMacOSGPUs() []GPU {
 		// Extract vendor
 		lower := strings.ToLower(trimmed)
 		if strings.Contains(lower, "vendor:") {
-			if strings.Contains(lower, "nvidia") {
+			switch {
+			case strings.Contains(lower, "nvidia"):
 				currentGPU.Vendor = "nvidia"
-			} else if strings.Contains(lower, "amd") || strings.Contains(lower, "ati") {
+			case strings.Contains(lower, "amd") || strings.Contains(lower, "ati"):
 				currentGPU.Vendor = "amd"
-			} else if strings.Contains(lower, "intel") {
+			case strings.Contains(lower, "intel"):
 				currentGPU.Vendor = "intel"
-			} else if strings.Contains(lower, "apple") {
+			case strings.Contains(lower, "apple"):
 				currentGPU.Vendor = "apple"
 			}
 		}

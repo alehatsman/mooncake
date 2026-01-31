@@ -1,6 +1,6 @@
 module github.com/alehatsman/mooncake
 
-go 1.24.0
+go 1.25
 
 require (
 	github.com/expr-lang/expr v1.17.7

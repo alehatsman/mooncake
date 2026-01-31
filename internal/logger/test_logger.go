@@ -6,13 +6,13 @@ import (
 	"sync"
 )
 
-// LogEntry represents a single log entry
+// LogEntry represents a single log entry.
 type LogEntry struct {
 	Level   string
 	Message string
 }
 
-// TestLogger implements Logger interface and captures log output for testing
+// TestLogger implements Logger interface and captures log output for testing.
 type TestLogger struct {
 	mu       sync.Mutex
 	Logs     []LogEntry
@@ -20,7 +20,7 @@ type TestLogger struct {
 	padLevel int
 }
 
-// NewTestLogger creates a new TestLogger for use in tests
+// NewTestLogger creates a new TestLogger for use in tests.
 func NewTestLogger() *TestLogger {
 	return &TestLogger{
 		Logs:     make([]LogEntry, 0),
@@ -29,6 +29,7 @@ func NewTestLogger() *TestLogger {
 	}
 }
 
+// Infof logs an informational message.
 func (t *TestLogger) Infof(format string, v ...interface{}) {
 	if t.logLevel <= InfoLevel {
 		t.mu.Lock()
@@ -37,6 +38,7 @@ func (t *TestLogger) Infof(format string, v ...interface{}) {
 	}
 }
 
+// Debugf logs a debug message.
 func (t *TestLogger) Debugf(format string, v ...interface{}) {
 	if t.logLevel <= DebugLevel {
 		t.mu.Lock()
@@ -45,6 +47,7 @@ func (t *TestLogger) Debugf(format string, v ...interface{}) {
 	}
 }
 
+// Errorf logs an error message.
 func (t *TestLogger) Errorf(format string, v ...interface{}) {
 	if t.logLevel <= ErrorLevel {
 		t.mu.Lock()
@@ -53,6 +56,7 @@ func (t *TestLogger) Errorf(format string, v ...interface{}) {
 	}
 }
 
+// Codef logs a code snippet message.
 func (t *TestLogger) Codef(format string, v ...interface{}) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -62,24 +66,28 @@ func (t *TestLogger) Codef(format string, v ...interface{}) {
 	}
 }
 
+// Textf logs a plain text message.
 func (t *TestLogger) Textf(format string, v ...interface{}) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.Logs = append(t.Logs, LogEntry{"TEXT", fmt.Sprintf(format, v...)})
 }
 
+// Mooncake displays the mooncake banner.
 func (t *TestLogger) Mooncake() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.Logs = append(t.Logs, LogEntry{"INFO", "Mooncake banner displayed"})
 }
 
+// SetLogLevel sets the logging level for the logger.
 func (t *TestLogger) SetLogLevel(logLevel int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.logLevel = logLevel
 }
 
+// SetLogLevelStr sets the logging level from a string value.
 func (t *TestLogger) SetLogLevelStr(logLevel string) error {
 	switch logLevel {
 	case "debug":
@@ -94,6 +102,7 @@ func (t *TestLogger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
+// WithPadLevel creates a new logger with the specified padding level.
 func (t *TestLogger) WithPadLevel(padLevel int) Logger {
 	return &TestLogger{
 		Logs:     t.Logs, // Share the same log slice
@@ -102,6 +111,7 @@ func (t *TestLogger) WithPadLevel(padLevel int) Logger {
 	}
 }
 
+// LogStep logs a step execution with status.
 func (t *TestLogger) LogStep(info StepInfo) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -109,6 +119,7 @@ func (t *TestLogger) LogStep(info StepInfo) {
 	t.Logs = append(t.Logs, LogEntry{"STEP", message})
 }
 
+// Complete logs the execution completion summary with statistics.
 func (t *TestLogger) Complete(stats ExecutionStats) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -119,7 +130,7 @@ func (t *TestLogger) Complete(stats ExecutionStats) {
 
 // Helper methods for assertions in tests
 
-// Contains checks if any log message contains the substring
+// Contains checks if any log message contains the substring.
 func (t *TestLogger) Contains(substr string) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -131,7 +142,7 @@ func (t *TestLogger) Contains(substr string) bool {
 	return false
 }
 
-// ContainsLevel checks if any log at the specified level contains the substring
+// ContainsLevel checks if any log at the specified level contains the substring.
 func (t *TestLogger) ContainsLevel(level, substr string) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -143,14 +154,14 @@ func (t *TestLogger) ContainsLevel(level, substr string) bool {
 	return false
 }
 
-// Count returns the number of log entries
+// Count returns the number of log entries.
 func (t *TestLogger) Count() int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return len(t.Logs)
 }
 
-// CountLevel returns the number of log entries at the specified level
+// CountLevel returns the number of log entries at the specified level.
 func (t *TestLogger) CountLevel(level string) int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -163,14 +174,14 @@ func (t *TestLogger) CountLevel(level string) int {
 	return count
 }
 
-// Clear removes all log entries
+// Clear removes all log entries.
 func (t *TestLogger) Clear() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.Logs = make([]LogEntry, 0)
 }
 
-// GetLogs returns a copy of all log entries
+// GetLogs returns a copy of all log entries.
 func (t *TestLogger) GetLogs() []LogEntry {
 	t.mu.Lock()
 	defer t.mu.Unlock()

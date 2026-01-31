@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestYAMLConfigReader_ReadConfig(t *testing.T) {
+func TestYAMLReader_ReadConfig(t *testing.T) {
 	reader := NewYAMLConfigReader()
 
 	t.Run("valid config", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestYAMLConfigReader_ReadConfig(t *testing.T) {
 	})
 }
 
-func TestYAMLConfigReader_ReadVariables(t *testing.T) {
+func TestYAMLReader_ReadVariables(t *testing.T) {
 	reader := NewYAMLConfigReader()
 
 	t.Run("valid variables", func(t *testing.T) {
@@ -166,16 +166,12 @@ count: 42
 		tmpFile := createTempYAML(t, "")
 		defer os.Remove(tmpFile)
 
-		vars, err := reader.ReadVariables(tmpFile)
+		_, err := reader.ReadVariables(tmpFile)
 		// Empty YAML should not error, just return empty map or nil
 		if err != nil {
 			// Some YAML parsers might return error, some might return empty
 			// Either is acceptable
 			return
-		}
-
-		if vars == nil {
-			vars = make(map[string]interface{})
 		}
 	})
 
@@ -228,8 +224,8 @@ func TestNewYAMLConfigReader(t *testing.T) {
 		t.Error("NewYAMLConfigReader() returned nil")
 	}
 
-	// Verify it implements ConfigReader interface
-	var _ ConfigReader = reader
+	// Verify it implements Reader interface
+	var _ Reader = reader
 }
 
 func TestPackageLevelFunctions(t *testing.T) {
@@ -267,7 +263,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 	})
 }
 
-func TestYAMLConfigReader_ReadConfigComplexSteps(t *testing.T) {
+func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 	reader := NewYAMLConfigReader()
 
 	tmpFile := createTempYAML(t, `

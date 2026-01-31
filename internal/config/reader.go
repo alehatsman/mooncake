@@ -2,24 +2,25 @@ package config
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
-// ConfigReader defines the interface for reading configuration and variables
-type ConfigReader interface {
+// Reader defines the interface for reading configuration and variables
+type Reader interface {
 	ReadConfig(path string) ([]Step, error)
 	ReadVariables(path string) (map[string]interface{}, error)
 }
 
-// YAMLConfigReader implements ConfigReader for YAML files
+// YAMLConfigReader implements Reader for YAML files
 type YAMLConfigReader struct {
 	// Can add dependencies here if needed (e.g., FileSystem interface)
 }
 
 // NewYAMLConfigReader creates a new YAMLConfigReader
-func NewYAMLConfigReader() ConfigReader {
+func NewYAMLConfigReader() Reader {
 	return &YAMLConfigReader{}
 }
 
@@ -43,11 +44,16 @@ func (r *YAMLConfigReader) ReadConfig(path string) ([]Step, error) {
 // ReadConfigWithValidation reads configuration steps from a YAML file with full validation
 // Returns steps, diagnostics (which may include warnings), and any parsing errors
 func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diagnostic, error) {
+	// #nosec G304 -- User-specified config file path is intentional and required functionality
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer f.Close()
+	defer func() {
+		if err = f.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close config file %s: %v\n", path, err)
+		}
+	}()
 
 	// Parse YAML to yaml.Node to preserve source location information
 	var rootNode yaml.Node
@@ -94,11 +100,16 @@ func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, e
 		return make(map[string]interface{}), nil
 	}
 
+	// #nosec G304 -- User-specified variables file path is intentional and required functionality
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if err = file.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close variables file %s: %v\n", path, err)
+		}
+	}()
 
 	reader := bufio.NewReader(file)
 
@@ -124,7 +135,10 @@ func ReadConfig(path string) ([]Step, error) {
 // ReadConfigWithValidation is a convenience function using the default YAML reader
 // Returns steps, diagnostics, and any parsing errors
 func ReadConfigWithValidation(path string) ([]Step, []Diagnostic, error) {
-	reader := defaultReader.(*YAMLConfigReader)
+	reader, ok := defaultReader.(*YAMLConfigReader)
+	if !ok {
+		panic("defaultReader is not a YAMLConfigReader")
+	}
 	return reader.ReadConfigWithValidation(path)
 }
 

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// StepEntry represents a single step in the execution history
+// StepEntry represents a single step in the execution history.
 type StepEntry struct {
 	Name      string
 	Status    string // "success", "error", "skipped", "running"
@@ -13,13 +13,13 @@ type StepEntry struct {
 	Timestamp time.Time
 }
 
-// ProgressInfo tracks overall execution progress
+// ProgressInfo tracks overall execution progress.
 type ProgressInfo struct {
 	Current int
 	Total   int
 }
 
-// BufferSnapshot is an atomic snapshot of the buffer state for rendering
+// BufferSnapshot is an atomic snapshot of the buffer state for rendering.
 type BufferSnapshot struct {
 	StepHistory   []StepEntry
 	CurrentStep   string
@@ -29,7 +29,7 @@ type BufferSnapshot struct {
 	Completion    *ExecutionStats
 }
 
-// TUIBuffer manages step history and message buffering
+// TUIBuffer manages step history and message buffering.
 type TUIBuffer struct {
 	stepHistory   []StepEntry // Circular buffer
 	historySize   int
@@ -48,7 +48,7 @@ type TUIBuffer struct {
 	mu sync.RWMutex
 }
 
-// NewTUIBuffer creates a new TUI buffer with specified history size
+// NewTUIBuffer creates a new TUI buffer with specified history size.
 func NewTUIBuffer(historySize int) *TUIBuffer {
 	return &TUIBuffer{
 		stepHistory:   make([]StepEntry, historySize),
@@ -61,7 +61,7 @@ func NewTUIBuffer(historySize int) *TUIBuffer {
 	}
 }
 
-// AddStep adds a step to the history (circular buffer)
+// AddStep adds a step to the history (circular buffer).
 func (b *TUIBuffer) AddStep(entry StepEntry) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -77,7 +77,7 @@ func (b *TUIBuffer) AddStep(entry StepEntry) {
 	}
 }
 
-// SetCurrentStep sets the currently executing step
+// SetCurrentStep sets the currently executing step.
 func (b *TUIBuffer) SetCurrentStep(name string, progress ProgressInfo) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -86,7 +86,7 @@ func (b *TUIBuffer) SetCurrentStep(name string, progress ProgressInfo) {
 	b.progress = progress
 }
 
-// SetCompletion sets execution completion statistics
+// SetCompletion sets execution completion statistics.
 func (b *TUIBuffer) SetCompletion(stats ExecutionStats) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -94,7 +94,7 @@ func (b *TUIBuffer) SetCompletion(stats ExecutionStats) {
 	b.completion = &stats
 }
 
-// AddDebug adds a debug message to the buffer
+// AddDebug adds a debug message to the buffer.
 func (b *TUIBuffer) AddDebug(message string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -106,7 +106,7 @@ func (b *TUIBuffer) AddDebug(message string) {
 	}
 }
 
-// AddError adds an error message to the buffer
+// AddError adds an error message to the buffer.
 func (b *TUIBuffer) AddError(message string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -118,7 +118,7 @@ func (b *TUIBuffer) AddError(message string) {
 	}
 }
 
-// GetSnapshot returns an atomic snapshot of the buffer state
+// GetSnapshot returns an atomic snapshot of the buffer state.
 func (b *TUIBuffer) GetSnapshot() BufferSnapshot {
 	b.mu.RLock()
 	defer b.mu.RUnlock()

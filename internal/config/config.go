@@ -1,10 +1,11 @@
+// Package config provides data structures and validation for mooncake configuration files.
 package config
 
 import (
-	"errors"
 	"fmt"
 )
 
+// File represents a file or directory operation in a configuration step.
 type File struct {
 	Path    string `yaml:"path" json:"path"`
 	State   string `yaml:"state" json:"state,omitempty"`
@@ -12,6 +13,7 @@ type File struct {
 	Mode    string `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
 
+// Template represents a template rendering operation in a configuration step.
 type Template struct {
 	Src  string                  `yaml:"src" json:"src"`
 	Dest string                  `yaml:"dest" json:"dest"`
@@ -19,10 +21,12 @@ type Template struct {
 	Mode string                  `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
 
+// Shell represents a shell command execution in a configuration step.
 type Shell struct {
 	Command string `yaml:"command"`
 }
 
+// Step represents a single configuration step that can perform various actions.
 type Step struct {
 	Name         string                  `yaml:"name" json:"name,omitempty"`
 	When         string                  `yaml:"when" json:"when,omitempty"`
@@ -63,13 +67,15 @@ func (s *Step) countActions() int {
 	return count
 }
 
+// ValidateOneAction checks that the step has at most one action defined.
 func (s *Step) ValidateOneAction() error {
 	if s.countActions() > 1 {
-		return errors.New(fmt.Sprintf("Step %s has more than one action", s.Name))
+		return fmt.Errorf("Step %s has more than one action", s.Name)
 	}
 	return nil
 }
 
+// ValidateHasAction checks that the step has at least one action defined.
 func (s *Step) ValidateHasAction() error {
 	if s.countActions() == 0 {
 		return fmt.Errorf("Step %s has no action", s.Name)
@@ -77,6 +83,7 @@ func (s *Step) ValidateHasAction() error {
 	return nil
 }
 
+// Validate checks that the step configuration is valid.
 func (s *Step) Validate() error {
 	err := s.ValidateHasAction()
 	if err != nil {
@@ -91,6 +98,7 @@ func (s *Step) Validate() error {
 	return nil
 }
 
+// Copy creates a shallow copy of the step.
 func (s *Step) Copy() *Step {
 	return &Step{
 		Name:         s.Name,

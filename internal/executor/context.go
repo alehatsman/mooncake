@@ -1,3 +1,4 @@
+// Package executor provides the execution engine for mooncake configuration steps.
 package executor
 
 import (
@@ -95,15 +96,7 @@ type ExecutionContext struct {
 }
 
 // Copy creates a new ExecutionContext for a nested execution scope (include or loop).
-//
-// Behavior:
-//   - Variables map is shallow copied (nested contexts can add/modify without affecting parent)
-//   - Display fields (CurrentDir, Level, etc.) are copied by value
-//   - Pointer fields (counters, dependencies) remain shared across all contexts
-//   - Logger is copied by value but can be replaced with WithPadLevel()
-//
-// This allows nested contexts to have their own variables and display state
-// while still contributing to global progress tracking and statistics.
+// Variables map is shallow copied, display fields are copied by value, and pointer fields remain shared across all contexts.
 func (ec *ExecutionContext) Copy() ExecutionContext {
 	newVariables := make(map[string]interface{})
 	for k, v := range ec.Variables {

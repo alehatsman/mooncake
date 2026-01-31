@@ -98,11 +98,16 @@ func filterUserFriendlyDiagnostics(diagnostics []Diagnostic) []Diagnostic {
 
 // loadFileLines loads a file and returns its lines
 func loadFileLines(filePath string) []string {
+	// #nosec G304 -- Config file path for diagnostic context is from previous validated read
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close file %s: %v\n", filePath, err)
+		}
+	}()
 
 	var lines []string
 	scanner := bufio.NewScanner(file)

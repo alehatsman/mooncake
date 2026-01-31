@@ -169,7 +169,7 @@ func formatPatternError(message string, instancePath string) string {
 }
 
 // formatRequiredError creates a friendly message for missing required fields
-func formatRequiredError(message string, instancePath string) string {
+func formatRequiredError(message string, _ string) string {
 	// Extract the missing property name
 	missingField := extractMissingProperty(message)
 	if missingField == "" {
@@ -196,7 +196,7 @@ func formatRequiredError(message string, instancePath string) string {
 }
 
 // formatAdditionalPropertiesError creates a friendly message for unknown fields
-func formatAdditionalPropertiesError(message string, instancePath string) string {
+func formatAdditionalPropertiesError(message string, _ string) string {
 	// Extract the additional property name
 	additionalField := extractAdditionalProperty(message)
 	if additionalField == "" {
@@ -301,7 +301,7 @@ func formatMaximumError(message string) string {
 }
 
 // formatFormatError creates a friendly message for format validation errors
-func formatFormatError(message string, instancePath string) string {
+func formatFormatError(message string, _ string) string {
 	// Detect the format type
 	if strings.Contains(message, "email") {
 		return "Invalid email format. Must be like: user@example.com"

@@ -134,10 +134,3 @@ func escapeJSONPointer(s string) string {
 	s = strings.ReplaceAll(s, "/", "~1")
 	return s
 }
-
-// unescapeJSONPointer unescapes JSON pointer tokens
-func unescapeJSONPointer(s string) string {
-	s = strings.ReplaceAll(s, "~1", "/")
-	s = strings.ReplaceAll(s, "~0", "~")
-	return s
-}

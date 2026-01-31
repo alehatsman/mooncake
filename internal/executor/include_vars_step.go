@@ -4,6 +4,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
+// HandleIncludeVars loads variables from a YAML file into the execution context.
 func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 	includeVars := step.IncludeVars
 

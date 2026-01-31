@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// TUIDisplay handles screen rendering for the animated TUI
+// TUIDisplay handles screen rendering for the animated TUI.
 type TUIDisplay struct {
 	animator *AnimationFrames
 	buffer   *TUIBuffer
@@ -16,7 +16,7 @@ type TUIDisplay struct {
 	height   int
 }
 
-// NewTUIDisplay creates a new TUI display renderer
+// NewTUIDisplay creates a new TUI display renderer.
 func NewTUIDisplay(animator *AnimationFrames, buffer *TUIBuffer, width, height int) *TUIDisplay {
 	return &TUIDisplay{
 		animator: animator,
@@ -26,7 +26,7 @@ func NewTUIDisplay(animator *AnimationFrames, buffer *TUIBuffer, width, height i
 	}
 }
 
-// Render generates the complete screen output
+// Render generates the complete screen output.
 func (d *TUIDisplay) Render() string {
 	var output strings.Builder
 
@@ -204,13 +204,13 @@ func (d *TUIDisplay) renderMessages(snapshot BufferSnapshot) string {
 // getStatusIndicator returns a colored status indicator
 func (d *TUIDisplay) getStatusIndicator(status string) string {
 	switch status {
-	case "success":
+	case StatusSuccess:
 		return color.GreenString("✓")
-	case "error":
+	case StatusError:
 		return color.RedString("✗")
-	case "skipped":
+	case StatusSkipped:
 		return color.YellowString("⊘")
-	case "running":
+	case StatusRunning:
 		return color.CyanString("⊙")
 	default:
 		return "•"

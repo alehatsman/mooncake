@@ -1,3 +1,4 @@
+// Package expression provides expression evaluation capabilities for conditional execution.
 package expression
 
 import (
@@ -9,17 +10,17 @@ type Evaluator interface {
 	Evaluate(expression string, variables map[string]interface{}) (interface{}, error)
 }
 
-// ExprEvaluator implements Evaluator using the expr-lang library
+// ExprEvaluator implements Evaluator using the expr-lang library.
 type ExprEvaluator struct {
 	// Store any evaluator-specific state here if needed
 }
 
-// NewExprEvaluator creates a new ExprEvaluator
+// NewExprEvaluator creates a new ExprEvaluator.
 func NewExprEvaluator() Evaluator {
 	return &ExprEvaluator{}
 }
 
-// NewGovaluateEvaluator is kept for backwards compatibility, now returns ExprEvaluator
+// NewGovaluateEvaluator is kept for backwards compatibility, now returns ExprEvaluator.
 func NewGovaluateEvaluator() Evaluator {
 	return NewExprEvaluator()
 }
