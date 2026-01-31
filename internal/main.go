@@ -371,7 +371,7 @@ func handleShell(step Step, ec ExecutionContext) error {
 		return err
 	}
 
-	fmt.Println("Executing shell command: ", renderedCommand)
+	fmt.Println("Command: ", renderedCommand)
 
 	var command *exec.Cmd
 
@@ -454,7 +454,7 @@ func executeSteps(steps []Step, ec ExecutionContext) {
 		err := step.Validate()
 		check(err)
 
-		fmt.Println("Step", i, step.Name)
+		fmt.Printf("[%d/%d] %s\n", i+1, len(steps), step.Name)
 
 		if step.When != "" {
 			shouldSkip, err := handleWhenExpression(step, ec)
