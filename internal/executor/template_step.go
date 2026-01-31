@@ -28,6 +28,21 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Infof("%s templating src=\"%s\" dest=\"%s\"", tag, src, dest)
 	}
 
+	// Check for dry-run mode
+	if ec.DryRun {
+		// Check if source file exists
+		if _, err := os.Stat(src); os.IsNotExist(err) {
+			ec.Logger.Errorf("  [DRY-RUN] Template source file does not exist: %s", src)
+			return fmt.Errorf("template source file not found: %s", src)
+		}
+		mode := parseFileMode(template.Mode, 0644)
+		ec.Logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %04o)", src, dest, mode)
+		if template.Vars != nil && len(*template.Vars) > 0 {
+			ec.Logger.Debugf("  Additional variables: %v", *template.Vars)
+		}
+		return nil
+	}
+
 	templateFile, err := os.Open(src)
 	if err != nil {
 		return err

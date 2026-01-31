@@ -10,6 +10,8 @@ go install github.com/alehatsman/mooncake@latest
 
 ## Usage
 
+Mooncake features an animated TUI (Text User Interface) by default that shows real-time progress with an animated character. Use `--raw` to disable the animation.
+
 ```bash
 # Run configuration
 mooncake run --config config.yml
@@ -24,6 +26,12 @@ mooncake run --config config.yml --sudo-pass <password>
 mooncake run --config config.yml --tags dev
 mooncake run --config config.yml --tags dev,prod,test
 
+# Preview what would be executed (dry-run)
+mooncake run --config config.yml --dry-run
+
+# Disable animated UI (use raw console output)
+mooncake run --config config.yml --raw
+
 # With debug logging
 mooncake run --config config.yml --log-level debug
 ```
@@ -35,6 +43,8 @@ mooncake run --config config.yml --log-level debug
 - `--log-level, -l`: Log level - debug, info, or error (default: info)
 - `--sudo-pass, -s`: Sudo password for steps with `become: true`
 - `--tags, -t`: Filter steps by tags (comma-separated)
+- `--dry-run`: Preview what would be executed without making any changes (validates and shows preview)
+- `--raw, -r`: Disable animated TUI and use raw console output
 
 ## Features
 
@@ -44,9 +54,48 @@ mooncake run --config config.yml --log-level debug
 - Conditional execution with expressions
 - Include other configuration files
 - Load variables from external files
-- File tree iteration
+- File tree iteration with with_filetree
+- List iteration with with_items
 - Relative path resolution
 - Global system facts (os, arch)
+- Animated TUI with live progress tracking
+- Dry-run mode for safe preview and validation
+
+## Dry-Run Mode
+
+Preview what would be executed and validate your configuration without making any changes to your system:
+
+```bash
+mooncake run --config config.yml --dry-run
+```
+
+**What it does:**
+- Validates YAML syntax and step structure
+- Checks that required files exist (template sources, included configs, variable files)
+- Verifies paths can be expanded and variables resolved
+- Shows commands that would be executed
+- Shows files and directories that would be created
+- Shows templates that would be rendered
+- Shows variables that would be set
+- Processes includes recursively to show all steps
+
+**Example output:**
+```
+[1/3] Create directory
+  [DRY-RUN] Would create directory: /home/user/.config (mode: 0755)
+[2/3] Render config
+  [DRY-RUN] Would template: ./template.j2 -> /home/user/.config/app.conf (mode: 0644)
+[3/3] Run setup
+  [DRY-RUN] Would execute: apt install neovim
+  [DRY-RUN] With sudo privileges
+```
+
+**Use cases:**
+- Test and validate configurations before applying them
+- Preview changes in production environments
+- Debug complex configurations with conditionals and includes
+- Verify variable substitution and template rendering
+- Check that all required files exist
 
 ## File Structure
 
@@ -322,6 +371,42 @@ Each iteration provides:
 - `item.src`: Source file path
 - `item.name`: File name
 - `item.is_dir`: Boolean indicating if item is directory
+
+### List Iteration
+
+Iterate over a list of items using `with_items`:
+
+```yaml
+- vars:
+    packages:
+      - neovim
+      - ripgrep
+      - tmux
+      - fzf
+
+- name: Install packages
+  shell: brew install {{ item }}
+  with_items: "{{ packages }}"
+```
+
+You can also iterate over inline lists:
+
+```yaml
+- vars:
+    users:
+      - alice
+      - bob
+      - charlie
+
+- name: Create user directories
+  file:
+    path: "/home/{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items: "{{ users }}"
+```
+
+Each iteration provides the current item in the `item` variable
 
 ### Tags
 

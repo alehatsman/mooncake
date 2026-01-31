@@ -17,6 +17,11 @@ func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
+	if ec.DryRun {
+		ec.Logger.Infof("  [DRY-RUN] Would load %d variables from: %s", len(vars), expandedPath)
+		// Still load variables in dry-run mode so subsequent steps can use them
+	}
+
 	newVariables := make(map[string]interface{})
 	for k, v := range ec.Variables {
 		newVariables[k] = v
