@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
@@ -17,8 +17,13 @@ import (
 
 
 func addGlobalVariables(variables map[string]interface{}) {
-	variables["os"] = runtime.GOOS
-	variables["arch"] = runtime.GOARCH
+	// Collect system facts
+	systemFacts := facts.Collect()
+
+	// Add all facts to variables
+	for k, v := range systemFacts.ToMap() {
+		variables[k] = v
+	}
 }
 
 func handleVars(step config.Step, ec *ExecutionContext) error {
