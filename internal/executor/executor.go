@@ -16,6 +16,67 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
+// mergeVariables creates a new map combining base and override variables.
+// Values from override take precedence over values from base with the same key.
+func mergeVariables(base, override map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range base {
+		result[k] = v
+	}
+	for k, v := range override {
+		result[k] = v
+	}
+	return result
+}
+
+// markStepFailed marks a result as failed and registers it if needed.
+// The caller is responsible for returning an appropriate error.
+func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
+	result.Failed = true
+	result.Rc = 1
+	if step.Register != "" {
+		result.RegisterTo(ec.Variables, step.Register)
+	}
+}
+
+// executeLoopStep executes a step for each item in the provided list.
+// Each iteration creates a nested execution context with the "item" variable set.
+func executeLoopStep(items []interface{}, step config.Step, ec *ExecutionContext) error {
+	// Log the step name once before iterating through list
+	if step.Name != "" {
+		globalStep := 0
+		if ec.GlobalStepsExecuted != nil {
+			globalStep = *ec.GlobalStepsExecuted
+		}
+
+		ec.Logger.LogStep(logger.StepInfo{
+			Name:       step.Name,
+			Level:      ec.Level,
+			GlobalStep: globalStep,
+			Status:     "running",
+		})
+	}
+
+	// Create nested execution context
+	curEc := ec.Copy()
+	curEc.Level += 1
+	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
+	curEc.TotalSteps = len(items)
+
+	// Execute step for each item
+	for i, item := range items {
+		curEc = curEc.Copy()
+		curEc.CurrentIndex = i
+		curEc.Variables["item"] = item
+
+		err := ExecuteStep(step, &curEc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func addGlobalVariables(variables map[string]interface{}) {
 	// Collect system facts
@@ -42,16 +103,7 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 		// Still set variables in dry-run mode so subsequent steps can use them
 	}
 
-	newVariables := make(map[string]interface{})
-	for k, v := range ec.Variables {
-		newVariables[k] = v
-	}
-
-	for k, v := range *vars {
-		newVariables[k] = v
-	}
-
-	ec.Variables = newVariables
+	ec.Variables = mergeVariables(ec.Variables, *vars)
 	return nil
 }
 
@@ -408,38 +460,7 @@ func HandleWithItems(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Debugf("list has %d items", len(list))
 
-	// Log the step name once before iterating through list
-	if step.Name != "" {
-		globalStep := 0
-		if ec.GlobalStepsExecuted != nil {
-			globalStep = *ec.GlobalStepsExecuted
-		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       step.Name,
-			Level:      ec.Level,
-			GlobalStep: globalStep,
-			Status:     "running",
-		})
-	}
-
-	curEc := ec.Copy()
-	curEc.Level += 1
-	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
-	curEc.TotalSteps = len(list)
-
-	for i, item := range list {
-		curEc = curEc.Copy()
-		curEc.CurrentIndex = i
-		curEc.Variables["item"] = item
-
-		err := ExecuteStep(step, &curEc)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return executeLoopStep(list, step, ec)
 }
 
 func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
@@ -461,38 +482,13 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Debugf("fileTree: %+v", fileTree)
 
-	// Log the step name once before iterating through files
-	if step.Name != "" {
-		globalStep := 0
-		if ec.GlobalStepsExecuted != nil {
-			globalStep = *ec.GlobalStepsExecuted
-		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       step.Name,
-			Level:      ec.Level,
-			GlobalStep: globalStep,
-			Status:     "running",
-		})
-	}
-
-	curEc := ec.Copy()
-	curEc.Level += 1
-	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
-	curEc.TotalSteps = len(fileTree)
-
+	// Convert FileTreeItem slice to []interface{} for executeLoopStep
+	items := make([]interface{}, len(fileTree))
 	for i, item := range fileTree {
-		curEc = curEc.Copy()
-		curEc.CurrentIndex = i
-		curEc.Variables["item"] = item
-
-		err := ExecuteStep(step, &curEc)
-		if err != nil {
-			return err
-		}
+		items[i] = item
 	}
 
-	return nil
+	return executeLoopStep(items, step, ec)
 }
 
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {

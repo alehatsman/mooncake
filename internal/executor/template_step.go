@@ -47,43 +47,25 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 
 	templateFile, err := os.Open(src)
 	if err != nil {
-		result.Failed = true
-		result.Rc = 1
-		if step.Register != "" {
-			ec.Variables[step.Register] = result.ToMap()
-		}
+		markStepFailed(result, step, ec)
 		return err
 	}
 	defer templateFile.Close()
 
 	templateBytes, err := io.ReadAll(templateFile)
 	if err != nil {
-		result.Failed = true
-		result.Rc = 1
-		if step.Register != "" {
-			ec.Variables[step.Register] = result.ToMap()
-		}
+		markStepFailed(result, step, ec)
 		return err
 	}
 
-	variables := make(map[string]interface{})
-	for k, v := range ec.Variables {
-		variables[k] = v
-	}
-
+	variables := ec.Variables
 	if template.Vars != nil {
-		for k, v := range *template.Vars {
-			variables[k] = v
-		}
+		variables = mergeVariables(ec.Variables, *template.Vars)
 	}
 
 	output, err := ec.Template.Render(string(templateBytes), variables)
 	if err != nil {
-		result.Failed = true
-		result.Rc = 1
-		if step.Register != "" {
-			ec.Variables[step.Register] = result.ToMap()
-		}
+		markStepFailed(result, step, ec)
 		return err
 	}
 
@@ -95,11 +77,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 
 	mode := parseFileMode(template.Mode, 0644)
 	if err := os.WriteFile(dest, []byte(output), mode); err != nil {
-		result.Failed = true
-		result.Rc = 1
-		if step.Register != "" {
-			ec.Variables[step.Register] = result.ToMap()
-		}
+		markStepFailed(result, step, ec)
 		return fmt.Errorf("failed to write template output to %s: %w", dest, err)
 	}
 

@@ -58,11 +58,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 
 		ec.Logger.Debugf("  Creating directory: %s", renderedPath)
 		if err := os.MkdirAll(renderedPath, mode); err != nil {
-			result.Failed = true
-			result.Rc = 1
-			if step.Register != "" {
-				result.RegisterTo(ec.Variables, step.Register)
-			}
+			markStepFailed(result, step, ec)
 			return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
 		}
 	}
@@ -85,11 +81,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 
 			ec.Logger.Debugf("  Creating file: %s", renderedPath)
 			if err := os.WriteFile(renderedPath, []byte(""), mode); err != nil {
-				result.Failed = true
-				result.Rc = 1
-				if step.Register != "" {
-					result.RegisterTo(ec.Variables, step.Register)
-				}
+				markStepFailed(result, step, ec)
 				return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
 			}
 		} else {
@@ -114,11 +106,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 
 			ec.Logger.Debugf("  Creating file: %s", renderedPath)
 			if err := os.WriteFile(renderedPath, []byte(renderedContent), mode); err != nil {
-				result.Failed = true
-				result.Rc = 1
-				if step.Register != "" {
-					result.RegisterTo(ec.Variables, step.Register)
-				}
+				markStepFailed(result, step, ec)
 				return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
 			}
 		}
