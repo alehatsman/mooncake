@@ -12,12 +12,6 @@ import (
 	"github.com/fatih/color"
 )
 
-func check(e error) {
-	if e != nil {
-		logger.Errorf("Error: %s", e)
-		panic(e)
-	}
-}
 
 func addGlobalVariables(variables map[string]interface{}) {
 	variables["os"] = runtime.GOOS
@@ -85,18 +79,21 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	newExecutionContext.Level = ec.Level + 1
 	newExecutionContext.Logger = logger.WithPadLevel(ec.Level + 1)
 
-	ExecuteSteps(includeSteps, &newExecutionContext)
-	return nil
+	return ExecuteSteps(includeSteps, &newExecutionContext)
 }
 
 func ExecuteStep(step config.Step, ec *ExecutionContext) error {
-	err := step.Validate()
-	check(err)
+	if err := step.Validate(); err != nil {
+		return err
+	}
 
 	shouldSkip := false
+	var err error
 	if step.When != "" {
 		shouldSkip, err = handleWhenExpression(step, ec)
-		check(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	if step.Include == nil {
@@ -104,8 +101,6 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		message := tag + " " + step.Name
 		if step.When != "" {
 			message += " when: " + step.When
-			shouldSkip, err := handleWhenExpression(step, ec)
-			check(err)
 			if shouldSkip {
 				message += " (skipped)"
 			}
@@ -119,31 +114,37 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	switch {
 	case step.IncludeVars != nil:
-		err := HandleIncludeVars(step, ec)
-		check(err)
+		if err := HandleIncludeVars(step, ec); err != nil {
+			return err
+		}
 
 	case step.Vars != nil:
-		err := handleVars(step, ec)
-		check(err)
+		if err := handleVars(step, ec); err != nil {
+			return err
+		}
 
 	case step.Template != nil:
-		err := HandleTemplate(step, ec)
-		check(err)
+		if err := HandleTemplate(step, ec); err != nil {
+			return err
+		}
 
 	case step.File != nil:
-		err := HandleFile(step, ec)
-		check(err)
+		if err := HandleFile(step, ec); err != nil {
+			return err
+		}
 
 	case step.Shell != nil:
-		err := HandleShell(step, ec)
-		check(err)
+		if err := HandleShell(step, ec); err != nil {
+			return err
+		}
 
 	case step.Include != nil:
-		tag := color.CyanString("[%d/%d]", ec.CurrentIndex, ec.TotalSteps)
+		tag := color.CyanString("[%d/%d]", ec.CurrentIndex+1, ec.TotalSteps)
 		ec.Logger.Infof(tag+" Including: %v", *step.Include)
 
-		err := handleInclude(step, ec)
-		check(err)
+		if err := handleInclude(step, ec); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -187,23 +188,26 @@ func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-func ExecuteSteps(steps []config.Step, ec *ExecutionContext) {
+func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	ec.Logger.Infof(color.CyanString("[1/%d]", ec.TotalSteps)+" Executing: %v", ec.CurrentFile)
 
 	for i, step := range steps {
 		ec.CurrentIndex = i
 
 		if step.WithFileTree != nil {
-			err := HandleWithFileTree(step, ec)
-			check(err)
+			if err := HandleWithFileTree(step, ec); err != nil {
+				return err
+			}
 			continue
 		}
 
-		err := ExecuteStep(step, ec)
-		check(err)
+		if err := ExecuteStep(step, ec); err != nil {
+			return err
+		}
 
 		logger.Infof("\n")
 	}
+	return nil
 }
 
 type StartConfig struct {
@@ -218,14 +222,18 @@ func Start(startConfig StartConfig) error {
 	logger.Debugf("config: %v", startConfig)
 
 	if startConfig.ConfigFilePath == "" {
-		return errors.New("Config file path is empty")
+		return errors.New("config file path is empty")
 	}
 
 	currentDir, err := os.Getwd()
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	expandedPath, err := utils.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	variables, err := config.ReadVariables(expandedPath)
 	if err != nil {
@@ -235,10 +243,14 @@ func Start(startConfig StartConfig) error {
 	addGlobalVariables(variables)
 
 	configFilePath, err := utils.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	steps, err := config.ReadConfig(configFilePath)
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	logger.Debugf("variables: %v", variables)
 
@@ -253,6 +265,5 @@ func Start(startConfig StartConfig) error {
 		SudoPass:     startConfig.SudoPass,
 	}
 
-	ExecuteSteps(steps, &executionContext)
-	return nil
+	return ExecuteSteps(steps, &executionContext)
 }

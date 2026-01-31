@@ -7,6 +7,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -47,29 +48,35 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 	stderr, err := command.StderrPipe()
 	if err != nil {
-		logger.Errorf("Error: %v", err)
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
-		logger.Errorf("Error: %v", err)
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	if err := command.Start(); err != nil {
-		logger.Errorf("Error: %v", err)
+		return fmt.Errorf("failed to start command: %w", err)
 	}
 
-	go printCommandOutputPipe(stdout, ec.Logger)
-	go printCommandOutputPipe(stderr, ec.Logger)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go printCommandOutputPipe(stdout, ec.Logger, &wg)
+	go printCommandOutputPipe(stderr, ec.Logger, &wg)
+
+	// Wait for all output to be processed
+	wg.Wait()
 
 	if err := command.Wait(); err != nil {
-		logger.Errorf("Error: %v", err)
+		return fmt.Errorf("command execution failed: %w", err)
 	}
 
-	return err
+	return nil
 }
 
-func printCommandOutputPipe(pipe io.Reader, logger *logger.Logger) {
+func printCommandOutputPipe(pipe io.Reader, logger *logger.Logger, wg *sync.WaitGroup) {
+	defer wg.Done()
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
 		logger.Codef("%v", scanner.Text())

@@ -2,7 +2,7 @@ package executor
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/alehatsman/mooncake/internal/config"
@@ -35,8 +35,9 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	if err != nil {
 		return err
 	}
+	defer templateFile.Close()
 
-	templateBytes, err := ioutil.ReadAll(templateFile)
+	templateBytes, err := io.ReadAll(templateFile)
 	if err != nil {
 		return err
 	}
@@ -57,9 +58,10 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(dest, []byte(output), 0644)
-	if err != nil {
-		ec.Logger.Errorf("Error: %s", err)
+	mode := parseFileMode(template.Mode, 0644)
+	if err := os.WriteFile(dest, []byte(output), mode); err != nil {
+		return fmt.Errorf("failed to write template output to %s: %w", dest, err)
 	}
-	return err
+
+	return nil
 }

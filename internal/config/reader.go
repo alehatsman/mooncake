@@ -15,6 +15,7 @@ func ReadConfig(path string) ([]Step, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	config := make([]Step, 0)
 
@@ -41,6 +42,7 @@ func ReadVariables(path string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	reader := bufio.NewReader(file)
 
