@@ -1,0 +1,17 @@
+# Example: Common typos and field name mistakes (INVALID)
+
+- name: Typo - used 'command' instead of 'shell'
+  command: echo "This is wrong"
+
+- name: Typo - used 'source' instead of 'src'
+  template:
+    source: /path/to/template.j2
+    dest: /path/to/output.txt
+
+- name: Typo - used 'condition' instead of 'when'
+  shell: echo "Hello"
+  condition: os == "linux"
+
+- name: Typo - used 'sudo' instead of 'become'
+  shell: apt-get update
+  sudo: true

@@ -1,0 +1,17 @@
+# Example: Template with missing required fields (INVALID)
+# Template action requires both 'src' and 'dest' fields
+
+- name: Template missing dest
+  template:
+    src: /path/to/template.j2
+    # Missing: dest
+
+- name: Template missing src
+  template:
+    dest: /path/to/output.txt
+    # Missing: src
+
+- name: Valid template for comparison
+  template:
+    src: /path/to/template.j2
+    dest: /path/to/output.txt

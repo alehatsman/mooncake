@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mooncake.dev/schemas/config.json",
+  "title": "Mooncake Configuration Schema",
+  "description": "JSON Schema for Mooncake configuration files",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/step"
+  },
+  "definitions": {
+    "step": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the step"
+        },
+        "when": {
+          "type": "string",
+          "description": "Conditional expression for step execution"
+        },
+        "become": {
+          "type": "boolean",
+          "description": "Execute step with sudo privileges"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags for filtering step execution"
+        },
+        "register": {
+          "type": "string",
+          "description": "Variable name to store step execution result"
+        },
+        "with_filetree": {
+          "type": "string",
+          "description": "Directory path for iterating over files"
+        },
+        "with_items": {
+          "type": "string",
+          "description": "Variable expression for iterating over items"
+        },
+        "shell": {
+          "type": "string",
+          "description": "Shell command to execute"
+        },
+        "template": {
+          "$ref": "#/definitions/template"
+        },
+        "file": {
+          "$ref": "#/definitions/file"
+        },
+        "include": {
+          "type": "string",
+          "description": "Path to YAML file with steps to include"
+        },
+        "include_vars": {
+          "type": "string",
+          "description": "Path to YAML file with variables to load"
+        },
+        "vars": {
+          "type": "object",
+          "description": "Inline variables to set",
+          "additionalProperties": true
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["shell"],
+          "not": {
+            "anyOf": [
+              {"required": ["template"]},
+              {"required": ["file"]},
+              {"required": ["include"]},
+              {"required": ["include_vars"]},
+              {"required": ["vars"]}
+            ]
+          }
+        },
+        {
+          "required": ["template"],
+          "not": {
+            "anyOf": [
+              {"required": ["shell"]},
+              {"required": ["file"]},
+              {"required": ["include"]},
+              {"required": ["include_vars"]},
+              {"required": ["vars"]}
+            ]
+          }
+        },
+        {
+          "required": ["file"],
+          "not": {
+            "anyOf": [
+              {"required": ["shell"]},
+              {"required": ["template"]},
+              {"required": ["include"]},
+              {"required": ["include_vars"]},
+              {"required": ["vars"]}
+            ]
+          }
+        },
+        {
+          "required": ["include"],
+          "not": {
+            "anyOf": [
+              {"required": ["shell"]},
+              {"required": ["template"]},
+              {"required": ["file"]},
+              {"required": ["include_vars"]},
+              {"required": ["vars"]}
+            ]
+          }
+        },
+        {
+          "required": ["include_vars"],
+          "not": {
+            "anyOf": [
+              {"required": ["shell"]},
+              {"required": ["template"]},
+              {"required": ["file"]},
+              {"required": ["include"]},
+              {"required": ["vars"]}
+            ]
+          }
+        },
+        {
+          "required": ["vars"],
+          "not": {
+            "anyOf": [
+              {"required": ["shell"]},
+              {"required": ["template"]},
+              {"required": ["file"]},
+              {"required": ["include"]},
+              {"required": ["include_vars"]}
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "template": {
+      "type": "object",
+      "required": ["src", "dest"],
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "Source template file path"
+        },
+        "dest": {
+          "type": "string",
+          "description": "Destination file path for rendered template"
+        },
+        "vars": {
+          "type": "object",
+          "description": "Variables for template rendering",
+          "additionalProperties": true
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^0[0-7]{3}$",
+          "description": "File mode in octal format (e.g., 0644)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "file": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "File or directory path"
+        },
+        "state": {
+          "type": "string",
+          "enum": ["file", "directory", "absent"],
+          "description": "Desired state of the file or directory"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write to the file"
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^0[0-7]{3}$",
+          "description": "File mode in octal format (e.g., 0644)"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -6,17 +6,17 @@ import (
 )
 
 type File struct {
-	Path    string `yaml:"path"`
-	State   string `yaml:"state"`
-	Content string `yaml:"content"`
-	Mode    string `yaml:"mode"` // Octal file permissions (e.g., "0644", "0755")
+	Path    string `yaml:"path" json:"path"`
+	State   string `yaml:"state" json:"state,omitempty"`
+	Content string `yaml:"content" json:"content,omitempty"`
+	Mode    string `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
 
 type Template struct {
-	Src  string                  `yaml:"src"`
-	Dest string                  `yaml:"dest"`
-	Vars *map[string]interface{} `yaml:"vars"`
-	Mode string                  `yaml:"mode"` // Octal file permissions (e.g., "0644", "0755")
+	Src  string                  `yaml:"src" json:"src"`
+	Dest string                  `yaml:"dest" json:"dest"`
+	Vars *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
+	Mode string                  `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
 
 type Shell struct {
@@ -24,19 +24,19 @@ type Shell struct {
 }
 
 type Step struct {
-	Name         string                  `yaml:"name"`
-	When         string                  `yaml:"when"`
-	Template     *Template               `yaml:"template"`
-	File         *File                   `yaml:"file"`
-	Shell        *string                 `yaml:"shell"`
-	Include      *string                 `yaml:"include"`
-	IncludeVars  *string                 `yaml:"include_vars"`
-	Become       bool                    `yaml:"become"`
-	Vars         *map[string]interface{} `yaml:"vars"`
-	Tags         []string                `yaml:"tags"`
-	WithFileTree *string                 `yaml:"with_filetree"`
-	WithItems    *string                 `yaml:"with_items"`
-	Register     string                  `yaml:"register"`
+	Name         string                  `yaml:"name" json:"name,omitempty"`
+	When         string                  `yaml:"when" json:"when,omitempty"`
+	Template     *Template               `yaml:"template" json:"template,omitempty"`
+	File         *File                   `yaml:"file" json:"file,omitempty"`
+	Shell        *string                 `yaml:"shell" json:"shell,omitempty"`
+	Include      *string                 `yaml:"include" json:"include,omitempty"`
+	IncludeVars  *string                 `yaml:"include_vars" json:"include_vars,omitempty"`
+	Become       bool                    `yaml:"become" json:"become,omitempty"`
+	Vars         *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
+	Tags         []string                `yaml:"tags" json:"tags,omitempty"`
+	WithFileTree *string                 `yaml:"with_filetree" json:"with_filetree,omitempty"`
+	WithItems    *string                 `yaml:"with_items" json:"with_items,omitempty"`
+	Register     string                  `yaml:"register" json:"register,omitempty"`
 }
 
 // countActions returns the number of non-nil action fields in this step.
