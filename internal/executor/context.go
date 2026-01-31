@@ -1,6 +1,12 @@
 package executor
 
-import "github.com/alehatsman/mooncake/internal/logger"
+import (
+	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/filetree"
+	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/template"
+)
 
 type ExecutionContext struct {
 	Variables    map[string]interface{}
@@ -11,6 +17,12 @@ type ExecutionContext struct {
 	TotalSteps   int
 	Logger       logger.Logger
 	SudoPass     string
+
+	// Injected dependencies
+	Template   template.Renderer
+	Evaluator  expression.Evaluator
+	PathUtil   *pathutil.PathExpander
+	FileTree   *filetree.Walker
 }
 
 func (ec *ExecutionContext) Copy() ExecutionContext {
@@ -20,13 +32,19 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 	}
 
 	return ExecutionContext{
-		Variables:   newVariables,
-		CurrentDir:  ec.CurrentDir,
-		CurrentFile: ec.CurrentFile,
-		Level:       ec.Level,
+		Variables:    newVariables,
+		CurrentDir:   ec.CurrentDir,
+		CurrentFile:  ec.CurrentFile,
+		Level:        ec.Level,
 		CurrentIndex: ec.CurrentIndex,
-		TotalSteps:  ec.TotalSteps,
-		Logger:      ec.Logger,
-		SudoPass:    ec.SudoPass,
+		TotalSteps:   ec.TotalSteps,
+		Logger:       ec.Logger,
+		SudoPass:     ec.SudoPass,
+
+		// Share the same dependency instances
+		Template:  ec.Template,
+		Evaluator: ec.Evaluator,
+		PathUtil:  ec.PathUtil,
+		FileTree:  ec.FileTree,
 	}
 }

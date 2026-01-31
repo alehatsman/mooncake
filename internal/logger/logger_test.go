@@ -212,3 +212,151 @@ func TestTestLogger_Concurrent(t *testing.T) {
 		t.Errorf("Count() after concurrent writes = %v, want 10", testLog.Count())
 	}
 }
+
+func TestConsoleLogger_AllMethods(t *testing.T) {
+	// Test that ConsoleLogger implements all interface methods
+	consoleLogger := NewConsoleLogger(InfoLevel)
+
+	// These calls shouldn't panic
+	consoleLogger.SetLogLevel(DebugLevel)
+	consoleLogger.Infof("info: %s", "test")
+	consoleLogger.Debugf("debug: %s", "test")
+	consoleLogger.Errorf("error: %s", "test")
+	consoleLogger.Textf("text: %s", "test")
+	consoleLogger.Codef("code: %s", "test")
+	consoleLogger.Mooncake()
+
+	err := consoleLogger.SetLogLevelStr("info")
+	if err != nil {
+		t.Errorf("SetLogLevelStr() error = %v", err)
+	}
+
+	padded := consoleLogger.WithPadLevel(2)
+	if padded == nil {
+		t.Error("WithPadLevel() returned nil")
+	}
+}
+
+func TestConsoleLogger_SetLogLevel(t *testing.T) {
+	logger := NewConsoleLogger(InfoLevel)
+
+	logger.SetLogLevel(DebugLevel)
+	logger.Debugf("test")
+
+	logger.SetLogLevel(ErrorLevel)
+	logger.Errorf("test")
+}
+
+func TestNewLogger(t *testing.T) {
+	logger := NewLogger(InfoLevel)
+	if logger == nil {
+		t.Error("NewLogger() returned nil")
+	}
+
+	var _ Logger = logger
+}
+
+func TestTestLogger_GetLogs(t *testing.T) {
+	testLog := NewTestLogger()
+
+	testLog.Infof("message 1")
+	testLog.Debugf("message 2")
+
+	logs := testLog.GetLogs()
+
+	if len(logs) != 2 {
+		t.Errorf("GetLogs() returned %d logs, want 2", len(logs))
+	}
+
+	logs[0].Message = "modified"
+
+	if testLog.Logs[0].Message == "modified" {
+		t.Error("GetLogs() should return a copy, not original")
+	}
+}
+
+
+func TestTestLogger_SetLogLevelStr(t *testing.T) {
+	testLog := NewTestLogger()
+
+	tests := []struct {
+		level   string
+		wantErr bool
+	}{
+		{"debug", false},
+		{"info", false},
+		{"error", false},
+		{"invalid", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.level, func(t *testing.T) {
+			err := testLog.SetLogLevelStr(tt.level)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SetLogLevelStr(%q) error = %v, wantErr %v", tt.level, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestTestLogger_Mooncake(t *testing.T) {
+	testLog := NewTestLogger()
+
+	testLog.Mooncake()
+
+	if testLog.Count() != 1 {
+		t.Errorf("Mooncake() should log one entry, got %d", testLog.Count())
+	}
+
+	if !testLog.Contains("Mooncake") {
+		t.Error("Mooncake() should log message containing 'Mooncake'")
+	}
+}
+
+func TestTestLogger_WithPadLevel(t *testing.T) {
+	testLog := NewTestLogger()
+	testLog.Infof("original message")
+
+	paddedLogger := testLog.WithPadLevel(2)
+
+	// Verify it returns a TestLogger
+	if paddedLogger == nil {
+		t.Error("WithPadLevel() returned nil")
+	}
+
+	// Verify it's a different instance
+	if paddedLogger == testLog {
+		t.Error("WithPadLevel() should return a different instance")
+	}
+
+	// Cast to TestLogger to check padLevel
+	if tl, ok := paddedLogger.(*TestLogger); ok {
+		if tl.padLevel != 2 {
+			t.Errorf("WithPadLevel(2) padLevel = %v, want 2", tl.padLevel)
+		}
+	} else {
+		t.Errorf("WithPadLevel() returned wrong type: %T", paddedLogger)
+	}
+}
+
+func TestTestLogger_ContainsLevel_NotFound(t *testing.T) {
+	testLog := NewTestLogger()
+
+	testLog.Infof("info message")
+	testLog.Debugf("debug message")
+
+	// Test case where level doesn't match
+	if testLog.ContainsLevel("ERROR", "info message") {
+		t.Error("ContainsLevel() should return false for non-matching level")
+	}
+
+	// Test case where substring doesn't match
+	if testLog.ContainsLevel("INFO", "nonexistent") {
+		t.Error("ContainsLevel() should return false for non-matching substring")
+	}
+
+	// Test case where both level and substring don't match
+	if testLog.ContainsLevel("ERROR", "nonexistent") {
+		t.Error("ContainsLevel() should return false when nothing matches")
+	}
+}

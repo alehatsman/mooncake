@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/utils"
 	"github.com/fatih/color"
 )
 
@@ -34,7 +33,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 		return nil
 	}
 
-	renderedPath, err := utils.ExpandPath(file.Path, ec.CurrentDir, ec.Variables)
+	renderedPath, err := ec.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ec.Variables)
 	if err != nil {
 		return err
 	}
@@ -62,7 +61,7 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 				return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
 			}
 		} else {
-			renderedContent, err := utils.Render(file.Content, ec.Variables)
+			renderedContent, err := ec.Template.Render(file.Content, ec.Variables)
 			if err != nil {
 				return err
 			}
