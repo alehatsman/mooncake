@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/explain"
+	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/urfave/cli/v2"
 )
@@ -63,6 +65,16 @@ func run(c *cli.Context) error {
 	}, log)
 }
 
+func explainCommand(c *cli.Context) error {
+	// Collect system facts
+	f := facts.Collect()
+
+	// Display facts
+	explain.DisplayFacts(f)
+
+	return nil
+}
+
 func createApp() *cli.App {
 	app := &cli.App{
 		Name:                 "mooncake",
@@ -114,6 +126,12 @@ func createApp() *cli.App {
 					},
 				},
 				Action: run,
+			},
+			{
+				Name:    "explain",
+				Aliases: []string{"info"},
+				Usage:   "Explain machine state - show system information",
+				Action:  explainCommand,
 			},
 		},
 	}

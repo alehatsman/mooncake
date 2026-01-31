@@ -22,15 +22,46 @@ type Facts struct {
 	DistributionMajor   string
 
 	// Network
-	IPAddresses []string
+	IPAddresses       []string
+	NetworkInterfaces []NetworkInterface
 
 	// Hardware
 	CPUCores      int
 	MemoryTotalMB int64
+	Disks         []Disk
+	GPUs          []GPU
 
 	// Software
 	PythonVersion  string
 	PackageManager string
+}
+
+// NetworkInterface represents a network interface
+type NetworkInterface struct {
+	Name       string
+	MACAddress string
+	MTU        int
+	Addresses  []string
+	Up         bool
+}
+
+// Disk represents a storage device
+type Disk struct {
+	Device     string
+	MountPoint string
+	Filesystem string
+	SizeGB     int64
+	UsedGB     int64
+	AvailGB    int64
+	UsedPct    int
+}
+
+// GPU represents a graphics card
+type GPU struct {
+	Vendor string // nvidia, amd, intel
+	Model  string
+	Memory string // e.g. "8GB", "24GB"
+	Driver string
 }
 
 // Collect gathers all system facts
@@ -45,6 +76,7 @@ func Collect() *Facts {
 	f.UserHome, _ = os.UserHomeDir()
 	f.CPUCores = runtime.NumCPU()
 	f.IPAddresses = collectIPAddresses()
+	f.NetworkInterfaces = collectNetworkInterfaces()
 	f.PythonVersion = detectPythonVersion()
 
 	// Platform-specific facts
@@ -117,6 +149,41 @@ func collectIPAddresses() []string {
 	}
 
 	return ips
+}
+
+// collectNetworkInterfaces gathers detailed network interface information
+func collectNetworkInterfaces() []NetworkInterface {
+	var interfaces []NetworkInterface
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return interfaces
+	}
+
+	for _, iface := range ifaces {
+		// Skip loopback
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+
+		ni := NetworkInterface{
+			Name:       iface.Name,
+			MACAddress: iface.HardwareAddr.String(),
+			MTU:        iface.MTU,
+			Up:         iface.Flags&net.FlagUp != 0,
+		}
+
+		addrs, err := iface.Addrs()
+		if err == nil {
+			for _, addr := range addrs {
+				ni.Addresses = append(ni.Addresses, addr.String())
+			}
+		}
+
+		interfaces = append(interfaces, ni)
+	}
+
+	return interfaces
 }
 
 // detectPythonVersion attempts to detect Python version

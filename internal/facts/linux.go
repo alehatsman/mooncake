@@ -13,6 +13,8 @@ func collectLinuxFacts(f *Facts) {
 	f.DistributionMajor = extractMajorVersion(f.DistributionVersion)
 	f.PackageManager = detectLinuxPackageManager(f.Distribution)
 	f.MemoryTotalMB = detectLinuxMemory()
+	f.Disks = detectLinuxDisks()
+	f.GPUs = detectLinuxGPUs()
 }
 
 // detectLinuxDistribution reads /etc/os-release to identify distribution
@@ -110,4 +112,147 @@ func extractMajorVersion(version string) string {
 	}
 
 	return version
+}
+
+// detectLinuxDisks uses df to get mounted filesystems
+func detectLinuxDisks() []Disk {
+	var disks []Disk
+
+	out, err := exec.Command("df", "-BG", "--output=source,target,fstype,size,used,avail,pcent").Output()
+	if err != nil {
+		return disks
+	}
+
+	lines := strings.Split(string(out), "\n")
+	// Skip header line
+	for i, line := range lines {
+		if i == 0 || line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 7 {
+			continue
+		}
+
+		// Skip tmpfs, devtmpfs, and other virtual filesystems
+		device := fields[0]
+		if strings.HasPrefix(device, "tmpfs") || strings.HasPrefix(device, "devtmpfs") ||
+			strings.HasPrefix(device, "udev") || strings.HasPrefix(device, "overlay") {
+			continue
+		}
+
+		disk := Disk{
+			Device:     device,
+			MountPoint: fields[1],
+			Filesystem: fields[2],
+			SizeGB:     parseSize(fields[3]),
+			UsedGB:     parseSize(fields[4]),
+			AvailGB:    parseSize(fields[5]),
+			UsedPct:    parsePercent(fields[6]),
+		}
+
+		disks = append(disks, disk)
+	}
+
+	return disks
+}
+
+// detectLinuxGPUs detects NVIDIA and AMD GPUs
+func detectLinuxGPUs() []GPU {
+	var gpus []GPU
+
+	// Try NVIDIA first
+	if nvidiaSmi, err := exec.LookPath("nvidia-smi"); err == nil {
+		out, err := exec.Command(nvidiaSmi, "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader").Output()
+		if err == nil {
+			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			for _, line := range lines {
+				parts := strings.Split(line, ",")
+				if len(parts) >= 3 {
+					gpu := GPU{
+						Vendor: "nvidia",
+						Model:  strings.TrimSpace(parts[0]),
+						Memory: strings.TrimSpace(parts[1]),
+						Driver: strings.TrimSpace(parts[2]),
+					}
+					gpus = append(gpus, gpu)
+				}
+			}
+		}
+	}
+
+	// Try AMD
+	if rocmSmi, err := exec.LookPath("rocm-smi"); err == nil {
+		out, err := exec.Command(rocmSmi, "--showproductname").Output()
+		if err == nil {
+			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			for _, line := range lines {
+				if strings.Contains(line, "GPU") && strings.Contains(line, ":") {
+					parts := strings.Split(line, ":")
+					if len(parts) >= 2 {
+						gpu := GPU{
+							Vendor: "amd",
+							Model:  strings.TrimSpace(parts[1]),
+						}
+						gpus = append(gpus, gpu)
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: Try lspci for basic GPU detection
+	if len(gpus) == 0 {
+		if lspci, err := exec.LookPath("lspci"); err == nil {
+			out, err := exec.Command(lspci).Output()
+			if err == nil {
+				lines := strings.Split(string(out), "\n")
+				for _, line := range lines {
+					lower := strings.ToLower(line)
+					if strings.Contains(lower, "vga") || strings.Contains(lower, "3d controller") {
+						var vendor string
+						if strings.Contains(lower, "nvidia") {
+							vendor = "nvidia"
+						} else if strings.Contains(lower, "amd") || strings.Contains(lower, "ati") {
+							vendor = "amd"
+						} else if strings.Contains(lower, "intel") {
+							vendor = "intel"
+						}
+
+						if vendor != "" {
+							// Extract model name (everything after ":")
+							parts := strings.SplitN(line, ":", 3)
+							model := ""
+							if len(parts) >= 3 {
+								model = strings.TrimSpace(parts[2])
+							}
+
+							gpu := GPU{
+								Vendor: vendor,
+								Model:  model,
+							}
+							gpus = append(gpus, gpu)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return gpus
+}
+
+// parseSize converts size string like "100G" to int64
+func parseSize(s string) int64 {
+	s = strings.TrimSuffix(s, "G")
+	val, _ := strconv.ParseInt(s, 10, 64)
+	return val
+}
+
+// parsePercent converts percent string like "75%" to int
+func parsePercent(s string) int {
+	s = strings.TrimSuffix(s, "%")
+	val, _ := strconv.Atoi(s)
+	return val
 }
