@@ -6,6 +6,7 @@ require (
 	github.com/expr-lang/expr v1.17.7
 	github.com/fatih/color v1.15.0
 	github.com/flosch/pongo2/v6 v6.0.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/urfave/cli/v2 v2.23.5
 	golang.org/x/term v0.39.0
 	gopkg.in/yaml.v3 v3.0.1

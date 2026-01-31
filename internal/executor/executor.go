@@ -172,10 +172,26 @@ func handleInclude(step config.Step, ec *ExecutionContext) error {
 	}
 
 	ec.Logger.Debugf("Reading configuration from file: %v", renderedPath)
-	includeSteps, err := config.ReadConfig(renderedPath)
+	includeSteps, diagnostics, err := config.ReadConfigWithValidation(renderedPath)
 	if err != nil {
 		return err
 	}
+
+	// Emit validation diagnostics
+	if len(diagnostics) > 0 {
+		if config.HasErrors(diagnostics) {
+			// Use formatted output for errors
+			formatted := config.FormatDiagnosticsWithContext(diagnostics)
+			ec.Logger.Errorf("%s", formatted)
+			return fmt.Errorf("included file validation failed")
+		} else {
+			// Just warnings - show them but continue
+			for _, diag := range diagnostics {
+				ec.Logger.Errorf(diag.String())
+			}
+		}
+	}
+
 	ec.Logger.Debugf("Read configuration with %v steps", len(includeSteps))
 
 	if ec.DryRun {
@@ -603,10 +619,26 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 	}
 
 	log.Debugf("Reading configuration from file: %v", configFilePath)
-	steps, err := config.ReadConfig(configFilePath)
+	steps, diagnostics, err := config.ReadConfigWithValidation(configFilePath)
 	if err != nil {
 		return err
 	}
+
+	// Emit validation diagnostics
+	if len(diagnostics) > 0 {
+		if config.HasErrors(diagnostics) {
+			// Use formatted output for errors
+			formatted := config.FormatDiagnosticsWithContext(diagnostics)
+			log.Errorf("%s", formatted)
+			return fmt.Errorf("configuration validation failed")
+		} else {
+			// Just warnings - show them but continue
+			for _, diag := range diagnostics {
+				log.Errorf(diag.String())
+			}
+		}
+	}
+
 	log.Debugf("Read configuration with %v steps", len(steps))
 
 	// Initialize global step counter and statistics (shared across all contexts via pointers)

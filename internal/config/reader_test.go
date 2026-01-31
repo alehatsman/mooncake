@@ -282,8 +282,8 @@ func TestYAMLConfigReader_ReadConfigComplexSteps(t *testing.T) {
     src: template.j2
     dest: /tmp/output.txt
     mode: "0644"
-  vars:
-    key: value
+    vars:
+      key: value
 
 - name: run with sudo
   shell: apt-get update

@@ -1,0 +1,16 @@
+# Example: Step with no action (INVALID)
+# Every step must have at least one action
+
+- name: Valid step first
+  shell: echo "This is fine"
+
+- name: Invalid step with no action
+  when: os == "linux"
+  tags:
+    - setup
+  # Missing: shell, file, template, include, include_vars, or vars
+
+- name: Another step with only metadata
+  become: true
+  register: result
+  # Also missing an action

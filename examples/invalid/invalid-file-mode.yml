@@ -1,0 +1,26 @@
+# Example: Invalid file mode format (INVALID)
+# File modes must be in octal format: "0XXX" where X is 0-7
+
+- name: File with invalid mode - missing leading zero
+  file:
+    path: /tmp/test1.txt
+    state: file
+    mode: "644"  # Invalid: should be "0644"
+
+- name: File with invalid mode - invalid octal digit
+  file:
+    path: /tmp/test2.txt
+    state: file
+    mode: "0888"  # Invalid: 8 is not a valid octal digit
+
+- name: File with invalid mode - too short
+  file:
+    path: /tmp/test3.txt
+    state: file
+    mode: "07"  # Invalid: should be 4 characters like "0755"
+
+- name: Valid file for comparison
+  file:
+    path: /tmp/test4.txt
+    state: file
+    mode: "0644"  # Valid: proper octal format

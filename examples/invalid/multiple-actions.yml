@@ -1,0 +1,14 @@
+# Example: Multiple actions in one step (INVALID)
+# A step can only have ONE action: shell, file, template, include, include_vars, or vars
+
+- name: This step tries to do two things at once
+  shell: echo "Running a command"
+  file:
+    path: /tmp/test.txt
+    state: file
+
+- name: Another invalid step with shell and template
+  shell: echo "Hello"
+  template:
+    src: /path/to/template.j2
+    dest: /path/to/output.txt
