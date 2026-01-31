@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -19,10 +20,23 @@ func run(c *cli.Context) error {
 		return err
 	}
 
+	// Parse tags from comma-separated string
+	var tags []string
+	tagsStr := c.String("tags")
+	if tagsStr != "" {
+		for _, tag := range strings.Split(tagsStr, ",") {
+			trimmed := strings.TrimSpace(tag)
+			if trimmed != "" {
+				tags = append(tags, trimmed)
+			}
+		}
+	}
+
 	return executor.Start(executor.StartConfig{
 		ConfigFilePath: c.String("config"),
 		VarsFilePath:   c.String("variables"),
 		SudoPass:       c.String("sudo"),
+		Tags:           tags,
 	}, log)
 }
 
@@ -54,6 +68,11 @@ func createApp() *cli.App {
 						Name:    "sudo",
 						Aliases: []string{"s"},
 						Value:   "false",
+					},
+					&cli.StringFlag{
+						Name:    "tags",
+						Aliases: []string{"t"},
+						Usage:   "Filter steps by tags (comma-separated)",
 					},
 				},
 				Action: run,
