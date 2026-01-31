@@ -15,6 +15,14 @@ const (
 	ErrorLevel
 )
 
+// StepInfo contains structured information about a step execution
+type StepInfo struct {
+	Name       string
+	Level      int    // Nesting level for indentation
+	GlobalStep int    // Cumulative step number
+	Status     string // "running", "success", "error", "skipped"
+}
+
 // Logger interface defines the logging contract
 type Logger interface {
 	Infof(format string, v ...interface{})
@@ -26,6 +34,7 @@ type Logger interface {
 	SetLogLevel(logLevel int)
 	SetLogLevelStr(logLevel string) error
 	WithPadLevel(padLevel int) Logger
+	LogStep(info StepInfo)
 }
 
 // Fatalf logs an error and exits the program

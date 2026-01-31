@@ -122,3 +122,30 @@ func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger {
 		pad:      strings.Repeat("  ", padLevel),
 	}
 }
+
+func (l *ConsoleLogger) LogStep(info StepInfo) {
+	if l.logLevel > InfoLevel {
+		return
+	}
+
+	indent := strings.Repeat("  ", info.Level)
+	var statusIcon string
+
+	switch info.Status {
+	case "running":
+		statusIcon = "▶"
+	case "success":
+		statusIcon = "✓"
+	case "error":
+		statusIcon = "✗"
+	case "skipped":
+		statusIcon = "⊘"
+	default:
+		statusIcon = "•"
+	}
+
+	// Icon in cyan, text in white
+	icon := color.CyanString(statusIcon)
+	output := fmt.Sprintf("%s%s %s", indent, icon, info.Name)
+	fmt.Println(output)
+}

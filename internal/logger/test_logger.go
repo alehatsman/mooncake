@@ -102,6 +102,13 @@ func (t *TestLogger) WithPadLevel(padLevel int) Logger {
 	}
 }
 
+func (t *TestLogger) LogStep(info StepInfo) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	message := fmt.Sprintf("[%s] %s (level:%d, step:%d)", info.Status, info.Name, info.Level, info.GlobalStep)
+	t.Logs = append(t.Logs, LogEntry{"STEP", message})
+}
+
 // Helper methods for assertions in tests
 
 // Contains checks if any log message contains the substring

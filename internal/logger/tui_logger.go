@@ -20,11 +20,8 @@ type TUILogger struct {
 	mu       sync.Mutex
 
 	// Track previous step for history
-	lastStepName string
+	lastStepInfo *StepInfo
 }
-
-// stepPattern matches step names like "[1/5] Step name"
-var stepPattern = regexp.MustCompile(`^\[(\d+)/(\d+)\]\s+(.+)$`)
 
 // ansiPattern matches ANSI escape codes
 var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
@@ -94,7 +91,55 @@ func stripANSI(s string) string {
 	return ansiPattern.ReplaceAllString(s, "")
 }
 
-// Infof logs an info message and updates current step
+// LogStep handles structured step logging
+func (l *TUILogger) LogStep(info StepInfo) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.logLevel > InfoLevel {
+		return
+	}
+
+	// Handle different statuses
+	switch info.Status {
+	case "skipped":
+		// Add directly to history as skipped
+		l.buffer.AddStep(StepEntry{
+			Name:      info.Name,
+			Status:    "skipped",
+			Level:     info.Level,
+			Timestamp: time.Now(),
+		})
+		l.lastStepInfo = nil
+	case "error":
+		// Add directly to history as error
+		l.buffer.AddStep(StepEntry{
+			Name:      info.Name,
+			Status:    "error",
+			Level:     info.Level,
+			Timestamp: time.Now(),
+		})
+		l.lastStepInfo = nil
+	case "success":
+		// Add directly to history as success
+		l.buffer.AddStep(StepEntry{
+			Name:      info.Name,
+			Status:    "success",
+			Level:     info.Level,
+			Timestamp: time.Now(),
+		})
+		l.lastStepInfo = nil
+	case "running":
+		// Set as current step, store for later completion
+		l.buffer.SetCurrentStep(info.Name, ProgressInfo{
+			Current: info.GlobalStep,
+			Total:   0, // Will display as "X steps completed"
+		})
+		l.lastStepInfo = &info
+	}
+}
+
+// Infof logs an info message (for non-step messages)
 func (l *TUILogger) Infof(format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -103,44 +148,9 @@ func (l *TUILogger) Infof(format string, v ...interface{}) {
 		return
 	}
 
+	// Just add as debug message - steps should use LogStep now
 	message := fmt.Sprintf(format, v...)
-	cleanMessage := stripANSI(message)
-
-	// Check if this is a step message
-	matches := stepPattern.FindStringSubmatch(cleanMessage)
-	if len(matches) == 4 {
-		current := atoi(matches[1])
-		total := atoi(matches[2])
-		stepName := matches[3]
-
-		// If we had a previous step, mark it as complete
-		if l.lastStepName != "" {
-			l.buffer.AddStep(StepEntry{
-				Name:      l.lastStepName,
-				Status:    "success",
-				Level:     l.padLevel,
-				Timestamp: time.Now(),
-			})
-		}
-
-		// Check if step is marked as skipped
-		if strings.Contains(stepName, "[skipped") {
-			l.buffer.AddStep(StepEntry{
-				Name:      stepName,
-				Status:    "skipped",
-				Level:     l.padLevel,
-				Timestamp: time.Now(),
-			})
-			l.lastStepName = ""
-		} else {
-			// Set as current step
-			l.buffer.SetCurrentStep(cleanMessage, ProgressInfo{
-				Current: current,
-				Total:   total,
-			})
-			l.lastStepName = cleanMessage
-		}
-	}
+	l.buffer.AddDebug(message)
 }
 
 // Debugf logs a debug message
@@ -165,14 +175,14 @@ func (l *TUILogger) Errorf(format string, v ...interface{}) {
 	l.buffer.AddError(message)
 
 	// Mark last step as error
-	if l.lastStepName != "" {
+	if l.lastStepInfo != nil {
 		l.buffer.AddStep(StepEntry{
-			Name:      l.lastStepName,
+			Name:      l.lastStepInfo.Name,
 			Status:    "error",
-			Level:     l.padLevel,
+			Level:     l.lastStepInfo.Level,
 			Timestamp: time.Now(),
 		})
-		l.lastStepName = ""
+		l.lastStepInfo = nil
 	}
 }
 
@@ -243,7 +253,7 @@ func (l *TUILogger) WithPadLevel(padLevel int) Logger {
 		done:         l.done,
 		logLevel:     l.logLevel,
 		padLevel:     padLevel,
-		lastStepName: "",
+		lastStepInfo: nil,
 	}
 
 	return newLogger

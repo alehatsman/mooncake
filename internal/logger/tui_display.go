@@ -103,7 +103,7 @@ func (d *TUIDisplay) renderCurrentStep(snapshot BufferSnapshot) string {
 	}
 
 	// Progress bar
-	if snapshot.Progress.Total > 0 {
+	if snapshot.Progress.Total > 0 || snapshot.Progress.Current > 0 {
 		progressLine := d.renderProgressBar(snapshot.Progress.Current, snapshot.Progress.Total)
 		output.WriteString(progressLine)
 		output.WriteString("\n")
@@ -114,6 +114,11 @@ func (d *TUIDisplay) renderCurrentStep(snapshot BufferSnapshot) string {
 
 // renderProgressBar renders a progress bar
 func (d *TUIDisplay) renderProgressBar(current, total int) string {
+	// If total is 0, show cumulative steps completed (global progress)
+	if total == 0 {
+		return fmt.Sprintf("Progress: %d steps completed", current)
+	}
+
 	barWidth := 30
 	percentage := 0
 	if total > 0 {
