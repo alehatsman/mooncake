@@ -1,4 +1,4 @@
-package internal
+package utils
 
 import (
 	"testing"
@@ -6,20 +6,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type Context map[string]interface{}
+
 func TestRenderTemplateSuccess(t *testing.T) {
-	result, err := renderTemplate("{{ foo }}", Context{"foo": "bar"})
+	result, err := Render("{{ foo }}", Context{"foo": "bar"})
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", result)
 }
 
 func TestRenderTemplateWithUnmacthedCurly(t *testing.T) {
-	output, err := renderTemplate("{{ foo }", Context{"foo": "bar"})
+	output, err := Render("{{ foo }", Context{"foo": "bar"})
 	assert.Equal(t, "", output)
 	assert.Error(t, err)
 }
 
 func TestEvaluateExpression(t *testing.T) {
-	result, err := evaluateExpression("foo == 'bar'", Context{"foo": "bar"})
+	result, err := Evaluate("foo == 'bar'", Context{"foo": "bar"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -28,7 +30,7 @@ func TestEvaluateExpression(t *testing.T) {
 		t.Errorf("Expected 'true', got '%v'", result)
 	}
 
-	result, err = evaluateExpression("foo == 'bar'", Context{"foo": "baz"})
+	result, err = Evaluate("foo == 'bar'", Context{"foo": "baz"})
 	if err != nil {
 		t.Error(err)
 	}

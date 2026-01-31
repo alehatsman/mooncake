@@ -17,6 +17,10 @@ build-arm:
 install-local:
 	sudo cp ./out/mooncake /usr/local/bin/mooncake
 
+local-arm:
+	make build-arm;
+	make install-local;
+
 run-basic-test-in-ubuntu:
 	docker build -f basic.Dockerfile -t mooncake-basic-test . --progress=plain
 

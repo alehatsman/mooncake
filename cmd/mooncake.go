@@ -5,19 +5,20 @@ import (
 	"log"
 	"os"
 
-	"github.com/alehatsman/mooncake/internal"
+	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/urfave/cli/v2"
 )
 
 func run(c *cli.Context) error {
-	logger := internal.GetInstance()
+	logger := logger.GetInstance()
 
 	logLevel := c.String("log-level")
 
-	if err := logger.SetLevelStr(logLevel); err != nil {
+	if err := logger.SetLogLevelStr(logLevel); err != nil {
 		return err
 	}
-	return internal.Start(internal.StartConfig{
+	return executor.Start(executor.StartConfig{
 		ConfigFilePath: c.String("config"),
 		VarsFilePath:   c.String("variables"),
 	})
