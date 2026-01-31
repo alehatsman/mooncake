@@ -11,6 +11,12 @@ build-ubuntu-binary:
 build-darwin-binary:
 	env GOOS=darwin GOARCH=amd64 go build -v -o out/mooncake ./cmd 
 
+build-arm:
+	env GOOS=darwin GOARCH=arm64 go build -v -o out/mooncake ./cmd
+
+install-local:
+	sudo cp ./out/mooncake /usr/local/bin/mooncake
+
 run-basic-test-in-ubuntu:
 	docker build -f basic.Dockerfile -t mooncake-basic-test . --progress=plain
 
