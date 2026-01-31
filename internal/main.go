@@ -16,12 +16,14 @@ import (
 	"strings"
 
 	"github.com/Knetic/govaluate"
+	"github.com/fatih/color"
 	"github.com/flosch/pongo2/v6"
 	"gopkg.in/yaml.v3"
 )
 
 func check(e error) {
 	if e != nil {
+		logger.Errorf("Error: %s", e)
 		panic(e)
 	}
 }
@@ -79,7 +81,7 @@ func (s *Step) ValidateOneAction() error {
 	}
 
 	if actionsCount > 1 {
-		return fmt.Errorf("Step %s has more than one action", s.Name)
+		return errors.New(fmt.Sprintf("Step %s has more than one action", s.Name))
 	}
 
 	return nil
@@ -108,7 +110,7 @@ func (s *Step) Validate() error {
 }
 
 func readConfig(path string) ([]Step, error) {
-	fmt.Println("Reading configuration from file:", path)
+	logger.Debugf("Reading configuration from file: %v", path)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -124,7 +126,7 @@ func readConfig(path string) ([]Step, error) {
 		return nil, err
 	}
 
-	fmt.Println("Read configuration with", len(config), "steps")
+	logger.Debugf("Read configuration with %v steps", len(config))
 
 	return config, nil
 }
@@ -140,7 +142,7 @@ func readVariables(path string) (Context, error) {
 		return make(Context), nil
 	}
 
-	fmt.Println("Reading variables from file: ", path)
+	logger.Debugf("Reading variables from file: %v", path)
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -157,7 +159,7 @@ func readVariables(path string) (Context, error) {
 		return nil, err
 	}
 
-	fmt.Println("Read variables: ", variables)
+	logger.Debugf("Read variables: %v", variables)
 
 	return variables, nil
 }
@@ -193,7 +195,7 @@ func evaluateExpression(expression string, variables Context) (interface{}, erro
 }
 
 func expandPath(originalPath string, currentDir string, context Context) (string, error) {
-	fmt.Println("Expanding path:", originalPath, "in", currentDir, "with context ", context)
+	logger.Debugf("Expanding path: %v in %v with context: %v", originalPath, currentDir, context)
 
 	expandedPath, err := renderTemplate(originalPath, context)
 	if err != nil {
@@ -254,9 +256,13 @@ func handleIncludeVars(step Step, ec *ExecutionContext) error {
 }
 
 func handleVars(step Step, ec *ExecutionContext) error {
+	logger.Debugf("Handling vars: %+v", step.Vars)
+
 	vars := step.Vars
 
-	fmt.Println("Adding variables: ", vars)
+	for k, v := range *vars {
+		logger.Infof("  %v: %v", k, v)
+	}
 
 	newVariables := make(map[string]interface{})
 	for k, v := range ec.Variables {
@@ -284,7 +290,9 @@ func handleTemplate(step Step, ec ExecutionContext) error {
 		return err
 	}
 
-	fmt.Println("Rendering template: ", src, dest)
+	logger.Infof("  src: %v", src)
+	logger.Infof("  dest: %v", dest)
+	logger.Infof("  vars: %+v", template.Vars)
 
 	templateFile, err := os.Open(src)
 	if err != nil {
@@ -313,6 +321,9 @@ func handleTemplate(step Step, ec ExecutionContext) error {
 	}
 
 	err = ioutil.WriteFile(dest, []byte(output), 0644)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+	}
 	return err
 }
 
@@ -320,7 +331,7 @@ func handleFile(step Step, ec ExecutionContext) error {
 	file := step.File
 
 	if file.Path == "" {
-		fmt.Println("Skipping empty path")
+		logger.Infof("Skipping empty path")
 		return nil
 	}
 
@@ -330,12 +341,12 @@ func handleFile(step Step, ec ExecutionContext) error {
 	}
 
 	if file.State == "directory" {
-		fmt.Println("Creating directory: ", renderedPath)
+		logger.Debugf("Creating directory: ", renderedPath)
 		os.MkdirAll(renderedPath, 0755)
 	}
 
 	if file.State == "file" {
-		fmt.Println("Creating file: ", renderedPath)
+		logger.Debugf("Creating file: ", renderedPath)
 
 		if file.Content == "" {
 			err := ioutil.WriteFile(renderedPath, []byte(""), 0644)
@@ -357,21 +368,24 @@ func handleFile(step Step, ec ExecutionContext) error {
 func printCommandOutputPipe(pipe io.Reader) {
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
-		fmt.Println("Output: ", scanner.Text())
+		logger.Debugf("  %v", scanner.Text())
 	}
 }
 
 func handleShell(step Step, ec ExecutionContext) error {
-	shell := step.Shell
+	shell := *step.Shell
 
-	fmt.Println("Rendering command: ", *shell, "with vars: ", ec.Variables)
+	logger.Debugf("Rendering command: %v with vars: %+v", shell, ec.Variables)
 
-	renderedCommand, err := renderTemplate(*shell, ec.Variables)
+	shell = strings.Trim(shell, " ")
+	shell = strings.Trim(shell, "\n")
+
+	renderedCommand, err := renderTemplate(shell, ec.Variables)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Command: ", renderedCommand)
+	logger.Infof("%v", renderedCommand)
 
 	var command *exec.Cmd
 
@@ -412,7 +426,7 @@ func handleInclude(step Step, ec ExecutionContext) error {
 		return err
 	}
 
-	fmt.Println("Including file: ", renderedPath)
+	logger.Infof("Including file: %v", renderedPath)
 
 	includeSteps, err := readConfig(renderedPath)
 	if err != nil {
@@ -448,19 +462,20 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 }
 
 func executeSteps(steps []Step, ec ExecutionContext) {
-	fmt.Println("Executing steps from file", ec.CurrentFile)
+	color.Green("[0/%d] %v", len(steps), ec.CurrentFile)
 
 	for i, step := range steps {
 		err := step.Validate()
 		check(err)
 
-		fmt.Printf("[%d/%d] %s\n", i+1, len(steps), step.Name)
+		color.Green("[%d/%d] %s\n", i+1, len(steps), step.Name)
 
 		if step.When != "" {
+			color.Green("when: %v", step.When)
 			shouldSkip, err := handleWhenExpression(step, ec)
 			check(err)
 			if shouldSkip {
-				fmt.Println("Skipping step: ", step.Name)
+				color.Green("skipping")
 				continue
 			}
 		}
@@ -490,6 +505,8 @@ func executeSteps(steps []Step, ec ExecutionContext) {
 			err := handleInclude(step, ec)
 			check(err)
 		}
+
+		logger.Infof("")
 	}
 }
 
@@ -503,6 +520,9 @@ type StartConfig struct {
 }
 
 func Start(config StartConfig) error {
+	color.Green("Running space fighter...")
+	logger.Infof("config: %v", config)
+
 	if config.ConfigFilePath == "" {
 		return errors.New("Config file path is empty")
 	}

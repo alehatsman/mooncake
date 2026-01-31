@@ -10,8 +10,13 @@ import (
 )
 
 func run(c *cli.Context) error {
-	fmt.Println("Chookity!")
+	logger := internal.GetInstance()
 
+	logLevel := c.String("log-level")
+
+	if err := logger.SetLevelStr(logLevel); err != nil {
+		return err
+	}
 	return internal.Start(internal.StartConfig{
 		ConfigFilePath: c.String("config"),
 		VarsFilePath:   c.String("variables"),
@@ -23,6 +28,7 @@ func createApp() *cli.App {
 		Name:                 "mooncake",
 		Usage:                "Space fighters provisioning tool, Chookity!",
 		EnableBashCompletion: true,
+
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
@@ -35,6 +41,11 @@ func createApp() *cli.App {
 					&cli.StringFlag{
 						Name:    "variables",
 						Aliases: []string{"v"},
+					},
+					&cli.StringFlag{
+						Name:    "log-level",
+						Aliases: []string{"l"},
+						Value:   "info",
 					},
 				},
 				Action: run,

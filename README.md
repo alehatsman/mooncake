@@ -2,10 +2,9 @@
 
 Space fighters provisioning tool, **Chookity!**
 
-## TODO
+## In progress
 
-1. Create a script to build all possible binaries to out.
-2. Use that script in github.
+- [ ] Nice output, info, log, error
 
 ## Progress
 
@@ -18,6 +17,7 @@ Space fighters provisioning tool, **Chookity!**
 - [x] Facts - global variables with facts about system (OS)
 - [x] Templating for config values - variables are available from facts and defined by user. (https://github.com/flosch/pongo2)
 - [x] Supports relatives paths - node like file resolution.
+
 - [ ] OpenSsh - generate keys
 - [ ] Http - make http calls, download files etc.
 - [ ] with_items - pass list and it will execute the command with each item
