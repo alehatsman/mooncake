@@ -321,11 +321,11 @@ Each example should have:
 ```go
 // Good: Explains why
 // Use nested execution context to isolate loop variables
-curEc := ec.Copy()
+curEc := ec.Clone()
 
 // Bad: Explains what (obvious from code)
 // Copy the execution context
-curEc := ec.Copy()
+curEc := ec.Clone()
 ```
 
 ## Feature Proposals

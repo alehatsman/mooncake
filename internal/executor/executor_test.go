@@ -40,7 +40,7 @@ func TestExecutionContext_Copy(t *testing.T) {
 		FileTree:     fileTreeWalker,
 	}
 
-	copied := original.Copy()
+	copied := original.Clone()
 
 	// Verify all fields are copied
 	if copied.CurrentDir != original.CurrentDir {

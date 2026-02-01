@@ -125,9 +125,9 @@ type ExecutionContext struct {
 	CurrentResult *Result
 }
 
-// Copy creates a new ExecutionContext for a nested execution scope (include or loop).
+// Clone creates a new ExecutionContext for a nested execution scope (include or loop).
 // Variables map is shallow copied, display fields are copied by value, and pointer fields remain shared across all contexts.
-func (ec *ExecutionContext) Copy() ExecutionContext {
+func (ec *ExecutionContext) Clone() ExecutionContext {
 	newVariables := make(map[string]interface{})
 	for k, v := range ec.Variables {
 		newVariables[k] = v

@@ -60,6 +60,9 @@
         "file": {
           "$ref": "#/definitions/file"
         },
+        "copy": {
+          "$ref": "#/definitions/copy"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"
@@ -142,6 +145,7 @@
             "anyOf": [
               {"required": ["template"]},
               {"required": ["file"]},
+              {"required": ["copy"]},
               {"required": ["include"]},
               {"required": ["include_vars"]},
               {"required": ["vars"]}
@@ -154,6 +158,7 @@
             "anyOf": [
               {"required": ["shell"]},
               {"required": ["file"]},
+              {"required": ["copy"]},
               {"required": ["include"]},
               {"required": ["include_vars"]},
               {"required": ["vars"]}
@@ -166,6 +171,20 @@
             "anyOf": [
               {"required": ["shell"]},
               {"required": ["template"]},
+              {"required": ["copy"]},
+              {"required": ["include"]},
+              {"required": ["include_vars"]},
+              {"required": ["vars"]}
+            ]
+          }
+        },
+        {
+          "required": ["copy"],
+          "not": {
+            "anyOf": [
+              {"required": ["shell"]},
+              {"required": ["template"]},
+              {"required": ["file"]},
               {"required": ["include"]},
               {"required": ["include_vars"]},
               {"required": ["vars"]}
@@ -179,6 +198,7 @@
               {"required": ["shell"]},
               {"required": ["template"]},
               {"required": ["file"]},
+              {"required": ["copy"]},
               {"required": ["include_vars"]},
               {"required": ["vars"]}
             ]
@@ -191,6 +211,7 @@
               {"required": ["shell"]},
               {"required": ["template"]},
               {"required": ["file"]},
+              {"required": ["copy"]},
               {"required": ["include"]},
               {"required": ["vars"]}
             ]
@@ -203,6 +224,7 @@
               {"required": ["shell"]},
               {"required": ["template"]},
               {"required": ["file"]},
+              {"required": ["copy"]},
               {"required": ["include"]},
               {"required": ["include_vars"]}
             ]
@@ -246,17 +268,81 @@
         },
         "state": {
           "type": "string",
-          "enum": ["file", "directory", "absent"],
-          "description": "Desired state of the file or directory"
+          "enum": ["file", "directory", "absent", "link", "hardlink", "touch", "perms"],
+          "description": "Desired state: file (create/update), directory (create), absent (remove), link (symlink), hardlink, touch (update timestamp), perms (change permissions only)"
         },
         "content": {
           "type": "string",
-          "description": "Content to write to the file"
+          "description": "Content to write to the file (for state: file)"
         },
         "mode": {
           "type": "string",
           "pattern": "^0[0-7]{3}$",
           "description": "File mode in octal format (e.g., 0644)"
+        },
+        "owner": {
+          "type": "string",
+          "description": "File owner username or UID"
+        },
+        "group": {
+          "type": "string",
+          "description": "File group name or GID"
+        },
+        "src": {
+          "type": "string",
+          "description": "Source path for link/hardlink operations"
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Force overwrite existing files or remove non-empty directories"
+        },
+        "recurse": {
+          "type": "boolean",
+          "description": "Apply permissions recursively for directories (with state: perms)"
+        },
+        "backup": {
+          "type": "boolean",
+          "description": "Create .bak backup before overwriting files"
+        }
+      },
+      "additionalProperties": false
+    },
+    "copy": {
+      "type": "object",
+      "required": ["src", "dest"],
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "Source file path"
+        },
+        "dest": {
+          "type": "string",
+          "description": "Destination file path"
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^0[0-7]{3}$",
+          "description": "File mode in octal format (e.g., 0644)"
+        },
+        "owner": {
+          "type": "string",
+          "description": "File owner username or UID"
+        },
+        "group": {
+          "type": "string",
+          "description": "File group name or GID"
+        },
+        "backup": {
+          "type": "boolean",
+          "description": "Create .bak backup before overwriting"
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Force overwrite if destination exists"
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Expected SHA256 or MD5 checksum for verification"
         }
       },
       "additionalProperties": false

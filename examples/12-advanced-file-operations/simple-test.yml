@@ -1,0 +1,48 @@
+# Simple test of new file operations
+
+- name: Create test directory
+  file:
+    path: /tmp/mooncake-test
+    state: directory
+    mode: "0755"
+
+- name: Touch a marker file
+  file:
+    path: /tmp/mooncake-test/.marker
+    state: touch
+    mode: "0644"
+
+- name: Create a config file
+  file:
+    path: /tmp/mooncake-test/config.yml
+    state: file
+    content: "app: test\nversion: 1.0"
+    mode: "0644"
+
+- name: Create symlink to config
+  file:
+    path: /tmp/mooncake-test/current-config.yml
+    src: /tmp/mooncake-test/config.yml
+    state: link
+
+- name: Copy file with backup
+  copy:
+    src: /tmp/mooncake-test/config.yml
+    dest: /tmp/mooncake-test/config-backup.yml
+    mode: "0644"
+    backup: true
+
+- name: Fix permissions
+  file:
+    path: /tmp/mooncake-test/config.yml
+    state: perms
+    mode: "0600"
+
+- name: Show results
+  shell: ls -la /tmp/mooncake-test/
+
+- name: Cleanup
+  file:
+    path: /tmp/mooncake-test
+    state: absent
+    force: true

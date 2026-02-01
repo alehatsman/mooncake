@@ -75,9 +75,15 @@ Create and manage files and directories.
 | Property | Type | Description |
 |----------|------|-------------|
 | `file.path` | string | File or directory path (required) |
-| `file.state` | string | `file`, `directory`, or `absent` |
-| `file.content` | string | Content to write to file |
+| `file.state` | string | `file`, `directory`, `absent`, `touch`, `link`, `hardlink`, or `perms` |
+| `file.content` | string | Content to write to file (for `state: file`) |
 | `file.mode` | string | Permissions (e.g., "0644", "0755") |
+| `file.owner` | string | File owner (username or UID) |
+| `file.group` | string | File group (group name or GID) |
+| `file.src` | string | Source path (required for `link` and `hardlink` states) |
+| `file.force` | boolean | Force overwrite existing files or remove non-empty directories |
+| `file.recurse` | boolean | Apply permissions recursively (with `state: perms`) |
+| `file.backup` | boolean | Create `.bak` backup before overwriting |
 
 Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
 
@@ -124,6 +130,152 @@ Common permission modes:
 - `"0644"` - rw-r--r-- (regular files)
 - `"0600"` - rw------- (private files)
 - `"0700"` - rwx------ (private directories)
+
+### Remove File or Directory
+
+```yaml
+- name: Remove file
+  file:
+    path: /tmp/old-file.txt
+    state: absent
+
+- name: Remove directory (empty)
+  file:
+    path: /tmp/old-dir
+    state: absent
+
+- name: Remove directory (recursive)
+  file:
+    path: /tmp/old-dir
+    state: absent
+    force: true
+```
+
+### Touch File (Update Timestamp)
+
+```yaml
+- name: Create empty marker file
+  file:
+    path: /tmp/.marker
+    state: touch
+    mode: "0644"
+```
+
+### Create Symbolic Link
+
+```yaml
+- name: Create symlink
+  file:
+    path: /usr/local/bin/myapp
+    src: /opt/myapp/bin/myapp
+    state: link
+
+- name: Force replace existing file with symlink
+  file:
+    path: /etc/config.yml
+    src: /opt/configs/prod.yml
+    state: link
+    force: true
+```
+
+### Create Hard Link
+
+```yaml
+- name: Create hard link
+  file:
+    path: /backup/important.txt
+    src: /data/important.txt
+    state: hardlink
+```
+
+### Change Permissions Only
+
+```yaml
+- name: Fix permissions on existing file
+  file:
+    path: /opt/app/data
+    state: perms
+    mode: "0755"
+    owner: app
+    group: app
+
+- name: Recursively fix directory permissions
+  file:
+    path: /var/www/html
+    state: perms
+    mode: "0644"
+    owner: www-data
+    group: www-data
+    recurse: true
+  become: true
+```
+
+### Set Ownership
+
+```yaml
+- name: Change file owner
+  file:
+    path: /opt/app/config.yml
+    state: file
+    owner: app
+    group: app
+    mode: "0600"
+  become: true
+```
+
+## Copy
+
+Copy files with checksum verification and backup support.
+
+### Copy Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `copy.src` | string | Source file path (required) |
+| `copy.dest` | string | Destination file path (required) |
+| `copy.mode` | string | Permissions (e.g., "0644", "0755") |
+| `copy.owner` | string | File owner (username or UID) |
+| `copy.group` | string | File group (group name or GID) |
+| `copy.backup` | boolean | Create `.bak` backup before overwriting |
+| `copy.force` | boolean | Force overwrite if destination exists |
+| `copy.checksum` | string | Expected SHA256 or MD5 checksum |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+### Basic Copy
+
+```yaml
+- name: Copy configuration file
+  copy:
+    src: ./configs/app.yml
+    dest: /opt/app/config.yml
+    mode: "0644"
+```
+
+### Copy with Backup
+
+```yaml
+- name: Update config with backup
+  copy:
+    src: ./configs/prod.yml
+    dest: /etc/app/config.yml
+    mode: "0600"
+    owner: app
+    group: app
+    backup: true
+  become: true
+```
+
+### Copy with Checksum Verification
+
+```yaml
+- name: Copy binary with integrity check
+  copy:
+    src: ./downloads/app-v1.2.3
+    dest: /usr/local/bin/app
+    mode: "0755"
+    checksum: "sha256:a3b5c6d7e8f9..."
+```
 
 ## Template
 

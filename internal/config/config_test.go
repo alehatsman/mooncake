@@ -225,7 +225,7 @@ func TestStep_Copy(t *testing.T) {
 		Vars:    &map[string]interface{}{"key": "value"},
 	}
 
-	copied := original.Copy()
+	copied := original.Clone()
 
 	// Verify all fields are copied
 	if copied.Name != original.Name {
@@ -264,7 +264,7 @@ func TestStep_CopyWithModification(t *testing.T) {
 		Shell: stringPtr("echo hello"),
 	}
 
-	copied := original.Copy()
+	copied := original.Clone()
 	copied.Name = "modified"
 
 	if original.Name == copied.Name {
@@ -404,7 +404,7 @@ func TestStep_CopyWithNewFields(t *testing.T) {
 		FailedWhen:  "result.rc != 0",
 	}
 
-	copied := original.Copy()
+	copied := original.Clone()
 
 	// Verify all new fields are copied
 	if copied.BecomeUser != original.BecomeUser {

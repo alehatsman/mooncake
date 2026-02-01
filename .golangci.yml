@@ -101,6 +101,14 @@ linters:
         linters: [gosec]
         text: "G204"
 
+      - path: internal/utils/
+        linters: [revive]
+        text: "var-naming: avoid meaningless package names"
+
+      - path: internal/utils/checksum\.go
+        linters: [dupl]
+        text: "lines are duplicate"
+
       - path: '(^|/).*_test\.go$'
         linters:
           - errcheck

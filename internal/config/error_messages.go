@@ -126,7 +126,7 @@ func formatTypeError(message string) string {
 func formatEnumError(message string, instancePath string) string {
 	// Check if this is a file state error
 	if strings.Contains(instancePath, "/state") {
-		return "Invalid file state. Must be one of: 'file', 'directory', or 'absent'"
+		return "Invalid file state. Must be one of: 'file', 'directory', 'absent', 'touch', 'link', 'hardlink', or 'perms'"
 	}
 
 	// Generic enum error - make it more readable
@@ -255,16 +255,16 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 
 	// If all causes are "required" failures, it means no action is present
 	if hasRequiredFailure && !hasNotFailure {
-		return "Step has no action. Each step must have exactly ONE of: shell, template, file, include, include_vars, or vars"
+		return "Step has no action. Each step must have exactly ONE of: shell, template, file, copy, include, include_vars, or vars"
 	}
 
 	// If we have "not" failures, it means multiple actions are present
 	if hasNotFailure {
-		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, include, include_vars, or vars"
+		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, copy, include, include_vars, or vars"
 	}
 
 	// Generic fallback
-	return "Step must have exactly one action (shell, template, file, include, include_vars, or vars)"
+	return "Step must have exactly one action (shell, template, file, copy, include, include_vars, or vars)"
 }
 
 // formatMinLengthError creates a friendly message for string too short errors

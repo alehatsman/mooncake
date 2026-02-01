@@ -1,0 +1,74 @@
+# Advanced File Operations Example
+# This demonstrates the expanded file management capabilities
+
+- name: Create application directory structure
+  file:
+    path: /tmp/mooncake-demo/{{item}}
+    state: directory
+    mode: "0755"
+  with_items: "['app', 'app/bin', 'app/config', 'app/data', 'app/logs']"
+
+- name: Create application files
+  file:
+    path: /tmp/mooncake-demo/app/{{item.name}}
+    state: file
+    content: "{{item.content}}"
+    mode: "{{item.mode}}"
+  with_items: |
+    [
+      {"name": "README.md", "content": "# Application\nVersion 1.0", "mode": "0644"},
+      {"name": ".env", "content": "DEBUG=false\nPORT=3000", "mode": "0600"}
+    ]
+
+- name: Touch marker files
+  file:
+    path: /tmp/mooncake-demo/app/{{item}}
+    state: touch
+    mode: "0644"
+  with_items: "['data/.gitkeep', 'logs/.gitkeep']"
+
+- name: Create symbolic links for configuration
+  file:
+    path: /tmp/mooncake-demo/app/config/current.yml
+    src: ../prod.yml
+    state: link
+
+- name: Create hard link backup of important data
+  file:
+    path: /tmp/mooncake-demo/app/data.backup
+    src: /tmp/mooncake-demo/app/data
+    state: hardlink
+  register: hardlink_result
+  when: false  # Example: conditionally create hardlink
+
+- name: Fix permissions on sensitive files
+  file:
+    path: /tmp/mooncake-demo/app/.env
+    state: perms
+    mode: "0600"
+
+- name: Copy configuration file
+  copy:
+    src: ./sample-config.yml
+    dest: /tmp/mooncake-demo/app/config/app.yml
+    mode: "0644"
+    backup: true
+
+- name: Remove temporary files
+  file:
+    path: /tmp/mooncake-demo/app/{{item}}
+    state: absent
+  with_items: "['temp.txt', 'cache.dat']"
+  when: false  # Example: conditional cleanup
+
+- name: Remove old directory
+  file:
+    path: /tmp/mooncake-demo/old-app
+    state: absent
+    force: true
+  when: false  # Example: force remove non-empty directory
+
+- name: Display results
+  shell: |
+    echo "Directory structure created:"
+    tree /tmp/mooncake-demo || ls -laR /tmp/mooncake-demo

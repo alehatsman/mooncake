@@ -209,7 +209,7 @@ func TestFormatEnumError(t *testing.T) {
 			name:         "file state error",
 			message:      "value must be one of 'file', 'directory', 'absent'",
 			instancePath: "/steps/0/file/state",
-			expected:     "Invalid file state. Must be one of: 'file', 'directory', or 'absent'",
+			expected:     "Invalid file state. Must be one of: 'file', 'directory', 'absent', 'touch', 'link', 'hardlink', or 'perms'",
 		},
 		{
 			name:         "generic enum error",
@@ -583,7 +583,7 @@ func TestFormatOneOfError(t *testing.T) {
 					{Message: "missing required property 'file'"},
 				},
 			},
-			expected: "Step has no action. Each step must have exactly ONE of: shell, template, file, include, include_vars, or vars",
+			expected: "Step has no action. Each step must have exactly ONE of: shell, template, file, copy, include, include_vars, or vars",
 		},
 		{
 			name: "multiple actions present",
@@ -593,14 +593,14 @@ func TestFormatOneOfError(t *testing.T) {
 					{KeywordLocation: "#/oneOf/1/not"},
 				},
 			},
-			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, include, include_vars, or vars",
+			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, copy, include, include_vars, or vars",
 		},
 		{
 			name: "generic oneOf error",
 			err: &jsonschema.ValidationError{
 				Causes: []*jsonschema.ValidationError{},
 			},
-			expected: "Step must have exactly one action (shell, template, file, include, include_vars, or vars)",
+			expected: "Step must have exactly one action (shell, template, file, copy, include, include_vars, or vars)",
 		},
 	}
 
@@ -645,7 +645,7 @@ func TestFormatValidationErrorMessage(t *testing.T) {
 				Message:          "value must be one of 'file', 'directory', 'absent'",
 				InstanceLocation: "/steps/0/file/state",
 			},
-			expected: "Invalid file state. Must be one of: 'file', 'directory', or 'absent'",
+			expected: "Invalid file state. Must be one of: 'file', 'directory', 'absent', 'touch', 'link', 'hardlink', or 'perms'",
 		},
 		{
 			name: "minItems error",

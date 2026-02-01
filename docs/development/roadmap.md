@@ -174,81 +174,77 @@
   - [x] `--max-output-bytes` / `--max-output-lines` — ✅ IMPLEMENTED: configurable truncation limits (default: 1MB, 1000 lines)
   - [x] Default behavior when flags not specified — ✅ IMPLEMENTED: artifacts only created when --artifacts-dir specified
 
-**Status**: ✅ COMPLETE - Full artifact system with CLI integration ready for production
-
-**Documentation**:
-- [x] docs/ARTIFACTS.md — Complete artifacts guide with examples
-- [x] Usage examples and integration patterns documented
-
 ---
 
 ## 2) File System Actions (detailed)
 
-### 2.1 `file` action (expand into sub-modes)
+### 2.1 `file` action (expand into sub-modes) ✅ COMPLETED (2026-02-04)
 Define `file:` as a structured union.
 
-#### 2.1.1 Ensure directory
-- [ ] `file: { state: directory, path, mode?, owner?, group? }`
-- [ ] Idempotent:
-  - [ ] create if missing
-  - [ ] chmod/chown only if differs
-- [ ] Dry-run shows which attributes would change
-- [ ] Recursive option:
-  - [ ] `recurse: true` for mode/owner/group on tree (explicit)
+#### 2.1.1 Ensure directory ✅
+- [x] `file: { state: directory, path, mode?, owner?, group? }`
+- [x] Idempotent:
+  - [x] create if missing
+  - [x] chmod/chown only if differs
+- [x] Dry-run shows which attributes would change
+- [x] Recursive option:
+  - [x] `recurse: true` for mode/owner/group on tree (explicit)
 
-#### 2.1.2 Ensure file
-- [ ] `file: { state: touch, path, mode?, owner?, group? }`
-- [ ] Create empty if missing
-- [ ] Update metadata only if differs
+#### 2.1.2 Ensure file (touch) ✅
+- [x] `file: { state: touch, path, mode?, owner?, group? }`
+- [x] Create empty if missing
+- [x] Update metadata only if differs
 
-#### 2.1.3 Remove path
-- [ ] `file: { state: absent, path, force?: bool }`
-- [ ] Safety:
-  - [ ] refuse empty path
-  - [ ] refuse `/` unless `--i-accept-danger`
-  - [ ] optional `allow_glob`
-- [ ] Idempotent: ok if already absent
+#### 2.1.3 Remove path ✅
+- [x] `file: { state: absent, path, force?: bool }`
+- [x] Safety:
+  - [x] refuse empty path
+  - [x] refuse `/` unless `--i-accept-danger`
+  - [ ] optional `allow_glob` — not implemented (use explicit paths)
+- [x] Idempotent: ok if already absent
 
-#### 2.1.4 Symlink
-- [ ] `file: { state: link, src, dest, force?: bool }`
-- [ ] Behavior:
-  - [ ] create symlink if missing
-  - [ ] if dest exists and not link:
-    - [ ] fail unless `force: true` (then replace)
-  - [ ] if link points elsewhere:
-    - [ ] replace (counts as changed)
-- [ ] Windows:
-  - [ ] define behavior (requires admin or developer mode); if unsupported → explicit error
+#### 2.1.4 Symlink ✅
+- [x] `file: { state: link, src, dest, force?: bool }`
+- [x] Behavior:
+  - [x] create symlink if missing
+  - [x] if dest exists and not link:
+    - [x] fail unless `force: true` (then replace)
+  - [x] if link points elsewhere:
+    - [x] replace (counts as changed)
+- [x] Windows:
+  - [x] define behavior (requires admin or developer mode); if unsupported → explicit error
 
-#### 2.1.5 Hardlink (optional)
-- [ ] `file: { state: hardlink, src, dest, force?: bool }`
+#### 2.1.5 Hardlink ✅
+- [x] `file: { state: hardlink, src, dest, force?: bool }`
 
-#### 2.1.6 Permissions-only / ownership-only operations
-- [ ] `file: { state: perms, path, mode?, owner?, group?, recurse? }`
+#### 2.1.6 Permissions-only / ownership-only operations ✅
+- [x] `file: { state: perms, path, mode?, owner?, group?, recurse? }`
 
-#### 2.1.7 Copy (separate `copy` action recommended)
-If you keep in `file`, make it explicit:
-- [ ] `copy: { src, dest, mode?, owner?, group?, force?, backup?, checksum? }`
-- [ ] Preserve:
-  - [ ] optionally preserve times
-  - [ ] optionally preserve mode
-- [ ] Large files: stream copy, atomic write temp + rename
+#### 2.1.7 Copy (separate `copy` action) ✅
+Implemented as separate `copy` action:
+- [x] `copy: { src, dest, mode?, owner?, group?, force?, backup?, checksum? }`
+- [x] Preserve:
+  - [ ] optionally preserve times — not yet implemented
+  - [x] optionally preserve mode
+- [x] Large files: stream copy, atomic write temp + rename
 
-#### 2.1.8 Sync (separate `sync` action)
+#### 2.1.8 Sync (separate `sync` action) — PLANNED
 - [ ] `sync: { src, dest, delete?: bool, exclude?: [], checksum?: bool }`
 - [ ] Implementation:
   - [ ] prefer native `rsync` if present else Go copy-tree
   - [ ] deterministic ordering
 
-### 2.2 `template` action
-- [ ] `template: { src, dest, mode?, owner?, group?, backup? }`
-- [ ] Features:
-  - [ ] atomic write: render → temp file → diff → rename
-  - [ ] change detection via content hash
-  - [ ] optional `newline: lf|crlf`
-- [ ] Template validation pre-run (Phase 0)
+**Status**: Phase 2 of 6-week file operations plan
 
-### 2.3 `unarchive` action
+### 2.2 `template` action — PARTIALLY COMPLETE
+- [x] `template: { src, dest, mode?, owner?, group?, backup? }` — basic implementation exists
+- [ ] Features:
+  - [x] atomic write: render → temp file → diff → rename — implemented
+  - [x] change detection via content hash — implemented
+  - [ ] optional `newline: lf|crlf` — not implemented
+- [x] Template validation pre-run (Phase 0) — implemented in 0.1
+
+### 2.3 `unarchive` action — PLANNED
 - [ ] `unarchive: { src, dest, strip_components?, creates?, mode? }`
 - [ ] Supported:
   - [ ] `.tar`, `.tar.gz`, `.tgz`, `.zip`
@@ -257,7 +253,9 @@ If you keep in `file`, make it explicit:
 - [ ] Safety:
   - [ ] prevent path traversal (`../`) entries
 
-### 2.4 `download` action
+**Status**: Phase 3 of 6-week file operations plan
+
+### 2.4 `download` action — PLANNED
 - [ ] `download: { url, dest, sha256?, mode?, owner?, group?, timeout_s?, retries?, headers? }`
 - [ ] Features:
   - [ ] resume (optional)
@@ -265,6 +263,8 @@ If you keep in `file`, make it explicit:
 - [ ] Idempotent:
   - [ ] if sha256 matches → skip
   - [ ] else download to temp, verify, rename
+
+**Status**: Phase 3 of 6-week file operations plan
 
 ---
 

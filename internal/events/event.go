@@ -41,10 +41,15 @@ const (
 
 // Event types for file operations
 const (
-	EventFileCreated    EventType = "file.created"
-	EventFileUpdated    EventType = "file.updated"
-	EventDirCreated     EventType = "directory.created"
-	EventTemplateRender EventType = "template.rendered"
+	EventFileCreated         EventType = "file.created"
+	EventFileUpdated         EventType = "file.updated"
+	EventFileRemoved         EventType = "file.removed"
+	EventFileCopied          EventType = "file.copied"
+	EventDirCreated          EventType = "directory.created"
+	EventDirRemoved          EventType = "directory.removed"
+	EventLinkCreated         EventType = "link.created"
+	EventPermissionsChanged  EventType = "permissions.changed"
+	EventTemplateRender      EventType = "template.rendered"
 )
 
 // Event types for variables
@@ -140,6 +145,42 @@ type FileOperationData struct {
 	Mode      string `json:"mode,omitempty"`
 	SizeBytes int64  `json:"size_bytes,omitempty"`
 	Changed   bool   `json:"changed"`
+	DryRun    bool   `json:"dry_run"`
+}
+
+// FileRemovedData contains data for file/directory removal events
+type FileRemovedData struct {
+	Path      string `json:"path"`
+	WasDir    bool   `json:"was_dir"`
+	SizeBytes int64  `json:"size_bytes,omitempty"`
+	DryRun    bool   `json:"dry_run"`
+}
+
+// LinkCreatedData contains data for link creation events
+type LinkCreatedData struct {
+	Src    string `json:"src"`
+	Dest   string `json:"dest"`
+	Type   string `json:"type"` // "symlink" or "hardlink"
+	DryRun bool   `json:"dry_run"`
+}
+
+// PermissionsChangedData contains data for permissions.changed events
+type PermissionsChangedData struct {
+	Path      string `json:"path"`
+	Mode      string `json:"mode,omitempty"`
+	Owner     string `json:"owner,omitempty"`
+	Group     string `json:"group,omitempty"`
+	Recursive bool   `json:"recursive"`
+	DryRun    bool   `json:"dry_run"`
+}
+
+// FileCopiedData contains data for file.copied events
+type FileCopiedData struct {
+	Src       string `json:"src"`
+	Dest      string `json:"dest"`
+	SizeBytes int64  `json:"size_bytes"`
+	Mode      string `json:"mode"`
+	Checksum  string `json:"checksum,omitempty"`
 	DryRun    bool   `json:"dry_run"`
 }
 

@@ -23,9 +23,21 @@ type RunConfig struct {
 // File represents a file or directory operation in a configuration step.
 type File struct {
 	Path    string `yaml:"path" json:"path"`
-	State   string `yaml:"state" json:"state,omitempty"`
+	State   string `yaml:"state" json:"state,omitempty"`      // file|directory|absent|link|hardlink|touch|perms
 	Content string `yaml:"content" json:"content,omitempty"`
 	Mode    string `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
+
+	// Ownership
+	Owner string `yaml:"owner" json:"owner,omitempty"` // Username or UID
+	Group string `yaml:"group" json:"group,omitempty"` // Groupname or GID
+
+	// Link operations
+	Src string `yaml:"src" json:"src,omitempty"` // Source path for link/copy operations
+
+	// Behavior flags
+	Force   bool `yaml:"force" json:"force,omitempty"`     // Overwrite existing files
+	Recurse bool `yaml:"recurse" json:"recurse,omitempty"` // Apply permissions recursively
+	Backup  bool `yaml:"backup" json:"backup,omitempty"`   // Create .bak before overwrite
 }
 
 // Template represents a template rendering operation in a configuration step.
@@ -39,6 +51,18 @@ type Template struct {
 // Shell represents a shell command execution in a configuration step.
 type Shell struct {
 	Command string `yaml:"command"`
+}
+
+// Copy represents a file copy operation in a configuration step.
+type Copy struct {
+	Src      string `yaml:"src" json:"src"`                       // Source file path
+	Dest     string `yaml:"dest" json:"dest"`                     // Destination file path
+	Mode     string `yaml:"mode" json:"mode,omitempty"`           // Octal file permissions (e.g., "0644", "0755")
+	Owner    string `yaml:"owner" json:"owner,omitempty"`         // Username or UID
+	Group    string `yaml:"group" json:"group,omitempty"`         // Groupname or GID
+	Backup   bool   `yaml:"backup" json:"backup,omitempty"`       // Create .bak before overwrite
+	Force    bool   `yaml:"force" json:"force,omitempty"`         // Overwrite if exists
+	Checksum string `yaml:"checksum" json:"checksum,omitempty"`   // Expected SHA256 or MD5 checksum
 }
 
 // Step represents a single configuration step that can perform various actions.
@@ -57,6 +81,7 @@ type Step struct {
 	Template    *Template `yaml:"template" json:"template,omitempty"`
 	File        *File     `yaml:"file" json:"file,omitempty"`
 	Shell       *string   `yaml:"shell" json:"shell,omitempty"`
+	Copy        *Copy     `yaml:"copy" json:"copy,omitempty"`
 	Include     *string   `yaml:"include" json:"include,omitempty"`
 	IncludeVars *string   `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
@@ -125,6 +150,9 @@ func (s *Step) countActions() int {
 	if s.Shell != nil {
 		count++
 	}
+	if s.Copy != nil {
+		count++
+	}
 	if s.Include != nil {
 		count++
 	}
@@ -147,6 +175,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Template != nil {
 		return "template"
+	}
+	if s.Copy != nil {
+		return "copy"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -194,8 +225,8 @@ func (s *Step) Validate() error {
 	return nil
 }
 
-// Copy creates a shallow copy of the step.
-func (s *Step) Copy() *Step {
+// Clone creates a shallow copy of the step.
+func (s *Step) Clone() *Step {
 	return &Step{
 		Name:         s.Name,
 		When:         s.When,
@@ -204,6 +235,7 @@ func (s *Step) Copy() *Step {
 		Template:     s.Template,
 		File:         s.File,
 		Shell:        s.Shell,
+		Copy:         s.Copy,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,
@@ -221,6 +253,7 @@ func (s *Step) Copy() *Step {
 		Tags:         s.Tags,
 		Register:     s.Register,
 		ID:           s.ID,
+		ActionType:   s.ActionType,
 		Origin:       s.Origin,
 		Skipped:      s.Skipped,
 		LoopContext:  s.LoopContext,
