@@ -172,3 +172,66 @@ func TestEvaluate_RuntimeErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestContainsFunction(t *testing.T) {
+	evaluator := NewExprEvaluator()
+
+	tests := []struct {
+		name      string
+		expr      string
+		vars      map[string]interface{}
+		want      bool
+		wantError bool
+	}{
+		{
+			name: "contains with string found",
+			expr: `has(result.stdout, "hello")`,
+			vars: map[string]interface{}{
+				"result": map[string]interface{}{
+					"stdout": "hello world",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "contains not found",
+			expr: `has(result.stdout, "goodbye")`,
+			vars: map[string]interface{}{
+				"result": map[string]interface{}{
+					"stdout": "hello world",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "contains empty substring",
+			expr: `has("test", "")`,
+			vars: map[string]interface{}{},
+			want: true,
+		},
+		{
+			name: "contains case sensitive",
+			expr: `has("Hello", "hello")`,
+			vars: map[string]interface{}{},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.Evaluate(tt.expr, tt.vars)
+			if tt.wantError {
+				if err == nil {
+					t.Fatal("Expected error but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Evaluate() error = %v", err)
+			}
+			if result != tt.want {
+				t.Errorf("Evaluate() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}

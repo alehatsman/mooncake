@@ -561,6 +561,10 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 	}
 
 	if step.File != nil {
+		// Make a deep copy of File to avoid modifying shared pointer
+		fileCopy := *step.File
+		step.File = &fileCopy
+
 		// Render file fields
 		path, err := p.template.Render(step.File.Path, ctx.Variables)
 		if err != nil {
@@ -578,6 +582,10 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 	}
 
 	if step.Template != nil {
+		// Make a deep copy of Template to avoid modifying shared pointer
+		templateCopy := *step.Template
+		step.Template = &templateCopy
+
 		// Render template fields
 		src, err := p.template.Render(step.Template.Src, ctx.Variables)
 		if err != nil {

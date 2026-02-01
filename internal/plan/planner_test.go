@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/filetree"
 )
 
 func TestPlanner_BuildPlan_Simple(t *testing.T) {
@@ -751,4 +754,114 @@ func findSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestPlanner_WithFileTree_TemplateDeepCopy verifies that loop iterations
+// each get their own copy of action objects (Template, File, etc.) to prevent
+// shared pointer bugs where one iteration modifies another's data.
+// This is a regression test for the bug where all with_filetree iterations
+// had the same template src/dest values because they shared a pointer.
+func TestPlanner_WithFileTree_TemplateDeepCopy(t *testing.T) {
+	// Create a temporary directory with test files
+	tmpDir := t.TempDir()
+	templatesDir := filepath.Join(tmpDir, "templates")
+	err := os.MkdirAll(templatesDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create templates directory: %v", err)
+	}
+
+	// Create test template files
+	testFile1 := filepath.Join(templatesDir, "file1.txt")
+	testFile2 := filepath.Join(templatesDir, "file2.txt")
+	err = os.WriteFile(testFile1, []byte("content1"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file1: %v", err)
+	}
+	err = os.WriteFile(testFile2, []byte("content2"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test file2: %v", err)
+	}
+
+	// Create config with with_filetree
+	configPath := filepath.Join(tmpDir, "test.yml")
+	configContent := `version: "1.0"
+vars:
+  output_dir: /tmp/output
+
+steps:
+  - name: Deploy {{ item.Name }}
+    template:
+      src: "{{ item.Src }}"
+      dest: "{{ output_dir }}/{{ item.Name }}"
+    with_filetree: "` + templatesDir + `"
+    when: item.State == "file"
+`
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	// Build plan
+	planner := NewPlanner()
+	plan, err := planner.BuildPlan(PlannerConfig{
+		ConfigPath: configPath,
+		Variables:  nil,
+		Tags:       nil,
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to build plan: %v", err)
+	}
+
+	// Verify plan has 3 steps: templates dir (skipped), file1, file2
+	if len(plan.Steps) != 3 {
+		t.Fatalf("Expected 3 steps (1 dir + 2 files), got %d", len(plan.Steps))
+	}
+
+	// Find the file steps (skip the directory step)
+	var fileSteps []config.Step
+	for _, step := range plan.Steps {
+		if step.LoopContext != nil {
+			item, ok := step.LoopContext.Item.(filetree.Item)
+			if ok && item.State == "file" {
+				fileSteps = append(fileSteps, step)
+			}
+		}
+	}
+
+	if len(fileSteps) != 2 {
+		t.Fatalf("Expected 2 file steps, got %d", len(fileSteps))
+	}
+
+	// Verify each file step has a unique template src path
+	// This is the regression test: before the fix, all steps had the same src
+	step1 := fileSteps[0]
+	step2 := fileSteps[1]
+
+	if step1.Template == nil || step2.Template == nil {
+		t.Fatal("Template action is nil")
+	}
+
+	src1 := step1.Template.Src
+	src2 := step2.Template.Src
+
+	if src1 == src2 {
+		t.Errorf("Bug detected: both steps have the same template src: %s\nThis indicates shared pointer bug", src1)
+	}
+
+	// Verify each src matches the expected file path
+	if !contains(src1, "file1.txt") && !contains(src1, "file2.txt") {
+		t.Errorf("Step 1 src doesn't contain a file name: %s", src1)
+	}
+	if !contains(src2, "file1.txt") && !contains(src2, "file2.txt") {
+		t.Errorf("Step 2 src doesn't contain a file name: %s", src2)
+	}
+
+	// Verify they're different files
+	if contains(src1, "file1.txt") && contains(src2, "file1.txt") {
+		t.Error("Both steps point to file1.txt - expected different files")
+	}
+	if contains(src1, "file2.txt") && contains(src2, "file2.txt") {
+		t.Error("Both steps point to file2.txt - expected different files")
+	}
 }

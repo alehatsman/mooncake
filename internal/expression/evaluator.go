@@ -2,6 +2,8 @@
 package expression
 
 import (
+	"strings"
+
 	"github.com/expr-lang/expr"
 )
 
@@ -31,8 +33,23 @@ func (e *ExprEvaluator) Evaluate(expression string, variables map[string]interfa
 		variables = make(map[string]interface{})
 	}
 
-	// Compile and evaluate the expression
-	program, err := expr.Compile(expression, expr.Env(variables))
+	// Compile and evaluate the expression with custom functions
+	program, err := expr.Compile(expression,
+		expr.Env(variables),
+		// Add string functions (note: "contains" is reserved as an operator in expr)
+		// So we use "has" as a shorter alternative
+		expr.Function("has", func(params ...interface{}) (interface{}, error) {
+			if len(params) != 2 {
+				return false, nil
+			}
+			str, ok1 := params[0].(string)
+			substr, ok2 := params[1].(string)
+			if !ok1 || !ok2 {
+				return false, nil
+			}
+			return strings.Contains(str, substr), nil
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -44,3 +61,4 @@ func (e *ExprEvaluator) Evaluate(expression string, variables map[string]interfa
 
 	return result, nil
 }
+
