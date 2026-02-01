@@ -184,4 +184,5 @@ func (t *testSubscriber) OnEvent(event Event) {
 	}
 }
 
+// Close is a no-op for test subscriber - no cleanup required
 func (t *testSubscriber) Close() {}

@@ -9,17 +9,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/template"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
-// logDryRunTemplateOperation attempts to render template and log appropriate message.
-func logDryRunTemplateOperation(dryRun *dryRunLogger, src, dest string, mode os.FileMode, renderer template.Renderer, variables map[string]interface{}, ec *ExecutionContext) {
-	// Try to render template for better dry-run feedback
+// readAndRenderTemplate reads a template file and renders it with the given variables.
+// Returns the rendered output or an error if reading/rendering fails.
+func readAndRenderTemplate(src string, renderer template.Renderer, variables map[string]interface{}, ec *ExecutionContext) (string, error) {
 	// #nosec G304 -- Template source path from user config is intentional functionality
 	srcFile, err := os.Open(src)
 	if err != nil {
-		// Can't open source - use basic logging
-		dryRun.LogTemplateRender(src, dest, mode)
-		return
+		return "", err
 	}
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
@@ -29,20 +28,14 @@ func logDryRunTemplateOperation(dryRun *dryRunLogger, src, dest string, mode os.
 
 	srcBytes, err := io.ReadAll(srcFile)
 	if err != nil {
-		// Can't read source - use basic logging
-		dryRun.LogTemplateRender(src, dest, mode)
-		return
+		return "", err
 	}
 
-	output, err := renderer.Render(string(srcBytes), variables)
-	if err != nil {
-		// Can't render - use basic logging and show error
-		dryRun.LogTemplateRender(src, dest, mode)
-		ec.Logger.Debugf("  Template render error (dry-run): %v", err)
-		return
-	}
+	return renderer.Render(string(srcBytes), variables)
+}
 
-	// Successfully rendered - compare with existing file
+// logTemplateComparison compares rendered output with existing file and logs appropriate message.
+func logTemplateComparison(dryRun *dryRunLogger, src, dest string, mode os.FileMode, output string) {
 	// #nosec G304 -- Template destination path from user config is intentional functionality
 	existingContent, _ := os.ReadFile(dest)
 	if existingContent != nil {
@@ -54,6 +47,21 @@ func logDryRunTemplateOperation(dryRun *dryRunLogger, src, dest string, mode os.
 	} else {
 		dryRun.LogTemplateCreate(src, dest, mode, len(output))
 	}
+}
+
+// logDryRunTemplateOperation attempts to render template and log appropriate message.
+func logDryRunTemplateOperation(dryRun *dryRunLogger, src, dest string, mode os.FileMode, renderer template.Renderer, variables map[string]interface{}, ec *ExecutionContext) {
+	output, err := readAndRenderTemplate(src, renderer, variables, ec)
+	if err != nil {
+		// Can't read or render - use basic logging
+		dryRun.LogTemplateRender(src, dest, mode)
+		if err != nil {
+			ec.Logger.Debugf("  Template render error (dry-run): %v", err)
+		}
+		return
+	}
+
+	logTemplateComparison(dryRun, src, dest, mode, output)
 }
 
 // HandleTemplate renders a template file and writes it to a destination.
@@ -95,7 +103,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		// Prepare variables for rendering
 		variables := ec.Variables
 		if template.Vars != nil {
-			variables = mergeVariables(ec.Variables, *template.Vars)
+			variables = utils.MergeVariables(ec.Variables, *template.Vars)
 		}
 
 		mode := parseFileMode(template.Mode, 0644)
@@ -131,7 +139,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 
 	variables := ec.Variables
 	if template.Vars != nil {
-		variables = mergeVariables(ec.Variables, *template.Vars)
+		variables = utils.MergeVariables(ec.Variables, *template.Vars)
 	}
 
 	output, err := ec.Template.Render(string(templateBytes), variables)

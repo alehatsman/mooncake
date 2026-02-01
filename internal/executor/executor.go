@@ -20,6 +20,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 const (
@@ -35,19 +36,6 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 		return step.ID
 	}
 	return fmt.Sprintf("step-%d", *ec.Stats.Global)
-}
-
-// mergeVariables creates a new map combining base and override variables.
-// Values from override take precedence over values from base with the same key.
-func mergeVariables(base, override map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-	for k, v := range base {
-		result[k] = v
-	}
-	for k, v := range override {
-		result[k] = v
-	}
-	return result
 }
 
 // markStepFailed marks a result as failed and registers it if needed.
@@ -86,7 +74,7 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 		// Still set variables in dry-run mode so subsequent steps can use them
 	})
 
-	ec.Variables = mergeVariables(ec.Variables, *vars)
+	ec.Variables = utils.MergeVariables(ec.Variables, *vars)
 
 	// Emit variables.set event
 	keys := make([]string, 0, len(*vars))

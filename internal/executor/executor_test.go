@@ -13,6 +13,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 func TestExecutionContext_Copy(t *testing.T) {
@@ -376,13 +377,13 @@ func TestMergeVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := mergeVariables(tt.base, tt.override)
+			got := utils.MergeVariables(tt.base, tt.override)
 			if len(got) != len(tt.want) {
-				t.Errorf("mergeVariables() length = %v, want %v", len(got), len(tt.want))
+				t.Errorf("utils.MergeVariables() length = %v, want %v", len(got), len(tt.want))
 			}
 			for k, v := range tt.want {
 				if got[k] != v {
-					t.Errorf("mergeVariables()[%s] = %v, want %v", k, got[k], v)
+					t.Errorf("utils.MergeVariables()[%s] = %v, want %v", k, got[k], v)
 				}
 			}
 		})

@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+const (
+	// TUI buffer and animation settings
+	tuiBufferHistorySize   = 10                  // Number of completed steps to keep in history
+	tuiAnimationFrameRate  = 150 * time.Millisecond // Animation frame update interval
+)
+
 // TUILogger implements Logger interface with animated TUI display.
 type TUILogger struct {
 	buffer   *TUIBuffer
@@ -32,7 +38,7 @@ func NewTUILogger(logLevel int) (*TUILogger, error) {
 	}
 
 	// Create buffer
-	buffer := NewTUIBuffer(10)
+	buffer := NewTUIBuffer(tuiBufferHistorySize)
 
 	// Get terminal size
 	width, height := GetTerminalSize()
@@ -52,7 +58,7 @@ func NewTUILogger(logLevel int) (*TUILogger, error) {
 
 // Start begins the animation and rendering loop.
 func (l *TUILogger) Start() {
-	l.ticker = time.NewTicker(150 * time.Millisecond)
+	l.ticker = time.NewTicker(tuiAnimationFrameRate)
 	go func() {
 		for {
 			select {

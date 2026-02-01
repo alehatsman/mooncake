@@ -27,6 +27,13 @@ const (
 	// Artifact default limits
 	defaultMaxOutputBytes = 1048576 // 1MB
 	defaultMaxOutputLines = 1000
+
+	// YAML formatting
+	yamlIndentSpaces = 2
+
+	// Exit codes
+	exitCodeValidationError = 2 // Configuration validation failed
+	exitCodeRuntimeError    = 3 // Runtime error during execution
 )
 
 // parseTags parses a comma-separated tag string into a slice of trimmed tags
@@ -260,8 +267,9 @@ func formatPlanJSON(p *plan.Plan) error {
 
 func formatPlanYAML(p *plan.Plan) error {
 	encoder := yaml.NewEncoder(os.Stdout)
-	encoder.SetIndent(2)
+	encoder.SetIndent(yamlIndentSpaces)
 	defer func() {
+		// Intentionally ignore Close() error - encoder writes to stdout which doesn't need explicit close handling
 		_ = encoder.Close()
 	}()
 	return encoder.Encode(p)
@@ -328,7 +336,7 @@ func validateCommand(c *cli.Context) error {
 	_, diagnostics, err := config.ReadConfigWithValidation(configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading config: %v\n", err)
-		os.Exit(3) // Runtime error
+		os.Exit(exitCodeRuntimeError)
 	}
 
 	// Check for validation errors
@@ -349,7 +357,7 @@ func validateCommand(c *cli.Context) error {
 		encoder.SetIndent("", "  ")
 		if err := encoder.Encode(result); err != nil {
 			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(3)
+			os.Exit(exitCodeRuntimeError)
 		}
 	} else {
 		// Text output
@@ -368,7 +376,7 @@ func validateCommand(c *cli.Context) error {
 
 	// Exit with appropriate code
 	if hasErrors {
-		os.Exit(2) // Validation error
+		os.Exit(exitCodeValidationError)
 	}
 
 	return nil

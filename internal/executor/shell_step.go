@@ -133,35 +133,31 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 }
 
 // executeShellCommand executes a shell command once without retry logic.
-func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand string) error {
-	// Create result object with start time
-	result := NewResult()
-	result.StartTime = time.Now()
-
-	// Create context with timeout if specified
+// setupCommandContext creates a context with timeout if specified in the step
+func setupCommandContext(step config.Step) (context.Context, context.CancelFunc, error) {
 	ctx := context.Background()
 	var cancel context.CancelFunc
+
 	if step.Timeout != "" {
 		timeout, err := time.ParseDuration(step.Timeout)
 		if err != nil {
-			return fmt.Errorf("invalid timeout duration %q: %w", step.Timeout, err)
+			return nil, nil, fmt.Errorf("invalid timeout duration %q: %w", step.Timeout, err)
 		}
 		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
 	}
 
-	var command *exec.Cmd
+	return ctx, cancel, nil
+}
 
+// createShellCommand creates the exec.Cmd with or without sudo elevation
+func createShellCommand(ctx context.Context, step config.Step, renderedCommand string, ec *ExecutionContext) (*exec.Cmd, error) {
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+			return nil, fmt.Errorf("become is not supported on %s", runtime.GOOS)
 		}
 		if ec.SudoPass == "" {
-			return fmt.Errorf("step requires sudo but no password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
+			return nil, fmt.Errorf("step requires sudo but no password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
 		}
-		// #nosec G204 - This is a provisioning tool designed to execute shell commands.
-		// Command execution is the core functionality. The command comes from user-provided
-		// YAML configuration files, and users are expected to validate and trust their configs.
 
 		// Build sudo arguments
 		args := []string{"-S"}
@@ -170,36 +166,33 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 		}
 		args = append(args, "--", "bash", "-c", renderedCommand)
 
-		command = exec.CommandContext(ctx, "sudo", args...)
+		// #nosec G204 - This is a provisioning tool designed to execute shell commands
+		command := exec.CommandContext(ctx, "sudo", args...)
 		command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
-	} else {
-		// #nosec G204 - This is a provisioning tool designed to execute shell commands.
-		// Command execution is the core functionality. The command comes from user-provided
-		// YAML configuration files, and users are expected to validate and trust their configs.
-		command = exec.CommandContext(ctx, "bash", "-c", renderedCommand)
+		return command, nil
 	}
 
+	// #nosec G204 - This is a provisioning tool designed to execute shell commands
+	return exec.CommandContext(ctx, "bash", "-c", renderedCommand), nil
+}
+
+// configureCommandEnvironment sets environment variables and working directory
+func configureCommandEnvironment(command *exec.Cmd, step config.Step, ec *ExecutionContext) error {
 	// Set environment variables if specified
 	if len(step.Env) > 0 {
-		// Start with current environment
 		envVars := os.Environ()
-
-		// Add/override with step environment variables
 		for key, value := range step.Env {
-			// Render the value through template engine
 			renderedValue, err := ec.Template.Render(value, ec.Variables)
 			if err != nil {
 				return fmt.Errorf("failed to render env var %s: %w", key, err)
 			}
 			envVars = append(envVars, fmt.Sprintf("%s=%s", key, renderedValue))
 		}
-
 		command.Env = envVars
 	}
 
 	// Set working directory if specified
 	if step.Cwd != "" {
-		// Render the path through template engine
 		renderedCwd, err := ec.Template.Render(step.Cwd, ec.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render cwd: %w", err)
@@ -207,46 +200,46 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 		command.Dir = renderedCwd
 	}
 
+	return nil
+}
+
+// executeAndCaptureOutput runs the command and captures stdout/stderr
+func executeAndCaptureOutput(command *exec.Cmd, ec *ExecutionContext) (string, string, error) {
 	stderr, err := command.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
+		return "", "", fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
+		return "", "", fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	if err = command.Start(); err != nil {
-		return fmt.Errorf("failed to start command: %w", err)
+		return "", "", fmt.Errorf("failed to start command: %w", err)
 	}
 
-	// Capture output
 	var stdoutBuf, stderrBuf bytes.Buffer
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go captureOutput(stdout, &stdoutBuf, ec, true, &wg)
 	go captureOutput(stderr, &stderrBuf, ec, false, &wg)
-
-	// Wait for all output to be processed
 	wg.Wait()
 
-	// Populate result fields
-	result.Stdout = strings.TrimSpace(stdoutBuf.String())
-	result.Stderr = strings.TrimSpace(stderrBuf.String())
-	result.Changed = true // Commands always count as changed
+	return strings.TrimSpace(stdoutBuf.String()), strings.TrimSpace(stderrBuf.String()), nil
+}
 
-	// Determine result status based on command execution
+// processCommandResult handles command completion, exit codes, and result registration
+func processCommandResult(ctx context.Context, command *exec.Cmd, step config.Step, result *Result, stdoutLen, stderrLen int, ec *ExecutionContext) (bool, error) {
 	waitErr := command.Wait()
 	wasTimeout := false
+
 	if waitErr != nil {
-		// Check if timeout occurred
 		if ctx.Err() == context.DeadlineExceeded {
 			result.Rc = 124 // Standard timeout exit code
 			result.Failed = true
 			wasTimeout = true
 		} else {
-			// Extract exit code
 			if exitErr, ok := waitErr.(*exec.ExitError); ok {
 				result.Rc = exitErr.ExitCode()
 			} else {
@@ -259,13 +252,9 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 		result.Failed = false
 	}
 
-	// Record end time and duration
-	result.EndTime = time.Now()
-	result.Duration = result.EndTime.Sub(result.StartTime)
-
 	// Evaluate changed_when and failed_when overrides
-	if evalErr := evaluateResultOverrides(step, result, ec); evalErr != nil {
-		return evalErr
+	if err := evaluateResultOverrides(step, result, ec); err != nil {
+		return wasTimeout, err
 	}
 
 	// Register the result if register is specified
@@ -281,16 +270,59 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 	// Set result in context for event emission
 	ec.CurrentResult = result
 
-	// Return error if command failed (after applying overrides)
+	// Log error output if command failed
 	if result.Failed {
-		// On error, show captured output for debugging (logger will automatically redact)
-		if stdoutBuf.Len() > 0 {
+		if stdoutLen > 0 {
 			ec.Logger.Errorf("Command output:\n%s", result.Stdout)
 		}
-		if stderrBuf.Len() > 0 {
+		if stderrLen > 0 {
 			ec.Logger.Errorf("Error output:\n%s", result.Stderr)
 		}
+	}
 
+	return wasTimeout, nil
+}
+
+func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand string) error {
+	result := NewResult()
+	result.StartTime = time.Now()
+
+	ctx, cancel, err := setupCommandContext(step)
+	if err != nil {
+		return err
+	}
+	if cancel != nil {
+		defer cancel()
+	}
+
+	command, err := createShellCommand(ctx, step, renderedCommand, ec)
+	if err != nil {
+		return err
+	}
+
+	err = configureCommandEnvironment(command, step, ec)
+	if err != nil {
+		return err
+	}
+
+	stdout, stderr, err := executeAndCaptureOutput(command, ec)
+	if err != nil {
+		return err
+	}
+
+	result.Stdout = stdout
+	result.Stderr = stderr
+	result.Changed = true
+
+	wasTimeout, err := processCommandResult(ctx, command, step, result, len(stdout), len(stderr), ec)
+	if err != nil {
+		return err
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
+
+	if result.Failed {
 		if wasTimeout {
 			return fmt.Errorf("command timed out after %s", step.Timeout)
 		}

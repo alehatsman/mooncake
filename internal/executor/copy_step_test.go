@@ -28,6 +28,7 @@ func (c *testEventCollector) OnEvent(event events.Event) {
 	c.events = append(c.events, event)
 }
 
+// Close is a no-op for test event collector - no cleanup required
 func (c *testEventCollector) Close() {}
 
 func (c *testEventCollector) getEvents() []events.Event {

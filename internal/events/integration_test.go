@@ -209,4 +209,5 @@ func (c *eventCollector) OnEvent(event Event) {
 	c.events = append(c.events, event)
 }
 
+// Close is a no-op for test collector - no cleanup required for in-memory event storage
 func (c *eventCollector) Close() {}

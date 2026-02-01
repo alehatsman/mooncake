@@ -14,21 +14,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/template"
+	"github.com/alehatsman/mooncake/internal/utils"
 	"gopkg.in/yaml.v3"
 )
-
-// mergeVariables creates a new map combining base and override variables.
-// Values from override take precedence over values from base with the same key.
-func mergeVariables(base, override map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-	for k, v := range base {
-		result[k] = v
-	}
-	for k, v := range override {
-		result[k] = v
-	}
-	return result
-}
 
 // resolvePath converts a potentially relative path to an absolute path.
 // If the path is relative, it's joined with baseDir. Then filepath.Abs is called.
@@ -103,7 +91,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	}
 
 	// Merge global vars from config with provided vars (provided vars take precedence)
-	variables := mergeVariables(runConfig.Vars, cfg.Variables)
+	variables := utils.MergeVariables(runConfig.Vars, cfg.Variables)
 
 	// Inject system facts (ansible_os_family, ansible_distribution, etc.)
 	// These are added after config vars but before expansion, so templates can use them
@@ -200,47 +188,50 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 	return &runConfig, nil
 }
 
+// expandStep dispatches a single step to the appropriate expansion handler
+func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan, stepIndex int) error {
+	// Handle include directives
+	if step.Include != nil {
+		return p.expandInclude(step, ctx, plan, stepIndex)
+	}
+
+	// Handle loop constructs
+	if step.WithItems != nil {
+		return p.expandWithItems(step, ctx, plan)
+	}
+	if step.WithFileTree != nil {
+		return p.expandWithFileTree(step, ctx, plan)
+	}
+
+	// Handle variable operations (skip if when condition is false at plan time)
+	if step.Vars != nil {
+		if !p.shouldProcessAtPlanTime(step, ctx) {
+			return nil // Skip this step
+		}
+		return p.expandVars(step, ctx)
+	}
+	if step.IncludeVars != nil {
+		if !p.shouldProcessAtPlanTime(step, ctx) {
+			return nil // Skip this step
+		}
+		return p.expandIncludeVars(step, ctx)
+	}
+
+	// Regular step - compile it
+	planStep, err := p.compilePlanStep(step, ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to compile step %q: %w", step.Name, err)
+	}
+	plan.Steps = append(plan.Steps, planStep)
+	return nil
+}
+
 // expandSteps recursively expands a list of steps
 func (p *Planner) expandSteps(steps []config.Step, ctx *ExpansionContext, plan *Plan, baseStepIndex int) error {
 	for i, step := range steps {
 		stepIndex := baseStepIndex + i
-
-		// Handle different step types
-		if step.Include != nil {
-			if err := p.expandInclude(step, ctx, plan, stepIndex); err != nil {
-				return err
-			}
-		} else if step.WithItems != nil {
-			if err := p.expandWithItems(step, ctx, plan); err != nil {
-				return err
-			}
-		} else if step.WithFileTree != nil {
-			if err := p.expandWithFileTree(step, ctx, plan); err != nil {
-				return err
-			}
-		} else if step.Vars != nil {
-			// Skip vars steps with when conditions that evaluate to false at plan time
-			if !p.shouldProcessAtPlanTime(step, ctx) {
-				continue
-			}
-			if err := p.expandVars(step, ctx); err != nil {
-				return err
-			}
-		} else if step.IncludeVars != nil {
-			// Skip include_vars steps with when conditions that evaluate to false at plan time
-			if !p.shouldProcessAtPlanTime(step, ctx) {
-				continue
-			}
-			if err := p.expandIncludeVars(step, ctx); err != nil {
-				return err
-			}
-		} else {
-			// Regular step - compile it
-			planStep, err := p.compilePlanStep(step, ctx, nil)
-			if err != nil {
-				return fmt.Errorf("failed to compile step %q: %w", step.Name, err)
-			}
-			plan.Steps = append(plan.Steps, planStep)
+		if err := p.expandStep(step, ctx, plan, stepIndex); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -703,7 +694,7 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 	}
 
 	// Merge context variables with loop variables (loop variables take precedence)
-	newVars := mergeVariables(ctx.Variables, loopVars)
+	newVars := utils.MergeVariables(ctx.Variables, loopVars)
 
 	return &ExpansionContext{
 		Variables:  newVars,

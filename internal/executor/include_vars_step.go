@@ -3,6 +3,7 @@ package executor
 import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 // HandleIncludeVars loads variables from a YAML file into the execution context.
@@ -24,7 +25,7 @@ func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 		// Still load variables in dry-run mode so subsequent steps can use them
 	})
 
-	ec.Variables = mergeVariables(ec.Variables, vars)
+	ec.Variables = utils.MergeVariables(ec.Variables, vars)
 
 	// Emit variables.loaded event
 	keys := make([]string, 0, len(vars))
