@@ -167,13 +167,13 @@ Load variables from external files.
   include_vars: ./vars/{{env}}.yml
 ```
 
-## Action Properties
+## Universal Fields
 
-All actions support these properties:
+These fields work with all action types (shell, file, template, include, etc.):
 
 ### name
 
-Human-readable description:
+Human-readable description displayed in output:
 ```yaml
 - name: Install dependencies
   shell: npm install
@@ -181,7 +181,7 @@ Human-readable description:
 
 ### when
 
-Conditional execution:
+Conditional execution - step runs only if expression evaluates to `true`:
 ```yaml
 - shell: brew install git
   when: os == "darwin"
@@ -189,42 +189,200 @@ Conditional execution:
 
 ### tags
 
-Filter execution:
+Filter execution - run only steps with specified tags:
 ```yaml
 - shell: npm test
   tags: [test, dev]
 ```
 
+Run with: `mooncake run --config config.yml --tags test`
+
 ### become
 
-Run with sudo:
+Run with elevated privileges (sudo). Works with shell, file, and template actions:
 ```yaml
 - shell: apt update
   become: true
 ```
 
+Requires `--sudo-pass` flag or `--raw` mode for interactive sudo.
+
 ### register
 
-Capture output:
+Capture command output in a variable:
 ```yaml
 - shell: whoami
   register: current_user
+
+- name: Use captured output
+  shell: echo "Running as {{current_user.stdout}}"
 ```
+
+Result contains:
+- `rc` - Exit code
+- `stdout` - Standard output
+- `stderr` - Standard error
+- `changed` - Whether step made changes
+- `failed` - Whether step failed
 
 ### with_items
 
-Iterate over list:
+Iterate over list items:
 ```yaml
 - shell: echo "{{item}}"
   with_items: ["a", "b", "c"]
 ```
 
+Or with variables:
+```yaml
+- vars:
+    packages: [git, vim, tmux]
+
+- shell: brew install {{item}}
+  with_items: "{{packages}}"
+```
+
 ### with_filetree
 
-Iterate over files:
+Iterate over files in a directory:
 ```yaml
 - shell: cp "{{item.src}}" "/backup/{{item.name}}"
   with_filetree: ./dotfiles
+```
+
+Item properties:
+- `name` - File name
+- `src` - Full source path
+- `is_dir` - Whether it's a directory
+
+## Shell-Specific Fields
+
+The following fields **only work with shell commands**. They don't apply to file, template, or include operations.
+
+### become_user
+
+Specify user when using `become` with shell commands (default is root):
+```yaml
+- name: Run as postgres user
+  shell: psql -c "SELECT version()"
+  become: true
+  become_user: postgres
+```
+
+### env
+
+Set environment variables for shell commands:
+```yaml
+- name: Build with custom env
+  shell: make build
+  env:
+    CC: gcc-11
+    CFLAGS: "-O2 -Wall"
+    PATH: "/custom/bin:$PATH"
+```
+
+Values support template rendering.
+
+### cwd
+
+Change working directory before executing shell command:
+```yaml
+- name: Build in project directory
+  shell: npm run build
+  cwd: "/opt/{{project_name}}"
+```
+
+### timeout
+
+Enforce maximum execution time (duration string):
+```yaml
+- name: Long running command
+  shell: ./slow-script.sh
+  timeout: 5m
+```
+
+Supported units: `ns`, `us`, `ms`, `s`, `m`, `h`. Command times out with exit code 124.
+
+### retries
+
+Retry failed shell commands up to N times:
+```yaml
+- name: Flaky API call
+  shell: curl https://api.example.com/data
+  retries: 3
+  retry_delay: 5s
+```
+
+Total attempts = retries + 1 (initial attempt).
+
+### retry_delay
+
+Wait duration between retry attempts:
+```yaml
+- name: Wait for service
+  shell: nc -z localhost 8080
+  retries: 5
+  retry_delay: 2s
+```
+
+### changed_when
+
+Override changed status based on expression (shell commands only):
+```yaml
+- name: Check if update needed
+  shell: git fetch && git status
+  register: git_status
+  changed_when: "'behind' in result.stdout"
+```
+
+Expression has access to `result.rc`, `result.stdout`, `result.stderr`.
+
+### failed_when
+
+Override failure status based on expression (shell commands only):
+```yaml
+- name: Command that may return 2
+  shell: ./script.sh
+  failed_when: "result.rc != 0 and result.rc != 2"
+```
+
+Useful for commands where certain non-zero exit codes are acceptable.
+
+## Shell Command Examples
+
+### Robust shell command with retry and timeout
+```yaml
+- name: Download large file
+  shell: curl -O https://example.com/large-file.tar.gz
+  timeout: 10m
+  retries: 3
+  retry_delay: 30s
+  failed_when: "result.rc != 0 and result.rc != 18"  # 18 = partial transfer
+```
+
+### Conditional change detection
+```yaml
+- name: Update git repository
+  shell: git pull
+  cwd: "/opt/{{project}}"
+  register: git_pull
+  changed_when: "'Already up to date' not in result.stdout"
+```
+
+### Complex shell execution control
+```yaml
+- name: Deploy with validation
+  shell: ./deploy.sh
+  cwd: "/opt/app"
+  env:
+    ENVIRONMENT: "{{env}}"
+    DEBUG: "{{debug_mode}}"
+  timeout: 15m
+  become: true
+  become_user: deployer
+  register: deploy_result
+  failed_when: "result.rc != 0 or 'ERROR' in result.stderr"
+  changed_when: "'deployed successfully' in result.stdout"
 ```
 
 ## See Also

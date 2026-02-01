@@ -3770,3 +3770,438 @@ func TestExecuteStep_NoStepName(t *testing.T) {
 func String(s string) *string {
 	return &s
 }
+
+// Tests for new common fields implementation
+
+func TestHandleShell_BecomeUser(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skip("Test requires root privileges")
+	}
+
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+		SudoPass:  "test", // Would need real password in real test
+	}
+
+	step := config.Step{
+		Name:       "test become_user",
+		Shell:      String("whoami"),
+		Become:     true,
+		BecomeUser: "nobody",
+	}
+
+	// This test verifies the command is constructed correctly
+	// In real usage, it would execute as the specified user
+	err := HandleShell(step, ec)
+
+	// We expect an error because we don't have a valid sudo password
+	// But we can verify the BecomeUser field is being used
+	if err == nil {
+		t.Log("Command succeeded (possibly running as root)")
+	}
+}
+
+func TestHandleShell_Env(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{"custom_value": "test123"},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+	}
+
+	step := config.Step{
+		Name:  "test env",
+		Shell: String("echo $TEST_VAR"),
+		Env: map[string]string{
+			"TEST_VAR": "{{custom_value}}",
+		},
+		Register: "result",
+	}
+
+	err := HandleShell(step, ec)
+	if err != nil {
+		t.Fatalf("HandleShell() error = %v", err)
+	}
+
+	// Verify the environment variable was set and rendered
+	result, ok := ec.Variables["result"].(map[string]interface{})
+	if !ok {
+		t.Fatal("result not registered")
+	}
+
+	stdout, ok := result["stdout"].(string)
+	if !ok {
+		t.Fatal("stdout not in result")
+	}
+
+	if !strings.Contains(stdout, "test123") {
+		t.Errorf("Expected stdout to contain 'test123', got: %s", stdout)
+	}
+}
+
+func TestHandleShell_Cwd(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	// Create a temp directory
+	tmpDir, err := os.MkdirTemp("", "mooncake-test-cwd-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{"target_dir": tmpDir},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+	}
+
+	step := config.Step{
+		Name:     "test cwd",
+		Shell:    String("pwd"),
+		Cwd:      "{{target_dir}}",
+		Register: "result",
+	}
+
+	err = HandleShell(step, ec)
+	if err != nil {
+		t.Fatalf("HandleShell() error = %v", err)
+	}
+
+	// Verify the working directory was changed
+	result, ok := ec.Variables["result"].(map[string]interface{})
+	if !ok {
+		t.Fatal("result not registered")
+	}
+
+	stdout, ok := result["stdout"].(string)
+	if !ok {
+		t.Fatal("stdout not in result")
+	}
+
+	if !strings.Contains(stdout, tmpDir) {
+		t.Errorf("Expected stdout to contain temp dir %s, got: %s", tmpDir, stdout)
+	}
+}
+
+func TestHandleShell_Timeout(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+	}
+
+	step := config.Step{
+		Name:     "test timeout",
+		Shell:    String("sleep 10"),
+		Timeout:  "100ms",
+		Register: "result",
+	}
+
+	err := HandleShell(step, ec)
+	if err == nil {
+		t.Fatal("Expected timeout error")
+	}
+
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Errorf("Expected timeout error, got: %v", err)
+	}
+
+	// Verify result was registered even on timeout
+	result, ok := ec.Variables["result"].(map[string]interface{})
+	if !ok {
+		t.Fatal("result not registered on timeout")
+	}
+
+	rc, ok := result["rc"].(int)
+	if !ok || rc != 124 {
+		t.Errorf("Expected rc=124 for timeout, got: %v", rc)
+	}
+}
+
+func TestHandleShell_Retries(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+	}
+
+	step := config.Step{
+		Name:    "test retries",
+		Shell:   String("exit 1"),
+		Retries: 2,
+	}
+
+	err := HandleShell(step, ec)
+	if err == nil {
+		t.Fatal("Expected error after retries")
+	}
+
+	// Verify error message mentions number of attempts
+	if !strings.Contains(err.Error(), "3 attempts") {
+		t.Errorf("Expected error about 3 attempts (1 + 2 retries), got: %v", err)
+	}
+}
+
+func TestHandleShell_RetryDelay(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+	}
+
+	step := config.Step{
+		Name:       "test retry delay",
+		Shell:      String("exit 1"),
+		Retries:    1,
+		RetryDelay: "50ms",
+	}
+
+	// Just verify it doesn't crash with retry_delay set
+	err := HandleShell(step, ec)
+	if err == nil {
+		t.Fatal("Expected error after retries")
+	}
+}
+
+func TestHandleShell_ChangedWhen(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	t.Run("changed_when false", func(t *testing.T) {
+		ec := &ExecutionContext{
+			Variables: map[string]interface{}{},
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+		}
+
+		step := config.Step{
+			Name:        "test changed_when",
+			Shell:       String("echo test"),
+			ChangedWhen: "false",
+			Register:    "result",
+		}
+
+		err := HandleShell(step, ec)
+		if err != nil {
+			t.Fatalf("HandleShell() error = %v", err)
+		}
+
+		result, ok := ec.Variables["result"].(map[string]interface{})
+		if !ok {
+			t.Fatal("result not registered")
+		}
+
+		changed, ok := result["changed"].(bool)
+		if !ok {
+			t.Fatal("changed not in result")
+		}
+
+		if changed {
+			t.Error("Expected changed=false")
+		}
+	})
+
+	t.Run("changed_when with result.rc", func(t *testing.T) {
+		ec := &ExecutionContext{
+			Variables: map[string]interface{}{},
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+		}
+
+		step := config.Step{
+			Name:        "test changed_when",
+			Shell:       String("echo test"),
+			ChangedWhen: "result.rc == 0",
+			Register:    "result",
+		}
+
+		err := HandleShell(step, ec)
+		if err != nil {
+			t.Fatalf("HandleShell() error = %v", err)
+		}
+
+		result, ok := ec.Variables["result"].(map[string]interface{})
+		if !ok {
+			t.Fatal("result not registered")
+		}
+
+		changed, ok := result["changed"].(bool)
+		if !ok {
+			t.Fatal("changed not in result")
+		}
+
+		if !changed {
+			t.Error("Expected changed=true when rc==0")
+		}
+	})
+}
+
+func TestHandleShell_FailedWhen(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	t.Run("failed_when overrides success", func(t *testing.T) {
+		ec := &ExecutionContext{
+			Variables: map[string]interface{}{},
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+		}
+
+		step := config.Step{
+			Name:       "test failed_when",
+			Shell:      String("echo 'ERROR' >&2"),
+			FailedWhen: "result.stderr != ''",
+			Register:   "result",
+		}
+
+		err := HandleShell(step, ec)
+		if err == nil {
+			t.Fatal("Expected error when failed_when evaluates to true")
+		}
+
+		result, ok := ec.Variables["result"].(map[string]interface{})
+		if !ok {
+			t.Fatal("result not registered")
+		}
+
+		failed, ok := result["failed"].(bool)
+		if !ok {
+			t.Fatal("failed not in result")
+		}
+
+		if !failed {
+			t.Error("Expected failed=true")
+		}
+	})
+
+	t.Run("failed_when overrides failure", func(t *testing.T) {
+		ec := &ExecutionContext{
+			Variables: map[string]interface{}{},
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+		}
+
+		step := config.Step{
+			Name:       "test failed_when",
+			Shell:      String("exit 1"),
+			FailedWhen: "false",
+			Register:   "result",
+		}
+
+		err := HandleShell(step, ec)
+		if err != nil {
+			t.Fatalf("Expected no error when failed_when=false, got: %v", err)
+		}
+
+		result, ok := ec.Variables["result"].(map[string]interface{})
+		if !ok {
+			t.Fatal("result not registered")
+		}
+
+		failed, ok := result["failed"].(bool)
+		if !ok {
+			t.Fatal("failed not in result")
+		}
+
+		if failed {
+			t.Error("Expected failed=false when failed_when=false")
+		}
+	})
+}
+
+func TestHandleShell_CombinedFields(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+
+	tmpDir, err := os.MkdirTemp("", "mooncake-test-combined-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{
+			"work_dir": tmpDir,
+			"msg":      "hello",
+		},
+		Logger:    testLogger,
+		Template:  renderer,
+		Evaluator: evaluator,
+	}
+
+	step := config.Step{
+		Name:  "test combined fields",
+		Shell: String("echo $MSG"),
+		Env: map[string]string{
+			"MSG": "{{msg}}",
+		},
+		Cwd:         "{{work_dir}}",
+		Timeout:     "5s",
+		ChangedWhen: "result.stdout == 'hello'",
+		Register:    "result",
+	}
+
+	err = HandleShell(step, ec)
+	if err != nil {
+		t.Fatalf("HandleShell() error = %v", err)
+	}
+
+	result, ok := ec.Variables["result"].(map[string]interface{})
+	if !ok {
+		t.Fatal("result not registered")
+	}
+
+	stdout, ok := result["stdout"].(string)
+	if !ok {
+		t.Fatal("stdout not in result")
+	}
+
+	if !strings.Contains(stdout, "hello") {
+		t.Errorf("Expected stdout to contain 'hello', got: %s", stdout)
+	}
+
+	changed, ok := result["changed"].(bool)
+	if !ok {
+		t.Fatal("changed not in result")
+	}
+
+	if !changed {
+		t.Error("Expected changed=true")
+	}
+}

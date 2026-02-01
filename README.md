@@ -24,6 +24,7 @@ Space fighters provisioning tool for managing dotfiles and system configuration.
 - 📝 **Simple YAML** - No complex DSL to learn
 - 🌍 **Cross-Platform** - Linux, macOS, and Windows
 - 🔧 **Powerful** - Variables, conditionals, loops, templates, system facts
+- ⚡ **Robust** - Timeouts, retries, custom environments, failure handling
 
 ## Quick Start
 
@@ -125,6 +126,20 @@ ls examples/
 ```
 
 Run `mooncake explain` to see all available system facts.
+
+### Execution Control
+```yaml
+- name: Robust command with retry
+  shell: curl -O https://example.com/file.tar.gz
+  timeout: 5m
+  retries: 3
+  retry_delay: 10s
+  env:
+    HTTP_PROXY: "{{proxy_url}}"
+  cwd: /tmp/downloads
+  changed_when: "result.rc == 0"
+  failed_when: "result.rc not in [0, 18]"  # 18 = partial transfer
+```
 
 ### Templates (pongo2)
 ```yaml

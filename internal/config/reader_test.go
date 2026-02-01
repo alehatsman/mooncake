@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestYAMLReader_ReadConfig(t *testing.T) {
@@ -348,4 +350,127 @@ func createTempYAML(t *testing.T, content string) string {
 	}
 
 	return tmpFile
+}
+
+func TestYAMLReader_ReadConfig_RunConfigFormat(t *testing.T) {
+	tests := []struct {
+		name          string
+		yamlContent   string
+		expectSteps   int
+		expectError   bool
+	}{
+		{
+			name: "new format with version and vars",
+			yamlContent: `version: "1.0"
+vars:
+  app_name: "myapp"
+  port: 8080
+steps:
+  - name: Test step
+    shell: echo "{{app_name}}"
+  - name: Second step
+    shell: echo "Port {{port}}"`,
+			expectSteps: 2,
+			expectError: false,
+		},
+		{
+			name: "new format with just steps",
+			yamlContent: `version: "1.0"
+steps:
+  - name: Test step
+    shell: echo "test"`,
+			expectSteps: 1,
+			expectError: false,
+		},
+		{
+			name: "old format still works",
+			yamlContent: `- name: Test step
+  shell: echo "old format"
+- name: Second step
+  shell: echo "still works"`,
+			expectSteps: 2,
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create temp file
+			tmpFile, err := os.CreateTemp("", "runconfig-test-*.yml")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			if _, err := tmpFile.Write([]byte(tt.yamlContent)); err != nil {
+				t.Fatal(err)
+			}
+			if err := tmpFile.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			// Read config
+			reader := NewYAMLConfigReader()
+			steps, err := reader.ReadConfig(tmpFile.Name())
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if len(steps) != tt.expectSteps {
+				t.Errorf("Expected %d steps, got %d", tt.expectSteps, len(steps))
+			}
+		})
+	}
+}
+
+func TestIsArrayFormat(t *testing.T) {
+	tests := []struct {
+		name        string
+		yamlContent string
+		expectArray bool
+	}{
+		{
+			name: "array format",
+			yamlContent: `- name: Step 1
+  shell: echo test`,
+			expectArray: true,
+		},
+		{
+			name: "object format",
+			yamlContent: `version: "1.0"
+steps:
+  - name: Step 1
+    shell: echo test`,
+			expectArray: false,
+		},
+		{
+			name: "empty array",
+			yamlContent: `[]`,
+			expectArray: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var rootNode yaml.Node
+			err := yaml.Unmarshal([]byte(tt.yamlContent), &rootNode)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			result := isArrayFormat(&rootNode)
+			if result != tt.expectArray {
+				t.Errorf("isArrayFormat() = %v, want %v", result, tt.expectArray)
+			}
+		})
+	}
 }

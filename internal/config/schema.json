@@ -13,34 +13,34 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Name of the step"
+          "description": "Name of the step (universal)"
         },
         "when": {
           "type": "string",
-          "description": "Conditional expression for step execution"
+          "description": "Conditional expression for step execution (universal)"
         },
         "become": {
           "type": "boolean",
-          "description": "Execute step with sudo privileges"
+          "description": "Execute with sudo privileges. Works with: shell, file, template"
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Tags for filtering step execution"
+          "description": "Tags for filtering step execution (universal)"
         },
         "register": {
           "type": "string",
-          "description": "Variable name to store step execution result"
+          "description": "Variable name to store step execution result (universal)"
         },
         "with_filetree": {
           "type": "string",
-          "description": "Directory path for iterating over files"
+          "description": "Directory path for iterating over files (universal)"
         },
         "with_items": {
           "type": "string",
-          "description": "Variable expression for iterating over items"
+          "description": "Variable expression for iterating over items (universal)"
         },
         "shell": {
           "type": "string",
@@ -64,8 +64,69 @@
           "type": "object",
           "description": "Inline variables to set",
           "additionalProperties": true
+        },
+        "become_user": {
+          "type": "string",
+          "description": "⚠️ SHELL ONLY: User to become via sudo (e.g., 'root', 'postgres'). Only works with 'shell' action. Ignored for file/template/include."
+        },
+        "env": {
+          "type": "object",
+          "description": "⚠️ SHELL ONLY: Environment variables for shell command execution. Ignored for file/template/include.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "cwd": {
+          "type": "string",
+          "description": "⚠️ SHELL ONLY: Working directory for shell command execution. Ignored for file/template/include."
+        },
+        "timeout": {
+          "type": "string",
+          "description": "⚠️ SHELL ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Only works with 'shell' action. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "retries": {
+          "type": "integer",
+          "description": "⚠️ SHELL ONLY: Number of retry attempts on failure. Only works with 'shell' action. Ignored for file/template/include.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "retry_delay": {
+          "type": "string",
+          "description": "⚠️ SHELL ONLY: Delay between retry attempts (e.g., '1s', '5s'). Only works with 'shell' action. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "changed_when": {
+          "type": "string",
+          "description": "⚠️ SHELL ONLY: Expression to override 'changed' status (e.g., 'result.rc == 0'). Only works with 'shell' action. Ignored for file/template/include."
+        },
+        "failed_when": {
+          "type": "string",
+          "description": "⚠️ SHELL ONLY: Expression to override 'failed' status (e.g., 'result.rc != 0'). Only works with 'shell' action. Ignored for file/template/include."
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "required": ["shell"]
+            },
+            "anyOf": [
+              {"required": ["become_user"]},
+              {"required": ["env"]},
+              {"required": ["cwd"]},
+              {"required": ["timeout"]},
+              {"required": ["retries"]},
+              {"required": ["retry_delay"]},
+              {"required": ["changed_when"]},
+              {"required": ["failed_when"]}
+            ]
+          },
+          "then": {
+            "description": "Warning: Shell-specific fields (become_user, env, cwd, timeout, retries, retry_delay, changed_when, failed_when) are only supported for 'shell' actions and will be ignored for file/template/include operations."
+          }
+        }
+      ],
       "oneOf": [
         {
           "required": ["shell"],

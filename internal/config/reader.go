@@ -66,11 +66,23 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diag
 	// Build location map from yaml.Node tree
 	locationMap := buildLocationMap(&rootNode)
 
-	// Unmarshal yaml.Node to []Step structs
+	// Parse config - supports both old format (array) and new format (object with steps)
 	var config []Step
-	err = rootNode.Decode(&config)
-	if err != nil {
-		return nil, nil, err
+	if isArrayFormat(&rootNode) {
+		// Old format: plain array of steps
+		err = rootNode.Decode(&config)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		// New format: RunConfig structure with version, vars, and steps
+		var runConfig RunConfig
+		err = rootNode.Decode(&runConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+		config = runConfig.Steps
+		// TODO: Handle runConfig.Vars and runConfig.Version in future
 	}
 
 	// Run schema validation
@@ -91,7 +103,23 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diag
 
 	diagnostics := validator.Validate(config, locationMap, path)
 
+	// Validate template syntax in all templatable fields
+	templateValidator := NewTemplateValidator()
+	templateDiagnostics := templateValidator.ValidateSteps(config, locationMap, path)
+	diagnostics = append(diagnostics, templateDiagnostics...)
+
 	return config, diagnostics, nil
+}
+
+// isArrayFormat checks if the YAML root node represents an array (old format)
+// or an object (new RunConfig format)
+func isArrayFormat(node *yaml.Node) bool {
+	// The root node is a document node, so we need to check its content
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		firstNode := node.Content[0]
+		return firstNode.Kind == yaml.SequenceNode
+	}
+	return node.Kind == yaml.SequenceNode
 }
 
 // ReadVariables reads variables from a YAML file

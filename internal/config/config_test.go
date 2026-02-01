@@ -347,3 +347,123 @@ func TestStep_CountActions(t *testing.T) {
 func strPtr(s string) *string {
 	return &s
 }
+
+func TestStep_NewCommonFields(t *testing.T) {
+	t.Run("all new fields can be set", func(t *testing.T) {
+		step := Step{
+			Name:        "test",
+			Shell:       strPtr("echo test"),
+			BecomeUser:  "postgres",
+			Env:         map[string]string{"PATH": "/usr/bin", "HOME": "/home/user"},
+			Cwd:         "/tmp",
+			Timeout:     "30s",
+			Retries:     3,
+			RetryDelay:  "5s",
+			ChangedWhen: "result.rc == 0",
+			FailedWhen:  "result.rc != 0",
+		}
+
+		if step.BecomeUser != "postgres" {
+			t.Errorf("BecomeUser = %s, want postgres", step.BecomeUser)
+		}
+		if step.Env["PATH"] != "/usr/bin" {
+			t.Errorf("Env[PATH] = %s, want /usr/bin", step.Env["PATH"])
+		}
+		if step.Cwd != "/tmp" {
+			t.Errorf("Cwd = %s, want /tmp", step.Cwd)
+		}
+		if step.Timeout != "30s" {
+			t.Errorf("Timeout = %s, want 30s", step.Timeout)
+		}
+		if step.Retries != 3 {
+			t.Errorf("Retries = %d, want 3", step.Retries)
+		}
+		if step.RetryDelay != "5s" {
+			t.Errorf("RetryDelay = %s, want 5s", step.RetryDelay)
+		}
+		if step.ChangedWhen != "result.rc == 0" {
+			t.Errorf("ChangedWhen = %s, want result.rc == 0", step.ChangedWhen)
+		}
+		if step.FailedWhen != "result.rc != 0" {
+			t.Errorf("FailedWhen = %s, want result.rc != 0", step.FailedWhen)
+		}
+	})
+}
+
+func TestStep_CopyWithNewFields(t *testing.T) {
+	original := Step{
+		Name:        "test",
+		Shell:       strPtr("echo test"),
+		BecomeUser:  "postgres",
+		Env:         map[string]string{"PATH": "/usr/bin"},
+		Cwd:         "/tmp",
+		Timeout:     "30s",
+		Retries:     3,
+		RetryDelay:  "5s",
+		ChangedWhen: "result.rc == 0",
+		FailedWhen:  "result.rc != 0",
+	}
+
+	copied := original.Copy()
+
+	// Verify all new fields are copied
+	if copied.BecomeUser != original.BecomeUser {
+		t.Errorf("Copy() BecomeUser = %s, want %s", copied.BecomeUser, original.BecomeUser)
+	}
+	if copied.Env["PATH"] != original.Env["PATH"] {
+		t.Errorf("Copy() Env not equal")
+	}
+	if copied.Cwd != original.Cwd {
+		t.Errorf("Copy() Cwd = %s, want %s", copied.Cwd, original.Cwd)
+	}
+	if copied.Timeout != original.Timeout {
+		t.Errorf("Copy() Timeout = %s, want %s", copied.Timeout, original.Timeout)
+	}
+	if copied.Retries != original.Retries {
+		t.Errorf("Copy() Retries = %d, want %d", copied.Retries, original.Retries)
+	}
+	if copied.RetryDelay != original.RetryDelay {
+		t.Errorf("Copy() RetryDelay = %s, want %s", copied.RetryDelay, original.RetryDelay)
+	}
+	if copied.ChangedWhen != original.ChangedWhen {
+		t.Errorf("Copy() ChangedWhen = %s, want %s", copied.ChangedWhen, original.ChangedWhen)
+	}
+	if copied.FailedWhen != original.FailedWhen {
+		t.Errorf("Copy() FailedWhen = %s, want %s", copied.FailedWhen, original.FailedWhen)
+	}
+
+	// Verify it's a shallow copy (map references are shared)
+	// This is intentional behavior as documented in Copy()
+	copied.Env["NEW"] = "value"
+	if _, exists := original.Env["NEW"]; !exists {
+		t.Error("Copy() is shallow copy, so map modifications should be visible in original")
+	}
+}
+
+func TestRunConfig(t *testing.T) {
+	t.Run("create RunConfig with all fields", func(t *testing.T) {
+		rc := RunConfig{
+			Version: "1.0",
+			Vars: map[string]interface{}{
+				"app_name": "myapp",
+				"port":     8080,
+			},
+			Steps: []Step{
+				{
+					Name:  "step1",
+					Shell: strPtr("echo test"),
+				},
+			},
+		}
+
+		if rc.Version != "1.0" {
+			t.Errorf("Version = %s, want 1.0", rc.Version)
+		}
+		if rc.Vars["app_name"] != "myapp" {
+			t.Errorf("Vars[app_name] = %v, want myapp", rc.Vars["app_name"])
+		}
+		if len(rc.Steps) != 1 {
+			t.Errorf("len(Steps) = %d, want 1", len(rc.Steps))
+		}
+	})
+}

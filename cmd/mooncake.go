@@ -2,10 +2,13 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -76,6 +79,60 @@ func explainCommand(_ *cli.Context) error {
 	return nil
 }
 
+func validateCommand(c *cli.Context) error {
+	configPath := c.String("config")
+	format := c.String("format")
+
+	// Read and validate configuration
+	_, diagnostics, err := config.ReadConfigWithValidation(configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading config: %v\n", err)
+		os.Exit(3) // Runtime error
+	}
+
+	// Check for validation errors
+	hasErrors := config.HasErrors(diagnostics)
+
+	// Output diagnostics
+	if format == "json" {
+		// JSON output
+		type ValidationResult struct {
+			Valid       bool                  `json:"valid"`
+			Diagnostics []config.Diagnostic   `json:"diagnostics,omitempty"`
+		}
+		result := ValidationResult{
+			Valid:       !hasErrors,
+			Diagnostics: diagnostics,
+		}
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(result); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+			os.Exit(3)
+		}
+	} else {
+		// Text output
+		if len(diagnostics) > 0 {
+			fmt.Println(config.FormatDiagnosticsWithContext(diagnostics))
+		}
+
+		if hasErrors {
+			fmt.Println("\n❌ Validation failed")
+		} else if len(diagnostics) > 0 {
+			fmt.Println("\n⚠️  Validation passed with warnings")
+		} else {
+			fmt.Println("✓ Configuration is valid")
+		}
+	}
+
+	// Exit with appropriate code
+	if hasErrors {
+		os.Exit(2) // Validation error
+	}
+
+	return nil
+}
+
 func createApp() *cli.App {
 	app := &cli.App{
 		Name:                 "mooncake",
@@ -133,6 +190,30 @@ func createApp() *cli.App {
 				Aliases: []string{"info"},
 				Usage:   "Explain machine state - show system information",
 				Action:  explainCommand,
+			},
+			{
+				Name:  "validate",
+				Usage: "Validate configuration file without executing",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "config",
+						Aliases:  []string{"c"},
+						Required: true,
+						Usage:    "Path to configuration file",
+					},
+					&cli.StringFlag{
+						Name:    "vars",
+						Aliases: []string{"v"},
+						Usage:   "Path to variables file",
+					},
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Value:   "text",
+						Usage:   "Output format: text or json",
+					},
+				},
+				Action: validateCommand,
 			},
 		},
 	}

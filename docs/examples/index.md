@@ -1004,6 +1004,137 @@ tasks/
 
 ---
 
+### 11 - Shell Execution Control
+
+Learn advanced execution control for shell commands with timeouts, retries, environment variables, and custom result evaluation.
+
+**Important:** These features are shell-specific and don't apply to file, template, or include operations.
+
+#### What You'll Learn
+
+- Setting command timeouts
+- Retrying failed commands
+- Configuring retry delays
+- Setting environment variables
+- Changing working directory
+- Custom change detection with `changed_when`
+- Custom failure detection with `failed_when`
+- Running as different users with `become_user`
+
+#### Quick Start
+
+```bash
+cd examples/11-execution-control
+mooncake run --config config.yml
+```
+
+#### Key Concepts
+
+**Timeouts**
+
+Prevent commands from running indefinitely:
+```yaml
+- name: Command with timeout
+  shell: ./slow-script.sh
+  timeout: 30s
+```
+
+**Retries**
+
+Automatically retry failed operations:
+```yaml
+- name: Download file
+  shell: curl -O https://example.com/file.tar.gz
+  retries: 3
+  retry_delay: 5s
+```
+
+**Environment Variables**
+
+Set custom environment for commands:
+```yaml
+- name: Build with custom env
+  shell: make build
+  env:
+    CC: gcc-11
+    CFLAGS: "-O2"
+```
+
+**Working Directory**
+
+Execute commands in specific directories:
+```yaml
+- name: Build project
+  shell: npm run build
+  cwd: /opt/myproject
+```
+
+**Custom Change Detection**
+
+Override when a step counts as "changed":
+```yaml
+- name: Git pull
+  shell: git pull
+  changed_when: "'Already up to date' not in result.stdout"
+```
+
+**Custom Failure Detection**
+
+Override when a step is considered failed:
+```yaml
+- name: Grep with acceptable exit codes
+  shell: grep "pattern" file.txt
+  failed_when: "result.rc >= 2"  # 0=found, 1=not found, 2+=error
+```
+
+**Different Users**
+
+Run commands as specific users:
+```yaml
+- name: Run as postgres
+  shell: psql -c "SELECT version()"
+  become: true
+  become_user: postgres
+```
+
+#### Real-World Example
+
+Robust service deployment with retries and validation:
+```yaml
+- name: Download release
+  shell: curl -O https://releases.example.com/app-{{version}}.tar.gz
+  timeout: 10m
+  retries: 3
+  retry_delay: 30s
+
+- name: Install application
+  shell: pip install -r requirements.txt
+  cwd: /opt/myapp
+  become: true
+  become_user: appuser
+  timeout: 5m
+  env:
+    PIP_INDEX_URL: "{{pip_mirror}}"
+
+- name: Run migrations
+  shell: ./manage.py migrate
+  cwd: /opt/myapp
+  become_user: appuser
+  timeout: 10m
+  register: migrate_result
+  changed_when: "'No migrations to apply' not in result.stdout"
+
+- name: Wait for service
+  shell: curl -sf http://localhost:8080/health
+  retries: 30
+  retry_delay: 2s
+  failed_when: "result.rc != 0"
+```
+
+See [complete example](11-execution-control.md) for detailed deployment workflow.
+
+---
+
 ## Real-World Example
 
 ### Dotfiles Manager
@@ -1143,16 +1274,19 @@ You've learned all core Mooncake features through these examples:
 
 | Feature | Examples |
 |---------|----------|
-| **Shell Commands** | 01, 04, 06, 08 |
+| **Shell Commands** | 01, 04, 06, 08, 11 |
 | **File Operations** | 03, 06, Real-World |
 | **Templates** | 05, Real-World |
 | **Variables** | 02, 05, 06, 10 |
 | **Conditionals** | 04, 08, 09 |
 | **Loops** | 06, Real-World |
-| **Register** | 07 |
+| **Register** | 07, 11 |
 | **Tags** | 08, Real-World |
-| **Sudo** | 09 |
+| **Sudo** | 09, 11 |
 | **Multi-file** | 10, Real-World |
+| **Execution Control** | 11 |
+| **Timeouts & Retries** | 11 |
+| **Environment Variables** | 11 |
 
 ## Next Steps
 

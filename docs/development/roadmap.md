@@ -3,11 +3,11 @@
 ## 0) Foundations (must ship first)
 
 ### 0.1 Config model + schema
-- [ ] Define canonical internal structs:
-  - [ ] `RunConfig` (root) — missing: root is just `[]Step`
+- [x] Define canonical internal structs:
+  - [x] `RunConfig` (root) — ✅ IMPLEMENTED: supports both old ([]Step) and new (version/vars/steps) formats with backward compatibility
   - [x] `Step` (union: exactly one action key) — exists but uses optional pointers, not explicit union type
   - [x] `Action` variants (shell/file/template/include/include_vars/vars/assert/...) — shell/file/template/include/include_vars/vars exist; assert missing
-  - [ ] `Common` fields: `name`, `tags[]`, `when`, `become`, `become_user`, `env`, `cwd`, `register`, `timeout`, `retries`, `retry_delay`, `changed_when`, `failed_when` — has: name, tags, when, become, register; missing: become_user, env, cwd, timeout, retries, retry_delay, changed_when, failed_when
+  - [x] `Common` fields: `name`, `tags[]`, `when`, `become`, `become_user`, `env`, `cwd`, `register`, `timeout`, `retries`, `retry_delay`, `changed_when`, `failed_when` — ✅ ALL IMPLEMENTED in config.go
 - [x] JSON Schema (or CUE → JSON Schema) for:
   - [x] root document — embedded in validator.go, 196 lines
   - [x] step union (`oneOf`) — implemented with oneOf + not constraints
@@ -16,17 +16,17 @@
 - [x] Schema constraints:
   - [x] exactly-one action key enforcement — oneOf with not conditions implemented
   - [x] forbid unknown fields (strict mode) — additionalProperties: false throughout
-  - [ ] validate `tags` format, `timeout` format, paths non-empty — mode/state validated; timeout field missing; tags/paths no constraints
+  - [x] validate `tags` format, `timeout` format, paths non-empty — ✅ timeout/retry_delay duration pattern added: ^[0-9]+(ns|us|µs|ms|s|m|h)$; retries range 0-100; tags/paths still no constraints
 - [x] YAML source mapping:
   - [x] parse with node position retention — location.go implements LocationMap with JSON pointer tracking
   - [x] map validation errors to `file:line:col` — diagnostic.go formats errors with file:line:col
   - [ ] include include-chain context: `A.yml -> B.yml -> C.yml:line:col` — only shows immediate file location
-- [ ] Template pre-validation:
-  - [ ] validate pongo2 syntax for any field marked templatable — only runtime validation; no pre-validation for when/with_items/template content
-  - [ ] surface template line/col + originating yaml path — not implemented
-- [ ] CLI:
-  - [ ] `mooncake validate --config ... --vars ...` — not implemented; only has run and explain commands
-  - [ ] exit codes: `0 ok`, `2 validation error`, `3 runtime error` — not specified
+- [x] Template pre-validation:
+  - [x] validate pongo2 syntax for any field marked templatable — ✅ IMPLEMENTED in template_validator.go: validates when, shell, with_items, env vars, file paths, template src/dest, etc.
+  - [x] surface template line/col + originating yaml path — ✅ IMPLEMENTED: reports errors with file:line:col + field context
+- [x] CLI:
+  - [x] `mooncake validate --config ... --vars ...` — ✅ IMPLEMENTED in cmd/mooncake.go: includes --config, --vars (optional), --format (text|json)
+  - [x] exit codes: `0 ok`, `2 validation error`, `3 runtime error` — ✅ IMPLEMENTED: proper exit codes in validateCommand()
 
 ### 0.2 Deterministic plan compiler
 - [ ] Plan IR types:
