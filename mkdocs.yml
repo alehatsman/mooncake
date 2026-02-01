@@ -73,6 +73,7 @@ plugins:
 nav:
   - Guide: index.md
   - Reference:
+    - Property Reference: guide/config/reference.md
     - Actions: guide/config/actions.md
     - Control Flow: guide/config/control-flow.md
     - Variables: guide/config/variables.md

@@ -2,14 +2,36 @@
 
 Actions are the operations Mooncake performs. Each step in your configuration uses one action type.
 
+📖 **See [Property Reference](reference.md)** for a complete table of all available properties.
+
 ## Shell
 
 Execute shell commands.
+
+### Basic Usage
 
 ```yaml
 - name: Run command
   shell: echo "Hello"
 ```
+
+### Shell Properties
+
+Shell commands support these specific properties in addition to universal fields:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `shell` | string | Command to execute (required) |
+| `env` | object | Environment variables |
+| `cwd` | string | Working directory |
+| `timeout` | string | Maximum execution time (e.g., '30s', '5m') |
+| `retries` | integer | Number of retry attempts (0-100) |
+| `retry_delay` | string | Delay between retries (e.g., '5s') |
+| `changed_when` | string | Expression to override changed status |
+| `failed_when` | string | Expression to override failure status |
+| `become_user` | string | User for sudo (when become: true) |
+
+Plus all [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
 
 ### Multi-line Commands
 
@@ -31,9 +53,35 @@ Execute shell commands.
   shell: "{{package_manager}} install {{package}}"
 ```
 
+### With Execution Control
+
+```yaml
+- name: Robust download
+  shell: curl -O https://example.com/file.tar.gz
+  timeout: 10m
+  retries: 3
+  retry_delay: 30s
+  env:
+    HTTP_PROXY: "{{proxy_url}}"
+  cwd: /tmp/downloads
+```
+
 ## File
 
 Create and manage files and directories.
+
+### File Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `file.path` | string | File or directory path (required) |
+| `file.state` | string | `file`, `directory`, or `absent` |
+| `file.content` | string | Content to write to file |
+| `file.mode` | string | Permissions (e.g., "0644", "0755") |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+**Note:** File operations do NOT support shell-specific fields (timeout, retries, env, cwd, etc.)
 
 ### Create Directory
 
@@ -71,6 +119,7 @@ Create and manage files and directories.
 ### File Permissions
 
 Common permission modes:
+
 - `"0755"` - rwxr-xr-x (directories, executables)
 - `"0644"` - rw-r--r-- (regular files)
 - `"0600"` - rw------- (private files)
@@ -79,6 +128,21 @@ Common permission modes:
 ## Template
 
 Render templates with variables and logic.
+
+### Template Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `template.src` | string | Source template file path (required) |
+| `template.dest` | string | Destination file path (required) |
+| `template.vars` | object | Additional variables for rendering |
+| `template.mode` | string | Permissions (e.g., "0644") |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+**Note:** Template operations do NOT support shell-specific fields (timeout, retries, env, cwd, etc.)
+
+### Basic Usage
 
 ```yaml
 - name: Render config
@@ -135,6 +199,18 @@ name: {{ app_name | upper }}
 
 Load and execute tasks from other files.
 
+### Include Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `include` | string | Path to YAML file with steps (required) |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `tags`, `with_items`
+
+**Note:** Include does NOT support shell-specific fields or `register`.
+
+### Basic Usage
+
 ```yaml
 - name: Run common tasks
   include: ./tasks/common.yml
@@ -151,6 +227,18 @@ Load and execute tasks from other files.
 ## Include Vars
 
 Load variables from external files.
+
+### Include Vars Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `include_vars` | string | Path to YAML file with variables (required) |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `tags`
+
+**Note:** Include vars does NOT support shell-specific fields, `register`, or loops.
+
+### Basic Usage
 
 ```yaml
 - name: Load environment variables
@@ -219,6 +307,7 @@ Capture command output in a variable:
 ```
 
 Result contains:
+
 - `rc` - Exit code
 - `stdout` - Standard output
 - `stderr` - Standard error
@@ -251,6 +340,7 @@ Iterate over files in a directory:
 ```
 
 Item properties:
+
 - `name` - File name
 - `src` - Full source path
 - `is_dir` - Whether it's a directory

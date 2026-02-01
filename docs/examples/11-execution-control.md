@@ -262,6 +262,6 @@ Run as different users:
 
 ## See Also
 
-- [Actions Reference](../guide/config/actions.md#common-fields) - Complete field documentation
+- [Actions Reference](../guide/config/actions.md#universal-fields) - Complete field documentation
 - [Advanced Configuration](../guide/config/advanced.md#error-handling) - Error handling patterns
 - [Example 07: Register](07-register.md) - Using command results

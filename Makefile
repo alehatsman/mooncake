@@ -36,6 +36,9 @@ release-latest:
 test-essentials:
 	docker build -t mooncake-essential-test -f ./testing/essentials/Dockerfile .
 
+serve-docs:
+	pipenv run mkdocs serve
+
 # CI targets
 .PHONY: lint test scan ci
 
@@ -61,3 +64,5 @@ scan: lint
 ci: lint test-race scan
 	@echo ""
 	@echo "✓ All CI checks passed!"
+
+
