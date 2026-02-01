@@ -43,3 +43,11 @@ Thumbs.db
 *.bak
 *.log
 *.cover
+
+# MkDocs
+site/
+.cache/
+
+# Python / pipenv
+__pycache__/
+*.py[cod]

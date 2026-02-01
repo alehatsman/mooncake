@@ -1,0 +1,103 @@
+# Mooncake Documentation Site Configuration
+
+site_name: Mooncake
+site_url: https://mooncake.alehatsman.com
+site_description: Space fighters provisioning tool - Simple, powerful system configuration
+site_author: Aleh Atsman
+repo_url: https://github.com/alehatsman/mooncake
+repo_name: alehatsman/mooncake
+edit_uri: edit/master/docs/
+
+# Theme configuration
+theme:
+  name: material
+  palette:
+    # Light mode
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    - navigation.instant      # Fast page loading
+    - navigation.tracking     # URL updates with scroll
+    - navigation.tabs         # Top-level tabs
+    - navigation.sections     # Sections in sidebar
+    - navigation.top          # Back to top button
+    - navigation.indexes      # Section index pages
+    - toc.follow              # Sidebar TOC follows scroll
+    - toc.integrate           # Integrate TOC with navigation
+    - search.suggest          # Search suggestions
+    - search.highlight        # Highlight search terms
+    - content.code.copy       # Copy code button
+    - content.code.annotate   # Code annotations
+    - content.tabs.link       # Link tabs across pages
+
+# Extensions
+markdown_extensions:
+  - admonition              # Note/warning boxes
+  - pymdownx.details        # Collapsible sections
+  - pymdownx.superfences    # Code blocks
+  - pymdownx.highlight:     # Syntax highlighting
+      anchor_linenums: true
+  - pymdownx.inlinehilite   # Inline code highlighting
+  - pymdownx.snippets       # Include snippets
+  - pymdownx.tabbed:        # Tabbed content
+      alternate_style: true
+  - pymdownx.tasklist:      # Task lists
+      custom_checkbox: true
+  - pymdownx.emoji:         # Emoji support
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables                  # Tables
+  - attr_list              # Add attributes to elements
+  - md_in_html             # Markdown in HTML
+  - toc:                   # Table of contents
+      permalink: true
+
+# Plugins
+plugins:
+  - search                 # Search functionality
+  - tags                   # Tag support
+
+# Navigation structure
+nav:
+  - Guide: index.md
+  - Reference:
+    - Actions: guide/config/actions.md
+    - Control Flow: guide/config/control-flow.md
+    - Variables: guide/config/variables.md
+    - Advanced: guide/config/advanced.md
+  - Examples: examples/index.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Roadmap: development/roadmap.md
+    - Development Guide: development/development.md
+    - Proposals: development/proposals.md
+  - About:
+    - Changelog: about/changelog.md
+    - License: about/license.md
+
+# Extra CSS/JS
+extra_css:
+  - stylesheets/extra.css
+
+# Footer
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/alehatsman/mooncake
+  version:
+    provider: mike  # Version switching
+
+# Copyright
+copyright: Copyright &copy; 2024-2026 Aleh Atsman

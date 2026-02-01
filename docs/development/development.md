@@ -23,7 +23,7 @@ Mooncake uses a three-tier system for managing development:
 - Major feature decisions
 - After completing milestones
 
-**Link:** [ROADMAP.md](../ROADMAP.md)
+**Link:** [ROADMAP.md](roadmap.md)
 
 ---
 
@@ -64,9 +64,9 @@ Mooncake uses a three-tier system for managing development:
 - Architectural decisions
 - Complex implementations
 
-**Template:** See [docs/proposals/README.md](proposals/README.md)
+**Template:** See [proposals](proposals.md)
 
-**Example:** [0001-with-dict-iteration.md](proposals/0001-with-dict-iteration.md)
+**Example:** See [proposals](proposals.md) for examples
 
 **Process:**
 1. Copy template
@@ -409,14 +409,14 @@ go test -race ./...
 
 ## Resources
 
-- **Main docs:** [README.md](../README.md)
-- **Contributing:** [CONTRIBUTING.md](../CONTRIBUTING.md)
-- **Roadmap:** [ROADMAP.md](../ROADMAP.md)
-- **Examples:** [examples/](../examples/)
-- **Proposals:** [docs/proposals/](proposals/)
+- **Main guide:** [Guide](../index.md)
+- **Contributing:** [Contributing](contributing.md)
+- **Roadmap:** [Roadmap](roadmap.md)
+- **Examples:** [Examples](../examples/index.md)
+- **Proposals:** [Proposals](proposals.md)
 
 ## Questions?
 
 - Open an issue
 - Start a discussion
-- Check CONTRIBUTING.md
+- Check [Contributing](contributing.md)
