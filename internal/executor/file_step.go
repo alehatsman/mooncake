@@ -10,9 +10,20 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/security"
 )
+
+const (
+	defaultFileMode os.FileMode = 0644
+	defaultDirMode  os.FileMode = 0755
+)
+
+// formatMode formats a file mode for display in log messages
+func formatMode(mode os.FileMode) string {
+	return fmt.Sprintf("%#o", mode)
+}
 
 // parseFileMode parses a mode string (e.g., "0644") into os.FileMode
 // Returns default mode if mode is empty or invalid
@@ -30,14 +41,14 @@ func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	return os.FileMode(mode)
 }
 
-// handleDirectoryState creates a directory at the specified path.
-func handleDirectoryState(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
-	mode := parseFileMode(file.Mode, 0755)
+// createDirectory creates a directory at the specified path.
+func createDirectory(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
+	mode := parseFileMode(file.Mode, defaultDirMode)
 
-	if ec.DryRun {
-		dryRun := newDryRunLogger(ec.Logger)
+	if ec.HandleDryRun(func(dryRun *dryRunLogger) {
 		dryRun.LogDirectoryCreate(renderedPath, mode)
 		dryRun.LogRegister(step)
+	}) {
 		return nil
 	}
 
@@ -51,6 +62,14 @@ func handleDirectoryState(file *config.File, renderedPath string, result *Result
 		markStepFailed(result, step, ec)
 		return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
 	}
+
+	// Emit directory.created event
+	ec.EmitEvent(events.EventDirCreated, events.FileOperationData{
+		Path:    renderedPath,
+		Mode:    mode.String(),
+		Changed: result.Changed,
+		DryRun:  ec.DryRun,
+	})
 
 	return nil
 }
@@ -78,16 +97,16 @@ func logContentPreview(log logger.Logger, content string, maxLen int) {
 	log.Debugf("  Content preview:\n%s", preview)
 }
 
-// handleFileState creates a file at the specified path, with optional content.
-func handleFileState(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
-	mode := parseFileMode(file.Mode, 0644)
+// createOrUpdateFile creates a file at the specified path, with optional content.
+func createOrUpdateFile(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
+	mode := parseFileMode(file.Mode, defaultFileMode)
 
 	// Handle empty file
 	if file.Content == "" {
-		if ec.DryRun {
-			dryRun := newDryRunLogger(ec.Logger)
+		if ec.HandleDryRun(func(dryRun *dryRunLogger) {
 			logDryRunFileOperation(dryRun, renderedPath, mode, 0)
 			dryRun.LogRegister(step)
+		}) {
 			return nil
 		}
 
@@ -97,10 +116,24 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 		}
 
 		ec.Logger.Debugf("  Creating file: %s", renderedPath)
+		fileCreated := result.Changed
 		if err := createFileWithBecome(renderedPath, []byte(""), mode, step, ec); err != nil {
 			markStepFailed(result, step, ec)
 			return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
 		}
+
+		// Emit file.created or file.updated event
+		eventType := events.EventFileUpdated
+		if fileCreated {
+			eventType = events.EventFileCreated
+		}
+		ec.EmitEvent(eventType, events.FileOperationData{
+			Path:      renderedPath,
+			Mode:      mode.String(),
+			SizeBytes: 0,
+			Changed:   result.Changed,
+			DryRun:    ec.DryRun,
+		})
 
 		return nil
 	}
@@ -111,11 +144,11 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 		return err
 	}
 
-	if ec.DryRun {
-		dryRun := newDryRunLogger(ec.Logger)
+	if ec.HandleDryRun(func(dryRun *dryRunLogger) {
 		logDryRunFileOperation(dryRun, renderedPath, mode, len(renderedContent))
 		logContentPreview(ec.Logger, renderedContent, 200)
 		dryRun.LogRegister(step)
+	}) {
 		return nil
 	}
 
@@ -127,10 +160,24 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 	}
 
 	ec.Logger.Debugf("  Creating file: %s", renderedPath)
+	fileCreated := result.Changed
 	if err := createFileWithBecome(renderedPath, []byte(renderedContent), mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
 		return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
 	}
+
+	// Emit file.created or file.updated event
+	eventType := events.EventFileUpdated
+	if fileCreated {
+		eventType = events.EventFileCreated
+	}
+	ec.EmitEvent(eventType, events.FileOperationData{
+		Path:      renderedPath,
+		Mode:      mode.String(),
+		SizeBytes: int64(len(renderedContent)),
+		Changed:   result.Changed,
+		DryRun:    ec.DryRun,
+	})
 
 	return nil
 }
@@ -163,11 +210,11 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 	// Dispatch to appropriate handler based on state
 	switch file.State {
 	case "directory":
-		if err := handleDirectoryState(file, renderedPath, result, step, ec); err != nil {
+		if err := createDirectory(file, renderedPath, result, step, ec); err != nil {
 			return err
 		}
-	case "file":
-		if err := handleFileState(file, renderedPath, result, step, ec); err != nil {
+	case actionTypeFile:
+		if err := createOrUpdateFile(file, renderedPath, result, step, ec); err != nil {
 			return err
 		}
 	}
@@ -177,6 +224,9 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 		result.RegisterTo(ec.Variables, step.Register)
 		ec.Logger.Debugf("  Registered result as: %s (changed=%v)", step.Register, result.Changed)
 	}
+
+	// Set result in context for event emission
+	ec.CurrentResult = result
 
 	return nil
 }

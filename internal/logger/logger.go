@@ -57,6 +57,11 @@ type ExecutionStats struct {
 	Failed   int
 }
 
+// Redactor interface for redacting sensitive data in logs.
+type Redactor interface {
+	Redact(string) string
+}
+
 // Logger interface defines the logging contract.
 type Logger interface {
 	Infof(format string, v ...interface{})
@@ -70,6 +75,7 @@ type Logger interface {
 	WithPadLevel(padLevel int) Logger
 	LogStep(info StepInfo)
 	Complete(stats ExecutionStats)
+	SetRedactor(redactor Redactor)
 }
 
 // Fatalf logs an error and exits the program.

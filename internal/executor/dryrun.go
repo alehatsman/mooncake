@@ -25,21 +25,9 @@ func (d *dryRunLogger) LogShellExecution(command string, withSudo bool) {
 	}
 }
 
-// LogFileOperation logs a dry-run message for file/directory operations.
-func (d *dryRunLogger) LogFileOperation(state, path string, mode os.FileMode) {
-	switch state {
-	case "directory":
-		d.logger.Infof("  [DRY-RUN] Would create directory: %s (mode: %04o)", path, mode)
-	case "file":
-		d.logger.Infof("  [DRY-RUN] Would create file: %s (mode: %04o)", path, mode)
-	default:
-		d.logger.Infof("  [DRY-RUN] Would create %s: %s (mode: %04o)", state, path, mode)
-	}
-}
-
 // LogTemplateRender logs a dry-run message for template rendering.
 func (d *dryRunLogger) LogTemplateRender(src, dest string, mode os.FileMode) {
-	d.logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %04o)", src, dest, mode)
+	d.logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %s)", src, dest, formatMode(mode))
 }
 
 // LogVariableLoad logs a dry-run message for loading variables.
@@ -52,11 +40,6 @@ func (d *dryRunLogger) LogVariableSet(count int) {
 	d.logger.Infof("  [DRY-RUN] Would set %d variables", count)
 }
 
-// LogInclude logs a dry-run message for including other config files.
-func (d *dryRunLogger) LogInclude(stepCount int, path string) {
-	d.logger.Debugf("  [DRY-RUN] Would include %d steps from: %s", stepCount, path)
-}
-
 // LogRegister logs a dry-run message for registering results.
 func (d *dryRunLogger) LogRegister(step config.Step) {
 	if step.Register != "" {
@@ -66,27 +49,27 @@ func (d *dryRunLogger) LogRegister(step config.Step) {
 
 // LogFileCreate logs a dry-run message for file creation.
 func (d *dryRunLogger) LogFileCreate(path string, mode os.FileMode, size int) {
-	d.logger.Infof("  [DRY-RUN] Would create file: %s (mode: %#o, size: %d bytes)", path, mode, size)
+	d.logger.Infof("  [DRY-RUN] Would create file: %s (mode: %s, size: %d bytes)", path, formatMode(mode), size)
 }
 
 // LogFileUpdate logs a dry-run message for file update.
 func (d *dryRunLogger) LogFileUpdate(path string, mode os.FileMode, oldSize, newSize int) {
-	d.logger.Infof("  [DRY-RUN] Would update file: %s (mode: %#o, %d -> %d bytes)", path, mode, oldSize, newSize)
+	d.logger.Infof("  [DRY-RUN] Would update file: %s (mode: %s, %d -> %d bytes)", path, formatMode(mode), oldSize, newSize)
 }
 
 // LogDirectoryCreate logs a dry-run message for directory creation.
 func (d *dryRunLogger) LogDirectoryCreate(path string, mode os.FileMode) {
-	d.logger.Infof("  [DRY-RUN] Would create directory: %s (mode: %#o)", path, mode)
+	d.logger.Infof("  [DRY-RUN] Would create directory: %s (mode: %s)", path, formatMode(mode))
 }
 
 // LogTemplateCreate logs a dry-run message for template creation.
 func (d *dryRunLogger) LogTemplateCreate(src, dest string, mode os.FileMode, size int) {
-	d.logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %#o, size: %d bytes)", src, dest, mode, size)
+	d.logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %s, size: %d bytes)", src, dest, formatMode(mode), size)
 }
 
 // LogTemplateUpdate logs a dry-run message for template update.
 func (d *dryRunLogger) LogTemplateUpdate(src, dest string, mode os.FileMode, oldSize, newSize int) {
-	d.logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %#o, %d -> %d bytes)", src, dest, mode, oldSize, newSize)
+	d.logger.Infof("  [DRY-RUN] Would template: %s -> %s (mode: %s, %d -> %d bytes)", src, dest, formatMode(mode), oldSize, newSize)
 }
 
 // LogTemplateNoChange logs a dry-run message when template produces no changes.

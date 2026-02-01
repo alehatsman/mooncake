@@ -1,0 +1,14 @@
+---
+steps:
+  - name: Test step 1
+    shell: echo "Hello from step 1"
+
+  - name: Test step 2
+    shell: echo "Hello from step 2"
+
+  - name: Test step 3
+    vars:
+      test_var: "test_value"
+
+  - name: Test step 4
+    shell: echo "Variable is {{ test_var }}"

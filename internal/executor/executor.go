@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/artifacts"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/filetree"
@@ -19,6 +21,21 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
+
+const (
+	actionTypeFile        = "file"
+	actionTypeTemplate    = "template"
+	actionTypeVars        = "vars"
+	actionTypeIncludeVars = "include_vars"
+)
+
+// generateStepID creates a unique identifier for a step
+func generateStepID(step config.Step, ec *ExecutionContext) string {
+	if step.ID != "" {
+		return step.ID
+	}
+	return fmt.Sprintf("step-%d", *ec.Stats.Global)
+}
 
 // mergeVariables creates a new map combining base and override variables.
 // Values from override take precedence over values from base with the same key.
@@ -64,13 +81,24 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Debugf("  %v: %v", k, v)
 	}
 
-	if ec.DryRun {
-		dryRun := newDryRunLogger(ec.Logger)
+	ec.HandleDryRun(func(dryRun *dryRunLogger) {
 		dryRun.LogVariableSet(len(*vars))
 		// Still set variables in dry-run mode so subsequent steps can use them
-	}
+	})
 
 	ec.Variables = mergeVariables(ec.Variables, *vars)
+
+	// Emit variables.set event
+	keys := make([]string, 0, len(*vars))
+	for k := range *vars {
+		keys = append(keys, k)
+	}
+	ec.EmitEvent(events.EventVarsSet, events.VarsSetData{
+		Count:  len(*vars),
+		Keys:   keys,
+		DryRun: ec.DryRun,
+	})
+
 	return nil
 }
 
@@ -208,7 +236,7 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 // getStepDisplayName determines the display name to show for a step in logs and output.
 //
 // The function follows a priority order to determine the name:
-//  1. If executing within a with_filetree loop, uses the file's name (Item.Name)
+//  1. If executing within a with_filetree loop, uses action + destination path
 //  2. If executing within a with_items loop, uses the string representation of the item
 //  3. Otherwise, uses the step's configured Name field
 //
@@ -216,10 +244,28 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 //   - displayName: the name to display for this step
 //   - hasName: true if a name was found, false if the step is anonymous
 func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
-	// For with_filetree, show the actual file name instead of generic step name
+	// For with_filetree, show hierarchical structure
 	if item, ok := ec.Variables["item"].(filetree.Item); ok {
+		// For directories, show as headers with trailing slash
+		if item.IsDir {
+			if item.Path == "" {
+				// Root directory
+				return fmt.Sprintf("%s/", item.Name), true
+			}
+			// Subdirectory - show path without leading slash, with trailing slash
+			dirPath := strings.TrimPrefix(item.Path, "/")
+			return fmt.Sprintf("%s/", dirPath), true
+		}
+
+		// For files, show just the filename (not full destination path)
+		// The directory context will be shown by the parent directory header
 		if item.Name != "" {
 			return item.Name, true
+		}
+
+		// Fallback to item path
+		if item.Path != "" {
+			return strings.TrimPrefix(item.Path, "/"), true
 		}
 	}
 
@@ -236,99 +282,7 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	return "", false
 }
 
-// shouldLogStep determines whether a step should have its status logged to the output.
-//
-// Not all steps are logged individually:
-//   - Anonymous steps (no name) are not logged
-//   - Include steps have their own specialized logging
-//   - Template steps within with_filetree loops are logged by the handler, not here
-//
-// Parameters:
-//   - step: the step configuration
-//   - hasStepName: whether the step has a display name (from getStepDisplayName)
-//   - ec: execution context (used to detect with_filetree loops)
-//
-// Returns true if the step's status (running/success/error) should be logged.
-func shouldLogStep(step config.Step, hasStepName bool, ec *ExecutionContext) bool {
-	// Don't log if no name
-	if !hasStepName {
-		return false
-	}
 
-	// Don't log includes (they have their own logging)
-	if step.Include != nil {
-		return false
-	}
-
-	// Don't log template steps in with_filetree (handler logs them)
-	_, inFileTree := ec.Variables["item"].(filetree.Item)
-	if step.Template != nil && inFileTree {
-		return false
-	}
-
-	return true
-}
-
-// logStepStatus logs step status (running, success, error, skipped) and updates statistics.
-// For skipped status, pass "skipped:when" or "skipped:tags" or "skipped:idempotency:..." to include the skip reason.
-func logStepStatus(stepName string, status string, step config.Step, ec *ExecutionContext) {
-	// Handle skipped status (may include reason like "skipped:when" or "skipped:tags" or "skipped:idempotency:...")
-	if strings.HasPrefix(status, "skipped") {
-		skipInfo := ""
-
-		// Parse skip reason from status if present
-		parts := strings.SplitN(status, ":", 2)
-		if len(parts) == 2 {
-			skipReason := parts[1]
-			if skipReason == "when" && step.When != "" {
-				skipInfo = fmt.Sprintf(" (when: %s)", step.When)
-			} else if skipReason == "tags" && len(ec.Tags) > 0 {
-				skipInfo = fmt.Sprintf(" (tags filter: %s)", strings.Join(ec.Tags, ", "))
-			} else if strings.HasPrefix(skipReason, "idempotency:") {
-				// Extract the actual reason after "idempotency:"
-				idempotencyDetail := strings.TrimPrefix(skipReason, "idempotency:")
-				skipInfo = fmt.Sprintf(" (%s)", idempotencyDetail)
-			}
-		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       stepName + skipInfo,
-			Level:      ec.Level,
-			GlobalStep: 0,
-			Status:     logger.StatusSkipped,
-		})
-
-		if ec.StatsSkipped != nil {
-			*ec.StatsSkipped++
-		}
-		return
-	}
-
-	// For running/success/error, log with global step number
-	globalStep := 0
-	if ec.GlobalStepsExecuted != nil {
-		globalStep = *ec.GlobalStepsExecuted
-	}
-
-	ec.Logger.LogStep(logger.StepInfo{
-		Name:       stepName,
-		Level:      ec.Level,
-		GlobalStep: globalStep,
-		Status:     status,
-	})
-
-	// Update statistics
-	switch status {
-	case logger.StatusSuccess:
-		if ec.StatsExecuted != nil {
-			*ec.StatsExecuted++
-		}
-	case logger.StatusError:
-		if ec.StatsFailed != nil {
-			*ec.StatsFailed++
-		}
-	}
-}
 
 // dispatchStepAction executes the appropriate handler based on step type.
 func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
@@ -385,8 +339,26 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	if shouldSkip {
 		// Log skipped steps (only for named, non-include steps)
 		if hasStepName && step.Include == nil {
-			logStepStatus(stepName, "skipped:"+skipReason, step, ec)
+			// Update skipped statistics
+			if ec.Stats.Skipped != nil {
+				*ec.Stats.Skipped++
+			}
+
+			// Emit step.skipped event
+			stepID := generateStepID(step, ec)
+			depth := 0
+			if step.LoopContext != nil {
+				depth = step.LoopContext.Depth
+			}
+			ec.EmitEvent(events.EventStepSkipped, events.StepSkippedData{
+				StepID: stepID,
+				Name:   stepName,
+				Level:  ec.Level,
+				Reason: skipReason,
+				Depth:  depth,
+			})
 		}
+
 		return nil
 	}
 
@@ -405,31 +377,91 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Increment global step counter for non-skipped steps
-	if ec.GlobalStepsExecuted != nil {
-		*ec.GlobalStepsExecuted++
+	if ec.Stats.Global != nil {
+		*ec.Stats.Global++
 	}
 
-	// Log running status
-	if shouldLogStep(step, hasStepName, ec) {
-		logStepStatus(stepName, logger.StatusRunning, step, ec)
+	// Generate step ID and store in context for event correlation
+	stepID := generateStepID(step, ec)
+	ec.CurrentStepID = stepID
+
+	// Get directory depth from loop context (for filetree items)
+	depth := 0
+	if step.LoopContext != nil {
+		depth = step.LoopContext.Depth
 	}
+
+	// Emit step.started event
+	ec.EmitEvent(events.EventStepStarted, events.StepStartedData{
+		StepID:     stepID,
+		Name:       stepName,
+		Level:      ec.Level,
+		GlobalStep: *ec.Stats.Global,
+		Action:     step.ActionType,
+		Tags:       step.Tags,
+		When:       step.When,
+		Depth:      depth,
+		DryRun:     ec.DryRun,
+	})
+
+	// Track start time for duration
+	stepStartTime := time.Now()
 
 	// Execute the appropriate handler
 	stepErr := dispatchStepAction(step, ec)
 
+	// Calculate duration
+	stepDuration := time.Since(stepStartTime)
+
 	// Handle errors
 	if stepErr != nil {
 		ec.Logger.Errorf("%v", stepErr)
-		if shouldLogStep(step, hasStepName, ec) {
-			logStepStatus(stepName, logger.StatusError, step, ec)
+		// Update failed statistics
+		if ec.Stats.Failed != nil {
+			*ec.Stats.Failed++
 		}
+
+		// Emit step.failed event
+		ec.EmitEvent(events.EventStepFailed, events.StepFailedData{
+			StepID:       stepID,
+			Name:         stepName,
+			Level:        ec.Level,
+			ErrorMessage: stepErr.Error(),
+			DurationMs:   stepDuration.Milliseconds(),
+			Depth:        depth,
+			DryRun:       ec.DryRun,
+		})
+
 		return stepErr
 	}
 
-	// Log success
-	if shouldLogStep(step, hasStepName, ec) {
-		logStepStatus(stepName, logger.StatusSuccess, step, ec)
+	// Update executed statistics
+	if ec.Stats.Executed != nil {
+		*ec.Stats.Executed++
 	}
+
+	// Get result data if handler provided it
+	changed := false
+	var resultData map[string]interface{}
+	if ec.CurrentResult != nil {
+		changed = ec.CurrentResult.Changed
+		resultData = ec.CurrentResult.ToMap()
+	}
+
+	// Emit step.completed event
+	ec.EmitEvent(events.EventStepCompleted, events.StepCompletedData{
+		StepID:     stepID,
+		Name:       stepName,
+		Level:      ec.Level,
+		DurationMs: stepDuration.Milliseconds(),
+		Changed:    changed,
+		Result:     resultData,
+		Depth:      depth,
+		DryRun:     ec.DryRun,
+	})
+
+	// Clear current result for next step
+	ec.CurrentResult = nil
 
 	return nil
 }
@@ -458,6 +490,13 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 			ec.Variables["index"] = step.LoopContext.Index
 			ec.Variables["first"] = step.LoopContext.First
 			ec.Variables["last"] = step.LoopContext.Last
+		} else {
+			// Clear loop variables for steps without loop context
+			// to prevent stale values from previous loop iterations
+			delete(ec.Variables, "item")
+			delete(ec.Variables, "index")
+			delete(ec.Variables, "first")
+			delete(ec.Variables, "last")
 		}
 
 		if err := ExecuteStep(step, ec); err != nil {
@@ -471,17 +510,24 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 type StartConfig struct {
 	ConfigFilePath   string
 	VarsFilePath     string
-	SudoPass         string // Deprecated: use AskBecomePass or SudoPassFile
+	SudoPass         string // Sudo password provided directly (use SudoPassFile for better security)
 	SudoPassFile     string
 	AskBecomePass    bool
 	InsecureSudoPass bool
 	Tags             []string
 	DryRun           bool
+
+	// Artifact configuration
+	ArtifactsDir      string
+	CaptureFullOutput bool
+	MaxOutputBytes    int
+	MaxOutputLines    int
 }
 
 // Start begins execution of a mooncake configuration with the given settings.
 // Always goes through the planner to expand loops, includes, and variables.
-func Start(startConfig StartConfig, log logger.Logger) error {
+// Emits events through the provided publisher for all execution progress.
+func Start(startConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
 	log.Debugf("config: %v", startConfig)
 
 	if startConfig.ConfigFilePath == "" {
@@ -550,19 +596,69 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 
 	log.Debugf("Plan built with %d steps", len(planData.Steps))
 
-	// Execute the plan with resolved password
-	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, log)
+	// Setup artifact writer if artifacts-dir is specified
+	if startConfig.ArtifactsDir != "" {
+		// Gather system facts for artifact generation
+		systemFacts := facts.Collect()
+
+		// Create artifact writer
+		artifactWriter, err := artifacts.NewWriter(
+			artifacts.Config{
+				BaseDir:        startConfig.ArtifactsDir,
+				CaptureStdout:  startConfig.CaptureFullOutput,
+				CaptureStderr:  startConfig.CaptureFullOutput,
+				MaxOutputBytes: startConfig.MaxOutputBytes,
+				MaxOutputLines: startConfig.MaxOutputLines,
+			},
+			planData,
+			systemFacts,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create artifact writer: %w", err)
+		}
+		defer artifactWriter.Close()
+
+		// Subscribe artifact writer to events
+		publisher.Subscribe(artifactWriter)
+
+		log.Debugf("Artifacts will be written to: %s/runs/%s", startConfig.ArtifactsDir, "...")
+	}
+
+	// Execute the plan with event publisher
+	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, log, publisher)
 }
 
-// ExecutePlan executes a pre-compiled plan
-func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) error {
+// ExecutePlan executes a pre-compiled plan.
+// Emits events through the provided publisher for all execution progress.
+func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, publisher events.Publisher) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
 	// Start timing
 	startTime := time.Now()
 
-	log.Mooncake()
+	// Emit run.started event
+	publisher.Publish(events.Event{
+		Type:      events.EventRunStarted,
+		Timestamp: time.Now(),
+		Data: events.RunStartedData{
+			RootFile:   p.RootFile,
+			Tags:       p.Tags,
+			DryRun:     dryRun,
+			TotalSteps: len(p.Steps),
+		},
+	})
+
+	// Emit plan.loaded event
+	publisher.Publish(events.Event{
+		Type:      events.EventPlanLoaded,
+		Timestamp: time.Now(),
+		Data: events.PlanLoadedData{
+			RootFile:   p.RootFile,
+			TotalSteps: len(p.Steps),
+			Tags:       p.Tags,
+		},
+	})
 
 	// Create dependencies
 	renderer := template.NewPongo2Renderer()
@@ -577,15 +673,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) 
 	}
 
 	// Set redactor on logger for automatic redaction
-	// The logger interface defines Redactor, so we use type assertion
-	type RedactorSetter interface {
-		SetRedactor(r interface {
-			Redact(string) string
-		})
-	}
-	if loggerWithRedactor, ok := log.(RedactorSetter); ok {
-		loggerWithRedactor.SetRedactor(redactor)
-	}
+	log.SetRedactor(redactor)
 
 	// Use the directory of the root config file, not the current working directory
 	// This ensures relative paths in the config (like ./template.j2) are resolved correctly
@@ -614,13 +702,13 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) 
 		Tags:         []string{},
 		DryRun:       dryRun,
 
-		// Global progress tracking
-		GlobalStepsExecuted: &globalExecuted,
-
 		// Statistics tracking
-		StatsExecuted: &statsExecuted,
-		StatsSkipped:  &statsSkipped,
-		StatsFailed:   &statsFailed,
+		Stats: &ExecutionStats{
+			Global:   &globalExecuted,
+			Executed: &statsExecuted,
+			Skipped:  &statsSkipped,
+			Failed:   &statsFailed,
+		},
 
 		// Inject dependencies
 		Template:  renderer,
@@ -628,6 +716,9 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) 
 		PathUtil:  pathExpander,
 		FileTree:  fileTreeWalker,
 		Redactor:  redactor,
+
+		// Event publisher
+		EventPublisher: publisher,
 	}
 
 	// Execute pre-expanded steps
@@ -636,12 +727,32 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) 
 	// Calculate duration
 	duration := time.Since(startTime)
 
-	// Show completion message
-	log.Complete(logger.ExecutionStats{
-		Duration: duration,
-		Executed: statsExecuted,
-		Skipped:  statsSkipped,
-		Failed:   statsFailed,
+	// Emit run.completed event (console subscriber handles display)
+	changedSteps := 0
+	// Count changed steps (steps that were executed and not failed)
+	// Changed status is tracked elsewhere, for now use simplified logic
+	if execErr == nil {
+		changedSteps = statsExecuted
+	}
+
+	publisher.Publish(events.Event{
+		Type:      events.EventRunCompleted,
+		Timestamp: time.Now(),
+		Data: events.RunCompletedData{
+			TotalSteps:   len(steps),
+			SuccessSteps: statsExecuted,
+			FailedSteps:  statsFailed,
+			SkippedSteps: statsSkipped,
+			ChangedSteps: changedSteps,
+			DurationMs:   duration.Milliseconds(),
+			Success:      execErr == nil,
+			ErrorMessage: func() string {
+				if execErr != nil {
+					return execErr.Error()
+				}
+				return ""
+			}(),
+		},
 	})
 
 	return execErr

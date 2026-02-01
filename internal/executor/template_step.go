@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -91,22 +92,22 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 			return fmt.Errorf("template source file not found: %s", src)
 		}
 
-		mode := parseFileMode(template.Mode, 0644)
-		dryRun := newDryRunLogger(ec.Logger)
-
 		// Prepare variables for rendering
 		variables := ec.Variables
 		if template.Vars != nil {
 			variables = mergeVariables(ec.Variables, *template.Vars)
 		}
 
-		// Attempt to render and log detailed status
-		logDryRunTemplateOperation(dryRun, src, dest, mode, ec.Template, variables, ec)
+		mode := parseFileMode(template.Mode, 0644)
+		ec.HandleDryRun(func(dryRun *dryRunLogger) {
+			// Attempt to render and log detailed status
+			logDryRunTemplateOperation(dryRun, src, dest, mode, ec.Template, variables, ec)
 
-		if template.Vars != nil && len(*template.Vars) > 0 {
-			ec.Logger.Debugf("  Additional variables: %v", *template.Vars)
-		}
-		dryRun.LogRegister(step)
+			if template.Vars != nil && len(*template.Vars) > 0 {
+				ec.Logger.Debugf("  Additional variables: %v", *template.Vars)
+			}
+			dryRun.LogRegister(step)
+		})
 		return nil
 	}
 
@@ -152,11 +153,23 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		return fmt.Errorf("failed to write template output to %s: %w", dest, err)
 	}
 
+	// Emit template.rendered event
+	ec.EmitEvent(events.EventTemplateRender, events.TemplateRenderData{
+		TemplatePath: src,
+		DestPath:     dest,
+		SizeBytes:    int64(len(output)),
+		Changed:      result.Changed,
+		DryRun:       ec.DryRun,
+	})
+
 	// Register the result if register is specified
 	if step.Register != "" {
 		result.RegisterTo(ec.Variables, step.Register)
 		ec.Logger.Debugf("  Registered result as: %s (changed=%v)", step.Register, result.Changed)
 	}
+
+	// Set result in context for event emission
+	ec.CurrentResult = result
 
 	return nil
 }

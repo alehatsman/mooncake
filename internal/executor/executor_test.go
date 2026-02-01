@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -765,8 +766,7 @@ func TestExecuteStep_WithShell(t *testing.T) {
 		Evaluator:           evaluator,
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
+		Stats: NewExecutionStats(),
 		Redactor:            security.NewRedactor(),
 	}
 
@@ -781,11 +781,11 @@ func TestExecuteStep_WithShell(t *testing.T) {
 		t.Errorf("ExecuteStep() error = %v", err)
 	}
 
-	if *ec.GlobalStepsExecuted != 1 {
-		t.Errorf("GlobalStepsExecuted = %d, want 1", *ec.GlobalStepsExecuted)
+	if *ec.Stats.Global != 1 {
+		t.Errorf("GlobalStepsExecuted = %d, want 1", *ec.Stats.Global)
 	}
-	if *ec.StatsExecuted != 1 {
-		t.Errorf("StatsExecuted = %d, want 1", *ec.StatsExecuted)
+	if *ec.Stats.Executed != 1 {
+		t.Errorf("StatsExecuted = %d, want 1", *ec.Stats.Executed)
 	}
 }
 
@@ -802,8 +802,7 @@ func TestExecuteStep_Skipped(t *testing.T) {
 		Evaluator:           evaluator,
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
-		GlobalStepsExecuted: new(int),
-		StatsSkipped:        new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	shellCmd := "echo test"
@@ -818,11 +817,11 @@ func TestExecuteStep_Skipped(t *testing.T) {
 		t.Errorf("ExecuteStep() error = %v", err)
 	}
 
-	if *ec.GlobalStepsExecuted != 0 {
-		t.Errorf("GlobalStepsExecuted = %d, want 0 for skipped step", *ec.GlobalStepsExecuted)
+	if *ec.Stats.Global != 0 {
+		t.Errorf("GlobalStepsExecuted = %d, want 0 for skipped step", *ec.Stats.Global)
 	}
-	if *ec.StatsSkipped != 1 {
-		t.Errorf("StatsSkipped = %d, want 1", *ec.StatsSkipped)
+	if *ec.Stats.Skipped != 1 {
+		t.Errorf("StatsSkipped = %d, want 1", *ec.Stats.Skipped)
 	}
 }
 
@@ -840,8 +839,7 @@ func TestExecuteSteps(t *testing.T) {
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
 		CurrentFile:         "test.yml",
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
+		Stats: NewExecutionStats(),
 		Redactor:            security.NewRedactor(),
 	}
 
@@ -857,8 +855,8 @@ func TestExecuteSteps(t *testing.T) {
 		t.Errorf("ExecuteSteps() error = %v", err)
 	}
 
-	if *ec.GlobalStepsExecuted != 2 {
-		t.Errorf("GlobalStepsExecuted = %d, want 2", *ec.GlobalStepsExecuted)
+	if *ec.Stats.Global != 2 {
+		t.Errorf("GlobalStepsExecuted = %d, want 2", *ec.Stats.Global)
 	}
 }
 
@@ -913,115 +911,7 @@ key2: value2
 
 
 
-func TestLogStepStatus(t *testing.T) {
-	testLogger := logger.NewTestLogger()
 
-	tests := []struct {
-		name     string
-		stepName string
-		status   string
-		register string
-	}{
-		{
-			name:     "running status",
-			stepName: "test step",
-			status:   "running",
-		},
-		{
-			name:     "success status",
-			stepName: "test step",
-			status:   "success",
-		},
-		{
-			name:     "error status",
-			stepName: "test step",
-			status:   "error",
-		},
-		{
-			name:     "skipped with when",
-			stepName: "test step",
-			status:   "skipped:when",
-		},
-		{
-			name:     "skipped with tags",
-			stepName: "test step",
-			status:   "skipped:tags",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ec := &ExecutionContext{
-				Variables:      make(map[string]interface{}),
-				Tags:           []string{"test"},
-				Logger:         testLogger,
-				StatsExecuted:  new(int),
-				StatsFailed:    new(int),
-				StatsSkipped:   new(int),
-				GlobalStepsExecuted: new(int),
-			}
-			step := config.Step{
-				Name: tt.stepName,
-				When: "x == 5",
-				Tags: []string{"test"},
-			}
-
-			// This should not panic
-			logStepStatus(tt.stepName, tt.status, step, ec)
-		})
-	}
-}
-
-func TestShouldLogStep_AllCases(t *testing.T) {
-	tests := []struct {
-		name        string
-		hasStepName bool
-		step        config.Step
-		itemVar     interface{}
-		want        bool
-	}{
-		{
-			name:        "no name",
-			hasStepName: false,
-			want:        false,
-		},
-		{
-			name:        "include step",
-			hasStepName: true,
-			step:        config.Step{Include: strPtr("file.yml")},
-			want:        false,
-		},
-		{
-			name:        "normal shell step",
-			hasStepName: true,
-			step:        config.Step{Shell: strPtr("echo test")},
-			want:        true,
-		},
-		{
-			name:        "template with filetree",
-			hasStepName: true,
-			step:        config.Step{Template: &config.Template{Src: "src", Dest: "dest"}},
-			itemVar:     filetree.Item{Name: "file.txt"},
-			want:        false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ec := &ExecutionContext{
-				Variables: make(map[string]interface{}),
-			}
-			if tt.itemVar != nil {
-				ec.Variables["item"] = tt.itemVar
-			}
-
-			got := shouldLogStep(tt.step, tt.hasStepName, ec)
-			if got != tt.want {
-				t.Errorf("shouldLogStep() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestDispatchStepAction(t *testing.T) {
 	testLogger := logger.NewTestLogger()
@@ -1080,12 +970,9 @@ func TestDryRunLogger(t *testing.T) {
 	// Test all dry-run logging methods
 	dryRun.LogShellExecution("echo test", false)
 	dryRun.LogShellExecution("echo test", true)
-	dryRun.LogFileOperation("file", "/path/file", 0644)
-	dryRun.LogFileOperation("directory", "/path/dir", 0755)
 	dryRun.LogTemplateRender("/src", "/dest", 0644)
 	dryRun.LogVariableLoad(5, "/path/vars.yml")
 	dryRun.LogVariableSet(3)
-	dryRun.LogInclude(10, "/path/include.yml")
 	dryRun.LogRegister(config.Step{Register: "result"})
 
 	// If we got here without panicking, the tests pass
@@ -1252,9 +1139,9 @@ func TestHandleDirectoryState(t *testing.T) {
 	result := NewResult()
 	step := config.Step{Name: "test"}
 
-	err := handleDirectoryState(file, testPath, result, step, ec)
+	err := createDirectory(file, testPath, result, step, ec)
 	if err != nil {
-		t.Errorf("handleDirectoryState() error = %v", err)
+		t.Errorf("createDirectory() error = %v", err)
 	}
 
 	// Verify directory exists
@@ -1289,9 +1176,9 @@ func TestHandleFileState(t *testing.T) {
 	result := NewResult()
 	step := config.Step{Name: "test"}
 
-	err := handleFileState(file, testPath, result, step, ec)
+	err := createOrUpdateFile(file, testPath, result, step, ec)
 	if err != nil {
-		t.Errorf("handleFileState() error = %v", err)
+		t.Errorf("createOrUpdateFile() error = %v", err)
 	}
 
 	// Verify file exists with correct content
@@ -1652,15 +1539,14 @@ testvar: testvalue`
 		DryRun:         false,
 	}
 
-	err = Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err = Start(startConfig, testLogger, publisher)
 	if err != nil {
 		t.Errorf("Start() error = %v", err)
 	}
 
-	// Check that mooncake banner was logged
-	if !testLogger.Contains("Mooncake") {
-		t.Error("Start() should log Mooncake banner")
-	}
+	// Execution completed successfully with events
 }
 
 func TestStart_EmptyConfigPath(t *testing.T) {
@@ -1669,7 +1555,9 @@ func TestStart_EmptyConfigPath(t *testing.T) {
 		ConfigFilePath: "",
 	}
 
-	err := Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err := Start(startConfig, testLogger, publisher)
 	if err == nil {
 		t.Error("Start() should error with empty config path")
 	}
@@ -1684,7 +1572,9 @@ func TestStart_MissingConfigFile(t *testing.T) {
 		ConfigFilePath: "/nonexistent/config.yml",
 	}
 
-	err := Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err := Start(startConfig, testLogger, publisher)
 	if err == nil {
 		t.Error("Start() should error with missing config file")
 	}
@@ -1705,7 +1595,9 @@ func TestStart_InvalidYAML(t *testing.T) {
 		ConfigFilePath: configPath,
 	}
 
-	err = Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err = Start(startConfig, testLogger, publisher)
 	if err == nil {
 		t.Error("Start() should error with invalid YAML")
 	}
@@ -1732,7 +1624,9 @@ func TestStart_WithValidationErrors(t *testing.T) {
 		ConfigFilePath: configPath,
 	}
 
-	err = Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err = Start(startConfig, testLogger, publisher)
 	if err == nil {
 		t.Error("Start() should error with validation errors")
 	}
@@ -1762,7 +1656,9 @@ func TestStart_DryRun(t *testing.T) {
 		DryRun:         true,
 	}
 
-	err = Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err = Start(startConfig, testLogger, publisher)
 	if err != nil {
 		t.Errorf("Start() dry-run error = %v", err)
 	}
@@ -1792,7 +1688,9 @@ func TestStart_WithTags(t *testing.T) {
 		Tags:           []string{"dev"},
 	}
 
-	err = Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err = Start(startConfig, testLogger, publisher)
 	if err != nil {
 		t.Errorf("Start() with tags error = %v", err)
 	}
@@ -1816,7 +1714,9 @@ func TestStart_MissingVarsFile(t *testing.T) {
 	}
 
 	// Should succeed even with missing vars file (vars are optional)
-	err = Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err = Start(startConfig, testLogger, publisher)
 	if err != nil {
 		t.Errorf("Start() should succeed with missing vars file: %v", err)
 	}
@@ -1831,9 +1731,6 @@ func TestExecuteSteps_WithError(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
-	statsFailed := 0
-	globalExecuted := 0
-	statsExecuted := 0
 
 	ec := &ExecutionContext{
 		Variables:           make(map[string]interface{}),
@@ -1843,9 +1740,7 @@ func TestExecuteSteps_WithError(t *testing.T) {
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
 		CurrentFile:         "test.yml",
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
-		StatsFailed:         &statsFailed,
+		Stats: NewExecutionStats(),
 		Redactor:            security.NewRedactor(),
 	}
 
@@ -1860,8 +1755,8 @@ func TestExecuteSteps_WithError(t *testing.T) {
 		t.Error("ExecuteSteps() should return error for failing step")
 	}
 
-	if statsFailed != 1 {
-		t.Errorf("StatsFailed = %d, want 1", statsFailed)
+	if *ec.Stats.Failed != 1 {
+		t.Errorf("StatsFailed = %d, want 1", *ec.Stats.Failed)
 	}
 }
 
@@ -1871,8 +1766,6 @@ func TestExecuteSteps_MultipleSteps(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
-	globalExecuted := 0
-	statsExecuted := 0
 
 	ec := &ExecutionContext{
 		Variables:           make(map[string]interface{}),
@@ -1882,8 +1775,7 @@ func TestExecuteSteps_MultipleSteps(t *testing.T) {
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
 		CurrentFile:         "test.yml",
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
+		Stats: NewExecutionStats(),
 		Redactor:            security.NewRedactor(),
 	}
 
@@ -1901,12 +1793,12 @@ func TestExecuteSteps_MultipleSteps(t *testing.T) {
 		t.Errorf("ExecuteSteps() error = %v", err)
 	}
 
-	if statsExecuted != 3 {
-		t.Errorf("StatsExecuted = %d, want 3", statsExecuted)
+	if *ec.Stats.Executed != 3 {
+		t.Errorf("StatsExecuted = %d, want 3", *ec.Stats.Executed)
 	}
 
-	if globalExecuted != 3 {
-		t.Errorf("GlobalStepsExecuted = %d, want 3", globalExecuted)
+	if *ec.Stats.Global != 3 {
+		t.Errorf("GlobalStepsExecuted = %d, want 3", *ec.Stats.Global)
 	}
 }
 
@@ -1917,8 +1809,6 @@ func TestExecuteSteps_UpdatesContext(t *testing.T) {
 	pathExpander := pathutil.NewPathExpander(renderer)
 	redactor := security.NewRedactor()
 
-	globalExecuted := 0
-	statsExecuted := 0
 
 	ec := &ExecutionContext{
 		Variables:           make(map[string]interface{}),
@@ -1929,8 +1819,7 @@ func TestExecuteSteps_UpdatesContext(t *testing.T) {
 		CurrentDir:          os.TempDir(),
 		CurrentFile:         "test.yml",
 		Level:               0,
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
+		Stats: NewExecutionStats(),
 		Redactor:            redactor,
 	}
 
@@ -1951,8 +1840,8 @@ func TestExecuteSteps_UpdatesContext(t *testing.T) {
 	}
 
 	// Verify steps were executed
-	if globalExecuted != 2 {
-		t.Errorf("GlobalStepsExecuted = %d, want 2", globalExecuted)
+	if *ec.Stats.Global != 2 {
+		t.Errorf("GlobalStepsExecuted = %d, want 2", *ec.Stats.Global)
 	}
 }
 
@@ -1986,9 +1875,9 @@ func TestHandleDirectoryState_WithModeChange(t *testing.T) {
 	result := NewResult()
 	step := config.Step{Name: "test"}
 
-	err = handleDirectoryState(file, testPath, result, step, ec)
+	err = createDirectory(file, testPath, result, step, ec)
 	if err != nil {
-		t.Errorf("handleDirectoryState() error = %v", err)
+		t.Errorf("createDirectory() error = %v", err)
 	}
 
 	// Directory exists, so should not be marked as changed
@@ -2025,9 +1914,9 @@ func TestHandleFileState_EmptyContentExists(t *testing.T) {
 	result := NewResult()
 	step := config.Step{Name: "test"}
 
-	err = handleFileState(file, testPath, result, step, ec)
+	err = createOrUpdateFile(file, testPath, result, step, ec)
 	if err != nil {
-		t.Errorf("handleFileState() error = %v", err)
+		t.Errorf("createOrUpdateFile() error = %v", err)
 	}
 
 	// File exists with same (empty) content
@@ -2058,9 +1947,9 @@ func TestHandleFileState_TemplateRenderError(t *testing.T) {
 	result := NewResult()
 	step := config.Step{Name: "test"}
 
-	err := handleFileState(file, testPath, result, step, ec)
+	err := createOrUpdateFile(file, testPath, result, step, ec)
 	if err == nil {
-		t.Error("handleFileState() should error with invalid template")
+		t.Error("createOrUpdateFile() should error with invalid template")
 	}
 }
 
@@ -2418,14 +2307,14 @@ func TestHandleFileState_EmptyContentDryRun(t *testing.T) {
 	result := &Result{}
 	step := config.Step{Name: "test"}
 
-	err := handleFileState(file, tmpDir+"/test.txt", result, step, ec)
+	err := createOrUpdateFile(file, tmpDir+"/test.txt", result, step, ec)
 	if err != nil {
-		t.Fatalf("handleFileState() error = %v", err)
+		t.Fatalf("createOrUpdateFile() error = %v", err)
 	}
 
 	// File should not be created in dry-run
 	if _, err := os.Stat(tmpDir + "/test.txt"); !os.IsNotExist(err) {
-		t.Error("handleFileState() should not create file in dry-run")
+		t.Error("createOrUpdateFile() should not create file in dry-run")
 	}
 }
 
@@ -2450,14 +2339,14 @@ func TestHandleFileState_WithContentDryRun(t *testing.T) {
 	result := &Result{}
 	step := config.Step{Name: "test"}
 
-	err := handleFileState(file, tmpDir+"/test.txt", result, step, ec)
+	err := createOrUpdateFile(file, tmpDir+"/test.txt", result, step, ec)
 	if err != nil {
-		t.Fatalf("handleFileState() error = %v", err)
+		t.Fatalf("createOrUpdateFile() error = %v", err)
 	}
 
 	// File should not be created in dry-run
 	if _, err := os.Stat(tmpDir + "/test.txt"); !os.IsNotExist(err) {
-		t.Error("handleFileState() should not create file in dry-run")
+		t.Error("createOrUpdateFile() should not create file in dry-run")
 	}
 }
 
@@ -2482,9 +2371,9 @@ func TestHandleFileState_FileWriteError(t *testing.T) {
 	result := &Result{}
 	step := config.Step{Name: "test"}
 
-	err := handleFileState(file, "/invalid/path/that/does/not/exist/test.txt", result, step, ec)
+	err := createOrUpdateFile(file, "/invalid/path/that/does/not/exist/test.txt", result, step, ec)
 	if err == nil {
-		t.Error("handleFileState() should error when write fails")
+		t.Error("createOrUpdateFile() should error when write fails")
 	}
 }
 
@@ -2508,9 +2397,9 @@ func TestHandleFileState_EmptyFileWriteError(t *testing.T) {
 	result := &Result{}
 	step := config.Step{Name: "test"}
 
-	err := handleFileState(file, "/invalid/path/that/does/not/exist/test.txt", result, step, ec)
+	err := createOrUpdateFile(file, "/invalid/path/that/does/not/exist/test.txt", result, step, ec)
 	if err == nil {
-		t.Error("handleFileState() should error when write fails for empty file")
+		t.Error("createOrUpdateFile() should error when write fails for empty file")
 	}
 }
 
@@ -2562,14 +2451,14 @@ func TestHandleDirectoryState_DryRun(t *testing.T) {
 	result := &Result{}
 	step := config.Step{Name: "test", Register: "result"}
 
-	err := handleDirectoryState(file, tmpDir+"/testdir", result, step, ec)
+	err := createDirectory(file, tmpDir+"/testdir", result, step, ec)
 	if err != nil {
-		t.Fatalf("handleDirectoryState() dry-run error = %v", err)
+		t.Fatalf("createDirectory() dry-run error = %v", err)
 	}
 
 	// Directory should not be created in dry-run
 	if _, err := os.Stat(tmpDir + "/testdir"); !os.IsNotExist(err) {
-		t.Error("handleDirectoryState() should not create directory in dry-run")
+		t.Error("createDirectory() should not create directory in dry-run")
 	}
 }
 
@@ -2588,28 +2477,18 @@ func TestHandleDirectoryState_CreateError(t *testing.T) {
 		Logger:        testLogger,
 		Template:      renderer,
 		DryRun:        false,
-		StatsExecuted: new(int),
-		StatsFailed:   new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	result := &Result{}
 	step := config.Step{Name: "test"}
 
-	err := handleDirectoryState(file, "/proc/invalid/dir", result, step, ec)
+	err := createDirectory(file, "/proc/invalid/dir", result, step, ec)
 	if err == nil {
-		t.Error("handleDirectoryState() should error when directory creation fails")
+		t.Error("createDirectory() should error when directory creation fails")
 	}
 }
 
-func TestLogFileOperation_DefaultCase(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	dryRun := newDryRunLogger(testLogger)
-
-	// Test the default case with a non-standard state
-	dryRun.LogFileOperation("symlink", "/path/to/link", 0644)
-
-	// Just verify no panic - we can't easily check log output in test logger
-}
 
 func TestHandleIncludeVars_Basic(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -2672,8 +2551,7 @@ func TestHandleShell_RegisterResult(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
+		Stats: NewExecutionStats(),
 		Redactor:            redactor,
 	}
 
@@ -2718,8 +2596,7 @@ func TestHandleTemplate_RegisterResult(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	templateStep := config.Template{
@@ -2762,9 +2639,7 @@ func TestHandleTemplate_ErrorCase(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
-		StatsFailed:         new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	templateStep := config.Template{
@@ -2834,7 +2709,7 @@ func TestHandleShell_TemplateError(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	shellCmd := "echo {{ invalid_template"
@@ -2867,7 +2742,7 @@ func TestHandleShell_BecomeWithoutPassword(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
+		Stats: NewExecutionStats(),
 		SudoPass:            "", // No password
 		Redactor:            redactor,
 	}
@@ -2907,8 +2782,7 @@ func TestHandleShell_FailedCommand(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
+		Stats: NewExecutionStats(),
 		Redactor:            redactor,
 	}
 
@@ -2978,7 +2852,7 @@ func TestHandleFile_TemplateError(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	file := config.File{
@@ -3013,8 +2887,7 @@ func TestExecuteStep_SkipByTags(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsSkipped:        new(int),
+		Stats: NewExecutionStats(),
 		Tags:                []string{"production"},
 	}
 
@@ -3030,7 +2903,7 @@ func TestExecuteStep_SkipByTags(t *testing.T) {
 	}
 
 	// Check that step was skipped
-	if *ec.StatsSkipped == 0 {
+	if *ec.Stats.Skipped == 0 {
 		t.Error("ExecuteStep() should increment skipped counter")
 	}
 }
@@ -3059,7 +2932,9 @@ myvar: hello`
 		VarsFilePath:   varsPath,
 	}
 
-	err := Start(startConfig, testLogger)
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	err := Start(startConfig, testLogger, publisher)
 	if err != nil {
 		t.Fatalf("Start() with vars file error = %v", err)
 	}
@@ -3084,7 +2959,7 @@ func TestHandleTemplate_PathExpansionError(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
+		Stats: NewExecutionStats(),
 	}
 
 	templateStep := config.Template{
@@ -3121,7 +2996,7 @@ func TestExecuteStep_NoStepName(t *testing.T) {
 		PathUtil:            pathExpander,
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
+		Stats: NewExecutionStats(),
 		Redactor:            readactor,
 	}
 

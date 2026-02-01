@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
@@ -15,6 +16,29 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 	"gopkg.in/yaml.v3"
 )
+
+// mergeVariables creates a new map combining base and override variables.
+// Values from override take precedence over values from base with the same key.
+func mergeVariables(base, override map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range base {
+		result[k] = v
+	}
+	for k, v := range override {
+		result[k] = v
+	}
+	return result
+}
+
+// resolvePath converts a potentially relative path to an absolute path.
+// If the path is relative, it's joined with baseDir. Then filepath.Abs is called.
+func resolvePath(path, baseDir string) (string, error) {
+	absPath := path
+	if !filepath.IsAbs(path) {
+		absPath = filepath.Join(baseDir, path)
+	}
+	return filepath.Abs(absPath)
+}
 
 // Planner builds deterministic execution plans from config files
 type Planner struct {
@@ -79,17 +103,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	}
 
 	// Merge global vars from config with provided vars (provided vars take precedence)
-	variables := make(map[string]interface{})
-	if runConfig.Vars != nil {
-		for k, v := range runConfig.Vars {
-			variables[k] = v
-		}
-	}
-	if cfg.Variables != nil {
-		for k, v := range cfg.Variables {
-			variables[k] = v
-		}
-	}
+	variables := mergeVariables(runConfig.Vars, cfg.Variables)
 
 	// Inject system facts (ansible_os_family, ansible_distribution, etc.)
 	// These are added after config vars but before expansion, so templates can use them
@@ -245,11 +259,7 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 	}
 
 	// Resolve to absolute path
-	absIncludePath := includePath
-	if !filepath.IsAbs(includePath) {
-		absIncludePath = filepath.Join(ctx.CurrentDir, includePath)
-	}
-	absIncludePath, err = filepath.Abs(absIncludePath)
+	absIncludePath, err := resolvePath(includePath, ctx.CurrentDir)
 	if err != nil {
 		return fmt.Errorf("failed to resolve include path: %w", err)
 	}
@@ -386,6 +396,14 @@ func (p *Planner) expandWithFileTree(step config.Step, ctx *ExpansionContext, pl
 
 	// Expand step for each item
 	for i, item := range items {
+		// Calculate directory depth from item path
+		// For filetree items: depth = number of "/" in path (excluding leading "/")
+		depth := 0
+		trimmedPath := strings.TrimPrefix(item.Path, "/")
+		if trimmedPath != "" {
+			depth = strings.Count(trimmedPath, "/")
+		}
+
 		loopCtx := &config.LoopContext{
 			Type:           "with_filetree",
 			Item:           item,
@@ -393,6 +411,7 @@ func (p *Planner) expandWithFileTree(step config.Step, ctx *ExpansionContext, pl
 			First:          i == 0,
 			Last:           i == len(items)-1,
 			LoopExpression: *step.WithFileTree,
+			Depth:          depth,
 		}
 
 		// Create new context with loop variables
@@ -445,9 +464,9 @@ func (p *Planner) expandIncludeVars(step config.Step, ctx *ExpansionContext) err
 	}
 
 	// Resolve to absolute path
-	absVarsPath := varsPath
-	if !filepath.IsAbs(varsPath) {
-		absVarsPath = filepath.Join(ctx.CurrentDir, varsPath)
+	absVarsPath, err := resolvePath(varsPath, ctx.CurrentDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve vars path: %w", err)
 	}
 
 	// Read variables
@@ -542,6 +561,7 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 
 	// Add plan metadata
 	step.ID = stepID
+	step.ActionType = step.DetermineActionType()
 	step.Origin = &origin
 	step.Skipped = skipped
 	step.LoopContext = loopCtx
@@ -674,17 +694,16 @@ func (p *Planner) shouldSkipByTags(stepTags []string, filterTags []string) bool 
 
 // copyContextWithLoopVars creates a new context with loop variables added
 func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config.LoopContext) *ExpansionContext {
-	// Copy variables map
-	newVars := make(map[string]interface{})
-	for k, v := range ctx.Variables {
-		newVars[k] = v
+	// Create loop variables
+	loopVars := map[string]interface{}{
+		"item":  loopCtx.Item,
+		"index": loopCtx.Index,
+		"first": loopCtx.First,
+		"last":  loopCtx.Last,
 	}
 
-	// Add loop variables
-	newVars["item"] = loopCtx.Item
-	newVars["index"] = loopCtx.Index
-	newVars["first"] = loopCtx.First
-	newVars["last"] = loopCtx.Last
+	// Merge context variables with loop variables (loop variables take precedence)
+	newVars := mergeVariables(ctx.Variables, loopVars)
 
 	return &ExpansionContext{
 		Variables:  newVars,

@@ -88,6 +88,7 @@ type Step struct {
 
 	// Plan metadata (populated during plan expansion, omitted in config files)
 	ID          string        `yaml:"id,omitempty" json:"id,omitempty"`
+	ActionType  string        `yaml:"action_type,omitempty" json:"action_type,omitempty"`
 	Origin      *Origin       `yaml:"origin,omitempty" json:"origin,omitempty"`
 	Skipped     bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
 	LoopContext *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
@@ -109,6 +110,7 @@ type LoopContext struct {
 	First          bool        `yaml:"first" json:"first"`
 	Last           bool        `yaml:"last" json:"last"`
 	LoopExpression string      `yaml:"loop_expression,omitempty" json:"loop_expression,omitempty"`
+	Depth          int         `yaml:"depth,omitempty" json:"depth,omitempty"` // Directory depth for filetree items
 }
 
 // countActions returns the number of non-nil action fields in this step.
@@ -133,6 +135,32 @@ func (s *Step) countActions() int {
 		count++
 	}
 	return count
+}
+
+// DetermineActionType returns the action type for this step based on which action field is populated.
+func (s *Step) DetermineActionType() string {
+	if s.Shell != nil {
+		return "shell"
+	}
+	if s.File != nil {
+		return "file"
+	}
+	if s.Template != nil {
+		return "template"
+	}
+	if s.Vars != nil {
+		return "vars"
+	}
+	if s.IncludeVars != nil {
+		return "include_vars"
+	}
+	if s.Include != nil {
+		return "include"
+	}
+	if s.WithItems != nil || s.WithFileTree != nil {
+		return "loop"
+	}
+	return "unknown"
 }
 
 // ValidateOneAction checks that the step has at most one action defined.

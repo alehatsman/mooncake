@@ -9,11 +9,6 @@ import (
 	"github.com/fatih/color"
 )
 
-// Redactor interface for redacting sensitive information from logs
-type Redactor interface {
-	Redact(text string) string
-}
-
 // ConsoleLogger implements Logger interface with colored console output.
 type ConsoleLogger struct {
 	logLevel int

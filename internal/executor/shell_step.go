@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
@@ -83,10 +83,10 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Check for dry-run mode
-	if ec.DryRun {
-		dryRun := newDryRunLogger(ec.Logger)
+	if ec.HandleDryRun(func(dryRun *dryRunLogger) {
 		dryRun.LogShellExecution(renderedCommand, step.Become)
 		dryRun.LogRegister(step)
+	}) {
 		return nil
 	}
 
@@ -225,8 +225,8 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 	var stdoutBuf, stderrBuf bytes.Buffer
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go captureOutput(stdout, &stdoutBuf, ec.Logger, true, &wg)
-	go captureOutput(stderr, &stderrBuf, ec.Logger, false, &wg)
+	go captureOutput(stdout, &stdoutBuf, ec, true, &wg)
+	go captureOutput(stderr, &stderrBuf, ec, false, &wg)
 
 	// Wait for all output to be processed
 	wg.Wait()
@@ -278,6 +278,9 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 		}
 	}
 
+	// Set result in context for event emission
+	ec.CurrentResult = result
+
 	// Return error if command failed (after applying overrides)
 	if result.Failed {
 		// On error, show captured output for debugging (logger will automatically redact)
@@ -297,14 +300,40 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 	return nil
 }
 
-func captureOutput(pipe io.Reader, buf *bytes.Buffer, log logger.Logger, _ bool, wg *sync.WaitGroup) {
+func captureOutput(pipe io.Reader, buf *bytes.Buffer, ec *ExecutionContext, isStdout bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(pipe)
+	lineNum := 0
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		buf.WriteString(line + "\n")
+		lineNum++
+
+		// Determine stream type
+		stream := "stderr"
+		if isStdout {
+			stream = "stdout"
+		}
+
+		// Emit output event
+		if isStdout {
+			ec.EmitEvent(events.EventStepStdout, events.StepOutputData{
+				StepID:     ec.CurrentStepID,
+				Stream:     stream,
+				Line:       line,
+				LineNumber: lineNum,
+			})
+		} else {
+			ec.EmitEvent(events.EventStepStderr, events.StepOutputData{
+				StepID:     ec.CurrentStepID,
+				Stream:     stream,
+				Line:       line,
+				LineNumber: lineNum,
+			})
+		}
 
 		// Only show in debug mode (both stdout and stderr)
-		log.Debugf(" %v", line)
+		ec.Logger.Debugf(" %v", line)
 	}
 }

@@ -272,10 +272,6 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 	}
 
 	renderer := template.NewPongo2Renderer()
-	statsSkipped := 0
-	statsExecuted := 0
-	statsFailed := 0
-	globalExecuted := 0
 
 	ec := &ExecutionContext{
 		Template:            renderer,
@@ -283,10 +279,7 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 		Evaluator:           expression.NewGovaluateEvaluator(),
 		Variables:           make(map[string]interface{}),
 		Logger:              logger.NewConsoleLogger(logger.InfoLevel),
-		StatsSkipped:        &statsSkipped,
-		StatsExecuted:       &statsExecuted,
-		StatsFailed:         &statsFailed,
-		GlobalStepsExecuted: &globalExecuted,
+		Stats: NewExecutionStats(),
 	}
 
 	err = ExecuteStep(step, ec)
@@ -296,10 +289,10 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 	}
 
 	// Step should be skipped
-	if statsSkipped != 1 {
-		t.Errorf("Expected 1 skipped step, got %d", statsSkipped)
+	if *ec.Stats.Skipped != 1 {
+		t.Errorf("Expected 1 skipped step, got %d", *ec.Stats.Skipped)
 	}
-	if statsExecuted != 0 {
-		t.Errorf("Expected 0 executed steps, got %d", statsExecuted)
+	if *ec.Stats.Executed != 0 {
+		t.Errorf("Expected 0 executed steps, got %d", *ec.Stats.Executed)
 	}
 }

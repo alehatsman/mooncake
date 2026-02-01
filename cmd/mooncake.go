@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -17,6 +18,33 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
+
+const (
+	outputFormatJSON = "json"
+	outputFormatText = "text"
+	outputFormatYAML = "yaml"
+
+	// Artifact default limits
+	defaultMaxOutputBytes = 1048576 // 1MB
+	defaultMaxOutputLines = 1000
+)
+
+// parseTags parses a comma-separated tag string into a slice of trimmed tags
+func parseTags(tagsStr string) []string {
+	if tagsStr == "" {
+		return nil
+	}
+
+	var tags []string
+	for _, tag := range strings.Split(tagsStr, ",") {
+		trimmed := strings.TrimSpace(tag)
+		if trimmed != "" {
+			tags = append(tags, trimmed)
+		}
+	}
+	return tags
+}
+
 
 func run(c *cli.Context) error {
 	// Check if running from plan
@@ -28,45 +56,25 @@ func run(c *cli.Context) error {
 	raw := c.Bool("raw")
 	dryRun := c.Bool("dry-run")
 	logLevel := c.String("log-level")
-
-	var log logger.Logger
+	outputFormat := c.String("output-format")
 
 	// Force raw mode for dry-run
 	if dryRun {
 		raw = true
 	}
 
-	// Use animated TUI by default if supported, unless --raw is specified
-	if !raw && logger.IsTUISupported() {
-		tuiLogger, err := logger.NewTUILogger(logger.InfoLevel)
-		if err != nil {
-			// Fallback to console logger if TUI initialization fails
-			log = logger.NewLogger(logger.InfoLevel)
-		} else {
-			log = tuiLogger
-			tuiLogger.Start()
-			defer tuiLogger.Stop()
-		}
-	} else {
-		// Use console logger for raw output or when TUI is not supported
-		log = logger.NewLogger(logger.InfoLevel)
+	// Validate output format
+	if outputFormat != outputFormatText && outputFormat != outputFormatJSON {
+		return fmt.Errorf("invalid output-format: %s (must be 'text' or 'json')", outputFormat)
 	}
 
-	if err := log.SetLogLevelStr(logLevel); err != nil {
-		return err
+	// JSON format requires raw mode
+	if outputFormat == outputFormatJSON && !raw {
+		return fmt.Errorf("--output-format json requires --raw flag")
 	}
 
 	// Parse tags from comma-separated string
-	var tags []string
-	tagsStr := c.String("tags")
-	if tagsStr != "" {
-		for _, tag := range strings.Split(tagsStr, ",") {
-			trimmed := strings.TrimSpace(tag)
-			if trimmed != "" {
-				tags = append(tags, trimmed)
-			}
-		}
-	}
+	tags := parseTags(c.String("tags"))
 
 	// Validate password input methods (mutual exclusion)
 	passwordMethods := 0
@@ -89,6 +97,43 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
 	}
 
+	// Always use event-driven architecture
+	// Create event publisher
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+
+	// Parse log level for subscriber
+	level := logger.InfoLevel
+	switch logLevel {
+	case "debug":
+		level = logger.DebugLevel
+	case "error":
+		level = logger.ErrorLevel
+	}
+
+	// Create appropriate subscriber based on mode
+	if !raw && logger.IsTUISupported() {
+		// Use TUI subscriber for animated display
+		tuiSubscriber, err := logger.NewTUISubscriber(level)
+		if err != nil {
+			// Fallback to console subscriber if TUI initialization fails
+			subscriber := logger.NewConsoleSubscriber(level, outputFormat)
+			publisher.Subscribe(subscriber)
+		} else {
+			tuiSubscriber.Start()
+			defer tuiSubscriber.Stop()
+			publisher.Subscribe(tuiSubscriber)
+		}
+	} else {
+		// Use console subscriber for raw/JSON output
+		subscriber := logger.NewConsoleSubscriber(level, outputFormat)
+		publisher.Subscribe(subscriber)
+	}
+
+	// Create a minimal logger for internal use (errors, etc.)
+	internalLog := logger.NewLogger(level)
+
+	// Execute with event publisher
 	return executor.Start(executor.StartConfig{
 		ConfigFilePath:   c.String("config"),
 		VarsFilePath:     c.String("vars"),
@@ -98,7 +143,13 @@ func run(c *cli.Context) error {
 		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
 		Tags:             tags,
 		DryRun:           dryRun,
-	}, log)
+
+		// Artifact configuration
+		ArtifactsDir:      c.String("artifacts-dir"),
+		CaptureFullOutput: c.Bool("capture-full-output"),
+		MaxOutputBytes:    c.Int("max-output-bytes"),
+		MaxOutputLines:    c.Int("max-output-lines"),
+	}, internalLog, publisher)
 }
 
 func runFromPlan(c *cli.Context, planPath string) error {
@@ -109,39 +160,31 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	}
 
 	// Setup logger
-	raw := c.Bool("raw")
 	dryRun := c.Bool("dry-run")
 	logLevel := c.String("log-level")
 
-	var log logger.Logger
+	// Always use event-driven architecture
+	publisher := events.NewPublisher()
+	defer publisher.Close()
 
-	// Force raw mode for dry-run
-	if dryRun {
-		raw = true
+	// Parse log level
+	level := logger.InfoLevel
+	switch logLevel {
+	case "debug":
+		level = logger.DebugLevel
+	case "error":
+		level = logger.ErrorLevel
 	}
 
-	// Use animated TUI by default if supported, unless --raw is specified
-	if !raw && logger.IsTUISupported() {
-		tuiLogger, err := logger.NewTUILogger(logger.InfoLevel)
-		if err != nil {
-			// Fallback to console logger if TUI initialization fails
-			log = logger.NewLogger(logger.InfoLevel)
-		} else {
-			log = tuiLogger
-			tuiLogger.Start()
-			defer tuiLogger.Stop()
-		}
-	} else {
-		// Use console logger for raw output or when TUI is not supported
-		log = logger.NewLogger(logger.InfoLevel)
-	}
+	// Create console subscriber for text output
+	subscriber := logger.NewConsoleSubscriber(level, outputFormatText)
+	publisher.Subscribe(subscriber)
 
-	if err := log.SetLogLevelStr(logLevel); err != nil {
-		return err
-	}
+	// Create minimal logger for internal use
+	internalLog := logger.NewLogger(level)
 
-	// Execute plan
-	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, log)
+	// Execute plan with event publisher
+	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, internalLog, publisher)
 }
 
 func explainCommand(_ *cli.Context) error {
@@ -162,16 +205,7 @@ func planCommand(c *cli.Context) error {
 	showOrigins := c.Bool("show-origins")
 
 	// Parse tags
-	var tags []string
-	tagsStr := c.String("tags")
-	if tagsStr != "" {
-		for _, tag := range strings.Split(tagsStr, ",") {
-			trimmed := strings.TrimSpace(tag)
-			if trimmed != "" {
-				tags = append(tags, trimmed)
-			}
-		}
-	}
+	tags := parseTags(c.String("tags"))
 
 	// Load variables if specified
 	var variables map[string]interface{}
@@ -207,11 +241,11 @@ func planCommand(c *cli.Context) error {
 
 	// Format and display plan
 	switch format {
-	case "json":
+	case outputFormatJSON:
 		return formatPlanJSON(planData)
-	case "yaml":
+	case outputFormatYAML:
 		return formatPlanYAML(planData)
-	case "text":
+	case outputFormatText:
 		return formatPlanText(planData, showOrigins)
 	default:
 		return fmt.Errorf("unsupported format: %s (use text, json, or yaml)", format)
@@ -301,7 +335,7 @@ func validateCommand(c *cli.Context) error {
 	hasErrors := config.HasErrors(diagnostics)
 
 	// Output diagnostics
-	if format == "json" {
+	if format == outputFormatJSON {
 		// JSON output
 		type ValidationResult struct {
 			Valid       bool                  `json:"valid"`
@@ -400,6 +434,31 @@ func createApp() *cli.App {
 						Name:  "dry-run",
 						Value: false,
 						Usage: "Preview what would be executed without making changes",
+					},
+					&cli.StringFlag{
+						Name:  "output-format",
+						Value: "text",
+						Usage: "Output format: text or json (requires --raw)",
+					},
+					&cli.StringFlag{
+						Name:  "artifacts-dir",
+						Value: "",
+						Usage: "Directory to store run artifacts (e.g., .mooncake)",
+					},
+					&cli.BoolFlag{
+						Name:  "capture-full-output",
+						Value: false,
+						Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)",
+					},
+					&cli.IntFlag{
+						Name:  "max-output-bytes",
+						Value: defaultMaxOutputBytes,
+						Usage: "Max bytes of output per step in results.json",
+					},
+					&cli.IntFlag{
+						Name:  "max-output-lines",
+						Value: defaultMaxOutputLines,
+						Usage: "Max lines of output per step in results.json",
 					},
 					&cli.StringFlag{
 						Name:  "from-plan",

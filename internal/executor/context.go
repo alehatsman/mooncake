@@ -2,6 +2,9 @@
 package executor
 
 import (
+	"time"
+
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -9,6 +12,29 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
+
+// ExecutionStats holds shared statistics counters for execution tracking.
+// All fields are pointers to enable shared state across nested execution contexts.
+type ExecutionStats struct {
+	// Global tracks total non-skipped steps across the entire execution tree
+	Global *int
+	// Executed counts successfully completed steps
+	Executed *int
+	// Skipped counts steps skipped due to when conditions or tag filtering
+	Skipped *int
+	// Failed counts steps that failed with errors
+	Failed *int
+}
+
+// NewExecutionStats creates a new ExecutionStats with all counters initialized to zero
+func NewExecutionStats() *ExecutionStats {
+	return &ExecutionStats{
+		Global:   new(int),
+		Executed: new(int),
+		Skipped:  new(int),
+		Failed:   new(int),
+	}
+}
 
 // ExecutionContext holds all state needed to execute a step or sequence of steps.
 //
@@ -62,22 +88,9 @@ type ExecutionContext struct {
 	// Commands are not executed, files are not created, templates are not rendered.
 	DryRun bool
 
-	// GlobalStepsExecuted tracks total non-skipped steps across the entire execution tree.
-	// SHARED via pointer - incremented in any context affects all contexts.
-	// Used for cumulative progress display in TUI.
-	GlobalStepsExecuted *int
-
-	// StatsExecuted counts successfully completed steps across the entire execution.
-	// SHARED via pointer - all contexts update the same counter.
-	StatsExecuted *int
-
-	// StatsSkipped counts steps skipped due to when conditions or tag filtering.
-	// SHARED via pointer - all contexts update the same counter.
-	StatsSkipped *int
-
-	// StatsFailed counts steps that failed with errors.
-	// SHARED via pointer - all contexts update the same counter.
-	StatsFailed *int
+	// Stats holds shared execution statistics counters.
+	// SHARED via pointer - all contexts update the same counters.
+	Stats *ExecutionStats
 
 	// Template renders template strings with variable substitution.
 	// SHARED across all contexts - same instance used everywhere.
@@ -98,6 +111,18 @@ type ExecutionContext struct {
 	// Redactor redacts sensitive values (passwords) from log output.
 	// SHARED across all contexts - same instance used everywhere.
 	Redactor *security.Redactor
+
+	// EventPublisher publishes execution events to subscribers.
+	// SHARED across all contexts - same instance used everywhere.
+	EventPublisher events.Publisher
+
+	// CurrentStepID is the unique identifier for the currently executing step.
+	// Used for correlating events from the same step execution.
+	CurrentStepID string
+
+	// CurrentResult holds the result of the currently executing step.
+	// Handlers should set this to provide result data to event emission.
+	CurrentResult *Result
 }
 
 // Copy creates a new ExecutionContext for a nested execution scope (include or loop).
@@ -120,13 +145,8 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		Tags:         ec.Tags,
 		DryRun:       ec.DryRun,
 
-		// Share the same global counter pointer
-		GlobalStepsExecuted: ec.GlobalStepsExecuted,
-
-		// Share the same statistics pointers
-		StatsExecuted: ec.StatsExecuted,
-		StatsSkipped:  ec.StatsSkipped,
-		StatsFailed:   ec.StatsFailed,
+		// Share the same statistics pointer
+		Stats: ec.Stats,
 
 		// Share the same dependency instances
 		Template:  ec.Template,
@@ -134,5 +154,32 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		PathUtil:  ec.PathUtil,
 		FileTree:  ec.FileTree,
 		Redactor:  ec.Redactor,
+
+		// Share the same event publisher
+		EventPublisher: ec.EventPublisher,
+		CurrentStepID:  ec.CurrentStepID,
 	}
+}
+
+// EmitEvent publishes an event to all subscribers
+func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface{}) {
+	if ec.EventPublisher != nil {
+		ec.EventPublisher.Publish(events.Event{
+			Type:      eventType,
+			Timestamp: time.Now(),
+			Data:      data,
+		})
+	}
+}
+
+// HandleDryRun executes dry-run logging if in dry-run mode.
+// Returns true if in dry-run mode (caller should return early).
+// The logFn is called with a dryRunLogger to perform logging.
+func (ec *ExecutionContext) HandleDryRun(logFn func(*dryRunLogger)) bool {
+	if !ec.DryRun {
+		return false
+	}
+	dryRun := newDryRunLogger(ec.Logger)
+	logFn(dryRun)
+	return true
 }

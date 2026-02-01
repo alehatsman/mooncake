@@ -1,0 +1,168 @@
+// Package events provides the event system for Mooncake execution lifecycle.
+// Events are emitted during execution and consumed by subscribers for logging,
+// artifacts, and observability.
+package events
+
+import (
+	"time"
+)
+
+// Event represents a single event in the execution lifecycle
+type Event struct {
+	Type      EventType   `json:"type"`
+	Timestamp time.Time   `json:"timestamp"`
+	Data      interface{} `json:"data"`
+}
+
+// EventType identifies the type of event
+type EventType string
+
+// Event types for run lifecycle
+const (
+	EventRunStarted   EventType = "run.started"
+	EventPlanLoaded   EventType = "plan.loaded"
+	EventRunCompleted EventType = "run.completed"
+)
+
+// Event types for step lifecycle
+const (
+	EventStepStarted   EventType = "step.started"
+	EventStepCompleted EventType = "step.completed"
+	EventStepSkipped   EventType = "step.skipped"
+	EventStepFailed    EventType = "step.failed"
+)
+
+// Event types for output streaming
+const (
+	EventStepStdout EventType = "step.stdout"
+	EventStepStderr EventType = "step.stderr"
+	EventStepDebug  EventType = "step.debug"
+)
+
+// Event types for file operations
+const (
+	EventFileCreated    EventType = "file.created"
+	EventFileUpdated    EventType = "file.updated"
+	EventDirCreated     EventType = "directory.created"
+	EventTemplateRender EventType = "template.rendered"
+)
+
+// Event types for variables
+const (
+	EventVarsSet    EventType = "variables.set"
+	EventVarsLoaded EventType = "variables.loaded"
+)
+
+// RunStartedData contains data for run.started events
+type RunStartedData struct {
+	RootFile   string   `json:"root_file"`
+	Tags       []string `json:"tags,omitempty"`
+	DryRun     bool     `json:"dry_run"`
+	TotalSteps int      `json:"total_steps"`
+}
+
+// PlanLoadedData contains data for plan.loaded events
+type PlanLoadedData struct {
+	RootFile   string   `json:"root_file"`
+	TotalSteps int      `json:"total_steps"`
+	Tags       []string `json:"tags,omitempty"`
+}
+
+// RunCompletedData contains data for run.completed events
+type RunCompletedData struct {
+	TotalSteps    int    `json:"total_steps"`
+	SuccessSteps  int    `json:"success_steps"`
+	FailedSteps   int    `json:"failed_steps"`
+	SkippedSteps  int    `json:"skipped_steps"`
+	ChangedSteps  int    `json:"changed_steps"`
+	DurationMs    int64  `json:"duration_ms"`
+	Success       bool   `json:"success"`
+	ErrorMessage  string `json:"error_message,omitempty"`
+}
+
+// StepStartedData contains data for step.started events
+type StepStartedData struct {
+	StepID     string            `json:"step_id"`
+	Name       string            `json:"name"`
+	Level      int               `json:"level"`
+	GlobalStep int               `json:"global_step"`
+	Action     string            `json:"action"`
+	Tags       []string          `json:"tags,omitempty"`
+	When       string            `json:"when,omitempty"`
+	Vars       map[string]string `json:"vars,omitempty"`
+	Depth      int               `json:"depth,omitempty"` // Directory depth for filetree items
+	DryRun     bool              `json:"dry_run"`
+}
+
+// StepCompletedData contains data for step.completed events
+type StepCompletedData struct {
+	StepID     string                 `json:"step_id"`
+	Name       string                 `json:"name"`
+	Level      int                    `json:"level"`
+	DurationMs int64                  `json:"duration_ms"`
+	Changed    bool                   `json:"changed"`
+	Result     map[string]interface{} `json:"result,omitempty"`
+	Depth      int                    `json:"depth,omitempty"` // Directory depth for filetree items
+	DryRun     bool                   `json:"dry_run"`
+}
+
+// StepSkippedData contains data for step.skipped events
+type StepSkippedData struct {
+	StepID string `json:"step_id"`
+	Name   string `json:"name"`
+	Level  int    `json:"level"`
+	Reason string `json:"reason"`
+	Depth  int    `json:"depth,omitempty"` // Directory depth for filetree items
+}
+
+// StepFailedData contains data for step.failed events
+type StepFailedData struct {
+	StepID       string `json:"step_id"`
+	Name         string `json:"name"`
+	Level        int    `json:"level"`
+	ErrorMessage string `json:"error_message"`
+	DurationMs   int64  `json:"duration_ms"`
+	Depth        int    `json:"depth,omitempty"` // Directory depth for filetree items
+	DryRun       bool   `json:"dry_run"`
+}
+
+// StepOutputData contains data for step.stdout/stderr events
+type StepOutputData struct {
+	StepID     string `json:"step_id"`
+	Stream     string `json:"stream"` // "stdout" or "stderr"
+	Line       string `json:"line"`
+	LineNumber int    `json:"line_number"`
+}
+
+// FileOperationData contains data for file operation events
+type FileOperationData struct {
+	Path      string `json:"path"`
+	Mode      string `json:"mode,omitempty"`
+	SizeBytes int64  `json:"size_bytes,omitempty"`
+	Changed   bool   `json:"changed"`
+	DryRun    bool   `json:"dry_run"`
+}
+
+// TemplateRenderData contains data for template.rendered events
+type TemplateRenderData struct {
+	TemplatePath string `json:"template_path"`
+	DestPath     string `json:"dest_path"`
+	SizeBytes    int64  `json:"size_bytes"`
+	Changed      bool   `json:"changed"`
+	DryRun       bool   `json:"dry_run"`
+}
+
+// VarsSetData contains data for variables.set events
+type VarsSetData struct {
+	Count  int      `json:"count"`
+	Keys   []string `json:"keys"`
+	DryRun bool     `json:"dry_run"`
+}
+
+// VarsLoadedData contains data for variables.loaded events
+type VarsLoadedData struct {
+	FilePath string   `json:"file_path"`
+	Count    int      `json:"count"`
+	Keys     []string `json:"keys"`
+	DryRun   bool     `json:"dry_run"`
+}
