@@ -653,3 +653,194 @@ func TestTestLogger_Complete(t *testing.T) {
 		t.Error("Complete() should log message containing 'Complete'")
 	}
 }
+
+// testRedactor is a test implementation of the Redactor interface with configurable behavior
+type testRedactor struct {
+	redactFunc func(string) string
+}
+
+func (m *testRedactor) Redact(text string) string {
+	if m.redactFunc != nil {
+		return m.redactFunc(text)
+	}
+	return text
+}
+
+func TestConsoleLogger_SetRedactor(t *testing.T) {
+	logger := NewConsoleLogger(InfoLevel)
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			// Replace "secret" with "***"
+			return "redacted: " + text
+		},
+	}
+
+	// Should not panic
+	logger.SetRedactor(redactor)
+
+	// Verify redactor is set by checking if redact method uses it
+	result := logger.redact("test message")
+	if result != "redacted: test message" {
+		t.Errorf("redact() with redactor = %q, want %q", result, "redacted: test message")
+	}
+}
+
+func TestConsoleLogger_Redact_WithRedactor(t *testing.T) {
+	logger := NewConsoleLogger(InfoLevel)
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			// Simple replacement
+			if text == "password123" {
+				return "***"
+			}
+			return text
+		},
+	}
+
+	logger.SetRedactor(redactor)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "redact password",
+			input:    "password123",
+			expected: "***",
+		},
+		{
+			name:     "no redaction needed",
+			input:    "normal text",
+			expected: "normal text",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := logger.redact(tt.input)
+			if result != tt.expected {
+				t.Errorf("redact(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestConsoleLogger_Redact_WithoutRedactor(t *testing.T) {
+	logger := NewConsoleLogger(InfoLevel)
+
+	// Without redactor, text should be returned unchanged
+	input := "sensitive data"
+	result := logger.redact(input)
+
+	if result != input {
+		t.Errorf("redact() without redactor = %q, want %q", result, input)
+	}
+}
+
+func TestTestLogger_SetRedactor(t *testing.T) {
+	testLog := NewTestLogger()
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			return "***"
+		},
+	}
+
+	// Should not panic
+	testLog.SetRedactor(redactor)
+
+	// Verify redactor is set
+	result := testLog.redact("secret")
+	if result != "***" {
+		t.Errorf("redact() with redactor = %q, want %q", result, "***")
+	}
+}
+
+func TestTestLogger_Redact_WithRedactor(t *testing.T) {
+	testLog := NewTestLogger()
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			return "[REDACTED]"
+		},
+	}
+
+	testLog.SetRedactor(redactor)
+
+	result := testLog.redact("sensitive information")
+	if result != "[REDACTED]" {
+		t.Errorf("redact() = %q, want %q", result, "[REDACTED]")
+	}
+}
+
+func TestTestLogger_Redact_WithoutRedactor(t *testing.T) {
+	testLog := NewTestLogger()
+
+	input := "normal message"
+	result := testLog.redact(input)
+
+	if result != input {
+		t.Errorf("redact() without redactor = %q, want %q", result, input)
+	}
+}
+
+func TestConsoleLogger_Infof_WithRedactor(t *testing.T) {
+	testLog := NewTestLogger()
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			// Replace "password" with "***"
+			if text == "user password123" {
+				return "user ***"
+			}
+			return text
+		},
+	}
+
+	testLog.SetRedactor(redactor)
+	testLog.Infof("user password123")
+
+	// Verify the logged message is redacted
+	if !testLog.Contains("user ***") {
+		t.Error("Infof() should log redacted message")
+	}
+}
+
+func TestConsoleLogger_Debugf_WithRedactor(t *testing.T) {
+	testLog := NewTestLogger()
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			return "***DEBUG***"
+		},
+	}
+
+	testLog.SetRedactor(redactor)
+	testLog.Debugf("debug secret")
+
+	// Verify the logged message is redacted
+	if !testLog.Contains("***DEBUG***") {
+		t.Error("Debugf() should log redacted message")
+	}
+}
+
+func TestConsoleLogger_Errorf_WithRedactor(t *testing.T) {
+	testLog := NewTestLogger()
+
+	redactor := &testRedactor{
+		redactFunc: func(text string) string {
+			return "***ERROR***"
+		},
+	}
+
+	testLog.SetRedactor(redactor)
+	testLog.Errorf("error with secret")
+
+	// Verify the logged message is redacted
+	if !testLog.Contains("***ERROR***") {
+		t.Error("Errorf() should log redacted message")
+	}
+}
