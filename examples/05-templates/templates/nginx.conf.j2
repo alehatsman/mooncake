@@ -1,0 +1,19 @@
+server {
+    listen {{ port }};
+    server_name {{ server_name }};
+
+    root {{ document_root }};
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    {% if enable_ssl %}
+    ssl_certificate {{ ssl_cert_path }};
+    ssl_certificate_key {{ ssl_key_path }};
+    {% endif %}
+
+    access_log {{ log_dir }}/access.log;
+    error_log {{ log_dir }}/error.log;
+}

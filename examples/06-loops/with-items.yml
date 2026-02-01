@@ -1,0 +1,36 @@
+# Example showing list iteration with with_items
+
+# Define a list of packages to install
+- vars:
+    packages:
+      - neovim
+      - ripgrep
+      - fzf
+      - tmux
+
+    users:
+      - alice
+      - bob
+      - charlie
+
+# Iterate over packages
+- name: Install package
+  shell: echo "Installing {{ item }}"
+  with_items: "{{ packages }}"
+
+# Create directories for each user
+- name: Create user directory
+  file:
+    path: "/tmp/users/{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items: "{{ users }}"
+
+# Create config files for each user
+- name: Create user config
+  file:
+    path: "/tmp/users/{{ item }}/config.txt"
+    state: file
+    content: "Configuration for {{ item }}"
+    mode: "0644"
+  with_items: "{{ users }}"

@@ -1,0 +1,48 @@
+# Example showing how to capture and use command output with register
+
+# Check if a command exists
+- name: Check if git is installed
+  shell: which git
+  register: git_check
+
+- name: Show git location
+  shell: echo "Git found at {{ git_check.stdout }}"
+  when: git_check.rc == 0
+
+- name: Git not found
+  shell: echo "Git is not installed"
+  when: git_check.rc != 0
+
+# Get current user
+- name: Get current username
+  shell: whoami
+  register: current_user
+
+# Use captured output in file operations
+- name: Create user-specific config
+  file:
+    path: "/tmp/{{ current_user.stdout }}_config.txt"
+    state: file
+    content: |
+      User: {{ current_user.stdout }}
+      Config created by Mooncake
+    mode: "0644"
+
+# Check OS version
+- name: Get OS version
+  shell: uname -r
+  register: os_version
+
+- name: Display OS version
+  shell: echo "Running kernel version {{ os_version.stdout }}"
+
+# Example with file operations
+- name: Create test file
+  file:
+    path: /tmp/test-register.txt
+    state: file
+    content: "Test content"
+  register: file_result
+
+- name: Show if file was created
+  shell: echo "File operation changed={{ file_result.changed }}"

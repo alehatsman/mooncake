@@ -1,0 +1,18 @@
+#!/bin/bash
+# Generated script for {{ project_name }}
+
+APP_NAME="{{ app_name }}"
+ENVIRONMENT="{{ environment }}"
+USER="{{ user_home | expanduser }}"
+
+echo "Starting $APP_NAME in $ENVIRONMENT mode"
+echo "User home: $USER"
+
+{% if commands %}
+# Execute commands
+{% for cmd in commands %}
+{{ cmd }}
+{% endfor %}
+{% endif %}
+
+echo "Script completed successfully"

@@ -1,0 +1,69 @@
+# Example showing variables and system facts
+
+# Define custom variables
+- vars:
+    app_name: MyApplication
+    version: "1.0.0"
+    environment: development
+    config_dir: "~/.config/{{app_name}}"
+
+# Use custom variables
+- name: Display custom variables
+  shell: |
+    echo "Application: {{app_name}}"
+    echo "Version: {{version}}"
+    echo "Environment: {{environment}}"
+    echo "Config directory: {{config_dir}}"
+
+# Use system facts - Basic
+- name: Display system facts
+  shell: |
+    echo "Operating System: {{os}}"
+    echo "Architecture: {{arch}}"
+    echo "Hostname: {{hostname}}"
+    echo "User Home: {{user_home}}"
+
+# Use system facts - Hardware
+- name: Display hardware info
+  shell: |
+    echo "CPU Cores: {{cpu_cores}}"
+    echo "Memory: {{memory_total_mb}} MB"
+
+# Use system facts - Distribution (Linux/macOS)
+- name: Display distribution info
+  shell: |
+    echo "Distribution: {{distribution}}"
+    echo "Distribution Version: {{distribution_version}}"
+    echo "Distribution Major: {{distribution_major}}"
+
+# Use system facts - Software
+- name: Display software info
+  shell: |
+    echo "Package Manager: {{package_manager}}"
+    echo "Python Version: {{python_version}}"
+
+# Use system facts - Network
+- name: Display network info
+  shell: echo "IP Addresses: {{ip_addresses_string}}"
+
+# Combine custom variables and system facts
+- name: Create version-specific directory
+  file:
+    path: "/tmp/{{app_name}}-{{version}}-{{os}}-{{arch}}"
+    state: directory
+    mode: "0755"
+
+- name: Create system info file
+  file:
+    path: "/tmp/system-info.txt"
+    state: file
+    content: |
+      System Information
+      ==================
+      OS: {{os}} {{arch}}
+      Distribution: {{distribution}} {{distribution_version}}
+      Hostname: {{hostname}}
+      CPU Cores: {{cpu_cores}}
+      Memory: {{memory_total_mb}} MB
+      Package Manager: {{package_manager}}
+    mode: "0644"

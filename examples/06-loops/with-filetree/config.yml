@@ -1,0 +1,21 @@
+# Example showing file tree iteration with with_filetree
+
+- name: Create backup directory
+  file:
+    path: /tmp/dotfiles-backup
+    state: directory
+    mode: "0755"
+
+# Copy all dotfiles from the dotfiles directory
+- name: Copy dotfile
+  shell: cp "{{ item.src }}" "/tmp/dotfiles-backup/{{ item.name }}"
+  with_filetree: ./dotfiles
+
+# Alternative: Create files with modified content
+- name: Display dotfile info
+  shell: |
+    echo "File: {{ item.name }}"
+    echo "Source: {{ item.src }}"
+    echo "Is directory: {{ item.is_dir }}"
+  with_filetree: ./dotfiles
+  when: item.is_dir == false

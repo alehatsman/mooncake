@@ -1,0 +1,26 @@
+# Configuration for {{ app_name }}
+app:
+  name: {{ app_name }}
+  version: {{ version }}
+  environment: {{ environment }}
+
+server:
+  host: {{ host }}
+  port: {{ port }}
+  {% if debug %}
+  debug: true
+  log_level: debug
+  {% else %}
+  debug: false
+  log_level: info
+  {% endif %}
+
+database:
+  host: {{ db_host }}
+  port: {{ db_port }}
+  name: {{ db_name }}
+
+features:
+  {% for feature in features %}
+  - {{ feature }}
+  {% endfor %}

@@ -1,0 +1,36 @@
+[user]
+  name = {{ git_user_name }}
+  email = {{ git_user_email }}
+
+[core]
+  editor = {{ git_editor }}
+  autocrlf = input
+  excludesfile = ~/.gitignore_global
+
+[init]
+  defaultBranch = main
+
+[pull]
+  rebase = false
+
+[alias]
+  st = status
+  co = checkout
+  br = branch
+  ci = commit
+  unstage = reset HEAD --
+  last = log -1 HEAD
+  visual = log --graph --oneline --decorate --all
+
+[color]
+  ui = auto
+
+{% if os == "darwin" %}
+[credential]
+  helper = osxkeychain
+{% endif %}
+
+{% if os == "linux" %}
+[credential]
+  helper = cache --timeout=3600
+{% endif %}
