@@ -4,102 +4,102 @@
 
 ### 0.1 Config model + schema
 - [ ] Define canonical internal structs:
-  - [ ] `RunConfig` (root)
-  - [ ] `Step` (union: exactly one action key)
-  - [ ] `Action` variants (shell/file/template/include/include_vars/vars/assert/...)
-  - [ ] `Common` fields: `name`, `tags[]`, `when`, `become`, `become_user`, `env`, `cwd`, `register`, `timeout`, `retries`, `retry_delay`, `changed_when`, `failed_when`
-- [ ] JSON Schema (or CUE → JSON Schema) for:
-  - [ ] root document
-  - [ ] step union (`oneOf`)
-  - [ ] per-action payloads
-  - [ ] expression strings (typed as string but tagged as `expr`)
-- [ ] Schema constraints:
-  - [ ] exactly-one action key enforcement
-  - [ ] forbid unknown fields (strict mode)
-  - [ ] validate `tags` format, `timeout` format, paths non-empty
-- [ ] YAML source mapping:
-  - [ ] parse with node position retention
-  - [ ] map validation errors to `file:line:col`
-  - [ ] include include-chain context: `A.yml -> B.yml -> C.yml:line:col`
+  - [ ] `RunConfig` (root) — missing: root is just `[]Step`
+  - [x] `Step` (union: exactly one action key) — exists but uses optional pointers, not explicit union type
+  - [x] `Action` variants (shell/file/template/include/include_vars/vars/assert/...) — shell/file/template/include/include_vars/vars exist; assert missing
+  - [ ] `Common` fields: `name`, `tags[]`, `when`, `become`, `become_user`, `env`, `cwd`, `register`, `timeout`, `retries`, `retry_delay`, `changed_when`, `failed_when` — has: name, tags, when, become, register; missing: become_user, env, cwd, timeout, retries, retry_delay, changed_when, failed_when
+- [x] JSON Schema (or CUE → JSON Schema) for:
+  - [x] root document — embedded in validator.go, 196 lines
+  - [x] step union (`oneOf`) — implemented with oneOf + not constraints
+  - [x] per-action payloads — template, file objects defined
+  - [ ] expression strings (typed as string but tagged as `expr`) — no pattern validation for expressions
+- [x] Schema constraints:
+  - [x] exactly-one action key enforcement — oneOf with not conditions implemented
+  - [x] forbid unknown fields (strict mode) — additionalProperties: false throughout
+  - [ ] validate `tags` format, `timeout` format, paths non-empty — mode/state validated; timeout field missing; tags/paths no constraints
+- [x] YAML source mapping:
+  - [x] parse with node position retention — location.go implements LocationMap with JSON pointer tracking
+  - [x] map validation errors to `file:line:col` — diagnostic.go formats errors with file:line:col
+  - [ ] include include-chain context: `A.yml -> B.yml -> C.yml:line:col` — only shows immediate file location
 - [ ] Template pre-validation:
-  - [ ] validate pongo2 syntax for any field marked templatable
-  - [ ] surface template line/col + originating yaml path
+  - [ ] validate pongo2 syntax for any field marked templatable — only runtime validation; no pre-validation for when/with_items/template content
+  - [ ] surface template line/col + originating yaml path — not implemented
 - [ ] CLI:
-  - [ ] `mooncake validate --config ... --vars ...`
-  - [ ] exit codes: `0 ok`, `2 validation error`, `3 runtime error`
+  - [ ] `mooncake validate --config ... --vars ...` — not implemented; only has run and explain commands
+  - [ ] exit codes: `0 ok`, `2 validation error`, `3 runtime error` — not specified
 
 ### 0.2 Deterministic plan compiler
 - [ ] Plan IR types:
-  - [ ] `Plan` (ordered steps)
+  - [ ] `Plan` (ordered steps) — not implemented; uses config.Step directly
   - [ ] `PlanStep` fields:
-    - [ ] `id` (stable)
-    - [ ] `origin` (file, line, col, include stack)
-    - [ ] `name_resolved` (post-template)
-    - [ ] `tags_effective`
-    - [ ] `when_expr_resolved` (string)
-    - [ ] `become_effective`
-    - [ ] `action` (compiled action payload)
-    - [ ] `rendered` (optional: dry-run string)
+    - [ ] `id` (stable) — no stable step IDs exist
+    - [ ] `origin` (file, line, col, include stack) — partial: file/line/col tracked, no include stack
+    - [ ] `name_resolved` (post-template) — not stored in plan
+    - [ ] `tags_effective` — not stored in plan
+    - [ ] `when_expr_resolved` (string) — not stored in plan
+    - [ ] `become_effective` — not stored in plan
+    - [ ] `action` (compiled action payload) — not stored in plan
+    - [ ] `rendered` (optional: dry-run string) — not stored in plan
 - [ ] Include expansion:
-  - [ ] recursive includes
-  - [ ] relative path base = directory of including file
-  - [ ] cycle detection with chain display
+  - [x] recursive includes — handleInclude() in executor.go lines 166-209
+  - [x] relative path base = directory of including file — uses pathutil.GetDirectoryOfFile()
+  - [ ] cycle detection with chain display — no cycle detection implemented; can cause infinite loops
 - [ ] Vars layering (deterministic precedence):
-  - [ ] CLI `--vars` (highest)
-  - [ ] include_vars
-  - [ ] config-local vars
-  - [ ] facts (read-only)
+  - [x] CLI `--vars` (highest) — supported, loaded in executor.go lines 613-620
+  - [x] include_vars — implemented in include_vars_step.go
+  - [x] config-local vars — vars step merges into Variables map
+  - [x] facts (read-only) — facts collected and merged globally, but precedence order not explicit/documented
 - [ ] Loop expansion:
-  - [ ] `with_items`: expand to N steps; each has stable id suffix (`stepid[i]`)
-  - [ ] `with_filetree`: deterministic ordering (lexicographic path)
-  - [ ] loop vars: `item`, `index`, `first`, `last`
+  - [ ] `with_items`: expand to N steps; each has stable id suffix (`stepid[i]`) — execution-time expansion works (lines 474-512); no stable IDs or plan-stage expansion
+  - [ ] `with_filetree`: deterministic ordering (lexicographic path) — uses filepath.Walk (lines 514-541); no explicit sorting for determinism
+  - [ ] loop vars: `item`, `index`, `first`, `last` — only `item` implemented (line 70); missing index, first, last
 - [ ] Tag filtering at plan stage:
-  - [ ] if `--tags` set, steps without matching tags are excluded (or marked skipped; pick one and stay consistent)
-  - [ ] dry-run and run show identical step indices/ids
+  - [ ] if `--tags` set, steps without matching tags are excluded (or marked skipped; pick one and stay consistent) — runtime filtering via shouldSkipByTags() (lines 142-164); skips steps, not plan-stage exclusion
+  - [x] dry-run and run show identical step indices/ids — both use same skip logic
 - [ ] CLI:
-  - [ ] `mooncake plan --format json|yaml`
-  - [ ] `--show-origins` prints file:line:col per step
+  - [ ] `mooncake plan --format json|yaml` — not implemented; only run and explain commands exist
+  - [ ] `--show-origins` prints file:line:col per step — not implemented
 
 ### 0.3 Execution semantics (idempotency + check mode)
 - [ ] Core step result model:
-  - [ ] statuses: `ok`, `changed`, `skipped`, `failed`
-  - [ ] timings: start/end/duration
-  - [ ] stdout/stderr capture policy (bounded)
-  - [ ] register payload (structured)
+  - [ ] statuses: `ok`, `changed`, `skipped`, `failed` — uses boolean fields (Failed, Changed, Skipped); no explicit status enum
+  - [ ] timings: start/end/duration — not tracked per-step; only global execution time
+  - [x] stdout/stderr capture policy (bounded) — line-buffered via bufio.Scanner in shell_step.go lines 56-78
+  - [x] register payload (structured) — Result.ToMap() converts to map[string]interface{}; accessible as result.stdout, result.rc, etc.
 - [ ] `--dry-run` (check-mode):
-  - [ ] identical plan + identical evaluators
+  - [x] identical plan + identical evaluators — same expression engine, same skip logic
   - [ ] actions implement `Plan()` and `Apply()`:
-    - [ ] `Plan()` computes diff/intent, no side effects
-    - [ ] `Apply()` executes changes
-  - [ ] dry-run prints `would_change` and reason
+    - [ ] `Plan()` computes diff/intent, no side effects — no Plan/Apply interface; uses early return in handlers
+    - [ ] `Apply()` executes changes — no separate Apply method
+  - [ ] dry-run prints `would_change` and reason — prints action type (e.g., "[DRY-RUN] Would execute: cmd") but no detailed change reasoning/diff
 - [ ] Expression engine:
-  - [ ] `when` boolean expression
-  - [ ] `changed_when` boolean expression based on action result
-  - [ ] `failed_when` boolean expression based on action result
-  - [ ] type rules: missing var handling, nulls, strings/bools/numbers, map/list indexing
+  - [x] `when` boolean expression — handleWhenExpression() in executor.go:110-140; uses expr-lang/expr library
+  - [ ] `changed_when` boolean expression based on action result — not implemented; Changed always set by handler
+  - [ ] `failed_when` boolean expression based on action result — not implemented; Failed set only by exit code or error
+  - [x] type rules: missing var handling, nulls, strings/bools/numbers, map/list indexing — basic support via expr-lang; nil handling works; no explicit documented rules
 - [ ] `shell` idempotency:
-  - [ ] `creates: <path>` → skip if exists
-  - [ ] `unless: <command>` → run only if unless returns non-zero
-  - [ ] `changed_when` override (default: changed if rc==0; or default changed=true; choose explicit contract)
+  - [ ] `creates: <path>` → skip if exists — not implemented; no creates field in Step struct
+  - [ ] `unless: <command>` → run only if unless returns non-zero — not implemented; no unless field
+  - [ ] `changed_when` override (default: changed if rc==0; or default changed=true; choose explicit contract) — not implemented; shell always sets Changed=true (line 84)
 - [ ] Retries:
-  - [ ] `retries: N`
-  - [ ] `retry_delay: duration`
-  - [ ] retry on failure only unless configured
+  - [ ] `retries: N` — not implemented; no retries field in Step struct
+  - [ ] `retry_delay: duration` — not implemented; no retry_delay field
+  - [ ] retry on failure only unless configured — not implemented; no retry logic in executor
 
 ### 0.4 Sudo / privilege escalation
 - [ ] Input methods:
-  - [ ] `--ask-become-pass` (prompt no-echo)
-  - [ ] `--sudo-pass-file` (0600)
-  - [ ] `SUDO_ASKPASS` support (optional)
+  - [ ] `--ask-become-pass` (prompt no-echo) — not implemented; only --sudo-pass CLI flag exists (cmd/mooncake.go:108-110)
+  - [ ] `--sudo-pass-file` (0600) — not implemented; no file-based password input
+  - [ ] `SUDO_ASKPASS` support (optional) — not implemented; no env var handling
 - [ ] Security:
-  - [ ] forbid plaintext `--sudo-pass` by default (or warn + require explicit insecure flag)
-  - [ ] redact password in logs/events
+  - [ ] forbid plaintext `--sudo-pass` by default (or warn + require explicit insecure flag) — not implemented; no warnings or restrictions
+  - [ ] redact password in logs/events — not implemented; SudoPass flows through ExecutionContext without sanitization
 - [ ] Become implementation:
-  - [ ] Linux/macOS: `sudo -S` / askpass
-  - [ ] Windows: explicit not supported or use `runas` (define scope)
+  - [x] Linux/macOS: `sudo -S` / askpass — sudo -S implemented in shell_step.go:40-48; no askpass support
+  - [ ] Windows: explicit not supported or use `runas` (define scope) — not implemented; no Windows privilege escalation
 - [ ] Per-step become:
-  - [ ] `become: true|false`
-  - [ ] `become_user` (optional; linux/mac only)
+  - [x] `become: true|false` — fully implemented; config.go:38, schema.json:22-25, shell_step.go:40
+  - [ ] `become_user` (optional; linux/mac only) — not implemented; no become_user field in Step struct
 
 ---
 
