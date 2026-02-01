@@ -146,7 +146,7 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 	}
 
 	// Read the file again to get vars (ReadConfigWithValidation doesn't return them)
-	data, err := os.ReadFile(path) //nolint:gosec // path is from include directive in config
+	data, err := os.ReadFile(path) // #nosec G304 -- path is from include directive in config
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}

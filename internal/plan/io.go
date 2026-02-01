@@ -14,7 +14,7 @@ import (
 func SavePlanToFile(p *Plan, filePath string) (err error) {
 	ext := filepath.Ext(filePath)
 
-	file, err := os.Create(filePath) //nolint:gosec // filePath is user-provided CLI argument
+	file, err := os.Create(filePath) // #nosec G304 -- filePath is user-provided CLI argument
 	if err != nil {
 		return fmt.Errorf("failed to create plan file: %w", err)
 	}
@@ -46,7 +46,7 @@ func SavePlanToFile(p *Plan, filePath string) (err error) {
 
 // LoadPlanFromFile loads a plan from a JSON or YAML file
 func LoadPlanFromFile(filePath string) (*Plan, error) {
-	data, err := os.ReadFile(filePath) //nolint:gosec // filePath is user-provided CLI argument
+	data, err := os.ReadFile(filePath) // #nosec G304 -- filePath is user-provided CLI argument
 	if err != nil {
 		return nil, fmt.Errorf("failed to read plan file: %w", err)
 	}
