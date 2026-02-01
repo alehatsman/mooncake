@@ -46,6 +46,12 @@ Mooncake is a simple, powerful provisioning tool for system configuration. Write
 
     Animated progress tracking with real-time status updates
 
+-   :material-chart-timeline:{ .lg .middle } **Full Observability**
+
+    ---
+
+    Event streaming, artifacts, and JSON output for monitoring and auditing
+
 </div>
 
 ---
@@ -198,6 +204,9 @@ mooncake run --config <file> [options]
 | `--dry-run` | Preview without executing |
 | `--sudo-pass, -s` | Sudo password for `become: true` steps |
 | `--raw, -r` | Disable animated TUI |
+| `--output-format` | Output format: text, json (default: text) |
+| `--artifacts-dir` | Directory to save run artifacts |
+| `--capture-full-output` | Capture full stdout/stderr to artifact files |
 | `--log-level, -l` | Log level: debug, info, error (default: info) |
 
 **Examples:**
@@ -224,6 +233,12 @@ mooncake run --config config.yml --log-level debug
 # Execute from saved plan
 mooncake plan --config config.yml --format json --output plan.json
 mooncake run --from-plan plan.json
+
+# Enable artifacts for auditing
+mooncake run --config config.yml --artifacts-dir .mooncake
+
+# JSON output for integration
+mooncake run --config config.yml --raw --output-format json
 ```
 
 **Features:**
@@ -745,6 +760,159 @@ mooncake run --config config.yml --dry-run
 - Preview changes in production
 - Debug complex conditionals and includes
 - Verify variable substitution
+
+---
+
+## Observability & Artifacts
+
+### Event System
+
+Mooncake emits structured events during execution, enabling observability, logging, and integration with external systems. Events cover the full execution lifecycle from run start to completion.
+
+**Event Stream Output:**
+
+```bash
+# Get JSON event stream
+mooncake run --config deploy.yml --raw --output-format json
+
+# Process with jq
+mooncake run --config deploy.yml --raw --output-format json | \
+  jq 'select(.type == "step.completed") | .data.name'
+```
+
+**Key Event Types:**
+
+| Event | Description | Use Case |
+|-------|-------------|----------|
+| `run.started` | Execution begins | Track run metadata |
+| `plan.loaded` | Plan compiled | Analyze configuration |
+| `step.started` | Before step execution | Progress tracking |
+| `step.completed` | Step succeeded | Success metrics |
+| `step.failed` | Step failed | Error handling |
+| `step.stdout`/`stderr` | Command output | Log streaming |
+| `file.created`/`updated` | File operations | Change tracking |
+| `template.rendered` | Template applied | Config management |
+| `variables.set` | Variables defined | State inspection |
+| `run.completed` | Execution finished | Run summary |
+
+**Example event:**
+
+```json
+{
+  "type": "step.completed",
+  "timestamp": "2026-02-04T14:14:21Z",
+  "data": {
+    "step_id": "step-0001",
+    "name": "Install nginx",
+    "level": 0,
+    "duration_ms": 1250,
+    "changed": true
+  }
+}
+```
+
+**Integration use cases:**
+
+- **Monitoring**: Send events to logging systems (Elasticsearch, Datadog)
+- **CI/CD**: Track deployment progress and failures
+- **Auditing**: Record all configuration changes
+- **Analytics**: Analyze performance and success rates
+
+### Run Artifacts
+
+Mooncake can persist execution artifacts to disk for auditing, debugging, and compliance. Artifacts are stored in `.mooncake/runs/` with a unique run ID.
+
+**Enable artifacts:**
+
+```bash
+# Basic (events + summary)
+mooncake run --config deploy.yml --artifacts-dir .mooncake
+
+# With full output capture
+mooncake run --config deploy.yml \
+  --artifacts-dir .mooncake \
+  --capture-full-output
+```
+
+**Artifact structure:**
+
+```
+.mooncake/
+└── runs/
+    └── 20260204-141419-a3f2c8/
+        ├── plan.json          # Executed plan
+        ├── facts.json         # System facts
+        ├── summary.json       # Run summary
+        ├── results.json       # Step results
+        ├── events.jsonl       # Full event stream
+        ├── diff.json          # Changed files
+        ├── stdout.log         # Full stdout (if --capture-full-output)
+        └── stderr.log         # Full stderr (if --capture-full-output)
+```
+
+**Artifact files:**
+
+- **plan.json** - Complete execution plan with all steps expanded
+- **facts.json** - System information gathered at runtime
+- **summary.json** - High-level statistics (duration, success/failure counts)
+- **results.json** - Per-step results with timing and status
+- **events.jsonl** - Full event stream in JSONL format (one event per line)
+- **diff.json** - List of files created or modified
+- **stdout.log / stderr.log** - Complete command output (optional)
+
+**Common use cases:**
+
+**Debugging failures:**
+```bash
+# Find latest run
+ls -lt .mooncake/runs/ | head -n 1
+
+# View failed steps
+jq '.steps[] | select(.status == "failed")' \
+  .mooncake/runs/20260204-141419-a3f2c8/results.json
+
+# Check full error output
+cat .mooncake/runs/20260204-141419-a3f2c8/stderr.log
+```
+
+**Audit trail:**
+```bash
+# Keep historical record
+mooncake run --config deploy.yml --artifacts-dir /var/log/mooncake
+
+# Package for compliance
+tar czf deployment-$(date +%Y%m%d).tar.gz .mooncake/runs/
+```
+
+**Performance analysis:**
+```bash
+# Find slowest steps
+jq '.steps[] | {name, duration_ms}' \
+  .mooncake/runs/*/results.json | \
+  jq -s 'sort_by(.duration_ms) | reverse | .[0:10]'
+```
+
+**CI/CD integration:**
+```yaml
+# GitLab CI example
+deploy:
+  script:
+    - mooncake run --config deploy.yml --artifacts-dir artifacts/
+  artifacts:
+    paths:
+      - artifacts/runs/
+    when: always
+    expire_in: 30 days
+```
+
+**Cleanup old runs:**
+```bash
+# Keep last 30 days
+find .mooncake/runs/ -type d -mtime +30 -exec rm -rf {} +
+
+# Keep last 100 runs
+ls -1dt .mooncake/runs/* | tail -n +101 | xargs rm -rf
+```
 
 ---
 
