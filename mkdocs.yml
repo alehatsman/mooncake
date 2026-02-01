@@ -82,6 +82,7 @@ nav:
     - Contributing: development/contributing.md
     - Roadmap: development/roadmap.md
     - Development Guide: development/development.md
+    - Releasing: development/releasing.md
     - Proposals: development/proposals.md
   - About:
     - Changelog: about/changelog.md
