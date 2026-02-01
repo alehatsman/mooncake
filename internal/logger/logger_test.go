@@ -431,3 +431,225 @@ func TestParseLogLevel(t *testing.T) {
 		})
 	}
 }
+
+func TestConsoleLogger_AddPaddingToLines(t *testing.T) {
+	tests := []struct {
+		name     string
+		padLevel int
+		input    string
+		expected string
+	}{
+		{
+			name:     "no padding",
+			padLevel: 0,
+			input:    "single line",
+			expected: "single line",
+		},
+		{
+			name:     "single line with padding",
+			padLevel: 2,
+			input:    "single line",
+			expected: "    single line",
+		},
+		{
+			name:     "multiple lines with padding",
+			padLevel: 1,
+			input:    "line 1\nline 2\nline 3",
+			expected: "  line 1\n  line 2\n  line 3",
+		},
+		{
+			name:     "empty lines with padding",
+			padLevel: 1,
+			input:    "line 1\n\nline 3",
+			expected: "  line 1\n  \n  line 3",
+		},
+		{
+			name:     "trailing newline",
+			padLevel: 1,
+			input:    "line 1\n",
+			expected: "  line 1\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := NewConsoleLogger(InfoLevel)
+			paddedLogger := logger.WithPadLevel(tt.padLevel).(*ConsoleLogger)
+
+			result := paddedLogger.addPaddingToLines(tt.input)
+			if result != tt.expected {
+				t.Errorf("addPaddingToLines() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestConsoleLogger_LogStep(t *testing.T) {
+	logger := NewConsoleLogger(InfoLevel)
+
+	tests := []struct {
+		name string
+		info StepInfo
+	}{
+		{
+			name: "running status",
+			info: StepInfo{
+				Name:       "Test Step",
+				Level:      0,
+				GlobalStep: 1,
+				Status:     StatusRunning,
+			},
+		},
+		{
+			name: "success status",
+			info: StepInfo{
+				Name:       "Test Step",
+				Level:      1,
+				GlobalStep: 2,
+				Status:     StatusSuccess,
+			},
+		},
+		{
+			name: "error status",
+			info: StepInfo{
+				Name:       "Test Step",
+				Level:      2,
+				GlobalStep: 3,
+				Status:     StatusError,
+			},
+		},
+		{
+			name: "skipped status",
+			info: StepInfo{
+				Name:       "Test Step",
+				Level:      0,
+				GlobalStep: 4,
+				Status:     StatusSkipped,
+			},
+		},
+		{
+			name: "unknown status",
+			info: StepInfo{
+				Name:       "Test Step",
+				Level:      0,
+				GlobalStep: 5,
+				Status:     "unknown",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Just ensure it doesn't panic
+			logger.LogStep(tt.info)
+		})
+	}
+
+	// Test that it doesn't log at ErrorLevel
+	errorLogger := NewConsoleLogger(ErrorLevel)
+	errorLogger.LogStep(StepInfo{
+		Name:   "Should not log",
+		Status: StatusRunning,
+	})
+}
+
+func TestConsoleLogger_Complete(t *testing.T) {
+	logger := NewConsoleLogger(InfoLevel)
+
+	tests := []struct {
+		name  string
+		stats ExecutionStats
+	}{
+		{
+			name: "successful execution",
+			stats: ExecutionStats{
+				Duration: 1000000000, // 1 second
+				Executed: 5,
+				Skipped:  0,
+				Failed:   0,
+			},
+		},
+		{
+			name: "execution with skipped",
+			stats: ExecutionStats{
+				Duration: 2000000000, // 2 seconds
+				Executed: 3,
+				Skipped:  2,
+				Failed:   0,
+			},
+		},
+		{
+			name: "failed execution",
+			stats: ExecutionStats{
+				Duration: 500000000, // 0.5 seconds
+				Executed: 2,
+				Skipped:  1,
+				Failed:   1,
+			},
+		},
+		{
+			name: "all failed",
+			stats: ExecutionStats{
+				Duration: 100000000, // 0.1 seconds
+				Executed: 0,
+				Skipped:  0,
+				Failed:   3,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Just ensure it doesn't panic
+			logger.Complete(tt.stats)
+		})
+	}
+}
+
+func TestTestLogger_LogStep(t *testing.T) {
+	testLog := NewTestLogger()
+
+	info := StepInfo{
+		Name:       "Test Step",
+		Level:      1,
+		GlobalStep: 1,
+		Status:     StatusRunning,
+	}
+
+	testLog.LogStep(info)
+
+	// TestLogger should capture LogStep calls
+	if testLog.Count() != 1 {
+		t.Errorf("LogStep() should log one entry, got %d", testLog.Count())
+	}
+
+	if !testLog.Contains("Test Step") {
+		t.Error("LogStep() should log message containing step name")
+	}
+
+	if !testLog.Contains("running") {
+		t.Error("LogStep() should log message containing status")
+	}
+}
+
+func TestTestLogger_Complete(t *testing.T) {
+	testLog := NewTestLogger()
+
+	stats := ExecutionStats{
+		Duration: 1000000000,
+		Executed: 5,
+		Skipped:  2,
+		Failed:   1,
+	}
+
+	testLog.Complete(stats)
+
+	// TestLogger should capture Complete calls
+	if testLog.Count() != 1 {
+		t.Errorf("Complete() should log one entry, got %d", testLog.Count())
+	}
+
+	if !testLog.Contains("Complete") {
+		t.Error("Complete() should log message containing 'Complete'")
+	}
+}
