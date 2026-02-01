@@ -30,7 +30,7 @@ func (v *TemplateValidator) ValidateSyntax(template string) error {
 // ValidateSteps validates template syntax in all templatable fields across steps
 // Returns diagnostics for any syntax errors found
 func (v *TemplateValidator) ValidateSteps(steps []Step, locationMap *LocationMap, filePath string) []Diagnostic {
-	var diagnostics []Diagnostic
+	diagnostics := make([]Diagnostic, 0, len(steps)*5) // Preallocate with reasonable estimate
 
 	for i, step := range steps {
 		// Validate templatable fields
@@ -41,9 +41,29 @@ func (v *TemplateValidator) ValidateSteps(steps []Step, locationMap *LocationMap
 	return diagnostics
 }
 
+// validateField validates a single field and appends a diagnostic if there's an error
+func (v *TemplateValidator) validateField(fieldValue, fieldPath, fieldDescription, filePath string, locationMap *LocationMap, diagnostics []Diagnostic) []Diagnostic {
+	if fieldValue == "" {
+		return diagnostics
+	}
+
+	err := v.ValidateSyntax(fieldValue)
+	if err != nil {
+		pos := locationMap.GetOrDefault(fieldPath, Position{Line: 1, Column: 1})
+		diagnostics = append(diagnostics, Diagnostic{
+			FilePath: filePath,
+			Line:     pos.Line,
+			Column:   pos.Column,
+			Message:  fmt.Sprintf("Invalid template syntax in %s: %s", fieldDescription, formatTemplateError(err)),
+			Severity: "error",
+		})
+	}
+	return diagnostics
+}
+
 // validateStepTemplates validates all templatable fields in a single step
 func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, locationMap *LocationMap, filePath string) []Diagnostic {
-	var diagnostics []Diagnostic
+	diagnostics := make([]Diagnostic, 0, 10) // Preallocate with reasonable capacity
 
 	// Define fields that may contain template expressions
 	templateFields := []struct {
@@ -118,62 +138,14 @@ func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, loca
 
 	// Validate template action fields
 	if step.Template != nil {
-		if step.Template.Src != "" {
-			err := v.ValidateSyntax(step.Template.Src)
-			if err != nil {
-				pos := locationMap.GetOrDefault(fmt.Sprintf("/%d/template/src", stepIndex), Position{Line: 1, Column: 1})
-				diagnostics = append(diagnostics, Diagnostic{
-					FilePath: filePath,
-					Line:     pos.Line,
-					Column:   pos.Column,
-					Message:  fmt.Sprintf("Invalid template syntax in template.src: %s", formatTemplateError(err)),
-					Severity: "error",
-				})
-			}
-		}
-		if step.Template.Dest != "" {
-			err := v.ValidateSyntax(step.Template.Dest)
-			if err != nil {
-				pos := locationMap.GetOrDefault(fmt.Sprintf("/%d/template/dest", stepIndex), Position{Line: 1, Column: 1})
-				diagnostics = append(diagnostics, Diagnostic{
-					FilePath: filePath,
-					Line:     pos.Line,
-					Column:   pos.Column,
-					Message:  fmt.Sprintf("Invalid template syntax in template.dest: %s", formatTemplateError(err)),
-					Severity: "error",
-				})
-			}
-		}
+		diagnostics = v.validateField(step.Template.Src, fmt.Sprintf("/%d/template/src", stepIndex), "template.src", filePath, locationMap, diagnostics)
+		diagnostics = v.validateField(step.Template.Dest, fmt.Sprintf("/%d/template/dest", stepIndex), "template.dest", filePath, locationMap, diagnostics)
 	}
 
 	// Validate file action fields
 	if step.File != nil {
-		if step.File.Path != "" {
-			err := v.ValidateSyntax(step.File.Path)
-			if err != nil {
-				pos := locationMap.GetOrDefault(fmt.Sprintf("/%d/file/path", stepIndex), Position{Line: 1, Column: 1})
-				diagnostics = append(diagnostics, Diagnostic{
-					FilePath: filePath,
-					Line:     pos.Line,
-					Column:   pos.Column,
-					Message:  fmt.Sprintf("Invalid template syntax in file.path: %s", formatTemplateError(err)),
-					Severity: "error",
-				})
-			}
-		}
-		if step.File.Content != "" {
-			err := v.ValidateSyntax(step.File.Content)
-			if err != nil {
-				pos := locationMap.GetOrDefault(fmt.Sprintf("/%d/file/content", stepIndex), Position{Line: 1, Column: 1})
-				diagnostics = append(diagnostics, Diagnostic{
-					FilePath: filePath,
-					Line:     pos.Line,
-					Column:   pos.Column,
-					Message:  fmt.Sprintf("Invalid template syntax in file.content: %s", formatTemplateError(err)),
-					Severity: "error",
-				})
-			}
-		}
+		diagnostics = v.validateField(step.File.Path, fmt.Sprintf("/%d/file/path", stepIndex), "file.path", filePath, locationMap, diagnostics)
+		diagnostics = v.validateField(step.File.Content, fmt.Sprintf("/%d/file/content", stepIndex), "file.content", filePath, locationMap, diagnostics)
 	}
 
 	// Validate string fields
