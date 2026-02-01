@@ -13,10 +13,18 @@ import (
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
 )
 
 func run(c *cli.Context) error {
+	// Check if running from plan
+	fromPlan := c.String("from-plan")
+	if fromPlan != "" {
+		return runFromPlan(c, fromPlan)
+	}
+
 	raw := c.Bool("raw")
 	dryRun := c.Bool("dry-run")
 	logLevel := c.String("log-level")
@@ -69,12 +77,187 @@ func run(c *cli.Context) error {
 	}, log)
 }
 
+func runFromPlan(c *cli.Context, planPath string) error {
+	// Load plan from file
+	planData, err := plan.LoadPlanFromFile(planPath)
+	if err != nil {
+		return fmt.Errorf("failed to load plan: %w", err)
+	}
+
+	// Setup logger
+	raw := c.Bool("raw")
+	dryRun := c.Bool("dry-run")
+	logLevel := c.String("log-level")
+
+	var log logger.Logger
+
+	// Force raw mode for dry-run
+	if dryRun {
+		raw = true
+	}
+
+	// Use animated TUI by default if supported, unless --raw is specified
+	if !raw && logger.IsTUISupported() {
+		tuiLogger, err := logger.NewTUILogger(logger.InfoLevel)
+		if err != nil {
+			// Fallback to console logger if TUI initialization fails
+			log = logger.NewLogger(logger.InfoLevel)
+		} else {
+			log = tuiLogger
+			tuiLogger.Start()
+			defer tuiLogger.Stop()
+		}
+	} else {
+		// Use console logger for raw output or when TUI is not supported
+		log = logger.NewLogger(logger.InfoLevel)
+	}
+
+	if err := log.SetLogLevelStr(logLevel); err != nil {
+		return err
+	}
+
+	// Execute plan
+	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, log)
+}
+
 func explainCommand(_ *cli.Context) error {
 	// Collect system facts
 	f := facts.Collect()
 
 	// Display facts
 	explain.DisplayFacts(f)
+
+	return nil
+}
+
+func planCommand(c *cli.Context) error {
+	configPath := c.String("config")
+	varsPath := c.String("vars")
+	outputPath := c.String("output")
+	format := c.String("format")
+	showOrigins := c.Bool("show-origins")
+
+	// Parse tags
+	var tags []string
+	tagsStr := c.String("tags")
+	if tagsStr != "" {
+		for _, tag := range strings.Split(tagsStr, ",") {
+			trimmed := strings.TrimSpace(tag)
+			if trimmed != "" {
+				tags = append(tags, trimmed)
+			}
+		}
+	}
+
+	// Load variables if specified
+	var variables map[string]interface{}
+	if varsPath != "" {
+		vars, err := config.ReadVariables(varsPath)
+		if err != nil {
+			return fmt.Errorf("failed to read variables: %w", err)
+		}
+		variables = vars
+	} else {
+		variables = make(map[string]interface{})
+	}
+
+	// Build plan (planner will inject system facts automatically)
+	planner := plan.NewPlanner()
+	planData, err := planner.BuildPlan(plan.PlannerConfig{
+		ConfigPath: configPath,
+		Variables:  variables,
+		Tags:       tags,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to build plan: %w", err)
+	}
+
+	// Save to file if output path specified
+	if outputPath != "" {
+		if err := plan.SavePlanToFile(planData, outputPath); err != nil {
+			return fmt.Errorf("failed to save plan: %w", err)
+		}
+		fmt.Printf("Plan saved to %s\n", outputPath)
+		return nil
+	}
+
+	// Format and display plan
+	switch format {
+	case "json":
+		return formatPlanJSON(planData)
+	case "yaml":
+		return formatPlanYAML(planData)
+	case "text":
+		return formatPlanText(planData, showOrigins)
+	default:
+		return fmt.Errorf("unsupported format: %s (use text, json, or yaml)", format)
+	}
+}
+
+func formatPlanJSON(p *plan.Plan) error {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(p)
+}
+
+func formatPlanYAML(p *plan.Plan) error {
+	encoder := yaml.NewEncoder(os.Stdout)
+	encoder.SetIndent(2)
+	defer func() {
+		_ = encoder.Close()
+	}()
+	return encoder.Encode(p)
+}
+
+func formatPlanText(p *plan.Plan, showOrigins bool) error {
+	fmt.Printf("Plan: %s\n", p.RootFile)
+	fmt.Printf("Generated: %s\n", p.GeneratedAt.Format("2006-01-02 15:04:05"))
+	if len(p.Tags) > 0 {
+		fmt.Printf("Tags: %s\n", strings.Join(p.Tags, ", "))
+	}
+	fmt.Printf("Steps: %d\n\n", len(p.Steps))
+
+	for i, step := range p.Steps {
+		fmt.Printf("[%d] %s (ID: %s)\n", i+1, step.Name, step.ID)
+
+		// Determine action type
+		actionType := "unknown"
+		if step.Shell != nil {
+			actionType = "shell"
+		} else if step.File != nil {
+			actionType = "file"
+		} else if step.Template != nil {
+			actionType = "template"
+		} else if step.Vars != nil {
+			actionType = "vars"
+		} else if step.IncludeVars != nil {
+			actionType = "include_vars"
+		}
+		fmt.Printf("    Action: %s\n", actionType)
+
+		if step.Skipped {
+			fmt.Printf("    Status: SKIPPED (tags)\n")
+		}
+
+		if len(step.Tags) > 0 {
+			fmt.Printf("    Tags: %s\n", strings.Join(step.Tags, ", "))
+		}
+
+		if showOrigins && step.Origin != nil {
+			fmt.Printf("    Origin: %s:%d:%d\n", step.Origin.FilePath, step.Origin.Line, step.Origin.Column)
+			if len(step.Origin.IncludeChain) > 0 {
+				fmt.Printf("    Chain: %s\n", strings.Join(step.Origin.IncludeChain, " -> "))
+			}
+		}
+
+		if step.LoopContext != nil {
+			fmt.Printf("    Loop: %s[%d] (first=%v, last=%v)\n",
+				step.LoopContext.Type, step.LoopContext.Index,
+				step.LoopContext.First, step.LoopContext.Last)
+		}
+
+		fmt.Println()
+	}
 
 	return nil
 }
@@ -147,7 +330,6 @@ func createApp() *cli.App {
 					&cli.StringFlag{
 						Name:     "config",
 						Aliases:  []string{"c"},
-						Required: true,
 						Usage:    "Path to configuration file",
 					},
 					&cli.StringFlag{
@@ -182,8 +364,51 @@ func createApp() *cli.App {
 						Value: false,
 						Usage: "Preview what would be executed without making changes",
 					},
+					&cli.StringFlag{
+						Name:  "from-plan",
+						Usage: "Execute from saved plan file (JSON or YAML)",
+					},
 				},
 				Action: run,
+			},
+			{
+				Name:  "plan",
+				Usage: "Generate and display execution plan",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "config",
+						Aliases:  []string{"c"},
+						Required: true,
+						Usage:    "Path to configuration file",
+					},
+					&cli.StringFlag{
+						Name:    "vars",
+						Aliases: []string{"v"},
+						Usage:   "Path to variables file",
+					},
+					&cli.StringFlag{
+						Name:    "tags",
+						Aliases: []string{"t"},
+						Usage:   "Filter steps by tags (comma-separated)",
+					},
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Value:   "text",
+						Usage:   "Output format: text, json, or yaml",
+					},
+					&cli.BoolFlag{
+						Name:  "show-origins",
+						Value: false,
+						Usage: "Show origin file:line:col for each step",
+					},
+					&cli.StringFlag{
+						Name:    "output",
+						Aliases: []string{"o"},
+						Usage:   "Save plan to file (format determined by extension: .json, .yaml, .yml)",
+					},
+				},
+				Action: planCommand,
 			},
 			{
 				Name:    "explain",

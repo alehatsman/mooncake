@@ -85,22 +85,22 @@ func TestExecutionContext_Copy(t *testing.T) {
 func TestAddGlobalVariables(t *testing.T) {
 	vars := make(map[string]interface{})
 
-	addGlobalVariables(vars)
+	AddGlobalVariables(vars)
 
 	// Should add os and arch
 	if vars["os"] == nil {
-		t.Error("addGlobalVariables() should add 'os'")
+		t.Error("AddGlobalVariables() should add 'os'")
 	}
 	if vars["arch"] == nil {
-		t.Error("addGlobalVariables() should add 'arch'")
+		t.Error("AddGlobalVariables() should add 'arch'")
 	}
 
 	// Verify they are strings
 	if _, ok := vars["os"].(string); !ok {
-		t.Errorf("addGlobalVariables() os should be string, got %T", vars["os"])
+		t.Errorf("AddGlobalVariables() os should be string, got %T", vars["os"])
 	}
 	if _, ok := vars["arch"].(string); !ok {
-		t.Errorf("addGlobalVariables() arch should be string, got %T", vars["arch"])
+		t.Errorf("AddGlobalVariables() arch should be string, got %T", vars["arch"])
 	}
 }
 
@@ -747,41 +747,6 @@ func TestHandleTemplate(t *testing.T) {
 	}
 }
 
-func TestExecuteLoopStep(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	items := []interface{}{"item1", "item2", "item3"}
-	executedItems := []string{}
-
-	// We'll use a shell step that records the item value
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"executed": &executedItems,
-		},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		PathUtil:  pathExpander,
-		CurrentDir: os.TempDir(),
-	}
-
-	shellCmd := "echo {{ item }}"
-	step := config.Step{
-		Name:  "process items",
-		Shell: &shellCmd,
-	}
-
-	// Note: executeLoopStep will set "item" variable for each iteration
-	// We can't easily test the actual execution without more mocking,
-	// so we'll just verify it doesn't error
-	err := executeLoopStep(items, step, ec)
-	if err != nil {
-		t.Errorf("executeLoopStep() error = %v", err)
-	}
-}
 
 func TestExecuteStep_WithShell(t *testing.T) {
 	testLogger := logger.NewTestLogger()
@@ -940,84 +905,7 @@ key2: value2
 	}
 }
 
-func TestHandleWithItems(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
 
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"mylist": []interface{}{"a", "b", "c"},
-		},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
-	}
-
-	withItems := "mylist"
-	shellCmd := "echo {{ item }}"
-	step := config.Step{
-		Name:      "process items",
-		WithItems: &withItems,
-		Shell:     &shellCmd,
-	}
-
-	err := HandleWithItems(step, ec)
-	if err != nil {
-		t.Errorf("HandleWithItems() error = %v", err)
-	}
-
-	// Should have executed 3 times (once per item)
-	if *ec.GlobalStepsExecuted != 3 {
-		t.Errorf("GlobalStepsExecuted = %d, want 3", *ec.GlobalStepsExecuted)
-	}
-}
-
-func TestHandleWithFileTree(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	tmpDir := t.TempDir()
-	// Create some test files
-	os.WriteFile(tmpDir+"/file1.txt", []byte("test1"), 0644)
-	os.WriteFile(tmpDir+"/file2.txt", []byte("test2"), 0644)
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
-	}
-
-	withFileTree := "*.txt"
-	shellCmd := "echo {{ item.name }}"
-	step := config.Step{
-		Name:         "process files",
-		WithFileTree: &withFileTree,
-		Shell:        &shellCmd,
-	}
-
-	err := HandleWithFileTree(step, ec)
-	// The test may fail if no files match, but that's OK for coverage
-	// We're primarily testing that the function doesn't panic
-	if err != nil {
-		// File tree might not find files depending on directory structure
-		t.Logf("HandleWithFileTree() returned error (may be expected): %v", err)
-	}
-}
 
 func TestLogStepStatus(t *testing.T) {
 	testLogger := logger.NewTestLogger()
@@ -1415,93 +1303,7 @@ func strPtr(s string) *string {
 	return &s
 }
 
-func TestHandleInclude(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
 
-	tmpDir := t.TempDir()
-	includeFile := tmpDir + "/include.yml"
-
-	// Create an include file with steps
-	includeContent := `---
-- name: included step
-  shell: echo "from include"
-`
-	err := os.WriteFile(includeFile, []byte(includeContent), 0644)
-	if err != nil {
-		t.Fatalf("Could not create include file: %v", err)
-	}
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-		StatsExecuted:       new(int),
-		Level:               0,
-	}
-
-	step := config.Step{
-		Name:    "test include",
-		Include: &includeFile,
-	}
-
-	err = handleInclude(step, ec)
-	if err != nil {
-		t.Errorf("handleInclude() error = %v", err)
-	}
-
-	// Should have executed the included step
-	if *ec.GlobalStepsExecuted != 1 {
-		t.Errorf("GlobalStepsExecuted = %d, want 1", *ec.GlobalStepsExecuted)
-	}
-}
-
-func TestHandleInclude_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	tmpDir := t.TempDir()
-	includeFile := tmpDir + "/include.yml"
-
-	includeContent := `---
-- name: included step
-  shell: echo "from include"
-`
-	os.WriteFile(includeFile, []byte(includeContent), 0644)
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		Evaluator:  evaluator,
-		PathUtil:   pathExpander,
-		FileTree:   fileTreeWalker,
-		CurrentDir: tmpDir,
-		DryRun:     true,
-		Level:      0,
-	}
-
-	step := config.Step{
-		Name:    "test include dry run",
-		Include: &includeFile,
-	}
-
-	err := handleInclude(step, ec)
-	if err != nil {
-		t.Errorf("handleInclude() dry-run error = %v", err)
-	}
-}
 
 func TestHandleTemplate_WithExtraVars(t *testing.T) {
 	testLogger := logger.NewTestLogger()
@@ -2013,54 +1815,6 @@ func TestStart_MissingVarsFile(t *testing.T) {
 }
 
 // TestDispatchStepAction_Include tests the include action path
-func TestDispatchStepAction_Include(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	tmpDir := t.TempDir()
-	includeFile := tmpDir + "/include.yml"
-	includeContent := `---
-- name: included step
-  shell: echo test`
-	err := os.WriteFile(includeFile, []byte(includeContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create include file: %v", err)
-	}
-
-	globalExecuted := 0
-	statsExecuted := 0
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Level:               0,
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
-	}
-
-	step := config.Step{
-		Name:    "test include",
-		Include: &includeFile,
-	}
-
-	err = dispatchStepAction(step, ec)
-	if err != nil {
-		t.Errorf("dispatchStepAction() with include error = %v", err)
-	}
-
-	// Check that LogStep was called for the include
-	if !testLogger.Contains("Including:") {
-		t.Error("Should log include step")
-	}
-}
 
 // TestExecuteSteps tests for ExecuteSteps function
 func TestExecuteSteps_WithError(t *testing.T) {
@@ -2366,77 +2120,7 @@ func TestHandleFile_UnsupportedState(t *testing.T) {
 }
 
 // HandleWithFileTree edge cases
-func TestHandleWithFileTree_InvalidPattern(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
 
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          "/nonexistent",
-		GlobalStepsExecuted: new(int),
-	}
-
-	pattern := "*.txt"
-	shellCmd := "echo {{ item.name }}"
-	step := config.Step{
-		Name:         "process files",
-		WithFileTree: &pattern,
-		Shell:        &shellCmd,
-	}
-
-	err := HandleWithFileTree(step, ec)
-	if err == nil {
-		t.Error("HandleWithFileTree() should error with nonexistent directory")
-	}
-}
-
-func TestHandleWithFileTree_EmptyResults(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	tmpDir := t.TempDir()
-	// Don't create any files - pattern won't match anything
-
-	statsExecuted := 0
-	globalExecuted := 0
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
-	}
-
-	pattern := "*.txt"
-	shellCmd := "echo {{ item.name }}"
-	step := config.Step{
-		Name:         "process files",
-		WithFileTree: &pattern,
-		Shell:        &shellCmd,
-	}
-
-	err := HandleWithFileTree(step, ec)
-	// Will error when no files match the pattern
-	if err == nil {
-		t.Error("HandleWithFileTree() should error when pattern matches no files")
-	}
-}
 
 // ExecuteStep validation tests
 func TestExecuteStep_ValidationError(t *testing.T) {
@@ -2461,47 +2145,6 @@ func TestExecuteStep_ValidationError(t *testing.T) {
 	}
 }
 
-func TestExecuteStep_WithItemsPath(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	globalExecuted := 0
-	statsExecuted := 0
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"mylist": []interface{}{"a", "b"},
-		},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
-	}
-
-	withItems := "mylist"
-	shellCmd := "echo {{ item }}"
-	step := config.Step{
-		Name:      "with items",
-		WithItems: &withItems,
-		Shell:     &shellCmd,
-	}
-
-	err := ExecuteStep(step, ec)
-	if err != nil {
-		t.Errorf("ExecuteStep() with items error = %v", err)
-	}
-
-	// ExecuteStep calls HandleWithItems which doesn't increment global counter itself
-	// So we just verify it completes without error
-	if globalExecuted < 1 {
-		t.Errorf("Should execute at least once, got %d", globalExecuted)
-	}
-}
 
 // ============================================================================
 // PRIORITY 3 TESTS - Polish
@@ -2651,68 +2294,7 @@ func TestGetStepDisplayName_ItemNotFileTreeItem(t *testing.T) {
 }
 
 // HandleWithItems error tests
-func TestHandleWithItems_TemplateError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
 
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		GlobalStepsExecuted: new(int),
-	}
-
-	// with_items has invalid template
-	withItems := "{{ invalid"
-	shellCmd := "echo test"
-	step := config.Step{
-		Name:      "process items",
-		WithItems: &withItems,
-		Shell:     &shellCmd,
-	}
-
-	err := HandleWithItems(step, ec)
-	if err == nil {
-		t.Error("HandleWithItems() should error with invalid template in with_items")
-	}
-}
-
-func TestHandleWithItems_NotAList(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"notalist": "just a string",
-		},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		GlobalStepsExecuted: new(int),
-	}
-
-	withItems := "notalist"
-	shellCmd := "echo test"
-	step := config.Step{
-		Name:      "process items",
-		WithItems: &withItems,
-		Shell:     &shellCmd,
-	}
-
-	err := HandleWithItems(step, ec)
-	if err == nil {
-		t.Error("HandleWithItems() should error when with_items is not a list")
-	}
-}
 
 // handleVars edge case
 func TestHandleVars_EmptyVars(t *testing.T) {
@@ -2920,179 +2502,10 @@ func TestHandleFileState_EmptyFileWriteError(t *testing.T) {
 	}
 }
 
-func TestExecuteSteps_WithFileTree(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	// Create some files for the tree
-	os.WriteFile(tmpDir+"/file1.txt", []byte("content1"), 0644)
-	os.WriteFile(tmpDir+"/file2.txt", []byte("content2"), 0644)
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	statsExecuted := 0
-	globalExecuted := 0
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
-	}
-
-	steps := []config.Step{
-		{
-			Name:         "test filetree",
-			WithFileTree: String("*.txt"),
-			Shell:        String("echo {{ item.Path }}"),
-		},
-	}
-
-	err := ExecuteSteps(steps, ec)
-	// May error if FileTree walker has issues, but we're testing the code path
-	if err != nil {
-		t.Logf("ExecuteSteps() with filetree error (may be expected): %v", err)
-	}
-}
-
-func TestExecuteSteps_WithItems(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	items := []interface{}{"item1", "item2", "item3"}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"myitems": items,
-		},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: new(int),
-	}
-
-	steps := []config.Step{
-		{
-			Name:      "test items",
-			WithItems: String("{{ myitems }}"),
-			Shell:     String("echo {{ item }}"),
-		},
-	}
-
-	err := ExecuteSteps(steps, ec)
-	if err != nil {
-		t.Fatalf("ExecuteSteps() with items error = %v", err)
-	}
-
-	// Should execute once per item
-	if *ec.GlobalStepsExecuted < 3 {
-		t.Errorf("ExecuteSteps() should execute for each item, got %d", *ec.GlobalStepsExecuted)
-	}
-}
-
-func TestHandleInclude_ValidationError(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	// Create invalid config file
-	includeFile := tmpDir + "/invalid.yml"
-	invalidContent := `---
-- name: test
-  shell: echo
-  file:
-    path: test`
-
-	os.WriteFile(includeFile, []byte(invalidContent), 0644)
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		CurrentFile:         tmpDir + "/main.yml",
-		GlobalStepsExecuted: new(int),
-	}
-
-	step := config.Step{
-		Name:    "test include",
-		Include: &includeFile,
-	}
-
-	err := handleInclude(step, ec)
-	if err == nil {
-		t.Error("handleInclude() should error on validation failure")
-	}
-
-	if !strings.Contains(err.Error(), "validation") {
-		t.Errorf("handleInclude() error should mention validation, got: %v", err)
-	}
-}
 
 
-func TestHandleWithFileTree_SuccessfulIteration(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
 
-	// Create files
-	os.WriteFile(tmpDir+"/a.txt", []byte("a"), 0644)
-	os.WriteFile(tmpDir+"/b.txt", []byte("b"), 0644)
 
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	statsExecuted := 0
-	globalExecuted := 0
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		GlobalStepsExecuted: &globalExecuted,
-		StatsExecuted:       &statsExecuted,
-	}
-
-	step := config.Step{
-		Name:         "test",
-		WithFileTree: String("*.txt"),
-		Shell:        String("echo {{ item.Path }}"),
-	}
-
-	err := HandleWithFileTree(step, ec)
-	// May error if FileTree walker has issues, but we're testing the code path
-	if err != nil {
-		t.Logf("HandleWithFileTree() error (may be expected): %v", err)
-	}
-}
 
 
 func TestDispatchStepAction_NoAction(t *testing.T) {
@@ -3634,70 +3047,7 @@ myvar: hello`
 	}
 }
 
-func TestHandleInclude_PathExpansionError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
 
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          "/tmp",
-		CurrentFile:         "/tmp/main.yml",
-		GlobalStepsExecuted: new(int),
-	}
-
-	includeFile := "{{ invalid_template"
-	step := config.Step{
-		Name:    "test include path error",
-		Include: &includeFile,
-	}
-
-	err := handleInclude(step, ec)
-	if err == nil {
-		t.Error("handleInclude() should error on path expansion failure")
-	}
-}
-
-func TestHandleInclude_ReadError(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		CurrentFile:         tmpDir + "/main.yml",
-		GlobalStepsExecuted: new(int),
-	}
-
-	includeFile := "/nonexistent/file.yml"
-	step := config.Step{
-		Name:    "test include read error",
-		Include: &includeFile,
-	}
-
-	err := handleInclude(step, ec)
-	if err == nil {
-		t.Error("handleInclude() should error when file doesn't exist")
-	}
-}
 
 func TestHandleTemplate_PathExpansionError(t *testing.T) {
 	tmpDir := t.TempDir()

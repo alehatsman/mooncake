@@ -81,6 +81,30 @@ type Step struct {
 	// Tags and registration
 	Tags     []string `yaml:"tags" json:"tags,omitempty"`
 	Register string   `yaml:"register" json:"register,omitempty"`
+
+	// Plan metadata (populated during plan expansion, omitted in config files)
+	ID          string        `yaml:"id,omitempty" json:"id,omitempty"`
+	Origin      *Origin       `yaml:"origin,omitempty" json:"origin,omitempty"`
+	Skipped     bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
+	LoopContext *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
+}
+
+// Origin tracks source location and include chain for plan traceability
+type Origin struct {
+	FilePath     string   `yaml:"file" json:"file"`
+	Line         int      `yaml:"line" json:"line"`
+	Column       int      `yaml:"column" json:"column"`
+	IncludeChain []string `yaml:"include_chain,omitempty" json:"include_chain,omitempty"` // "file:line" entries
+}
+
+// LoopContext captures loop iteration metadata
+type LoopContext struct {
+	Type           string      `yaml:"type" json:"type"` // "with_items" or "with_filetree"
+	Item           interface{} `yaml:"item" json:"item"`
+	Index          int         `yaml:"index" json:"index"`
+	First          bool        `yaml:"first" json:"first"`
+	Last           bool        `yaml:"last" json:"last"`
+	LoopExpression string      `yaml:"loop_expression,omitempty" json:"loop_expression,omitempty"`
 }
 
 // countActions returns the number of non-nil action fields in this step.
@@ -162,5 +186,9 @@ func (s *Step) Copy() *Step {
 		WithItems:    s.WithItems,
 		Tags:         s.Tags,
 		Register:     s.Register,
+		ID:           s.ID,
+		Origin:       s.Origin,
+		Skipped:      s.Skipped,
+		LoopContext:  s.LoopContext,
 	}
 }

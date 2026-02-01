@@ -6,7 +6,7 @@ Learn how to iterate over lists and files to avoid repetition.
 
 - Iterating over lists with `with_items`
 - Iterating over files with `with_filetree`
-- Using the `{{ item }}` variable
+- Using loop variables: `{{ item }}`, `{{ index }}`, `{{ first }}`, `{{ last }}`
 - Accessing file properties in loops
 
 ## Quick Start
@@ -92,6 +92,50 @@ This creates:
 - `item.src` - Full source path
 - `item.name` - File name
 - `item.is_dir` - Boolean, true if directory
+
+### Loop Variables
+
+Both `with_items` and `with_filetree` provide additional loop variables:
+
+```yaml
+- vars:
+    packages: [git, vim, tmux]
+
+- name: "Installing {{index + 1}}/{{packages|length}}: {{item}}"
+  shell: |
+    echo "Package: {{item}}"
+    echo "Index: {{index}}"
+    echo "First: {{first}}"
+    echo "Last: {{last}}"
+    brew install {{item}}
+  with_items: "{{packages}}"
+```
+
+**Available loop variables:**
+- `{{ item }}` - Current item (for `with_items`) or file object (for `with_filetree`)
+- `{{ index }}` - Zero-based iteration index (0, 1, 2, ...)
+- `{{ first }}` - Boolean, true for first iteration
+- `{{ last }}` - Boolean, true for last iteration
+
+**Example use cases:**
+```yaml
+# Progress counter
+- name: "[{{index + 1}}/3] Processing {{item}}"
+  shell: process {{item}}
+  with_items: [a, b, c]
+
+# First-only setup
+- name: Initialize on first item
+  shell: mkdir -p /tmp/output
+  with_items: "{{files}}"
+  when: first == true
+
+# Last-only cleanup
+- name: Cleanup after last item
+  shell: echo "All done!"
+  with_items: "{{files}}"
+  when: last == true
+```
 
 ### Filtering in Loops
 

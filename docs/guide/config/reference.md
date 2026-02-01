@@ -266,7 +266,13 @@ mooncake run --config config.yml --tags dev,test
 **Applies to:** All actions
 **Required:** No
 
-Iterate over list. Step executes once for each item with `{{item}}` variable.
+Iterate over list. Step executes once for each item.
+
+**Loop variables available:**
+- `{{item}}` - Current item value
+- `{{index}}` - Zero-based iteration index (0, 1, 2, ...)
+- `{{first}}` - Boolean, true for first iteration
+- `{{last}}` - Boolean, true for last iteration
 
 ```yaml
 # List literal
@@ -279,6 +285,16 @@ Iterate over list. Step executes once for each item with `{{item}}` variable.
 
 - shell: brew install {{item}}
   with_items: "{{packages}}"
+
+# Using loop variables
+- name: "Package {{index + 1}}/{{packages|length}}: {{item}}"
+  shell: brew install {{item}}
+  with_items: "{{packages}}"
+
+# First/last checks
+- shell: echo "Processing {{item}}"
+  with_items: [a, b, c]
+  when: first == true  # Only first iteration
 ```
 
 ---
@@ -289,17 +305,27 @@ Iterate over list. Step executes once for each item with `{{item}}` variable.
 **Applies to:** All actions
 **Required:** No
 
-Iterate over files in directory tree. Step executes for each file.
+Iterate over files in directory tree. Step executes for each file in deterministic (sorted) order.
 
 **Item properties:**
 - `{{item.name}}` - File name
 - `{{item.src}}` - Full source path
 - `{{item.is_dir}}` - Boolean, true if directory
 
+**Loop variables available:**
+- `{{index}}` - Zero-based iteration index
+- `{{first}}` - Boolean, true for first iteration
+- `{{last}}` - Boolean, true for last iteration
+
 ```yaml
 - shell: cp "{{item.src}}" "/backup/{{item.name}}"
   with_filetree: ./dotfiles
   when: item.is_dir == false
+
+# Using loop variables
+- name: "[{{index + 1}}] Copying {{item.name}}"
+  shell: cp "{{item.src}}" "~/{{item.name}}"
+  with_filetree: ./dotfiles
 ```
 
 ---

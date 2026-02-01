@@ -2,6 +2,29 @@
 
 Mooncake configurations are YAML files containing an array of **steps**. Each step performs one **action**.
 
+## Two-Phase Architecture
+
+Mooncake uses a two-phase architecture for configuration execution:
+
+1. **Planning Phase** - Expands configuration into a deterministic plan
+   - Resolves all includes recursively
+   - Expands all loops (`with_items`, `with_filetree`) into individual steps
+   - Tracks origin (file:line:col) for every step
+   - Filters steps by tags (marked as skipped)
+   - Produces a deterministic, inspectable plan
+
+2. **Execution Phase** - Executes the plan
+   - Evaluates `when` conditions at runtime
+   - Executes actions (shell, file, template, etc.)
+   - Captures results and updates variables
+   - Logs progress and status
+
+**Benefits:**
+- **Deterministic** - Same config always produces the same plan
+- **Inspectable** - Use `mooncake plan` to see what will execute
+- **Traceable** - Every step tracks its origin with include chain
+- **Debuggable** - Understand loop expansions and includes before execution
+
 ## Steps
 
 Steps are executed sequentially:

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -39,46 +41,9 @@ func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
 	}
 }
 
-// executeLoopStep executes a step for each item in the provided list.
-// Each iteration creates a nested execution context with the "item" variable set.
-func executeLoopStep(items []interface{}, step config.Step, ec *ExecutionContext) error {
-	// Log the step name once before iterating through list
-	if step.Name != "" {
-		globalStep := 0
-		if ec.GlobalStepsExecuted != nil {
-			globalStep = *ec.GlobalStepsExecuted
-		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       step.Name,
-			Level:      ec.Level,
-			GlobalStep: globalStep,
-			Status:     logger.StatusRunning,
-		})
-	}
-
-	// Create nested execution context
-	curEc := ec.Copy()
-	curEc.Level++
-	curEc.Logger = ec.Logger.WithPadLevel(curEc.Level)
-	curEc.TotalSteps = len(items)
-
-	// Execute step for each item
-	for i, item := range items {
-		curEc = curEc.Copy()
-		curEc.CurrentIndex = i
-		curEc.Variables["item"] = item
-
-		err := ExecuteStep(step, &curEc)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func addGlobalVariables(variables map[string]interface{}) {
+// AddGlobalVariables injects system facts into the variables map.
+// This makes facts like ansible_os_family, ansible_distribution, etc. available during planning.
+func AddGlobalVariables(variables map[string]interface{}) {
 	// Collect system facts
 	systemFacts := facts.Collect()
 
@@ -161,51 +126,6 @@ func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 
 	// No matching tags found, skip the step
 	return true
-}
-
-func handleInclude(step config.Step, ec *ExecutionContext) error {
-	ec.Logger.Debugf("Expanding path: %v in %v with context: %v", step.Include, ec.CurrentDir, ec.Variables)
-
-	renderedPath, err := ec.PathUtil.ExpandPath(*step.Include, ec.CurrentDir, ec.Variables)
-	if err != nil {
-		return err
-	}
-
-	ec.Logger.Debugf("Reading configuration from file: %v", renderedPath)
-	includeSteps, diagnostics, err := config.ReadConfigWithValidation(renderedPath)
-	if err != nil {
-		return err
-	}
-
-	// Emit validation diagnostics
-	if len(diagnostics) > 0 {
-		if config.HasErrors(diagnostics) {
-			// Use formatted output for errors
-			formatted := config.FormatDiagnosticsWithContext(diagnostics)
-			ec.Logger.Errorf("%s", formatted)
-			return fmt.Errorf("included file validation failed")
-		}
-		// Just warnings - show them but continue
-		for _, diag := range diagnostics {
-			ec.Logger.Errorf(diag.String())
-		}
-	}
-
-	ec.Logger.Debugf("Read configuration with %v steps", len(includeSteps))
-
-	if ec.DryRun {
-		dryRun := newDryRunLogger(ec.Logger)
-		dryRun.LogInclude(len(includeSteps), renderedPath)
-	}
-
-	newCurrentDir := pathutil.GetDirectoryOfFile(renderedPath)
-
-	newExecutionContext := ec.Copy()
-	newExecutionContext.CurrentDir = newCurrentDir
-	newExecutionContext.Level = ec.Level + 1
-	newExecutionContext.Logger = ec.Logger.WithPadLevel(ec.Level + 1)
-
-	return ExecuteSteps(includeSteps, &newExecutionContext)
 }
 
 // checkSkipConditions evaluates whether a step should be skipped based on conditional
@@ -381,22 +301,6 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	case step.Shell != nil:
 		return HandleShell(step, ec)
 
-	case step.Include != nil:
-		// Include steps log themselves
-		globalStep := 0
-		if ec.GlobalStepsExecuted != nil {
-			globalStep = *ec.GlobalStepsExecuted
-		}
-
-		ec.Logger.LogStep(logger.StepInfo{
-			Name:       "Including: " + *step.Include,
-			Level:      ec.Level,
-			GlobalStep: globalStep,
-			Status:     logger.StatusRunning,
-		})
-
-		return handleInclude(step, ec)
-
 	default:
 		return nil
 	}
@@ -471,75 +375,6 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-// HandleWithItems executes a step for each item in a list specified by with_items.
-func HandleWithItems(step config.Step, ec *ExecutionContext) error {
-	ec.Logger.Debugf("Handling with_items: %+v", step.WithItems)
-
-	withItems := step.WithItems
-	ec.Logger.Debugf("with_items: %v", *withItems)
-
-	// Extract variable name from template syntax: "{{ varname }}" -> "varname"
-	varName := strings.TrimSpace(*withItems)
-	varName = strings.TrimPrefix(varName, "{{")
-	varName = strings.TrimSuffix(varName, "}}")
-	varName = strings.TrimSpace(varName)
-
-	ec.Logger.Debugf("looking up variable: %s", varName)
-
-	// Look up the variable
-	listValue, exists := ec.Variables[varName]
-	if !exists {
-		return fmt.Errorf("with_items variable not found: %s", varName)
-	}
-
-	// Convert to slice
-	var list []interface{}
-	switch v := listValue.(type) {
-	case []interface{}:
-		list = v
-	case []string:
-		list = make([]interface{}, len(v))
-		for i, s := range v {
-			list[i] = s
-		}
-	default:
-		return fmt.Errorf("with_items value is not a list: %T", listValue)
-	}
-
-	ec.Logger.Debugf("list has %d items", len(list))
-
-	return executeLoopStep(list, step, ec)
-}
-
-// HandleWithFileTree executes a step for each file in a directory tree specified by with_filetree.
-func HandleWithFileTree(step config.Step, ec *ExecutionContext) error {
-	ec.Logger.Debugf("Handling with_filetree: %+v", step.WithFileTree)
-
-	withFileTree := step.WithFileTree
-
-	ec.Logger.Debugf("with_filetree: %v", *withFileTree)
-
-	path, err := ec.PathUtil.ExpandPath(*withFileTree, ec.CurrentDir, ec.Variables)
-	if err != nil {
-		return err
-	}
-
-	fileTree, err := ec.FileTree.GetFileTree(path, ec.CurrentDir, ec.Variables)
-	if err != nil {
-		return err
-	}
-
-	ec.Logger.Debugf("fileTree: %+v", fileTree)
-
-	// Convert Item slice to []interface{} for executeLoopStep
-	items := make([]interface{}, len(fileTree))
-	for i, item := range fileTree {
-		items[i] = item
-	}
-
-	return executeLoopStep(items, step, ec)
-}
-
 // ExecuteSteps executes a sequence of configuration steps within the given execution context.
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Executing: %v", ec.CurrentFile)
@@ -550,18 +385,20 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	for i, step := range steps {
 		ec.CurrentIndex = i
 
-		if step.WithFileTree != nil {
-			if err := HandleWithFileTree(step, ec); err != nil {
-				return err
-			}
-			continue
+		// If step has origin metadata (from planner), use its directory
+		// This ensures relative paths work correctly for included files
+		if step.Origin != nil && step.Origin.FilePath != "" {
+			ec.CurrentDir = filepath.Dir(step.Origin.FilePath)
+			ec.CurrentFile = step.Origin.FilePath
 		}
 
-		if step.WithItems != nil {
-			if err := HandleWithItems(step, ec); err != nil {
-				return err
-			}
-			continue
+		// If step has loop context (from planner), restore loop variables
+		// This ensures when conditions can reference item, index, first, last
+		if step.LoopContext != nil {
+			ec.Variables["item"] = step.LoopContext.Item
+			ec.Variables["index"] = step.LoopContext.Index
+			ec.Variables["first"] = step.LoopContext.First
+			ec.Variables["last"] = step.LoopContext.Last
 		}
 
 		if err := ExecuteStep(step, ec); err != nil {
@@ -581,17 +418,76 @@ type StartConfig struct {
 }
 
 // Start begins execution of a mooncake configuration with the given settings.
+// Always goes through the planner to expand loops, includes, and variables.
 func Start(startConfig StartConfig, log logger.Logger) error {
-	// Start timing
-	startTime := time.Now()
-
-	log.Mooncake()
-
 	log.Debugf("config: %v", startConfig)
 
 	if startConfig.ConfigFilePath == "" {
 		return errors.New("config file path is empty")
 	}
+
+	// Create path expander for resolving paths
+	renderer := template.NewPongo2Renderer()
+	pathExpander := pathutil.NewPathExpander(renderer)
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	// Load variables if specified
+	var variables map[string]interface{}
+	if startConfig.VarsFilePath != "" {
+		expandedPath, expandErr := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
+		if expandErr != nil {
+			return expandErr
+		}
+
+		log.Debugf("Reading variables from file: %v", expandedPath)
+		variables, err = config.ReadVariables(expandedPath)
+		if err != nil {
+			log.Debugf("Failed to read variables: %v", err)
+			variables = make(map[string]interface{})
+		}
+		log.Debugf("Read variables: %v", variables)
+	} else {
+		variables = make(map[string]interface{})
+	}
+
+	// Expand config file path
+	configFilePath, err := pathExpander.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Building plan from configuration: %v", configFilePath)
+
+	// ALWAYS build plan first (expands loops, includes, vars)
+	planner := plan.NewPlanner()
+	planData, err := planner.BuildPlan(plan.PlannerConfig{
+		ConfigPath: configFilePath,
+		Variables:  variables,
+		Tags:       startConfig.Tags,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to build plan: %w", err)
+	}
+
+	log.Debugf("Plan built with %d steps", len(planData.Steps))
+
+	// Execute the plan
+	return ExecutePlan(planData, startConfig.SudoPass, startConfig.DryRun, log)
+}
+
+// ExecutePlan executes a pre-compiled plan
+func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) error {
+	steps := p.Steps
+	variables := p.InitialVars
+
+	// Start timing
+	startTime := time.Now()
+
+	log.Mooncake()
 
 	// Create dependencies
 	renderer := template.NewPongo2Renderer()
@@ -599,53 +495,16 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+	// Use the directory of the root config file, not the current working directory
+	// This ensures relative paths in the config (like ./template.j2) are resolved correctly
+	configDir := filepath.Dir(p.RootFile)
 
-	expandedPath, err := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("Reading variables from file: %v", expandedPath)
-	variables, err := config.ReadVariables(expandedPath)
-	if err != nil {
+	// Initialize variables from plan (system facts already injected by planner)
+	if variables == nil {
 		variables = make(map[string]interface{})
 	}
-	log.Debugf("Read variables: %v", variables)
 
-	addGlobalVariables(variables)
-
-	configFilePath, err := pathExpander.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("Reading configuration from file: %v", configFilePath)
-	steps, diagnostics, err := config.ReadConfigWithValidation(configFilePath)
-	if err != nil {
-		return err
-	}
-
-	// Emit validation diagnostics
-	if len(diagnostics) > 0 {
-		if config.HasErrors(diagnostics) {
-			// Use formatted output for errors
-			formatted := config.FormatDiagnosticsWithContext(diagnostics)
-			log.Errorf("%s", formatted)
-			return fmt.Errorf("configuration validation failed")
-		}
-		// Just warnings - show them but continue
-		for _, diag := range diagnostics {
-			log.Errorf(diag.String())
-		}
-	}
-
-	log.Debugf("Read configuration with %v steps", len(steps))
-
-	// Initialize global step counter and statistics (shared across all contexts via pointers)
+	// Initialize global step counter and statistics
 	globalExecuted := 0
 	statsExecuted := 0
 	statsSkipped := 0
@@ -653,15 +512,15 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 
 	executionContext := ExecutionContext{
 		Variables:    variables,
-		CurrentDir:   currentDir,
-		CurrentFile:  configFilePath,
+		CurrentDir:   configDir,
+		CurrentFile:  "",
 		Level:        0,
 		CurrentIndex: 0,
 		TotalSteps:   len(steps),
 		Logger:       log.WithPadLevel(0),
-		SudoPass:     startConfig.SudoPass,
-		Tags:         startConfig.Tags,
-		DryRun:       startConfig.DryRun,
+		SudoPass:     sudoPass,
+		Tags:         []string{},
+		DryRun:       dryRun,
 
 		// Global progress tracking
 		GlobalStepsExecuted: &globalExecuted,
@@ -678,6 +537,7 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 		FileTree:  fileTreeWalker,
 	}
 
+	// Execute pre-expanded steps
 	execErr := ExecuteSteps(steps, &executionContext)
 
 	// Calculate duration

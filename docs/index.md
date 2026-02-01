@@ -131,6 +131,53 @@ Mooncake configurations are YAML files containing an array of **steps**. Each st
 
 ## Commands
 
+### mooncake plan
+
+Generate and inspect a deterministic execution plan.
+
+**Syntax:**
+```bash
+mooncake plan --config <file> [options]
+```
+
+**What it does:**
+- Expands all loops and includes into individual steps
+- Shows exactly what will be executed before running
+- Tracks origin (file:line:col) for every step
+- Exports plans as JSON/YAML for CI/CD integration
+
+**Common options:**
+
+| Flag | Description |
+|------|-------------|
+| `--config, -c` | Path to configuration file (required) |
+| `--format, -f` | Output format: text, json, yaml (default: text) |
+| `--show-origins` | Display file:line:col for each step |
+| `--output, -o` | Save plan to file |
+| `--tags, -t` | Filter steps by tags |
+
+**Examples:**
+
+```bash
+# View plan as text
+mooncake plan --config config.yml
+
+# View with origins
+mooncake plan --config config.yml --show-origins
+
+# Export as JSON
+mooncake plan --config config.yml --format json --output plan.json
+
+# Filter by tags
+mooncake plan --config config.yml --tags dev
+```
+
+**Use cases:**
+- 🔍 **Debugging** - See how loops and includes expand
+- ✅ **Verification** - Review changes before execution
+- 📊 **CI/CD** - Export plans for approval workflows
+- 🔬 **Analysis** - Understand configuration behavior
+
 ### mooncake run
 
 Run a configuration file.
@@ -144,7 +191,8 @@ mooncake run --config <file> [options]
 
 | Flag | Description |
 |------|-------------|
-| `--config, -c` | Path to configuration file (required) |
+| `--config, -c` | Path to configuration file (required, unless using --from-plan) |
+| `--from-plan` | Execute from a saved plan file (JSON/YAML) |
 | `--vars, -v` | Path to variables file |
 | `--tags, -t` | Filter steps by tags (comma-separated) |
 | `--dry-run` | Preview without executing |
@@ -172,6 +220,10 @@ mooncake run --config config.yml --sudo-pass <password>
 
 # Debug mode
 mooncake run --config config.yml --log-level debug
+
+# Execute from saved plan
+mooncake plan --config config.yml --format json --output plan.json
+mooncake run --from-plan plan.json
 ```
 
 **Features:**

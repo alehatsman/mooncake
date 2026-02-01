@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"runtime"
 	"strings"
 )
@@ -14,6 +15,7 @@ type Facts struct {
 	OS       string
 	Arch     string
 	Hostname string
+	Username string
 	UserHome string
 
 	// Distribution (Linux)
@@ -74,6 +76,9 @@ func Collect() *Facts {
 	// Basic facts (cross-platform)
 	f.Hostname, _ = os.Hostname()
 	f.UserHome, _ = os.UserHomeDir()
+	if currentUser, err := user.Current(); err == nil {
+		f.Username = currentUser.Username
+	}
 	f.CPUCores = runtime.NumCPU()
 	f.IPAddresses = collectIPAddresses()
 	f.NetworkInterfaces = collectNetworkInterfaces()
@@ -98,6 +103,7 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"os":                   f.OS,
 		"arch":                 f.Arch,
 		"hostname":             f.Hostname,
+		"username":             f.Username,
 		"user_home":            f.UserHome,
 		"distribution":         f.Distribution,
 		"distribution_version": f.DistributionVersion,

@@ -1,0 +1,4 @@
+- name: Common configuration
+  shell: echo "This comes from an included file"
+  tags:
+    - common
