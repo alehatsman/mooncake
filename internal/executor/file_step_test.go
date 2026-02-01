@@ -2,8 +2,10 @@ package executor
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"testing"
 	"time"
 
@@ -11,30 +13,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 )
 
-// TestFormatMode tests the formatMode function
-func TestFormatMode(t *testing.T) {
-	tests := []struct {
-		name     string
-		mode     os.FileMode
-		expected string
-	}{
-		{"default file", 0644, "0644"},
-		{"default dir", 0755, "0755"},
-		{"read-only", 0400, "0400"},
-		{"executable", 0755, "0755"},
-		{"full perms", 0777, "0777"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := formatMode(tt.mode)
-			if result != tt.expected {
-				t.Errorf("formatMode(%#o) = %q, want %q", tt.mode, result, tt.expected)
-			}
-		})
-	}
-}
-
+// Note: TestFormatMode already exists in dryrun_test.go
 // Note: TestParseFileMode already exists in executor_test.go
 
 // TestHandleFile_CreateDirectory tests directory creation
@@ -1525,5 +1504,256 @@ func TestHandleFile_SetPermissionsEmitsEvent(t *testing.T) {
 
 	if !found {
 		t.Error("Expected permissions.changed event to be emitted")
+	}
+}
+
+// TestHandleFile_SetPermissionsRecursiveWithoutSudo tests recursive chmod error without sudo
+func TestHandleFile_SetPermissionsRecursiveWithoutSudo(t *testing.T) {
+	ec := newTestExecutionContext(t)
+	dirPath := filepath.Join(ec.CurrentDir, "testdir")
+
+	// Create directory
+	if err := os.Mkdir(dirPath, 0755); err != nil {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
+	step := config.Step{
+		File: &config.File{
+			Path:    dirPath,
+			State:   "perms",
+			Mode:    "0700",
+			Recurse: true,
+		},
+	}
+
+	err := HandleFile(step, ec)
+	if err == nil {
+		t.Fatal("Expected error for recursive permission change without sudo")
+	}
+	if err.Error() != "recursive permission change without sudo not yet implemented (use become: true)" {
+		t.Errorf("Unexpected error message: %v", err)
+	}
+}
+
+// TestParseUserID_WithUsername tests parsing actual username
+func TestParseUserID_WithUsername(t *testing.T) {
+	// Get current user
+	currentUser, err := os.UserCacheDir()
+	if err != nil {
+		t.Skip("Cannot get current user, skipping test")
+	}
+	_ = currentUser
+
+	// Try to lookup current user by getting user info
+	u, err := user.Current()
+	if err != nil {
+		t.Skip("Cannot get current user info, skipping test")
+	}
+
+	// Test with username
+	uid, err := parseUserID(u.Username)
+	if err != nil {
+		t.Errorf("parseUserID with username failed: %v", err)
+	}
+
+	// Verify it matches the UID
+	expectedUID, _ := strconv.Atoi(u.Uid)
+	if uid != expectedUID {
+		t.Errorf("parseUserID(%q) = %d, want %d", u.Username, uid, expectedUID)
+	}
+}
+
+// TestParseGroupID_WithGroupName tests parsing actual group name
+func TestParseGroupID_WithGroupName(t *testing.T) {
+	// Try to get current user's group
+	u, err := user.Current()
+	if err != nil {
+		t.Skip("Cannot get current user info, skipping test")
+	}
+
+	// Try to lookup group by GID first
+	g, err := user.LookupGroupId(u.Gid)
+	if err != nil {
+		t.Skip("Cannot lookup group info, skipping test")
+	}
+
+	// Test with group name
+	gid, err := parseGroupID(g.Name)
+	if err != nil {
+		t.Errorf("parseGroupID with group name failed: %v", err)
+	}
+
+	// Verify it matches the GID
+	expectedGID, _ := strconv.Atoi(u.Gid)
+	if gid != expectedGID {
+		t.Errorf("parseGroupID(%q) = %d, want %d", g.Name, gid, expectedGID)
+	}
+}
+
+// TestHandleFile_DryRunFileUpdate tests dry-run for file update (not create)
+func TestHandleFile_DryRunFileUpdate(t *testing.T) {
+	ec := newTestExecutionContext(t)
+	filePath := filepath.Join(ec.CurrentDir, "testfile.txt")
+
+	// Create file first
+	createTestFile(t, filePath, "old content")
+
+	// Now try to update in dry-run mode
+	ec.DryRun = true
+
+	step := config.Step{
+		File: &config.File{
+			Path:    filePath,
+			State:   "file",
+			Content: "new content",
+		},
+	}
+
+	err := HandleFile(step, ec)
+	if err != nil {
+		t.Fatalf("HandleFile in dry-run failed: %v", err)
+	}
+
+	// Verify file was NOT updated
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(content) != "old content" {
+		t.Errorf("File should not be updated in dry-run mode, got: %q", string(content))
+	}
+}
+
+// TestHandleFile_TouchFileUpdatesTimestamp tests that touch updates timestamp
+func TestHandleFile_TouchFileUpdatesTimestamp(t *testing.T) {
+	ec := newTestExecutionContext(t)
+	filePath := filepath.Join(ec.CurrentDir, "testfile.txt")
+	content := "existing content"
+
+	// Create file
+	createTestFile(t, filePath, content)
+
+	// Set an old mod time
+	oldTime := time.Now().Add(-1 * time.Hour)
+	if err := os.Chtimes(filePath, oldTime, oldTime); err != nil {
+		t.Fatalf("Failed to set old time: %v", err)
+	}
+
+	// Get the old mod time
+	infoOld, _ := os.Stat(filePath)
+	oldModTime := infoOld.ModTime()
+
+	// Small sleep to ensure time difference
+	time.Sleep(10 * time.Millisecond)
+
+	step := config.Step{
+		File: &config.File{
+			Path:  filePath,
+			State: "touch",
+		},
+	}
+
+	err := HandleFile(step, ec)
+	if err != nil {
+		t.Fatalf("HandleFile failed: %v", err)
+	}
+
+	// Verify timestamp was updated
+	infoNew, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatalf("Failed to stat file: %v", err)
+	}
+	newModTime := infoNew.ModTime()
+
+	if !newModTime.After(oldModTime) {
+		t.Error("Touch should update modification time")
+	}
+
+	// Verify content is unchanged
+	newContent, _ := os.ReadFile(filePath)
+	if string(newContent) != content {
+		t.Errorf("Content should be unchanged, got: %q", string(newContent))
+	}
+}
+
+// TestHandleFile_CreateDirectoryDryRun tests directory creation in dry-run mode
+func TestHandleFile_CreateDirectoryDryRun(t *testing.T) {
+	ec := newTestExecutionContext(t)
+	ec.DryRun = true
+	dirPath := filepath.Join(ec.CurrentDir, "testdir")
+
+	step := config.Step{
+		File: &config.File{
+			Path:  dirPath,
+			State: "directory",
+		},
+	}
+
+	err := HandleFile(step, ec)
+	if err != nil {
+		t.Fatalf("HandleFile failed: %v", err)
+	}
+
+	// Verify directory was NOT created
+	if _, err := os.Stat(dirPath); !os.IsNotExist(err) {
+		t.Error("Directory should not be created in dry-run mode")
+	}
+}
+
+// TestHandleFile_RemoveFileDryRun tests file removal in dry-run mode
+func TestHandleFile_RemoveFileDryRun(t *testing.T) {
+	ec := newTestExecutionContext(t)
+	filePath := filepath.Join(ec.CurrentDir, "testfile.txt")
+
+	// Create file
+	createTestFile(t, filePath, "test")
+
+	ec.DryRun = true
+
+	step := config.Step{
+		File: &config.File{
+			Path:  filePath,
+			State: "absent",
+		},
+	}
+
+	err := HandleFile(step, ec)
+	if err != nil {
+		t.Fatalf("HandleFile failed: %v", err)
+	}
+
+	// Verify file was NOT removed
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		t.Error("File should not be removed in dry-run mode")
+	}
+}
+
+// TestHandleFile_RemoveDirectoryDryRun tests directory removal in dry-run mode
+func TestHandleFile_RemoveDirectoryDryRun(t *testing.T) {
+	ec := newTestExecutionContext(t)
+	dirPath := filepath.Join(ec.CurrentDir, "testdir")
+
+	// Create directory
+	if err := os.Mkdir(dirPath, 0755); err != nil {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
+	ec.DryRun = true
+
+	step := config.Step{
+		File: &config.File{
+			Path:  dirPath,
+			State: "absent",
+		},
+	}
+
+	err := HandleFile(step, ec)
+	if err != nil {
+		t.Fatalf("HandleFile failed: %v", err)
+	}
+
+	// Verify directory was NOT removed
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		t.Error("Directory should not be removed in dry-run mode")
 	}
 }
