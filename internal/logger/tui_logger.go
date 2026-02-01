@@ -17,6 +17,7 @@ type TUILogger struct {
 	logLevel int
 	padLevel int
 	mu       sync.Mutex
+	redactor Redactor
 
 	// Track previous step for history
 	lastStepInfo *StepInfo
@@ -147,6 +148,7 @@ func (l *TUILogger) Debugf(format string, v ...interface{}) {
 	}
 
 	message := fmt.Sprintf(format, v...)
+	message = l.redact(message)
 	l.buffer.AddDebug(message)
 }
 
@@ -156,6 +158,7 @@ func (l *TUILogger) Errorf(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 
 	message := fmt.Sprintf(format, v...)
+	message = l.redact(message)
 	l.buffer.AddError(message)
 
 	// Mark last step as error
@@ -226,6 +229,21 @@ func (l *TUILogger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
+// SetRedactor sets the redactor for automatic sensitive data redaction.
+func (l *TUILogger) SetRedactor(redactor Redactor) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.redactor = redactor
+}
+
+// redact applies redaction if a redactor is configured
+func (l *TUILogger) redact(text string) string {
+	if l.redactor != nil {
+		return l.redactor.Redact(text)
+	}
+	return text
+}
+
 // WithPadLevel creates a new logger with the specified padding level.
 func (l *TUILogger) WithPadLevel(padLevel int) Logger {
 	// Create a new TUILogger that shares the same buffer and display
@@ -237,6 +255,7 @@ func (l *TUILogger) WithPadLevel(padLevel int) Logger {
 		done:         l.done,
 		logLevel:     l.logLevel,
 		padLevel:     padLevel,
+		redactor:     l.redactor, // Share the same redactor
 		lastStepInfo: nil,
 	}
 

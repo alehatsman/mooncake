@@ -14,6 +14,28 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
+// newTestExecutionContext creates an ExecutionContext for testing with all required fields initialized
+func newTestExecutionContext(vars map[string]interface{}, log logger.Logger) *ExecutionContext {
+	renderer := template.NewPongo2Renderer()
+	evaluator := expression.NewGovaluateEvaluator()
+	pathExpander := pathutil.NewPathExpander(renderer)
+	fileTreeWalker := filetree.NewWalker(pathExpander)
+
+	if vars == nil {
+		vars = make(map[string]interface{})
+	}
+
+	return &ExecutionContext{
+		Variables: vars,
+		Logger:    log,
+		Template:  renderer,
+		Evaluator: evaluator,
+		PathUtil:  pathExpander,
+		FileTree:  fileTreeWalker,
+		Redactor:  security.NewRedactor(),
+	}
+}
+
 func TestExecutionContext_Copy(t *testing.T) {
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
@@ -188,7 +210,6 @@ func TestHandleWhenExpression(t *testing.T) {
 				Variables: tt.vars,
 				Logger:    testLogger,
 				Template:  renderer,
-				Redactor:  security.NewRedactor(),
 				Evaluator: evaluator,
 			}
 
@@ -335,7 +356,6 @@ func TestShouldSkipByTags(t *testing.T) {
 			}
 			ec := &ExecutionContext{
 				Tags: tt.filterTags,
-				Redactor: security.NewRedactor(),
 			}
 
 			got := shouldSkipByTags(step, ec)
@@ -529,7 +549,6 @@ func TestHandleShell(t *testing.T) {
 				Variables: tt.variables,
 				Logger:    testLogger,
 				Template:  renderer,
-				Redactor:  security.NewRedactor(),
 			}
 			step := config.Step{
 				Name:     "test shell",
@@ -842,7 +861,6 @@ func TestExecuteSteps(t *testing.T) {
 		CurrentFile:         "test.yml",
 		GlobalStepsExecuted: new(int),
 		StatsExecuted:       new(int),
-		Redactor:            security.NewRedactor(),
 	}
 
 	shellCmd1 := "echo step1"
@@ -1062,7 +1080,6 @@ func TestDispatchStepAction(t *testing.T) {
 				Evaluator:  evaluator,
 				PathUtil:   pathExpander,
 				CurrentDir: tmpDir,
-				Redactor:   security.NewRedactor(),
 			}
 
 			err := dispatchStepAction(tt.step, ec)
@@ -1076,10 +1093,11 @@ func TestDispatchStepAction(t *testing.T) {
 func TestDryRunLogger(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	dryRun := newDryRunLogger(testLogger)
+	redactor := security.NewRedactor()
 
 	// Test all dry-run logging methods
-	dryRun.LogShellExecution("echo test", false)
-	dryRun.LogShellExecution("echo test", true)
+	dryRun.LogShellExecution("echo test", false, redactor)
+	dryRun.LogShellExecution("echo test", true, redactor)
 	dryRun.LogFileOperation("file", "/path/file", 0644)
 	dryRun.LogFileOperation("directory", "/path/dir", 0755)
 	dryRun.LogTemplateRender("/src", "/dest", 0644)
@@ -1138,7 +1156,6 @@ func TestHandleShell_DryRun(t *testing.T) {
 		Logger:    testLogger,
 		Template:  renderer,
 		DryRun:    true,
-		Redactor:  security.NewRedactor(),
 	}
 
 	shellCmd := "echo test"
@@ -1846,7 +1863,6 @@ func TestExecuteSteps_WithError(t *testing.T) {
 		GlobalStepsExecuted: &globalExecuted,
 		StatsExecuted:       &statsExecuted,
 		StatsFailed:         &statsFailed,
-		Redactor:            security.NewRedactor(),
 	}
 
 	// Step that will fail
@@ -1884,7 +1900,6 @@ func TestExecuteSteps_MultipleSteps(t *testing.T) {
 		CurrentFile:         "test.yml",
 		GlobalStepsExecuted: &globalExecuted,
 		StatsExecuted:       &statsExecuted,
-		Redactor:            security.NewRedactor(),
 	}
 
 	cmd1 := "echo step1"
@@ -1915,7 +1930,6 @@ func TestExecuteSteps_UpdatesContext(t *testing.T) {
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
-	redactor := security.NewRedactor()
 
 	globalExecuted := 0
 	statsExecuted := 0
@@ -1931,7 +1945,6 @@ func TestExecuteSteps_UpdatesContext(t *testing.T) {
 		Level:               0,
 		GlobalStepsExecuted: &globalExecuted,
 		StatsExecuted:       &statsExecuted,
-		Redactor:            redactor,
 	}
 
 	shellCmd := "echo test"
@@ -2662,7 +2675,6 @@ func TestHandleShell_RegisterResult(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables:           map[string]interface{}{},
@@ -2674,7 +2686,6 @@ func TestHandleShell_RegisterResult(t *testing.T) {
 		CurrentDir:          tmpDir,
 		GlobalStepsExecuted: new(int),
 		StatsExecuted:       new(int),
-		Redactor:            redactor,
 	}
 
 	shellCmd := "echo hello"
@@ -2857,7 +2868,6 @@ func TestHandleShell_BecomeWithoutPassword(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables:           map[string]interface{}{},
@@ -2869,7 +2879,6 @@ func TestHandleShell_BecomeWithoutPassword(t *testing.T) {
 		CurrentDir:          tmpDir,
 		GlobalStepsExecuted: new(int),
 		SudoPass:            "", // No password
-		Redactor:            redactor,
 	}
 
 	shellCmd := "echo test"
@@ -2897,7 +2906,6 @@ func TestHandleShell_FailedCommand(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables:           map[string]interface{}{},
@@ -2909,7 +2917,6 @@ func TestHandleShell_FailedCommand(t *testing.T) {
 		CurrentDir:          tmpDir,
 		GlobalStepsExecuted: new(int),
 		StatsExecuted:       new(int),
-		Redactor:            redactor,
 	}
 
 	shellCmd := "exit 1"
@@ -3111,7 +3118,6 @@ func TestExecuteStep_NoStepName(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
-	readactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables:           map[string]interface{}{},
@@ -3122,7 +3128,6 @@ func TestExecuteStep_NoStepName(t *testing.T) {
 		FileTree:            fileTreeWalker,
 		CurrentDir:          tmpDir,
 		GlobalStepsExecuted: new(int),
-		Redactor:            readactor,
 	}
 
 	// Anonymous step (no name) with shell
@@ -3182,14 +3187,12 @@ func TestHandleShell_Env(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables: map[string]interface{}{"custom_value": "test123"},
 		Logger:    testLogger,
 		Template:  renderer,
 		Evaluator: evaluator,
-		Redactor:  redactor,
 	}
 
 	step := config.Step{
@@ -3226,7 +3229,6 @@ func TestHandleShell_Cwd(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	// Create a temp directory
 	tmpDir, err := os.MkdirTemp("", "mooncake-test-cwd-*")
@@ -3240,7 +3242,6 @@ func TestHandleShell_Cwd(t *testing.T) {
 		Logger:    testLogger,
 		Template:  renderer,
 		Evaluator: evaluator,
-		Redactor:  redactor,
 	}
 
 	step := config.Step{
@@ -3275,14 +3276,12 @@ func TestHandleShell_Timeout(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables: map[string]interface{}{},
 		Logger:    testLogger,
 		Template:  renderer,
 		Evaluator: evaluator,
-		Redactor:  redactor,
 	}
 
 	step := config.Step{
@@ -3317,14 +3316,12 @@ func TestHandleShell_Retries(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables: map[string]interface{}{},
 		Logger:    testLogger,
 		Template:  renderer,
 		Evaluator: evaluator,
-		Redactor:  redactor,
 	}
 
 	step := config.Step{
@@ -3348,14 +3345,12 @@ func TestHandleShell_RetryDelay(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	ec := &ExecutionContext{
 		Variables: map[string]interface{}{},
 		Logger:    testLogger,
 		Template:  renderer,
 		Evaluator: evaluator,
-		Redactor:  redactor,
 	}
 
 	step := config.Step{
@@ -3376,7 +3371,6 @@ func TestHandleShell_ChangedWhen(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	t.Run("changed_when false", func(t *testing.T) {
 		ec := &ExecutionContext{
@@ -3384,7 +3378,6 @@ func TestHandleShell_ChangedWhen(t *testing.T) {
 			Logger:    testLogger,
 			Template:  renderer,
 			Evaluator: evaluator,
-			Redactor:  redactor,
 		}
 
 		step := config.Step{
@@ -3420,7 +3413,6 @@ func TestHandleShell_ChangedWhen(t *testing.T) {
 			Logger:    testLogger,
 			Template:  renderer,
 			Evaluator: evaluator,
-			Redactor:  redactor,
 		}
 
 		step := config.Step{
@@ -3455,7 +3447,6 @@ func TestHandleShell_FailedWhen(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	t.Run("failed_when overrides success", func(t *testing.T) {
 		ec := &ExecutionContext{
@@ -3463,7 +3454,6 @@ func TestHandleShell_FailedWhen(t *testing.T) {
 			Logger:    testLogger,
 			Template:  renderer,
 			Evaluator: evaluator,
-			Redactor:  redactor,
 		}
 
 		step := config.Step{
@@ -3499,7 +3489,6 @@ func TestHandleShell_FailedWhen(t *testing.T) {
 			Logger:    testLogger,
 			Template:  renderer,
 			Evaluator: evaluator,
-			Redactor:  redactor,
 		}
 
 		step := config.Step{
@@ -3534,7 +3523,6 @@ func TestHandleShell_CombinedFields(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer := template.NewPongo2Renderer()
 	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
 
 	tmpDir, err := os.MkdirTemp("", "mooncake-test-combined-*")
 	if err != nil {
@@ -3550,7 +3538,6 @@ func TestHandleShell_CombinedFields(t *testing.T) {
 		Logger:    testLogger,
 		Template:  renderer,
 		Evaluator: evaluator,
-		Redactor:  redactor,
 	}
 
 	step := config.Step{

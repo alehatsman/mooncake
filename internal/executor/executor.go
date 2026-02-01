@@ -16,6 +16,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/plan"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -468,11 +469,14 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 
 // StartConfig contains configuration for starting a mooncake execution.
 type StartConfig struct {
-	ConfigFilePath string
-	VarsFilePath   string
-	SudoPass       string
-	Tags           []string
-	DryRun         bool
+	ConfigFilePath   string
+	VarsFilePath     string
+	SudoPass         string // Deprecated: use AskBecomePass or SudoPassFile
+	SudoPassFile     string
+	AskBecomePass    bool
+	InsecureSudoPass bool
+	Tags             []string
+	DryRun           bool
 }
 
 // Start begins execution of a mooncake configuration with the given settings.
@@ -482,6 +486,19 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 
 	if startConfig.ConfigFilePath == "" {
 		return errors.New("config file path is empty")
+	}
+
+	// Resolve sudo password early (before plan building)
+	passwordCfg := security.PasswordConfig{
+		CLIPassword:    startConfig.SudoPass,
+		AskInteractive: startConfig.AskBecomePass,
+		PasswordFile:   startConfig.SudoPassFile,
+		InsecureCLI:    startConfig.InsecureSudoPass,
+	}
+
+	sudoPassword, err := security.ResolvePassword(passwordCfg)
+	if err != nil {
+		return fmt.Errorf("failed to resolve sudo password: %w", err)
 	}
 
 	// Create path expander for resolving paths
@@ -533,8 +550,8 @@ func Start(startConfig StartConfig, log logger.Logger) error {
 
 	log.Debugf("Plan built with %d steps", len(planData.Steps))
 
-	// Execute the plan
-	return ExecutePlan(planData, startConfig.SudoPass, startConfig.DryRun, log)
+	// Execute the plan with resolved password
+	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, log)
 }
 
 // ExecutePlan executes a pre-compiled plan
@@ -552,6 +569,23 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) 
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
+
+	// Create redactor and add sudo password if present
+	redactor := security.NewRedactor()
+	if sudoPass != "" {
+		redactor.AddSensitive(sudoPass)
+	}
+
+	// Set redactor on logger for automatic redaction
+	// The logger interface defines Redactor, so we use type assertion
+	type RedactorSetter interface {
+		SetRedactor(r interface {
+			Redact(string) string
+		})
+	}
+	if loggerWithRedactor, ok := log.(RedactorSetter); ok {
+		loggerWithRedactor.SetRedactor(redactor)
+	}
 
 	// Use the directory of the root config file, not the current working directory
 	// This ensures relative paths in the config (like ./template.j2) are resolved correctly
@@ -593,6 +627,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger) 
 		Evaluator: evaluator,
 		PathUtil:  pathExpander,
 		FileTree:  fileTreeWalker,
+		Redactor:  redactor,
 	}
 
 	// Execute pre-expanded steps

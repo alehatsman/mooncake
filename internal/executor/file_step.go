@@ -1,13 +1,17 @@
 package executor
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 // parseFileMode parses a mode string (e.g., "0644") into os.FileMode
@@ -43,7 +47,7 @@ func handleDirectoryState(file *config.File, renderedPath string, result *Result
 	}
 
 	ec.Logger.Debugf("  Creating directory: %s", renderedPath)
-	if err := os.MkdirAll(renderedPath, mode); err != nil {
+	if err := createDirectoryWithBecome(renderedPath, mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
 		return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
 	}
@@ -93,7 +97,7 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 		}
 
 		ec.Logger.Debugf("  Creating file: %s", renderedPath)
-		if err := os.WriteFile(renderedPath, []byte(""), mode); err != nil {
+		if err := createFileWithBecome(renderedPath, []byte(""), mode, step, ec); err != nil {
 			markStepFailed(result, step, ec)
 			return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
 		}
@@ -123,7 +127,7 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 	}
 
 	ec.Logger.Debugf("  Creating file: %s", renderedPath)
-	if err := os.WriteFile(renderedPath, []byte(renderedContent), mode); err != nil {
+	if err := createFileWithBecome(renderedPath, []byte(renderedContent), mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
 		return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
 	}
@@ -172,6 +176,106 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 	if step.Register != "" {
 		result.RegisterTo(ec.Variables, step.Register)
 		ec.Logger.Debugf("  Registered result as: %s (changed=%v)", step.Register, result.Changed)
+	}
+
+	return nil
+}
+
+// createFileWithBecome creates a file with become support
+// Uses temporary file + sudo move pattern when become is true
+func createFileWithBecome(path string, content []byte, mode os.FileMode, step config.Step, ec *ExecutionContext) error {
+	if !step.Become {
+		// Regular file creation
+		return os.WriteFile(path, content, mode)
+	}
+
+	// Validate platform support
+	if !security.IsBecomeSupported() {
+		return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+	}
+
+	// Become required - use temp file + sudo move pattern
+	if ec.SudoPass == "" {
+		return fmt.Errorf("step requires sudo but no password provided")
+	}
+
+	// Create temp file
+	tmpFile, err := os.CreateTemp("", "mooncake-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer func() {
+		if removeErr := os.Remove(tmpPath); removeErr != nil {
+			ec.Logger.Debugf("Failed to remove temp file %s: %v", tmpPath, removeErr)
+		}
+	}()
+
+	// Write content to temp file
+	if err := os.WriteFile(tmpPath, content, 0600); err != nil {
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+
+	// Use sudo to move and set permissions
+	return executeSudoFileOperation(tmpPath, path, mode, step, ec)
+}
+
+// createDirectoryWithBecome creates a directory with become support
+func createDirectoryWithBecome(path string, mode os.FileMode, step config.Step, ec *ExecutionContext) error {
+	if !step.Become {
+		// Regular directory creation
+		return os.MkdirAll(path, mode)
+	}
+
+	// Validate platform support
+	if !security.IsBecomeSupported() {
+		return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+	}
+
+	// Become required - use sudo
+	if ec.SudoPass == "" {
+		return fmt.Errorf("step requires sudo but no password provided")
+	}
+
+	// Build sudo mkdir command
+	cmd := fmt.Sprintf("mkdir -p %q && chmod %#o %q", path, mode, path)
+
+	if step.BecomeUser != "" {
+		cmd = fmt.Sprintf("%s && chown %q %q", cmd, step.BecomeUser, path)
+	}
+
+	return executeSudoCommand(cmd, step, ec)
+}
+
+// executeSudoFileOperation moves temp file to destination with sudo
+func executeSudoFileOperation(tmpPath, destPath string, mode os.FileMode, step config.Step, ec *ExecutionContext) error {
+	// Build command: mv tmpPath destPath && chmod mode destPath
+	cmd := fmt.Sprintf("mv %q %q && chmod %#o %q", tmpPath, destPath, mode, destPath)
+
+	if step.BecomeUser != "" {
+		cmd = fmt.Sprintf("%s && chown %q %q", cmd, step.BecomeUser, destPath)
+	}
+
+	return executeSudoCommand(cmd, step, ec)
+}
+
+// executeSudoCommand executes a command with sudo
+func executeSudoCommand(command string, step config.Step, ec *ExecutionContext) error {
+	// Build sudo arguments
+	args := []string{"-S"}
+	if step.BecomeUser != "" {
+		args = append(args, "-u", step.BecomeUser)
+	}
+	args = append(args, "--", "bash", "-c", command)
+
+	// #nosec G204 - This is a provisioning tool designed to execute commands.
+	cmd := exec.Command("sudo", args...)
+	cmd.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
+
+	// Capture output for error reporting
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("sudo command failed: %w\nOutput: %s", err, ec.Redactor.Redact(string(output)))
 	}
 
 	return nil

@@ -9,11 +9,17 @@ import (
 	"github.com/fatih/color"
 )
 
+// Redactor interface for redacting sensitive information from logs
+type Redactor interface {
+	Redact(text string) string
+}
+
 // ConsoleLogger implements Logger interface with colored console output.
 type ConsoleLogger struct {
 	logLevel int
 	padLevel int
 	pad      string
+	redactor Redactor
 }
 
 // NewLogger creates a new ConsoleLogger with the specified log level.
@@ -49,10 +55,24 @@ func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
+// SetRedactor sets the redactor for automatic sensitive data redaction.
+func (l *ConsoleLogger) SetRedactor(redactor Redactor) {
+	l.redactor = redactor
+}
+
+// redact applies redaction if a redactor is configured
+func (l *ConsoleLogger) redact(text string) string {
+	if l.redactor != nil {
+		return l.redactor.Redact(text)
+	}
+	return text
+}
+
 // Infof logs an informational message.
 func (l *ConsoleLogger) Infof(format string, v ...interface{}) {
 	if l.logLevel <= InfoLevel {
 		msg := fmt.Sprintf(format, v...)
+		msg = l.redact(msg)
 		msg = l.addPaddingToLines(msg)
 		color.White(msg)
 	}
@@ -62,6 +82,7 @@ func (l *ConsoleLogger) Infof(format string, v ...interface{}) {
 func (l *ConsoleLogger) Errorf(format string, v ...interface{}) {
 	if l.logLevel <= ErrorLevel {
 		msg := fmt.Sprintf(format, v...)
+		msg = l.redact(msg)
 		msg = l.addPaddingToLines(msg)
 		color.Red(msg)
 	}
@@ -71,6 +92,7 @@ func (l *ConsoleLogger) Errorf(format string, v ...interface{}) {
 func (l *ConsoleLogger) Debugf(format string, v ...interface{}) {
 	if l.logLevel <= DebugLevel {
 		msg := fmt.Sprintf(format, v...)
+		msg = l.redact(msg)
 		msg = l.addPaddingToLines(msg)
 		color.Yellow(msg)
 	}
@@ -125,6 +147,7 @@ func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger {
 		logLevel: l.logLevel,
 		padLevel: padLevel,
 		pad:      strings.Repeat("  ", padLevel),
+		redactor: l.redactor, // Share the same redactor
 	}
 }
 

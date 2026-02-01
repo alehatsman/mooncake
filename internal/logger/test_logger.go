@@ -18,6 +18,7 @@ type TestLogger struct {
 	Logs     []LogEntry
 	logLevel int
 	padLevel int
+	redactor Redactor
 }
 
 // NewTestLogger creates a new TestLogger for use in tests.
@@ -34,7 +35,9 @@ func (t *TestLogger) Infof(format string, v ...interface{}) {
 	if t.logLevel <= InfoLevel {
 		t.mu.Lock()
 		defer t.mu.Unlock()
-		t.Logs = append(t.Logs, LogEntry{"INFO", fmt.Sprintf(format, v...)})
+		msg := fmt.Sprintf(format, v...)
+		msg = t.redact(msg)
+		t.Logs = append(t.Logs, LogEntry{"INFO", msg})
 	}
 }
 
@@ -43,7 +46,9 @@ func (t *TestLogger) Debugf(format string, v ...interface{}) {
 	if t.logLevel <= DebugLevel {
 		t.mu.Lock()
 		defer t.mu.Unlock()
-		t.Logs = append(t.Logs, LogEntry{"DEBUG", fmt.Sprintf(format, v...)})
+		msg := fmt.Sprintf(format, v...)
+		msg = t.redact(msg)
+		t.Logs = append(t.Logs, LogEntry{"DEBUG", msg})
 	}
 }
 
@@ -52,7 +57,9 @@ func (t *TestLogger) Errorf(format string, v ...interface{}) {
 	if t.logLevel <= ErrorLevel {
 		t.mu.Lock()
 		defer t.mu.Unlock()
-		t.Logs = append(t.Logs, LogEntry{"ERROR", fmt.Sprintf(format, v...)})
+		msg := fmt.Sprintf(format, v...)
+		msg = t.redact(msg)
+		t.Logs = append(t.Logs, LogEntry{"ERROR", msg})
 	}
 }
 
@@ -102,12 +109,28 @@ func (t *TestLogger) SetLogLevelStr(logLevel string) error {
 	return nil
 }
 
+// SetRedactor sets the redactor for automatic sensitive data redaction.
+func (t *TestLogger) SetRedactor(redactor Redactor) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.redactor = redactor
+}
+
+// redact applies redaction if a redactor is configured
+func (t *TestLogger) redact(text string) string {
+	if t.redactor != nil {
+		return t.redactor.Redact(text)
+	}
+	return text
+}
+
 // WithPadLevel creates a new logger with the specified padding level.
 func (t *TestLogger) WithPadLevel(padLevel int) Logger {
 	return &TestLogger{
 		Logs:     t.Logs, // Share the same log slice
 		logLevel: t.logLevel,
 		padLevel: padLevel,
+		redactor: t.redactor, // Share the same redactor
 	}
 }
 

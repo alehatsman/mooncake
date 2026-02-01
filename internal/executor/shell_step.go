@@ -8,12 +8,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 // evaluateResultOverrides applies changed_when and failed_when expressions to override result status.
@@ -151,6 +153,9 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 	var command *exec.Cmd
 
 	if step.Become {
+		if !security.IsBecomeSupported() {
+			return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+		}
 		if ec.SudoPass == "" {
 			return fmt.Errorf("step requires sudo but no password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
 		}
@@ -275,7 +280,7 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 
 	// Return error if command failed (after applying overrides)
 	if result.Failed {
-		// On error, show captured output for debugging
+		// On error, show captured output for debugging (logger will automatically redact)
 		if stdoutBuf.Len() > 0 {
 			ec.Logger.Errorf("Command output:\n%s", result.Stdout)
 		}

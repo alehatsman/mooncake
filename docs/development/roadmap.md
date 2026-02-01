@@ -94,20 +94,28 @@
   - [x] `retry_delay: duration` — ✅ IMPLEMENTED: config.Step.RetryDelay field; parses duration string and sleeps between retries
   - [x] retry on failure only unless configured — ✅ IMPLEMENTED: retries only on command failure (non-zero exit code); logs retry attempts
 
-### 0.4 Sudo / privilege escalation
-- [ ] Input methods:
-  - [ ] `--ask-become-pass` (prompt no-echo) — not implemented; only --sudo-pass CLI flag exists (cmd/mooncake.go:108-110)
-  - [ ] `--sudo-pass-file` (0600) — not implemented; no file-based password input
-  - [ ] `SUDO_ASKPASS` support (optional) — not implemented; no env var handling
-- [ ] Security:
-  - [ ] forbid plaintext `--sudo-pass` by default (or warn + require explicit insecure flag) — not implemented; no warnings or restrictions
-  - [ ] redact password in logs/events — not implemented; SudoPass flows through ExecutionContext without sanitization
-- [ ] Become implementation:
-  - [x] Linux/macOS: `sudo -S` / askpass — sudo -S implemented in shell_step.go:40-48; no askpass support
-  - [ ] Windows: explicit not supported or use `runas` (define scope) — not implemented; no Windows privilege escalation
-- [ ] Per-step become:
-  - [x] `become: true|false` — fully implemented; config.go:38, schema.json:22-25, shell_step.go:40
-  - [ ] `become_user` (optional; linux/mac only) — not implemented; no become_user field in Step struct
+### 0.4 Sudo / privilege escalation ✅
+- [x] Input methods:
+  - [x] `--ask-become-pass` / `-K` (prompt no-echo) — ✅ IMPLEMENTED: InteractivePasswordProvider in security/password.go uses golang.org/x/term.ReadPassword
+  - [x] `--sudo-pass-file` (0600) — ✅ IMPLEMENTED: FilePasswordProvider validates 0600 permissions and file ownership
+  - [x] `SUDO_ASKPASS` support (optional) — ✅ IMPLEMENTED: EnvPasswordProvider executes SUDO_ASKPASS helper program as fallback
+- [x] Security:
+  - [x] forbid plaintext `--sudo-pass` by default (or warn + require explicit insecure flag) — ✅ IMPLEMENTED: requires --insecure-sudo-pass flag; mutual exclusion validation; security warnings in CLI
+  - [x] redact password in logs/events — ✅ IMPLEMENTED: Redactor in security/redact.go; integrated into ExecutionContext; redacts all debug logs, stdout, stderr, dry-run output
+- [x] Become implementation:
+  - [x] Linux/macOS: `sudo -S` / askpass — ✅ IMPLEMENTED: sudo -S in shell_step.go; SUDO_ASKPASS support via EnvPasswordProvider
+  - [x] Platform detection — ✅ IMPLEMENTED: IsBecomeSupported() in security/platform.go validates Linux/macOS support
+  - [ ] Windows: explicit not supported or use `runas` (define scope) — not implemented; become operations explicitly fail on Windows
+- [x] Per-step become:
+  - [x] `become: true|false` — ✅ IMPLEMENTED: fully functional for shell, file, template operations
+  - [x] `become_user` (optional; linux/mac only) — ✅ IMPLEMENTED: config.Step.BecomeUser field; supported in shell via sudo -u; file/template operations use chown
+- [x] Extended become support:
+  - [x] File operations — ✅ IMPLEMENTED: createFileWithBecome() uses temp file + sudo move pattern
+  - [x] Template operations — ✅ IMPLEMENTED: template rendering respects become flag
+  - [x] Directory operations — ✅ IMPLEMENTED: createDirectoryWithBecome() uses sudo mkdir
+- [x] Testing:
+  - [x] Unit tests — ✅ IMPLEMENTED: 26 tests in security/*_test.go (password providers, redaction, platform)
+  - [x] Integration tests — ✅ IMPLEMENTED: sudo_integration_test.go validates password resolution, redaction, file permissions, mutual exclusion
 
 ---
 

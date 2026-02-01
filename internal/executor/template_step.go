@@ -147,7 +147,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	}
 
 	mode := parseFileMode(template.Mode, 0644)
-	if err := os.WriteFile(dest, []byte(output), mode); err != nil {
+	if err := createFileWithBecome(dest, []byte(output), mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
 		return fmt.Errorf("failed to write template output to %s: %w", dest, err)
 	}

@@ -68,12 +68,36 @@ func run(c *cli.Context) error {
 		}
 	}
 
+	// Validate password input methods (mutual exclusion)
+	passwordMethods := 0
+	if c.String("sudo-pass") != "" {
+		passwordMethods++
+	}
+	if c.Bool("ask-become-pass") {
+		passwordMethods++
+	}
+	if c.String("sudo-pass-file") != "" {
+		passwordMethods++
+	}
+
+	if passwordMethods > 1 {
+		return fmt.Errorf("only one password method can be specified (--sudo-pass, --ask-become-pass, --sudo-pass-file)")
+	}
+
+	// Security warning for --sudo-pass
+	if c.String("sudo-pass") != "" && !c.Bool("insecure-sudo-pass") {
+		return fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
+	}
+
 	return executor.Start(executor.StartConfig{
-		ConfigFilePath: c.String("config"),
-		VarsFilePath:   c.String("vars"),
-		SudoPass:       c.String("sudo-pass"),
-		Tags:           tags,
-		DryRun:         dryRun,
+		ConfigFilePath:   c.String("config"),
+		VarsFilePath:     c.String("vars"),
+		SudoPass:         c.String("sudo-pass"),
+		SudoPassFile:     c.String("sudo-pass-file"),
+		AskBecomePass:    c.Bool("ask-become-pass"),
+		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
+		Tags:             tags,
+		DryRun:           dryRun,
 	}, log)
 }
 
@@ -346,7 +370,20 @@ func createApp() *cli.App {
 					&cli.StringFlag{
 						Name:    "sudo-pass",
 						Aliases: []string{"s"},
-						Usage:   "Sudo password for steps with become: true",
+						Usage:   "Sudo password for steps with become: true (requires --insecure-sudo-pass)",
+					},
+					&cli.BoolFlag{
+						Name:    "ask-become-pass",
+						Aliases: []string{"K"},
+						Usage:   "Prompt for sudo password interactively (recommended)",
+					},
+					&cli.StringFlag{
+						Name:  "sudo-pass-file",
+						Usage: "Read sudo password from file (must have 0600 permissions)",
+					},
+					&cli.BoolFlag{
+						Name:  "insecure-sudo-pass",
+						Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
 					},
 					&cli.StringFlag{
 						Name:    "tags",

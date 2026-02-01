@@ -12,11 +12,14 @@ Learn how to execute commands and operations with elevated privileges.
 ## Quick Start
 
 ```bash
-# Requires sudo password
-mooncake run --config config.yml --sudo-pass <your-password>
+# Interactive prompt (recommended)
+mooncake run --config config.yml --ask-become-pass
+
+# Or using short flag
+mooncake run --config config.yml -K
 
 # Preview what would run with sudo
-mooncake run --config config.yml --sudo-pass <password> --dry-run
+mooncake run --config config.yml -K --dry-run
 ```
 
 ⚠️ **Warning:** This example contains commands that require root privileges. Review the config before running!
@@ -42,21 +45,41 @@ Add `become: true` to run with sudo:
 
 ### Providing Password
 
-Three ways to provide sudo password:
+Four ways to provide sudo password (mutually exclusive):
 
-**1. Command line (recommended):**
+**1. Interactive prompt (recommended):**
 ```bash
-mooncake run --config config.yml --sudo-pass mypassword
+mooncake run --config config.yml --ask-become-pass
+# or
+mooncake run --config config.yml -K
 ```
+Password is hidden while typing. Most secure option.
 
-**2. Environment variable:**
+**2. File-based (secure for automation):**
 ```bash
-export MOONCAKE_SUDO_PASS=mypassword
+echo "mypassword" > ~/.mooncake/sudo_pass
+chmod 0600 ~/.mooncake/sudo_pass
+mooncake run --config config.yml --sudo-pass-file ~/.mooncake/sudo_pass
+```
+⚠️ File must have 0600 permissions and be owned by current user.
+
+**3. SUDO_ASKPASS (password manager integration):**
+```bash
+export SUDO_ASKPASS=/usr/bin/ssh-askpass
 mooncake run --config config.yml
 ```
+Uses external helper program for password input.
 
-**3. Interactive prompt:**
-Some systems may prompt automatically (if configured)
+**4. Command line (insecure, not recommended):**
+```bash
+mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
+```
+⚠️ **WARNING:** Password visible in shell history and process list. Requires explicit `--insecure-sudo-pass` flag.
+
+**Security Features:**
+- Passwords are automatically redacted from all log output
+- Only one password method can be used at a time
+- File permissions are strictly validated
 
 ### Which Operations Need Sudo?
 
@@ -117,7 +140,10 @@ Create system files:
 2. **Use dry-run** - Preview with `--dry-run` first
 3. **Minimize sudo usage** - Only use on steps that require it
 4. **Specific commands** - Don't use `become: true` on untrusted commands
-5. **Password handling** - Be careful with password in shell history
+5. **Password input** - Use interactive prompt or file-based methods, avoid CLI flag
+6. **Password redaction** - Passwords are automatically redacted from logs (debug, stdout, stderr)
+7. **File permissions** - If using `--sudo-pass-file`, ensure 0600 permissions
+8. **Platform support** - Only works on Linux and macOS (explicitly fails on Windows)
 
 ## Common Use Cases
 
@@ -166,19 +192,39 @@ Create system files:
 
 ```bash
 # Preview what will run with sudo
-mooncake run --config config.yml --sudo-pass test --dry-run
+mooncake run --config config.yml -K --dry-run
 
 # Run with sudo
-mooncake run --config config.yml --sudo-pass <password>
+mooncake run --config config.yml -K
 
 # Check created system files
-ls -la /opt/myapp/
+sudo ls -la /opt/myapp/
+
+# Verify password redaction in debug logs
+mooncake run --config config.yml -K --log-level debug | grep -i password
+# Should show [REDACTED] instead of actual password
 ```
 
 ## Troubleshooting
 
-**"sudo: no tty present"**
-- Make sure to provide `--sudo-pass` flag
+**"step requires sudo but no password provided"**
+- Provide password using `--ask-become-pass`, `--sudo-pass-file`, or `SUDO_ASKPASS`
+
+**"--sudo-pass requires --insecure-sudo-pass flag"**
+- CLI password flag requires explicit security acknowledgment
+- Use `--ask-become-pass` instead (more secure)
+
+**"password file must have 0600 permissions"**
+- Fix permissions: `chmod 0600 /path/to/password/file`
+- Verify ownership: `ls -l /path/to/password/file`
+
+**"only one password method can be specified"**
+- Remove conflicting password flags
+- Use only one of: `--ask-become-pass`, `--sudo-pass-file`, or `--sudo-pass`
+
+**"become is not supported on windows"**
+- Privilege escalation only works on Linux and macOS
+- Use platform-specific conditionals with `when`
 
 **Permission denied without sudo**
 - Add `become: true` to the step

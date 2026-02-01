@@ -6,6 +6,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -93,6 +94,10 @@ type ExecutionContext struct {
 	// FileTree walks directory trees for with_filetree.
 	// SHARED across all contexts - same instance used everywhere.
 	FileTree *filetree.Walker
+
+	// Redactor redacts sensitive values (passwords) from log output.
+	// SHARED across all contexts - same instance used everywhere.
+	Redactor *security.Redactor
 }
 
 // Copy creates a new ExecutionContext for a nested execution scope (include or loop).
@@ -128,5 +133,6 @@ func (ec *ExecutionContext) Copy() ExecutionContext {
 		Evaluator: ec.Evaluator,
 		PathUtil:  ec.PathUtil,
 		FileTree:  ec.FileTree,
+		Redactor:  ec.Redactor,
 	}
 }

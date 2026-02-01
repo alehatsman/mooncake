@@ -29,7 +29,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `with_filetree` | string | All | Iterate over directory |
 | **Privilege** ||||
 | `become` | boolean | shell, file, template | Execute with sudo |
-| `become_user` | string | shell only | User for sudo (e.g., 'postgres') |
+| `become_user` | string | shell, file, template | User for sudo (e.g., 'postgres') |
 | **Shell Execution Control** ||||
 | `env` | object | shell only | Environment variables |
 | `cwd` | string | shell only | Working directory |
@@ -466,10 +466,47 @@ Execute step with sudo privileges.
     path: /opt/myapp
     state: directory
   become: true
+
+- template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  become: true
 ```
 
-**Requirements:**
-- Must provide `--sudo-pass` flag or use `--raw` mode
+**Password Input Methods:**
+
+You must provide a sudo password using one of these methods (mutually exclusive):
+
+1. **Interactive prompt (recommended):**
+   ```bash
+   mooncake run --config config.yml --ask-become-pass
+   # or
+   mooncake run --config config.yml -K
+   ```
+
+2. **File-based (secure):**
+   ```bash
+   echo "mypassword" > ~/.mooncake/sudo_pass
+   chmod 0600 ~/.mooncake/sudo_pass
+   mooncake run --config config.yml --sudo-pass-file ~/.mooncake/sudo_pass
+   ```
+   ⚠️ File must have 0600 permissions and be owned by current user
+
+3. **Environment variable (password manager integration):**
+   ```bash
+   export SUDO_ASKPASS=/usr/bin/ssh-askpass
+   mooncake run --config config.yml
+   ```
+
+4. **CLI flag (insecure, not recommended):**
+   ```bash
+   mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
+   ```
+   ⚠️ **WARNING:** Password visible in shell history and process list. Requires `--insecure-sudo-pass` flag.
+
+**Security:**
+- Passwords are automatically redacted from all log output
+- Platform support: Linux and macOS only
 - User must have sudo privileges
 
 ---
@@ -477,13 +514,11 @@ Execute step with sudo privileges.
 ### become_user
 
 **Type:** `string`
-**Applies to:** shell only
+**Applies to:** shell, file, template actions
 **Required:** No
 **Default:** `root`
 
-⚠️ **Shell commands only** - Ignored for file/template/include.
-
-Specify user when using `become`. Only works with shell commands.
+Specify which user to become when using `become`. Works with shell commands, file operations, and template rendering.
 
 ```yaml
 - name: Run as postgres user
@@ -491,10 +526,20 @@ Specify user when using `become`. Only works with shell commands.
   become: true
   become_user: postgres
 
-- name: Run as app user
-  shell: ./manage.py migrate
+- name: Create file owned by app user
+  file:
+    path: /opt/myapp/config.json
+    content: '{"key": "value"}'
+    state: file
   become: true
   become_user: appuser
+
+- name: Deploy config as nginx user
+  template:
+    src: site.conf.j2
+    dest: /etc/nginx/sites-enabled/mysite.conf
+  become: true
+  become_user: nginx
 ```
 
 ---

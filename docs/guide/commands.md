@@ -139,7 +139,12 @@ mooncake run --config <file> [options]
 | `--vars, -v` | Path to variables file |
 | `--tags, -t` | Filter steps by tags |
 | `--dry-run` | Preview without executing |
-| `--sudo-pass, -s` | Sudo password |
+| **Privilege Escalation** ||
+| `--ask-become-pass, -K` | Prompt for sudo password interactively (recommended) |
+| `--sudo-pass-file` | Read sudo password from file (must have 0600 permissions) |
+| `--sudo-pass, -s` | Sudo password (requires --insecure-sudo-pass) |
+| `--insecure-sudo-pass` | Allow --sudo-pass flag (password visible in history) |
+| **Display Options** ||
 | `--raw, -r` | Disable animated TUI |
 | `--log-level, -l` | Log level (debug, info, error) |
 
@@ -155,8 +160,18 @@ mooncake run --config config.yml --dry-run
 # Filter by tags
 mooncake run --config config.yml --tags dev
 
-# With sudo
-mooncake run --config config.yml --sudo-pass mypass
+# With sudo (interactive prompt - recommended)
+mooncake run --config config.yml --ask-become-pass
+# or
+mooncake run --config config.yml -K
+
+# With sudo (file-based)
+echo "mypassword" > ~/.mooncake/sudo_pass
+chmod 0600 ~/.mooncake/sudo_pass
+mooncake run --config config.yml --sudo-pass-file ~/.mooncake/sudo_pass
+
+# With sudo (insecure CLI - not recommended)
+mooncake run --config config.yml --sudo-pass mypass --insecure-sudo-pass
 
 # Execute from saved plan
 mooncake plan --config config.yml --format json --output plan.json
