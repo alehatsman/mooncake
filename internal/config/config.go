@@ -49,6 +49,10 @@ type Step struct {
 	// Conditionals
 	When string `yaml:"when" json:"when,omitempty"`
 
+	// Idempotency controls
+	Creates *string `yaml:"creates" json:"creates,omitempty"` // Skip if path exists
+	Unless  *string `yaml:"unless" json:"unless,omitempty"`   // Skip if command succeeds
+
 	// Actions (exactly one required)
 	Template    *Template `yaml:"template" json:"template,omitempty"`
 	File        *File     `yaml:"file" json:"file,omitempty"`
@@ -167,6 +171,8 @@ func (s *Step) Copy() *Step {
 	return &Step{
 		Name:         s.Name,
 		When:         s.When,
+		Creates:      s.Creates,
+		Unless:       s.Unless,
 		Template:     s.Template,
 		File:         s.File,
 		Shell:        s.Shell,

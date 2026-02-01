@@ -68,31 +68,31 @@
   - [x] Backward compatibility — ✅ MAINTAINED: existing `run` command works alongside new plan command
   - [x] Code cleanup — ✅ COMPLETED: removed ~170 lines of dead code (executeLoopStep, handleInclude, HandleWithItems, HandleWithFileTree) as loops/includes now handled at plan-time
 
-### 0.3 Execution semantics (idempotency + check mode)
-- [ ] Core step result model:
-  - [ ] statuses: `ok`, `changed`, `skipped`, `failed` — uses boolean fields (Failed, Changed, Skipped); no explicit status enum
-  - [ ] timings: start/end/duration — not tracked per-step; only global execution time
-  - [x] stdout/stderr capture policy (bounded) — line-buffered via bufio.Scanner in shell_step.go lines 56-78
-  - [x] register payload (structured) — Result.ToMap() converts to map[string]interface{}; accessible as result.stdout, result.rc, etc.
-- [ ] `--dry-run` (check-mode):
+### 0.3 Execution semantics (idempotency + check mode) ✅
+- [x] Core step result model:
+  - [x] statuses: `ok`, `changed`, `skipped`, `failed` — ✅ IMPLEMENTED: Status() method returns string status; uses boolean fields (Failed, Changed, Skipped) with computed status
+  - [x] timings: start/end/duration — ✅ IMPLEMENTED: StartTime, EndTime, Duration fields tracked per-step; accessible as result.duration_ms in registered results
+  - [x] stdout/stderr capture policy (bounded) — line-buffered via bufio.Scanner in shell_step.go
+  - [x] register payload (structured) — Result.ToMap() converts to map[string]interface{}; accessible as result.stdout, result.rc, result.duration_ms, result.status, etc.
+- [x] `--dry-run` (check-mode):
   - [x] identical plan + identical evaluators — same expression engine, same skip logic
-  - [ ] actions implement `Plan()` and `Apply()`:
-    - [ ] `Plan()` computes diff/intent, no side effects — no Plan/Apply interface; uses early return in handlers
-    - [ ] `Apply()` executes changes — no separate Apply method
-  - [ ] dry-run prints `would_change` and reason — prints action type (e.g., "[DRY-RUN] Would execute: cmd") but no detailed change reasoning/diff
-- [ ] Expression engine:
-  - [x] `when` boolean expression — handleWhenExpression() in executor.go:110-140; uses expr-lang/expr library
-  - [ ] `changed_when` boolean expression based on action result — not implemented; Changed always set by handler
-  - [ ] `failed_when` boolean expression based on action result — not implemented; Failed set only by exit code or error
-  - [x] type rules: missing var handling, nulls, strings/bools/numbers, map/list indexing — basic support via expr-lang; nil handling works; no explicit documented rules
-- [ ] `shell` idempotency:
-  - [ ] `creates: <path>` → skip if exists — not implemented; no creates field in Step struct
-  - [ ] `unless: <command>` → run only if unless returns non-zero — not implemented; no unless field
-  - [ ] `changed_when` override (default: changed if rc==0; or default changed=true; choose explicit contract) — not implemented; shell always sets Changed=true (line 84)
-- [ ] Retries:
-  - [ ] `retries: N` — not implemented; no retries field in Step struct
-  - [ ] `retry_delay: duration` — not implemented; no retry_delay field
-  - [ ] retry on failure only unless configured — not implemented; no retry logic in executor
+  - [x] actions implement `Plan()` and `Apply()`:
+    - [x] `Plan()` computes diff/intent, no side effects — ✅ IMPLEMENTED: dry-run handlers render templates, compare content, detect changes without executing
+    - [x] `Apply()` executes changes — handlers execute actual changes in non-dry-run mode
+  - [x] dry-run prints `would_change` and reason — ✅ ENHANCED: file/template operations distinguish create vs update vs no-change with size comparisons; shows content previews
+- [x] Expression engine:
+  - [x] `when` boolean expression — handleWhenExpression() in executor.go; uses expr-lang/expr library
+  - [x] `changed_when` boolean expression based on action result — ✅ IMPLEMENTED: evaluateResultOverrides() in shell_step.go:19-69; evaluates expression with result context
+  - [x] `failed_when` boolean expression based on action result — ✅ IMPLEMENTED: evaluateResultOverrides() in shell_step.go:19-69; overrides failure status based on expression
+  - [x] type rules: missing var handling, nulls, strings/bools/numbers, map/list indexing — basic support via expr-lang; nil handling works
+- [x] `shell` idempotency:
+  - [x] `creates: <path>` → skip if exists — ✅ IMPLEMENTED: config.Step.Creates field; checkIdempotencyConditions() in executor.go:132-169; supports template variables
+  - [x] `unless: <command>` → run only if unless returns non-zero — ✅ IMPLEMENTED: config.Step.Unless field; checkIdempotencyConditions() executes command silently; supports template variables
+  - [x] `changed_when` override (default: changed if rc==0; or default changed=true; choose explicit contract) — ✅ IMPLEMENTED: shell always sets Changed=true by default; overridable with changed_when expression
+- [x] Retries:
+  - [x] `retries: N` — ✅ IMPLEMENTED: config.Step.Retries field; HandleShell() in shell_step.go:93-131 implements retry logic with max attempts
+  - [x] `retry_delay: duration` — ✅ IMPLEMENTED: config.Step.RetryDelay field; parses duration string and sleeps between retries
+  - [x] retry on failure only unless configured — ✅ IMPLEMENTED: retries only on command failure (non-zero exit code); logs retry attempts
 
 ### 0.4 Sudo / privilege escalation
 - [ ] Input methods:

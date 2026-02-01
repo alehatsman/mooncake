@@ -1,5 +1,9 @@
 package executor
 
+import (
+	"time"
+)
+
 // Result represents the outcome of executing a step and can be registered
 // to variables for use in subsequent steps via the "register" field.
 //
@@ -53,6 +57,11 @@ type Result struct {
 	// Skipped is reserved for future use to indicate skipped steps.
 	// Currently not set by any step type.
 	Skipped bool `json:"skipped"`
+
+	// Timing information
+	StartTime time.Time     `json:"start_time,omitempty"`
+	EndTime   time.Time     `json:"end_time,omitempty"`
+	Duration  time.Duration `json:"duration_ms,omitempty"` // Duration in time.Duration format
 }
 
 // NewResult creates a new Result with default values.
@@ -67,15 +76,31 @@ func NewResult() *Result {
 	}
 }
 
+// Status returns a string representation of the result status.
+func (r *Result) Status() string {
+	if r.Failed {
+		return "failed"
+	}
+	if r.Skipped {
+		return "skipped"
+	}
+	if r.Changed {
+		return "changed"
+	}
+	return "ok"
+}
+
 // ToMap converts Result to a map for use in template variables.
 func (r *Result) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"stdout":  r.Stdout,
-		"stderr":  r.Stderr,
-		"rc":      r.Rc,
-		"failed":  r.Failed,
-		"changed": r.Changed,
-		"skipped": r.Skipped,
+		"stdout":      r.Stdout,
+		"stderr":      r.Stderr,
+		"rc":          r.Rc,
+		"failed":      r.Failed,
+		"changed":     r.Changed,
+		"skipped":     r.Skipped,
+		"duration_ms": r.Duration.Milliseconds(),
+		"status":      r.Status(),
 	}
 }
 

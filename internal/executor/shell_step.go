@@ -132,6 +132,9 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 // executeShellCommand executes a shell command once without retry logic.
 func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand string) error {
+	// Create result object with start time
+	result := NewResult()
+	result.StartTime = time.Now()
 
 	// Create context with timeout if specified
 	ctx := context.Background()
@@ -223,16 +226,15 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 	// Wait for all output to be processed
 	wg.Wait()
 
-	// Create result object
-	result := NewResult()
+	// Populate result fields
 	result.Stdout = strings.TrimSpace(stdoutBuf.String())
 	result.Stderr = strings.TrimSpace(stderrBuf.String())
 	result.Changed = true // Commands always count as changed
 
 	// Determine result status based on command execution
-	err = command.Wait()
+	waitErr := command.Wait()
 	wasTimeout := false
-	if err != nil {
+	if waitErr != nil {
 		// Check if timeout occurred
 		if ctx.Err() == context.DeadlineExceeded {
 			result.Rc = 124 // Standard timeout exit code
@@ -240,7 +242,7 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 			wasTimeout = true
 		} else {
 			// Extract exit code
-			if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr, ok := waitErr.(*exec.ExitError); ok {
 				result.Rc = exitErr.ExitCode()
 			} else {
 				result.Rc = 1
@@ -251,6 +253,10 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 		result.Rc = 0
 		result.Failed = false
 	}
+
+	// Record end time and duration
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
 
 	// Evaluate changed_when and failed_when overrides
 	if evalErr := evaluateResultOverrides(step, result, ec); evalErr != nil {

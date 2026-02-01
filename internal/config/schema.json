@@ -19,6 +19,14 @@
           "type": "string",
           "description": "Conditional expression for step execution (universal)"
         },
+        "creates": {
+          "type": "string",
+          "description": "Skip step if this file path exists. Useful for idempotency (universal)"
+        },
+        "unless": {
+          "type": "string",
+          "description": "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)"
+        },
         "become": {
           "type": "boolean",
           "description": "Execute with sudo privileges. Works with: shell, file, template"

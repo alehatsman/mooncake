@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -128,6 +129,47 @@ func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 	return true
 }
 
+// checkIdempotencyConditions evaluates creates and unless conditions for shell steps.
+// Returns (shouldSkip bool, reason string, error)
+func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+	// Check creates condition
+	if step.Creates != nil {
+		path, err := ec.Template.Render(*step.Creates, ec.Variables)
+		if err != nil {
+			return false, "", fmt.Errorf("failed to render creates path: %w", err)
+		}
+
+		expandedPath, err := ec.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
+		if err != nil {
+			return false, "", fmt.Errorf("failed to expand creates path: %w", err)
+		}
+
+		if _, err := os.Stat(expandedPath); err == nil {
+			// Path exists - skip step
+			return true, fmt.Sprintf("creates: %s", expandedPath), nil
+		}
+	}
+
+	// Check unless condition
+	if step.Unless != nil {
+		command, err := ec.Template.Render(*step.Unless, ec.Variables)
+		if err != nil {
+			return false, "", fmt.Errorf("failed to render unless command: %w", err)
+		}
+
+		// Execute unless command (silently, no logging)
+		// #nosec G204 -- This is a provisioning tool designed to execute commands from user configs.
+		// The command comes from user-provided YAML configuration files for idempotency checks.
+		cmd := exec.Command("sh", "-c", command)
+		if err := cmd.Run(); err == nil {
+			// Command succeeded - skip step
+			return true, fmt.Sprintf("unless: %s", command), nil
+		}
+	}
+
+	return false, "", nil
+}
+
 // checkSkipConditions evaluates whether a step should be skipped based on conditional
 // expressions and tag filters.
 //
@@ -227,9 +269,9 @@ func shouldLogStep(step config.Step, hasStepName bool, ec *ExecutionContext) boo
 }
 
 // logStepStatus logs step status (running, success, error, skipped) and updates statistics.
-// For skipped status, pass "skipped:when" or "skipped:tags" to include the skip reason.
+// For skipped status, pass "skipped:when" or "skipped:tags" or "skipped:idempotency:..." to include the skip reason.
 func logStepStatus(stepName string, status string, step config.Step, ec *ExecutionContext) {
-	// Handle skipped status (may include reason like "skipped:when" or "skipped:tags")
+	// Handle skipped status (may include reason like "skipped:when" or "skipped:tags" or "skipped:idempotency:...")
 	if strings.HasPrefix(status, "skipped") {
 		skipInfo := ""
 
@@ -241,6 +283,10 @@ func logStepStatus(stepName string, status string, step config.Step, ec *Executi
 				skipInfo = fmt.Sprintf(" (when: %s)", step.When)
 			} else if skipReason == "tags" && len(ec.Tags) > 0 {
 				skipInfo = fmt.Sprintf(" (tags filter: %s)", strings.Join(ec.Tags, ", "))
+			} else if strings.HasPrefix(skipReason, "idempotency:") {
+				// Extract the actual reason after "idempotency:"
+				idempotencyDetail := strings.TrimPrefix(skipReason, "idempotency:")
+				skipInfo = fmt.Sprintf(" (%s)", idempotencyDetail)
 			}
 		}
 
@@ -317,6 +363,18 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	shouldSkip, skipReason, err := checkSkipConditions(step, ec)
 	if err != nil {
 		return err
+	}
+
+	// Check idempotency conditions (creates, unless) - ONLY for shell steps
+	if !shouldSkip && step.Shell != nil {
+		idempotencySkip, idempotencyReason, err := checkIdempotencyConditions(step, ec)
+		if err != nil {
+			return err
+		}
+		if idempotencySkip {
+			shouldSkip = true
+			skipReason = "idempotency:" + idempotencyReason
+		}
 	}
 
 	// Determine step display name

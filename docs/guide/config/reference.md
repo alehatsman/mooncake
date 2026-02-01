@@ -21,6 +21,8 @@ Every step in your configuration can use these properties. Properties are groupe
 | `vars` | object | Variables | Define inline variables |
 | **Control Flow** ||||
 | `when` | string | All | Conditional expression |
+| `creates` | string | All | Skip if file exists (idempotency) |
+| `unless` | string | All | Skip if command succeeds (idempotency) |
 | `tags` | array[string] | All | Tags for filtering |
 | **Loops** ||||
 | `with_items` | string | All | Iterate over list |
@@ -230,6 +232,123 @@ Conditional expression. Step executes only if expression evaluates to `true`.
 - shell: echo "Docker not found"
   when: docker_check.rc != 0
 ```
+
+---
+
+### creates
+
+**Type:** `string`
+**Applies to:** All actions
+**Required:** No
+
+Skip step if the specified file path exists. Useful for idempotency - prevents re-running steps that have already completed.
+
+```yaml
+# Skip if binary already exists
+- name: Compile application
+  shell: go build -o myapp
+  creates: ./myapp
+
+# Skip if installation marker exists
+- name: Install package
+  shell: apt-get install -y package
+  creates: /usr/bin/package
+```
+
+**Path rendering:**
+The path is rendered through the template engine, so variables are supported:
+
+```yaml
+- name: Set output directory
+  vars:
+    output_dir: /opt/myproject
+
+- name: Build project
+  shell: make build
+  creates: "{{ output_dir }}/myapp"
+```
+
+**How it works:**
+- Before executing the step, Mooncake checks if the file exists using `os.Stat()`
+- If the file exists, the step is skipped with reason `"idempotency:creates: /path/to/file"`
+- If the file doesn't exist, the step executes normally
+
+**Evaluation order:**
+Idempotency conditions are evaluated after `when` and `tags` filters:
+1. `when` expression (if present)
+2. `tags` filter (if specified)
+3. `creates` check (if specified)
+4. `unless` command (if specified)
+5. Execute step
+
+**See also:** [Idempotency Examples](../../examples/idempotency.md)
+
+---
+
+### unless
+
+**Type:** `string`
+**Applies to:** All actions
+**Required:** No
+
+Skip step if the given shell command succeeds (returns exit code 0). Provides flexible idempotency control based on system state.
+
+```yaml
+# Skip if service is already enabled
+- name: Enable nginx
+  shell: systemctl enable nginx
+  unless: "systemctl is-enabled nginx"
+
+# Skip if database table exists
+- name: Initialize database
+  shell: psql -f schema.sql mydb
+  unless: "psql -c '\\dt' mydb | grep users"
+```
+
+**Command rendering:**
+The command is rendered through the template engine:
+
+```yaml
+- name: Set database name
+  vars:
+    db_name: production
+
+- name: Create database
+  shell: createdb {{ db_name }}
+  unless: "psql -l | grep {{ db_name }}"
+```
+
+**How it works:**
+- Before executing the step, Mooncake runs the `unless` command with `sh -c`
+- The command is executed silently (no output logged)
+- If the command exits with code 0 (success), the step is skipped with reason `"idempotency:unless: command"`
+- If the command exits with non-zero code (failure), the step executes normally
+
+**Important notes:**
+- The `unless` command is run silently to avoid cluttering logs
+- Only the exit code is checked - stdout/stderr are discarded
+- Use simple, fast commands to avoid performance impact
+- The command runs in a shell (`sh -c`), so shell features like pipes and redirects work
+
+**Common patterns:**
+```yaml
+# Check if file exists
+unless: "test -f /path/to/file"
+
+# Check if package installed
+unless: "dpkg -l package-name | grep '^ii'"
+
+# Check if user exists
+unless: "id username"
+
+# Check if service running
+unless: "systemctl is-active service"
+
+# Check for specific content
+unless: "grep 'pattern' /etc/config"
+```
+
+**See also:** [Idempotency Examples](../../examples/idempotency.md)
 
 ---
 

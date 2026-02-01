@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/logger"
 )
 
 // parseFileMode parses a mode string (e.g., "0644") into os.FileMode
@@ -30,7 +32,7 @@ func handleDirectoryState(file *config.File, renderedPath string, result *Result
 
 	if ec.DryRun {
 		dryRun := newDryRunLogger(ec.Logger)
-		dryRun.LogFileOperation("directory", renderedPath, mode)
+		dryRun.LogDirectoryCreate(renderedPath, mode)
 		dryRun.LogRegister(step)
 		return nil
 	}
@@ -49,6 +51,29 @@ func handleDirectoryState(file *config.File, renderedPath string, result *Result
 	return nil
 }
 
+// logDryRunFileOperation logs appropriate dry-run message based on file existence.
+func logDryRunFileOperation(dryRun *dryRunLogger, path string, mode os.FileMode, newSize int) {
+	// #nosec G304 -- File path from user config is intentional functionality for provisioning
+	existingContent, _ := os.ReadFile(path)
+	if existingContent != nil {
+		dryRun.LogFileUpdate(path, mode, len(existingContent), newSize)
+	} else {
+		dryRun.LogFileCreate(path, mode, newSize)
+	}
+}
+
+// logContentPreview logs a preview of content, truncating if necessary.
+func logContentPreview(log logger.Logger, content string, maxLen int) {
+	if len(content) == 0 {
+		return
+	}
+	preview := content
+	if len(content) > maxLen {
+		preview = content[:maxLen] + "..."
+	}
+	log.Debugf("  Content preview:\n%s", preview)
+}
+
 // handleFileState creates a file at the specified path, with optional content.
 func handleFileState(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
 	mode := parseFileMode(file.Mode, 0644)
@@ -57,7 +82,7 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 	if file.Content == "" {
 		if ec.DryRun {
 			dryRun := newDryRunLogger(ec.Logger)
-			dryRun.LogFileOperation("file", renderedPath, mode)
+			logDryRunFileOperation(dryRun, renderedPath, mode, 0)
 			dryRun.LogRegister(step)
 			return nil
 		}
@@ -84,8 +109,8 @@ func handleFileState(file *config.File, renderedPath string, result *Result, ste
 
 	if ec.DryRun {
 		dryRun := newDryRunLogger(ec.Logger)
-		dryRun.LogFileOperation("file", renderedPath, mode)
-		ec.Logger.Debugf("  Content preview (first 100 chars): %.100s", renderedContent)
+		logDryRunFileOperation(dryRun, renderedPath, mode, len(renderedContent))
+		logContentPreview(ec.Logger, renderedContent, 200)
 		dryRun.LogRegister(step)
 		return nil
 	}
@@ -120,9 +145,16 @@ func HandleFile(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	// Create result object
+	// Create result object with start time
 	result := NewResult()
+	result.StartTime = time.Now()
 	result.Changed = false // Will be set to true if we create/modify
+
+	// Finalize timing when function returns
+	defer func() {
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime)
+	}()
 
 	// Dispatch to appropriate handler based on state
 	switch file.State {
