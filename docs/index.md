@@ -77,8 +77,6 @@ Verify installation:
 mooncake --help
 ```
 
-→ **[Detailed Installation Guide](getting-started/installation.md)** for other platforms and methods
-
 ---
 
 ## 30 Second Quick Start
@@ -668,9 +666,9 @@ Set up new machines automatically:
 
 ## Next Steps
 
-1. **[Quick Start →](getting-started/quick-start.md)** - Get running in 30 seconds
-2. **[Examples →](examples/)** - Learn by doing
-3. **[Actions Guide →](guide/config/actions.md)** - See what you can do
+1. **[Actions Guide →](guide/config/actions.md)** - See what you can do
+2. **[Complete Reference →](guide/config/reference.md)** - All properties and types
+3. **[AI Specification →](ai-specification.md)** - For AI agents and LLMs
 4. **[Complete Reference →](guide/config/reference.md)** - All properties
 
 ---
