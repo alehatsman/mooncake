@@ -4,14 +4,12 @@
 - name: install ollama with tinyllama model
   preset: ollama
   with:
-    state: present
     service: false  # we'll start manually for demo
     pull: [tinyllama]  # smallest model, good for testing
   become: true
 
 - name: start ollama server
   shell: nohup ollama serve > /tmp/ollama.log 2>&1 &
-  become: true
 
 - name: wait for server startup
   shell: sleep 3

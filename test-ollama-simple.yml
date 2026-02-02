@@ -3,7 +3,6 @@
 - name: install ollama
   preset: ollama
   with:
-    state: present
     service: false
     pull: [tinyllama]
   become: true

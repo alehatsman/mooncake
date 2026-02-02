@@ -6,7 +6,7 @@ preset:
   parameters:
     state:
       type: string
-      required: true
+      required: false
       default: present
       enum: [present, absent]
       description: Whether Ollama should be installed or removed
