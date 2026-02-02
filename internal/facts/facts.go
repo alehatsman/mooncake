@@ -57,6 +57,11 @@ type Facts struct {
 	DockerVersion string // "24.0.7"
 	GitVersion    string // "2.43.0"
 	GoVersion     string // "1.21.5"
+
+	// Ollama (optional)
+	OllamaVersion  string        // "0.1.47"
+	OllamaModels   []OllamaModel // List of installed models
+	OllamaEndpoint string        // "http://localhost:11434"
 }
 
 // NetworkInterface represents a network interface.
@@ -86,6 +91,14 @@ type GPU struct {
 	Memory      string // e.g. "8GB", "24GB"
 	Driver      string
 	CUDAVersion string // "12.3" (NVIDIA only)
+}
+
+// OllamaModel represents an installed Ollama model.
+type OllamaModel struct {
+	Name       string // e.g., "llama3.1:8b"
+	Size       string // e.g., "4.7 GB"
+	Digest     string // SHA256 hash
+	ModifiedAt string // ISO timestamp
 }
 
 // collectUncached gathers all system facts without caching.
@@ -119,6 +132,13 @@ func collectUncached() *Facts {
 
 	// Toolchains (cross-platform)
 	f.DockerVersion, f.GitVersion, f.GoVersion = detectToolchains()
+
+	// Ollama (cross-platform, optional)
+	f.OllamaVersion = detectOllamaVersion()
+	if f.OllamaVersion != "" {
+		f.OllamaModels = detectOllamaModels()
+		f.OllamaEndpoint = detectOllamaEndpoint()
+	}
 
 	return f
 }
@@ -175,6 +195,11 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"docker_version": f.DockerVersion,
 		"git_version":    f.GitVersion,
 		"go_version":     f.GoVersion,
+
+		// Ollama
+		"ollama_version":  f.OllamaVersion,
+		"ollama_models":   f.OllamaModels,  // Array for template iteration
+		"ollama_endpoint": f.OllamaEndpoint,
 	}
 }
 

@@ -62,7 +62,7 @@ func DisplayFacts(f *facts.Facts) {
 	fmt.Println()
 
 	// Software & Development Tools
-	if f.PackageManager != "" || f.PythonVersion != "" || f.DockerVersion != "" || f.GitVersion != "" || f.GoVersion != "" {
+	if f.PackageManager != "" || f.PythonVersion != "" || f.DockerVersion != "" || f.GitVersion != "" || f.GoVersion != "" || f.OllamaVersion != "" {
 		fmt.Println("Software:")
 		if f.PackageManager != "" {
 			fmt.Printf("  Package Manager: %s\n", f.PackageManager)
@@ -78,6 +78,24 @@ func DisplayFacts(f *facts.Facts) {
 		}
 		if f.GoVersion != "" {
 			fmt.Printf("  Go:              %s\n", f.GoVersion)
+		}
+		if f.OllamaVersion != "" {
+			fmt.Printf("  Ollama:          %s\n", f.OllamaVersion)
+		}
+		fmt.Println()
+	}
+
+	// Ollama Models (if installed)
+	if f.OllamaVersion != "" && len(f.OllamaModels) > 0 {
+		fmt.Println("Ollama Models:")
+		fmt.Printf("  Endpoint: %s\n", f.OllamaEndpoint)
+		fmt.Printf("  Models:   %d installed\n", len(f.OllamaModels))
+		for _, model := range f.OllamaModels {
+			parts := []string{model.Name, model.Size}
+			if model.ModifiedAt != "" {
+				parts = append(parts, fmt.Sprintf("Modified: %s", model.ModifiedAt))
+			}
+			fmt.Printf("    • %s\n", strings.Join(parts, "  |  "))
 		}
 		fmt.Println()
 	}

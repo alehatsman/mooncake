@@ -301,6 +301,9 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	case step.Service != nil:
 		return HandleService(step, ec)
 
+	case step.Ollama != nil:
+		return HandleOllama(step, ec)
+
 	case step.Assert != nil:
 		return HandleAssert(step, ec)
 

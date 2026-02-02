@@ -583,7 +583,7 @@ func TestFormatOneOfError(t *testing.T) {
 					{Message: "missing required property 'file'"},
 				},
 			},
-			expected: "Step has no action. Each step must have exactly ONE of: shell, template, file, copy, service, assert, include, include_vars, or vars",
+			expected: "Step has no action. Each step must have exactly ONE of: shell, template, file, copy, service, ollama, assert, include, include_vars, or vars",
 		},
 		{
 			name: "multiple actions present",
@@ -593,14 +593,14 @@ func TestFormatOneOfError(t *testing.T) {
 					{KeywordLocation: "#/oneOf/1/not"},
 				},
 			},
-			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, copy, service, assert, include, include_vars, or vars",
+			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, copy, service, ollama, assert, include, include_vars, or vars",
 		},
 		{
 			name: "generic oneOf error",
 			err: &jsonschema.ValidationError{
 				Causes: []*jsonschema.ValidationError{},
 			},
-			expected: "Step must have exactly one action (shell, template, file, copy, service, assert, include, include_vars, or vars)",
+			expected: "Step must have exactly one action (shell, template, file, copy, service, ollama, assert, include, include_vars, or vars)",
 		},
 	}
 

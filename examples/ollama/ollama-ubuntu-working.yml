@@ -1,0 +1,118 @@
+# Working Ollama Installation for Ubuntu/Docker
+# Uses the official installation method
+
+- name: Install Ollama using official script
+  shell: curl -fsSL https://ollama.com/install.sh | sh
+  timeout: 10m
+  register: install_result
+
+- name: Show installation output
+  shell: echo "{{ install_result.stdout }}"
+
+- name: Verify Ollama is installed
+  shell: which ollama && ollama --version
+  register: ollama_check
+
+- name: Show Ollama version
+  shell: |
+    echo "================================"
+    echo "Ollama Installation Complete"
+    echo "================================"
+    echo "{{ ollama_check.stdout }}"
+    echo "================================"
+
+- name: Create ollama user directory
+  file:
+    path: /root/.ollama
+    state: directory
+    mode: "0755"
+
+- name: Start Ollama server in background
+  shell: nohup ollama serve > /tmp/ollama.log 2>&1 &
+
+- name: Wait for Ollama server to start
+  shell: sleep 8
+
+- name: Check Ollama API health
+  shell: |
+    for i in {1..10}; do
+      if curl -f -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+        echo "Ollama API is ready!"
+        exit 0
+      fi
+      echo "Waiting for Ollama... attempt $i"
+      sleep 2
+    done
+    echo "Ollama API not responding"
+    exit 1
+  register: health_check
+
+- name: Pull tinyllama model (smallest model ~637MB)
+  shell: |
+    echo "Pulling tinyllama model..."
+    ollama pull tinyllama
+  timeout: 15m
+  register: pull_result
+
+- name: Show pull output
+  shell: echo "{{ pull_result.stdout }}"
+
+- name: List installed models
+  shell: ollama list
+  register: models
+
+- name: Show models
+  shell: |
+    echo ""
+    echo "================================"
+    echo "Installed Models"
+    echo "================================"
+    echo "{{ models.stdout }}"
+    echo "================================"
+
+- name: Run inference - Simple math question
+  shell: |
+    echo "Asking LLM: What is 2+2?"
+    ollama run tinyllama "What is 2+2? Answer in one sentence." --verbose
+  timeout: 3m
+  register: math_result
+
+- name: Display LLM response
+  shell: |
+    echo ""
+    echo "================================"
+    echo "🤖 LLM Response (Math)"
+    echo "================================"
+    echo "{{ math_result.stdout }}"
+    echo "================================"
+
+- name: Run inference - Geography question
+  shell: |
+    echo "Asking LLM: What is the capital of France?"
+    ollama run tinyllama "What is the capital of France? Answer in 3 words." --verbose
+  timeout: 3m
+  register: geography_result
+
+- name: Display geography response
+  shell: |
+    echo ""
+    echo "================================"
+    echo "🤖 LLM Response (Geography)"
+    echo "================================"
+    echo "{{ geography_result.stdout }}"
+    echo "================================"
+
+- name: Final summary
+  shell: |
+    echo ""
+    echo "╔════════════════════════════════════════════════════════╗"
+    echo "║          OLLAMA UBUNTU DEMO COMPLETE ✅                ║"
+    echo "╚════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "✓ Ollama installed successfully"
+    echo "✓ Server started and running"
+    echo "✓ Model pulled: tinyllama"
+    echo "✓ Successfully ran 2 LLM inference queries"
+    echo ""
+    echo "API Endpoint: http://localhost:11434"
+    echo ""

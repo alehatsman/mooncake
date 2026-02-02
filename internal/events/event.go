@@ -65,6 +65,14 @@ const (
 	EventServiceManaged EventType = "service.managed"
 )
 
+// Event types for Ollama management
+const (
+	EventOllamaManaged     EventType = "ollama.managed"
+	EventOllamaInstalled   EventType = "ollama.installed"
+	EventOllamaRemoved     EventType = "ollama.removed"
+	EventOllamaModelPulled EventType = "ollama.model_pulled"
+)
+
 // Event types for assertions
 const (
 	EventAssertPassed EventType = "assert.passed"
@@ -252,6 +260,17 @@ type ServiceManagementData struct {
 	Changed    bool     `json:"changed"`              // Whether changes were made
 	Operations []string `json:"operations,omitempty"` // List of operations performed
 	DryRun     bool     `json:"dry_run"`
+}
+
+// OllamaData contains data for ollama.managed events
+type OllamaData struct {
+	State          string   `json:"state"`                     // present|absent
+	ServiceEnabled bool     `json:"service_enabled"`           // Service was configured/started
+	Method         string   `json:"method,omitempty"`          // Installation method used (script|package)
+	ModelsDir      string   `json:"models_dir,omitempty"`      // Custom models directory
+	ModelsPulled   []string `json:"models_pulled,omitempty"`   // Models that were pulled (changed)
+	ModelsSkipped  []string `json:"models_skipped,omitempty"`  // Models already present (unchanged)
+	Operations     []string `json:"operations,omitempty"`      // Operations performed
 }
 
 // AssertionData contains data for assert.passed and assert.failed events

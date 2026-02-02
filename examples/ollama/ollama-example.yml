@@ -1,0 +1,342 @@
+# Ollama Action Examples
+# Manage Ollama installation, service configuration, and model management
+#
+# Key characteristics:
+# - Idempotent: Won't reinstall if already present
+# - Cross-platform: Linux (systemd) and macOS (launchd/Homebrew)
+# - Service management: Creates systemd drop-in or launchd plist
+# - Model management: Pull and manage LLM models
+
+# =============================================================================
+# Basic Installation
+# =============================================================================
+
+- name: "Example 1: Install Ollama (binary only)"
+  ollama:
+    state: present
+  become: true
+
+- name: "Example 2: Install with service"
+  ollama:
+    state: present
+    service: true
+  become: true
+
+- name: "Example 3: Install via specific method (package manager)"
+  ollama:
+    state: present
+    method: package  # Use apt, brew, etc. (no fallback)
+  become: true
+
+- name: "Example 4: Install via official script"
+  ollama:
+    state: present
+    method: script
+  become: true
+
+# =============================================================================
+# Model Management
+# =============================================================================
+
+- name: "Example 5: Install and pull single model"
+  ollama:
+    state: present
+    service: true
+    pull:
+      - "llama3.1:8b"
+  become: true
+
+- name: "Example 6: Install and pull multiple models"
+  ollama:
+    state: present
+    service: true
+    pull:
+      - "llama3.1:8b"
+      - "mistral:latest"
+      - "codellama:7b"
+  become: true
+
+- name: "Example 7: Force re-pull models"
+  ollama:
+    state: present
+    pull:
+      - "llama3.1:8b"
+    force: true  # Re-download even if exists
+  become: true
+
+# =============================================================================
+# Service Configuration
+# =============================================================================
+
+- name: "Example 8: Custom bind address (network access)"
+  ollama:
+    state: present
+    service: true
+    host: "0.0.0.0:11434"
+  become: true
+
+- name: "Example 9: Custom models directory"
+  ollama:
+    state: present
+    service: true
+    models_dir: "/data/ollama/models"
+  become: true
+
+- name: "Example 10: Service with environment variables"
+  ollama:
+    state: present
+    service: true
+    env:
+      OLLAMA_DEBUG: "1"
+      OLLAMA_ORIGINS: "*"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+  become: true
+
+- name: "Example 11: Complete configuration"
+  ollama:
+    state: present
+    service: true
+    method: auto
+    host: "0.0.0.0:11434"
+    models_dir: "/data/ollama"
+    pull:
+      - "llama3.1:8b"
+      - "mistral"
+    env:
+      OLLAMA_DEBUG: "1"
+  become: true
+  register: ollama_result
+
+# =============================================================================
+# Uninstallation
+# =============================================================================
+
+- name: "Example 12: Uninstall (keep models)"
+  ollama:
+    state: absent
+  become: true
+
+- name: "Example 13: Complete removal (including models)"
+  ollama:
+    state: absent
+    force: true  # Also remove ~/.ollama/models
+  become: true
+
+# =============================================================================
+# Practical Use Cases
+# =============================================================================
+
+# Use Case 1: Development Environment Setup
+- name: Setup local LLM development environment
+  ollama:
+    state: present
+    service: true
+    host: "localhost:11434"
+    pull:
+      - "llama3.1:8b"      # General purpose
+      - "codellama:7b"     # Code generation
+      - "mistral:latest"   # Alternative model
+    env:
+      OLLAMA_DEBUG: "0"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+  become: true
+  register: ollama_setup
+
+- name: Verify Ollama API is responding
+  assert:
+    http:
+      url: "http://localhost:11434/api/tags"
+      status: 200
+      timeout: "10s"
+  retries: 5
+  retry_delay: "5s"
+
+- name: Test model execution
+  shell: ollama run llama3.1:8b 'Say hello'
+  register: test_result
+
+- name: Display test result
+  shell: echo "{{ test_result.stdout }}"
+
+# Use Case 2: Production Server Deployment
+- name: Install Ollama for API service
+  ollama:
+    state: present
+    service: true
+    method: package  # Prefer package manager for updates
+    host: "0.0.0.0:11434"
+    models_dir: "/opt/ollama/models"
+    pull:
+      - "llama3.1:70b"  # Larger model for production
+    env:
+      OLLAMA_ORIGINS: "https://api.example.com"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_NUM_PARALLEL: "4"
+  become: true
+
+- name: Verify service is running (systemd)
+  shell: systemctl is-active ollama
+  register: service_status
+  when: "{{ os == 'linux' }}"
+
+- name: Check models are available
+  shell: ollama list
+  register: models_list
+
+# Use Case 3: Conditional Installation
+- name: Check if Ollama already installed
+  shell: which ollama
+  register: ollama_check
+  failed_when: false
+
+- name: Install Ollama only if not present
+  ollama:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  become: true
+  when: "{{ ollama_check.rc != 0 }}"
+
+# Use Case 4: Using System Facts
+# Facts are automatically collected: ollama_version, ollama_models, ollama_endpoint
+- name: Show Ollama information from facts
+  shell: |
+    echo "Ollama version: {{ ollama_version }}"
+    echo "Endpoint: {{ ollama_endpoint }}"
+    {{ range .ollama_models }}
+    echo "Model: {{ .Name }} ({{ .Size }})"
+    {{ end }}
+  when: "{{ ollama_version != '' }}"
+
+# Use Case 5: Multi-stage Deployment with Error Handling
+- name: Install Ollama with error handling
+  ollama:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  become: true
+  register: ollama_result
+  failed_when: false
+
+- name: Handle installation success
+  shell: echo "Ollama installed successfully"
+  when: "{{ !ollama_result.failed }}"
+
+- name: Handle installation failure
+  shell: echo "Installation failed: {{ ollama_result.stderr }}"
+  when: "{{ ollama_result.failed }}"
+
+- name: Wait for service to be ready
+  assert:
+    http:
+      url: "http://localhost:11434/api/tags"
+      status: 200
+      timeout: "5s"
+  retries: 10
+  retry_delay: "3s"
+  when: "{{ !ollama_result.failed }}"
+
+# Use Case 6: Template Integration
+- name: Install Ollama with templated configuration
+  ollama:
+    state: present
+    service: true
+    host: "{{ ollama_bind_address }}"
+    models_dir: "{{ ollama_models_path }}"
+    pull: "{{ ollama_models_list }}"
+    env:
+      OLLAMA_DEBUG: "{{ ollama_debug_mode }}"
+  become: true
+
+# Use Case 7: Update Existing Installation
+- name: Update Ollama and refresh models
+  ollama:
+    state: present
+    service: true
+    pull:
+      - "llama3.1:8b"
+      - "mistral:latest"
+    force: true  # Re-pull to get latest versions
+  become: true
+
+# Use Case 8: Cleanup and Reinstall
+- name: Remove old Ollama installation
+  ollama:
+    state: absent
+    force: true  # Remove everything
+  become: true
+
+- name: Fresh Ollama installation
+  ollama:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  become: true
+
+# =============================================================================
+# Platform-Specific Examples
+# =============================================================================
+
+# Linux (systemd) specific
+- name: Linux - Install with systemd service
+  ollama:
+    state: present
+    service: true
+    host: "0.0.0.0:11434"
+  become: true
+  when: "{{ os == 'linux' }}"
+
+- name: Linux - Check systemd service status
+  shell: systemctl status ollama
+  when: "{{ os == 'linux' }}"
+
+# macOS (launchd) specific
+- name: macOS - Install via Homebrew
+  ollama:
+    state: present
+    service: true
+    method: package
+  become: false  # Homebrew doesn't need sudo for user services
+  when: "{{ os == 'darwin' }}"
+
+- name: macOS - Check launchd service status
+  shell: launchctl list | grep ollama
+  when: "{{ os == 'darwin' }}"
+
+# =============================================================================
+# Integration with Other Actions
+# =============================================================================
+
+# Create API wrapper script
+- name: Install Ollama
+  ollama:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  become: true
+
+- name: Create convenience script
+  file:
+    path: ~/bin/ask-llm
+    state: file
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      ollama run llama3.1:8b "$@"
+
+# Configure application to use Ollama
+- name: Deploy app configuration with Ollama endpoint
+  template:
+    src: ./templates/app-config.yml.j2
+    dest: /etc/myapp/config.yml
+    vars:
+      llm_endpoint: "{{ ollama_endpoint }}"
+
+# Monitor Ollama health
+- name: Setup healthcheck cron job
+  file:
+    path: /etc/cron.d/ollama-healthcheck
+    state: file
+    content: |
+      */5 * * * * root curl -f http://localhost:11434/api/tags || systemctl restart ollama
+  become: true

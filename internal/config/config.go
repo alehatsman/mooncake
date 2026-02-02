@@ -177,6 +177,19 @@ type ServiceDropin struct {
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
 }
 
+// OllamaAction represents Ollama installation and management in a configuration step.
+// Supports installation, service configuration, and model management.
+type OllamaAction struct {
+	State     string            `yaml:"state" json:"state,omitempty"`              // present|absent (installation management)
+	Service   *bool             `yaml:"service" json:"service,omitempty"`          // Enable/start systemd/launchd service
+	Host      string            `yaml:"host" json:"host,omitempty"`                // Bind address (default: localhost:11434)
+	ModelsDir string            `yaml:"models_dir" json:"models_dir,omitempty"`    // Custom models directory
+	Pull      []string          `yaml:"pull" json:"pull,omitempty"`                // Models to pull (e.g., ["llama3.1:8b"])
+	Force     bool              `yaml:"force" json:"force,omitempty"`              // Force model pull / remove models on uninstall
+	Method    string            `yaml:"method" json:"method,omitempty"`            // auto|script|package (installation method)
+	Env       map[string]string `yaml:"env" json:"env,omitempty"`                  // Environment variables for service
+}
+
 // Assert represents an assertion/verification operation in a configuration step.
 // Assertions always have changed: false and fail if the assertion doesn't pass.
 // Supports three types: command (exit code), file (content/existence), and http (response).
@@ -238,6 +251,7 @@ type Step struct {
 	Unarchive   *Unarchive      `yaml:"unarchive" json:"unarchive,omitempty"`
 	Download    *Download       `yaml:"download" json:"download,omitempty"`
 	Service     *ServiceAction  `yaml:"service" json:"service,omitempty"`
+	Ollama      *OllamaAction   `yaml:"ollama" json:"ollama,omitempty"`
 	Assert      *Assert         `yaml:"assert" json:"assert,omitempty"`
 	Include     *string         `yaml:"include" json:"include,omitempty"`
 	IncludeVars *string         `yaml:"include_vars" json:"include_vars,omitempty"`
@@ -322,6 +336,9 @@ func (s *Step) countActions() int {
 	if s.Service != nil {
 		count++
 	}
+	if s.Ollama != nil {
+		count++
+	}
 	if s.Assert != nil {
 		count++
 	}
@@ -362,6 +379,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Service != nil {
 		return "service"
+	}
+	if s.Ollama != nil {
+		return "ollama"
 	}
 	if s.Assert != nil {
 		return "assert"
@@ -427,6 +447,7 @@ func (s *Step) Clone() *Step {
 		Unarchive:    s.Unarchive,
 		Download:     s.Download,
 		Service:      s.Service,
+		Ollama:       s.Ollama,
 		Assert:       s.Assert,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,

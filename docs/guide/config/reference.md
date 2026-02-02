@@ -20,6 +20,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `unarchive` | object | Unarchive | Extract archive files |
 | `template` | object | Template | Template rendering |
 | `service` | object | Service | Manage system services (systemd/launchd) |
+| `ollama` | object | Ollama | Manage Ollama installation and models |
 | `assert` | object | Assert | Verify state (command/file/http) |
 | `include` | string | Include | Include steps from another file |
 | `include_vars` | string | Variables | Load variables from file |
@@ -33,7 +34,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `with_items` | string | All | Iterate over list |
 | `with_filetree` | string | All | Iterate over directory |
 | **Privilege** ||||
-| `become` | boolean | shell, file, template, service | Execute with sudo |
+| `become` | boolean | shell, file, template, service, ollama | Execute with sudo |
 | `become_user` | string | shell, file, template | User for sudo (e.g., 'postgres') |
 | **Shell Execution Control** ||||
 | `env` | object | shell only | Environment variables |
@@ -428,6 +429,84 @@ Manage system services (systemd on Linux, launchd on macOS).
 ```
 
 📖 **See [Actions - Service](actions.md#service)** for comprehensive examples and platform-specific details.
+
+---
+
+### ollama
+
+**Type:** `object`
+**Applies to:** Ollama action
+**Required:** When using ollama action
+
+Manage Ollama installation, service configuration, and model management.
+
+**Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `state` | string | Yes | Installation state: `present` (install) or `absent` (uninstall) |
+| `service` | boolean | No | Enable and start Ollama service (systemd/launchd) |
+| `method` | string | No | Installation method: `auto` (prefer package manager, fallback to script), `script` (official installer only), `package` (package manager only) - default: `auto` |
+| `host` | string | No | Server bind address (e.g., `localhost:11434`, `0.0.0.0:11434`) - sets `OLLAMA_HOST` environment variable |
+| `models_dir` | string | No | Custom models directory path - sets `OLLAMA_MODELS` environment variable |
+| `pull` | array | No | List of models to pull (e.g., `["llama3.1:8b", "mistral"]`) |
+| `force` | boolean | No | Force operations: re-pull existing models, remove models directory on uninstall |
+| `env` | object | No | Additional environment variables for Ollama service (e.g., `OLLAMA_DEBUG`, `OLLAMA_ORIGINS`) |
+
+```yaml
+# Basic installation
+- ollama:
+    state: present
+  become: true
+
+# Install with service
+- ollama:
+    state: present
+    service: true
+  become: true
+
+# Install and pull models
+- ollama:
+    state: present
+    service: true
+    pull:
+      - "llama3.1:8b"
+      - "mistral:latest"
+  become: true
+
+# Custom configuration
+- ollama:
+    state: present
+    service: true
+    host: "0.0.0.0:11434"
+    models_dir: "/data/ollama"
+    env:
+      OLLAMA_DEBUG: "1"
+      OLLAMA_ORIGINS: "*"
+  become: true
+
+# Uninstall (keep models)
+- ollama:
+    state: absent
+  become: true
+
+# Complete removal (including models)
+- ollama:
+    state: absent
+    force: true
+  become: true
+```
+
+**Platform Support:**
+- **Linux:** Package managers (apt, dnf, yum, pacman, zypper, apk), official script, systemd service
+- **macOS:** Homebrew, official script, launchd service
+
+**Key Behaviors:**
+- Idempotent: Won't reinstall if already present, won't re-pull existing models (unless `force: true`)
+- Service configuration: Creates systemd drop-in (Linux) or launchd plist (macOS) with environment variables
+- Uninstall: Always removes binary and service, removes models only with `force: true`
+
+📖 **See [Actions - Ollama](actions.md#ollama)** for comprehensive examples, platform-specific details, and integration patterns.
 
 ---
 

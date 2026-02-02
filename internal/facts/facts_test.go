@@ -619,3 +619,171 @@ func TestGPU_CUDAVersion(t *testing.T) {
 		t.Errorf("CUDAVersion = %s, want 12.3", gpu.CUDAVersion)
 	}
 }
+
+// Ollama Tests
+
+func TestDetectOllamaVersion(t *testing.T) {
+	version := detectOllamaVersion()
+
+	// Version might be empty if Ollama is not installed
+	if version == "" {
+		t.Log("Ollama not detected (this is ok)")
+	} else {
+		// If detected, should not contain "ollama version " prefix
+		if strings.HasPrefix(version, "ollama version ") {
+			t.Errorf("Version should not have 'ollama version ' prefix, got: %s", version)
+		}
+
+		// Should look like a version number
+		t.Logf("Detected Ollama version: %s", version)
+	}
+}
+
+func TestDetectOllamaModels(t *testing.T) {
+	models := detectOllamaModels()
+
+	// Models might be empty if Ollama is not installed or has no models
+	if models == nil || len(models) == 0 {
+		t.Log("No Ollama models detected (this is ok)")
+	} else {
+		t.Logf("Found %d Ollama models", len(models))
+		for _, model := range models {
+			t.Logf("  - %s (%s)", model.Name, model.Size)
+
+			// Name should not be empty
+			if model.Name == "" {
+				t.Error("Model name should not be empty")
+			}
+
+			// Size should not be empty if model detected
+			if model.Size == "" {
+				t.Error("Model size should not be empty")
+			}
+		}
+	}
+}
+
+func TestDetectOllamaEndpoint(t *testing.T) {
+	endpoint := detectOllamaEndpoint()
+
+	// Should always return a value (default or from env)
+	if endpoint == "" {
+		t.Error("Endpoint should not be empty")
+	}
+
+	// Should start with http:// or https://
+	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+		t.Errorf("Endpoint should start with http:// or https://, got: %s", endpoint)
+	}
+
+	// Default should be localhost:11434
+	if endpoint == "http://localhost:11434" {
+		t.Log("Using default Ollama endpoint")
+	} else {
+		t.Logf("Using custom Ollama endpoint: %s", endpoint)
+	}
+}
+
+func TestOllamaModel_Structure(t *testing.T) {
+	model := OllamaModel{
+		Name:       "llama3.1:8b",
+		Size:       "4.7 GB",
+		Digest:     "sha256:12345",
+		ModifiedAt: "2 weeks ago",
+	}
+
+	if model.Name != "llama3.1:8b" {
+		t.Errorf("Name = %s, want llama3.1:8b", model.Name)
+	}
+	if model.Size != "4.7 GB" {
+		t.Errorf("Size = %s, want 4.7 GB", model.Size)
+	}
+	if model.Digest != "sha256:12345" {
+		t.Errorf("Digest = %s, want sha256:12345", model.Digest)
+	}
+	if model.ModifiedAt != "2 weeks ago" {
+		t.Errorf("ModifiedAt = %s, want 2 weeks ago", model.ModifiedAt)
+	}
+}
+
+func TestToMap_Ollama(t *testing.T) {
+	facts := &Facts{
+		OS:             "linux",
+		OllamaVersion:  "0.1.47",
+		OllamaEndpoint: "http://localhost:11434",
+		OllamaModels: []OllamaModel{
+			{Name: "llama3.1:8b", Size: "4.7 GB"},
+			{Name: "mistral:latest", Size: "4.1 GB"},
+		},
+	}
+
+	m := facts.ToMap()
+
+	// Check ollama_version
+	if m["ollama_version"] != "0.1.47" {
+		t.Errorf("ollama_version = %v, want 0.1.47", m["ollama_version"])
+	}
+
+	// Check ollama_endpoint
+	if m["ollama_endpoint"] != "http://localhost:11434" {
+		t.Errorf("ollama_endpoint = %v, want http://localhost:11434", m["ollama_endpoint"])
+	}
+
+	// Check ollama_models (array for template iteration)
+	models, ok := m["ollama_models"].([]OllamaModel)
+	if !ok {
+		t.Fatal("ollama_models should be []OllamaModel type")
+	}
+	if len(models) != 2 {
+		t.Errorf("ollama_models length = %d, want 2", len(models))
+	}
+	if models[0].Name != "llama3.1:8b" {
+		t.Errorf("Model 0 Name = %s, want llama3.1:8b", models[0].Name)
+	}
+	if models[1].Name != "mistral:latest" {
+		t.Errorf("Model 1 Name = %s, want mistral:latest", models[1].Name)
+	}
+}
+
+func TestToMap_Ollama_NoModels(t *testing.T) {
+	facts := &Facts{
+		OS:             "linux",
+		OllamaVersion:  "0.1.47",
+		OllamaEndpoint: "http://localhost:11434",
+		OllamaModels:   []OllamaModel{},
+	}
+
+	m := facts.ToMap()
+
+	// Should have empty array
+	models, ok := m["ollama_models"].([]OllamaModel)
+	if !ok {
+		t.Fatal("ollama_models should be []OllamaModel type")
+	}
+	if len(models) != 0 {
+		t.Errorf("ollama_models length = %d, want 0", len(models))
+	}
+}
+
+func TestCollect_Ollama(t *testing.T) {
+	facts := Collect()
+
+	// Ollama might not be installed
+	if facts.OllamaVersion == "" {
+		t.Log("Ollama not installed (this is ok)")
+	} else {
+		t.Logf("Ollama version: %s", facts.OllamaVersion)
+		t.Logf("Ollama endpoint: %s", facts.OllamaEndpoint)
+		t.Logf("Ollama models: %d", len(facts.OllamaModels))
+
+		// If version is set, endpoint should also be set
+		if facts.OllamaEndpoint == "" {
+			t.Error("If Ollama is installed, endpoint should be set")
+		}
+
+		// Models array should not be nil (might be empty)
+		if facts.OllamaModels == nil {
+			t.Log("Warning: OllamaModels is nil (should be empty array)")
+		}
+	}
+}

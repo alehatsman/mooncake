@@ -476,18 +476,39 @@ Implemented as separate `copy` action:
 
 ## 7) ML Adoption Modules (after foundations)
 
-### 7.1 `ollama` action/module
-- [ ] `ollama: { state: present|absent, host?, models_dir?, service?: bool }`
-- [ ] Install:
-  - [ ] Linux/macOS installer strategy
-- [ ] Service:
-  - [ ] systemd drop-in for env vars (`OLLAMA_HOST`, `OLLAMA_MODELS`, `OLLAMA_DEBUG`)
-- [ ] Model pull:
-  - [ ] `ollama: { pull: ["llama3.1:8b", ...] }`
-- [ ] Healthcheck:
-  - [ ] `assert.http` to `/api/tags`
-- [ ] Facts emitted:
-  - [ ] `ollama.endpoint`, `ollama.models[]`
+### 7.1 `ollama` action/module ✅ COMPLETED (2026-02-05)
+- [x] `ollama: { state: present|absent, service?: bool, method?: auto|script|package, host?, models_dir?, pull?: [], force?: bool, env?: {} }` — ✅ IMPLEMENTED: OllamaAction with all fields
+- [x] Install:
+  - [x] Linux/macOS installer strategy — ✅ IMPLEMENTED: Auto-detection of package managers (apt, dnf, yum, pacman, zypper, apk, brew), official script fallback
+  - [x] Installation methods: auto (prefer package manager, fallback to script), script (official installer only), package (package manager only)
+- [x] Service:
+  - [x] systemd drop-in for env vars (`OLLAMA_HOST`, `OLLAMA_MODELS`, `OLLAMA_DEBUG`) — ✅ IMPLEMENTED: Creates `/etc/systemd/system/ollama.service.d/10-mooncake.conf` with environment variables
+  - [x] launchd plist for macOS — ✅ IMPLEMENTED: Creates plist at user or system domain with environment variables
+- [x] Model pull:
+  - [x] `ollama: { pull: ["llama3.1:8b", ...] }` — ✅ IMPLEMENTED: Pulls models idempotently, force flag for re-pull
+- [x] Healthcheck:
+  - [x] Integration with `assert.http` to `/api/tags` — ✅ DOCUMENTED: Example in ollama-example.yml
+- [x] Facts emitted:
+  - [x] `ollama_version`, `ollama_endpoint`, `ollama_models[]` — ✅ IMPLEMENTED: Auto-collected facts in internal/facts/toolchains.go
+- [x] Implementation:
+  - [x] internal/executor/ollama_step.go — 700 lines of installation, service, and model management logic
+  - [x] Configuration structs in internal/config/config.go
+  - [x] JSON schema validation in internal/config/schema.json
+  - [x] Event emission (EventOllamaManaged)
+  - [x] Dry-run support with detailed operation logging
+  - [x] Result registration support
+  - [x] Sudo/become support for system-wide installation
+- [x] Testing:
+  - [x] 13 comprehensive test functions in internal/executor/ollama_step_test.go
+  - [x] All tests passing (validation, dry-run, service, models, uninstall, idempotency)
+- [x] Documentation:
+  - [x] Complete actions guide section (docs/guide/config/actions.md) — 250+ lines with examples
+  - [x] Property reference (docs/guide/config/reference.md) — Full property table
+  - [x] Core concepts update (docs/guide/core-concepts.md)
+  - [x] Comprehensive examples (examples/ollama-example.yml) — 260+ lines covering all use cases
+- [x] Platform Support: Linux (systemd + package managers) ✅ | macOS (launchd + Homebrew) ✅
+
+**Status**: Complete Ollama action implementation with installation, service management, and model pulling
 
 ### 7.2 Container runtime
 - [ ] `docker: { state: present, version_pin? }`

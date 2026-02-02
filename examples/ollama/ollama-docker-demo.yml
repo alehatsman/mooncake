@@ -1,0 +1,74 @@
+# Ollama Docker Demo
+# Installs Ollama, pulls a small model, and runs inference
+
+- name: Install Ollama via official script
+  ollama:
+    state: present
+    service: false  # Don't need systemd in container
+    method: script
+  become: true
+  register: ollama_install
+
+- name: Show installation result
+  shell: echo "Ollama installed - changed={{ ollama_install.changed }}"
+
+- name: Verify Ollama binary exists
+  shell: which ollama
+  register: ollama_path
+
+- name: Show Ollama location
+  shell: echo "Ollama installed at{{ ":" }} {{ ollama_path.stdout }}"
+
+- name: Check Ollama version
+  shell: ollama --version
+  register: ollama_version_output
+
+- name: Show version
+  shell: echo "{{ ollama_version_output.stdout }}"
+
+- name: Start Ollama server in background
+  shell: ollama serve > /tmp/ollama.log 2>&1 &
+  become: true
+
+- name: Wait for Ollama to start
+  shell: sleep 5
+
+- name: Check if Ollama API is responding
+  shell: curl -s http://localhost:11434/api/tags || echo "Not ready yet"
+  register: api_check
+  retries: 5
+  retry_delay: "2s"
+
+- name: Pull a small model (tinyllama - ~637MB)
+  shell: ollama pull tinyllama
+  register: model_pull
+  timeout: 10m
+
+- name: Show model pull output
+  shell: echo "{{ model_pull.stdout }}"
+
+- name: List installed models
+  shell: ollama list
+  register: models_list
+
+- name: Show installed models
+  shell: echo "{{ models_list.stdout }}"
+
+- name: Run inference with tinyllama
+  shell: ollama run tinyllama "What is 2+2? Answer briefly."
+  register: inference_result
+  timeout: 2m
+
+- name: Show inference result
+  shell: |
+    echo "==================================="
+    echo "LLM Response:"
+    echo "==================================="
+    echo "{{ inference_result.stdout }}"
+    echo "==================================="
+
+- name: Show system facts about Ollama
+  shell: |
+    echo "Ollama Facts:"
+    echo "  Version: {{ ollama_version }}"
+    echo "  Endpoint: {{ ollama_endpoint }}"
