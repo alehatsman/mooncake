@@ -2,6 +2,22 @@
 
 This directory contains comprehensive examples demonstrating the Ollama preset for managing Ollama installations, service configuration, and LLM model management.
 
+## 🚀 Quick Start
+
+**New to Ollama?** Start here:
+
+#### `ollama-quick-start.yml`
+Simple 5-minute demo that installs Ollama and runs test queries:
+```bash
+mooncake run -c examples/ollama/ollama-quick-start.yml
+```
+- Installs Ollama
+- Pulls tinyllama (smallest model, ~637MB)
+- Starts server
+- Runs test queries (math, geography)
+
+---
+
 ## 📚 Examples Overview
 
 ### Main Example
