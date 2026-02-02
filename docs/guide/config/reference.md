@@ -18,6 +18,7 @@ Actions are what your steps **do**. Every step uses exactly one action.
 | **file** | Create/manage files | `file: {path: /tmp/test, state: file}` |
 | **copy** | Copy files | `copy: {src: ./app.conf, dest: /etc/app.conf}` |
 | **download** | Download from URLs | `download: {url: https://..., dest: /tmp/file}` |
+| **package** | Manage packages | `package: {name: nginx, state: present}` |
 | **unarchive** | Extract archives | `unarchive: {src: /tmp/app.tar.gz, dest: /opt/app}` |
 | **template** | Render templates | `template: {src: app.j2, dest: /etc/app.conf}` |
 | **service** | Manage services | `service: {name: nginx, state: started}` |
@@ -242,6 +243,40 @@ Download files from remote URLs with checksum verification and retry support.
 **Idempotency**: Downloads skipped when destination exists with matching checksum.
 
 [See complete download documentation in Actions Guide →](actions.md#download)
+
+---
+
+### package
+
+Manage system packages with automatic package manager detection.
+
+**Properties**:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | string | Single package name |
+| `names` | array | Multiple package names |
+| `state` | string | `present` (default), `absent`, `latest` |
+| `manager` | string | Package manager (auto-detected if not specified) |
+| `update_cache` | boolean | Update package cache before operation |
+| `upgrade` | boolean | Upgrade all packages |
+| `extra` | array | Extra arguments for package manager |
+
+**Works with**: `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+**Supported managers**: apt, dnf, yum, pacman, zypper, apk, brew, port, choco, scoop
+
+**Example**:
+```yaml
+- name: Install packages
+  package:
+    names: [git, curl, vim]
+    state: present
+    update_cache: true
+  become: true
+```
+
+[See complete package documentation in Actions Guide →](actions.md#package)
 
 ---
 

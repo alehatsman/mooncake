@@ -14,8 +14,8 @@ type dryRunLogger struct {
 	logger logger.Logger
 }
 
-// newDryRunLogger creates a dry-run logger wrapper.
-func newDryRunLogger(log logger.Logger) *dryRunLogger {
+// NewDryRunLogger creates a dry-run logger wrapper.
+func NewDryRunLogger(log logger.Logger) *dryRunLogger {
 	return &dryRunLogger{logger: log}
 }
 

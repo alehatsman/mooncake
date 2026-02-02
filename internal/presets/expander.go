@@ -8,16 +8,17 @@ import (
 
 // ExpandPreset expands a preset invocation into its constituent steps.
 // It loads the preset definition, validates parameters, and returns the expanded steps
-// with the 'parameters' namespace injected into the execution context.
-func ExpandPreset(invocation *config.PresetInvocation) ([]config.Step, map[string]interface{}, error) {
+// with the 'parameters' namespace injected into the execution context, along with the
+// preset's base directory for relative path resolution.
+func ExpandPreset(invocation *config.PresetInvocation) ([]config.Step, map[string]interface{}, string, error) {
 	if invocation == nil {
-		return nil, nil, fmt.Errorf("preset invocation is nil")
+		return nil, nil, "", fmt.Errorf("preset invocation is nil")
 	}
 
 	// Load preset definition
 	definition, err := LoadPreset(invocation.Name)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load preset '%s': %w", invocation.Name, err)
+		return nil, nil, "", fmt.Errorf("failed to load preset '%s': %w", invocation.Name, err)
 	}
 
 	// Validate and prepare parameters
@@ -28,7 +29,7 @@ func ExpandPreset(invocation *config.PresetInvocation) ([]config.Step, map[strin
 
 	validatedParams, err := ValidateParameters(definition, userParams)
 	if err != nil {
-		return nil, nil, fmt.Errorf("preset '%s' parameter validation failed: %w", invocation.Name, err)
+		return nil, nil, "", fmt.Errorf("preset '%s' parameter validation failed: %w", invocation.Name, err)
 	}
 
 	// Create parameters namespace for template expansion
@@ -45,5 +46,5 @@ func ExpandPreset(invocation *config.PresetInvocation) ([]config.Step, map[strin
 		expandedSteps[i] = *step.Clone()
 	}
 
-	return expandedSteps, parametersNamespace, nil
+	return expandedSteps, parametersNamespace, definition.BaseDir, nil
 }

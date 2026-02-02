@@ -54,3 +54,6 @@ site/
 # Python / pipenv
 __pycache__/
 *.py[cod]
+
+.claude_temp/
+.claude/

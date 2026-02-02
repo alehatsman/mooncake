@@ -179,7 +179,7 @@ func (ec *ExecutionContext) HandleDryRun(logFn func(*dryRunLogger)) bool {
 	if !ec.DryRun {
 		return false
 	}
-	dryRun := newDryRunLogger(ec.Logger)
+	dryRun := NewDryRunLogger(ec.Logger)
 	logFn(dryRun)
 	return true
 }

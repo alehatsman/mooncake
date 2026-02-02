@@ -150,6 +150,18 @@ type Download struct {
 	Retries  int               `yaml:"retries" json:"retries,omitempty"`       // Number of retry attempts
 }
 
+// Package represents a package management operation (install/remove/update packages).
+// Supports apt, dnf, yum, pacman, zypper, apk (Linux), brew, port (macOS), choco, scoop (Windows).
+type Package struct {
+	Name         string   `yaml:"name" json:"name,omitempty"`                     // Package name (single package)
+	Names        []string `yaml:"names" json:"names,omitempty"`                   // Multiple packages
+	State        string   `yaml:"state" json:"state,omitempty"`                   // present|absent|latest (default: present)
+	Manager      string   `yaml:"manager" json:"manager,omitempty"`               // Package manager to use (auto-detected if empty)
+	UpdateCache  bool     `yaml:"update_cache" json:"update_cache,omitempty"`     // Update package cache before operation
+	Upgrade      bool     `yaml:"upgrade" json:"upgrade,omitempty"`               // Upgrade all packages (ignores name/names)
+	Extra        []string `yaml:"extra" json:"extra,omitempty"`                   // Extra arguments to pass to package manager
+}
+
 // ServiceAction represents a service management operation in a configuration step.
 // Supports systemd (Linux), launchd (macOS), and Windows services.
 type ServiceAction struct {
@@ -225,6 +237,7 @@ type PresetDefinition struct {
 	Version     string                     `yaml:"version" json:"version,omitempty"`                 // Semantic version
 	Parameters  map[string]PresetParameter `yaml:"parameters" json:"parameters,omitempty"`           // Parameter definitions
 	Steps       []Step                     `yaml:"steps" json:"steps"`                               // Steps to execute
+	BaseDir     string                     `yaml:"-" json:"-"`                                       // Base directory for relative paths (set by loader)
 }
 
 // PresetParameter defines a parameter that can be passed to a preset.
@@ -307,6 +320,7 @@ type Step struct {
 	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
 	Unarchive   *Unarchive         `yaml:"unarchive" json:"unarchive,omitempty"`
 	Download    *Download          `yaml:"download" json:"download,omitempty"`
+	Package     *Package           `yaml:"package" json:"package,omitempty"`
 	Service     *ServiceAction     `yaml:"service" json:"service,omitempty"`
 	Assert      *Assert            `yaml:"assert" json:"assert,omitempty"`
 	Preset      *PresetInvocation  `yaml:"preset" json:"preset,omitempty"`
@@ -391,6 +405,9 @@ func (s *Step) countActions() int {
 	if s.Download != nil {
 		count++
 	}
+	if s.Package != nil {
+		count++
+	}
 	if s.Service != nil {
 		count++
 	}
@@ -437,6 +454,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Download != nil {
 		return "download"
+	}
+	if s.Package != nil {
+		return "package"
 	}
 	if s.Service != nil {
 		return "service"
@@ -510,6 +530,7 @@ func (s *Step) Clone() *Step {
 		Copy:         s.Copy,
 		Unarchive:    s.Unarchive,
 		Download:     s.Download,
+		Package:      s.Package,
 		Service:      s.Service,
 		Assert:       s.Assert,
 		Preset:       s.Preset,

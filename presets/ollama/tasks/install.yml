@@ -1,0 +1,51 @@
+# Ollama Installation Tasks
+# Handles installation via package manager or official script
+
+- name: Check if Ollama is already installed
+  shell: command -v ollama
+  register: ollama_check
+  failed_when: false
+
+# Package Manager Installation
+- name: Install Ollama via apt (Debian/Ubuntu)
+  shell: apt-get update && apt-get install -y ollama
+  become: true
+  when: >
+    ollama_check.rc != 0 and
+    parameters.method == "package" and
+    package_manager == "apt"
+  failed_when: false
+
+- name: Install Ollama via dnf (Fedora/RHEL 8+)
+  shell: dnf install -y ollama
+  become: true
+  when: >
+    ollama_check.rc != 0 and
+    parameters.method == "package" and
+    package_manager == "dnf"
+  failed_when: false
+
+- name: Install Ollama via yum (RHEL/CentOS 7)
+  shell: yum install -y ollama
+  become: true
+  when: >
+    ollama_check.rc != 0 and
+    parameters.method == "package" and
+    package_manager == "yum"
+  failed_when: false
+
+- name: Install Ollama via Homebrew (macOS)
+  shell: brew install ollama
+  when: >
+    ollama_check.rc != 0 and
+    parameters.method == "package" and
+    package_manager == "brew"
+  failed_when: false
+
+# Official Script Installation
+- name: Install Ollama via official script
+  shell: curl -fsSL https://ollama.com/install.sh | sh
+  become: true
+  when: >
+    ollama_check.rc != 0 and
+    (parameters.method == "auto" or parameters.method == "script")

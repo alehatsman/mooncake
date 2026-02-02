@@ -1,0 +1,21 @@
+# Ollama Model Management
+# Handles pulling and managing LLM models
+
+- name: Pull Ollama models
+  shell: |
+    {% for model in parameters.pull %}
+    # Check if model exists (unless force)
+    {% if not parameters.force %}
+    if ollama list | grep -q "{{ model }}"; then
+      echo "Model {{ model }} already exists, skipping"
+    else
+      echo "Pulling model {{ model }}"
+      ollama pull {{ model }}
+    fi
+    {% else %}
+    echo "Force pulling model {{ model }}"
+    ollama pull {{ model }}
+    {% endif %}
+    {% endfor %}
+  when: len(parameters.pull) > 0
+  register: model_pull

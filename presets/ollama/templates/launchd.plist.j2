@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ollama.ollama</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/ollama</string>
+    <string>serve</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  {% if parameters.host or parameters.models_dir %}
+  <key>EnvironmentVariables</key>
+  <dict>
+    {% if parameters.host %}
+    <key>OLLAMA_HOST</key>
+    <string>{{ parameters.host }}</string>
+    {% endif %}
+    {% if parameters.models_dir %}
+    <key>OLLAMA_MODELS</key>
+    <string>{{ parameters.models_dir }}</string>
+    {% endif %}
+  </dict>
+  {% endif %}
+</dict>
+</plist>

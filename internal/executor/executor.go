@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,9 +39,9 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 	return fmt.Sprintf("step-%d", *ec.Stats.Global)
 }
 
-// markStepFailed marks a result as failed and registers it if needed.
+// MarkStepFailed marks a result as failed and registers it if needed.
 // The caller is responsible for returning an appropriate error.
-func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
+func MarkStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
 	result.Failed = true
 	result.Rc = 1
 	if step.Register != "" {
@@ -60,7 +61,7 @@ func AddGlobalVariables(variables map[string]interface{}) {
 	}
 }
 
-func handleVars(step config.Step, ec *ExecutionContext) error {
+func HandleVars(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling vars: %+v", step.Vars)
 
 	vars := step.Vars
@@ -90,7 +91,7 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
+func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
 	ec.Logger.Debugf("variables: %v", ec.Variables)
@@ -125,7 +126,7 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !boolResult, nil
 }
 
-func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
+func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 	// If no tags filter specified, execute all steps
 	if len(ec.Tags) == 0 {
 		return false
@@ -149,9 +150,9 @@ func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 	return true
 }
 
-// checkIdempotencyConditions evaluates creates and unless conditions for shell steps.
+// CheckIdempotencyConditions evaluates creates and unless conditions for shell steps.
 // Returns (shouldSkip bool, reason string, error)
-func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check creates condition
 	if step.Creates != nil {
 		path, err := ec.Template.Render(*step.Creates, ec.Variables)
@@ -190,7 +191,7 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 	return false, "", nil
 }
 
-// checkSkipConditions evaluates whether a step should be skipped based on conditional
+// CheckSkipConditions evaluates whether a step should be skipped based on conditional
 // expressions and tag filters.
 //
 // It first evaluates the step's "when" condition (if present), which is an expression
@@ -204,10 +205,10 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 //   - shouldSkip: true if the step should be skipped
 //   - skipReason: "when" or "tags" indicating why the step was skipped (empty if not skipped)
 //   - error: any error encountered while evaluating conditions
-func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check when condition
 	if step.When != "" {
-		shouldSkip, err := handleWhenExpression(step, ec)
+		shouldSkip, err := HandleWhenExpression(step, ec)
 		if err != nil {
 			return false, "", err
 		}
@@ -217,14 +218,14 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 	}
 
 	// Check tags filter
-	if shouldSkipByTags(step, ec) {
+	if ShouldSkipByTags(step, ec) {
 		return true, "tags", nil
 	}
 
 	return false, "", nil
 }
 
-// getStepDisplayName determines the display name to show for a step in logs and output.
+// GetStepDisplayName determines the display name to show for a step in logs and output.
 //
 // The function follows a priority order to determine the name:
 //  1. If executing within a with_filetree loop, uses action + destination path
@@ -234,7 +235,7 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 // Returns:
 //   - displayName: the name to display for this step
 //   - hasName: true if a name was found, false if the step is anonymous
-func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
+func GetStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	// For with_filetree, show hierarchical structure
 	if item, ok := ec.Variables["item"].(filetree.Item); ok {
 		// For directories, show as headers with trailing slash
@@ -275,10 +276,9 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 
 
 
-// dispatchStepAction executes the appropriate handler based on step type.
-// It first checks if a handler is registered in the new actions registry,
-// and falls back to legacy handlers for non-migrated actions.
-func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
+// DispatchStepAction executes the appropriate handler based on step type.
+// All actions are now handled through the actions registry.
+func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	// Determine action type from step
 	actionType := step.DetermineActionType()
 
@@ -335,50 +335,8 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 		return nil
 	}
 
-	// Fall back to legacy handlers for non-migrated actions
-	switch {
-	case step.IncludeVars != nil:
-		return HandleIncludeVars(step, ec)
-
-	case step.Vars != nil:
-		return handleVars(step, ec)
-
-	case step.Template != nil:
-		return HandleTemplate(step, ec)
-
-	case step.File != nil:
-		return HandleFile(step, ec)
-
-	case step.Copy != nil:
-		return HandleCopy(step, ec)
-
-	case step.Unarchive != nil:
-		return HandleUnarchive(step, ec)
-
-	case step.Download != nil:
-		return HandleDownload(step, ec)
-
-	case step.Service != nil:
-		return HandleService(step, ec)
-
-	case step.Assert != nil:
-		return HandleAssert(step, ec)
-
-	case step.Preset != nil:
-		return HandlePreset(step, ec)
-
-	case step.Print != nil:
-		return HandlePrint(step, ec)
-
-	case step.Shell != nil:
-		return HandleShell(step, ec)
-
-	case step.Command != nil:
-		return HandleCommand(step, ec)
-
-	default:
-		return nil
-	}
+	// If we get here, the action type is not registered
+	return fmt.Errorf("no handler registered for action type: %s", actionType)
 }
 
 // ExecuteStep executes a single configuration step within the given execution context.
@@ -389,14 +347,14 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Check if step should be skipped (when conditions, tags)
-	shouldSkip, skipReason, err := checkSkipConditions(step, ec)
+	shouldSkip, skipReason, err := CheckSkipConditions(step, ec)
 	if err != nil {
 		return err
 	}
 
 	// Check idempotency conditions (creates, unless) - ONLY for shell/command steps
 	if !shouldSkip && (step.Shell != nil || step.Command != nil) {
-		idempotencySkip, idempotencyReason, err := checkIdempotencyConditions(step, ec)
+		idempotencySkip, idempotencyReason, err := CheckIdempotencyConditions(step, ec)
 		if err != nil {
 			return err
 		}
@@ -407,7 +365,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Determine step display name
-	stepName, hasStepName := getStepDisplayName(step, ec)
+	stepName, hasStepName := GetStepDisplayName(step, ec)
 
 	// Handle skipped steps
 	if shouldSkip {
@@ -482,7 +440,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	stepStartTime := time.Now()
 
 	// Execute the appropriate handler
-	stepErr := dispatchStepAction(step, ec)
+	stepErr := DispatchStepAction(step, ec)
 
 	// Calculate duration
 	stepDuration := time.Since(stepStartTime)
@@ -601,19 +559,19 @@ type StartConfig struct {
 // Start begins execution of a mooncake configuration with the given settings.
 // Always goes through the planner to expand loops, includes, and variables.
 // Emits events through the provided publisher for all execution progress.
-func Start(startConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
-	log.Debugf("config: %v", startConfig)
+func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
+	log.Debugf("config: %v", StartConfig)
 
-	if startConfig.ConfigFilePath == "" {
+	if StartConfig.ConfigFilePath == "" {
 		return &SetupError{Component: "config", Issue: "config file path is empty"}
 	}
 
 	// Resolve sudo password early (before plan building)
 	passwordCfg := security.PasswordConfig{
-		CLIPassword:    startConfig.SudoPass,
-		AskInteractive: startConfig.AskBecomePass,
-		PasswordFile:   startConfig.SudoPassFile,
-		InsecureCLI:    startConfig.InsecureSudoPass,
+		CLIPassword:    StartConfig.SudoPass,
+		AskInteractive: StartConfig.AskBecomePass,
+		PasswordFile:   StartConfig.SudoPassFile,
+		InsecureCLI:    StartConfig.InsecureSudoPass,
 	}
 
 	sudoPassword, err := security.ResolvePassword(passwordCfg)
@@ -632,8 +590,8 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 
 	// Load variables if specified
 	var variables map[string]interface{}
-	if startConfig.VarsFilePath != "" {
-		expandedPath, expandErr := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
+	if StartConfig.VarsFilePath != "" {
+		expandedPath, expandErr := pathExpander.ExpandPath(StartConfig.VarsFilePath, currentDir, nil)
 		if expandErr != nil {
 			return &RenderError{Field: "vars file path", Cause: expandErr}
 		}
@@ -650,7 +608,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	}
 
 	// Expand config file path
-	configFilePath, err := pathExpander.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
+	configFilePath, err := pathExpander.ExpandPath(StartConfig.ConfigFilePath, currentDir, nil)
 	if err != nil {
 		return err
 	}
@@ -662,7 +620,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	planData, err := planner.BuildPlan(plan.PlannerConfig{
 		ConfigPath: configFilePath,
 		Variables:  variables,
-		Tags:       startConfig.Tags,
+		Tags:       StartConfig.Tags,
 	})
 	if err != nil {
 		return &SetupError{Component: "planner", Issue: "failed to build plan", Cause: err}
@@ -671,18 +629,18 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	log.Debugf("Plan built with %d steps", len(planData.Steps))
 
 	// Setup artifact writer if artifacts-dir is specified
-	if startConfig.ArtifactsDir != "" {
+	if StartConfig.ArtifactsDir != "" {
 		// Gather system facts for artifact generation
 		systemFacts := facts.Collect()
 
 		// Create artifact writer
 		artifactWriter, err := artifacts.NewWriter(
 			artifacts.Config{
-				BaseDir:        startConfig.ArtifactsDir,
-				CaptureStdout:  startConfig.CaptureFullOutput,
-				CaptureStderr:  startConfig.CaptureFullOutput,
-				MaxOutputBytes: startConfig.MaxOutputBytes,
-				MaxOutputLines: startConfig.MaxOutputLines,
+				BaseDir:        StartConfig.ArtifactsDir,
+				CaptureStdout:  StartConfig.CaptureFullOutput,
+				CaptureStderr:  StartConfig.CaptureFullOutput,
+				MaxOutputBytes: StartConfig.MaxOutputBytes,
+				MaxOutputLines: StartConfig.MaxOutputLines,
 			},
 			planData,
 			systemFacts,
@@ -695,11 +653,11 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		// Subscribe artifact writer to events
 		publisher.Subscribe(artifactWriter)
 
-		log.Debugf("Artifacts will be written to: %s/runs/%s", startConfig.ArtifactsDir, "...")
+		log.Debugf("Artifacts will be written to: %s/runs/%s", StartConfig.ArtifactsDir, "...")
 	}
 
 	// Execute the plan with event publisher
-	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, log, publisher)
+	return ExecutePlan(planData, sudoPassword, StartConfig.DryRun, log, publisher)
 }
 
 // ExecutePlan executes a pre-compiled plan.
@@ -830,4 +788,25 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 	})
 
 	return execErr
+}
+
+// formatMode formats an os.FileMode as an octal string (e.g., "0644").
+func formatMode(mode os.FileMode) string {
+	return fmt.Sprintf("%#o", mode)
+}
+
+// ParseFileMode parses a mode string (e.g., "0644") into os.FileMode.
+// Returns default mode if mode is empty or invalid.
+func ParseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
+	if modeStr == "" {
+		return defaultMode
+	}
+
+	// Parse as octal
+	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		return defaultMode
+	}
+
+	return os.FileMode(mode)
 }

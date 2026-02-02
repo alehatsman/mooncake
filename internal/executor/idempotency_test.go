@@ -1,11 +1,25 @@
-package executor
+package executor_test
 
 import (
 	"os"
 	"strings"
 	"testing"
 
+	_ "github.com/alehatsman/mooncake/internal/actions/assert"
+	_ "github.com/alehatsman/mooncake/internal/actions/command"
+	_ "github.com/alehatsman/mooncake/internal/actions/copy"
+	_ "github.com/alehatsman/mooncake/internal/actions/download"
+	_ "github.com/alehatsman/mooncake/internal/actions/file"
+	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
+	_ "github.com/alehatsman/mooncake/internal/actions/preset"
+	_ "github.com/alehatsman/mooncake/internal/actions/print"
+	_ "github.com/alehatsman/mooncake/internal/actions/service"
+	_ "github.com/alehatsman/mooncake/internal/actions/shell"
+	_ "github.com/alehatsman/mooncake/internal/actions/template"
+	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"
+	_ "github.com/alehatsman/mooncake/internal/actions/vars"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
@@ -23,18 +37,18 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 
 	// Step with creates pointing to existing file
 	step := config.Step{
-		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:   &config.ShellAction{Cmd: "echo test"},
 		Creates: strPtr(tmpFile.Name()),
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
 		Variables: make(map[string]interface{}),
 	}
 
-	shouldSkip, reason, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -53,18 +67,18 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 func TestCheckIdempotencyConditions_Creates_FileNotExists(t *testing.T) {
 	creates := "/nonexistent/file/that/does/not/exist"
 	step := config.Step{
-		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:   &config.ShellAction{Cmd: "echo test"},
 		Creates: strPtr(creates),
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
 		Variables: make(map[string]interface{}),
 	}
 
-	shouldSkip, _, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, _, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -84,12 +98,12 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 	tmpFile.Close()
 
 	step := config.Step{
-		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:   &config.ShellAction{Cmd: "echo test"},
 		Creates: strPtr("{{ output_file }}"),
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template: renderer,
 		PathUtil: pathutil.NewPathExpander(renderer),
 		Variables: map[string]interface{}{
@@ -97,7 +111,7 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 		},
 	}
 
-	shouldSkip, reason, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -113,17 +127,17 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 	unless := "true" // Always succeeds
 	step := config.Step{
-		Shell:  &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:  &config.ShellAction{Cmd: "echo test"},
 		Unless: &unless,
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		Variables: make(map[string]interface{}),
 	}
 
-	shouldSkip, reason, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -142,17 +156,17 @@ func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 	unless := "false" // Always fails
 	step := config.Step{
-		Shell:  &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:  &config.ShellAction{Cmd: "echo test"},
 		Unless: &unless,
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		Variables: make(map[string]interface{}),
 	}
 
-	shouldSkip, _, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, _, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -164,7 +178,7 @@ func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 
 func TestCheckIdempotencyConditions_Unless_WithTemplateVariable(t *testing.T) {
 	step := config.Step{
-		Shell:  &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:  &config.ShellAction{Cmd: "echo test"},
 		Unless: strPtr("test -f {{ marker_file }}"),
 	}
 
@@ -177,14 +191,14 @@ func TestCheckIdempotencyConditions_Unless_WithTemplateVariable(t *testing.T) {
 	tmpFile.Close()
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template: renderer,
 		Variables: map[string]interface{}{
 			"marker_file": tmpFile.Name(),
 		},
 	}
 
-	shouldSkip, reason, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -208,19 +222,19 @@ func TestCheckIdempotencyConditions_BothConditions(t *testing.T) {
 
 	// Both creates and unless are satisfied
 	step := config.Step{
-		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
+		Shell:   &config.ShellAction{Cmd: "echo test"},
 		Creates: strPtr(tmpFile.Name()),
 		Unless:  strPtr("true"),
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
 		Variables: make(map[string]interface{}),
 	}
 
-	shouldSkip, reason, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -240,13 +254,13 @@ func TestCheckIdempotencyConditions_NoConditions(t *testing.T) {
 	}
 
 	renderer := template.NewPongo2Renderer()
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
 		Variables: make(map[string]interface{}),
 	}
 
-	shouldSkip, _, err := checkIdempotencyConditions(step, ec)
+	shouldSkip, _, err := executor.CheckIdempotencyConditions(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -267,22 +281,22 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 
 	step := config.Step{
 		Name:    "Test step with creates",
-		Shell:   &config.ShellAction{Cmd: *strPtr("echo should not run")},
+		Shell:   &config.ShellAction{Cmd: "echo should not run"},
 		Creates: strPtr(tmpFile.Name()),
 	}
 
 	renderer := template.NewPongo2Renderer()
 
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Template:            renderer,
 		PathUtil:            pathutil.NewPathExpander(renderer),
 		Evaluator:           expression.NewGovaluateEvaluator(),
 		Variables:           make(map[string]interface{}),
 		Logger:              logger.NewConsoleLogger(logger.InfoLevel),
-		Stats: NewExecutionStats(),
+		Stats: executor.NewExecutionStats(),
 	}
 
-	err = ExecuteStep(step, ec)
+	err = executor.ExecuteStep(step, ec)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)

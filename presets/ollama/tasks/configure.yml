@@ -1,0 +1,27 @@
+# Ollama Service Configuration
+# Handles systemd (Linux) and launchd (macOS) service setup
+
+- name: Configure Ollama systemd service (Linux)
+  service:
+    name: ollama
+    state: started
+    enabled: true
+    daemon_reload: true
+    dropin:
+      name: 10-mooncake.conf
+      src_template: templates/systemd-dropin.conf.j2
+  become: true
+  when: >
+    parameters.service and
+    os == "linux"
+
+- name: Configure Ollama launchd service (macOS)
+  service:
+    name: ollama
+    state: started
+    enabled: true
+    unit:
+      src_template: templates/launchd.plist.j2
+  when: >
+    parameters.service and
+    os == "darwin"

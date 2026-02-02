@@ -1,0 +1,3 @@
+[Service]
+{% if parameters.host %}Environment="OLLAMA_HOST={{ parameters.host }}"{% endif %}
+{% if parameters.models_dir %}Environment="OLLAMA_MODELS={{ parameters.models_dir }}"{% endif %}

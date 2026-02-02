@@ -1,0 +1,10 @@
+---
+name: Test Ollama Preset on macOS
+steps:
+  - name: Install Ollama with tinyllama model
+    preset:
+      name: ollama
+      with:
+        service: true
+        pull: [tinyllama]
+    become: true

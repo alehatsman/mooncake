@@ -10,16 +10,16 @@ import (
 
 func TestNewDryRunLogger(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	if dryRun == nil {
-		t.Fatal("newDryRunLogger returned nil")
+		t.Fatal("NewDryRunLogger returned nil")
 	}
 }
 
 func TestLogShellExecution_WithoutSudo(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogShellExecution("echo hello", false)
@@ -27,7 +27,7 @@ func TestLogShellExecution_WithoutSudo(t *testing.T) {
 
 func TestLogShellExecution_WithSudo(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogShellExecution("systemctl restart nginx", true)
@@ -35,7 +35,7 @@ func TestLogShellExecution_WithSudo(t *testing.T) {
 
 func TestLogTemplateRender(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogTemplateRender("/src/template.j2", "/dest/config.conf", 0644)
@@ -43,7 +43,7 @@ func TestLogTemplateRender(t *testing.T) {
 
 func TestLogVariableLoad(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogVariableLoad(5, "/path/to/vars.yml")
@@ -51,7 +51,7 @@ func TestLogVariableLoad(t *testing.T) {
 
 func TestLogVariableSet(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogVariableSet(3)
@@ -59,7 +59,7 @@ func TestLogVariableSet(t *testing.T) {
 
 func TestLogRegister_WithRegister(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	step := config.Step{
 		Register: "my_result",
@@ -71,7 +71,7 @@ func TestLogRegister_WithRegister(t *testing.T) {
 
 func TestLogRegister_WithoutRegister(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	step := config.Step{}
 
@@ -81,7 +81,7 @@ func TestLogRegister_WithoutRegister(t *testing.T) {
 
 func TestLogFileCreate(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogFileCreate("/path/to/file.txt", 0644, 1024)
@@ -89,7 +89,7 @@ func TestLogFileCreate(t *testing.T) {
 
 func TestLogFileUpdate(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogFileUpdate("/path/to/file.txt", 0644, 512, 1024)
@@ -97,7 +97,7 @@ func TestLogFileUpdate(t *testing.T) {
 
 func TestLogDirectoryCreate(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogDirectoryCreate("/path/to/dir", 0755)
@@ -105,7 +105,7 @@ func TestLogDirectoryCreate(t *testing.T) {
 
 func TestLogTemplateCreate(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogTemplateCreate("/src/template.j2", "/dest/file.conf", 0644, 2048)
@@ -113,7 +113,7 @@ func TestLogTemplateCreate(t *testing.T) {
 
 func TestLogTemplateUpdate(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogTemplateUpdate("/src/template.j2", "/dest/file.conf", 0644, 1024, 2048)
@@ -121,7 +121,7 @@ func TestLogTemplateUpdate(t *testing.T) {
 
 func TestLogTemplateNoChange(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogTemplateNoChange("/src/template.j2", "/dest/file.conf")
@@ -129,7 +129,7 @@ func TestLogTemplateNoChange(t *testing.T) {
 
 func TestLogFileRemove(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogFileRemove("/path/to/file.txt", 4096)
@@ -137,7 +137,7 @@ func TestLogFileRemove(t *testing.T) {
 
 func TestLogDirectoryRemove(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogDirectoryRemove("/path/to/dir")
@@ -145,7 +145,7 @@ func TestLogDirectoryRemove(t *testing.T) {
 
 func TestLogFileTouch(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogFileTouch("/path/to/file.txt")
@@ -153,7 +153,7 @@ func TestLogFileTouch(t *testing.T) {
 
 func TestLogSymlinkCreate_WithoutForce(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogSymlinkCreate("/target", "/link", false)
@@ -161,7 +161,7 @@ func TestLogSymlinkCreate_WithoutForce(t *testing.T) {
 
 func TestLogSymlinkCreate_WithForce(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogSymlinkCreate("/target", "/link", true)
@@ -169,7 +169,7 @@ func TestLogSymlinkCreate_WithForce(t *testing.T) {
 
 func TestLogSymlinkNoChange(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogSymlinkNoChange("/target", "/link")
@@ -177,7 +177,7 @@ func TestLogSymlinkNoChange(t *testing.T) {
 
 func TestLogHardlinkCreate_WithoutForce(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogHardlinkCreate("/target", "/link", false)
@@ -185,7 +185,7 @@ func TestLogHardlinkCreate_WithoutForce(t *testing.T) {
 
 func TestLogHardlinkCreate_WithForce(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogHardlinkCreate("/target", "/link", true)
@@ -193,7 +193,7 @@ func TestLogHardlinkCreate_WithForce(t *testing.T) {
 
 func TestLogHardlinkNoChange(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogHardlinkNoChange("/target", "/link")
@@ -201,7 +201,7 @@ func TestLogHardlinkNoChange(t *testing.T) {
 
 func TestLogPermissionsChange_ModeOnly(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogPermissionsChange("/path/to/file", "0644", "", "", false)
@@ -209,7 +209,7 @@ func TestLogPermissionsChange_ModeOnly(t *testing.T) {
 
 func TestLogPermissionsChange_OwnerOnly(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogPermissionsChange("/path/to/file", "", "root", "", false)
@@ -217,7 +217,7 @@ func TestLogPermissionsChange_OwnerOnly(t *testing.T) {
 
 func TestLogPermissionsChange_GroupOnly(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogPermissionsChange("/path/to/file", "", "", "wheel", false)
@@ -225,7 +225,7 @@ func TestLogPermissionsChange_GroupOnly(t *testing.T) {
 
 func TestLogPermissionsChange_AllParameters(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogPermissionsChange("/path/to/file", "0755", "root", "wheel", true)
@@ -233,7 +233,7 @@ func TestLogPermissionsChange_AllParameters(t *testing.T) {
 
 func TestLogPermissionsChange_Recursive(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogPermissionsChange("/path/to/dir", "", "", "", true)
@@ -241,7 +241,7 @@ func TestLogPermissionsChange_Recursive(t *testing.T) {
 
 func TestLogPermissionsChange_NoParameters(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic even with all empty parameters
 	dryRun.LogPermissionsChange("/path/to/file", "", "", "", false)
@@ -249,7 +249,7 @@ func TestLogPermissionsChange_NoParameters(t *testing.T) {
 
 func TestLogPermissionsNoChange(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogPermissionsNoChange("/path/to/file")
@@ -257,7 +257,7 @@ func TestLogPermissionsNoChange(t *testing.T) {
 
 func TestLogFileCopy(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogFileCopy("/src/file.txt", "/dest/file.txt", 0644, 8192)
@@ -265,7 +265,7 @@ func TestLogFileCopy(t *testing.T) {
 
 func TestLogFileCopyNoChange(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Should not panic
 	dryRun.LogFileCopyNoChange("/src/file.txt", "/dest/file.txt")
@@ -273,7 +273,7 @@ func TestLogFileCopyNoChange(t *testing.T) {
 
 func TestDryRunLogger_MultipleOperations(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Perform multiple operations - should not panic
 	dryRun.LogFileCreate("/file1.txt", 0644, 100)
@@ -314,7 +314,7 @@ func TestFormatModeVarious(t *testing.T) {
 
 func TestDryRunLogger_EdgeCases(t *testing.T) {
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	// Test with empty strings
 	dryRun.LogShellExecution("", false)
@@ -337,7 +337,7 @@ func TestDryRunLogger_EdgeCases(t *testing.T) {
 func TestDryRunLogger_AllMethods(t *testing.T) {
 	// Ensure all methods can be called without panicking
 	log := logger.NewTestLogger()
-	dryRun := newDryRunLogger(log)
+	dryRun := NewDryRunLogger(log)
 
 	t.Run("shell", func(t *testing.T) {
 		dryRun.LogShellExecution("cmd", false)

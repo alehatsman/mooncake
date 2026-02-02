@@ -1,4 +1,6 @@
-package executor
+// Package service implements the service action handler.
+// Manages services across different platforms (systemd, launchd, Windows).
+package service
 
 import (
 	"bytes"
@@ -7,11 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
@@ -23,22 +28,34 @@ const (
 	ServiceStateRestarted = "restarted"
 )
 
-// HandleService manages services across different platforms (systemd, launchd, Windows).
-func HandleService(step config.Step, ec *ExecutionContext) error {
-	serviceAction := step.Service
-	if serviceAction == nil {
-		return &SetupError{Component: "service", Issue: "no service configuration specified"}
+// Handler implements the service action handler.
+type Handler struct{}
+
+func init() {
+	actions.Register(&Handler{})
+}
+
+// Metadata returns the action metadata.
+func (h *Handler) Metadata() actions.ActionMetadata {
+	return actions.ActionMetadata{
+		Name:           "service",
+		Description:    "Manage services across platforms (systemd, launchd, Windows)",
+		Category:       actions.CategorySystem,
+		SupportsDryRun: true,
 	}
+}
+
+// Validate validates the service action configuration.
+func (h *Handler) Validate(step *config.Step) error {
+	if step.Service == nil {
+		return fmt.Errorf("service action requires service configuration")
+	}
+
+	serviceAction := step.Service
 
 	// Validate service name
 	if serviceAction.Name == "" {
-		return &StepValidationError{Field: "name", Message: "service name is required"}
-	}
-
-	// Render service name
-	renderedName, err := ec.Template.Render(serviceAction.Name, ec.Variables)
-	if err != nil {
-		return &RenderError{Field: "service.name", Cause: err}
+		return fmt.Errorf("service name is required")
 	}
 
 	// Validate state if provided
@@ -52,19 +69,96 @@ func HandleService(step config.Step, ec *ExecutionContext) error {
 			}
 		}
 		if !isValid {
-			return &StepValidationError{
+			return fmt.Errorf("invalid state %q, must be one of: %v", serviceAction.State, validStates)
+		}
+	}
+
+	return nil
+}
+
+// Execute executes the service action.
+func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return nil, fmt.Errorf("invalid context type")
+	}
+
+	return nil, HandleService(*step, ec)
+}
+
+// DryRun logs what the service operation would do.
+func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return fmt.Errorf("invalid context type")
+	}
+
+	serviceAction := step.Service
+	if serviceAction == nil {
+		return fmt.Errorf("service action requires service configuration")
+	}
+
+	// Render service name
+	renderedName, err := ec.Template.Render(serviceAction.Name, ec.Variables)
+	if err != nil {
+		return err
+	}
+
+	// Log what would be done
+	ec.Logger.Infof("  [DRY-RUN] Would manage service: %s", renderedName)
+	if serviceAction.State != "" {
+		ec.Logger.Infof("    State: %s", serviceAction.State)
+	}
+	if serviceAction.Enabled != nil {
+		ec.Logger.Infof("    Enabled: %v", *serviceAction.Enabled)
+	}
+	if serviceAction.Unit != nil {
+		ec.Logger.Infof("    Unit file: managed")
+	}
+	if serviceAction.Dropin != nil {
+		ec.Logger.Infof("    Drop-in: %s", serviceAction.Dropin.Name)
+	}
+	if serviceAction.DaemonReload {
+		ec.Logger.Infof("    Daemon reload: yes")
+	}
+
+	return nil
+}
+
+// HandleService manages services across different platforms (systemd, launchd, Windows).
+func HandleService(step config.Step, ec *executor.ExecutionContext) error {
+	serviceAction := step.Service
+	if serviceAction == nil {
+		return &executor.SetupError{Component: "service", Issue: "no service configuration specified"}
+	}
+
+	// Validate service name
+	if serviceAction.Name == "" {
+		return &executor.StepValidationError{Field: "name", Message: "service name is required"}
+	}
+
+	// Render service name
+	renderedName, err := ec.Template.Render(serviceAction.Name, ec.Variables)
+	if err != nil {
+		return &executor.RenderError{Field: "service.name", Cause: err}
+	}
+
+	// Validate state if provided
+	if serviceAction.State != "" {
+		validStates := []string{ServiceStateStarted, ServiceStateStopped, ServiceStateReloaded, ServiceStateRestarted}
+		isValid := false
+		for _, s := range validStates {
+			if serviceAction.State == s {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return &executor.StepValidationError{
 				Field:   "state",
 				Message: fmt.Sprintf("invalid state %q, must be one of: %v", serviceAction.State, validStates),
 			}
 		}
-	}
-
-	// Handle dry-run mode
-	if ec.HandleDryRun(func(dryRun *dryRunLogger) {
-		dryRun.LogServiceOperation(renderedName, serviceAction, step.Become)
-		dryRun.LogRegister(step)
-	}) {
-		return nil
 	}
 
 	// Dispatch to platform-specific handler
@@ -76,7 +170,7 @@ func HandleService(step config.Step, ec *ExecutionContext) error {
 	case "windows":
 		return handleWindowsService(renderedName, serviceAction, step, ec)
 	default:
-		return &SetupError{
+		return &executor.SetupError{
 			Component: "service",
 			Issue:     fmt.Sprintf("service management not supported on %s", runtime.GOOS),
 		}
@@ -85,12 +179,12 @@ func HandleService(step config.Step, ec *ExecutionContext) error {
 
 // renderTemplateOrContent renders content from either a template file or inline content.
 // This helper function reduces code duplication across unit file, dropin, and plist management.
-func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec *ExecutionContext) (string, error) {
+func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec *executor.ExecutionContext) (string, error) {
 	if srcTemplate != "" {
 		// Expand and render template file
 		srcPath, expandErr := ec.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.Variables)
 		if expandErr != nil {
-			return "", &RenderError{Field: fieldPrefix + ".src_template", Cause: expandErr}
+			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: expandErr}
 		}
 
 		// Make path absolute relative to config directory
@@ -102,13 +196,13 @@ func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 		// #nosec G304 - This is a provisioning tool that reads user-specified template files
 		templateData, readErr := os.ReadFile(srcPath)
 		if readErr != nil {
-			return "", &FileOperationError{Operation: "read", Path: srcPath, Cause: readErr}
+			return "", &executor.FileOperationError{Operation: "read", Path: srcPath, Cause: readErr}
 		}
 
 		// Render template
 		content, renderErr := ec.Template.Render(string(templateData), ec.Variables)
 		if renderErr != nil {
-			return "", &RenderError{Field: fieldPrefix + ".src_template", Cause: renderErr}
+			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: renderErr}
 		}
 		return content, nil
 	}
@@ -117,20 +211,20 @@ func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 		// Render inline content
 		content, renderErr := ec.Template.Render(inlineContent, ec.Variables)
 		if renderErr != nil {
-			return "", &RenderError{Field: fieldPrefix + ".content", Cause: renderErr}
+			return "", &executor.RenderError{Field: fieldPrefix + ".content", Cause: renderErr}
 		}
 		return content, nil
 	}
 
-	return "", &StepValidationError{
+	return "", &executor.StepValidationError{
 		Field:   fieldPrefix,
 		Message: "either src_template or content is required",
 	}
 }
 
 // handleSystemdService manages systemd services on Linux.
-func handleSystemdService(serviceName string, serviceAction *config.ServiceAction, step config.Step, ec *ExecutionContext) error {
-	result := NewResult()
+func handleSystemdService(serviceName string, serviceAction *config.ServiceAction, step config.Step, ec *executor.ExecutionContext) error {
+	result := executor.NewResult()
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
@@ -236,7 +330,7 @@ func handleSystemdService(serviceName string, serviceAction *config.ServiceActio
 }
 
 // manageSystemdUnitFile creates or updates a systemd unit file.
-func manageSystemdUnitFile(serviceName string, unit *config.ServiceUnit, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageSystemdUnitFile(serviceName string, unit *config.ServiceUnit, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	// Determine unit file path
 	unitPath := unit.Dest
 	if unitPath == "" {
@@ -268,9 +362,9 @@ func manageSystemdUnitFile(serviceName string, unit *config.ServiceUnit, step co
 }
 
 // manageSystemdDropin creates or updates a systemd drop-in file.
-func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	if dropin.Name == "" {
-		return false, &StepValidationError{Field: "service.dropin.name", Message: "drop-in name is required"}
+		return false, &executor.StepValidationError{Field: "service.dropin.name", Message: "drop-in name is required"}
 	}
 
 	// Drop-in directory path
@@ -295,13 +389,13 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 	// #nosec G301 - Drop-in directories need to be readable by systemd (0755 is appropriate)
 	if err := os.MkdirAll(dropinDir, 0755); err != nil {
 		if os.IsPermission(err) && !step.Become {
-			return false, &FileOperationError{
+			return false, &executor.FileOperationError{
 				Operation: "mkdir",
 				Path:      dropinDir,
 				Cause:     fmt.Errorf("permission denied (try become: true)"),
 			}
 		}
-		return false, &FileOperationError{Operation: "mkdir", Path: dropinDir, Cause: err}
+		return false, &executor.FileOperationError{Operation: "mkdir", Path: dropinDir, Cause: err}
 	}
 
 	// Write drop-in file (may require sudo)
@@ -314,19 +408,19 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 }
 
 // systemdDaemonReload executes systemctl daemon-reload.
-func systemdDaemonReload(step config.Step, ec *ExecutionContext) error {
+func systemdDaemonReload(step config.Step, ec *executor.ExecutionContext) error {
 	ec.Logger.Debugf("  Running systemctl daemon-reload")
 
 	var cmd *exec.Cmd
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "become",
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
 		if ec.SudoPass == "" {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -343,7 +437,7 @@ func systemdDaemonReload(step config.Step, ec *ExecutionContext) error {
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &CommandError{
+		return &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("daemon-reload failed: %w (output: %s)", err, string(output)),
 		}
@@ -353,7 +447,7 @@ func systemdDaemonReload(step config.Step, ec *ExecutionContext) error {
 }
 
 // manageSystemdServiceState manages the service state (started/stopped/restarted/reloaded).
-func manageSystemdServiceState(serviceName, desiredState string, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageSystemdServiceState(serviceName, desiredState string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	// Get current state
 	currentState, err := getSystemdServiceState(serviceName, step, ec)
 	if err != nil {
@@ -379,7 +473,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 	case ServiceStateReloaded:
 		action = "reload"
 	default:
-		return false, &StepValidationError{
+		return false, &executor.StepValidationError{
 			Field:   "state",
 			Message: fmt.Sprintf("unsupported state: %s", desiredState),
 		}
@@ -390,13 +484,13 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 	var cmd *exec.Cmd
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return false, &SetupError{
+			return false, &executor.SetupError{
 				Component: "become",
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
 		if ec.SudoPass == "" {
-			return false, &SetupError{
+			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -415,7 +509,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return false, &CommandError{
+		return false, &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("systemctl %s failed: %w (output: %s)", action, err, string(output)),
 		}
@@ -425,11 +519,11 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 }
 
 // getSystemdServiceState returns the current state of a systemd service.
-func getSystemdServiceState(serviceName string, step config.Step, ec *ExecutionContext) (string, error) {
+func getSystemdServiceState(serviceName string, step config.Step, ec *executor.ExecutionContext) (string, error) {
 	var cmd *exec.Cmd
 	if step.Become {
 		if ec.SudoPass == "" {
-			return "", &SetupError{
+			return "", &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -448,7 +542,7 @@ func getSystemdServiceState(serviceName string, step config.Step, ec *ExecutionC
 }
 
 // manageSystemdServiceEnabled manages the service enabled status.
-func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	// Check current enabled status
 	isEnabled, err := isSystemdServiceEnabled(serviceName, step, ec)
 	if err != nil {
@@ -472,13 +566,13 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 	var cmd *exec.Cmd
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return false, &SetupError{
+			return false, &executor.SetupError{
 				Component: "become",
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
 		if ec.SudoPass == "" {
-			return false, &SetupError{
+			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -497,7 +591,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return false, &CommandError{
+		return false, &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("systemctl %s failed: %w (output: %s)", action, err, string(output)),
 		}
@@ -507,11 +601,11 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 }
 
 // isSystemdServiceEnabled checks if a systemd service is enabled.
-func isSystemdServiceEnabled(serviceName string, step config.Step, ec *ExecutionContext) (bool, error) {
+func isSystemdServiceEnabled(serviceName string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	var cmd *exec.Cmd
 	if step.Become {
 		if ec.SudoPass == "" {
-			return false, &SetupError{
+			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -532,7 +626,7 @@ func isSystemdServiceEnabled(serviceName string, step config.Step, ec *Execution
 }
 
 // writeFileWithPrivileges writes a file with optional sudo privileges.
-func writeFileWithPrivileges(path string, content []byte, mode string, step config.Step, ec *ExecutionContext) error {
+func writeFileWithPrivileges(path string, content []byte, mode string, step config.Step, ec *executor.ExecutionContext) error {
 	// Parse mode if provided
 	fileMode := parseFileMode(mode, 0644)
 
@@ -542,23 +636,23 @@ func writeFileWithPrivileges(path string, content []byte, mode string, step conf
 			// Use sudo to write file
 			return writeFileWithSudo(path, content, fileMode, ec)
 		}
-		return &FileOperationError{Operation: "write", Path: path, Cause: err}
+		return &executor.FileOperationError{Operation: "write", Path: path, Cause: err}
 	}
 
 	return nil
 }
 
 // writeFileWithSudo writes a file using sudo (for privileged paths).
-func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *ExecutionContext) error {
+func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *executor.ExecutionContext) error {
 	if !security.IsBecomeSupported() {
-		return &SetupError{
+		return &executor.SetupError{
 			Component: "become",
 			Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 		}
 	}
 
 	if ec.SudoPass == "" {
-		return &SetupError{
+		return &executor.SetupError{
 			Component: "sudo",
 			Issue:     "no password provided. Use --sudo-pass flag",
 		}
@@ -567,17 +661,17 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *Execut
 	// Write to temporary file first
 	tmpFile, err := os.CreateTemp("", "mooncake-unit-*")
 	if err != nil {
-		return &FileOperationError{Operation: "create temp", Path: path, Cause: err}
+		return &executor.FileOperationError{Operation: "create temp", Path: path, Cause: err}
 	}
 	tmpPath := tmpFile.Name()
 	defer func() { _ = os.Remove(tmpPath) }() // Best-effort cleanup
 
 	if _, err := tmpFile.Write(content); err != nil {
 		_ = tmpFile.Close() // Best-effort cleanup on error path
-		return &FileOperationError{Operation: "write temp", Path: tmpPath, Cause: err}
+		return &executor.FileOperationError{Operation: "write temp", Path: tmpPath, Cause: err}
 	}
 	if err := tmpFile.Close(); err != nil {
-		return &FileOperationError{Operation: "close temp", Path: tmpPath, Cause: err}
+		return &executor.FileOperationError{Operation: "close temp", Path: tmpPath, Cause: err}
 	}
 
 	// Use sudo to copy temp file to target location
@@ -590,7 +684,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *Execut
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &CommandError{
+		return &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("sudo cp failed: %w (output: %s)", err, string(output)),
 		}
@@ -606,7 +700,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *Execut
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &CommandError{
+		return &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("sudo chmod failed: %w (output: %s)", err, string(output)),
 		}
@@ -616,8 +710,8 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *Execut
 }
 
 // handleLaunchdService manages launchd services on macOS.
-func handleLaunchdService(serviceName string, serviceAction *config.ServiceAction, step config.Step, ec *ExecutionContext) error {
-	result := NewResult()
+func handleLaunchdService(serviceName string, serviceAction *config.ServiceAction, step config.Step, ec *executor.ExecutionContext) error {
+	result := executor.NewResult()
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
@@ -724,7 +818,7 @@ func getLaunchdDomain(isSystem bool) string {
 }
 
 // getLaunchdPlistPath returns the plist file path for a launchd service
-func getLaunchdPlistPath(serviceName string, unit *config.ServiceUnit, isSystem bool, _ *ExecutionContext) string {
+func getLaunchdPlistPath(serviceName string, unit *config.ServiceUnit, isSystem bool, _ *executor.ExecutionContext) string {
 	if unit != nil && unit.Dest != "" {
 		return unit.Dest
 	}
@@ -739,7 +833,7 @@ func getLaunchdPlistPath(serviceName string, unit *config.ServiceUnit, isSystem 
 }
 
 // manageLaunchdPlist creates or updates a launchd plist file
-func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem bool, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem bool, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	plistPath := getLaunchdPlistPath(serviceName, unit, isSystem, ec)
 
 	// Render content from template or inline content
@@ -760,7 +854,7 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 	plistDir := filepath.Dir(plistPath)
 	// #nosec G301 - Plist directories need to be readable by launchd (0755 is appropriate)
 	if err := os.MkdirAll(plistDir, 0755); err != nil {
-		return false, &FileOperationError{Operation: "mkdir", Path: plistDir, Cause: err}
+		return false, &executor.FileOperationError{Operation: "mkdir", Path: plistDir, Cause: err}
 	}
 
 	// Write plist file (may require sudo for system daemons)
@@ -773,11 +867,11 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 }
 
 // isLaunchdServiceLoaded checks if a launchd service is loaded
-func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *ExecutionContext) (bool, error) {
+func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	var cmd *exec.Cmd
 	if step.Become {
 		if ec.SudoPass == "" {
-			return false, &SetupError{
+			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -805,7 +899,7 @@ func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *ExecutionCon
 }
 
 // manageLaunchdServiceState manages the service state (started/stopped/restarted)
-func manageLaunchdServiceState(serviceName, serviceID, plistPath, domain string, desiredState string, isLoaded bool, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageLaunchdServiceState(serviceName, serviceID, plistPath, domain string, desiredState string, isLoaded bool, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	switch desiredState {
 	case ServiceStateStarted:
 		if !isLoaded {
@@ -851,7 +945,7 @@ func manageLaunchdServiceState(serviceName, serviceID, plistPath, domain string,
 		return manageLaunchdServiceState(serviceName, serviceID, plistPath, domain, ServiceStateRestarted, isLoaded, step, ec)
 
 	default:
-		return false, &StepValidationError{
+		return false, &executor.StepValidationError{
 			Field:   "state",
 			Message: fmt.Sprintf("unsupported state: %s", desiredState),
 		}
@@ -859,7 +953,7 @@ func manageLaunchdServiceState(serviceName, serviceID, plistPath, domain string,
 }
 
 // manageLaunchdServiceEnabled manages the service enabled status (loaded/unloaded)
-func manageLaunchdServiceEnabled(serviceID, plistPath, domain string, shouldBeEnabled bool, isLoaded bool, step config.Step, ec *ExecutionContext) (bool, error) {
+func manageLaunchdServiceEnabled(serviceID, plistPath, domain string, shouldBeEnabled bool, isLoaded bool, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	if shouldBeEnabled && !isLoaded {
 		// Need to bootstrap
 		if err := launchdBootstrap(domain, plistPath, step, ec); err != nil {
@@ -882,19 +976,19 @@ func manageLaunchdServiceEnabled(serviceID, plistPath, domain string, shouldBeEn
 }
 
 // executeLaunchctlCommand executes a launchctl command with proper error handling
-func executeLaunchctlCommand(command, domain, plistPath string, step config.Step, ec *ExecutionContext, idempotencyCheck []string, successMsg, errorMsg string) error {
+func executeLaunchctlCommand(command, domain, plistPath string, step config.Step, ec *executor.ExecutionContext, idempotencyCheck []string, successMsg, errorMsg string) error {
 	ec.Logger.Debugf("  Running launchctl %s %s %s", command, domain, plistPath)
 
 	var cmd *exec.Cmd
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "become",
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
 		if ec.SudoPass == "" {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -921,7 +1015,7 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &CommandError{
+		return &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("%s: %w (output: %s)", errorMsg, err, outputStr),
 		}
@@ -931,7 +1025,7 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 }
 
 // launchdBootstrap loads a service using launchctl bootstrap
-func launchdBootstrap(domain, plistPath string, step config.Step, ec *ExecutionContext) error {
+func launchdBootstrap(domain, plistPath string, step config.Step, ec *executor.ExecutionContext) error {
 	return executeLaunchctlCommand(
 		"bootstrap",
 		domain,
@@ -945,7 +1039,7 @@ func launchdBootstrap(domain, plistPath string, step config.Step, ec *ExecutionC
 }
 
 // launchdBootout unloads a service using launchctl bootout
-func launchdBootout(domain, plistPath string, step config.Step, ec *ExecutionContext) error {
+func launchdBootout(domain, plistPath string, step config.Step, ec *executor.ExecutionContext) error {
 	return executeLaunchctlCommand(
 		"bootout",
 		domain,
@@ -959,7 +1053,7 @@ func launchdBootout(domain, plistPath string, step config.Step, ec *ExecutionCon
 }
 
 // launchdKickstart starts or restarts a service using launchctl kickstart
-func launchdKickstart(serviceID string, kill bool, step config.Step, ec *ExecutionContext) error {
+func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executor.ExecutionContext) error {
 	args := []string{"kickstart"}
 	if kill {
 		args = append(args, "-k")
@@ -971,13 +1065,13 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *Executi
 	var cmd *exec.Cmd
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "become",
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
 		if ec.SudoPass == "" {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -998,7 +1092,7 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *Executi
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &CommandError{
+		return &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("launchctl kickstart failed: %w (output: %s)", err, string(output)),
 		}
@@ -1008,19 +1102,19 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *Executi
 }
 
 // launchdKill stops a service using launchctl kill
-func launchdKill(serviceID string, step config.Step, ec *ExecutionContext) error {
+func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionContext) error {
 	ec.Logger.Debugf("  Running launchctl kill SIGTERM %s", serviceID)
 
 	var cmd *exec.Cmd
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "become",
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
 		if ec.SudoPass == "" {
-			return &SetupError{
+			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
@@ -1042,7 +1136,7 @@ func launchdKill(serviceID string, step config.Step, ec *ExecutionContext) error
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &CommandError{
+		return &executor.CommandError{
 			ExitCode: exitCode,
 			Cause:    fmt.Errorf("launchctl kill failed: %w (output: %s)", err, string(output)),
 		}
@@ -1052,9 +1146,33 @@ func launchdKill(serviceID string, step config.Step, ec *ExecutionContext) error
 }
 
 // handleWindowsService manages Windows services (placeholder).
-func handleWindowsService(_ string, _ *config.ServiceAction, _ config.Step, _ *ExecutionContext) error {
-	return &SetupError{
+func handleWindowsService(_ string, _ *config.ServiceAction, _ config.Step, _ *executor.ExecutionContext) error {
+	return &executor.SetupError{
 		Component: "windows service",
 		Issue:     "Windows service support not yet implemented",
 	}
+}
+
+// markStepFailed marks a step as failed and registers the result.
+func markStepFailed(result *executor.Result, step config.Step, ec *executor.ExecutionContext) {
+	result.Failed = true
+	result.Rc = 1
+	if step.Register != "" {
+		result.RegisterTo(ec.Variables, step.Register)
+	}
+}
+
+// parseFileMode parses a file mode string (octal) and returns os.FileMode.
+func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
+	if modeStr == "" {
+		return defaultMode
+	}
+
+	// Parse as octal
+	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		return defaultMode
+	}
+
+	return os.FileMode(mode)
 }

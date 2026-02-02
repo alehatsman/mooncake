@@ -11,6 +11,7 @@ Actions are the operations Mooncake performs. Each step in your configuration us
 | **file** | Create/manage files | [↓](#file) |
 | **copy** | Copy files | [↓](#copy) |
 | **download** | Download from URLs | [↓](#download) |
+| **package** | Manage packages | [↓](#package) |
 | **unarchive** | Extract archives | [↓](#unarchive) |
 | **template** | Render templates | [↓](#template) |
 | **service** | Manage services | [↓](#service) |
@@ -764,6 +765,167 @@ All downloads include these security features:
     url: "https://example.com/file.iso"
     dest: "/tmp/file.iso"
     force: true  # No idempotency
+```
+
+## Package
+
+Manage system packages (install, remove, update) with automatic package manager detection.
+
+### Package Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `package.name` | string | Single package name to manage |
+| `package.names` | array | Multiple package names to manage |
+| `package.state` | string | Desired state: `present` (default), `absent`, `latest` |
+| `package.manager` | string | Package manager to use (auto-detected if not specified) |
+| `package.update_cache` | boolean | Update package cache before operation |
+| `package.upgrade` | boolean | Upgrade all installed packages (ignores name/names) |
+| `package.extra` | array | Extra arguments to pass to package manager |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+**Supported Package Managers:**
+- **Linux:** apt, dnf, yum, pacman, zypper, apk
+- **macOS:** brew, port
+- **Windows:** choco, scoop
+
+**Auto-detection:** Uses `package_manager` system fact or detects based on OS if not specified.
+
+**Idempotency:** Checks if package is already installed before attempting installation.
+
+### Install Single Package
+
+```yaml
+- name: Install neovim
+  package:
+    name: neovim
+    state: present
+  become: true
+```
+
+### Install Multiple Packages
+
+```yaml
+- name: Install development tools
+  package:
+    names:
+      - git
+      - curl
+      - vim
+      - wget
+    state: present
+  become: true
+```
+
+### Auto-Detect Package Manager
+
+```yaml
+- name: Install Python (cross-platform)
+  package:
+    name: python3
+    update_cache: true
+  become: true
+  # Uses apt on Debian/Ubuntu, dnf on Fedora, brew on macOS, etc.
+```
+
+### Specify Package Manager
+
+```yaml
+- name: Install Node.js with Homebrew
+  package:
+    name: node
+    manager: brew
+  # Explicitly use Homebrew even if other managers are available
+```
+
+### Remove Package
+
+```yaml
+- name: Remove Apache
+  package:
+    name: apache2
+    state: absent
+  become: true
+```
+
+### Install Latest Version
+
+```yaml
+- name: Ensure latest Git
+  package:
+    name: git
+    state: latest
+    update_cache: true
+  become: true
+```
+
+### Upgrade All Packages
+
+```yaml
+- name: System-wide package upgrade
+  package:
+    upgrade: true
+  become: true
+  # Runs: apt-get upgrade, dnf upgrade, brew upgrade, etc.
+```
+
+### With Extra Arguments
+
+```yaml
+- name: Install with specific options
+  package:
+    name: nginx
+    state: present
+    extra:
+      - "--no-install-recommends"
+  become: true
+  # For apt: apt-get install -y --no-install-recommends nginx
+```
+
+### Loop Over Packages
+
+```yaml
+- vars:
+    dev_packages:
+      - gcc
+      - make
+      - autoconf
+      - pkg-config
+
+- name: Install build tools
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ dev_packages }}"
+  become: true
+```
+
+### Conditional Package Management
+
+```yaml
+- name: Install package manager specific tools
+  package:
+    name: "{{ item.package }}"
+    manager: "{{ item.manager }}"
+    state: present
+  with_items:
+    - { manager: "apt", package: "apt-transport-https" }
+    - { manager: "dnf", package: "dnf-plugins-core" }
+  when: package_manager == item.manager
+  become: true
+```
+
+### Update Cache Before Install
+
+```yaml
+- name: Install with fresh cache
+  package:
+    name: docker-ce
+    state: present
+    update_cache: true
+  become: true
+  # Runs apt-get update or equivalent before installation
 ```
 
 ## Service

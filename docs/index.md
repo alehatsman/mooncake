@@ -246,6 +246,27 @@ Extract tar, tar.gz, and zip archives with security protections.
 
 ---
 
+### 📦 Install Packages
+
+Manage system packages with automatic package manager detection.
+
+```yaml
+- name: Install packages
+  package:
+    names:
+      - neovim
+      - ripgrep
+      - fzf
+    state: present
+  become: true
+```
+
+**Features**: Auto-detect package manager (apt, dnf, yum, brew, choco, etc.), install/remove/upgrade, idempotent
+
+[Learn more: Package Action →](guide/config/actions.md#package)
+
+---
+
 ### ⚙️ Manage Services
 
 Manage system services (systemd on Linux, launchd on macOS).

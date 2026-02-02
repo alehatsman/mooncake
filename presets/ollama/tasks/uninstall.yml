@@ -1,0 +1,31 @@
+# Ollama Uninstallation Tasks
+# Handles service cleanup and binary removal
+
+- name: Stop Ollama service (Linux)
+  service:
+    name: ollama
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Stop Ollama service (macOS)
+  service:
+    name: ollama
+    state: stopped
+    enabled: false
+  when: os == "darwin"
+  failed_when: false
+
+- name: Remove Ollama binary
+  shell: rm -f /usr/local/bin/ollama /usr/bin/ollama
+  become: true
+  failed_when: false
+
+- name: Remove Ollama models directory (if force)
+  file:
+    path: "{% if parameters.models_dir %}{{ parameters.models_dir }}{% else %}~/.ollama{% endif %}"
+    state: absent
+  when: parameters.force
+  failed_when: false

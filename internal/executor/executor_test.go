@@ -1,13 +1,24 @@
-package executor
+package executor_test
 
 import (
-	"errors"
 	"os"
-	"strings"
 	"testing"
 
+	_ "github.com/alehatsman/mooncake/internal/actions/assert"
+	_ "github.com/alehatsman/mooncake/internal/actions/command"
+	_ "github.com/alehatsman/mooncake/internal/actions/copy"
+	_ "github.com/alehatsman/mooncake/internal/actions/download"
+	_ "github.com/alehatsman/mooncake/internal/actions/file"
+	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
+	_ "github.com/alehatsman/mooncake/internal/actions/preset"
+	_ "github.com/alehatsman/mooncake/internal/actions/print"
+	_ "github.com/alehatsman/mooncake/internal/actions/service"
+	_ "github.com/alehatsman/mooncake/internal/actions/shell"
+	_ "github.com/alehatsman/mooncake/internal/actions/template"
+	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"
+	_ "github.com/alehatsman/mooncake/internal/actions/vars"
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -24,7 +35,7 @@ func TestExecutionContext_Copy(t *testing.T) {
 	fileTreeWalker := filetree.NewWalker(pathExpander)
 	testLogger := logger.NewTestLogger()
 
-	original := ExecutionContext{
+	original := executor.ExecutionContext{
 		Variables: map[string]interface{}{
 			"key1": "value1",
 			"key2": "value2",
@@ -89,22 +100,22 @@ func TestExecutionContext_Copy(t *testing.T) {
 func TestAddGlobalVariables(t *testing.T) {
 	vars := make(map[string]interface{})
 
-	AddGlobalVariables(vars)
+	executor.AddGlobalVariables(vars)
 
 	// Should add os and arch
 	if vars["os"] == nil {
-		t.Error("AddGlobalVariables() should add 'os'")
+		t.Error("executor.AddGlobalVariables() should add 'os'")
 	}
 	if vars["arch"] == nil {
-		t.Error("AddGlobalVariables() should add 'arch'")
+		t.Error("executor.AddGlobalVariables() should add 'arch'")
 	}
 
 	// Verify they are strings
 	if _, ok := vars["os"].(string); !ok {
-		t.Errorf("AddGlobalVariables() os should be string, got %T", vars["os"])
+		t.Errorf("executor.AddGlobalVariables() os should be string, got %T", vars["os"])
 	}
 	if _, ok := vars["arch"].(string); !ok {
-		t.Errorf("AddGlobalVariables() arch should be string, got %T", vars["arch"])
+		t.Errorf("executor.AddGlobalVariables() arch should be string, got %T", vars["arch"])
 	}
 }
 
@@ -115,7 +126,7 @@ func TestHandleVars(t *testing.T) {
 		"new_key": "new_value",
 	}
 
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Variables: map[string]interface{}{
 			"existing_key": "existing_value",
 		},
@@ -127,19 +138,19 @@ func TestHandleVars(t *testing.T) {
 		Vars: &vars,
 	}
 
-	err := handleVars(step, ec)
+	err := executor.HandleVars(step, ec)
 	if err != nil {
-		t.Fatalf("handleVars() error = %v", err)
+		t.Fatalf("executor.HandleVars() error = %v", err)
 	}
 
 	// Verify new variable was added
 	if ec.Variables["new_key"] != "new_value" {
-		t.Errorf("handleVars() new_key = %v, want 'new_value'", ec.Variables["new_key"])
+		t.Errorf("executor.HandleVars() new_key = %v, want 'new_value'", ec.Variables["new_key"])
 	}
 
 	// Verify existing variable is preserved
 	if ec.Variables["existing_key"] != "existing_value" {
-		t.Errorf("handleVars() existing_key = %v, want 'existing_value'", ec.Variables["existing_key"])
+		t.Errorf("executor.HandleVars() existing_key = %v, want 'existing_value'", ec.Variables["existing_key"])
 	}
 }
 
@@ -187,7 +198,7 @@ func TestHandleWhenExpression(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ec := &ExecutionContext{
+			ec := &executor.ExecutionContext{
 				Variables: tt.vars,
 				Logger:    testLogger,
 				Template:  renderer,
@@ -199,21 +210,21 @@ func TestHandleWhenExpression(t *testing.T) {
 				When: tt.when,
 			}
 
-			skip, err := handleWhenExpression(step, ec)
+			skip, err := executor.HandleWhenExpression(step, ec)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("handleWhenExpression() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("executor.HandleWhenExpression() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if skip != tt.wantSkip {
-				t.Errorf("handleWhenExpression() skip = %v, want %v", skip, tt.wantSkip)
+				t.Errorf("executor.HandleWhenExpression() skip = %v, want %v", skip, tt.wantSkip)
 			}
 		})
 	}
 }
 
 func TestStartConfig(t *testing.T) {
-	// Test that StartConfig struct can be created
-	config := StartConfig{
+	// Test that executor.StartConfig struct can be created
+	config := executor.StartConfig{
 		ConfigFilePath: "/tmp/config.yml",
 		VarsFilePath:   "/tmp/vars.yml",
 		SudoPass:       "password",
@@ -265,9 +276,9 @@ func TestParseFileMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseFileMode(tt.modeStr, os.FileMode(tt.defaultMode))
+			got := executor.ParseFileMode(tt.modeStr, os.FileMode(tt.defaultMode))
 			if uint32(got) != tt.want {
-				t.Errorf("parseFileMode() = %o, want %o", got, tt.want)
+				t.Errorf("executor.ParseFileMode() = %o, want %o", got, tt.want)
 			}
 		})
 	}
@@ -336,14 +347,14 @@ func TestShouldSkipByTags(t *testing.T) {
 				Name: "test step",
 				Tags: tt.stepTags,
 			}
-			ec := &ExecutionContext{
+			ec := &executor.ExecutionContext{
 				Tags: tt.filterTags,
 				Redactor: security.NewRedactor(),
 			}
 
-			got := shouldSkipByTags(step, ec)
+			got := executor.ShouldSkipByTags(step, ec)
 			if got != tt.wantSkip {
-				t.Errorf("shouldSkipByTags() = %v, want %v", got, tt.wantSkip)
+				t.Errorf("executor.ShouldSkipByTags() = %v, want %v", got, tt.wantSkip)
 			}
 		})
 	}
@@ -393,8 +404,8 @@ func TestMergeVariables(t *testing.T) {
 
 func TestMarkStepFailed(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	result := NewResult()
-	ec := &ExecutionContext{
+	result := executor.NewResult()
+	ec := &executor.ExecutionContext{
 		Variables: make(map[string]interface{}),
 		Logger:    testLogger,
 	}
@@ -403,16 +414,16 @@ func TestMarkStepFailed(t *testing.T) {
 		Register: "result",
 	}
 
-	markStepFailed(result, step, ec)
+	executor.MarkStepFailed(result, step, ec)
 
 	if !result.Failed {
-		t.Error("markStepFailed() should set Failed to true")
+		t.Error("executor.MarkStepFailed() should set Failed to true")
 	}
 	if result.Rc != 1 {
-		t.Errorf("markStepFailed() Rc = %v, want 1", result.Rc)
+		t.Errorf("executor.MarkStepFailed() Rc = %v, want 1", result.Rc)
 	}
 	if ec.Variables["result"] == nil {
-		t.Error("markStepFailed() should register result")
+		t.Error("executor.MarkStepFailed() should register result")
 	}
 }
 
@@ -452,7 +463,7 @@ func TestCheckSkipConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ec := &ExecutionContext{
+			ec := &executor.ExecutionContext{
 				Variables: make(map[string]interface{}),
 				Tags:      tt.filterTags,
 				Logger:    testLogger,
@@ -464,295 +475,38 @@ func TestCheckSkipConditions(t *testing.T) {
 				Tags: tt.stepTags,
 			}
 
-			skip, reason, _ := checkSkipConditions(step, ec)
+			skip, reason, _ := executor.CheckSkipConditions(step, ec)
 			if skip != tt.wantSkip {
-				t.Errorf("checkSkipConditions() skip = %v, want %v", skip, tt.wantSkip)
+				t.Errorf("executor.CheckSkipConditions() skip = %v, want %v", skip, tt.wantSkip)
 			}
 			if reason != tt.wantReason {
-				t.Errorf("checkSkipConditions() reason = %v, want %v", reason, tt.wantReason)
+				t.Errorf("executor.CheckSkipConditions() reason = %v, want %v", reason, tt.wantReason)
 			}
 		})
 	}
 }
 
 func TestGetStepDisplayName(t *testing.T) {
-	ec := &ExecutionContext{Variables: make(map[string]interface{})}
+	ec := &executor.ExecutionContext{Variables: make(map[string]interface{})}
 	step := config.Step{Name: "My Step"}
 
-	name, hasName := getStepDisplayName(step, ec)
+	name, hasName := executor.GetStepDisplayName(step, ec)
 	if name != "My Step" || !hasName {
-		t.Errorf("getStepDisplayName() = (%v, %v), want (My Step, true)", name, hasName)
+		t.Errorf("executor.GetStepDisplayName() = (%v, %v), want (My Step, true)", name, hasName)
 	}
 
 	// Test with item
 	ec.Variables["item"] = "item_value"
-	name, hasName = getStepDisplayName(step, ec)
+	name, hasName = executor.GetStepDisplayName(step, ec)
 	if name != "item_value" || !hasName {
-		t.Errorf("getStepDisplayName() with item = (%v, %v), want (item_value, true)", name, hasName)
+		t.Errorf("executor.GetStepDisplayName() with item = (%v, %v), want (item_value, true)", name, hasName)
 	}
 }
 
-func TestHandleShell(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
 
-	tests := []struct {
-		name      string
-		shell     string
-		variables map[string]interface{}
-		wantErr   bool
-		wantRc    int
-	}{
-		{
-			name:      "successful command",
-			shell:     "echo test",
-			variables: map[string]interface{}{},
-			wantErr:   false,
-			wantRc:    0,
-		},
-		{
-			name:      "failing command",
-			shell:     "false",
-			variables: map[string]interface{}{},
-			wantErr:   true,
-			wantRc:    1,
-		},
-		{
-			name:      "command with variable",
-			shell:     "echo {{ msg }}",
-			variables: map[string]interface{}{"msg": "hello"},
-			wantErr:   false,
-			wantRc:    0,
-		},
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ec := &ExecutionContext{
-				Variables: tt.variables,
-				Logger:    testLogger,
-				Template:  renderer,
-				Redactor:  security.NewRedactor(),
-			}
-			step := config.Step{
-				Name:     "test shell",
-				Shell:    &config.ShellAction{Cmd: tt.shell},
-				Register: "result",
-			}
 
-			err := HandleShell(step, ec)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("HandleShell() error = %v, wantErr %v", err, tt.wantErr)
-			}
 
-			// Check result was registered
-			if ec.Variables["result"] != nil {
-				resultMap := ec.Variables["result"].(map[string]interface{})
-				if resultMap["rc"].(int) != tt.wantRc {
-					t.Errorf("HandleShell() rc = %v, want %v", resultMap["rc"], tt.wantRc)
-				}
-			}
-		})
-	}
-}
-
-func TestHandleFile_Directory(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	// Create temp directory for testing
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testdir"
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-		Template:  renderer,
-		PathUtil:  pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:  testPath,
-		State: "directory",
-		Mode:  "0755",
-	}
-	step := config.Step{
-		Name:     "create directory",
-		File:     file,
-		Register: "result",
-	}
-
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Fatalf("HandleFile() error = %v", err)
-	}
-
-	// Verify directory was created
-	info, err := os.Stat(testPath)
-	if err != nil {
-		t.Errorf("Directory was not created: %v", err)
-	}
-	if !info.IsDir() {
-		t.Error("Created path is not a directory")
-	}
-
-	// Check result
-	if ec.Variables["result"] != nil {
-		resultMap := ec.Variables["result"].(map[string]interface{})
-		if !resultMap["changed"].(bool) {
-			t.Error("HandleFile() should set changed=true for new directory")
-		}
-	}
-}
-
-func TestHandleFile_EmptyFile(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile.txt"
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:    testPath,
-		State:   "file",
-		Content: "",
-		Mode:    "0644",
-	}
-	step := config.Step{
-		Name: "create file",
-		File: file,
-	}
-
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Fatalf("HandleFile() error = %v", err)
-	}
-
-	// Verify file was created
-	info, err := os.Stat(testPath)
-	if err != nil {
-		t.Errorf("File was not created: %v", err)
-	}
-	if info.IsDir() {
-		t.Error("Created path is a directory, expected file")
-	}
-
-	// Verify content is empty
-	content, _ := os.ReadFile(testPath)
-	if len(content) != 0 {
-		t.Errorf("File should be empty, got %d bytes", len(content))
-	}
-}
-
-func TestHandleFile_WithContent(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile.txt"
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{"msg": "hello world"},
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:    testPath,
-		State:   "file",
-		Content: "{{ msg }}",
-		Mode:    "0644",
-	}
-	step := config.Step{
-		Name: "create file with content",
-		File: file,
-	}
-
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Fatalf("HandleFile() error = %v", err)
-	}
-
-	// Verify content
-	content, err := os.ReadFile(testPath)
-	if err != nil {
-		t.Fatalf("Could not read file: %v", err)
-	}
-	if string(content) != "hello world" {
-		t.Errorf("File content = %q, want %q", string(content), "hello world")
-	}
-}
-
-func TestHandleTemplate(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	srcPath := tmpDir + "/template.txt"
-	destPath := tmpDir + "/output.txt"
-
-	// Create source template file
-	err := os.WriteFile(srcPath, []byte("Hello {{ name }}!"), 0644)
-	if err != nil {
-		t.Fatalf("Could not create template file: %v", err)
-	}
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{"name": "World"},
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	tmpl := &config.Template{
-		Src:  srcPath,
-		Dest: destPath,
-		Mode: "0644",
-	}
-	step := config.Step{
-		Name:     "render template",
-		Template: tmpl,
-		Register: "result",
-	}
-
-	err = HandleTemplate(step, ec)
-	if err != nil {
-		t.Fatalf("HandleTemplate() error = %v", err)
-	}
-
-	// Verify output
-	content, err := os.ReadFile(destPath)
-	if err != nil {
-		t.Fatalf("Could not read output file: %v", err)
-	}
-	if string(content) != "Hello World!" {
-		t.Errorf("Template output = %q, want %q", string(content), "Hello World!")
-	}
-
-	// Check result
-	if ec.Variables["result"] != nil {
-		resultMap := ec.Variables["result"].(map[string]interface{})
-		if !resultMap["changed"].(bool) {
-			t.Error("HandleTemplate() should set changed=true for new file")
-		}
-	}
-}
 
 
 func TestExecuteStep_WithShell(t *testing.T) {
@@ -761,14 +515,14 @@ func TestExecuteStep_WithShell(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Variables:           make(map[string]interface{}),
 		Logger:              testLogger,
 		Template:            renderer,
 		Evaluator:           evaluator,
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
-		Stats: NewExecutionStats(),
+		Stats: executor.NewExecutionStats(),
 		Redactor:            security.NewRedactor(),
 	}
 
@@ -778,9 +532,9 @@ func TestExecuteStep_WithShell(t *testing.T) {
 		Shell: &config.ShellAction{Cmd: shellCmd},
 	}
 
-	err := ExecuteStep(step, ec)
+	err := executor.ExecuteStep(step, ec)
 	if err != nil {
-		t.Errorf("ExecuteStep() error = %v", err)
+		t.Errorf("executor.ExecuteStep() error = %v", err)
 	}
 
 	if *ec.Stats.Global != 1 {
@@ -797,14 +551,14 @@ func TestExecuteStep_Skipped(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Variables:           make(map[string]interface{}),
 		Logger:              testLogger,
 		Template:            renderer,
 		Evaluator:           evaluator,
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
-		Stats: NewExecutionStats(),
+		Stats: executor.NewExecutionStats(),
 	}
 
 	shellCmd := "echo test"
@@ -814,9 +568,9 @@ func TestExecuteStep_Skipped(t *testing.T) {
 		When:  "false",
 	}
 
-	err := ExecuteStep(step, ec)
+	err := executor.ExecuteStep(step, ec)
 	if err != nil {
-		t.Errorf("ExecuteStep() error = %v", err)
+		t.Errorf("executor.ExecuteStep() error = %v", err)
 	}
 
 	if *ec.Stats.Global != 0 {
@@ -833,7 +587,7 @@ func TestExecuteSteps(t *testing.T) {
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
-	ec := &ExecutionContext{
+	ec := &executor.ExecutionContext{
 		Variables:           make(map[string]interface{}),
 		Logger:              testLogger,
 		Template:            renderer,
@@ -841,7 +595,7 @@ func TestExecuteSteps(t *testing.T) {
 		PathUtil:            pathExpander,
 		CurrentDir:          os.TempDir(),
 		CurrentFile:         "test.yml",
-		Stats: NewExecutionStats(),
+		Stats: executor.NewExecutionStats(),
 		Redactor:            security.NewRedactor(),
 	}
 
@@ -852,9 +606,9 @@ func TestExecuteSteps(t *testing.T) {
 		{Name: "step 2", Shell: &config.ShellAction{Cmd: shellCmd2}},
 	}
 
-	err := ExecuteSteps(steps, ec)
+	err := executor.ExecuteSteps(steps, ec)
 	if err != nil {
-		t.Errorf("ExecuteSteps() error = %v", err)
+		t.Errorf("executor.ExecuteSteps() error = %v", err)
 	}
 
 	if *ec.Stats.Global != 2 {
@@ -862,54 +616,6 @@ func TestExecuteSteps(t *testing.T) {
 	}
 }
 
-func TestHandleIncludeVars(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	varsFile := tmpDir + "/vars.yml"
-
-	// Create vars file
-	varsContent := `---
-key1: value1
-key2: value2
-`
-	err := os.WriteFile(varsFile, []byte(varsContent), 0644)
-	if err != nil {
-		t.Fatalf("Could not create vars file: %v", err)
-	}
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{"existing": "value"},
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	step := config.Step{
-		Name:        "load vars",
-		IncludeVars: &varsFile,
-	}
-
-	err = HandleIncludeVars(step, ec)
-	if err != nil {
-		t.Errorf("HandleIncludeVars() error = %v", err)
-	}
-
-	// Check variables were loaded
-	if ec.Variables["key1"] != "value1" {
-		t.Errorf("key1 = %v, want value1", ec.Variables["key1"])
-	}
-	if ec.Variables["key2"] != "value2" {
-		t.Errorf("key2 = %v, want value2", ec.Variables["key2"])
-	}
-	// Existing variable should be preserved
-	if ec.Variables["existing"] != "value" {
-		t.Error("Existing variable was not preserved")
-	}
-}
 
 
 
@@ -930,7 +636,7 @@ func TestDispatchStepAction(t *testing.T) {
 	}{
 		{
 			name:    "shell action",
-			step:    config.Step{Shell: &config.ShellAction{Cmd: *String("echo test")}},
+			step:    config.Step{Shell: &config.ShellAction{Cmd: "echo test"}},
 			wantErr: false,
 		},
 		{
@@ -947,7 +653,7 @@ func TestDispatchStepAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ec := &ExecutionContext{
+			ec := &executor.ExecutionContext{
 				Variables:  make(map[string]interface{}),
 				Logger:     testLogger,
 				Template:   renderer,
@@ -957,9 +663,9 @@ func TestDispatchStepAction(t *testing.T) {
 				Redactor:   security.NewRedactor(),
 			}
 
-			err := dispatchStepAction(tt.step, ec)
+			err := executor.DispatchStepAction(tt.step, ec)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("dispatchStepAction() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("executor.DispatchStepAction() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -967,7 +673,7 @@ func TestDispatchStepAction(t *testing.T) {
 
 func TestDryRunLogger(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	dryRun := newDryRunLogger(testLogger)
+	dryRun := executor.NewDryRunLogger(testLogger)
 
 	// Test all dry-run logging methods
 	dryRun.LogShellExecution("echo test", false)
@@ -980,221 +686,11 @@ func TestDryRunLogger(t *testing.T) {
 	// If we got here without panicking, the tests pass
 }
 
-func TestHandleFile_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
 
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/dryrun_test"
 
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-		DryRun:     true,
-	}
 
-	file := &config.File{
-		Path:  testPath,
-		State: "file",
-		Mode:  "0644",
-	}
-	step := config.Step{
-		Name: "dry run file",
-		File: file,
-	}
 
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Errorf("HandleFile() dry-run error = %v", err)
-	}
 
-	// File should NOT be created in dry-run mode
-	if _, err := os.Stat(testPath); !os.IsNotExist(err) {
-		t.Error("File should not be created in dry-run mode")
-	}
-}
-
-func TestHandleShell_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-		Template:  renderer,
-		DryRun:    true,
-		Redactor:  security.NewRedactor(),
-	}
-
-	shellCmd := "echo test"
-	step := config.Step{
-		Name:  "dry run shell",
-		Shell: &config.ShellAction{Cmd: shellCmd},
-	}
-
-	err := HandleShell(step, ec)
-	if err != nil {
-		t.Errorf("HandleShell() dry-run error = %v", err)
-	}
-}
-
-func TestHandleTemplate_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	srcPath := tmpDir + "/template.txt"
-	destPath := tmpDir + "/output.txt"
-
-	// Create template file
-	os.WriteFile(srcPath, []byte("Hello {{ name }}!"), 0644)
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{"name": "World"},
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-		DryRun:     true,
-	}
-
-	tmpl := &config.Template{
-		Src:  srcPath,
-		Dest: destPath,
-		Mode: "0644",
-	}
-	step := config.Step{
-		Name:     "dry run template",
-		Template: tmpl,
-	}
-
-	err := HandleTemplate(step, ec)
-	if err != nil {
-		t.Errorf("HandleTemplate() dry-run error = %v", err)
-	}
-
-	// Output file should NOT be created
-	if _, err := os.Stat(destPath); !os.IsNotExist(err) {
-		t.Error("Output file should not be created in dry-run mode")
-	}
-}
-
-func TestHandleIncludeVars_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	varsFile := tmpDir + "/vars.yml"
-
-	varsContent := `---
-key1: value1
-`
-	os.WriteFile(varsFile, []byte(varsContent), 0644)
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-		DryRun:     true,
-	}
-
-	step := config.Step{
-		Name:        "dry run include vars",
-		IncludeVars: &varsFile,
-	}
-
-	err := HandleIncludeVars(step, ec)
-	if err != nil {
-		t.Errorf("HandleIncludeVars() dry-run error = %v", err)
-	}
-
-	// Variables should still be loaded in dry-run mode
-	if ec.Variables["key1"] != "value1" {
-		t.Error("Variables should be loaded even in dry-run mode")
-	}
-}
-
-func TestHandleDirectoryState(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testdir"
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-	}
-
-	file := &config.File{
-		Path:  testPath,
-		State: "directory",
-		Mode:  "0755",
-	}
-	result := NewResult()
-	step := config.Step{Name: "test"}
-
-	err := createDirectory(file, testPath, result, step, ec)
-	if err != nil {
-		t.Errorf("createDirectory() error = %v", err)
-	}
-
-	// Verify directory exists
-	info, err := os.Stat(testPath)
-	if err != nil || !info.IsDir() {
-		t.Error("Directory should be created")
-	}
-	if !result.Changed {
-		t.Error("Result should show changed=true")
-	}
-}
-
-func TestHandleFileState(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile"
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{"msg": "hello"},
-		Logger:    testLogger,
-		Template:  renderer,
-	}
-
-	file := &config.File{
-		Path:    testPath,
-		State:   "file",
-		Content: "{{ msg }}",
-		Mode:    "0644",
-	}
-	result := NewResult()
-	step := config.Step{Name: "test"}
-
-	err := createOrUpdateFile(file, testPath, result, step, ec)
-	if err != nil {
-		t.Errorf("createOrUpdateFile() error = %v", err)
-	}
-
-	// Verify file exists with correct content
-	content, err := os.ReadFile(testPath)
-	if err != nil {
-		t.Error("File should be created")
-	}
-	if string(content) != "hello" {
-		t.Errorf("Content = %q, want 'hello'", string(content))
-	}
-	if !result.Changed {
-		t.Error("Result should show changed=true")
-	}
-}
 
 func strPtr(s string) *string {
 	return &s
@@ -1202,2278 +698,8 @@ func strPtr(s string) *string {
 
 
 
-func TestHandleTemplate_WithExtraVars(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
 
-	tmpDir := t.TempDir()
-	srcPath := tmpDir + "/template.txt"
-	destPath := tmpDir + "/output.txt"
 
-	// Create source template file
-	err := os.WriteFile(srcPath, []byte("Hello {{ name }}, age {{ age }}!"), 0644)
-	if err != nil {
-		t.Fatalf("Could not create template file: %v", err)
-	}
 
-	extraVars := map[string]interface{}{"age": 25}
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{"name": "Alice"},
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
 
-	tmpl := &config.Template{
-		Src:  srcPath,
-		Dest: destPath,
-		Mode: "0600",
-		Vars: &extraVars,
-	}
-	step := config.Step{
-		Name:     "render template with extra vars",
-		Template: tmpl,
-	}
 
-	err = HandleTemplate(step, ec)
-	if err != nil {
-		t.Fatalf("HandleTemplate() error = %v", err)
-	}
-
-	// Verify output
-	content, err := os.ReadFile(destPath)
-	if err != nil {
-		t.Fatalf("Could not read output file: %v", err)
-	}
-	if string(content) != "Hello Alice, age 25!" {
-		t.Errorf("Template output = %q, want %q", string(content), "Hello Alice, age 25!")
-	}
-}
-
-func TestHandleTemplate_NoChange(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	srcPath := tmpDir + "/template.txt"
-	destPath := tmpDir + "/output.txt"
-
-	// Create source template
-	os.WriteFile(srcPath, []byte("Static content"), 0644)
-	// Create dest with same content
-	os.WriteFile(destPath, []byte("Static content"), 0644)
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	tmpl := &config.Template{
-		Src:  srcPath,
-		Dest: destPath,
-		Mode: "0644",
-	}
-	step := config.Step{
-		Name:     "render template no change",
-		Template: tmpl,
-		Register: "result",
-	}
-
-	err := HandleTemplate(step, ec)
-	if err != nil {
-		t.Fatalf("HandleTemplate() error = %v", err)
-	}
-
-	// Check result shows no change
-	if ec.Variables["result"] != nil {
-		resultMap := ec.Variables["result"].(map[string]interface{})
-		if resultMap["changed"].(bool) {
-			t.Error("HandleTemplate() should set changed=false when content is same")
-		}
-	}
-}
-
-func TestHandleTemplate_MissingSource(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	srcPath := tmpDir + "/nonexistent.txt"
-	destPath := tmpDir + "/output.txt"
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-		DryRun:     true,
-	}
-
-	tmpl := &config.Template{
-		Src:  srcPath,
-		Dest: destPath,
-		Mode: "0644",
-	}
-	step := config.Step{
-		Name:     "template with missing source",
-		Template: tmpl,
-	}
-
-	err := HandleTemplate(step, ec)
-	if err == nil {
-		t.Error("HandleTemplate() should return error for missing source file")
-	}
-}
-
-func TestHandleFile_DirectoryAlreadyExists(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testdir"
-
-	// Create directory first
-	os.Mkdir(testPath, 0755)
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:  testPath,
-		State: "directory",
-		Mode:  "0755",
-	}
-	step := config.Step{
-		Name:     "ensure directory exists",
-		File:     file,
-		Register: "result",
-	}
-
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Fatalf("HandleFile() error = %v", err)
-	}
-
-	// Check result shows no change
-	if ec.Variables["result"] != nil {
-		resultMap := ec.Variables["result"].(map[string]interface{})
-		if resultMap["changed"].(bool) {
-			t.Error("HandleFile() should set changed=false for existing directory")
-		}
-	}
-}
-
-func TestHandleFile_FileAlreadyExists(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile.txt"
-
-	// Create file with same content
-	os.WriteFile(testPath, []byte("hello"), 0644)
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{"msg": "hello"},
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:    testPath,
-		State:   "file",
-		Content: "{{ msg }}",
-		Mode:    "0644",
-	}
-	step := config.Step{
-		Name:     "ensure file exists",
-		File:     file,
-		Register: "result",
-	}
-
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Fatalf("HandleFile() error = %v", err)
-	}
-
-	// Check result shows no change
-	if ec.Variables["result"] != nil {
-		resultMap := ec.Variables["result"].(map[string]interface{})
-		if resultMap["changed"].(bool) {
-			t.Error("HandleFile() should set changed=false for file with same content")
-		}
-	}
-}
-
-func TestHandleFile_InvalidMode(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile.txt"
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:  testPath,
-		State: "file",
-		Mode:  "invalid",
-	}
-	step := config.Step{
-		Name: "file with invalid mode",
-		File: file,
-	}
-
-	// Should not error, just use default mode
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Fatalf("HandleFile() error = %v", err)
-	}
-
-	// Verify file was created
-	if _, err := os.Stat(testPath); err != nil {
-		t.Error("File should be created with default mode")
-	}
-}
-
-func TestHandleTemplate_RenderError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	srcPath := tmpDir + "/template.txt"
-	destPath := tmpDir + "/output.txt"
-
-	// Create template with invalid syntax
-	os.WriteFile(srcPath, []byte("{{ invalid syntax"), 0644)
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	tmpl := &config.Template{
-		Src:  srcPath,
-		Dest: destPath,
-		Mode: "0644",
-	}
-	step := config.Step{
-		Name:     "template with render error",
-		Template: tmpl,
-		Register: "result",
-	}
-
-	err := HandleTemplate(step, ec)
-	if err == nil {
-		t.Error("HandleTemplate() should return error for invalid template")
-	}
-
-	// Check result was registered as failed
-	if ec.Variables["result"] != nil {
-		resultMap := ec.Variables["result"].(map[string]interface{})
-		if !resultMap["failed"].(bool) {
-			t.Error("Result should be marked as failed")
-		}
-	}
-}
-
-// ============================================================================
-// PRIORITY 1 TESTS - High Impact
-// ============================================================================
-
-// TestStart tests the main Start function
-func TestStart_BasicExecution(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create config file
-	configPath := tmpDir + "/config.yml"
-	configContent := `---
-- name: test step
-  shell: echo hello`
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create config file: %v", err)
-	}
-
-	// Create vars file (optional)
-	varsPath := tmpDir + "/vars.yml"
-	varsContent := `---
-testvar: testvalue`
-	err = os.WriteFile(varsPath, []byte(varsContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create vars file: %v", err)
-	}
-
-	testLogger := logger.NewTestLogger()
-
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-		VarsFilePath:   varsPath,
-		Tags:           []string{},
-		DryRun:         false,
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err = Start(startConfig, testLogger, publisher)
-	if err != nil {
-		t.Errorf("Start() error = %v", err)
-	}
-
-	// Execution completed successfully with events
-}
-
-func TestStart_EmptyConfigPath(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: "",
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err := Start(startConfig, testLogger, publisher)
-	if err == nil {
-		t.Fatal("Start() should error with empty config path")
-	}
-	var setupErr *SetupError
-	if !errors.As(err, &setupErr) {
-		t.Fatalf("expected SetupError, got %T: %v", err, err)
-	}
-	if setupErr.Component != "config" {
-		t.Errorf("SetupError.Component = %q, want %q", setupErr.Component, "config")
-	}
-	if !strings.Contains(setupErr.Issue, "empty") {
-		t.Errorf("SetupError.Issue = %q, should contain 'empty'", setupErr.Issue)
-	}
-}
-
-func TestStart_MissingConfigFile(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: "/nonexistent/config.yml",
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err := Start(startConfig, testLogger, publisher)
-	if err == nil {
-		t.Error("Start() should error with missing config file")
-	}
-}
-
-func TestStart_InvalidYAML(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := tmpDir + "/invalid.yml"
-
-	// Invalid YAML
-	err := os.WriteFile(configPath, []byte("invalid: [yaml"), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create invalid config: %v", err)
-	}
-
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err = Start(startConfig, testLogger, publisher)
-	if err == nil {
-		t.Error("Start() should error with invalid YAML")
-	}
-}
-
-func TestStart_WithValidationErrors(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := tmpDir + "/config.yml"
-
-	// Config with validation errors (multiple actions)
-	configContent := `---
-- name: invalid step
-  shell: echo test
-  file:
-    path: /tmp/test
-    state: file`
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create config: %v", err)
-	}
-
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err = Start(startConfig, testLogger, publisher)
-	if err == nil {
-		t.Error("Start() should error with validation errors")
-	}
-	if !strings.Contains(err.Error(), "validation failed") {
-		t.Errorf("Start() error should mention validation, got: %v", err)
-	}
-}
-
-func TestStart_DryRun(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := tmpDir + "/config.yml"
-	configContent := `---
-- name: test step
-  shell: echo hello
-- name: create file
-  file:
-    path: /tmp/testfile
-    state: file`
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create config: %v", err)
-	}
-
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-		DryRun:         true,
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err = Start(startConfig, testLogger, publisher)
-	if err != nil {
-		t.Errorf("Start() dry-run error = %v", err)
-	}
-
-	// Just verify it completes without error
-	// (The actual DRY-RUN logging happens in the handlers)
-}
-
-func TestStart_WithTags(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := tmpDir + "/config.yml"
-	configContent := `---
-- name: dev step
-  tags: [dev]
-  shell: echo dev
-- name: prod step
-  tags: [prod]
-  shell: echo prod`
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create config: %v", err)
-	}
-
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-		Tags:           []string{"dev"},
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err = Start(startConfig, testLogger, publisher)
-	if err != nil {
-		t.Errorf("Start() with tags error = %v", err)
-	}
-}
-
-func TestStart_MissingVarsFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	configPath := tmpDir + "/config.yml"
-	configContent := `---
-- name: test step
-  shell: echo hello`
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create config: %v", err)
-	}
-
-	testLogger := logger.NewTestLogger()
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-		VarsFilePath:   "/nonexistent/vars.yml",
-	}
-
-	// Should succeed even with missing vars file (vars are optional)
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err = Start(startConfig, testLogger, publisher)
-	if err != nil {
-		t.Errorf("Start() should succeed with missing vars file: %v", err)
-	}
-}
-
-// TestDispatchStepAction_Include tests the include action path
-
-// TestExecuteSteps tests for ExecuteSteps function
-func TestExecuteSteps_WithError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		CurrentFile:         "test.yml",
-		Stats: NewExecutionStats(),
-		Redactor:            security.NewRedactor(),
-	}
-
-	// Step that will fail
-	shellCmd := "exit 1"
-	steps := []config.Step{
-		{Name: "failing step", Shell: &config.ShellAction{Cmd: shellCmd}},
-	}
-
-	err := ExecuteSteps(steps, ec)
-	if err == nil {
-		t.Error("ExecuteSteps() should return error for failing step")
-	}
-
-	if *ec.Stats.Failed != 1 {
-		t.Errorf("StatsFailed = %d, want 1", *ec.Stats.Failed)
-	}
-}
-
-func TestExecuteSteps_MultipleSteps(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		CurrentFile:         "test.yml",
-		Stats: NewExecutionStats(),
-		Redactor:            security.NewRedactor(),
-	}
-
-	cmd1 := "echo step1"
-	cmd2 := "echo step2"
-	cmd3 := "echo step3"
-	steps := []config.Step{
-		{Name: "step 1", Shell: &config.ShellAction{Cmd: cmd1}},
-		{Name: "step 2", Shell: &config.ShellAction{Cmd: cmd2}},
-		{Name: "step 3", Shell: &config.ShellAction{Cmd: cmd3}},
-	}
-
-	err := ExecuteSteps(steps, ec)
-	if err != nil {
-		t.Errorf("ExecuteSteps() error = %v", err)
-	}
-
-	if *ec.Stats.Executed != 3 {
-		t.Errorf("StatsExecuted = %d, want 3", *ec.Stats.Executed)
-	}
-
-	if *ec.Stats.Global != 3 {
-		t.Errorf("GlobalStepsExecuted = %d, want 3", *ec.Stats.Global)
-	}
-}
-
-func TestExecuteSteps_UpdatesContext(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	redactor := security.NewRedactor()
-
-
-	ec := &ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		CurrentFile:         "test.yml",
-		Level:               0,
-		Stats: NewExecutionStats(),
-		Redactor:            redactor,
-	}
-
-	shellCmd := "echo test"
-	steps := []config.Step{
-		{Name: "step 1", Shell: &config.ShellAction{Cmd: shellCmd}},
-		{Name: "step 2", Shell: &config.ShellAction{Cmd: shellCmd}},
-	}
-
-	err := ExecuteSteps(steps, ec)
-	if err != nil {
-		t.Errorf("ExecuteSteps() error = %v", err)
-	}
-
-	// Check TotalSteps was set
-	if ec.TotalSteps != 2 {
-		t.Errorf("TotalSteps = %d, want 2", ec.TotalSteps)
-	}
-
-	// Verify steps were executed
-	if *ec.Stats.Global != 2 {
-		t.Errorf("GlobalStepsExecuted = %d, want 2", *ec.Stats.Global)
-	}
-}
-
-// ============================================================================
-// PRIORITY 2 TESTS - Medium Impact
-// ============================================================================
-
-// File/Directory edge case tests
-func TestHandleDirectoryState_WithModeChange(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testdir"
-
-	// Create directory with different mode first
-	err := os.Mkdir(testPath, 0700)
-	if err != nil {
-		t.Fatalf("Failed to create directory: %v", err)
-	}
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-	}
-
-	file := &config.File{
-		Path:  testPath,
-		State: "directory",
-		Mode:  "0755",
-	}
-	result := NewResult()
-	step := config.Step{Name: "test"}
-
-	err = createDirectory(file, testPath, result, step, ec)
-	if err != nil {
-		t.Errorf("createDirectory() error = %v", err)
-	}
-
-	// Directory exists, so should not be marked as changed
-	if result.Changed {
-		t.Error("Result should not be changed for existing directory")
-	}
-}
-
-func TestHandleFileState_EmptyContentExists(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile"
-
-	// Create empty file first
-	err := os.WriteFile(testPath, []byte(""), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-		Template:  renderer,
-	}
-
-	file := &config.File{
-		Path:    testPath,
-		State:   "file",
-		Content: "",
-		Mode:    "0644",
-	}
-	result := NewResult()
-	step := config.Step{Name: "test"}
-
-	err = createOrUpdateFile(file, testPath, result, step, ec)
-	if err != nil {
-		t.Errorf("createOrUpdateFile() error = %v", err)
-	}
-
-	// File exists with same (empty) content
-	if result.Changed {
-		t.Error("Result should not be changed for existing empty file")
-	}
-}
-
-func TestHandleFileState_TemplateRenderError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile"
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-		Template:  renderer,
-	}
-
-	file := &config.File{
-		Path:    testPath,
-		State:   "file",
-		Content: "{{ invalid syntax",
-		Mode:    "0644",
-	}
-	result := NewResult()
-	step := config.Step{Name: "test"}
-
-	err := createOrUpdateFile(file, testPath, result, step, ec)
-	if err == nil {
-		t.Error("createOrUpdateFile() should error with invalid template")
-	}
-}
-
-func TestHandleFile_EmptyPath(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:  "",
-		State: "file",
-	}
-	step := config.Step{
-		Name: "test empty path",
-		File: file,
-	}
-
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Errorf("HandleFile() with empty path should not error: %v", err)
-	}
-
-	// Should log "Skipping"
-	if !testLogger.Contains("Skipping") {
-		t.Error("HandleFile() should log 'Skipping' for empty path")
-	}
-}
-
-func TestHandleFile_UnsupportedState(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	pathExpander := pathutil.NewPathExpander(renderer)
-
-	tmpDir := t.TempDir()
-	testPath := tmpDir + "/testfile"
-
-	ec := &ExecutionContext{
-		Variables:  make(map[string]interface{}),
-		Logger:     testLogger,
-		Template:   renderer,
-		PathUtil:   pathExpander,
-		CurrentDir: tmpDir,
-	}
-
-	file := &config.File{
-		Path:  testPath,
-		State: "unsupported",
-	}
-	step := config.Step{
-		Name: "test unsupported state",
-		File: file,
-	}
-
-	// Should succeed but do nothing for unsupported state
-	err := HandleFile(step, ec)
-	if err != nil {
-		t.Errorf("HandleFile() with unsupported state error = %v", err)
-	}
-}
-
-// HandleWithFileTree edge cases
-
-
-// ExecuteStep validation tests
-func TestExecuteStep_ValidationError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-	}
-
-	// Invalid step with both shell and file (should fail validation)
-	shellCmd := "echo test"
-	step := config.Step{
-		Name:  "invalid step",
-		Shell: &config.ShellAction{Cmd: shellCmd},
-		File:  &config.File{Path: "/tmp/test"},
-	}
-
-	err := ExecuteStep(step, ec)
-	if err == nil {
-		t.Error("ExecuteStep() should error with invalid step")
-	}
-}
-
-
-// ============================================================================
-// PRIORITY 3 TESTS - Polish
-// ============================================================================
-
-// handleWhenExpression edge cases
-func TestHandleWhenExpression_NilResult(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	testLogger := logger.NewTestLogger()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{"x": nil},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-	}
-
-	step := config.Step{When: "x"}
-
-	skip, err := handleWhenExpression(step, ec)
-	if err != nil {
-		t.Errorf("handleWhenExpression() error = %v", err)
-	}
-	if !skip {
-		t.Error("Should skip when expression evaluates to nil")
-	}
-}
-
-func TestHandleWhenExpression_NonBoolResult(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	testLogger := logger.NewTestLogger()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{"x": "string_value"},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-	}
-
-	// Expression that returns non-bool (evaluating a string variable)
-	step := config.Step{When: "x"}
-
-	skip, err := handleWhenExpression(step, ec)
-	// Should return error for non-bool results
-	if err == nil {
-		t.Error("handleWhenExpression() should error for non-bool results")
-	}
-	if skip {
-		t.Error("Should not skip on error")
-	}
-}
-
-func TestHandleWhenExpression_TemplateError(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	testLogger := logger.NewTestLogger()
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-	}
-
-	// Invalid template syntax
-	step := config.Step{When: "{{ invalid"}
-
-	skip, err := handleWhenExpression(step, ec)
-	if err == nil {
-		t.Error("handleWhenExpression() should error with invalid template")
-	}
-	if skip {
-		t.Error("Should not skip on error")
-	}
-}
-
-func TestHandleWhenExpression_EvaluatorError(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	testLogger := logger.NewTestLogger()
-
-	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-	}
-
-	// Invalid expression
-	step := config.Step{When: "invalid expression !@#"}
-
-	skip, err := handleWhenExpression(step, ec)
-	if err == nil {
-		t.Error("handleWhenExpression() should error with invalid expression")
-	}
-	if skip {
-		t.Error("Should not skip on error")
-	}
-}
-
-// getStepDisplayName edge cases
-func TestGetStepDisplayName_FileTreeItemEmptyName(t *testing.T) {
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"item": filetree.Item{Name: ""},
-		},
-	}
-	step := config.Step{Name: "Fallback Name"}
-
-	name, hasName := getStepDisplayName(step, ec)
-	// When item.Name is empty, falls through to regular item check
-	// which formats the entire filetree.Item struct
-	if !hasName {
-		t.Error("getStepDisplayName() should have name when item exists")
-	}
-	// Name will be the formatted struct, not empty string
-	if name == "" {
-		t.Error("getStepDisplayName() should return formatted item when Name is empty")
-	}
-}
-
-func TestGetStepDisplayName_NoNameNoItem(t *testing.T) {
-	ec := &ExecutionContext{Variables: make(map[string]interface{})}
-	step := config.Step{} // No name
-
-	name, hasName := getStepDisplayName(step, ec)
-	if hasName || name != "" {
-		t.Errorf("getStepDisplayName() = (%v, %v), want ('', false)", name, hasName)
-	}
-}
-
-func TestGetStepDisplayName_ItemNotFileTreeItem(t *testing.T) {
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"item": map[string]interface{}{"key": "value"},
-		},
-	}
-	step := config.Step{Name: "Step Name"}
-
-	_, hasName := getStepDisplayName(step, ec)
-	// Should fall through to regular item logic
-	if !hasName {
-		t.Error("getStepDisplayName() should have name")
-	}
-}
-
-// HandleWithItems error tests
-
-
-// handleVars edge case
-func TestHandleVars_EmptyVars(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	emptyVars := map[string]interface{}{}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"existing": "value",
-		},
-		Logger: testLogger,
-	}
-
-	step := config.Step{
-		Name: "test empty vars",
-		Vars: &emptyVars,
-	}
-
-	err := handleVars(step, ec)
-	if err != nil {
-		t.Fatalf("handleVars() with empty vars error = %v", err)
-	}
-
-	// Existing variable should still be there
-	if ec.Variables["existing"] != "value" {
-		t.Error("Existing variables should be preserved")
-	}
-}
-
-func TestHandleVars_OverwriteExisting(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	vars := map[string]interface{}{
-		"key": "new_value",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"key": "old_value",
-		},
-		Logger: testLogger,
-	}
-
-	step := config.Step{
-		Name: "test overwrite",
-		Vars: &vars,
-	}
-
-	err := handleVars(step, ec)
-	if err != nil {
-		t.Fatalf("handleVars() error = %v", err)
-	}
-
-	// Should overwrite with new value
-	if ec.Variables["key"] != "new_value" {
-		t.Errorf("handleVars() should overwrite, got %v, want 'new_value'", ec.Variables["key"])
-	}
-}
-
-// Tests to push coverage over 90%
-
-func TestHandleVars_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	vars := map[string]interface{}{
-		"testvar": "testvalue",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		DryRun:    true,
-	}
-
-	step := config.Step{
-		Name: "test dry run vars",
-		Vars: &vars,
-	}
-
-	err := handleVars(step, ec)
-	if err != nil {
-		t.Fatalf("handleVars() error = %v", err)
-	}
-
-	// Variables should still be set in dry-run
-	if ec.Variables["testvar"] != "testvalue" {
-		t.Errorf("handleVars() dry-run should set vars, got %v", ec.Variables["testvar"])
-	}
-}
-
-func TestHandleFileState_EmptyContentDryRun(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	file := &config.File{
-		Path:    tmpDir + "/test.txt",
-		Content: "",
-		Mode:    "0644",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		DryRun:    true,
-	}
-
-	result := &Result{}
-	step := config.Step{Name: "test"}
-
-	err := createOrUpdateFile(file, tmpDir+"/test.txt", result, step, ec)
-	if err != nil {
-		t.Fatalf("createOrUpdateFile() error = %v", err)
-	}
-
-	// File should not be created in dry-run
-	if _, err := os.Stat(tmpDir + "/test.txt"); !os.IsNotExist(err) {
-		t.Error("createOrUpdateFile() should not create file in dry-run")
-	}
-}
-
-func TestHandleFileState_WithContentDryRun(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	file := &config.File{
-		Path:    tmpDir + "/test.txt",
-		Content: "test content",
-		Mode:    "0644",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		DryRun:    true,
-	}
-
-	result := &Result{}
-	step := config.Step{Name: "test"}
-
-	err := createOrUpdateFile(file, tmpDir+"/test.txt", result, step, ec)
-	if err != nil {
-		t.Fatalf("createOrUpdateFile() error = %v", err)
-	}
-
-	// File should not be created in dry-run
-	if _, err := os.Stat(tmpDir + "/test.txt"); !os.IsNotExist(err) {
-		t.Error("createOrUpdateFile() should not create file in dry-run")
-	}
-}
-
-
-func TestHandleFileState_FileWriteError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	file := &config.File{
-		Path:    "/invalid/path/that/does/not/exist/test.txt",
-		Content: "test",
-		Mode:    "0644",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		DryRun:    false,
-	}
-
-	result := &Result{}
-	step := config.Step{Name: "test"}
-
-	err := createOrUpdateFile(file, "/invalid/path/that/does/not/exist/test.txt", result, step, ec)
-	if err == nil {
-		t.Error("createOrUpdateFile() should error when write fails")
-	}
-}
-
-func TestHandleFileState_EmptyFileWriteError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	file := &config.File{
-		Path:    "/invalid/path/that/does/not/exist/test.txt",
-		Content: "",
-		Mode:    "0644",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		DryRun:    false,
-	}
-
-	result := &Result{}
-	step := config.Step{Name: "test"}
-
-	err := createOrUpdateFile(file, "/invalid/path/that/does/not/exist/test.txt", result, step, ec)
-	if err == nil {
-		t.Error("createOrUpdateFile() should error when write fails for empty file")
-	}
-}
-
-
-
-
-
-
-
-func TestDispatchStepAction_NoAction(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-	}
-
-	step := config.Step{
-		Name: "no action",
-	}
-
-	// Should return nil for no action (validation happens elsewhere)
-	err := dispatchStepAction(step, ec)
-	if err != nil {
-		t.Fatalf("dispatchStepAction() no action should not error, got: %v", err)
-	}
-}
-
-
-
-func TestHandleDirectoryState_DryRun(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	file := &config.File{
-		Path:  tmpDir + "/testdir",
-		State: "directory",
-		Mode:  "0755",
-	}
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		DryRun:    true,
-	}
-
-	result := &Result{}
-	step := config.Step{Name: "test", Register: "result"}
-
-	err := createDirectory(file, tmpDir+"/testdir", result, step, ec)
-	if err != nil {
-		t.Fatalf("createDirectory() dry-run error = %v", err)
-	}
-
-	// Directory should not be created in dry-run
-	if _, err := os.Stat(tmpDir + "/testdir"); !os.IsNotExist(err) {
-		t.Error("createDirectory() should not create directory in dry-run")
-	}
-}
-
-func TestHandleDirectoryState_CreateError(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-
-	file := &config.File{
-		Path:  "/proc/invalid/dir",
-		State: "directory",
-		Mode:  "0755",
-	}
-
-	ec := &ExecutionContext{
-		Variables:     map[string]interface{}{},
-		Logger:        testLogger,
-		Template:      renderer,
-		DryRun:        false,
-		Stats: NewExecutionStats(),
-	}
-
-	result := &Result{}
-	step := config.Step{Name: "test"}
-
-	err := createDirectory(file, "/proc/invalid/dir", result, step, ec)
-	if err == nil {
-		t.Error("createDirectory() should error when directory creation fails")
-	}
-}
-
-
-func TestHandleIncludeVars_Basic(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	// Create a vars file
-	varsFile := tmpDir + "/vars.yml"
-	varsContent := `---
-test_var: test_value
-another_var: 123`
-
-	os.WriteFile(varsFile, []byte(varsContent), 0644)
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{},
-		Logger:     testLogger,
-		Template:   renderer,
-		Evaluator:  evaluator,
-		PathUtil:   pathExpander,
-		FileTree:   fileTreeWalker,
-		CurrentDir: tmpDir,
-	}
-
-	step := config.Step{
-		Name:        "test include vars",
-		IncludeVars: &varsFile,
-	}
-
-	err := HandleIncludeVars(step, ec)
-	if err != nil {
-		t.Fatalf("HandleIncludeVars() error = %v", err)
-	}
-
-	// Check that vars were loaded
-	if ec.Variables["test_var"] != "test_value" {
-		t.Errorf("HandleIncludeVars() should load vars, got %v", ec.Variables)
-	}
-}
-
-func TestHandleShell_RegisterResult(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-		Redactor:            redactor,
-	}
-
-	shellCmd := "echo hello"
-	step := config.Step{
-		Name:     "test shell register",
-		Shell: &config.ShellAction{Cmd: shellCmd},
-		Register: "shell_result",
-	}
-
-	err := HandleShell(step, ec)
-	if err != nil {
-		t.Fatalf("HandleShell() error = %v", err)
-	}
-
-	// Check that result was registered
-	if ec.Variables["shell_result"] == nil {
-		t.Error("HandleShell() should register result")
-	}
-}
-
-func TestHandleTemplate_RegisterResult(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	// Create a template file
-	templateFile := tmpDir + "/template.j2"
-	os.WriteFile(templateFile, []byte("Hello {{ name }}"), 0644)
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"name": "World",
-		},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-	}
-
-	templateStep := config.Template{
-		Src:  templateFile,
-		Dest: tmpDir + "/output.txt",
-		Mode: "0644",
-	}
-
-	step := config.Step{
-		Name:     "test template register",
-		Template: &templateStep,
-		Register: "template_result",
-	}
-
-	err := HandleTemplate(step, ec)
-	if err != nil {
-		t.Fatalf("HandleTemplate() error = %v", err)
-	}
-
-	// Check that result was registered
-	if ec.Variables["template_result"] == nil {
-		t.Error("HandleTemplate() should register result")
-	}
-}
-
-func TestHandleTemplate_ErrorCase(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-	}
-
-	templateStep := config.Template{
-		Src:  "/nonexistent/template.j2",
-		Dest: tmpDir + "/output.txt",
-		Mode: "0644",
-	}
-
-	step := config.Step{
-		Name:     "test template error",
-		Template: &templateStep,
-	}
-
-	err := HandleTemplate(step, ec)
-	if err == nil {
-		t.Error("HandleTemplate() should error when template file doesn't exist")
-	}
-}
-
-func TestCheckSkipConditions_Tags(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Tags:      []string{"production"},
-	}
-
-	step := config.Step{
-		Name: "test tags",
-		Tags: []string{"development"},
-		Shell: &config.ShellAction{Cmd: *String("echo test")},
-	}
-
-	shouldSkip, reason, err := checkSkipConditions(step, ec)
-	if err != nil {
-		t.Fatalf("checkSkipConditions() error = %v", err)
-	}
-
-	if !shouldSkip {
-		t.Error("checkSkipConditions() should skip when tags don't match")
-	}
-
-	if reason != "tags" {
-		t.Errorf("checkSkipConditions() reason = %q, want 'tags'", reason)
-	}
-}
-
-func TestHandleShell_TemplateError(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-	}
-
-	shellCmd := "echo {{ invalid_template"
-	step := config.Step{
-		Name:  "test shell template error",
-		Shell: &config.ShellAction{Cmd: shellCmd},
-	}
-
-	err := HandleShell(step, ec)
-	if err == nil {
-		t.Error("HandleShell() should error on invalid template")
-	}
-}
-
-func TestHandleShell_BecomeWithoutPassword(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-		SudoPass:            "", // No password
-		Redactor:            redactor,
-	}
-
-	shellCmd := "echo test"
-	step := config.Step{
-		Name:   "test sudo without password",
-		Shell: &config.ShellAction{Cmd: shellCmd},
-		Become: true,
-	}
-
-	err := HandleShell(step, ec)
-	if err == nil {
-		t.Error("HandleShell() should error when become is true but no sudo password")
-	}
-
-	if !strings.Contains(err.Error(), "sudo") {
-		t.Errorf("HandleShell() error should mention sudo, got: %v", err)
-	}
-}
-
-func TestHandleShell_FailedCommand(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-		Redactor:            redactor,
-	}
-
-	shellCmd := "exit 1"
-	step := config.Step{
-		Name:     "test failed command",
-		Shell: &config.ShellAction{Cmd: shellCmd},
-		Register: "failed_result",
-	}
-
-	err := HandleShell(step, ec)
-	if err == nil {
-		t.Error("HandleShell() should error when command fails")
-	}
-
-	// Check that result was still registered
-	if ec.Variables["failed_result"] == nil {
-		t.Error("HandleShell() should register result even on failure")
-	}
-}
-
-func TestHandleIncludeVars_InvalidFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:  map[string]interface{}{},
-		Logger:     testLogger,
-		Template:   renderer,
-		Evaluator:  evaluator,
-		PathUtil:   pathExpander,
-		FileTree:   fileTreeWalker,
-		CurrentDir: tmpDir,
-	}
-
-	varsFile := "/nonexistent/vars.yml"
-	step := config.Step{
-		Name:        "test include vars error",
-		IncludeVars: &varsFile,
-	}
-
-	err := HandleIncludeVars(step, ec)
-	if err == nil {
-		t.Error("HandleIncludeVars() should error when file doesn't exist")
-	}
-}
-
-func TestHandleFile_TemplateError(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-	}
-
-	file := config.File{
-		Path: "{{ invalid_template",
-	}
-
-	step := config.Step{
-		Name: "test file template error",
-		File: &file,
-	}
-
-	err := HandleFile(step, ec)
-	if err == nil {
-		t.Error("HandleFile() should error on invalid template")
-	}
-}
-
-func TestExecuteStep_SkipByTags(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-		Tags:                []string{"production"},
-	}
-
-	step := config.Step{
-		Name:  "test skip by tags",
-		Tags:  []string{"development"},
-		Shell: &config.ShellAction{Cmd: *String("echo test")},
-	}
-
-	err := ExecuteStep(step, ec)
-	if err != nil {
-		t.Fatalf("ExecuteStep() error = %v", err)
-	}
-
-	// Check that step was skipped
-	if *ec.Stats.Skipped == 0 {
-		t.Error("ExecuteStep() should increment skipped counter")
-	}
-}
-
-func TestStart_WithVarsFilePath(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	// Create config file
-	configPath := tmpDir + "/config.yml"
-	configContent := `---
-- name: test step
-  shell: echo {{ myvar }}`
-
-	os.WriteFile(configPath, []byte(configContent), 0644)
-
-	// Create vars file
-	varsPath := tmpDir + "/vars.yml"
-	varsContent := `---
-myvar: hello`
-
-	os.WriteFile(varsPath, []byte(varsContent), 0644)
-
-	startConfig := StartConfig{
-		ConfigFilePath: configPath,
-		VarsFilePath:   varsPath,
-	}
-
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-	err := Start(startConfig, testLogger, publisher)
-	if err != nil {
-		t.Fatalf("Start() with vars file error = %v", err)
-	}
-}
-
-
-
-func TestHandleTemplate_PathExpansionError(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-	}
-
-	templateStep := config.Template{
-		Src:  "{{ invalid_template",
-		Dest: tmpDir + "/output.txt",
-	}
-
-	step := config.Step{
-		Name:     "test template path error",
-		Template: &templateStep,
-	}
-
-	err := HandleTemplate(step, ec)
-	if err == nil {
-		t.Error("HandleTemplate() should error on path expansion failure")
-	}
-}
-
-func TestExecuteStep_NoStepName(t *testing.T) {
-	tmpDir := t.TempDir()
-	testLogger := logger.NewTestLogger()
-
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	pathExpander := pathutil.NewPathExpander(renderer)
-	fileTreeWalker := filetree.NewWalker(pathExpander)
-	readactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables:           map[string]interface{}{},
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		FileTree:            fileTreeWalker,
-		CurrentDir:          tmpDir,
-		Stats: NewExecutionStats(),
-		Redactor:            readactor,
-	}
-
-	// Anonymous step (no name) with shell
-	step := config.Step{
-		Shell: &config.ShellAction{Cmd: *String("echo test")},
-	}
-
-	err := ExecuteStep(step, ec)
-	if err != nil {
-		t.Fatalf("ExecuteStep() error = %v", err)
-	}
-}
-
-// Helper function for string pointers
-func String(s string) *string {
-	return &s
-}
-
-// Tests for new common fields implementation
-
-func TestHandleShell_BecomeUser(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Test requires root privileges")
-	}
-
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		SudoPass:  "test", // Would need real password in real test
-	}
-
-	step := config.Step{
-		Name:       "test become_user",
-		Shell: &config.ShellAction{Cmd: *String("whoami")},
-		Become:     true,
-		BecomeUser: "nobody",
-	}
-
-	// This test verifies the command is constructed correctly
-	// In real usage, it would execute as the specified user
-	err := HandleShell(step, ec)
-
-	// We expect an error because we don't have a valid sudo password
-	// But we can verify the BecomeUser field is being used
-	if err == nil {
-		t.Log("Command succeeded (possibly running as root)")
-	}
-}
-
-func TestHandleShell_Env(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{"custom_value": "test123"},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Redactor:  redactor,
-	}
-
-	step := config.Step{
-		Name:  "test env",
-		Shell: &config.ShellAction{Cmd: *String("echo $TEST_VAR")},
-		Env: map[string]string{
-			"TEST_VAR": "{{custom_value}}",
-		},
-		Register: "result",
-	}
-
-	err := HandleShell(step, ec)
-	if err != nil {
-		t.Fatalf("HandleShell() error = %v", err)
-	}
-
-	// Verify the environment variable was set and rendered
-	result, ok := ec.Variables["result"].(map[string]interface{})
-	if !ok {
-		t.Fatal("result not registered")
-	}
-
-	stdout, ok := result["stdout"].(string)
-	if !ok {
-		t.Fatal("stdout not in result")
-	}
-
-	if !strings.Contains(stdout, "test123") {
-		t.Errorf("Expected stdout to contain 'test123', got: %s", stdout)
-	}
-}
-
-func TestHandleShell_Cwd(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	// Create a temp directory
-	tmpDir, err := os.MkdirTemp("", "mooncake-test-cwd-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{"target_dir": tmpDir},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Redactor:  redactor,
-	}
-
-	step := config.Step{
-		Name:     "test cwd",
-		Shell: &config.ShellAction{Cmd: *String("pwd")},
-		Cwd:      "{{target_dir}}",
-		Register: "result",
-	}
-
-	err = HandleShell(step, ec)
-	if err != nil {
-		t.Fatalf("HandleShell() error = %v", err)
-	}
-
-	// Verify the working directory was changed
-	result, ok := ec.Variables["result"].(map[string]interface{})
-	if !ok {
-		t.Fatal("result not registered")
-	}
-
-	stdout, ok := result["stdout"].(string)
-	if !ok {
-		t.Fatal("stdout not in result")
-	}
-
-	if !strings.Contains(stdout, tmpDir) {
-		t.Errorf("Expected stdout to contain temp dir %s, got: %s", tmpDir, stdout)
-	}
-}
-
-func TestHandleShell_Timeout(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Redactor:  redactor,
-	}
-
-	step := config.Step{
-		Name:     "test timeout",
-		Shell: &config.ShellAction{Cmd: *String("sleep 10")},
-		Timeout:  "100ms",
-		Register: "result",
-	}
-
-	err := HandleShell(step, ec)
-	if err == nil {
-		t.Fatal("Expected timeout error")
-	}
-
-	if !strings.Contains(err.Error(), "timed out") {
-		t.Errorf("Expected timeout error, got: %v", err)
-	}
-
-	// Verify result was registered even on timeout
-	result, ok := ec.Variables["result"].(map[string]interface{})
-	if !ok {
-		t.Fatal("result not registered on timeout")
-	}
-
-	rc, ok := result["rc"].(int)
-	if !ok || rc != 124 {
-		t.Errorf("Expected rc=124 for timeout, got: %v", rc)
-	}
-}
-
-func TestHandleShell_Retries(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Redactor:  redactor,
-	}
-
-	step := config.Step{
-		Name:    "test retries",
-		Shell: &config.ShellAction{Cmd: *String("exit 1")},
-		Retries: 2,
-	}
-
-	err := HandleShell(step, ec)
-	if err == nil {
-		t.Fatal("Expected error after retries")
-	}
-
-	// Verify error message mentions number of attempts
-	if !strings.Contains(err.Error(), "3 attempts") {
-		t.Errorf("Expected error about 3 attempts (1 + 2 retries), got: %v", err)
-	}
-}
-
-func TestHandleShell_RetryDelay(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Redactor:  redactor,
-	}
-
-	step := config.Step{
-		Name:       "test retry delay",
-		Shell: &config.ShellAction{Cmd: *String("exit 1")},
-		Retries:    1,
-		RetryDelay: "50ms",
-	}
-
-	// Just verify it doesn't crash with retry_delay set
-	err := HandleShell(step, ec)
-	if err == nil {
-		t.Fatal("Expected error after retries")
-	}
-}
-
-func TestHandleShell_ChangedWhen(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	t.Run("changed_when false", func(t *testing.T) {
-		ec := &ExecutionContext{
-			Variables: map[string]interface{}{},
-			Logger:    testLogger,
-			Template:  renderer,
-			Evaluator: evaluator,
-			Redactor:  redactor,
-		}
-
-		step := config.Step{
-			Name:        "test changed_when",
-			Shell: &config.ShellAction{Cmd: *String("echo test")},
-			ChangedWhen: "false",
-			Register:    "result",
-		}
-
-		err := HandleShell(step, ec)
-		if err != nil {
-			t.Fatalf("HandleShell() error = %v", err)
-		}
-
-		result, ok := ec.Variables["result"].(map[string]interface{})
-		if !ok {
-			t.Fatal("result not registered")
-		}
-
-		changed, ok := result["changed"].(bool)
-		if !ok {
-			t.Fatal("changed not in result")
-		}
-
-		if changed {
-			t.Error("Expected changed=false")
-		}
-	})
-
-	t.Run("changed_when with result.rc", func(t *testing.T) {
-		ec := &ExecutionContext{
-			Variables: map[string]interface{}{},
-			Logger:    testLogger,
-			Template:  renderer,
-			Evaluator: evaluator,
-			Redactor:  redactor,
-		}
-
-		step := config.Step{
-			Name:        "test changed_when",
-			Shell: &config.ShellAction{Cmd: *String("echo test")},
-			ChangedWhen: "result.rc == 0",
-			Register:    "result",
-		}
-
-		err := HandleShell(step, ec)
-		if err != nil {
-			t.Fatalf("HandleShell() error = %v", err)
-		}
-
-		result, ok := ec.Variables["result"].(map[string]interface{})
-		if !ok {
-			t.Fatal("result not registered")
-		}
-
-		changed, ok := result["changed"].(bool)
-		if !ok {
-			t.Fatal("changed not in result")
-		}
-
-		if !changed {
-			t.Error("Expected changed=true when rc==0")
-		}
-	})
-}
-
-func TestHandleShell_FailedWhen(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	t.Run("failed_when overrides success", func(t *testing.T) {
-		ec := &ExecutionContext{
-			Variables: map[string]interface{}{},
-			Logger:    testLogger,
-			Template:  renderer,
-			Evaluator: evaluator,
-			Redactor:  redactor,
-		}
-
-		step := config.Step{
-			Name:       "test failed_when",
-			Shell: &config.ShellAction{Cmd: *String("echo 'ERROR' >&2")},
-			FailedWhen: "result.stderr != ''",
-			Register:   "result",
-		}
-
-		err := HandleShell(step, ec)
-		if err == nil {
-			t.Fatal("Expected error when failed_when evaluates to true")
-		}
-
-		result, ok := ec.Variables["result"].(map[string]interface{})
-		if !ok {
-			t.Fatal("result not registered")
-		}
-
-		failed, ok := result["failed"].(bool)
-		if !ok {
-			t.Fatal("failed not in result")
-		}
-
-		if !failed {
-			t.Error("Expected failed=true")
-		}
-	})
-
-	t.Run("failed_when overrides failure", func(t *testing.T) {
-		ec := &ExecutionContext{
-			Variables: map[string]interface{}{},
-			Logger:    testLogger,
-			Template:  renderer,
-			Evaluator: evaluator,
-			Redactor:  redactor,
-		}
-
-		step := config.Step{
-			Name:       "test failed_when",
-			Shell: &config.ShellAction{Cmd: *String("exit 1")},
-			FailedWhen: "false",
-			Register:   "result",
-		}
-
-		err := HandleShell(step, ec)
-		if err != nil {
-			t.Fatalf("Expected no error when failed_when=false, got: %v", err)
-		}
-
-		result, ok := ec.Variables["result"].(map[string]interface{})
-		if !ok {
-			t.Fatal("result not registered")
-		}
-
-		failed, ok := result["failed"].(bool)
-		if !ok {
-			t.Fatal("failed not in result")
-		}
-
-		if failed {
-			t.Error("Expected failed=false when failed_when=false")
-		}
-	})
-}
-
-func TestHandleShell_CombinedFields(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
-	evaluator := expression.NewGovaluateEvaluator()
-	redactor := security.NewRedactor()
-
-	tmpDir, err := os.MkdirTemp("", "mooncake-test-combined-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"work_dir": tmpDir,
-			"msg":      "hello",
-		},
-		Logger:    testLogger,
-		Template:  renderer,
-		Evaluator: evaluator,
-		Redactor:  redactor,
-	}
-
-	step := config.Step{
-		Name:  "test combined fields",
-		Shell: &config.ShellAction{Cmd: *String("echo $MSG")},
-		Env: map[string]string{
-			"MSG": "{{msg}}",
-		},
-		Cwd:         "{{work_dir}}",
-		Timeout:     "5s",
-		ChangedWhen: "result.stdout == 'hello'",
-		Register:    "result",
-	}
-
-	err = HandleShell(step, ec)
-	if err != nil {
-		t.Fatalf("HandleShell() error = %v", err)
-	}
-
-	result, ok := ec.Variables["result"].(map[string]interface{})
-	if !ok {
-		t.Fatal("result not registered")
-	}
-
-	stdout, ok := result["stdout"].(string)
-	if !ok {
-		t.Fatal("stdout not in result")
-	}
-
-	if !strings.Contains(stdout, "hello") {
-		t.Errorf("Expected stdout to contain 'hello', got: %s", stdout)
-	}
-
-	changed, ok := result["changed"].(bool)
-	if !ok {
-		t.Fatal("changed not in result")
-	}
-
-	if !changed {
-		t.Error("Expected changed=true")
-	}
-}

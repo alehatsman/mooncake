@@ -1,0 +1,66 @@
+preset:
+  name: ollama
+  description: Install and manage Ollama LLM runtime
+  version: 1.0.0
+
+  parameters:
+    state:
+      type: string
+      required: false
+      default: present
+      enum: [present, absent]
+      description: Whether Ollama should be installed or removed
+
+    pull:
+      type: array
+      required: false
+      default: []
+      description: List of models to pull (e.g., ['llama3.1:8b', 'mistral'])
+
+    service:
+      type: bool
+      required: false
+      default: true
+      description: Enable and start Ollama service
+
+    method:
+      type: string
+      required: false
+      default: auto
+      enum: [auto, script, package]
+      description: Installation method (auto, script, package)
+
+    host:
+      type: string
+      required: false
+      description: Ollama server bind address (e.g., 'localhost:11434', '0.0.0.0:11434')
+
+    models_dir:
+      type: string
+      required: false
+      description: Custom models directory path
+
+    force:
+      type: bool
+      required: false
+      default: false
+      description: Force operations (re-pull models, remove models on uninstall)
+
+  steps:
+    # Installation workflow
+    - name: Install Ollama
+      include: tasks/install.yml
+      when: parameters.state == "present"
+
+    - name: Configure Ollama service
+      include: tasks/configure.yml
+      when: parameters.state == "present"
+
+    - name: Pull models
+      include: tasks/models.yml
+      when: parameters.state == "present"
+
+    # Uninstallation workflow
+    - name: Uninstall Ollama
+      include: tasks/uninstall.yml
+      when: parameters.state == "absent"
