@@ -4,7 +4,11 @@
 [![Security](https://github.com/alehatsman/mooncake/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/security.yml)
 [![codecov](https://codecov.io/gh/alehatsman/mooncake/branch/master/graph/badge.svg)](https://codecov.io/gh/alehatsman/mooncake)
 
-Lightweight automation tool for dotfiles and system configuration. Single binary, no dependencies. **Chookity!**
+**The Standard Runtime for AI System Configuration**
+
+Mooncake is to AI agents what Docker is to containers - a safe, validated execution layer for system configuration. **Chookity!**
+
+Built for AI-driven infrastructure with idempotency guarantees, dry-run validation, and full observability.
 
 ```yaml
 - name: Hello Mooncake
@@ -16,6 +20,13 @@ Lightweight automation tool for dotfiles and system configuration. Single binary
     state: file
     content: "Hello from Mooncake!"
 ```
+
+## Who It's For
+
+**🤖 AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
+**🏗️ Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
+**👨‍💻 Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
+**⚙️ DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
 
 ## Quick Start
 
@@ -63,26 +74,28 @@ mooncake facts  # See all available facts
 
 **Control Flow**: Conditionals (`when`), loops (`with_items`, `with_filetree`), tags, sudo
 
-## Features
+## Why AI Agents Choose Mooncake
 
-- 🚀 **Single Binary** - No dependencies, written in Go
-- 🎨 **Animated TUI** - Real-time progress with beautiful output
-- 🔍 **Dry-run Mode** - Preview all changes before applying
-- 📝 **Simple YAML** - No complex DSL to learn
-- 🌍 **Cross-Platform** - Linux, macOS, and Windows
-- 🔧 **Powerful** - Variables, conditionals, loops, templates, system facts
-- ⚡ **Robust** - Timeouts, retries, custom environments, failure handling
+- 🛡️ **Safe by Default** - Dry-run validation, idempotency guarantees, rollback support
+- 📊 **Full Observability** - Structured events, audit trails, execution logs
+- ✅ **Validated Operations** - Schema validation, type checking, state verification
+- 🎯 **AI-Friendly Format** - Simple YAML that any AI can generate and understand
+- 🚀 **Zero Dependencies** - Single binary, no Python, no modules, no setup
+- 🌍 **Cross-Platform** - Linux, macOS, Windows with unified interface
+- 🔍 **Dry-run Everything** - Preview all changes before applying
+- 📝 **Declarative** - Describe desired state, not steps to get there
 
-## Why Mooncake?
+## Comparison
 
 | Feature | Mooncake | Ansible | Shell Scripts |
 |---------|----------|---------|---------------|
 | **Setup** | Single binary | Python + modules | Text editor |
 | **Dependencies** | None | Python, modules | System tools |
-| **Learning Curve** | Minutes | Hours/Days | Varies |
-| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
+| **AI Agent Friendly** | ✅ Native support | ⚠️ Complex | ❌ Unsafe |
 | **Dry-run** | ✅ Native | ✅ Check mode | ❌ Manual |
-| **Best For** | Personal configs, dotfiles | Enterprise automation | Quick tasks |
+| **Idempotency** | ✅ Guaranteed | ✅ Yes | ❌ Manual |
+| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
+| **Best For** | AI agents, dotfiles | Enterprise automation | Quick tasks |
 
 ## Documentation
 

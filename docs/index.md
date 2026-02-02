@@ -1,44 +1,46 @@
 # Mooncake
 
-Lightweight automation tool for system configuration and dotfiles management. **Chookity!**
+**The Standard Runtime for AI System Configuration**
+
+Mooncake is to AI agents what Docker is to containers - a safe, validated execution layer for system configuration. **Chookity!**
 
 <div class="grid cards" markdown>
-
--   :rocket:{ .lg .middle } **Fast & Lightweight**
-
-    ---
-
-    Single Go binary with no dependencies - install and run in seconds
 
 -   :material-shield-check:{ .lg .middle } **Safe by Default**
 
     ---
 
-    Dry-run mode previews all changes before applying them
+    Dry-run validation, idempotency guarantees, rollback support for AI-driven configuration
+
+-   :material-chart-line:{ .lg .middle } **Full Observability**
+
+    ---
+
+    Structured events, audit trails, execution logs for AI agent compliance
+
+-   :material-check-circle:{ .lg .middle } **Validated Operations**
+
+    ---
+
+    Schema validation, type checking, state verification before execution
+
+-   :material-robot:{ .lg .middle } **AI-Friendly Format**
+
+    ---
+
+    Simple YAML that any AI can generate and understand - no complex DSL
+
+-   :rocket:{ .lg .middle } **Zero Dependencies**
+
+    ---
+
+    Single Go binary with no Python, no modules, no setup required
 
 -   :material-devices:{ .lg .middle } **Cross-Platform**
 
     ---
 
-    Works seamlessly on Linux, macOS, and Windows
-
--   :material-file-code:{ .lg .middle } **Simple YAML**
-
-    ---
-
-    No complex DSL to learn - just write YAML configurations
-
--   :material-puzzle:{ .lg .middle } **Powerful Features**
-
-    ---
-
-    Variables, conditionals, loops, templates, and system facts
-
--   :material-draw:{ .lg .middle } **Beautiful TUI**
-
-    ---
-
-    Animated progress tracking with real-time status updates
+    Unified interface for Linux, macOS, and Windows
 
 </div>
 
@@ -46,14 +48,21 @@ Lightweight automation tool for system configuration and dotfiles management. **
 
 ## What is Mooncake?
 
-Mooncake automates system setup and configuration with simple YAML files. Perfect for:
+Mooncake provides a safe, validated execution environment for AI agents to configure systems. Built for the AI-driven infrastructure era.
 
-- **Personal Use** - Manage dotfiles and development environments across machines
-- **System Setup** - Automate new machine configuration and provisioning
-- **Cross-Platform** - Write once, run on Linux, macOS, or Windows
-- **Simplicity** - YAML configs without complex abstractions or steep learning curves
+**Target Audiences:**
 
-**Not another enterprise tool.** Mooncake is designed for developers managing personal configs, dotfiles enthusiasts, and anyone wanting simple system automation without the complexity of enterprise configuration management systems.
+- **🤖 AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
+- **🏗️ Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
+- **👨‍💻 Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
+- **⚙️ DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
+
+**Why AI Agents Choose Mooncake:**
+
+- Industry-standard YAML format that any AI can target
+- Guarantees idempotency and reproducibility
+- Enables system configuration without risk
+- Provides observability and compliance out of the box
 
 ---
 
@@ -715,19 +724,20 @@ Set up new machines automatically:
 
 ---
 
-## Why Mooncake?
+## Comparison
 
 | Feature | Mooncake | Ansible | Shell Scripts |
 |---------|----------|---------|---------------|
 | **Setup** | Single binary | Python + modules | Text editor |
 | **Dependencies** | None | Python, modules | System tools |
-| **Learning Curve** | Minutes | Hours/Days | Varies |
-| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
+| **AI Agent Friendly** | ✅ Native support | ⚠️ Complex | ❌ Unsafe |
 | **Dry-run** | ✅ Native | ✅ Check mode | ❌ Manual |
+| **Idempotency** | ✅ Guaranteed | ✅ Yes | ❌ Manual |
+| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
 | **System Facts** | ✅ Auto-detected | ✅ Gathered | ❌ Manual |
-| **Best For** | Personal configs, dotfiles | Enterprise automation | Quick tasks |
+| **Best For** | AI agents, dotfiles | Enterprise automation | Quick tasks |
 
-**Mooncake fills the gap** between simple shell scripts and complex enterprise tools. It's powerful enough for real automation, simple enough to learn in an afternoon.
+**Mooncake is the execution layer for AI-driven system configuration** - providing safety, validation, and observability that AI agents need.
 
 ---
 
