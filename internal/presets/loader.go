@@ -63,7 +63,7 @@ func LoadPreset(name string) (*config.PresetDefinition, error) {
 	}
 
 	// Read and parse preset file
-	data, err := os.ReadFile(presetPath)
+	data, err := os.ReadFile(presetPath) // #nosec G304 -- presetPath is validated through search paths
 	if err != nil {
 		return nil, fmt.Errorf("failed to read preset file '%s': %w", presetPath, err)
 	}

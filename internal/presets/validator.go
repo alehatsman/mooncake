@@ -7,6 +7,13 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
+const (
+	paramTypeString = "string"
+	paramTypeBool   = "bool"
+	paramTypeArray  = "array"
+	paramTypeObject = "object"
+)
+
 // ValidateParameters validates user-provided parameters against preset parameter definitions.
 // It checks required parameters, validates types, checks enum constraints, and applies defaults.
 // Returns a validated parameter map ready for use in template expansion.
@@ -64,20 +71,20 @@ func validateType(paramName string, value interface{}, expectedType string) erro
 	actualType := getValueType(value)
 
 	switch expectedType {
-	case "string":
-		if actualType != "string" {
+	case paramTypeString:
+		if actualType != paramTypeString {
 			return fmt.Errorf("parameter '%s' must be a string, got %s", paramName, actualType)
 		}
-	case "bool":
-		if actualType != "bool" {
+	case paramTypeBool:
+		if actualType != paramTypeBool {
 			return fmt.Errorf("parameter '%s' must be a boolean, got %s", paramName, actualType)
 		}
-	case "array":
-		if actualType != "array" {
+	case paramTypeArray:
+		if actualType != paramTypeArray {
 			return fmt.Errorf("parameter '%s' must be an array, got %s", paramName, actualType)
 		}
-	case "object":
-		if actualType != "object" {
+	case paramTypeObject:
+		if actualType != paramTypeObject {
 			return fmt.Errorf("parameter '%s' must be an object, got %s", paramName, actualType)
 		}
 	default:
