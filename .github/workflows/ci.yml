@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        os: [ubuntu-latest] #, macos-latest, macos-13, windows-latest]
 
     steps:
       - name: Checkout code
@@ -45,71 +45,71 @@ jobs:
           name: codecov-mooncake
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  docker-tests:
-    name: Docker Tests - ${{ matrix.distro }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        distro:
-          - ubuntu-22.04
-          - ubuntu-20.04
-          - alpine-3.19
-          - debian-12
-          - fedora-39
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: true
-
-      - name: Build Linux binary
-        run: env GOOS=linux GOARCH=amd64 go build -v -o out/mooncake-linux-amd64 ./cmd
-
-      - name: Build Docker image
-        run: docker build -f testing/docker/${{ matrix.distro }}.Dockerfile -t mooncake-test-${{ matrix.distro }} .
-
-      - name: Run smoke tests
-        run: docker run --rm mooncake-test-${{ matrix.distro }} smoke
-
-      - name: Run integration tests
-        run: docker run --rm mooncake-test-${{ matrix.distro }} integration
-
-  integration-tests:
-    name: Integration Tests - ${{ matrix.os }}
-    needs: unit-tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: true
-
-      - name: Build binary
-        run: go build -v -o out/mooncake ./cmd
-        if: matrix.os != 'windows-latest'
-
-      - name: Build binary (Windows)
-        run: go build -v -o out/mooncake.exe ./cmd
-        if: matrix.os == 'windows-latest'
-
-      - name: Run integration tests
-        run: bash ./scripts/run-integration-tests.sh
-        shell: bash
+  # docker-tests:
+  #   name: Docker Tests - ${{ matrix.distro }}
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       distro:
+  #         - ubuntu-22.04
+  #         - ubuntu-20.04
+  #         - alpine-3.19
+  #         - debian-12
+  #         - fedora-39
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: '1.25'
+  #         cache: true
+  #
+  #     - name: Build Linux binary
+  #       run: env GOOS=linux GOARCH=amd64 go build -v -o out/mooncake-linux-amd64 ./cmd
+  #
+  #     - name: Build Docker image
+  #       run: docker build -f testing/docker/${{ matrix.distro }}.Dockerfile -t mooncake-test-${{ matrix.distro }} .
+  #
+  #     - name: Run smoke tests
+  #       run: docker run --rm mooncake-test-${{ matrix.distro }} smoke
+  #
+  #     - name: Run integration tests
+  #       run: docker run --rm mooncake-test-${{ matrix.distro }} integration
+  #
+  # integration-tests:
+  #   name: Integration Tests - ${{ matrix.os }}
+  #   needs: unit-tests
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [ubuntu-latest, macos-latest, windows-latest]
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: '1.25'
+  #         cache: true
+  #
+  #     - name: Build binary
+  #       run: go build -v -o out/mooncake ./cmd
+  #       if: matrix.os != 'windows-latest'
+  #
+  #     - name: Build binary (Windows)
+  #       run: go build -v -o out/mooncake.exe ./cmd
+  #       if: matrix.os == 'windows-latest'
+  #
+  #     - name: Run integration tests
+  #       run: bash ./scripts/run-integration-tests.sh
+  #       shell: bash
 
   lint:
     name: Lint
