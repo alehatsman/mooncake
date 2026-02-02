@@ -41,6 +41,9 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 
 // MarkStepFailed marks a result as failed and registers it if needed.
 // The caller is responsible for returning an appropriate error.
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func MarkStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
 	result.Failed = true
 	result.Rc = 1
@@ -61,6 +64,10 @@ func AddGlobalVariables(variables map[string]interface{}) {
 	}
 }
 
+// HandleVars processes the vars field of a step, rendering templates and merging into the execution context.
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func HandleVars(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling vars: %+v", step.Vars)
 
@@ -91,6 +98,11 @@ func HandleVars(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
+// HandleWhenExpression evaluates the when condition and returns whether the step should be skipped.
+// Returns (shouldSkip bool, error).
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
@@ -126,6 +138,11 @@ func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !boolResult, nil
 }
 
+// ShouldSkipByTags determines if a step should be skipped based on tag filtering.
+// Returns true if the step should be skipped, false otherwise.
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 	// If no tags filter specified, execute all steps
 	if len(ec.Tags) == 0 {
@@ -152,6 +169,9 @@ func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 
 // CheckIdempotencyConditions evaluates creates and unless conditions for shell steps.
 // Returns (shouldSkip bool, reason string, error)
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check creates condition
 	if step.Creates != nil {
@@ -205,6 +225,9 @@ func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 //   - shouldSkip: true if the step should be skipped
 //   - skipReason: "when" or "tags" indicating why the step was skipped (empty if not skipped)
 //   - error: any error encountered while evaluating conditions
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check when condition
 	if step.When != "" {
@@ -235,6 +258,9 @@ func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 // Returns:
 //   - displayName: the name to display for this step
 //   - hasName: true if a name was found, false if the step is anonymous
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func GetStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	// For with_filetree, show hierarchical structure
 	if item, ok := ec.Variables["item"].(filetree.Item); ok {
@@ -278,6 +304,9 @@ func GetStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 
 // DispatchStepAction executes the appropriate handler based on step type.
 // All actions are now handled through the actions registry.
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	// Determine action type from step
 	actionType := step.DetermineActionType()
@@ -797,6 +826,9 @@ func formatMode(mode os.FileMode) string {
 
 // ParseFileMode parses a mode string (e.g., "0644") into os.FileMode.
 // Returns default mode if mode is empty or invalid.
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func ParseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	if modeStr == "" {
 		return defaultMode

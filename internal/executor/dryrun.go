@@ -15,6 +15,9 @@ type dryRunLogger struct {
 }
 
 // NewDryRunLogger creates a dry-run logger wrapper.
+//
+// INTERNAL: This function is exported for testing purposes only and is not part of
+// the public API. It may change or be removed in future versions without notice.
 func NewDryRunLogger(log logger.Logger) *dryRunLogger {
 	return &dryRunLogger{logger: log}
 }

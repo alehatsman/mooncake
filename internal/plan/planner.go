@@ -625,10 +625,14 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		templateCopy := *step.Template
 		step.Template = &templateCopy
 
-		// Render template fields
+		// Render and resolve template fields
 		src, err := p.template.Render(step.Template.Src, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render template src: %w", err)
+		}
+		// Resolve relative path to absolute based on current directory
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(ctx.CurrentDir, src)
 		}
 		step.Template.Src = src
 
@@ -637,6 +641,70 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 			return fmt.Errorf("failed to render template dest: %w", err)
 		}
 		step.Template.Dest = dest
+	}
+
+	if step.Copy != nil {
+		// Make a deep copy of Copy to avoid modifying shared pointer
+		copyCopy := *step.Copy
+		step.Copy = &copyCopy
+
+		// Render and resolve source path
+		src, err := p.template.Render(step.Copy.Src, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to render copy src: %w", err)
+		}
+		// Resolve relative path to absolute based on current directory
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(ctx.CurrentDir, src)
+		}
+		step.Copy.Src = src
+
+		// Render destination path
+		dest, err := p.template.Render(step.Copy.Dest, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to render copy dest: %w", err)
+		}
+		step.Copy.Dest = dest
+	}
+
+	if step.Unarchive != nil {
+		// Make a deep copy of Unarchive to avoid modifying shared pointer
+		unarchiveCopy := *step.Unarchive
+		step.Unarchive = &unarchiveCopy
+
+		// Render and resolve source path
+		src, err := p.template.Render(step.Unarchive.Src, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to render unarchive src: %w", err)
+		}
+		// Resolve relative path to absolute based on current directory
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(ctx.CurrentDir, src)
+		}
+		step.Unarchive.Src = src
+
+		// Render destination path
+		dest, err := p.template.Render(step.Unarchive.Dest, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to render unarchive dest: %w", err)
+		}
+		step.Unarchive.Dest = dest
+	}
+
+	if step.File != nil && step.File.Src != "" {
+		// Make a deep copy of File to avoid modifying shared pointer (already done above)
+		// Just need to resolve the Src field if it's a link operation
+
+		// Render and resolve source path
+		src, err := p.template.Render(step.File.Src, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to render file src: %w", err)
+		}
+		// Resolve relative path to absolute based on current directory
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(ctx.CurrentDir, src)
+		}
+		step.File.Src = src
 	}
 
 	if step.Service != nil {
