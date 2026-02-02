@@ -9,6 +9,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/presets"
 )
 
@@ -17,6 +18,40 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+}
+
+// savedContext captures the current execution context state for restoration.
+type savedContext struct {
+	variables  map[string]interface{}
+	currentDir string
+}
+
+// captureContext saves the current execution context state.
+func captureContext(ec *executor.ExecutionContext) *savedContext {
+	saved := &savedContext{
+		variables:  make(map[string]interface{}),
+		currentDir: ec.CurrentDir,
+	}
+	for k, v := range ec.Variables {
+		saved.variables[k] = v
+	}
+	return saved
+}
+
+// restoreContext restores the execution context to the saved state,
+// removing any keys added during preset execution.
+func (s *savedContext) restore(ec *executor.ExecutionContext, parametersNamespace map[string]interface{}) {
+	// Remove parameters namespace
+	for k := range parametersNamespace {
+		delete(ec.Variables, k)
+	}
+	// Restore original variables (in case steps modified them)
+	ec.Variables = make(map[string]interface{})
+	for k, v := range s.variables {
+		ec.Variables[k] = v
+	}
+	// Restore original directory
+	ec.CurrentDir = s.currentDir
 }
 
 // Metadata returns the action metadata.
@@ -65,11 +100,8 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	ec.Logger.Infof("Expanding preset '%s' into %d steps", invocation.Name, len(expandedSteps))
 
 	// Save current context for restoration
-	savedVariables := make(map[string]interface{})
-	for k, v := range ec.Variables {
-		savedVariables[k] = v
-	}
-	savedCurrentDir := ec.CurrentDir
+	saved := captureContext(ec)
+	defer saved.restore(ec, parametersNamespace)
 
 	// Merge parameters namespace into variables
 	for k, v := range parametersNamespace {
@@ -81,24 +113,20 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		ec.CurrentDir = presetBaseDir
 	}
 
-	// Restore context after execution
-	defer func() {
-		// Remove parameters namespace
-		for k := range parametersNamespace {
-			delete(ec.Variables, k)
-		}
-		// Restore original variables (in case steps modified them)
-		for k, v := range savedVariables {
-			ec.Variables[k] = v
-		}
-		// Restore original directory
-		ec.CurrentDir = savedCurrentDir
-	}()
+	// Use planner to expand includes, loops, and other plan-time directives
+	// This ensures includes within preset steps are properly expanded
+	planner := plan.NewPlanner()
+	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.Variables, presetBaseDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
+	}
 
-	// Execute expanded steps
+	ec.Logger.Infof("Preset '%s' expanded to %d steps (after include expansion)", invocation.Name, len(fullyExpandedSteps))
+
+	// Execute fully expanded steps
 	anyChanged := false
-	for i, expandedStep := range expandedSteps {
-		ec.Logger.Debugf("Executing preset step %d/%d: %s", i+1, len(expandedSteps), expandedStep.Name)
+	for i, expandedStep := range fullyExpandedSteps {
+		ec.Logger.Debugf("Executing preset step %d/%d: %s", i+1, len(fullyExpandedSteps), expandedStep.Name)
 
 		if err := executor.ExecuteStep(expandedStep, ec); err != nil {
 			return nil, fmt.Errorf("preset '%s' step %d failed: %w", invocation.Name, i+1, err)
@@ -113,13 +141,13 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Create preset result
 	result := executor.NewResult()
 	result.Changed = anyChanged
-	result.Stdout = fmt.Sprintf("Preset '%s' executed %d steps", invocation.Name, len(expandedSteps))
+	result.Stdout = fmt.Sprintf("Preset '%s' executed %d steps", invocation.Name, len(fullyExpandedSteps))
 
 	// Emit preset completed event
 	ec.EmitEvent(events.EventPresetCompleted, events.PresetData{
 		Name:       invocation.Name,
 		Parameters: invocation.With,
-		StepsCount: len(expandedSteps),
+		StepsCount: len(fullyExpandedSteps),
 		Changed:    anyChanged,
 	})
 
@@ -136,14 +164,41 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	invocation := step.Preset
+
+	// Try to expand preset to show step count
+	expandedSteps, parametersNamespace, presetBaseDir, err := presets.ExpandPreset(invocation)
+	if err != nil {
+		// If expansion fails, show error
+		ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (expansion failed: %v)", invocation.Name, err)
+		return nil
+	}
+
+	// Merge parameters for full expansion
+	variables := make(map[string]interface{})
+	for k, v := range ec.Variables {
+		variables[k] = v
+	}
+	for k, v := range parametersNamespace {
+		variables[k] = v
+	}
+
+	// Use planner to get final step count
+	planner := plan.NewPlanner()
+	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, variables, presetBaseDir)
+	if err != nil {
+		// Show initial count if full expansion fails
+		ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, full expansion failed)",
+			invocation.Name, len(expandedSteps))
+		return nil
+	}
+
 	paramCount := 0
 	if invocation.With != nil {
 		paramCount = len(invocation.With)
 	}
 
-	ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (parameters: %d)", invocation.Name, paramCount)
+	ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (parameters: %d, steps: %d)",
+		invocation.Name, paramCount, len(fullyExpandedSteps))
 
-	// Optionally, we could expand and show the steps in dry-run mode
-	// For now, just showing the preset name and parameter count
 	return nil
 }

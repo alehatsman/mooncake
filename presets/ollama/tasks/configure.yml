@@ -9,7 +9,7 @@
     daemon_reload: true
     dropin:
       name: 10-mooncake.conf
-      src_template: templates/systemd-dropin.conf.j2
+      src_template: ../templates/systemd-dropin.conf.j2
   become: true
   when: >
     parameters.service and
@@ -21,7 +21,7 @@
     state: started
     enabled: true
     unit:
-      src_template: templates/launchd.plist.j2
+      src_template: ../templates/launchd.plist.j2
   when: >
     parameters.service and
     os == "darwin"

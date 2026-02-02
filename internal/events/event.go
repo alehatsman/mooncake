@@ -87,12 +87,6 @@ const (
 	EventPrintMessage EventType = "print.message"
 )
 
-// Event types for include
-const (
-	EventIncludeStarted   EventType = "include.started"
-	EventIncludeCompleted EventType = "include.completed"
-)
-
 // RunStartedData contains data for run.started events
 type RunStartedData struct {
 	RootFile   string   `json:"root_file"`
@@ -296,11 +290,4 @@ type PresetData struct {
 // PrintData contains data for print.message events
 type PrintData struct {
 	Message string `json:"message"` // The message that was printed
-}
-
-// IncludeData contains data for include events
-type IncludeData struct {
-	Path       string `json:"path"`                  // The included file path
-	StepsCount int    `json:"steps_count"`           // Number of steps in included file
-	Changed    bool   `json:"changed,omitempty"`     // Whether any steps changed (completed event only)
 }

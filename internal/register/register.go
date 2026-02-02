@@ -15,7 +15,6 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/copy"
 	_ "github.com/alehatsman/mooncake/internal/actions/download"
 	_ "github.com/alehatsman/mooncake/internal/actions/file"
-	_ "github.com/alehatsman/mooncake/internal/actions/include"
 	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
 	_ "github.com/alehatsman/mooncake/internal/actions/package"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"

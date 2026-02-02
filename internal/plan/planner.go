@@ -72,6 +72,30 @@ func NewPlanner() *Planner {
 	}
 }
 
+// ExpandStepsWithContext expands a list of steps with the given context.
+// This is useful for expanding preset steps which may contain includes, loops, etc.
+// Returns the expanded steps ready for execution.
+func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error) {
+	// Create expansion context
+	ctx := &ExpansionContext{
+		Variables:  variables,
+		CurrentDir: currentDir,
+		Tags:       nil, // No tag filtering for preset expansion
+	}
+
+	// Create temporary plan to collect expanded steps
+	plan := &Plan{
+		Steps: make([]config.Step, 0),
+	}
+
+	// Expand steps
+	if err := p.expandSteps(steps, ctx, plan, 0); err != nil {
+		return nil, err
+	}
+
+	return plan.Steps, nil
+}
+
 // BuildPlan generates a deterministic execution plan from a config file
 func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	// Read config with validation
@@ -613,6 +637,40 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 			return fmt.Errorf("failed to render template dest: %w", err)
 		}
 		step.Template.Dest = dest
+	}
+
+	if step.Service != nil {
+		// Make a deep copy of Service to avoid modifying shared pointer
+		serviceCopy := *step.Service
+		step.Service = &serviceCopy
+
+		// Resolve unit.src_template if present
+		if serviceCopy.Unit != nil && serviceCopy.Unit.SrcTemplate != "" {
+			rendered, err := p.template.Render(serviceCopy.Unit.SrcTemplate, ctx.Variables)
+			if err != nil {
+				return fmt.Errorf("failed to render service unit src_template: %w", err)
+			}
+			// Resolve relative path to absolute based on current directory
+			if !filepath.IsAbs(rendered) {
+				rendered = filepath.Join(ctx.CurrentDir, rendered)
+			}
+			serviceCopy.Unit.SrcTemplate = rendered
+		}
+
+		// Resolve dropin.src_template if present
+		if serviceCopy.Dropin != nil && serviceCopy.Dropin.SrcTemplate != "" {
+			rendered, err := p.template.Render(serviceCopy.Dropin.SrcTemplate, ctx.Variables)
+			if err != nil {
+				return fmt.Errorf("failed to render service dropin src_template: %w", err)
+			}
+			// Resolve relative path to absolute based on current directory
+			if !filepath.IsAbs(rendered) {
+				rendered = filepath.Join(ctx.CurrentDir, rendered)
+			}
+			serviceCopy.Dropin.SrcTemplate = rendered
+		}
+
+		step.Service = &serviceCopy
 	}
 
 	return nil

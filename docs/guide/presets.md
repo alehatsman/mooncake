@@ -168,21 +168,53 @@ Mooncake searches for presets in this order (highest priority first):
 3. `/usr/local/share/mooncake/presets/` - Local installation
 4. `/usr/share/mooncake/presets/` - System installation
 
+### Preset File Formats
+
+Presets can use two formats:
+
+**Flat format** (simple presets):
+```
+presets/
+└── mypreset.yml
+```
+
+**Directory format** (complex presets with includes):
+```
+presets/
+└── mypreset/
+    ├── preset.yml       # Main definition
+    ├── tasks/           # Modular task files
+    │   ├── install.yml
+    │   └── configure.yml
+    └── templates/       # Configuration templates
+        └── config.j2
+```
+
+When both exist, the directory format takes precedence:
+- `presets/ollama/preset.yml` is loaded before `presets/ollama.yml`
+
 ### Example Directory Structure
 
 ```
 my-project/
 ├── playbook.yml
 └── presets/
-    ├── ollama.yml       # Local override
-    └── myapp.yml        # Project-specific preset
+    ├── ollama/          # Directory-based preset
+    │   ├── preset.yml
+    │   └── tasks/
+    │       └── install.yml
+    └── myapp.yml        # Flat preset
 
 ~/.mooncake/
 └── presets/
     └── common.yml       # User-wide preset
 
 /usr/share/mooncake/presets/
-└── ollama.yml           # Built-in preset
+└── ollama/              # Built-in directory preset
+    ├── preset.yml
+    ├── tasks/
+    ├── templates/
+    └── README.md
 ```
 
 ## Result Registration

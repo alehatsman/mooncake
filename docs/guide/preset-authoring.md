@@ -4,6 +4,8 @@ This guide shows you how to create your own mooncake presets for sharing complex
 
 ## Preset Structure
 
+### Flat Structure (Simple)
+
 A preset is a YAML file with this structure:
 
 ```yaml
@@ -32,6 +34,52 @@ preset:
         path: /tmp/flag
         state: file
       when: parameters.param2
+```
+
+### Directory Structure (Advanced)
+
+For complex presets with multiple files, use a directory structure:
+
+```
+presets/
+└── my-preset/
+    ├── preset.yml           # Main preset definition
+    ├── tasks/               # Modular task files
+    │   ├── install.yml
+    │   ├── configure.yml
+    │   └── cleanup.yml
+    ├── templates/           # Configuration templates
+    │   ├── config.j2
+    │   └── service.j2
+    └── README.md            # Documentation
+```
+
+The main preset file uses `include` to organize steps:
+
+```yaml
+# presets/my-preset/preset.yml
+preset:
+  name: my-preset
+  description: Modular preset with includes
+  version: 1.0.0
+
+  parameters:
+    state:
+      type: string
+      enum: [present, absent]
+
+  steps:
+    - name: Install
+      include: tasks/install.yml
+      when: parameters.state == "present"
+
+    - name: Configure
+      include: tasks/configure.yml
+      when: parameters.state == "present"
+
+    - name: Cleanup
+      include: tasks/cleanup.yml
+      when: parameters.state == "absent"
 ```
 
 ## Minimal Example
@@ -114,6 +162,98 @@ steps:
 
   - name: Access object parameter
     shell: echo "DB{{ ":" }} {{ parameters.config.database_url }}"
+```
+
+## Includes
+
+### Using Includes for Modularity
+
+Break large presets into smaller, focused files using `include`:
+
+```yaml
+# preset.yml
+steps:
+  - name: Run installation tasks
+    include: tasks/install.yml
+
+  - name: Run configuration tasks
+    include: tasks/configure.yml
+```
+
+```yaml
+# tasks/install.yml
+- name: Check if already installed
+  shell: command -v myapp
+  register: check
+  failed_when: false
+
+- name: Install if not present
+  shell: ./install.sh
+  when: check.rc != 0
+```
+
+### Path Resolution
+
+**All paths in presets resolve relative to the file they're written in** (Node.js-style):
+
+```
+presets/my-preset/
+├── preset.yml
+├── tasks/
+│   └── configure.yml
+└── templates/
+    └── config.j2
+```
+
+From `tasks/configure.yml`, reference the template:
+
+```yaml
+# tasks/configure.yml
+- name: Render config
+  template:
+    src: ../templates/config.j2  # Relative to tasks/ directory
+    dest: /etc/myapp/config
+```
+
+From `preset.yml`, reference the template directly:
+
+```yaml
+# preset.yml
+- name: Render config
+  template:
+    src: templates/config.j2  # Relative to preset.yml
+    dest: /etc/myapp/config
+```
+
+**Key principle**: Paths are always relative to the YAML file containing them, not the preset root.
+
+### Nested Includes
+
+Includes can include other files (but avoid deep nesting):
+
+```yaml
+# preset.yml
+steps:
+  - include: tasks/setup.yml
+
+# tasks/setup.yml
+- include: common/dependencies.yml
+- include: common/permissions.yml
+```
+
+### Include Conditions
+
+Apply conditions to entire include blocks:
+
+```yaml
+steps:
+  - name: Linux setup
+    include: tasks/linux.yml
+    when: os == "linux"
+
+  - name: macOS setup
+    include: tasks/macos.yml
+    when: os == "darwin"
 ```
 
 ## Steps
