@@ -84,6 +84,16 @@ nav:
   - Presets:
     - Using Presets: guide/presets.md
     - Authoring Presets: guide/preset-authoring.md
+  - API Reference:
+    - Overview: api/index.md
+    - Actions: api/actions.md
+    - Config: api/config.md
+    - Executor: api/executor.md
+    - Events: api/events.md
+    - Facts: api/facts.md
+    - Presets: api/presets.md
+    - Logger: api/logger.md
+    - Commands: api/cmd.md
   - AI Specification: ai-specification.md
   - Development:
     - Contributing: development/contributing.md
