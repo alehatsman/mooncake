@@ -44,6 +44,9 @@ Thumbs.db
 *.log
 *.cover
 
+# Testing
+testing/results/
+
 # MkDocs
 site/
 .cache/

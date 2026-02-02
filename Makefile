@@ -65,4 +65,37 @@ ci: lint test-race scan
 	@echo ""
 	@echo "✓ All CI checks passed!"
 
+# Multi-platform testing targets
+.PHONY: test-quick test-smoke test-integration test-docker-ubuntu test-docker-alpine test-docker-debian test-docker-fedora test-docker-all test-all-platforms
+
+test-quick:
+	@echo "Running quick smoke tests on Ubuntu 22.04..."
+	@./scripts/test-docker.sh ubuntu-22.04 smoke
+
+test-smoke:
+	@echo "Running smoke tests on all distros..."
+	@./scripts/test-docker-all.sh smoke
+
+test-integration:
+	@echo "Running integration tests..."
+	@./scripts/run-integration-tests.sh
+
+test-docker-ubuntu:
+	@./scripts/test-docker.sh ubuntu-22.04
+
+test-docker-alpine:
+	@./scripts/test-docker.sh alpine-3.19
+
+test-docker-debian:
+	@./scripts/test-docker.sh debian-12
+
+test-docker-fedora:
+	@./scripts/test-docker.sh fedora-39
+
+test-docker-all:
+	@./scripts/test-docker-all.sh all
+
+test-all-platforms:
+	@./scripts/test-all-platforms.sh
+
 

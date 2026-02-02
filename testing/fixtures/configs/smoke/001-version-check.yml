@@ -1,0 +1,11 @@
+- name: Verify mooncake is installed
+  shell: which mooncake
+  register: mooncake_path
+
+- name: Check mooncake help works
+  shell: mooncake --help
+  register: help_output
+
+- name: Display mooncake location
+  shell: echo "Mooncake found at {{ mooncake_path.stdout }}"
+  when: mooncake_path.stdout != ""

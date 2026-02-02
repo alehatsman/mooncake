@@ -214,6 +214,41 @@ mooncake explain
 | **Dry-run** | ✅ Native | ✅ Check mode | ❌ Manual |
 | **Best For** | Personal configs, dotfiles | Enterprise automation | Quick tasks |
 
+## Testing
+
+Mooncake is thoroughly tested across multiple platforms:
+
+- **Linux**: Ubuntu 22.04/20.04, Debian 12, Alpine 3.19, Fedora 39 (Docker)
+- **macOS**: Intel (macos-13) and Apple Silicon (macos-latest) - native + GitHub Actions
+- **Windows**: Windows Server (GitHub Actions)
+
+### Quick Testing Commands
+
+```bash
+# Run unit tests on current platform
+make test
+
+# Quick smoke test (Linux via Docker, ~2 minutes)
+make test-quick
+
+# Test on specific Linux distro
+make test-docker-ubuntu
+make test-docker-alpine
+
+# Test all Linux distros (~10 minutes)
+make test-smoke
+
+# Run complete local test suite (native + Docker)
+make test-all-platforms
+```
+
+### Documentation
+
+- 📖 **[Testing Documentation Index](docs/testing/README.md)** - Complete testing docs
+- ⚡ **[Quick Reference](docs/testing/quick-reference.md)** - Common commands
+- 📚 **[Testing Guide](docs/testing/guide.md)** - Detailed guide
+- 🏗️ **[Architecture](docs/testing/architecture.md)** - How it works
+
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

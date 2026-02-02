@@ -1,0 +1,30 @@
+- name: Execute simple command
+  shell: echo "Hello World"
+  register: hello
+
+- name: Verify command output
+  shell: test "{{ hello.stdout }}" = "Hello World"
+
+- name: Execute command with pipe
+  shell: echo "test" | tr '[:lower:]' '[:upper:]'
+  register: upper
+
+- name: Check uppercase conversion
+  shell: test "{{ upper.stdout }}" = "TEST"
+
+- name: Get current user
+  shell: whoami
+  register: current_user
+
+- name: Display user
+  shell: echo "Running as {{ current_user.stdout }}"
+
+- name: Create and read file
+  shell: echo "content" > /tmp/shell-test.txt && cat /tmp/shell-test.txt
+  register: file_content
+
+- name: Verify file content
+  shell: test "{{ file_content.stdout }}" = "content"
+
+- name: Clean up
+  shell: rm -f /tmp/shell-test.txt

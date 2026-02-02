@@ -1,0 +1,13 @@
+- vars:
+    test_var: "mooncake_test_value"
+    test_num: 42
+
+- name: Use variables in shell command
+  shell: echo "Variable value is {{ test_var }}"
+  register: result
+
+- name: Verify variable substitution works
+  shell: echo "{{ test_var }}" | grep "mooncake_test_value"
+
+- name: Test numeric variable
+  shell: echo "Number is {{ test_num }}"

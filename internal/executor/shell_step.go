@@ -18,6 +18,30 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
+// evaluateBoolExpression is a helper that renders and evaluates a boolean expression.
+func evaluateBoolExpression(expression, fieldName string, evalContext map[string]interface{}, ec *ExecutionContext) (bool, error) {
+	renderedExpr, err := ec.Template.Render(expression, evalContext)
+	if err != nil {
+		return false, &RenderError{Field: fieldName, Cause: err}
+	}
+
+	result, err := ec.Evaluator.Evaluate(renderedExpr, evalContext)
+	if err != nil {
+		return false, &EvaluationError{Expression: renderedExpr, Cause: err}
+	}
+
+	boolResult, ok := result.(bool)
+	if !ok {
+		return false, &EvaluationError{
+			Expression: renderedExpr,
+			Cause:      fmt.Errorf("expression evaluated to %T, expected bool", result),
+		}
+	}
+
+	ec.Logger.Debugf("  %s evaluated to: %v", fieldName, boolResult)
+	return boolResult, nil
+}
+
 // evaluateResultOverrides applies changed_when and failed_when expressions to override result status.
 func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionContext) error {
 	// Create context with result variables for evaluation
@@ -29,48 +53,20 @@ func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionCont
 
 	// Evaluate changed_when if specified
 	if step.ChangedWhen != "" {
-		renderedExpr, err := ec.Template.Render(step.ChangedWhen, evalContext)
+		boolResult, err := evaluateBoolExpression(step.ChangedWhen, "changed_when", evalContext, ec)
 		if err != nil {
-			return &RenderError{Field: "changed_when", Cause: err}
+			return err
 		}
-
-		changedResult, err := ec.Evaluator.Evaluate(renderedExpr, evalContext)
-		if err != nil {
-			return &EvaluationError{Expression: renderedExpr, Cause: err}
-		}
-
-		if boolResult, ok := changedResult.(bool); ok {
-			result.Changed = boolResult
-			ec.Logger.Debugf("  changed_when evaluated to: %v", boolResult)
-		} else {
-			return &EvaluationError{
-				Expression: renderedExpr,
-				Cause:      fmt.Errorf("expression evaluated to %T, expected bool", changedResult),
-			}
-		}
+		result.Changed = boolResult
 	}
 
 	// Evaluate failed_when if specified
 	if step.FailedWhen != "" {
-		renderedExpr, err := ec.Template.Render(step.FailedWhen, evalContext)
+		boolResult, err := evaluateBoolExpression(step.FailedWhen, "failed_when", evalContext, ec)
 		if err != nil {
-			return &RenderError{Field: "failed_when", Cause: err}
+			return err
 		}
-
-		failedResult, err := ec.Evaluator.Evaluate(renderedExpr, evalContext)
-		if err != nil {
-			return &EvaluationError{Expression: renderedExpr, Cause: err}
-		}
-
-		if boolResult, ok := failedResult.(bool); ok {
-			result.Failed = boolResult
-			ec.Logger.Debugf("  failed_when evaluated to: %v", boolResult)
-		} else {
-			return &EvaluationError{
-				Expression: renderedExpr,
-				Cause:      fmt.Errorf("expression evaluated to %T, expected bool", failedResult),
-			}
-		}
+		result.Failed = boolResult
 	}
 
 	return nil
