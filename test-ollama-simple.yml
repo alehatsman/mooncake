@@ -1,10 +1,11 @@
 # Simple Ollama Demo - Install and test with smallest model
 
 - name: install ollama
-  preset: ollama
-  with:
-    service: false
-    pull: [tinyllama]
+  preset:
+    name: ollama
+    with:
+      service: false
+      pull: [tinyllama]
   become: true
   register: ollama_install
 

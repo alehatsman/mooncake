@@ -2,17 +2,18 @@
 # Shows what the ollama preset would do without actually executing
 
 - name: Install Ollama with all features (DRY RUN)
-  preset: ollama
-  with:
-    state: present
-    service: true
-    method: auto
-    host: "0.0.0.0:11434"
-    models_dir: "/data/ollama"
-    pull:
-      - "llama3.1:8b"
-      - "mistral:latest"
-      - "codellama:7b"
+  preset:
+    name: ollama
+    with:
+      state: present
+      service: true
+      method: auto
+      host: "0.0.0.0:11434"
+      models_dir: "/data/ollama"
+      pull:
+        - "llama3.1:8b"
+        - "mistral:latest"
+        - "codellama:7b"
   become: true
   register: ollama_result
 

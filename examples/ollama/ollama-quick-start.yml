@@ -2,10 +2,11 @@
 # Installs ollama and tests it with the smallest model (tinyllama ~637MB)
 
 - name: install ollama with tinyllama model
-  preset: ollama
-  with:
-    service: false  # we'll start manually for demo
-    pull: [tinyllama]  # smallest model, good for testing
+  preset:
+    name: ollama
+    with:
+      service: false  # we'll start manually for demo
+      pull: [tinyllama]  # smallest model, good for testing
   become: true
 
 - name: start ollama server
