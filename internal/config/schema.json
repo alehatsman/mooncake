@@ -91,6 +91,19 @@
         "assert": {
           "$ref": "#/definitions/assert"
         },
+        "preset": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Preset name (simple string format)"
+            },
+            {
+              "$ref": "#/definitions/preset",
+              "description": "Preset invocation with parameters"
+            }
+          ],
+          "description": "Invoke a preset with optional parameters"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"
@@ -263,6 +276,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -328,6 +346,11 @@
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
                 ]
               },
               {
@@ -401,6 +424,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -466,6 +494,11 @@
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
                 ]
               },
               {
@@ -539,6 +572,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -604,6 +642,11 @@
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
                 ]
               },
               {
@@ -677,6 +720,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -742,6 +790,11 @@
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
                 ]
               },
               {
@@ -889,6 +942,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -958,6 +1016,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1022,6 +1085,11 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1082,6 +1150,90 @@
               {
                 "required": [
                   "service"
+                ]
+              },
+              {
+                "required": [
+                  "ollama"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "preset"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "ollama"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
                 ]
               },
               {
@@ -1647,6 +1799,22 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "preset": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Preset name (required)"
+        },
+        "with": {
+          "type": "object",
+          "description": "Parameters to pass to the preset",
+          "additionalProperties": true
         }
       },
       "additionalProperties": false

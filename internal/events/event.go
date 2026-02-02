@@ -79,6 +79,12 @@ const (
 	EventAssertFailed EventType = "assert.failed"
 )
 
+// Event types for presets
+const (
+	EventPresetExpanded  EventType = "preset.expanded"
+	EventPresetCompleted EventType = "preset.completed"
+)
+
 // RunStartedData contains data for run.started events
 type RunStartedData struct {
 	RootFile   string   `json:"root_file"`
@@ -280,4 +286,12 @@ type AssertionData struct {
 	Actual   string `json:"actual"`             // What was found
 	Failed   bool   `json:"failed"`             // Whether the assertion failed
 	StepID   string `json:"step_id,omitempty"`  // Step ID (added by event bus)
+}
+
+// PresetData contains data for preset events
+type PresetData struct {
+	Name       string                 `json:"name"`                  // Preset name
+	Parameters map[string]interface{} `json:"parameters,omitempty"`  // Parameters passed to preset
+	StepsCount int                    `json:"steps_count"`           // Number of steps in preset
+	Changed    bool                   `json:"changed,omitempty"`     // Whether any step changed (only in completed event)
 }

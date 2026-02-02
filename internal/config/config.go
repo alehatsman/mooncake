@@ -230,6 +230,51 @@ type AssertHTTP struct {
 	Timeout    string            `yaml:"timeout" json:"timeout,omitempty"`             // Request timeout (e.g., "30s")
 }
 
+// PresetDefinition represents a reusable preset loaded from a YAML file.
+// Presets are parameterized collections of steps that can be invoked as a single action.
+type PresetDefinition struct {
+	Name        string                     `yaml:"name" json:"name"`                                 // Preset name (required)
+	Description string                     `yaml:"description" json:"description,omitempty"`         // Human-readable description
+	Version     string                     `yaml:"version" json:"version,omitempty"`                 // Semantic version
+	Parameters  map[string]PresetParameter `yaml:"parameters" json:"parameters,omitempty"`           // Parameter definitions
+	Steps       []Step                     `yaml:"steps" json:"steps"`                               // Steps to execute
+}
+
+// PresetParameter defines a parameter that can be passed to a preset.
+type PresetParameter struct {
+	Type        string        `yaml:"type" json:"type"`                               // string|bool|array|object
+	Required    bool          `yaml:"required" json:"required,omitempty"`             // Whether parameter is required
+	Default     interface{}   `yaml:"default" json:"default,omitempty"`               // Default value if not provided
+	Enum        []interface{} `yaml:"enum" json:"enum,omitempty"`                     // Valid values (if restricted)
+	Description string        `yaml:"description" json:"description,omitempty"`       // Human-readable description
+}
+
+// PresetInvocation represents a user's invocation of a preset in their playbook.
+type PresetInvocation struct {
+	Name string                 `yaml:"name" json:"name"`                       // Preset name (required)
+	With map[string]interface{} `yaml:"with" json:"with,omitempty"`             // Parameter values
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling to support string form.
+// Supports: preset: "ollama" AND preset: { name: "ollama", with: {...} }
+func (p *PresetInvocation) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try unmarshaling as string first (simple form)
+	var str string
+	if err := unmarshal(&str); err == nil {
+		p.Name = str
+		return nil
+	}
+
+	// Try unmarshaling as structured object
+	type rawPreset PresetInvocation
+	var raw rawPreset
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	*p = PresetInvocation(raw)
+	return nil
+}
+
 // Step represents a single configuration step that can perform various actions.
 type Step struct {
 	// Identification
@@ -243,18 +288,19 @@ type Step struct {
 	Unless  *string `yaml:"unless" json:"unless,omitempty"`   // Skip if command succeeds
 
 	// Actions (exactly one required)
-	Template    *Template       `yaml:"template" json:"template,omitempty"`
-	File        *File           `yaml:"file" json:"file,omitempty"`
-	Shell       *ShellAction    `yaml:"shell" json:"shell,omitempty"`
-	Command     *CommandAction  `yaml:"command" json:"command,omitempty"`
-	Copy        *Copy           `yaml:"copy" json:"copy,omitempty"`
-	Unarchive   *Unarchive      `yaml:"unarchive" json:"unarchive,omitempty"`
-	Download    *Download       `yaml:"download" json:"download,omitempty"`
-	Service     *ServiceAction  `yaml:"service" json:"service,omitempty"`
-	Ollama      *OllamaAction   `yaml:"ollama" json:"ollama,omitempty"`
-	Assert      *Assert         `yaml:"assert" json:"assert,omitempty"`
-	Include     *string         `yaml:"include" json:"include,omitempty"`
-	IncludeVars *string         `yaml:"include_vars" json:"include_vars,omitempty"`
+	Template    *Template          `yaml:"template" json:"template,omitempty"`
+	File        *File              `yaml:"file" json:"file,omitempty"`
+	Shell       *ShellAction       `yaml:"shell" json:"shell,omitempty"`
+	Command     *CommandAction     `yaml:"command" json:"command,omitempty"`
+	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
+	Unarchive   *Unarchive         `yaml:"unarchive" json:"unarchive,omitempty"`
+	Download    *Download          `yaml:"download" json:"download,omitempty"`
+	Service     *ServiceAction     `yaml:"service" json:"service,omitempty"`
+	Ollama      *OllamaAction      `yaml:"ollama" json:"ollama,omitempty"`
+	Assert      *Assert            `yaml:"assert" json:"assert,omitempty"`
+	Preset      *PresetInvocation  `yaml:"preset" json:"preset,omitempty"`
+	Include     *string            `yaml:"include" json:"include,omitempty"`
+	IncludeVars *string            `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 
 	// Privilege escalation
@@ -342,6 +388,9 @@ func (s *Step) countActions() int {
 	if s.Assert != nil {
 		count++
 	}
+	if s.Preset != nil {
+		count++
+	}
 	if s.Include != nil {
 		count++
 	}
@@ -385,6 +434,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Assert != nil {
 		return "assert"
+	}
+	if s.Preset != nil {
+		return "preset"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -449,6 +501,7 @@ func (s *Step) Clone() *Step {
 		Service:      s.Service,
 		Ollama:       s.Ollama,
 		Assert:       s.Assert,
+		Preset:       s.Preset,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,

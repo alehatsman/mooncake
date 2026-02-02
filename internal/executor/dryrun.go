@@ -256,3 +256,12 @@ func (d *dryRunLogger) logAction(actionType, message string) {
 func (d *dryRunLogger) LogAssertCheck(assertType, expected string) {
 	d.logger.Infof("  [DRY-RUN] Would assert (%s): %s", assertType, expected)
 }
+
+// LogPresetOperation logs a preset expansion operation in dry-run mode.
+func (d *dryRunLogger) LogPresetOperation(invocation *config.PresetInvocation, paramsCount int) {
+	if paramsCount > 0 {
+		d.logger.Infof("  [DRY-RUN] Would expand preset '%s' with %d parameters", invocation.Name, paramsCount)
+	} else {
+		d.logger.Infof("  [DRY-RUN] Would expand preset '%s'", invocation.Name)
+	}
+}

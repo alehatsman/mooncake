@@ -307,6 +307,9 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	case step.Assert != nil:
 		return HandleAssert(step, ec)
 
+	case step.Preset != nil:
+		return HandlePreset(step, ec)
+
 	case step.Shell != nil:
 		return HandleShell(step, ec)
 
