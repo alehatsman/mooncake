@@ -78,11 +78,12 @@ nav:
     - Control Flow: guide/config/control-flow.md
     - Variables: guide/config/variables.md
     - Commands: guide/commands.md
-    - Presets: guide/presets.md
-    - Preset Authoring: guide/preset-authoring.md
     - Best Practices: guide/best-practices.md
     - Advanced: guide/config/advanced.md
   - Complete Reference: guide/config/reference.md
+  - Presets:
+    - Using Presets: guide/presets.md
+    - Authoring Presets: guide/preset-authoring.md
   - AI Specification: ai-specification.md
   - Development:
     - Contributing: development/contributing.md
