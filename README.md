@@ -26,6 +26,7 @@ Space fighters provisioning tool for managing dotfiles and system configuration.
 - 🔧 **Powerful** - Variables, conditionals, loops, templates, system facts
 - ⚡ **Robust** - Timeouts, retries, custom environments, failure handling
 - 📁 **Advanced File Operations** - Create, remove, link, copy, download with checksums, extract archives, ownership management
+- ⚙️ **Service Management** - Manage systemd (Linux) and launchd (macOS) services with full lifecycle control
 
 ## Quick Start
 

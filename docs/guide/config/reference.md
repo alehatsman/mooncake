@@ -19,6 +19,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `download` | object | Download | Download files from URLs |
 | `unarchive` | object | Unarchive | Extract archive files |
 | `template` | object | Template | Template rendering |
+| `service` | object | Service | Manage system services (systemd/launchd) |
 | `include` | string | Include | Include steps from another file |
 | `include_vars` | string | Variables | Load variables from file |
 | `vars` | object | Variables | Define inline variables |
@@ -31,7 +32,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `with_items` | string | All | Iterate over list |
 | `with_filetree` | string | All | Iterate over directory |
 | **Privilege** ||||
-| `become` | boolean | shell, file, template | Execute with sudo |
+| `become` | boolean | shell, file, template, service | Execute with sudo |
 | `become_user` | string | shell, file, template | User for sudo (e.g., 'postgres') |
 | **Shell Execution Control** ||||
 | `env` | object | shell only | Environment variables |
@@ -85,6 +86,52 @@ Command to execute in bash shell.
 - Template variable substitution
 - Multi-line commands with `|`
 - All shell-specific fields
+
+---
+
+### command
+
+**Type:** `object`
+**Applies to:** Command action
+**Required:** When using command action
+
+Execute command directly without shell interpolation (safer alternative to shell).
+
+**Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `argv` | array[string] | Yes | Command and arguments as array |
+| `stdin` | string | No | Input to pipe into command |
+| `capture` | boolean | No | Capture output (default: true) |
+
+```yaml
+# Basic usage
+- command:
+    argv: ["git", "clone", "https://github.com/user/repo.git"]
+
+# With stdin
+- command:
+    argv: ["python3", "-c", "import sys; print(sys.stdin.read())"]
+    stdin: "hello world"
+
+# With template variables
+- command:
+    argv:
+      - git
+      - clone
+      - "{{repo_url}}"
+      - "{{target_dir}}"
+```
+
+**Supports:**
+- Template variable substitution in argv and stdin
+- All shell-specific fields (env, cwd, timeout, retries, etc.)
+
+**Difference from shell:**
+- No shell interpretation (no pipes, redirects, wildcards)
+- Arguments passed directly to executable (safer, no injection risk)
+- Faster (no shell overhead)
 
 ---
 
@@ -289,6 +336,97 @@ Render pongo2 template file.
       port: 8080
       debug: true
 ```
+
+---
+
+### service
+
+**Type:** `object`
+**Applies to:** Service action
+**Required:** When using service action
+
+Manage system services (systemd on Linux, launchd on macOS).
+
+**Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | Yes | Service name |
+| `state` | string | No | Desired state: `started`, `stopped`, `restarted`, `reloaded` |
+| `enabled` | boolean | No | Enable service on boot |
+| `daemon_reload` | boolean | No | Run daemon-reload after unit changes (systemd only) |
+| `unit` | object | No | Unit/plist file configuration |
+| `dropin` | object | No | Drop-in configuration (systemd only) |
+
+**Unit Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `dest` | string | No | Destination path (auto-detected if not specified) |
+| `content` | string | No* | Inline unit/plist content (supports templates) |
+| `src_template` | string | No* | Path to unit/plist template file |
+| `mode` | string | No | File permissions (e.g., `"0644"`) |
+
+*Either `content` or `src_template` is required when using `unit`.
+
+**Drop-in Properties (systemd only):**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | Yes | Drop-in file name (e.g., `"10-override.conf"`) |
+| `content` | string | No* | Inline drop-in content (supports templates) |
+| `src_template` | string | No* | Path to drop-in template file |
+
+*Either `content` or `src_template` is required.
+
+```yaml
+# Linux (systemd)
+- service:
+    name: nginx
+    state: started
+    enabled: true
+  become: true
+
+# Create service with inline unit
+- service:
+    name: myapp
+    unit:
+      content: |
+        [Unit]
+        Description=My App
+        [Service]
+        ExecStart=/usr/local/bin/myapp
+        [Install]
+        WantedBy=multi-user.target
+    daemon_reload: true
+    state: started
+    enabled: true
+  become: true
+
+# macOS (launchd)
+- service:
+    name: com.example.myapp
+    unit:
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>com.example.myapp</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>/usr/local/bin/myapp</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+        </dict>
+        </plist>
+    state: started
+    enabled: true
+```
+
+📖 **See [Actions - Service](actions.md#service)** for comprehensive examples and platform-specific details.
 
 ---
 

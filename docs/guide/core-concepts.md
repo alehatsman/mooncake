@@ -48,6 +48,7 @@ Available actions:
 - **download** - Download files from URLs with checksums and retry
 - **unarchive** - Extract tar.gz, zip archives with security protections
 - **template** - Render configuration templates
+- **service** - Manage system services (systemd on Linux, launchd on macOS)
 - **include** - Load other configuration files
 - **include_vars** - Load variables from files
 - **vars** - Define variables

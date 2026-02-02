@@ -746,6 +746,244 @@ All downloads include these security features:
     force: true  # No idempotency
 ```
 
+## Service
+
+Manage system services (systemd on Linux, launchd on macOS).
+
+### Service Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `service.name` | string | Service name (required) |
+| `service.state` | string | Desired state: `started`, `stopped`, `restarted`, `reloaded` |
+| `service.enabled` | boolean | Enable service on boot (systemd: enable/disable, launchd: bootstrap/bootout) |
+| `service.daemon_reload` | boolean | Run `systemctl daemon-reload` after unit file changes (systemd only) |
+| `service.unit` | object | Unit/plist file configuration (see below) |
+| `service.dropin` | object | Drop-in configuration (systemd only, see below) |
+
+**Unit File Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `unit.dest` | string | Destination path (default: `/etc/systemd/system/<name>.service` or `~/Library/LaunchAgents/<name>.plist`) |
+| `unit.content` | string | Inline unit/plist file content (supports templates) |
+| `unit.src_template` | string | Path to unit/plist template file |
+| `unit.mode` | string | File permissions (e.g., "0644") |
+
+**Drop-in Properties (systemd only):**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `dropin.name` | string | Drop-in file name (e.g., "10-override.conf") - required |
+| `dropin.content` | string | Inline drop-in content (supports templates) |
+| `dropin.src_template` | string | Path to drop-in template file |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+### Linux (systemd) Examples
+
+#### Start and Enable Service
+
+```yaml
+- name: Start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: true
+  become: true
+```
+
+#### Create Service from Template
+
+```yaml
+- name: Deploy custom service
+  service:
+    name: myapp
+    unit:
+      src_template: templates/myapp.service.j2
+      dest: /etc/systemd/system/myapp.service
+    daemon_reload: true
+    state: started
+    enabled: true
+  become: true
+```
+
+#### Create Service with Inline Content
+
+```yaml
+- name: Create simple service
+  service:
+    name: myapp
+    unit:
+      content: |
+        [Unit]
+        Description=My Application
+        After=network.target
+
+        [Service]
+        Type=simple
+        ExecStart=/usr/local/bin/myapp
+        Restart=on-failure
+
+        [Install]
+        WantedBy=multi-user.target
+    daemon_reload: true
+    state: started
+    enabled: true
+  become: true
+```
+
+#### Add Drop-in Configuration
+
+```yaml
+- name: Override service environment
+  service:
+    name: myapp
+    dropin:
+      name: "10-env.conf"
+      content: |
+        [Service]
+        Environment="API_KEY={{ api_key }}"
+        Environment="DEBUG=true"
+    daemon_reload: true
+    state: restarted
+  become: true
+```
+
+#### Stop and Disable Service
+
+```yaml
+- name: Remove old service
+  service:
+    name: old-service
+    state: stopped
+    enabled: false
+  become: true
+```
+
+### macOS (launchd) Examples
+
+#### Create User Agent
+
+```yaml
+- name: Start user agent
+  service:
+    name: com.example.myapp
+    state: started
+    enabled: true
+    unit:
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>com.example.myapp</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>/usr/local/bin/myapp</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+        </dict>
+        </plist>
+```
+
+#### Create System Daemon (requires sudo)
+
+```yaml
+- name: Create system daemon
+  service:
+    name: com.example.daemon
+    state: started
+    enabled: true
+    unit:
+      dest: /Library/LaunchDaemons/com.example.daemon.plist
+      src_template: templates/daemon.plist.j2
+  become: true
+```
+
+#### Create Scheduled Task
+
+```yaml
+- name: Create backup task
+  service:
+    name: com.example.backup
+    enabled: true
+    unit:
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>com.example.backup</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>/usr/local/bin/backup.sh</string>
+          </array>
+          <key>StartCalendarInterval</key>
+          <dict>
+            <key>Hour</key>
+            <integer>2</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+          </dict>
+        </dict>
+        </plist>
+```
+
+### Service States
+
+| State | Linux (systemd) | macOS (launchd) |
+|-------|----------------|-----------------|
+| `started` | `systemctl start` | `launchctl bootstrap` / `kickstart` |
+| `stopped` | `systemctl stop` | `launchctl kill` |
+| `restarted` | `systemctl restart` | `launchctl kickstart -k` |
+| `reloaded` | `systemctl reload` | Same as restart |
+
+### Idempotency
+
+Service operations are idempotent:
+
+- **Unit/plist files:** Only updated if content changed
+- **Service state:** Checked before changing
+- **Enable status:** Only changed if different
+
+```yaml
+# First run: Creates unit, reloads daemon, starts service, enables on boot
+# Second run: No changes (unit unchanged, service already running and enabled)
+- name: Deploy service
+  service:
+    name: myapp
+    state: started
+    enabled: true
+    unit:
+      content: |
+        [Unit]
+        Description=My App
+        [Service]
+        ExecStart=/usr/local/bin/myapp
+        [Install]
+        WantedBy=multi-user.target
+  become: true
+```
+
+### Platform Detection
+
+Mooncake automatically detects the platform and uses the appropriate service manager:
+
+- **Linux:** Uses systemd (`systemctl`)
+- **macOS:** Uses launchd (`launchctl`)
+- **Windows:** Not yet supported
+
+### Complete Examples
+
+See detailed examples with real-world use cases:
+
+- **macOS Services:** `examples/macos-services/` - Complete launchd examples with Node.js apps, scheduled tasks, and service management patterns
+- **Service Management README:** `examples/macos-services/README.md` - Comprehensive guide to macOS service management
+
 ## Template
 
 Render templates with variables and logic.
@@ -965,6 +1203,47 @@ Item properties:
 - `name` - File name
 - `src` - Full source path
 - `is_dir` - Whether it's a directory
+
+### creates
+
+Skip step if path exists (idempotency check):
+```yaml
+- name: Extract application
+  unarchive:
+    src: /tmp/myapp.tar.gz
+    dest: /opt/myapp
+    creates: /opt/myapp/.installed
+
+# Second run skips - marker file exists
+```
+
+Works with all actions to provide idempotency without checking actual state:
+```yaml
+- name: Initialize database
+  shell: pg_restore backup.sql
+  creates: /var/lib/postgresql/.initialized
+```
+
+### unless
+
+Skip step if command succeeds (conditional idempotency):
+```yaml
+- name: Create user
+  shell: useradd myuser
+  unless: id myuser
+
+# Skips if user already exists (exit code 0)
+```
+
+The `unless` command is executed before the step. If it exits with code 0 (success), the step is skipped:
+```yaml
+- name: Install package
+  shell: apt install nginx
+  unless: dpkg -l | grep nginx
+  become: true
+
+# Skips if nginx is already installed
+```
 
 ## Shell-Specific Fields
 

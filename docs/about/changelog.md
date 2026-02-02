@@ -7,6 +7,12 @@
 - Dry-run mode for safe preview
 - System information (explain command)
 - Improved error messages
+- Service management (systemd on Linux, launchd on macOS)
+  - Full lifecycle control (start, stop, restart, reload)
+  - Enable/disable services on boot
+  - Unit/plist file management with templates
+  - Drop-in configuration files (systemd)
+  - Idempotent operations with change detection
 
 ## v0.2
 

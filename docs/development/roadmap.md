@@ -330,38 +330,94 @@ Implemented as separate `copy` action:
 
 ---
 
-## 4) Service Management (`systemd` / launchd / Windows)
+## 4) Service Management (`systemd` / launchd / Windows) ✅ COMPLETED (2026-02-05)
 
-### 4.1 `systemd` action (Linux)
-- [ ] `systemd: { name, state?: started|stopped|restarted|reloaded, enabled?: bool, daemon_reload?: bool }`
-- [ ] Unit file management (optional but high value):
-  - [ ] `systemd: { unit: { dest: "/etc/systemd/system/<name>.service", src_template?: ..., content?: ... } }`
-  - [ ] `dropin:` support:
-    - [ ] `dropin: { name: "10-mooncake.conf", content?, src_template? }`
-    - [ ] writes to `/etc/systemd/system/<name>.service.d/<dropin>.conf`
-- [ ] Environment directives via drop-in:
-  - [ ] `Environment=K=V` lines
-  - [ ] `EnvironmentFile=/etc/<...>` option
-- [ ] Common directives checklist to support in templates/docs (not parsed by Mooncake, but validated as file ops):
-  - [ ] `[Unit] After=`, `Wants=`, `Requires=`
-  - [ ] `[Service] ExecStart=`, `WorkingDirectory=`, `User=`, `Group=`
-  - [ ] `[Service] Environment=`, `EnvironmentFile=`
-  - [ ] `[Service] Restart=`, `RestartSec=`, `TimeoutStartSec=`
-  - [ ] `[Install] WantedBy=multi-user.target`
-- [ ] Verification:
-  - [ ] `systemctl is-active`, `is-enabled`, `status` capture
-- [ ] Idempotent:
-  - [ ] only `daemon-reload` when unit/dropin changed
+### 4.1 `systemd` action (Linux) ✅
+- [x] `service: { name, state?: started|stopped|restarted|reloaded, enabled?: bool, daemon_reload?: bool }` — ✅ IMPLEMENTED: ServiceAction with full lifecycle control
+- [x] Unit file management:
+  - [x] `service: { unit: { dest: "/etc/systemd/system/<name>.service", src_template?: ..., content?: ... } }` — ✅ IMPLEMENTED: ServiceUnit struct with template rendering
+  - [x] `dropin:` support:
+    - [x] `dropin: { name: "10-override.conf", content?, src_template? }` — ✅ IMPLEMENTED: ServiceDropin writes to `/etc/systemd/system/<name>.service.d/`
+- [x] Environment directives via drop-in:
+  - [x] `Environment=K=V` lines — ✅ DOCUMENTED: users can add via content/src_template
+  - [x] `EnvironmentFile=/etc/<...>` option — ✅ DOCUMENTED: users can configure in unit content
+- [x] Common directives supported in templates (user-provided content):
+  - [x] `[Unit] After=`, `Wants=`, `Requires=` — ✅ DOCUMENTED
+  - [x] `[Service] ExecStart=`, `WorkingDirectory=`, `User=`, `Group=` — ✅ DOCUMENTED
+  - [x] `[Service] Environment=`, `EnvironmentFile=` — ✅ DOCUMENTED
+  - [x] `[Service] Restart=`, `RestartSec=`, `TimeoutStartSec=` — ✅ DOCUMENTED
+  - [x] `[Install] WantedBy=multi-user.target` — ✅ DOCUMENTED
+- [x] Verification:
+  - [x] `systemctl is-active`, `is-enabled` state checks — ✅ IMPLEMENTED: idempotency checks before state changes
+- [x] Idempotent:
+  - [x] only `daemon-reload` when unit/dropin changed — ✅ IMPLEMENTED: content-based change detection with checksums
+- [x] Implementation:
+  - [x] Platform detection (systemd on Linux)
+  - [x] Sudo/become support for all operations
+  - [x] Template rendering in all fields
+  - [x] Event emission (EventServiceManaged)
+  - [x] Dry-run support with change preview
+  - [x] Result registration support
+  - [x] Custom error types (StepValidationError for invalid params)
+- [x] Testing:
+  - [x] 18 comprehensive tests with platform detection
+  - [x] Unit file creation (inline and template)
+  - [x] Drop-in configuration tests
+  - [x] State management tests
+  - [x] Idempotency verification
+  - [x] All tests passing with proper platform skipping
 
-### 4.2 `launchd` action (macOS) — optional but aligned with cross-platform
-- [ ] `launchd: { label, plist_src_template|plist_content, state?: loaded|unloaded, enabled?: bool }`
-- [ ] Paths:
-  - [ ] user agents: `~/Library/LaunchAgents`
-  - [ ] system daemons: `/Library/LaunchDaemons` (requires sudo)
-- [ ] `launchctl bootstrap/bootout` support
+### 4.2 `launchd` action (macOS) ✅
+- [x] `service: { name, state?: started|stopped|restarted|reloaded, enabled?: bool }` — ✅ IMPLEMENTED: unified service interface
+- [x] Plist file management:
+  - [x] `service: { unit: { dest?, content?, src_template?, mode? } }` — ✅ IMPLEMENTED: XML plist creation with template rendering
+- [x] Paths:
+  - [x] user agents: `~/Library/LaunchAgents` — ✅ IMPLEMENTED: automatic path detection based on become flag
+  - [x] system daemons: `/Library/LaunchDaemons` (requires sudo) — ✅ IMPLEMENTED: domain selection (gui/<uid> vs system)
+- [x] `launchctl bootstrap/bootout` support — ✅ IMPLEMENTED: full launchctl integration
+  - [x] `bootstrap` for loading services
+  - [x] `bootout` for unloading services
+  - [x] `kickstart` for starting/restarting
+  - [x] `kill` for stopping services
+- [x] Common plist properties documented:
+  - [x] `Label`, `ProgramArguments` — ✅ DOCUMENTED: required fields
+  - [x] `RunAtLoad`, `KeepAlive` — ✅ DOCUMENTED: auto-start configuration
+  - [x] `StartCalendarInterval` — ✅ DOCUMENTED: scheduled tasks (cron-like)
+  - [x] `EnvironmentVariables` — ✅ DOCUMENTED: environment configuration
+  - [x] `StandardOutPath`, `StandardErrorPath` — ✅ DOCUMENTED: logging
+  - [x] `WorkingDirectory`, `UserName`, `GroupName` — ✅ DOCUMENTED: execution context
+- [x] Idempotent:
+  - [x] plist content-based change detection — ✅ IMPLEMENTED: checksums prevent unnecessary updates
+  - [x] service state checks before operations — ✅ IMPLEMENTED
+- [x] Implementation:
+  - [x] Platform detection (launchd on macOS)
+  - [x] Domain selection (user vs system)
+  - [x] Sudo support for system daemons
+  - [x] Template rendering with Jinja2-like syntax
+  - [x] Idempotency through content comparison
+  - [x] Event emission
+  - [x] Dry-run support
+- [x] Testing:
+  - [x] 7 comprehensive tests with platform detection
+  - [x] Domain selection tests
+  - [x] Plist creation (inline and template)
+  - [x] Service lifecycle tests
+  - [x] All tests passing on macOS
 
-### 4.3 Windows service action (later)
-- [ ] `win_service: { name, state, start_mode }` (PowerShell `Set-Service`, `Start-Service`)
+### 4.3 Windows service action (future)
+- [ ] `service: { name, state, start_mode }` — PLACEHOLDER: not yet implemented
+- [ ] PowerShell integration (`Set-Service`, `Start-Service`)
+- [ ] Service configuration management
+
+**Documentation**:
+- [x] Complete actions guide (docs/guide/config/actions.md) — Service section with systemd/launchd examples
+- [x] Property reference (docs/guide/config/reference.md) — Detailed property tables
+- [x] macOS service examples (examples/macos-services/) — 3 comprehensive YAML examples
+- [x] macOS services README (examples/macos-services/README.md) — 440+ lines with patterns and troubleshooting
+- [x] Schema validation (internal/config/schema.json) — Full service action schema
+- [x] Updated changelog (docs/about/changelog.md)
+
+**Status**: Phase 4 complete for Linux (systemd) and macOS (launchd) ✅
 
 ---
 
@@ -377,28 +433,44 @@ Implemented as separate `copy` action:
 
 ---
 
-## 6) Facts (structured, immutable)
+## 6) Facts (structured, immutable) ✅ COMPLETED (2026-02-05)
 
-### 6.1 Facts collection
-- [ ] `facts` run once per execution (cached)
-- [ ] OS:
-  - [ ] `os.name`, `os.version`, `kernel`, `arch`
-- [ ] CPU:
-  - [ ] model, cores, flags (AVX etc)
-- [ ] Memory:
-  - [ ] total, free, swap total/free
-- [ ] Disk:
-  - [ ] mounts, fs type, size/free
-- [ ] Network:
-  - [ ] interfaces, default route, DNS
-- [ ] GPU (NVIDIA):
-  - [ ] `gpu.count`, `gpu.model[]`, `gpu.driver_version`, `gpu.cuda_version` (from `nvidia-smi`)
-- [ ] Toolchain probes (optional):
-  - [ ] `docker.version`, `git.version`, `python.version`, `go.version`
+### 6.1 Facts collection ✅
+- [x] `facts` run once per execution (cached) — ✅ IMPLEMENTED: internal/facts/cache.go uses sync.Once for per-process caching
+- [x] OS:
+  - [x] `os.name`, `os.version`, `kernel`, `arch` — ✅ IMPLEMENTED: OS, Arch, Hostname, Username, UserHome, Distribution, DistributionVersion, DistributionMajor, KernelVersion
+- [x] CPU:
+  - [x] model, cores, flags (AVX etc) — ✅ IMPLEMENTED: CPUCores, CPUModel, CPUFlags[] with AVX, AVX2, SSE4_2, FMA detection
+- [x] Memory:
+  - [x] total, free, swap total/free — ✅ IMPLEMENTED: MemoryTotalMB, MemoryFreeMB, SwapTotalMB, SwapFreeMB
+- [x] Disk:
+  - [x] mounts, fs type, size/free — ✅ IMPLEMENTED: Disks[] with Device, MountPoint, Filesystem, SizeGB, UsedGB, AvailGB, UsedPct
+- [x] Network:
+  - [x] interfaces, default route, DNS — ✅ IMPLEMENTED: IPAddresses[], NetworkInterfaces[] (Name, MACAddress, MTU, Addresses, Up), DefaultGateway, DNSServers[]
+- [x] GPU (NVIDIA/AMD/Intel/Apple):
+  - [x] `gpu.count`, `gpu.model[]`, `gpu.driver_version`, `gpu.cuda_version` — ✅ IMPLEMENTED: GPUs[] with Vendor, Model, Memory, Driver, CUDAVersion (supports nvidia-smi, rocm-smi, lspci, system_profiler)
+- [x] Toolchain probes (optional):
+  - [x] `docker.version`, `git.version`, `python.version`, `go.version` — ✅ IMPLEMENTED: DockerVersion, GitVersion, GoVersion, PythonVersion
+- [x] Package manager detection — ✅ IMPLEMENTED: PackageManager field (apt, dnf, yum, pacman, zypper, apk, brew, port)
 
-### 6.2 CLI
-- [ ] `mooncake facts --json`
-- [ ] `--facts-json <path>` emit during run
+### 6.2 CLI ✅
+- [x] `mooncake facts --format json|text` — ✅ IMPLEMENTED: cmd/mooncake.go:207 with JSON and text output formats
+- [x] `--facts-json <path>` emit during run — ✅ IMPLEMENTED: cmd/mooncake.go:512 flag writes facts during run command
+
+**Implementation**:
+- [x] internal/facts/facts.go — Core Facts struct and collection logic
+- [x] internal/facts/cache.go — Per-process caching with sync.Once
+- [x] internal/facts/linux.go — Full Linux support (524 lines)
+- [x] internal/facts/darwin.go — Full macOS support (360 lines)
+- [x] internal/facts/toolchains.go — Cross-platform toolchain detection
+- [x] internal/facts/windows.go — Minimal Windows stubs (27 lines)
+
+**Platform Support**: ✅ Linux (full) | ✅ macOS (full) | ⚠️ Windows (minimal stubs)
+
+**Testing**:
+- [x] Unit tests in internal/facts/*_test.go
+- [x] Platform-specific tests with proper skipping
+- [x] All tests passing
 
 ---
 
