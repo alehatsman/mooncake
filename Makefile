@@ -1,107 +1,118 @@
-build-binaries:
-	bash ./scripts/build_cli_binary.sh
-	sudo cp ./out/mooncake /usr/local/bin/mooncake
-	sudo chmod +x /usr/local/bin/mooncake
+# Mooncake Makefile
+# Simple, focused targets for development and CI
 
-build-ubuntu-binary:
-	env GOOS=linux GOARCH=amd64 go build -v -o out/mooncake ./cmd 
-	sudo cp ./out/mooncake /usr/local/bin/mooncake
-	sudo chmod +x /usr/local/bin/mooncake
+.PHONY: help
+help: ## Show this help message
+	@echo "Mooncake - Development Makefile"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Common targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
-build-darwin-binary:
-	env GOOS=darwin GOARCH=amd64 go build -v -o out/mooncake ./cmd 
+# ==============================================================================
+# Build Targets
+# ==============================================================================
 
-build-arm:
-	env GOOS=darwin GOARCH=arm64 go build -v -o out/mooncake ./cmd
+.PHONY: build
+build: ## Build the mooncake binary
+	@echo "Building mooncake..."
+	@go build -v -o out/mooncake ./cmd
 
-install-local:
-	sudo cp ./out/mooncake /usr/local/bin/mooncake
+.PHONY: install
+install: build ## Build and install mooncake to /usr/local/bin
+	@echo "Installing mooncake to /usr/local/bin..."
+	@sudo cp ./out/mooncake /usr/local/bin/mooncake
+	@sudo chmod +x /usr/local/bin/mooncake
+	@echo "✓ Installed successfully"
 
-local-arm:
-	make build-arm;
-	make install-local;
+.PHONY: clean
+clean: ## Remove build artifacts
+	@rm -rf out/
+	@rm -f coverage.out
+	@echo "✓ Cleaned"
 
-run-basic-test-in-ubuntu:
-	docker build -f basic.Dockerfile -t mooncake-basic-test . --progress=plain
+# ==============================================================================
+# Development & Testing
+# ==============================================================================
 
-run-test-in-ubuntu:
-	docker build -t mooncake-test . --progress=plain
-
-run-ubuntu:
-	./out/mooncake run -c ./mooncake-automation/main.yml -v ./mooncake-automation/global_variables.yml
-
-release-latest:
-	bash ./scripts/release_latest.sh
-
-test-essentials:
-	docker build -t mooncake-essential-test -f ./testing/essentials/Dockerfile .
-
-serve-docs:
-	pipenv run mkdocs serve
-
-# CI targets
-.PHONY: lint test scan ci
-
-lint:
-	@echo "Running golangci-lint..."
-	@golangci-lint run ./...
-
-test:
+.PHONY: test
+test: ## Run unit tests
 	@echo "Running tests..."
 	@go test -v ./...
 
-test-race:
+.PHONY: test-race
+test-race: ## Run tests with race detector
 	@echo "Running tests with race detector..."
 	@go test -race ./...
 
-test-ubuntu-docker:
-	@echo "Running tests in Ubuntu Docker container (matches CI)..."
+.PHONY: test-cover
+test-cover: ## Run tests with coverage report
+	@echo "Running tests with coverage..."
+	@go test -coverprofile=coverage.out -covermode=atomic ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "✓ Coverage report: coverage.html"
+
+# ==============================================================================
+# Docker Testing (Linux environment)
+# ==============================================================================
+
+.PHONY: test-docker
+test-docker: ## Run tests in Docker (Ubuntu, matches CI)
+	@echo "Running tests in Ubuntu Docker (matches CI environment)..."
 	@./scripts/test-ubuntu-quick.sh
 
-test-ubuntu-docker-full:
-	@echo "Running full test suite in Ubuntu Docker container..."
+.PHONY: test-docker-full
+test-docker-full: ## Run full test suite in Docker (build + test + coverage + race)
+	@echo "Running full test suite in Ubuntu Docker..."
 	@./scripts/test-ubuntu-docker.sh
 
-scan: lint
+.PHONY: test-integration
+test-integration: ## Run integration tests
+	@echo "Running integration tests..."
+	@./scripts/run-integration-tests.sh
+
+.PHONY: test-linux
+test-linux: ## Build Linux binary and run smoke tests in Docker
+	@echo "Building Linux binary and running smoke tests..."
+	@./scripts/test-docker.sh ubuntu-22.04 smoke
+
+# ==============================================================================
+# Code Quality
+# ==============================================================================
+
+.PHONY: lint
+lint: ## Run golangci-lint
+	@echo "Running golangci-lint..."
+	@golangci-lint run ./...
+
+.PHONY: fmt
+fmt: ## Format code with gofmt
+	@echo "Formatting code..."
+	@gofmt -s -w .
+	@echo "✓ Code formatted"
+
+.PHONY: scan
+scan: lint ## Run security scans (gosec + govulncheck)
 	@echo "Running gosec security scan..."
 	@gosec -exclude-generated ./...
 	@echo ""
 	@echo "Running govulncheck..."
 	@govulncheck ./...
 
-ci: lint test-race scan
+# ==============================================================================
+# CI Target (matches GitHub Actions)
+# ==============================================================================
+
+.PHONY: ci
+ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
 	@echo ""
 	@echo "✓ All CI checks passed!"
 
-# Multi-platform testing targets
-.PHONY: test-quick test-smoke test-integration test-docker-ubuntu test-docker-alpine test-docker-debian test-docker-fedora test-docker-all test-all-platforms
+# ==============================================================================
+# Release
+# ==============================================================================
 
-test-quick:
-	@echo "Running quick smoke tests on Ubuntu 22.04..."
-	@./scripts/test-docker.sh ubuntu-22.04 smoke
-
-test-smoke:
-	@echo "Running smoke tests on all distros..."
-	@./scripts/test-docker-all.sh smoke
-
-test-integration:
-	@echo "Running integration tests..."
-	@./scripts/run-integration-tests.sh
-
-test-docker-ubuntu:
-	@./scripts/test-docker.sh ubuntu-22.04
-
-test-docker-alpine:
-	@./scripts/test-docker.sh alpine-3.19
-
-test-docker-debian:
-	@./scripts/test-docker.sh debian-12
-
-test-docker-fedora:
-	@./scripts/test-docker.sh fedora-39
-
-test-docker-all:
-	@./scripts/test-docker-all.sh all
-
-test-all-platforms:
-	@./scripts/test-all-platforms.sh
+.PHONY: release
+release: ## Create a new release (runs release script)
+	@bash ./scripts/release.sh

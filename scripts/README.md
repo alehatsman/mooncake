@@ -1,80 +1,91 @@
-# Test Scripts
+# Scripts Directory
 
-This directory contains scripts for running tests in various environments.
+Essential scripts for building, testing, and releasing mooncake.
 
-## Ubuntu Docker Testing
+## Active Scripts
 
-These scripts reproduce the GitHub Actions Ubuntu CI environment locally:
+### Build & Release
 
-### Quick Test (matches CI exactly)
+#### `release.sh`
+Creates a new release tag and triggers the release workflow.
 
 ```bash
-# Run the exact command used in GitHub Actions
-make test-ubuntu-docker
+./scripts/release.sh
+# Or use: make release
+```
 
-# Or run the script directly
+### Docker Testing
+
+These scripts test mooncake in Linux Docker environments:
+
+#### `test-ubuntu-quick.sh`
+Quick unit tests in Ubuntu Docker (matches CI environment exactly).
+
+```bash
 ./scripts/test-ubuntu-quick.sh
+# Or use: make test-docker
 ```
 
-This runs: `go test -v ./...` inside a `golang:1.25-bookworm` Docker container.
-
-### Full Test Suite
+#### `test-ubuntu-docker.sh`
+Full test suite in Ubuntu Docker (build + unit tests + coverage + race detector).
 
 ```bash
-# Run all test variations (unit, coverage, race detector)
-make test-ubuntu-docker-full
-
-# Or run the script directly
 ./scripts/test-ubuntu-docker.sh
+# Or use: make test-docker-full
 ```
 
-This runs:
-- `go build -v ./...` - Build verification
-- `go test -v ./...` - Unit tests
-- `go test -coverprofile=coverage.out -covermode=atomic ./...` - Coverage
-- `go test -race -v ./...` - Race detector
-
-## Local Testing
+#### `test-docker.sh`
+Build Linux binary and run tests on specific distros.
 
 ```bash
-# Quick unit tests
-make test
-
-# With race detector
-make test-race
-
-# Full CI suite (lint + test-race + scan)
-make ci
+./scripts/test-docker.sh ubuntu-22.04 smoke
+# Or use: make test-linux
 ```
 
-## Requirements
+Supported distros:
+- ubuntu-22.04
+- ubuntu-20.04
+- alpine-3.19
+- debian-12
+- fedora-39
 
-- Docker installed and running
-- Scripts are executable (`chmod +x scripts/*.sh`)
+Test suites: smoke, integration, all
 
-## Troubleshooting
-
-### Test failures only in CI
-
-If tests pass locally but fail in GitHub Actions:
-
-1. Run `make test-ubuntu-docker` to reproduce the CI environment
-2. Check for platform-specific issues (file paths, permissions)
-3. Run with race detector: `make test-race`
-
-### Docker not pulling image
-
-The scripts use `golang:1.25-bookworm` which matches the CI. If the image doesn't exist:
+#### `run-integration-tests.sh`
+Run integration tests (end-to-end testing).
 
 ```bash
-docker pull golang:1.25-bookworm
+./scripts/run-integration-tests.sh
+# Or use: make test-integration
 ```
 
-### Permission issues
+## Utility Scripts
 
-Ensure scripts are executable:
+These are kept for reference:
 
+- `build_cli_binary.sh` - Old build script (use `make build` instead)
+- `test-docker-all.sh` - Run tests on all distros (for comprehensive testing)
+- `test-all-platforms.sh` - Multi-platform testing matrix
+- `setup-docs.sh` - Documentation setup
+- `verify-testing-setup.sh` - Verify testing infrastructure
+
+## Usage Recommendations
+
+**For local development:**
 ```bash
-chmod +x scripts/test-ubuntu-quick.sh
-chmod +x scripts/test-ubuntu-docker.sh
+make test              # Quick local tests
+make test-race         # With race detector
+```
+
+**For Linux compatibility testing:**
+```bash
+make test-docker       # Test in Linux environment (macOS/Windows users)
+make test-linux        # Build Linux binary and smoke test
+```
+
+**For comprehensive testing:**
+```bash
+make ci                # Full CI suite (lint + race + scan)
+make test-docker-full  # Full Docker test suite
+make test-integration  # Integration tests
 ```
