@@ -44,6 +44,12 @@ Follow the numbered examples in order for the best learning experience:
 |---------|-------------|---------------|
 | **[dotfiles-manager](real-world/dotfiles-manager/)** | Complete dotfiles deployment system | Templates, loops, tags, conditionals |
 
+### Platform-Specific Examples
+
+| Example | Description | Platform |
+|---------|-------------|----------|
+| **[macos-services](macos-services/)** | macOS service management with launchd | macOS |
+
 ## 🎯 Find by Feature
 
 Looking for a specific feature?
@@ -60,6 +66,7 @@ Looking for a specific feature?
 - **Sudo/become** → [09-sudo](09-sudo/)
 - **Multiple files (include)** → [10-multi-file-configs](10-multi-file-configs/)
 - **Load variables (include_vars)** → [10-multi-file-configs](10-multi-file-configs/)
+- **Service management (macOS)** → [macos-services](macos-services/)
 
 ## 💻 Running Examples
 

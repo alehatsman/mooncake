@@ -82,6 +82,9 @@
         "download": {
           "$ref": "#/definitions/download"
         },
+        "service": {
+          "$ref": "#/definitions/service"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"
@@ -239,6 +242,11 @@
               },
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -289,6 +297,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
                 ]
               },
               {
@@ -347,6 +360,11 @@
               },
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -397,6 +415,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
                 ]
               },
               {
@@ -455,6 +478,11 @@
               },
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -509,6 +537,11 @@
               },
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -559,6 +592,65 @@
               {
                 "required": [
                   "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "service"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
                 ]
               },
               {
@@ -676,6 +768,11 @@
               },
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -726,6 +823,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
                 ]
               },
               {
@@ -1011,6 +1113,81 @@
           "description": "Number of retry attempts on download failure",
           "minimum": 0,
           "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    },
+    "service": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Service name (systemd: nginx, launchd: com.example.app)"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "started",
+            "stopped",
+            "restarted",
+            "reloaded"
+          ],
+          "description": "Desired service state"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)"
+        },
+        "daemon_reload": {
+          "type": "boolean",
+          "description": "Run 'systemctl daemon-reload' after unit file changes (systemd only)"
+        },
+        "unit": {
+          "type": "object",
+          "properties": {
+            "dest": {
+              "type": "string",
+              "description": "Destination path for unit/plist file (default: /etc/systemd/system/<name>.service or ~/Library/LaunchAgents/<name>.plist)"
+            },
+            "content": {
+              "type": "string",
+              "description": "Inline unit/plist file content (supports templates)"
+            },
+            "src_template": {
+              "type": "string",
+              "description": "Path to unit/plist template file"
+            },
+            "mode": {
+              "type": "string",
+              "pattern": "^[0-7]{3,4}$",
+              "description": "File permissions (e.g., '0644')"
+            }
+          },
+          "additionalProperties": false
+        },
+        "dropin": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Drop-in file name (e.g., '10-override.conf') - systemd only"
+            },
+            "content": {
+              "type": "string",
+              "description": "Inline drop-in content (supports templates)"
+            },
+            "src_template": {
+              "type": "string",
+              "description": "Path to drop-in template file"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

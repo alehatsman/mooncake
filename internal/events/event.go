@@ -60,6 +60,11 @@ const (
 	EventVarsLoaded EventType = "variables.loaded"
 )
 
+// Event types for service management
+const (
+	EventServiceManaged EventType = "service.managed"
+)
+
 // RunStartedData contains data for run.started events
 type RunStartedData struct {
 	RootFile   string   `json:"root_file"`
@@ -231,4 +236,14 @@ type ArchiveExtractedData struct {
 	StripComponents int    `json:"strip_components,omitempty"`
 	DurationMs      int64  `json:"duration_ms"`
 	DryRun          bool   `json:"dry_run"`
+}
+
+// ServiceManagementData contains data for service.managed events
+type ServiceManagementData struct {
+	Service    string   `json:"service"`              // Service name
+	State      string   `json:"state,omitempty"`      // Desired state (started/stopped/restarted/reloaded)
+	Enabled    *bool    `json:"enabled,omitempty"`    // Enabled status
+	Changed    bool     `json:"changed"`              // Whether changes were made
+	Operations []string `json:"operations,omitempty"` // List of operations performed
+	DryRun     bool     `json:"dry_run"`
 }

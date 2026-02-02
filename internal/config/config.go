@@ -150,6 +150,33 @@ type Download struct {
 	Retries  int               `yaml:"retries" json:"retries,omitempty"`       // Number of retry attempts
 }
 
+// ServiceAction represents a service management operation in a configuration step.
+// Supports systemd (Linux), launchd (macOS), and Windows services.
+type ServiceAction struct {
+	Name         string         `yaml:"name" json:"name"`                                 // Service name (required)
+	State        string         `yaml:"state" json:"state,omitempty"`                     // started|stopped|restarted|reloaded
+	Enabled      *bool          `yaml:"enabled" json:"enabled,omitempty"`                 // Enable service on boot
+	DaemonReload bool           `yaml:"daemon_reload" json:"daemon_reload,omitempty"`     // Run daemon-reload after unit changes (systemd)
+	Unit         *ServiceUnit   `yaml:"unit" json:"unit,omitempty"`                       // Unit file management
+	Dropin       *ServiceDropin `yaml:"dropin" json:"dropin,omitempty"`                   // Drop-in configuration file
+}
+
+// ServiceUnit represents a systemd unit file or launchd plist configuration.
+type ServiceUnit struct {
+	Dest        string `yaml:"dest" json:"dest,omitempty"`                         // Unit file path (auto-detected if empty)
+	Content     string `yaml:"content" json:"content,omitempty"`                   // Inline content
+	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
+	Mode        string `yaml:"mode" json:"mode,omitempty"`                         // File permissions (default: "0644")
+}
+
+// ServiceDropin represents a systemd drop-in configuration file.
+// Drop-in files are placed in /etc/systemd/system/<service>.service.d/<name>.conf
+type ServiceDropin struct {
+	Name        string `yaml:"name" json:"name"`                                   // Drop-in file name (e.g., "10-mooncake.conf")
+	Content     string `yaml:"content" json:"content,omitempty"`                   // Inline content
+	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
+}
+
 // Step represents a single configuration step that can perform various actions.
 type Step struct {
 	// Identification
@@ -163,15 +190,16 @@ type Step struct {
 	Unless  *string `yaml:"unless" json:"unless,omitempty"`   // Skip if command succeeds
 
 	// Actions (exactly one required)
-	Template    *Template      `yaml:"template" json:"template,omitempty"`
-	File        *File          `yaml:"file" json:"file,omitempty"`
-	Shell       *ShellAction   `yaml:"shell" json:"shell,omitempty"`
-	Command     *CommandAction `yaml:"command" json:"command,omitempty"`
-	Copy        *Copy          `yaml:"copy" json:"copy,omitempty"`
-	Unarchive   *Unarchive     `yaml:"unarchive" json:"unarchive,omitempty"`
-	Download    *Download      `yaml:"download" json:"download,omitempty"`
-	Include     *string        `yaml:"include" json:"include,omitempty"`
-	IncludeVars *string        `yaml:"include_vars" json:"include_vars,omitempty"`
+	Template    *Template       `yaml:"template" json:"template,omitempty"`
+	File        *File           `yaml:"file" json:"file,omitempty"`
+	Shell       *ShellAction    `yaml:"shell" json:"shell,omitempty"`
+	Command     *CommandAction  `yaml:"command" json:"command,omitempty"`
+	Copy        *Copy           `yaml:"copy" json:"copy,omitempty"`
+	Unarchive   *Unarchive      `yaml:"unarchive" json:"unarchive,omitempty"`
+	Download    *Download       `yaml:"download" json:"download,omitempty"`
+	Service     *ServiceAction  `yaml:"service" json:"service,omitempty"`
+	Include     *string         `yaml:"include" json:"include,omitempty"`
+	IncludeVars *string         `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 
 	// Privilege escalation
@@ -250,6 +278,9 @@ func (s *Step) countActions() int {
 	if s.Download != nil {
 		count++
 	}
+	if s.Service != nil {
+		count++
+	}
 	if s.Include != nil {
 		count++
 	}
@@ -284,6 +315,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Download != nil {
 		return "download"
+	}
+	if s.Service != nil {
+		return "service"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -345,6 +379,7 @@ func (s *Step) Clone() *Step {
 		Copy:         s.Copy,
 		Unarchive:    s.Unarchive,
 		Download:     s.Download,
+		Service:      s.Service,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,

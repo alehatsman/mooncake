@@ -178,6 +178,41 @@ func (d *dryRunLogger) LogFileDownloadNoChange(_ /* url */, dest string) {
 	d.logger.Infof("  [DRY-RUN] File already downloaded with correct checksum: %s", dest)
 }
 
+// LogServiceOperation logs a dry-run message for service management.
+func (d *dryRunLogger) LogServiceOperation(serviceName string, serviceAction *config.ServiceAction, withSudo bool) {
+	operations := []string{}
+
+	if serviceAction.Unit != nil {
+		operations = append(operations, "manage unit file")
+	}
+	if serviceAction.Dropin != nil {
+		operations = append(operations, "manage drop-in")
+	}
+	if serviceAction.DaemonReload {
+		operations = append(operations, "daemon-reload")
+	}
+	if serviceAction.State != "" {
+		operations = append(operations, fmt.Sprintf("set state to %s", serviceAction.State))
+	}
+	if serviceAction.Enabled != nil {
+		if *serviceAction.Enabled {
+			operations = append(operations, "enable")
+		} else {
+			operations = append(operations, "disable")
+		}
+	}
+
+	if len(operations) > 0 {
+		d.logger.Infof("  [DRY-RUN] Would manage service %s: %s", serviceName, strings.Join(operations, ", "))
+	} else {
+		d.logger.Infof("  [DRY-RUN] Would check service: %s", serviceName)
+	}
+
+	if withSudo {
+		d.logger.Infof("  [DRY-RUN] With sudo privileges")
+	}
+}
+
 // logAction formats a generic action message for dry-run mode.
 func (d *dryRunLogger) logAction(actionType, message string) {
 	d.logger.Infof("  [DRY-RUN] Would %s: %s", actionType, message)

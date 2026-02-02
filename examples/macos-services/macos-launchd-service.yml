@@ -1,0 +1,190 @@
+version: "1.0"
+
+vars:
+  app_name: myapp
+  app_path: /usr/local/bin/myapp
+  log_dir: /var/log/myapp
+  port: 8080
+
+steps:
+  # Example 1: Simple user agent with inline plist
+  - name: Create user agent for web server
+    service:
+      name: com.example.webserver
+      state: started
+      enabled: true
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.webserver</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/local/bin/python3</string>
+              <string>-m</string>
+              <string>http.server</string>
+              <string>8000</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>KeepAlive</key>
+            <true/>
+            <key>StandardOutPath</key>
+            <string>/tmp/webserver.log</string>
+            <key>StandardErrorPath</key>
+            <string>/tmp/webserver.err</string>
+          </dict>
+          </plist>
+
+  # Example 2: User agent with template and variables
+  - name: Create user agent from template
+    service:
+      name: com.example.{{ app_name }}
+      state: started
+      enabled: true
+      unit:
+        src_template: templates/user-agent.plist.j2
+
+  # Example 3: System daemon (requires sudo)
+  - name: Create system daemon
+    service:
+      name: com.example.daemon
+      state: started
+      enabled: true
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.daemon</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>{{ app_path }}</string>
+              <string>--daemon</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>KeepAlive</key>
+            <dict>
+              <key>SuccessfulExit</key>
+              <false/>
+            </dict>
+            <key>StandardOutPath</key>
+            <string>{{ log_dir }}/stdout.log</string>
+            <key>StandardErrorPath</key>
+            <string>{{ log_dir }}/stderr.log</string>
+            <key>WorkingDirectory</key>
+            <string>/var/lib/myapp</string>
+            <key>EnvironmentVariables</key>
+            <dict>
+              <key>PORT</key>
+              <string>{{ port }}</string>
+              <key>ENV</key>
+              <string>production</string>
+            </dict>
+          </dict>
+          </plist>
+    become: true
+
+  # Example 4: Update service configuration (will reload if changed)
+  - name: Update service environment
+    service:
+      name: com.example.{{ app_name }}
+      state: restarted
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.{{ app_name }}</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>{{ app_path }}</string>
+            </array>
+            <key>EnvironmentVariables</key>
+            <dict>
+              <key>PORT</key>
+              <string>{{ port }}</string>
+              <key>LOG_LEVEL</key>
+              <string>debug</string>
+            </dict>
+          </dict>
+          </plist>
+
+  # Example 5: Stop and unload a service
+  - name: Stop and disable service
+    service:
+      name: com.example.old-service
+      state: stopped
+      enabled: false
+
+  # Example 6: Just restart a service (without changing plist)
+  - name: Restart service
+    service:
+      name: com.example.{{ app_name }}
+      state: restarted
+
+  # Example 7: Scheduled task (run every hour)
+  - name: Create scheduled backup task
+    service:
+      name: com.example.backup
+      enabled: true
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.backup</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/local/bin/backup.sh</string>
+            </array>
+            <key>StartCalendarInterval</key>
+            <dict>
+              <key>Minute</key>
+              <integer>0</integer>
+            </dict>
+          </dict>
+          </plist>
+
+  # Example 8: Service with resource limits
+  - name: Create resource-limited service
+    service:
+      name: com.example.limited
+      state: started
+      enabled: true
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.limited</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/local/bin/app</string>
+            </array>
+            <key>SoftResourceLimits</key>
+            <dict>
+              <key>NumberOfFiles</key>
+              <integer>1024</integer>
+            </dict>
+            <key>HardResourceLimits</key>
+            <dict>
+              <key>NumberOfFiles</key>
+              <integer>2048</integer>
+            </dict>
+            <key>Nice</key>
+            <integer>10</integer>
+          </dict>
+          </plist>

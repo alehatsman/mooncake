@@ -1,0 +1,167 @@
+version: "1.0"
+
+# Example: Managing existing launchd services
+# This shows how to start, stop, restart, and update services
+
+vars:
+  service_name: com.example.myapp
+
+steps:
+  # ============================================================================
+  # Starting Services
+  # ============================================================================
+
+  # Start a service (bootstrap if not loaded, kickstart if loaded)
+  - name: Start service
+    service:
+      name: "{{ service_name }}"
+      state: started
+
+  # Start and enable (load) a service
+  - name: Start and enable service
+    service:
+      name: "{{ service_name }}"
+      state: started
+      enabled: true
+
+  # ============================================================================
+  # Stopping Services
+  # ============================================================================
+
+  # Stop a service (send SIGTERM)
+  - name: Stop service
+    service:
+      name: "{{ service_name }}"
+      state: stopped
+
+  # Stop and disable (unload) a service
+  - name: Stop and disable service
+    service:
+      name: "{{ service_name }}"
+      state: stopped
+      enabled: false
+
+  # ============================================================================
+  # Restarting Services
+  # ============================================================================
+
+  # Restart a service (kill and restart)
+  - name: Restart service
+    service:
+      name: "{{ service_name }}"
+      state: restarted
+
+  # Reload service configuration (treated as restart on macOS)
+  - name: Reload service
+    service:
+      name: "{{ service_name }}"
+      state: reloaded
+
+  # ============================================================================
+  # Updating Service Configuration
+  # ============================================================================
+
+  # Update plist and restart (only restarts if plist changed)
+  - name: Update service configuration
+    service:
+      name: "{{ service_name }}"
+      state: restarted
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>{{ service_name }}</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/local/bin/myapp</string>
+              <string>--new-config</string>
+            </array>
+            <key>EnvironmentVariables</key>
+            <dict>
+              <key>NEW_VAR</key>
+              <string>new_value</string>
+            </dict>
+          </dict>
+          </plist>
+
+  # Update from template with variables
+  - name: Update service from template
+    service:
+      name: "{{ service_name }}"
+      state: restarted
+      unit:
+        src_template: templates/updated-config.plist.j2
+
+  # ============================================================================
+  # System Daemons (require sudo)
+  # ============================================================================
+
+  # Manage system daemon
+  - name: Manage system daemon
+    service:
+      name: com.example.system-daemon
+      state: started
+      enabled: true
+      unit:
+        dest: /Library/LaunchDaemons/com.example.system-daemon.plist
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.system-daemon</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/local/sbin/daemon</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+          </dict>
+          </plist>
+    become: true
+
+  # ============================================================================
+  # Checking Service Status
+  # ============================================================================
+
+  # Check if service is running
+  - name: Check service status
+    shell:
+      cmd: launchctl print gui/$(id -u)/{{ service_name }}
+    register: service_status
+
+  # List all loaded services
+  - name: List loaded services
+    shell:
+      cmd: launchctl list
+    register: loaded_services
+
+  # ============================================================================
+  # Dry-Run Mode
+  # ============================================================================
+
+  # Preview changes without applying them
+  # Run with: mooncake run --dry-run service-management.yml
+
+  - name: Preview service update
+    service:
+      name: "{{ service_name }}"
+      state: restarted
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>{{ service_name }}</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/local/bin/myapp</string>
+            </array>
+          </dict>
+          </plist>

@@ -298,6 +298,9 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	case step.Download != nil:
 		return HandleDownload(step, ec)
 
+	case step.Service != nil:
+		return HandleService(step, ec)
+
 	case step.Shell != nil:
 		return HandleShell(step, ec)
 
