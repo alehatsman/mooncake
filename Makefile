@@ -54,6 +54,14 @@ test-race:
 	@echo "Running tests with race detector..."
 	@go test -race ./...
 
+test-ubuntu-docker:
+	@echo "Running tests in Ubuntu Docker container (matches CI)..."
+	@./scripts/test-ubuntu-quick.sh
+
+test-ubuntu-docker-full:
+	@echo "Running full test suite in Ubuntu Docker container..."
+	@./scripts/test-ubuntu-docker.sh
+
 scan: lint
 	@echo "Running gosec security scan..."
 	@gosec -exclude-generated ./...

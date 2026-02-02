@@ -56,7 +56,7 @@ func newTestExecutionContext(t *testing.T) *ExecutionContext {
 		Template:       renderer,
 		Evaluator:      expression.NewGovaluateEvaluator(),
 		PathUtil:       pathutil.NewPathExpander(renderer),
-		EventPublisher: events.NewPublisher(),
+		EventPublisher: events.NewSyncPublisher(), // Synchronous publisher avoids async race conditions in tests
 		DryRun:         false,
 	}
 }

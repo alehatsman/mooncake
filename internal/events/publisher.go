@@ -9,6 +9,7 @@ type Publisher interface {
 	Publish(event Event)
 	Subscribe(subscriber Subscriber) int
 	Unsubscribe(id int)
+	Flush() // Wait for all pending events to be processed
 	Close()
 }
 
@@ -94,6 +95,12 @@ func (p *ChannelPublisher) Unsubscribe(id int) {
 	}
 }
 
+// Flush is a no-op for ChannelPublisher (async by design).
+// Use SyncPublisher for tests that need synchronous event delivery.
+func (p *ChannelPublisher) Flush() {
+	// No-op - async publisher doesn't support flushing
+}
+
 // Close closes the publisher and all subscriber channels
 func (p *ChannelPublisher) Close() {
 	p.mu.Lock()
@@ -112,4 +119,76 @@ func (p *ChannelPublisher) Close() {
 
 	// Wait for all forwarding goroutines to finish
 	p.wg.Wait()
+}
+
+// SyncPublisher implements Publisher with synchronous event delivery.
+// Events are delivered immediately via direct OnEvent() calls.
+// This is useful for tests to avoid race conditions with async delivery.
+type SyncPublisher struct {
+	subscribers map[int]Subscriber
+	nextID      int
+	mu          sync.RWMutex
+	closed      bool
+}
+
+// NewSyncPublisher creates a new synchronous event publisher for testing.
+func NewSyncPublisher() Publisher {
+	return &SyncPublisher{
+		subscribers: make(map[int]Subscriber),
+		nextID:      1,
+	}
+}
+
+// Publish sends an event to all subscribers synchronously.
+func (p *SyncPublisher) Publish(event Event) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.closed {
+		return
+	}
+
+	for _, sub := range p.subscribers {
+		sub.OnEvent(event)
+	}
+}
+
+// Subscribe adds a new subscriber and returns its ID.
+func (p *SyncPublisher) Subscribe(subscriber Subscriber) int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return -1
+	}
+
+	id := p.nextID
+	p.nextID++
+	p.subscribers[id] = subscriber
+	return id
+}
+
+// Unsubscribe removes a subscriber.
+func (p *SyncPublisher) Unsubscribe(id int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	delete(p.subscribers, id)
+}
+
+// Flush is a no-op for SyncPublisher (already synchronous).
+func (p *SyncPublisher) Flush() {
+	// No-op - sync publisher delivers events immediately
+}
+
+// Close closes the publisher.
+func (p *SyncPublisher) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return
+	}
+	p.closed = true
+	p.subscribers = make(map[int]Subscriber)
 }
