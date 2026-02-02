@@ -85,9 +85,6 @@
         "service": {
           "$ref": "#/definitions/service"
         },
-        "ollama": {
-          "$ref": "#/definitions/ollama"
-        },
         "assert": {
           "$ref": "#/definitions/assert"
         },
@@ -266,11 +263,6 @@
               },
               {
                 "required": [
-                  "ollama"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -336,11 +328,6 @@
               {
                 "required": [
                   "service"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -414,11 +401,6 @@
               },
               {
                 "required": [
-                  "ollama"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -484,11 +466,6 @@
               {
                 "required": [
                   "service"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -562,11 +539,6 @@
               },
               {
                 "required": [
-                  "ollama"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -632,11 +604,6 @@
               {
                 "required": [
                   "service"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -710,11 +677,6 @@
               },
               {
                 "required": [
-                  "ollama"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -780,11 +742,6 @@
               {
                 "required": [
                   "download"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -863,11 +820,6 @@
               },
               {
                 "required": [
-                  "ollama"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -928,11 +880,6 @@
               {
                 "required": [
                   "service"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -1006,11 +953,6 @@
               },
               {
                 "required": [
-                  "ollama"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -1027,80 +969,6 @@
               {
                 "required": [
                   "include_vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "ollama"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
                 ]
               }
             ]
@@ -1150,11 +1018,6 @@
               {
                 "required": [
                   "service"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -1224,11 +1087,6 @@
               {
                 "required": [
                   "service"
-                ]
-              },
-              {
-                "required": [
-                  "ollama"
                 ]
               },
               {
@@ -1603,91 +1461,63 @@
       },
       "additionalProperties": false
     },
-    "ollama": {
-      "type": "object",
-      "required": [
-        "state"
-      ],
-      "properties": {
-        "state": {
-          "type": "string",
-          "enum": [
-            "present",
-            "absent"
-          ],
-          "description": "Installation state: present (install), absent (uninstall)"
-        },
-        "service": {
-          "type": "boolean",
-          "description": "Enable and start systemd/launchd service"
-        },
-        "host": {
-          "type": "string",
-          "pattern": "^[a-zA-Z0-9.-]+:[0-9]+$",
-          "description": "Ollama server bind address (e.g., 'localhost:11434', '0.0.0.0:11434')"
-        },
-        "models_dir": {
-          "type": "string",
-          "description": "Custom models directory path"
-        },
-        "pull": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z0-9._-]+(:[a-z0-9._-]+)?$"
-          },
-          "description": "List of models to pull (e.g., ['llama3.1:8b', 'mistral'])"
-        },
-        "force": {
-          "type": "boolean",
-          "description": "Force operations: re-pull models, remove models on uninstall"
-        },
-        "method": {
-          "type": "string",
-          "enum": [
-            "auto",
-            "script",
-            "package"
-          ],
-          "description": "Installation method: auto (prefer pkg manager), script (official installer), package (pkg manager only)"
-        },
-        "env": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Environment variables for Ollama service (OLLAMA_DEBUG, etc.)"
-        }
-      },
-      "additionalProperties": false
-    },
     "assert": {
       "type": "object",
       "oneOf": [
         {
-          "required": ["command"],
+          "required": [
+            "command"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["file"]},
-              {"required": ["http"]}
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "http"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["file"],
+          "required": [
+            "file"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["command"]},
-              {"required": ["http"]}
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "http"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["http"],
+          "required": [
+            "http"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["command"]},
-              {"required": ["file"]}
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
             ]
           }
         }
@@ -1695,7 +1525,9 @@
       "properties": {
         "command": {
           "type": "object",
-          "required": ["cmd"],
+          "required": [
+            "cmd"
+          ],
           "properties": {
             "cmd": {
               "type": "string",
@@ -1712,7 +1544,9 @@
         },
         "file": {
           "type": "object",
-          "required": ["path"],
+          "required": [
+            "path"
+          ],
           "properties": {
             "path": {
               "type": "string",
@@ -1748,7 +1582,9 @@
         },
         "http": {
           "type": "object",
-          "required": ["url"],
+          "required": [
+            "url"
+          ],
           "properties": {
             "url": {
               "type": "string",
@@ -1757,7 +1593,15 @@
             },
             "method": {
               "type": "string",
-              "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "HEAD",
+                "OPTIONS"
+              ],
               "description": "HTTP method (default: GET)"
             },
             "status": {
@@ -1794,7 +1638,7 @@
             },
             "timeout": {
               "type": "string",
-              "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
+              "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
               "description": "Request timeout (e.g., '30s', '5m')"
             }
           },
@@ -1805,7 +1649,9 @@
     },
     "preset": {
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
         "name": {
           "type": "string",

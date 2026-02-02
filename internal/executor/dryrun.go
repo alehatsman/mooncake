@@ -213,40 +213,6 @@ func (d *dryRunLogger) LogServiceOperation(serviceName string, serviceAction *co
 	}
 }
 
-// LogOllamaOperation logs what an Ollama operation would do in dry-run mode.
-func (d *dryRunLogger) LogOllamaOperation(action *config.OllamaAction, withSudo bool) {
-	d.logger.Infof("  [DRY-RUN] Ollama operation:")
-	d.logger.Infof("    State:      %s", action.State)
-
-	if action.Service != nil && *action.Service {
-		d.logger.Infof("    Service:    enabled and started")
-	}
-
-	if action.Host != "" {
-		d.logger.Infof("    Host:       %s", action.Host)
-	}
-
-	if action.ModelsDir != "" {
-		d.logger.Infof("    ModelsDir:  %s", action.ModelsDir)
-	}
-
-	if len(action.Pull) > 0 {
-		d.logger.Infof("    Pull:       %s", strings.Join(action.Pull, ", "))
-	}
-
-	if action.Force {
-		d.logger.Infof("    Force:      true")
-	}
-
-	if action.Method != "" {
-		d.logger.Infof("    Method:     %s", action.Method)
-	}
-
-	if withSudo {
-		d.logger.Infof("    Become:     true")
-	}
-}
-
 // logAction formats a generic action message for dry-run mode.
 func (d *dryRunLogger) logAction(actionType, message string) {
 	d.logger.Infof("  [DRY-RUN] Would %s: %s", actionType, message)
