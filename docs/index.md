@@ -1,12 +1,6 @@
 # Mooncake
 
-Space fighters provisioning tool, **Chookity!**
-
-[![CI](https://github.com/alehatsman/mooncake/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/ci.yml)
-[![Security](https://github.com/alehatsman/mooncake/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/security.yml)
-[![codecov](https://codecov.io/gh/alehatsman/mooncake/branch/master/graph/badge.svg)](https://codecov.io/gh/alehatsman/mooncake)
-
-Mooncake is a simple, powerful provisioning tool for system configuration. Write YAML configs to manage dotfiles, configure systems, and automate your development environment setup.
+Lightweight automation tool for system configuration and dotfiles management. **Chookity!**
 
 <div class="grid cards" markdown>
 
@@ -46,26 +40,20 @@ Mooncake is a simple, powerful provisioning tool for system configuration. Write
 
     Animated progress tracking with real-time status updates
 
--   :material-chart-timeline:{ .lg .middle } **Full Observability**
-
-    ---
-
-    Event streaming, artifacts, and JSON output for monitoring and auditing
-
 </div>
 
 ---
 
 ## What is Mooncake?
 
-Mooncake is a **lightweight configuration management tool** designed for:
+Mooncake automates system setup and configuration with simple YAML files. Perfect for:
 
-- **Personal Use:** Manage dotfiles and development environments
-- **System Setup:** Automate new machine configuration
-- **Cross-Platform:** Write once, run on Linux, macOS, or Windows
-- **Simplicity:** YAML configs without complex abstractions
+- **Personal Use** - Manage dotfiles and development environments across machines
+- **System Setup** - Automate new machine configuration and provisioning
+- **Cross-Platform** - Write once, run on Linux, macOS, or Windows
+- **Simplicity** - YAML configs without complex abstractions or steep learning curves
 
-**Perfect for:** Developers managing personal configs, dotfiles enthusiasts, and anyone wanting simple system automation without the complexity of enterprise tools.
+**Not another enterprise tool.** Mooncake is designed for developers managing personal configs, dotfiles enthusiasts, and anyone wanting simple system automation without the complexity of enterprise configuration management systems.
 
 ---
 
@@ -80,15 +68,15 @@ Verify installation:
 mooncake --help
 ```
 
+→ **[Detailed Installation Guide](getting-started/installation.md)** for other platforms and methods
+
 ---
 
-## Quick Start
+## 30 Second Quick Start
 
-Get started in 30 seconds:
+Create `config.yml`:
 
-```bash
-# Create a simple configuration
-cat > config.yml <<EOF
+```yaml
 - name: Hello Mooncake
   shell: echo "Chookity! Running on {{os}}/{{arch}}"
 
@@ -97,346 +85,589 @@ cat > config.yml <<EOF
     path: /tmp/mooncake-test.txt
     state: file
     content: "Hello from Mooncake!"
-EOF
-
-# Run it
-mooncake run --config config.yml
-
-# Preview without executing
-mooncake run --config config.yml --dry-run
 ```
 
-**Next:** Explore [Examples](examples/index.md) for real-world configurations or continue reading below.
-
----
-
-## Core Concepts
-
-Mooncake configurations are YAML files containing an array of **steps**. Each step performs one **action**:
-
-```yaml
-- name: Step description
-  shell: echo "This is a shell action"
-
-- name: Another step
-  file:
-    path: /tmp/example
-    state: directory
-```
-
-**Key concepts:**
-
-- **Steps** - Sequential actions to execute
-- **Actions** - What to do: `shell`, `file`, `template`, `include`, `vars`
-- **Variables** - Dynamic values using `{{variable}}` syntax
-- **Conditionals** - Execute steps based on conditions with `when`
-- **System Facts** - Automatic OS, hardware, and network detection
-- **Tags** - Filter execution by workflow with `--tags`
-
----
-
-## Commands
-
-### mooncake plan
-
-Generate and inspect a deterministic execution plan.
-
-**Syntax:**
-```bash
-mooncake plan --config <file> [options]
-```
-
-**What it does:**
-- Expands all loops and includes into individual steps
-- Shows exactly what will be executed before running
-- Tracks origin (file:line:col) for every step
-- Exports plans as JSON/YAML for CI/CD integration
-
-**Common options:**
-
-| Flag | Description |
-|------|-------------|
-| `--config, -c` | Path to configuration file (required) |
-| `--format, -f` | Output format: text, json, yaml (default: text) |
-| `--show-origins` | Display file:line:col for each step |
-| `--output, -o` | Save plan to file |
-| `--tags, -t` | Filter steps by tags |
-
-**Examples:**
+Run it:
 
 ```bash
-# View plan as text
-mooncake plan --config config.yml
-
-# View with origins
-mooncake plan --config config.yml --show-origins
-
-# Export as JSON
-mooncake plan --config config.yml --format json --output plan.json
-
-# Filter by tags
-mooncake plan --config config.yml --tags dev
-```
-
-**Use cases:**
-- 🔍 **Debugging** - See how loops and includes expand
-- ✅ **Verification** - Review changes before execution
-- 📊 **CI/CD** - Export plans for approval workflows
-- 🔬 **Analysis** - Understand configuration behavior
-
-### mooncake run
-
-Run a configuration file.
-
-**Syntax:**
-```bash
-mooncake run --config <file> [options]
-```
-
-**Common options:**
-
-| Flag | Description |
-|------|-------------|
-| `--config, -c` | Path to configuration file (required, unless using --from-plan) |
-| `--from-plan` | Execute from a saved plan file (JSON/YAML) |
-| `--vars, -v` | Path to variables file |
-| `--tags, -t` | Filter steps by tags (comma-separated) |
-| `--dry-run` | Preview without executing |
-| `--sudo-pass, -s` | Sudo password for `become: true` steps |
-| `--raw, -r` | Disable animated TUI |
-| `--output-format` | Output format: text, json (default: text) |
-| `--artifacts-dir` | Directory to save run artifacts |
-| `--capture-full-output` | Capture full stdout/stderr to artifact files |
-| `--log-level, -l` | Log level: debug, info, error (default: info) |
-
-**Examples:**
-
-```bash
-# Basic execution
-mooncake run --config config.yml
-
-# With variables file
-mooncake run --config config.yml --vars prod.yml
-
 # Preview changes (safe!)
 mooncake run --config config.yml --dry-run
 
-# Filter by tags
-mooncake run --config config.yml --tags dev,test
-
-# With sudo for system operations
-mooncake run --config config.yml --sudo-pass <password>
-
-# Debug mode
-mooncake run --config config.yml --log-level debug
-
-# Execute from saved plan
-mooncake plan --config config.yml --format json --output plan.json
-mooncake run --from-plan plan.json
-
-# Enable artifacts for auditing
-mooncake run --config config.yml --artifacts-dir .mooncake
-
-# JSON output for integration
-mooncake run --config config.yml --raw --output-format json
+# Run it for real
+mooncake run --config config.yml
 ```
 
-**Features:**
+**What just happened?**
 
-- 🎨 **Animated TUI** - Real-time progress with animated character (use `--raw` to disable)
-- 🔍 **Dry-run mode** - Preview all changes before applying
-- 🏷️ **Tag filtering** - Run specific workflows
-- 🔐 **Sudo support** - Execute privileged operations
-- ✅ **Validation** - YAML syntax and step structure checking
+1. Mooncake detected your OS automatically (`{{os}}`, `{{arch}}`)
+2. Ran a shell command using those variables
+3. Created a file with specific content
 
-### mooncake facts
-
-Display system facts available as template variables.
-
-**Syntax:**
+Check the result:
 ```bash
-mooncake facts [--format text|json]
+cat /tmp/mooncake-test.txt
+# Output: Hello from Mooncake!
 ```
 
-**Options:**
-- `--format, -f`: Output format (text or json, default: text)
-
-**What it shows:**
-
-- **System**: OS, distribution, kernel version, architecture, hostname
-- **CPU**: Model, cores, feature flags (AVX, SSE, etc.)
-- **Memory**: Total, free, swap (total/free)
-- **GPUs**: Vendor, model, memory, driver, CUDA version
-- **Storage**: Disks with mount points, filesystem, size, used, available
-- **Network**: Interfaces, gateway, DNS, IP addresses
-- **Software**: Package manager, Python, Docker, Git, Go versions
-
-**Example output:**
-```
-OS:         ubuntu 22.04
-Kernel:     6.5.0-14-generic
-CPU:        Intel Core i7-10700K (8 cores)
-Memory:     16384 MB total, 8192 MB free
-Docker:     24.0.7
-Git:        2.43.0
-```
-
-**Use cases:**
-
-- See what system facts are available as variables
-- Troubleshoot hardware detection
-- Check system compatibility before running configurations
+→ **[Try More Examples](examples/)** - Step-by-step learning path from beginner to advanced
 
 ---
 
-## Configuration Basics
+## What You Can Do
 
-### Shell Commands
+Quick reference of available actions with examples:
 
-Execute shell commands with variable templating.
+### 🐚 Run Commands
+
+Execute shell commands with variables and conditionals.
 
 ```yaml
-- name: Simple command
-  shell: echo "Hello"
-
-- name: Multi-line commands
-  shell: |
-    echo "Starting setup"
-    mkdir -p ~/.local/bin
-    echo "Setup complete"
-
-- name: With variables
-  shell: echo "Running on {{os}}/{{arch}}"
+- name: OS-specific package install
+  shell: "{{package_manager}} install neovim"
+  become: true
+  when: os == "linux"
 ```
 
-**Features:**
+**Features**: Multi-line scripts, timeouts, retries, environment variables, working directory
 
-- Template variables in commands
-- Multi-line scripts
-- Exit code capture with `register`
+[Learn more: Shell Action →](guide/config/actions.md#shell)
 
-[→ See example](examples/01-hello-world.md)
+---
 
-### File Operations
+### 📁 Manage Files & Directories
 
-Create files and directories with permissions.
+Create files, directories, links with permissions and ownership.
 
 ```yaml
-# Create directory
 - name: Create config directory
   file:
     path: ~/.config/myapp
     state: directory
     mode: "0755"
 
-# Create file with content
 - name: Create config file
   file:
-    path: ~/.config/myapp/config.txt
+    path: ~/.config/myapp/settings.yml
     state: file
     content: |
       app_name: myapp
       version: 1.0
     mode: "0644"
-
-# Create executable script
-- name: Create script
-  file:
-    path: ~/.local/bin/deploy.sh
-    state: file
-    content: "#!/bin/bash\necho 'Deploying...'"
-    mode: "0755"
 ```
 
-**States:**
+**Features**: File/directory creation, symlinks, hard links, permissions, ownership, removal
 
-- `directory` - Create directory
-- `file` - Create file (optionally with content)
+[Learn more: File Action →](guide/config/actions.md#file)
 
-**Permissions:**
+---
 
-- `"0755"` - rwxr-xr-x (directories, executables)
-- `"0644"` - rw-r--r-- (regular files)
-- `"0600"` - rw------- (private files)
+### 📝 Render Templates
 
-[→ See example](examples/03-files-and-directories.md)
-
-### Template Rendering
-
-Render configuration files from templates using pongo2 syntax.
+Render configuration files from templates with variables and logic.
 
 ```yaml
 - name: Render nginx config
   template:
-    src: ./templates/nginx.conf.j2
-    dest: /etc/nginx/sites-available/myapp
+    src: ./nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
     mode: "0644"
     vars:
-      server_name: example.com
       port: 8080
+      ssl_enabled: true
 ```
 
-**Template syntax (pongo2):**
+**Template syntax**: Variables `{{ var }}`, conditionals `{% if %}`, loops `{% for %}`, filters `{{ path | expanduser }}`
 
-```jinja
-# Variables
-server_name {{ server_name }};
-listen {{ port }};
-
-# Conditionals
-{% if enable_ssl %}
-ssl_certificate {{ ssl_cert }};
-{% endif %}
-
-# Loops
-{% for upstream in upstreams %}
-upstream {{ upstream.name }} {
-    server {{ upstream.host }}:{{ upstream.port }};
-}
-{% endfor %}
-
-# Filters
-{{ path | expanduser }}  # Expands ~ to home directory
-{{ text | upper }}       # Uppercase
-```
-
-[→ See example](examples/05-templates.md)
-
-### Include Files
-
-Load and execute steps from other configuration files.
-
-```yaml
-- name: Include common setup
-  include: ./tasks/common.yml
-
-- name: Load OS-specific config
-  include: ./tasks/{{os}}.yml
-```
-
-**Path resolution:**
-
-- Paths are relative to the **current file**, not working directory
-- Supports variables in paths
-- Can be nested (includes can include other files)
-
-**Include variables:**
-
-```yaml
-- name: Load environment variables
-  include_vars: ./vars/{{environment}}.yml
-```
-
-[→ See example](examples/10-multi-file-configs.md)
+[Learn more: Template Action →](guide/config/actions.md#template)
 
 ---
 
-## Conditionals
+### 📦 Copy Files
 
-Execute steps based on conditions using `when`.
+Copy files with checksum verification and backup support.
 
 ```yaml
-# OS-specific steps
+- name: Deploy application config
+  copy:
+    src: ./configs/app.yml
+    dest: /etc/app/config.yml
+    mode: "0644"
+    owner: app
+    group: app
+    backup: true
+```
+
+**Features**: Checksum verification, automatic backups, ownership management
+
+[Learn more: Copy Action →](guide/config/actions.md#copy)
+
+---
+
+### ⬇️ Download Files
+
+Download files from URLs with checksums and retry logic.
+
+```yaml
+- name: Download Go tarball
+  download:
+    url: "https://go.dev/dl/go1.21.5.linux-amd64.tar.gz"
+    dest: "/tmp/go.tar.gz"
+    checksum: "e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
+    timeout: "10m"
+    retries: 3
+```
+
+**Features**: Checksum verification, retry logic, custom headers, idempotent downloads
+
+[Learn more: Download Action →](guide/config/actions.md#download)
+
+---
+
+### 📂 Extract Archives
+
+Extract tar, tar.gz, and zip archives with security protections.
+
+```yaml
+- name: Extract Node.js
+  unarchive:
+    src: /tmp/node-v20.tar.gz
+    dest: /opt/node
+    strip_components: 1
+    creates: /opt/node/bin/node
+```
+
+**Features**: Automatic format detection, path stripping, security validation, idempotency
+
+[Learn more: Unarchive Action →](guide/config/actions.md#unarchive)
+
+---
+
+### ⚙️ Manage Services
+
+Manage system services (systemd on Linux, launchd on macOS).
+
+```yaml
+- name: Configure and start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: true
+  become: true
+```
+
+**Features**: Start/stop/restart services, enable on boot, create unit files, drop-in configs
+
+[Learn more: Service Action →](guide/config/actions.md#service)
+
+---
+
+### ✓ Verify State
+
+Assert command results, file properties, and HTTP responses.
+
+```yaml
+- name: Verify Docker is installed
+  assert:
+    command:
+      cmd: docker --version
+      exit_code: 0
+
+- name: Verify API is healthy
+  assert:
+    http:
+      url: https://api.example.com/health
+      status: 200
+```
+
+**Features**: Command assertions, file property checks, HTTP response validation, fail-fast behavior
+
+[Learn more: Assert Action →](guide/config/actions.md#assert)
+
+---
+
+### 🎯 Reusable Workflows
+
+Use presets for complex, parameterized workflows.
+
+```yaml
+- name: Install Ollama
+  preset: ollama
+  with:
+    state: present
+    service: true
+    pull:
+      - llama3.1:8b
+      - mistral:latest
+  become: true
+```
+
+**Features**: Parameter validation, type safety, idempotency, platform detection
+
+[Learn more: Presets →](guide/presets.md)
+
+---
+
+**→ [See All Actions in Reference](guide/config/actions.md)** - Complete action documentation with examples
+
+---
+
+## Control Your Execution
+
+### Variables & System Facts
+
+Define custom variables and use auto-detected system information.
+
+```yaml
+- vars:
+    app_name: MyApp
+    version: "1.0.0"
+
+- name: Install application
+  shell: echo "Installing {{app_name}} v{{version}} on {{os}}"
+```
+
+**Auto-detected facts**: `os`, `arch`, `cpu_cores`, `memory_total_mb`, `distribution`, `package_manager`, `hostname`, and more
+
+```bash
+mooncake facts  # See all available system facts
+```
+
+[Learn more: Variables Guide →](guide/config/variables.md)
+
+---
+
+### Conditionals
+
+Execute steps based on conditions.
+
+```yaml
+- name: Install on macOS
+  shell: brew install neovim
+  when: os == "darwin"
+
+- name: Install on Linux
+  shell: apt install neovim
+  become: true
+  when: os == "linux" && package_manager == "apt"
+```
+
+**Operators**: `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`, `in`
+
+[Learn more: Control Flow →](guide/config/control-flow.md)
+
+---
+
+### Loops
+
+Iterate over lists or files to avoid repetition.
+
+```yaml
+# Iterate over lists
+- vars:
+    packages: [neovim, ripgrep, fzf, tmux]
+
+- name: Install package
+  shell: brew install {{item}}
+  with_items: "{{packages}}"
+
+# Iterate over files
+- name: Deploy dotfile
+  shell: cp "{{item.src}}" "~/{{item.name}}"
+  with_filetree: ./dotfiles
+  when: item.is_dir == false
+```
+
+[Learn more: Loops →](guide/config/control-flow.md#loops)
+
+---
+
+### Tags
+
+Filter execution by workflow.
+
+```yaml
+- name: Development setup
+  shell: install-dev-tools.sh
+  tags: [dev, setup]
+
+- name: Production deployment
+  shell: deploy-prod.sh
+  tags: [prod, deploy]
+```
+
+**Usage**:
+```bash
+# Run only dev-tagged steps
+mooncake run --config config.yml --tags dev
+
+# Multiple tags (OR logic)
+mooncake run --config config.yml --tags dev,test
+```
+
+[Learn more: Tags →](guide/config/control-flow.md#tags)
+
+---
+
+## Key Features
+
+### 🔍 Dry-Run Mode
+
+Preview all changes before applying with `--dry-run`:
+
+```bash
+mooncake run --config config.yml --dry-run
+```
+
+**What it shows**: Validates syntax, checks paths, shows what would execute - without making any changes.
+
+---
+
+### 📊 System Facts Collection
+
+Mooncake automatically detects system information:
+
+- **OS**: `os`, `arch`, `distribution`, `distribution_version`, `kernel_version`
+- **Hardware**: `cpu_cores`, `cpu_model`, `memory_total_mb`, `memory_free_mb`
+- **Network**: `ip_addresses`, `default_gateway`, `dns_servers`, `network_interfaces`
+- **Software**: `package_manager`, `python_version`, `docker_version`, `git_version`
+- **Storage**: `disks` (mounts, filesystem, size, usage)
+- **GPU**: `gpus` (vendor, model, memory, driver, CUDA version)
+
+```bash
+mooncake facts              # Text output
+mooncake facts --format json  # JSON output
+```
+
+[See all facts →](guide/config/reference.md#system-facts-reference)
+
+---
+
+### 📋 Execution Planning
+
+Generate deterministic execution plans before running:
+
+```bash
+# View plan as text
+mooncake plan --config config.yml
+
+# Export as JSON for CI/CD
+mooncake plan --config config.yml --format json --output plan.json
+
+# Execute from saved plan
+mooncake run --from-plan plan.json
+```
+
+**Use cases**: Debugging, verification, CI/CD integration, configuration analysis
+
+[Learn more: Commands →](guide/commands.md)
+
+---
+
+### ⚡ Robust Execution
+
+Control command execution with timeouts, retries, and custom conditions:
+
+```yaml
+- name: Download with retry
+  shell: curl -O https://example.com/file.tar.gz
+  timeout: 10m
+  retries: 3
+  retry_delay: 30s
+  failed_when: "result.rc != 0 and result.rc != 18"  # 18 = partial transfer
+```
+
+[Learn more: Execution Control →](examples/11-execution-control.md)
+
+---
+
+### 🔐 Sudo Support
+
+Execute privileged operations securely:
+
+```yaml
+- name: Install system package
+  shell: apt update && apt install neovim
+  become: true
+```
+
+**Password methods**:
+- Interactive: `mooncake run --config config.yml --ask-become-pass` (or `-K`)
+- File-based: `--sudo-pass-file ~/.mooncake/sudo_pass`
+- Environment variable: `export SUDO_ASKPASS=/usr/bin/ssh-askpass`
+
+[Learn more: Sudo →](examples/09-sudo.md)
+
+---
+
+## Learning Paths
+
+Choose how you want to learn:
+
+### 🚀 I Want to Get Started Fast
+
+→ **[Quick Start](getting-started/quick-start.md)** - 30 second tutorial
+
+Install → Create config → Run it → Done
+
+---
+
+### 📚 I Learn Best by Examples
+
+→ **[Examples Index](examples/)** - Step-by-step learning path
+
+**Beginner** (01-04):
+- [Hello World](examples/01-hello-world.md) - First steps
+- [Variables and Facts](examples/02-variables-and-facts.md) - Dynamic configs
+- [Files and Directories](examples/03-files-and-directories.md) - File operations
+- [Conditionals](examples/04-conditionals.md) - OS-specific logic
+
+**Intermediate** (05-07):
+- [Templates](examples/05-templates.md) - Render configs
+- [Loops](examples/06-loops.md) - Iterate over lists and files
+- [Register](examples/07-register.md) - Capture output
+
+**Advanced** (08-12):
+- [Tags](examples/08-tags.md) - Workflow control
+- [Sudo](examples/09-sudo.md) - Privileged operations
+- [Multi-file Configs](examples/10-multi-file-configs.md) - Organization
+- [Execution Control](examples/11-execution-control.md) - Timeouts and retries
+- [Unarchive](examples/12-unarchive.md) - Extract archives
+
+**Real-World**:
+- [Dotfiles Manager](examples/real-world-dotfiles.md) - Complete example
+
+---
+
+### 📖 I Want to Understand Concepts
+
+→ **[User Guide](guide/core-concepts.md)** - How Mooncake works
+
+**Core concepts**:
+- [Core Concepts](guide/core-concepts.md) - Steps, actions, variables, two-phase architecture
+- [Control Flow](guide/config/control-flow.md) - Conditionals, loops, tags
+- [Variables](guide/config/variables.md) - Custom variables and system facts
+- [Best Practices](guide/best-practices.md) - Patterns and tips
+
+---
+
+### 📋 I Need Reference Documentation
+
+→ **[Actions Guide](guide/config/actions.md)** - What you can do (with examples)
+→ **[Complete Reference](guide/config/reference.md)** - All properties organized
+
+**Quick links**:
+- [Shell](guide/config/actions.md#shell) - Execute commands
+- [File](guide/config/actions.md#file) - Manage files/directories
+- [Template](guide/config/actions.md#template) - Render configs
+- [Service](guide/config/actions.md#service) - Manage services
+- [Assert](guide/config/actions.md#assert) - Verify state
+- [Preset](guide/config/actions.md#preset) - Reusable workflows
+- [System Facts](guide/config/reference.md#system-facts-reference) - Available variables
+
+---
+
+### 🎯 I Want Real-World Examples
+
+→ **[Dotfiles Manager](examples/real-world-dotfiles.md)** - Complete dotfiles management
+
+→ **[Ollama Examples](examples/ollama/)** - LLM deployment and management
+
+---
+
+## Quick Commands Reference
+
+```bash
+# Run configuration
+mooncake run --config config.yml
+
+# Preview changes (safe!)
+mooncake run --config config.yml --dry-run
+
+# Show system facts
+mooncake facts
+mooncake facts --format json
+
+# Generate execution plan
+mooncake plan --config config.yml
+mooncake plan --config config.yml --format json --output plan.json
+
+# Filter by tags
+mooncake run --config config.yml --tags dev,test
+
+# With sudo
+mooncake run --config config.yml --ask-become-pass
+
+# Execute from plan
+mooncake run --from-plan plan.json
+
+# Debug mode
+mooncake run --config config.yml --log-level debug
+
+# Disable TUI (for CI/CD)
+mooncake run --config config.yml --raw
+
+# JSON output
+mooncake run --config config.yml --raw --output-format json
+```
+
+[See all commands →](guide/commands.md)
+
+---
+
+## Common Use Cases
+
+### Dotfiles Management
+
+Deploy and manage dotfiles across machines:
+
+```yaml
+- name: Create backup directory
+  file:
+    path: ~/.dotfiles-backup
+    state: directory
+
+- name: Deploy dotfiles
+  shell: cp "{{item.src}}" "~/{{item.name}}"
+  with_filetree: ./dotfiles
+  when: item.is_dir == false
+```
+
+[See complete example →](examples/real-world-dotfiles.md)
+
+---
+
+### Development Environment Setup
+
+Automate dev tool installation:
+
+```yaml
+- vars:
+    dev_tools:
+      - neovim
+      - ripgrep
+      - fzf
+      - tmux
+      - docker
+
+- name: Install dev tools (macOS)
+  shell: brew install {{item}}
+  with_items: "{{dev_tools}}"
+  when: os == "darwin"
+
+- name: Install dev tools (Linux)
+  shell: apt install -y {{item}}
+  become: true
+  with_items: "{{dev_tools}}"
+  when: os == "linux" && package_manager == "apt"
+```
+
+---
+
+### Multi-OS Configuration
+
+Write once, run anywhere:
+
+```yaml
 - name: Install on Linux
   shell: apt install neovim
   become: true
@@ -446,685 +677,84 @@ Execute steps based on conditions using `when`.
   shell: brew install neovim
   when: os == "darwin"
 
-# Complex conditions
-- name: High memory systems
-  shell: echo "Configuring for high memory"
-  when: memory_total_mb >= 16000
+- name: Install on Windows
+  shell: choco install neovim
+  when: os == "windows"
+```
 
-- name: Ubuntu 20+
-  shell: apt update
+---
+
+### System Provisioning
+
+Set up new machines automatically:
+
+```yaml
+- name: Install system packages
+  shell: "{{package_manager}} install {{item}}"
   become: true
-  when: distribution == "ubuntu" and distribution_major >= "20"
-
-# ARM Macs
-- name: ARM Mac specific
-  shell: echo "ARM architecture detected"
-  when: os == "darwin" && arch == "arm64"
-```
-
-**Operators:**
-
-- Comparison: `==`, `!=`, `>`, `<`, `>=`, `<=`
-- Logical: `&&` (and), `||` (or), `!` (not)
-- String: `in`, `contains`
-- Functions: `len()`, see [expr-lang](https://github.com/expr-lang/expr)
-
-[→ See example](examples/04-conditionals.md)
-
----
-
-## Tags
-
-Filter execution by tags for workflow management.
-
-```yaml
-- name: Install dev tools
-  shell: brew install neovim ripgrep
-  tags:
-    - dev
-    - tools
-
-- name: Production deployment
-  shell: ./deploy-prod.sh
-  tags:
-    - prod
-    - deploy
-
-- name: Run tests
-  shell: npm test
-  tags:
-    - test
-    - dev
-```
-
-**Usage:**
-
-```bash
-# Run only dev-tagged steps
-mooncake run --config config.yml --tags dev
-
-# Run dev OR prod steps
-mooncake run --config config.yml --tags dev,prod
-
-# No tags = run all steps
-mooncake run --config config.yml
-```
-
-**Behavior:**
-
-- **No filter**: All steps run (including untagged)
-- **With filter**: Only matching tags run; untagged steps skipped
-- **Multiple tags**: Step runs if it has ANY specified tag (OR logic)
-
-[→ See example](examples/08-tags.md)
-
----
-
-## Loops
-
-Iterate over lists or files to avoid repetition.
-
-**List iteration (with_items):**
-
-```yaml
-- vars:
-    packages:
-      - neovim
-      - ripgrep
-      - fzf
-      - tmux
-
-- name: Install package
-  shell: brew install {{ item }}
-  with_items: "{{ packages }}"
-```
-
-**File tree iteration (with_filetree):**
-
-```yaml
-- name: Deploy dotfiles
-  shell: cp "{{ item.src }}" "~/{{ item.name }}"
-  with_filetree: ./dotfiles
-  when: item.is_dir == false
-```
-
-**Available in loops:**
-
-- **with_items**: `{{ item }}` - Current list item
-- **with_filetree**:
-  - `{{ item.src }}` - Source file path
-  - `{{ item.name }}` - File name
-  - `{{ item.is_dir }}` - Boolean, true if directory
-
-[→ See example](examples/06-loops.md)
-
----
-
-## Variables
-
-### Custom Variables
-
-Define and use your own variables.
-
-```yaml
-- vars:
-    app_name: MyApp
-    version: "1.0.0"
-    config_dir: ~/.config/{{app_name}}
-
-- name: Create app directory
-  file:
-    path: "{{config_dir}}"
-    state: directory
-
-- name: Display info
-  shell: echo "Installing {{app_name}} v{{version}}"
-```
-
-**Variable syntax:**
-
-- Define: `vars:` at step level
-- Use: `{{variable_name}}` anywhere
-- Nest: `{{outer}}/{{inner}}`
-
-[→ See example](examples/02-variables-and-facts.md)
-
-### System Facts
-
-Mooncake automatically collects system information available as variables.
-
-| Category | Variable | Description | Example |
-|----------|----------|-------------|---------|
-| **Basic** | `os` | Operating system | `linux`, `darwin`, `windows` |
-| | `arch` | Architecture | `amd64`, `arm64` |
-| | `hostname` | System hostname | `my-laptop` |
-| | `user_home` | User home directory | `/home/user` |
-| **Hardware** | `cpu_cores` | Number of CPU cores | `8` |
-| | `memory_total_mb` | Total RAM in MB | `16384` |
-| **Distribution** | `distribution` | Distribution name | `ubuntu`, `debian`, `macos` |
-| | `distribution_version` | Full version | `22.04`, `15.7.3` |
-| | `distribution_major` | Major version | `22`, `15` |
-| **Software** | `package_manager` | Package manager | `apt`, `yum`, `brew`, `pacman` |
-| | `python_version` | Python version | `3.11.4` |
-| **Network** | `ip_addresses` | Array of IPs | `["192.168.1.10"]` |
-| | `ip_addresses_string` | Comma-separated IPs | `"192.168.1.10, 10.0.0.5"` |
-
-**Check your system:**
-```bash
-mooncake facts
-```
-
-**Example usage:**
-
-```yaml
-- name: Install with detected package manager
-  shell: "{{package_manager}} install neovim"
-  become: true
+  with_items:
+    - git
+    - curl
+    - vim
+    - htop
   when: os == "linux"
 
-- name: High memory config
-  shell: echo "Using high memory settings"
-  when: memory_total_mb >= 16000
-```
-
-[→ See example](examples/02-variables-and-facts.md)
-
-### Register (Capture Output)
-
-Capture command output and use it in subsequent steps.
-
-```yaml
-# Capture command output
-- name: Check if git exists
-  shell: which git
-  register: git_check
-
-# Use in conditional
-- name: Show git location
-  shell: echo "Git is at {{git_check.stdout}}"
-  when: git_check.rc == 0
-
-# Capture and use in paths
-- name: Get username
-  shell: whoami
-  register: current_user
-
-- name: Create user-specific file
+- name: Create user directories
   file:
-    path: "/tmp/{{current_user.stdout}}_config.txt"
-    state: file
-    content: "Config for {{current_user.stdout}}"
-```
-
-**Available fields:**
-
-- `{name}.stdout` - Standard output
-- `{name}.stderr` - Standard error
-- `{name}.rc` - Return code (0 = success)
-- `{name}.failed` - Boolean, true if failed
-- `{name}.changed` - Boolean, true if changed
-
-**Works with:**
-
-- `shell` - Captures output
-- `file` - Detects if created/modified
-- `template` - Detects if rendered output changed
-
-[→ See example](examples/07-register.md)
-
----
-
-## Advanced Features
-
-### Sudo / Privilege Escalation
-
-Execute commands with elevated privileges.
-
-```yaml
-- name: Install system package
-  shell: apt install neovim
-  become: true
-
-- name: Create system directory
-  file:
-    path: /opt/myapp
+    path: "{{item}}"
     state: directory
-    mode: "0755"
-  become: true
-```
-
-**Provide sudo password:**
-```bash
-mooncake run --config config.yml --sudo-pass <password>
-```
-
-**Note:** Only steps with `become: true` use sudo.
-
-[→ See example](examples/09-sudo.md)
-
-### Path Resolution
-
-Mooncake uses Node.js-style relative path resolution.
-
-**Key principle:** Paths are relative to the **current file**, not the working directory.
-
-```
-project/
-├── main.yml
-└── configs/
-    ├── app.yml
-    └── templates/
-        └── config.j2
-```
-
-**main.yml:**
-```yaml
-- include: ./configs/app.yml  # Relative to main.yml
-```
-
-**configs/app.yml:**
-```yaml
-- template:
-    src: ./templates/config.j2  # Relative to app.yml
-    dest: ~/app/config
-```
-
-**Path types:**
-
-- Relative: `./file.yml`, `../templates/app.j2`
-- Absolute: `/etc/config`, `/opt/app`
-- Home: `~/.config`, `~/bin/script`
-
-[→ See example](examples/10-multi-file-configs.md)
-
-### Dry-Run Mode
-
-Preview changes without executing them.
-
-```bash
-mooncake run --config config.yml --dry-run
-```
-
-**What it does:**
-
-- ✅ Validates YAML syntax and structure
-- ✅ Checks required files exist
-- ✅ Verifies paths and variables resolve
-- ✅ Shows what would be executed
-- ✅ Processes includes recursively
-- ❌ Does NOT make any changes
-
-**Example output:**
-```
-▶ Create application directory
-  [DRY-RUN] Would create directory: /tmp/myapp (mode: 0755)
-✓ Create application directory
-▶ Render neovim configuration
-  [DRY-RUN] Would template: ./init.lua.j2 -> /tmp/myapp/config/init.lua (mode: 0644)
-✓ Render neovim configuration
-▶ Install neovim on Linux
-  [DRY-RUN] Would execute: apt install neovim
-  [DRY-RUN] With sudo privileges
-✓ Install neovim on Linux
-```
-
-**Use cases:**
-- Test configurations before applying
-- Preview changes in production
-- Debug complex conditionals and includes
-- Verify variable substitution
-
----
-
-## Observability & Artifacts
-
-### Event System
-
-Mooncake emits structured events during execution, enabling observability, logging, and integration with external systems. Events cover the full execution lifecycle from run start to completion.
-
-**Event Stream Output:**
-
-```bash
-# Get JSON event stream
-mooncake run --config deploy.yml --raw --output-format json
-
-# Process with jq
-mooncake run --config deploy.yml --raw --output-format json | \
-  jq 'select(.type == "step.completed") | .data.name'
-```
-
-**Key Event Types:**
-
-| Event | Description | Use Case |
-|-------|-------------|----------|
-| `run.started` | Execution begins | Track run metadata |
-| `plan.loaded` | Plan compiled | Analyze configuration |
-| `step.started` | Before step execution | Progress tracking |
-| `step.completed` | Step succeeded | Success metrics |
-| `step.failed` | Step failed | Error handling |
-| `step.stdout`/`stderr` | Command output | Log streaming |
-| `file.created`/`updated` | File operations | Change tracking |
-| `template.rendered` | Template applied | Config management |
-| `variables.set` | Variables defined | State inspection |
-| `run.completed` | Execution finished | Run summary |
-
-**Example event:**
-
-```json
-{
-  "type": "step.completed",
-  "timestamp": "2026-02-04T14:14:21Z",
-  "data": {
-    "step_id": "step-0001",
-    "name": "Install nginx",
-    "level": 0,
-    "duration_ms": 1250,
-    "changed": true
-  }
-}
-```
-
-**Integration use cases:**
-
-- **Monitoring**: Send events to logging systems (Elasticsearch, Datadog)
-- **CI/CD**: Track deployment progress and failures
-- **Auditing**: Record all configuration changes
-- **Analytics**: Analyze performance and success rates
-
-### Run Artifacts
-
-Mooncake can persist execution artifacts to disk for auditing, debugging, and compliance. Artifacts are stored in `.mooncake/runs/` with a unique run ID.
-
-**Enable artifacts:**
-
-```bash
-# Basic (events + summary)
-mooncake run --config deploy.yml --artifacts-dir .mooncake
-
-# With full output capture
-mooncake run --config deploy.yml \
-  --artifacts-dir .mooncake \
-  --capture-full-output
-```
-
-**Artifact structure:**
-
-```
-.mooncake/
-└── runs/
-    └── 20260204-141419-a3f2c8/
-        ├── plan.json          # Executed plan
-        ├── facts.json         # System facts
-        ├── summary.json       # Run summary
-        ├── results.json       # Step results
-        ├── events.jsonl       # Full event stream
-        ├── diff.json          # Changed files
-        ├── stdout.log         # Full stdout (if --capture-full-output)
-        └── stderr.log         # Full stderr (if --capture-full-output)
-```
-
-**Artifact files:**
-
-- **plan.json** - Complete execution plan with all steps expanded
-- **facts.json** - System information gathered at runtime
-- **summary.json** - High-level statistics (duration, success/failure counts)
-- **results.json** - Per-step results with timing and status
-- **events.jsonl** - Full event stream in JSONL format (one event per line)
-- **diff.json** - List of files created or modified
-- **stdout.log / stderr.log** - Complete command output (optional)
-
-**Common use cases:**
-
-**Debugging failures:**
-```bash
-# Find latest run
-ls -lt .mooncake/runs/ | head -n 1
-
-# View failed steps
-jq '.steps[] | select(.status == "failed")' \
-  .mooncake/runs/20260204-141419-a3f2c8/results.json
-
-# Check full error output
-cat .mooncake/runs/20260204-141419-a3f2c8/stderr.log
-```
-
-**Audit trail:**
-```bash
-# Keep historical record
-mooncake run --config deploy.yml --artifacts-dir /var/log/mooncake
-
-# Package for compliance
-tar czf deployment-$(date +%Y%m%d).tar.gz .mooncake/runs/
-```
-
-**Performance analysis:**
-```bash
-# Find slowest steps
-jq '.steps[] | {name, duration_ms}' \
-  .mooncake/runs/*/results.json | \
-  jq -s 'sort_by(.duration_ms) | reverse | .[0:10]'
-```
-
-**CI/CD integration:**
-```yaml
-# GitLab CI example
-deploy:
-  script:
-    - mooncake run --config deploy.yml --artifacts-dir artifacts/
-  artifacts:
-    paths:
-      - artifacts/runs/
-    when: always
-    expire_in: 30 days
-```
-
-**Cleanup old runs:**
-```bash
-# Keep last 30 days
-find .mooncake/runs/ -type d -mtime +30 -exec rm -rf {} +
-
-# Keep last 100 runs
-ls -1dt .mooncake/runs/* | tail -n +101 | xargs rm -rf
-```
-
----
-
-## Best Practices
-
-### 1. Always Use Dry-Run First
-```bash
-mooncake run --config config.yml --dry-run
-```
-Preview changes before applying, especially in production.
-
-### 2. Organize by Purpose
-```
-project/
-├── main.yml           # Entry point
-├── tasks/
-│   ├── common.yml     # Shared setup
-│   ├── dev.yml        # Development
-│   └── prod.yml       # Production
-└── vars/
-    ├── dev.yml
-    └── prod.yml
-```
-
-### 3. Use Variables for Reusability
-```yaml
-- vars:
-    app_name: myapp
-    version: "1.0.0"
-
-- name: Create versioned directory
-  file:
-    path: "/opt/{{app_name}}-{{version}}"
-    state: directory
-```
-
-### 4. Tag Your Workflows
-```yaml
-- name: Install dev tools
-  shell: brew install neovim
-  tags: [dev, tools]
-
-- name: Deploy to production
-  shell: ./deploy.sh
-  tags: [prod, deploy]
-```
-
-Run selectively:
-```bash
-mooncake run --config config.yml --tags dev
-```
-
-### 5. Document Conditions
-```yaml
-# Install on Ubuntu 20+ only (older versions have incompatible package)
-- name: Install modern package
-  shell: apt install package-name
-  become: true
-  when: distribution == "ubuntu" and distribution_major >= "20"
-```
-
-### 6. Use System Facts
-```yaml
-# Automatic OS detection
-- shell: "{{package_manager}} install neovim"
-  become: true
-  when: os == "linux"
-```
-
-### 7. Test Incrementally
-Build configurations step by step:
-1. Start with simple steps
-2. Test with `--dry-run`
-3. Add complexity gradually
-4. Use `--log-level debug` to troubleshoot
-
-### 8. Handle Errors with Register
-```yaml
-- name: Check if command exists
-  shell: which docker
-  register: docker_check
-
-- name: Install if missing
-  shell: curl -fsSL https://get.docker.com | sh
-  when: docker_check.rc != 0
-```
-
----
-
-## Example Configurations
-
-**Complete Neovim Setup:**
-
-```yaml
-- vars:
-    config_dir: ~/.config
-    nvim_dir: "{{config_dir}}/nvim"
-
-- name: Create neovim directory
-  file:
-    path: "{{nvim_dir}}"
-    state: directory
-    mode: "0755"
-
-- name: Render neovim config
+  with_items:
+    - ~/.local/bin
+    - ~/.config
+    - ~/projects
+    - ~/backup
+
+- name: Deploy SSH config
   template:
-    src: ./init.lua.j2
-    dest: "{{nvim_dir}}/init.lua"
-    mode: "0644"
-
-- name: Install neovim on macOS
-  shell: brew install neovim
-  when: os == "darwin"
-
-- name: Install neovim on Linux
-  shell: apt install neovim
-  become: true
-  when: os == "linux"
-
-- name: Copy plugin configs
-  template:
-    src: "{{item.src}}"
-    dest: "{{nvim_dir}}/lua/{{item.name}}"
-  with_filetree: ./nvim/lua
-  when: item.is_dir == false
+    src: ./ssh_config.j2
+    dest: ~/.ssh/config
+    mode: "0600"
 ```
 
-**Multi-OS Package Installation:**
+---
 
-```yaml
-- vars:
-    packages:
-      - neovim
-      - ripgrep
-      - fzf
-      - tmux
+## Why Mooncake?
 
-# macOS
-- name: Install package (macOS)
-  shell: brew install {{item}}
-  with_items: "{{packages}}"
-  when: os == "darwin"
+| Feature | Mooncake | Ansible | Shell Scripts |
+|---------|----------|---------|---------------|
+| **Setup** | Single binary | Python + modules | Text editor |
+| **Dependencies** | None | Python, modules | System tools |
+| **Learning Curve** | Minutes | Hours/Days | Varies |
+| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
+| **Dry-run** | ✅ Native | ✅ Check mode | ❌ Manual |
+| **System Facts** | ✅ Auto-detected | ✅ Gathered | ❌ Manual |
+| **Best For** | Personal configs, dotfiles | Enterprise automation | Quick tasks |
 
-# Ubuntu/Debian
-- name: Install package (Ubuntu)
-  shell: apt install -y {{item}}
-  become: true
-  with_items: "{{packages}}"
-  when: os == "linux" and package_manager == "apt"
-
-# Arch Linux
-- name: Install package (Arch)
-  shell: pacman -S --noconfirm {{item}}
-  become: true
-  with_items: "{{packages}}"
-  when: os == "linux" and package_manager == "pacman"
-```
-
-**Dotfiles Deployment with Backup:**
-
-```yaml
-- vars:
-    backup_dir: ~/.dotfiles-backup
-
-- name: Create backup directory
-  file:
-    path: "{{backup_dir}}"
-    state: directory
-
-- name: Backup existing dotfiles
-  shell: |
-    for file in .bashrc .vimrc .gitconfig; do
-      [ -f ~/$file ] && cp ~/$file {{backup_dir}}/$file.$(date +%Y%m%d)
-    done
-
-- name: Deploy dotfiles
-  shell: cp "{{item.src}}" "~/{{item.name}}"
-  with_filetree: ./dotfiles
-  when: item.is_dir == false
-```
-
-**See [Examples](examples/index.md) for complete working examples.**
+**Mooncake fills the gap** between simple shell scripts and complex enterprise tools. It's powerful enough for real automation, simple enough to learn in an afternoon.
 
 ---
 
 ## Next Steps
 
-- 📚 **[Examples](examples/index.md)** - Step-by-step learning path from beginner to advanced
-- 📖 **[Reference](guide/config/actions.md)** - Detailed configuration documentation
-- 🤝 **[Contributing](development/contributing.md)** - Help make Mooncake better
-- 📝 **[Changelog](about/changelog.md)** - See what's new
+1. **[Quick Start →](getting-started/quick-start.md)** - Get running in 30 seconds
+2. **[Examples →](examples/)** - Learn by doing
+3. **[Actions Guide →](guide/config/actions.md)** - See what you can do
+4. **[Complete Reference →](guide/config/reference.md)** - All properties
 
 ---
 
-## Community
+## Community & Support
 
 - [:fontawesome-brands-github: GitHub Issues](https://github.com/alehatsman/mooncake/issues) - Report bugs and request features
 - [:material-star: Star the project](https://github.com/alehatsman/mooncake) if you find it useful!
+- [:material-book-open: Contributing Guide](development/contributing.md) - Help make Mooncake better
+- [:material-map: Roadmap](development/roadmap.md) - Planned features
+- [:material-history: Changelog](about/changelog.md) - What's new
+
+---
 
 ## License
 
 MIT License - Copyright (c) 2024-2026 Aleh Atsman
+
+See [LICENSE](https://github.com/alehatsman/mooncake/blob/master/LICENSE) for details.

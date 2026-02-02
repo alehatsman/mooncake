@@ -71,18 +71,47 @@ plugins:
 
 # Navigation structure
 nav:
-  - Guide: index.md
-  - Reference:
-    - Property Reference: guide/config/reference.md
+  - Home: index.md
+  - Getting Started:
+    - Quick Start: getting-started/quick-start.md
+    - Installation: getting-started/installation.md
+    - Your First Config: getting-started/first-config.md
+  - Examples:
+    - Examples Index: examples/index.md
+    - Beginner:
+      - 01 - Hello World: examples/01-hello-world.md
+      - 02 - Variables and Facts: examples/02-variables-and-facts.md
+      - 03 - Files and Directories: examples/03-files-and-directories.md
+      - 04 - Conditionals: examples/04-conditionals.md
+    - Intermediate:
+      - 05 - Templates: examples/05-templates.md
+      - 06 - Loops: examples/06-loops.md
+      - 07 - Register: examples/07-register.md
+    - Advanced:
+      - 08 - Tags: examples/08-tags.md
+      - 09 - Sudo: examples/09-sudo.md
+      - 10 - Multi-file Configs: examples/10-multi-file-configs.md
+      - 11 - Execution Control: examples/11-execution-control.md
+      - 12 - Unarchive: examples/12-unarchive.md
+    - Real-World:
+      - Dotfiles Manager: examples/real-world-dotfiles.md
+      - Idempotency: examples/idempotency.md
+  - User Guide:
+    - Core Concepts: guide/core-concepts.md
+    - Commands: guide/commands.md
+    - Presets: guide/presets.md
+    - Preset Authoring: guide/preset-authoring.md
+    - Best Practices: guide/best-practices.md
+  - Configuration:
     - Actions: guide/config/actions.md
+    - Complete Reference: guide/config/reference.md
     - Control Flow: guide/config/control-flow.md
     - Variables: guide/config/variables.md
     - Advanced: guide/config/advanced.md
-  - Examples: examples/index.md
   - Development:
     - Contributing: development/contributing.md
-    - Roadmap: development/roadmap.md
     - Development Guide: development/development.md
+    - Roadmap: development/roadmap.md
     - Releasing: development/releasing.md
     - Proposals: development/proposals.md
   - About:

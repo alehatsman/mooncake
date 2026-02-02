@@ -2,7 +2,27 @@
 
 Actions are the operations Mooncake performs. Each step in your configuration uses one action type.
 
-📖 **See [Property Reference](reference.md)** for a complete table of all available properties.
+## Quick Navigation
+
+| Action | Purpose | Jump to |
+|--------|---------|---------|
+| **shell** | Execute commands | [↓](#shell) |
+| **command** | Direct execution (no shell) | [↓](#command) |
+| **file** | Create/manage files | [↓](#file) |
+| **copy** | Copy files | [↓](#copy) |
+| **download** | Download from URLs | [↓](#download) |
+| **unarchive** | Extract archives | [↓](#unarchive) |
+| **template** | Render templates | [↓](#template) |
+| **service** | Manage services | [↓](#service) |
+| **assert** | Verify state | [↓](#assert) |
+| **preset** | Reusable workflows | [↓](#preset) |
+| **include** | Load configs | [↓](#include) |
+| **include_vars** | Load variables | [↓](#include-vars) |
+| **vars** | Define variables | [↓](#vars) |
+
+📋 **[Complete Properties Reference →](reference.md)** - All properties organized by type
+
+---
 
 ## Shell
 

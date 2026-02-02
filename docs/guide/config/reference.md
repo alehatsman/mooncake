@@ -1,79 +1,72 @@
 # Configuration Reference
 
-Complete reference for all configuration properties.
+Complete reference for all Mooncake configuration options.
 
-## Step Properties
-
-Every step in your configuration can use these properties. Properties are grouped by function.
-
-### Quick Reference Table
-
-| Property | Type | Applies To | Description |
-|----------|------|------------|-------------|
-| **Identification** ||||
-| `name` | string | All | Human-readable step name |
-| **Actions** (one required) ||||
-| `shell` | string | Shell | Shell command to execute |
-| `file` | object | File | File/directory operation |
-| `copy` | object | Copy | Copy file with checksums |
-| `download` | object | Download | Download files from URLs |
-| `unarchive` | object | Unarchive | Extract archive files |
-| `template` | object | Template | Template rendering |
-| `service` | object | Service | Manage system services (systemd/launchd) |
-| `assert` | object | Assert | Verify state (command/file/http) |
-| `preset` | string/object | Preset | Invoke parameterized preset |
-| `include` | string | Include | Include steps from another file |
-| `include_vars` | string | Variables | Load variables from file |
-| `vars` | object | Variables | Define inline variables |
-| **Control Flow** ||||
-| `when` | string | All | Conditional expression |
-| `creates` | string | All | Skip if file exists (idempotency) |
-| `unless` | string | All | Skip if command succeeds (idempotency) |
-| `tags` | array[string] | All | Tags for filtering |
-| **Loops** ||||
-| `with_items` | string | All | Iterate over list |
-| `with_filetree` | string | All | Iterate over directory |
-| **Privilege** ||||
-| `become` | boolean | shell, file, template, service, preset | Execute with sudo |
-| `become_user` | string | shell, file, template | User for sudo (e.g., 'postgres') |
-| **Shell Execution Control** ||||
-| `env` | object | shell only | Environment variables |
-| `cwd` | string | shell only | Working directory |
-| `timeout` | string | shell only | Maximum execution time |
-| `retries` | integer | shell only | Number of retry attempts |
-| `retry_delay` | string | shell only | Delay between retries |
-| **Result Control** ||||
-| `changed_when` | string | shell only | Override changed status |
-| `failed_when` | string | shell only | Override failure status |
-| `register` | string | All | Variable name to store result |
-
-## Property Details
-
-### name
-
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No (but recommended)
-
-Human-readable description displayed in output.
-
-```yaml
-- name: Install dependencies
-  shell: npm install
-```
+→ **Learning by doing?** Try [Examples](../../examples/) instead
+→ **Need action examples?** See [Actions Guide](actions.md)
 
 ---
 
+## Actions Quick Reference
+
+Actions are what your steps **do**. Every step uses exactly one action.
+
+| Action | Purpose | Example |
+|--------|---------|---------|
+| **shell** | Execute commands | `shell: echo "hello"` |
+| **command** | Direct execution (no shell) | `command: {argv: [git, status]}` |
+| **file** | Create/manage files | `file: {path: /tmp/test, state: file}` |
+| **copy** | Copy files | `copy: {src: ./app.conf, dest: /etc/app.conf}` |
+| **download** | Download from URLs | `download: {url: https://..., dest: /tmp/file}` |
+| **unarchive** | Extract archives | `unarchive: {src: /tmp/app.tar.gz, dest: /opt/app}` |
+| **template** | Render templates | `template: {src: app.j2, dest: /etc/app.conf}` |
+| **service** | Manage services | `service: {name: nginx, state: started}` |
+| **assert** | Verify state | `assert: {file: {path: /tmp/test, exists: true}}` |
+| **preset** | Reusable workflows | `preset: ollama` |
+| **include** | Load other configs | `include: ./tasks/common.yml` |
+| **include_vars** | Load variables | `include_vars: ./vars/prod.yml` |
+| **vars** | Define variables | `vars: {app_name: MyApp}` |
+
+**→ See [Actions Guide](actions.md) for detailed examples and use cases**
+
+---
+
+## Actions (Detailed)
+
 ### shell
 
-**Type:** `string`
-**Applies to:** Shell action
-**Required:** When using shell action
+Execute commands in a shell with full shell interpolation.
 
-Command to execute in bash shell.
-
+**Basic form**:
 ```yaml
-- shell: echo "Hello"
+- shell: echo "hello"
+```
+
+**Structured form**:
+```yaml
+- shell:
+    cmd: echo "hello"
+    interpreter: bash
+    stdin: "input data"
+    capture: true
+```
+
+**Properties**:
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `shell` | string | Yes | Command to execute (simple form) |
+| `shell.cmd` | string | Yes | Command to execute (structured form) |
+| `shell.interpreter` | string | No | Shell: "bash", "sh", "pwsh", "cmd" (default: bash on Unix, pwsh on Windows) |
+| `shell.stdin` | string | No | Input to pipe into command |
+| `shell.capture` | boolean | No | Capture output (default: true) |
+
+**Works with**: All [universal properties](#universal-properties) + [shell-specific properties](#shell-specific-properties)
+
+**Examples**:
+```yaml
+# Simple command
+- shell: echo "hello"
 
 # Multi-line
 - shell: |
@@ -81,83 +74,86 @@ Command to execute in bash shell.
     echo "Line 2"
 
 # With variables
-- shell: echo "{{message}}"
+- shell: echo "Running on {{os}}"
+
+# With execution control
+- shell: curl -O https://example.com/file.tar.gz
+  timeout: 10m
+  retries: 3
+  retry_delay: 30s
 ```
 
-**Supports:**
-- Template variable substitution
-- Multi-line commands with `|`
-- All shell-specific fields
+[See complete shell documentation in Actions Guide →](actions.md#shell)
 
 ---
 
 ### command
 
-**Type:** `object`
-**Applies to:** Command action
-**Required:** When using command action
+Execute commands directly without shell interpolation (safer, faster).
 
-Execute command directly without shell interpolation (safer alternative to shell).
+**Basic form**:
+```yaml
+- command:
+    argv: ["git", "status"]
+```
 
-**Properties:**
+**Properties**:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `argv` | array[string] | Yes | Command and arguments as array |
-| `stdin` | string | No | Input to pipe into command |
-| `capture` | boolean | No | Capture output (default: true) |
+| `command.argv` | array | Yes | Command and arguments as list |
+| `command.stdin` | string | No | Input to pipe to command |
+| `command.capture` | boolean | No | Capture output (default: true) |
 
+**Works with**: All [universal properties](#universal-properties) + [shell-specific properties](#shell-specific-properties)
+
+**Example**:
 ```yaml
-# Basic usage
 - command:
-    argv: ["git", "clone", "https://github.com/user/repo.git"]
-
-# With stdin
-- command:
-    argv: ["python3", "-c", "import sys; print(sys.stdin.read())"]
-    stdin: "hello world"
-
-# With template variables
-- command:
-    argv:
-      - git
-      - clone
-      - "{{repo_url}}"
-      - "{{target_dir}}"
+    argv: ["git", "clone", "{{repo_url}}", "/opt/app"]
+  timeout: 5m
+  retries: 3
 ```
 
-**Supports:**
-- Template variable substitution in argv and stdin
-- All shell-specific fields (env, cwd, timeout, retries, etc.)
+**Difference from shell**: No shell interpretation (no pipes, redirects, wildcards), arguments passed directly to executable.
 
-**Difference from shell:**
-- No shell interpretation (no pipes, redirects, wildcards)
-- Arguments passed directly to executable (safer, no injection risk)
-- Faster (no shell overhead)
+[See complete command documentation in Actions Guide →](actions.md#command)
 
 ---
 
 ### file
 
-**Type:** `object`
-**Applies to:** File action
-**Required:** When using file action
+Create and manage files, directories, and links.
 
-File or directory operation.
+**Basic form**:
+```yaml
+- file:
+    path: /tmp/test
+    state: directory
+```
 
-**Properties:**
+**Properties**:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `path` | string | Yes | File/directory path |
-| `state` | string | No | `file`, `directory`, or `absent` |
-| `content` | string | No | Content to write to file |
-| `mode` | string | No | Permissions (e.g., `"0644"`, `"0755"`) |
+| `file.path` | string | Yes | File or directory path |
+| `file.state` | string | No | `file`, `directory`, `absent`, `touch`, `link`, `hardlink`, `perms` |
+| `file.content` | string | No | Content to write (for `state: file`) |
+| `file.mode` | string | No | Permissions (e.g., "0644", "0755") |
+| `file.owner` | string | No | Owner (username or UID) |
+| `file.group` | string | No | Group (group name or GID) |
+| `file.src` | string | No | Source for links (required for `link`/`hardlink`) |
+| `file.force` | boolean | No | Force overwrite |
+| `file.recurse` | boolean | No | Apply permissions recursively (with `state: perms`) |
+| `file.backup` | boolean | No | Create .bak backup |
 
+**Works with**: [Universal properties](#universal-properties) only (NOT shell-specific properties)
+
+**Examples**:
 ```yaml
 # Create directory
 - file:
-    path: /tmp/myapp
+    path: ~/.config/myapp
     state: directory
     mode: "0755"
 
@@ -165,170 +161,140 @@ File or directory operation.
 - file:
     path: /tmp/config.txt
     state: file
-    content: "key: value"
+    content: "app_name: myapp"
     mode: "0644"
+
+# Create symbolic link
+- file:
+    path: /usr/local/bin/myapp
+    src: /opt/myapp/bin/myapp
+    state: link
 ```
+
+[See complete file documentation in Actions Guide →](actions.md#file)
 
 ---
 
 ### copy
 
-**Type:** `object`
-**Applies to:** Copy action
-**Required:** When using copy action
+Copy files with checksum verification and backup support.
 
-Copy file from source to destination with optional checksum verification.
-
-**Properties:**
+**Properties**:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `src` | string | Yes | Source file path |
-| `dest` | string | Yes | Destination file path |
-| `mode` | string | No | Permissions (e.g., `"0644"`) |
-| `owner` | string | No | File owner (username or UID) |
-| `group` | string | No | File group (group name or GID) |
-| `backup` | boolean | No | Create `.bak` backup before overwrite |
-| `force` | boolean | No | Force overwrite if destination exists |
-| `checksum` | string | No | Expected SHA256 or MD5 checksum |
+| `copy.src` | string | Yes | Source file path |
+| `copy.dest` | string | Yes | Destination file path |
+| `copy.mode` | string | No | Permissions (e.g., "0644") |
+| `copy.owner` | string | No | Owner (username or UID) |
+| `copy.group` | string | No | Group (group name or GID) |
+| `copy.backup` | boolean | No | Create .bak backup before overwrite |
+| `copy.force` | boolean | No | Force overwrite |
+| `copy.checksum` | string | No | Expected SHA256 or MD5 checksum |
 
+**Works with**: [Universal properties](#universal-properties)
+
+**Example**:
 ```yaml
 - copy:
-    src: ./app.conf
-    dest: /etc/app/app.conf
+    src: ./configs/app.yml
+    dest: /etc/app/config.yml
     mode: "0644"
     owner: app
     group: app
     backup: true
 ```
 
----
-
-### unarchive
-
-**Type:** `object`
-**Applies to:** Unarchive action
-**Required:** When using unarchive action
-
-Extract archive files with automatic format detection and security protections.
-
-**Properties:**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `src` | string | Yes | Path to archive file |
-| `dest` | string | Yes | Destination directory (created if missing) |
-| `strip_components` | integer | No | Number of leading path components to strip (default: 0) |
-| `creates` | string | No | Skip extraction if this path exists (idempotency) |
-| `mode` | string | No | Directory permissions (e.g., `"0755"`) |
-
-**Supported formats:** `.tar`, `.tar.gz`, `.tgz`, `.zip` (auto-detected from extension, case-insensitive)
-
-**Security:** Automatically blocks path traversal attacks (`../`), absolute paths, and validates symlink targets.
-
-```yaml
-# Basic extraction
-- unarchive:
-    src: /tmp/node-v20.tar.gz
-    dest: /opt/node
-    mode: "0755"
-
-# With path stripping (like tar --strip-components)
-- unarchive:
-    src: /tmp/app.tar.gz
-    dest: /opt/app
-    strip_components: 1
-    creates: /opt/app/bin/app
-```
-
-**strip_components** removes leading path components from extracted files:
-- `0` (default): Extract with full paths
-- `1`: Strip first directory level (e.g., `app-1.0/src/file` → `src/file`)
-- `2`: Strip two levels (e.g., `app-1.0/src/file` → `file`)
-
-Files with fewer components than specified are skipped.
+[See complete copy documentation in Actions Guide →](actions.md#copy)
 
 ---
 
 ### download
 
-**Type:** `object`
-**Applies to:** Download action
-**Required:** When using download action
-
 Download files from remote URLs with checksum verification and retry support.
 
-**Properties:**
+**Properties**:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `url` | string | Yes | Remote URL to download from |
-| `dest` | string | Yes | Destination file path |
-| `checksum` | string | No | Expected SHA256 (64 chars) or MD5 (32 chars) checksum |
-| `mode` | string | No | File permissions (e.g., `"0644"`) |
-| `timeout` | string | No | Maximum download time (e.g., `"30s"`, `"5m"`) |
-| `retries` | integer | No | Number of retry attempts on failure (0-100) |
-| `force` | boolean | No | Force re-download even if destination exists |
-| `backup` | boolean | No | Create `.bak` backup before overwriting |
-| `headers` | object | No | Custom HTTP headers (Authorization, User-Agent, etc.) |
+| `download.url` | string | Yes | Remote URL |
+| `download.dest` | string | Yes | Destination file path |
+| `download.checksum` | string | No | Expected SHA256 (64 chars) or MD5 (32 chars) |
+| `download.mode` | string | No | File permissions |
+| `download.timeout` | string | No | Maximum download time (e.g., "5m") |
+| `download.retries` | integer | No | Retry attempts (0-100) |
+| `download.force` | boolean | No | Force re-download |
+| `download.backup` | boolean | No | Create .bak backup |
+| `download.headers` | object | No | Custom HTTP headers |
 
-**Idempotency:** Downloads are skipped when destination exists with matching checksum (when `checksum` is provided).
+**Works with**: [Universal properties](#universal-properties)
 
-**Best practice:** Always use `checksum` for reliable idempotency and security.
-
+**Example**:
 ```yaml
-# Basic download
-- download:
-    url: "https://example.com/file.tar.gz"
-    dest: "/tmp/file.tar.gz"
-    mode: "0644"
-
-# Idempotent with checksum
 - download:
     url: "https://go.dev/dl/go1.21.5.linux-amd64.tar.gz"
     dest: "/tmp/go.tar.gz"
     checksum: "e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
-    mode: "0644"
-
-# With retry and timeout
-- download:
-    url: "https://releases.ubuntu.com/22.04/ubuntu.iso"
-    dest: "/tmp/ubuntu.iso"
     timeout: "10m"
     retries: 3
-
-# Authenticated download
-- download:
-    url: "https://api.example.com/files/document.pdf"
-    dest: "/tmp/document.pdf"
-    headers:
-      Authorization: "Bearer {{ api_token }}"
 ```
 
-**Security features:**
-- Atomic writes (download to temp, verify, rename)
-- Checksum verification prevents MITM attacks
-- HTTPS support for secure downloads
+**Idempotency**: Downloads skipped when destination exists with matching checksum.
+
+[See complete download documentation in Actions Guide →](actions.md#download)
+
+---
+
+### unarchive
+
+Extract archive files with automatic format detection and security protections.
+
+**Properties**:
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `unarchive.src` | string | Yes | Path to archive file |
+| `unarchive.dest` | string | Yes | Destination directory |
+| `unarchive.strip_components` | integer | No | Strip leading path components (default: 0) |
+| `unarchive.creates` | string | No | Skip if this path exists (idempotency) |
+| `unarchive.mode` | string | No | Directory permissions |
+
+**Works with**: [Universal properties](#universal-properties)
+
+**Supported formats**: `.tar`, `.tar.gz`, `.tgz`, `.zip` (auto-detected)
+
+**Example**:
+```yaml
+- unarchive:
+    src: /tmp/node-v20.tar.gz
+    dest: /opt/node
+    strip_components: 1
+    creates: /opt/node/bin/node
+    mode: "0755"
+```
+
+**Security**: Automatically blocks path traversal attacks and validates all paths.
+
+[See complete unarchive documentation in Actions Guide →](actions.md#unarchive)
 
 ---
 
 ### template
 
-**Type:** `object`
-**Applies to:** Template action
-**Required:** When using template action
+Render configuration files from templates using pongo2 syntax.
 
-Render pongo2 template file.
-
-**Properties:**
+**Properties**:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `src` | string | Yes | Source template file path |
-| `dest` | string | Yes | Destination file path |
-| `vars` | object | No | Additional variables for template |
-| `mode` | string | No | Permissions (e.g., `"0644"`) |
+| `template.src` | string | Yes | Source template file path |
+| `template.dest` | string | Yes | Destination file path |
+| `template.vars` | object | No | Additional variables for template |
+| `template.mode` | string | No | Permissions (e.g., "0644") |
 
+**Works with**: [Universal properties](#universal-properties)
+
+**Example**:
 ```yaml
 - template:
     src: ./config.yml.j2
@@ -339,307 +305,104 @@ Render pongo2 template file.
       debug: true
 ```
 
+**Template syntax**: Variables `{{ var }}`, conditionals `{% if %}`, loops `{% for %}`, filters `{{ path | expanduser }}`
+
+[See complete template documentation in Actions Guide →](actions.md#template)
+
 ---
 
 ### service
 
-**Type:** `object`
-**Applies to:** Service action
-**Required:** When using service action
-
 Manage system services (systemd on Linux, launchd on macOS).
 
-**Properties:**
+**Properties**:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `name` | string | Yes | Service name |
-| `state` | string | No | Desired state: `started`, `stopped`, `restarted`, `reloaded` |
-| `enabled` | boolean | No | Enable service on boot |
-| `daemon_reload` | boolean | No | Run daemon-reload after unit changes (systemd only) |
-| `unit` | object | No | Unit/plist file configuration |
-| `dropin` | object | No | Drop-in configuration (systemd only) |
+| `service.name` | string | Yes | Service name |
+| `service.state` | string | No | `started`, `stopped`, `restarted`, `reloaded` |
+| `service.enabled` | boolean | No | Enable on boot |
+| `service.daemon_reload` | boolean | No | Reload daemon (systemd only) |
+| `service.unit` | object | No | Unit/plist file config |
+| `service.dropin` | object | No | Drop-in config (systemd only) |
 
-**Unit Properties:**
+**Works with**: [Universal properties](#universal-properties)
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `dest` | string | No | Destination path (auto-detected if not specified) |
-| `content` | string | No* | Inline unit/plist content (supports templates) |
-| `src_template` | string | No* | Path to unit/plist template file |
-| `mode` | string | No | File permissions (e.g., `"0644"`) |
-
-*Either `content` or `src_template` is required when using `unit`.
-
-**Drop-in Properties (systemd only):**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | Yes | Drop-in file name (e.g., `"10-override.conf"`) |
-| `content` | string | No* | Inline drop-in content (supports templates) |
-| `src_template` | string | No* | Path to drop-in template file |
-
-*Either `content` or `src_template` is required.
-
+**Example**:
 ```yaml
-# Linux (systemd)
 - service:
     name: nginx
     state: started
     enabled: true
   become: true
-
-# Create service with inline unit
-- service:
-    name: myapp
-    unit:
-      content: |
-        [Unit]
-        Description=My App
-        [Service]
-        ExecStart=/usr/local/bin/myapp
-        [Install]
-        WantedBy=multi-user.target
-    daemon_reload: true
-    state: started
-    enabled: true
-  become: true
-
-# macOS (launchd)
-- service:
-    name: com.example.myapp
-    unit:
-      content: |
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-          <key>Label</key>
-          <string>com.example.myapp</string>
-          <key>ProgramArguments</key>
-          <array>
-            <string>/usr/local/bin/myapp</string>
-          </array>
-          <key>RunAtLoad</key>
-          <true/>
-        </dict>
-        </plist>
-    state: started
-    enabled: true
 ```
 
-📖 **See [Actions - Service](actions.md#service)** for comprehensive examples and platform-specific details.
-
----
-
-### ollama
-
-**Type:** `object`
-**Applies to:** Ollama action
-**Required:** When using ollama action
-
-Manage Ollama installation, service configuration, and model management.
-
-**Properties:**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `state` | string | Yes | Installation state: `present` (install) or `absent` (uninstall) |
-| `service` | boolean | No | Enable and start Ollama service (systemd/launchd) |
-| `method` | string | No | Installation method: `auto` (prefer package manager, fallback to script), `script` (official installer only), `package` (package manager only) - default: `auto` |
-| `host` | string | No | Server bind address (e.g., `localhost:11434`, `0.0.0.0:11434`) - sets `OLLAMA_HOST` environment variable |
-| `models_dir` | string | No | Custom models directory path - sets `OLLAMA_MODELS` environment variable |
-| `pull` | array | No | List of models to pull (e.g., `["llama3.1:8b", "mistral"]`) |
-| `force` | boolean | No | Force operations: re-pull existing models, remove models directory on uninstall |
-| `env` | object | No | Additional environment variables for Ollama service (e.g., `OLLAMA_DEBUG`, `OLLAMA_ORIGINS`) |
-
-```yaml
-# Basic installation
-- ollama:
-    state: present
-  become: true
-
-# Install with service
-- ollama:
-    state: present
-    service: true
-  become: true
-
-# Install and pull models
-- ollama:
-    state: present
-    service: true
-    pull:
-      - "llama3.1:8b"
-      - "mistral:latest"
-  become: true
-
-# Custom configuration
-- ollama:
-    state: present
-    service: true
-    host: "0.0.0.0:11434"
-    models_dir: "/data/ollama"
-    env:
-      OLLAMA_DEBUG: "1"
-      OLLAMA_ORIGINS: "*"
-  become: true
-
-# Uninstall (keep models)
-- ollama:
-    state: absent
-  become: true
-
-# Complete removal (including models)
-- ollama:
-    state: absent
-    force: true
-  become: true
-```
-
-**Platform Support:**
-- **Linux:** Package managers (apt, dnf, yum, pacman, zypper, apk), official script, systemd service
-- **macOS:** Homebrew, official script, launchd service
-
-**Key Behaviors:**
-- Idempotent: Won't reinstall if already present, won't re-pull existing models (unless `force: true`)
-- Service configuration: Creates systemd drop-in (Linux) or launchd plist (macOS) with environment variables
-- Uninstall: Always removes binary and service, removes models only with `force: true`
-
-📖 **See [Actions - Ollama](actions.md#ollama)** for comprehensive examples, platform-specific details, and integration patterns.
+[See complete service documentation in Actions Guide →](actions.md#service)
 
 ---
 
 ### assert
 
-**Type:** `object`
-**Applies to:** Assert action
-**Required:** When using assert action
+Verify system state, command results, file properties, or HTTP responses.
 
-Verify system state, command results, file properties, or HTTP responses. Assertions **always return `changed: false`** and **fail fast** if verification doesn't pass.
+**Properties** (one type required):
 
-**Assertion Types** (exactly one required):
-
-**Command Assertion:**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `command.cmd` | string | Yes | Command to execute |
-| `command.exit_code` | integer | No | Expected exit code (default: 0) |
-
-**File Assertion:**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `file.path` | string | Yes | File path to check |
-| `file.exists` | boolean | No | Verify file exists (true) or doesn't exist (false) |
-| `file.content` | string | No | Expected exact file content (supports templates) |
-| `file.contains` | string | No | Expected substring in file (supports templates) |
-| `file.mode` | string | No | Expected file permissions (e.g., `"0644"`) |
-| `file.owner` | string | No | Expected file owner (UID or username) |
-| `file.group` | string | No | Expected file group (GID or groupname) |
-
-**HTTP Assertion:**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `http.url` | string | Yes | URL to request |
-| `http.method` | string | No | HTTP method (default: `GET`) |
-| `http.status` | integer | No | Expected status code (default: 200) |
-| `http.headers` | object | No | Request headers (supports templates) |
-| `http.body` | string | No | Request body (supports templates) |
-| `http.contains` | string | No | Expected substring in response body |
-| `http.body_equals` | string | No | Expected exact response body |
-| `http.timeout` | string | No | Request timeout (e.g., `"30s"`, `"5m"`) |
-
+**Command Assertion**:
 ```yaml
-# Command assertion
-- assert:
-    command:
-      cmd: docker --version
-      exit_code: 0
-
-# File existence
-- assert:
-    file:
-      path: /etc/nginx/nginx.conf
-      exists: true
-
-# File permissions
-- assert:
-    file:
-      path: ~/.ssh/id_rsa
-      mode: "0600"
-
-# File content
-- assert:
-    file:
-      path: /etc/hostname
-      contains: "production"
-
-# HTTP status
-- assert:
-    http:
-      url: https://api.example.com/health
-      status: 200
-
-# HTTP response body
-- assert:
-    http:
-      url: https://api.example.com/status
-      status: 200
-      contains: '"healthy":true'
+assert:
+  command:
+    cmd: docker --version
+    exit_code: 0
 ```
 
-**Key Behaviors:**
-- Always returns `changed: false` (assertions verify state, they don't change it)
-- Fails immediately if verification doesn't pass (fail-fast)
-- Provides detailed error messages with expected vs actual values
+**File Assertion**:
+```yaml
+assert:
+  file:
+    path: /tmp/test
+    exists: true
+    mode: "0644"
+```
 
-📖 **See [Actions - Assert](actions.md#assert)** for comprehensive examples and use cases.
+**HTTP Assertion**:
+```yaml
+assert:
+  http:
+    url: https://api.example.com/health
+    status: 200
+```
+
+**Works with**: [Universal properties](#universal-properties)
+
+**Key behaviors**: Always returns `changed: false`, fails fast on verification failure.
+
+[See complete assert documentation in Actions Guide →](actions.md#assert)
 
 ---
 
 ### preset
 
-**Type:** `string` or `object`
-**Applies to:** Preset action
-**Required:** When using preset action
+Invoke reusable, parameterized workflows.
 
-Invoke a reusable preset with optional parameters.
-
+**Simple form**:
 ```yaml
-# Simple string form (no parameters)
 - preset: my-preset
+```
 
-# With parameters
+**With parameters**:
+```yaml
 - preset: ollama
   with:
     state: present
     service: true
     pull: [llama3.1:8b]
-
-# Full object form
-- preset:
-    name: deploy-webapp
-    with:
-      app_name: myapp
-      version: v1.2.3
 ```
 
-**Properties:**
+**Works with**: [Universal properties](#universal-properties)
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `preset` | string | Preset name (simple form) |
-| `preset.name` | string | Preset name (object form) |
-| `preset.with` | object | Parameters to pass to preset |
-
-**Examples:**
-
+**Example**:
 ```yaml
-# Install Ollama
-- name: Setup LLM runtime
+- name: Install Ollama
   preset: ollama
   with:
     state: present
@@ -649,105 +412,108 @@ Invoke a reusable preset with optional parameters.
       - mistral:latest
   become: true
   register: ollama_result
-
-# Conditional preset
-- name: Install on production only
-  preset: deploy-webapp
-  with:
-    environment: production
-    replicas: 5
-  when: env == "production"
-
-# With result checking
-- name: Deploy application
-  preset: deploy-webapp
-  with:
-    app_name: myapp
-    version: v1.2.3
-  register: deploy_result
-
-- name: Show result
-  shell: echo "Deployment changed{{ ":" }} {{ deploy_result.changed }}"
 ```
 
-**Key Behaviors:**
-- Parameters are validated against preset definition (type, required, enum)
-- Returns `changed: true` if any step in preset changed
-- Supports all standard step features (when, tags, register, become)
-- Fails if required parameters missing or invalid
-- Cannot nest presets (presets cannot call other presets)
-
-📖 **See [Presets Guide](../presets.md)** for complete documentation and **[Preset Authoring](../preset-authoring.md)** for creating custom presets.
+[See Presets Guide →](../presets.md) | [See complete preset documentation in Actions Guide →](actions.md#preset)
 
 ---
 
 ### include
 
-**Type:** `string`
-**Applies to:** Include action
-**Required:** When using include action
+Load and execute steps from other configuration files.
 
-Path to YAML file containing steps to include.
-
+**Basic form**:
 ```yaml
 - include: ./tasks/common.yml
+```
 
-# With condition
+**With conditional**:
+```yaml
 - include: ./tasks/linux.yml
   when: os == "linux"
-
-# With variables
-- include: ./tasks/{{env}}.yml
 ```
+
+**Works with**: `name`, `when`, `tags`, `with_items` (NOT shell-specific properties or `register`)
+
+[See complete include documentation in Actions Guide →](actions.md#include)
 
 ---
 
 ### include_vars
 
-**Type:** `string`
-**Applies to:** Variable loading action
-**Required:** When using include_vars action
+Load variables from external YAML files.
 
-Path to YAML file containing variables to load.
-
+**Basic form**:
 ```yaml
 - include_vars: ./vars/production.yml
+```
 
-# Dynamic
+**Dynamic path**:
+```yaml
 - include_vars: ./vars/{{environment}}.yml
 ```
+
+**Works with**: `name`, `when`, `tags` (NOT loops, shell-specific properties, or `register`)
+
+[See complete include_vars documentation in Actions Guide →](actions.md#include-vars)
 
 ---
 
 ### vars
 
-**Type:** `object`
-**Applies to:** Variable definition action
-**Required:** When using vars action
-
 Define inline variables.
 
+**Basic form**:
 ```yaml
 - vars:
     app_name: MyApp
     version: "1.0.0"
     environment: production
+```
+
+**Nested variables**:
+```yaml
+- vars:
+    app:
+      name: MyApp
+      version: "1.0.0"
     ports:
       web: 8080
       api: 8081
+```
+
+[See Variables Guide →](variables.md)
+
+---
+
+## Universal Properties
+
+These properties work with **all** actions (unless noted otherwise).
+
+### name
+
+**Type**: `string`
+**Applies to**: All actions
+**Required**: No (but recommended)
+
+Human-readable description displayed in output.
+
+```yaml
+- name: Install dependencies
+  shell: npm install
 ```
 
 ---
 
 ### when
 
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No
+**Type**: `string` (expression)
+**Applies to**: All actions
+**Required**: No
 
-Conditional expression. Step executes only if expression evaluates to `true`.
+Conditional execution - step runs only if expression evaluates to `true`.
 
-**Operators:** `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`
+**Operators**: `==`, `!=`, `>`, `<`, `>=`, `<=`, `&&`, `||`, `!`, `in`, `not in`
 
 ```yaml
 # OS check
@@ -766,130 +532,65 @@ Conditional expression. Step executes only if expression evaluates to `true`.
   when: docker_check.rc != 0
 ```
 
+[See Control Flow Guide →](control-flow.md#conditionals)
+
 ---
 
 ### creates
 
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No
+**Type**: `string` (path)
+**Applies to**: All actions
+**Required**: No
 
-Skip step if the specified file path exists. Useful for idempotency - prevents re-running steps that have already completed.
+Skip step if the specified file path exists (idempotency check).
 
 ```yaml
 # Skip if binary already exists
-- name: Compile application
-  shell: go build -o myapp
+- shell: go build -o myapp
   creates: ./myapp
 
 # Skip if installation marker exists
-- name: Install package
-  shell: apt-get install -y package
-  creates: /usr/bin/package
+- unarchive:
+    src: /tmp/app.tar.gz
+    dest: /opt/app
+  creates: /opt/app/.installed
 ```
 
-**Path rendering:**
-The path is rendered through the template engine, so variables are supported:
+**How it works**: Before executing, Mooncake checks if file exists. If yes, step is skipped.
 
-```yaml
-- name: Set output directory
-  vars:
-    output_dir: /opt/myproject
-
-- name: Build project
-  shell: make build
-  creates: "{{ output_dir }}/myapp"
-```
-
-**How it works:**
-- Before executing the step, Mooncake checks if the file exists using `os.Stat()`
-- If the file exists, the step is skipped with reason `"idempotency:creates: /path/to/file"`
-- If the file doesn't exist, the step executes normally
-
-**Evaluation order:**
-Idempotency conditions are evaluated after `when` and `tags` filters:
-1. `when` expression (if present)
-2. `tags` filter (if specified)
-3. `creates` check (if specified)
-4. `unless` command (if specified)
-5. Execute step
-
-**See also:** [Idempotency Examples](../../examples/idempotency.md)
+[See Idempotency Examples →](../../examples/idempotency.md)
 
 ---
 
 ### unless
 
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No
+**Type**: `string` (command)
+**Applies to**: All actions
+**Required**: No
 
-Skip step if the given shell command succeeds (returns exit code 0). Provides flexible idempotency control based on system state.
+Skip step if the given shell command succeeds (returns exit code 0).
 
 ```yaml
 # Skip if service is already enabled
-- name: Enable nginx
-  shell: systemctl enable nginx
+- shell: systemctl enable nginx
   unless: "systemctl is-enabled nginx"
 
-# Skip if database table exists
-- name: Initialize database
-  shell: psql -f schema.sql mydb
-  unless: "psql -c '\\dt' mydb | grep users"
+# Skip if user exists
+- shell: useradd myuser
+  unless: "id myuser"
 ```
 
-**Command rendering:**
-The command is rendered through the template engine:
+**How it works**: Command is executed silently before the step. If exit code is 0 (success), step is skipped.
 
-```yaml
-- name: Set database name
-  vars:
-    db_name: production
-
-- name: Create database
-  shell: createdb {{ db_name }}
-  unless: "psql -l | grep {{ db_name }}"
-```
-
-**How it works:**
-- Before executing the step, Mooncake runs the `unless` command with `sh -c`
-- The command is executed silently (no output logged)
-- If the command exits with code 0 (success), the step is skipped with reason `"idempotency:unless: command"`
-- If the command exits with non-zero code (failure), the step executes normally
-
-**Important notes:**
-- The `unless` command is run silently to avoid cluttering logs
-- Only the exit code is checked - stdout/stderr are discarded
-- Use simple, fast commands to avoid performance impact
-- The command runs in a shell (`sh -c`), so shell features like pipes and redirects work
-
-**Common patterns:**
-```yaml
-# Check if file exists
-unless: "test -f /path/to/file"
-
-# Check if package installed
-unless: "dpkg -l package-name | grep '^ii'"
-
-# Check if user exists
-unless: "id username"
-
-# Check if service running
-unless: "systemctl is-active service"
-
-# Check for specific content
-unless: "grep 'pattern' /etc/config"
-```
-
-**See also:** [Idempotency Examples](../../examples/idempotency.md)
+[See Idempotency Examples →](../../examples/idempotency.md)
 
 ---
 
 ### tags
 
-**Type:** `array[string]`
-**Applies to:** All actions
-**Required:** No
+**Type**: `array[string]`
+**Applies to**: All actions
+**Required**: No
 
 Tags for filtering step execution via `--tags` flag.
 
@@ -901,7 +602,7 @@ Tags for filtering step execution via `--tags` flag.
   tags: [prod, deploy]
 ```
 
-**Usage:**
+**Usage**:
 ```bash
 # Run only dev steps
 mooncake run --config config.yml --tags dev
@@ -910,19 +611,25 @@ mooncake run --config config.yml --tags dev
 mooncake run --config config.yml --tags dev,test
 ```
 
+**Behavior**:
+- **No tags specified**: All steps run
+- **Tags specified**: Only steps with matching tags run
+
+[See Control Flow Guide →](control-flow.md#tags)
+
 ---
 
 ### with_items
 
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No
+**Type**: `string` (variable reference)
+**Applies to**: All actions
+**Required**: No
 
 Iterate over list. Step executes once for each item.
 
-**Loop variables available:**
+**Loop variables available**:
 - `{{item}}` - Current item value
-- `{{index}}` - Zero-based iteration index (0, 1, 2, ...)
+- `{{index}}` - Zero-based iteration index
 - `{{first}}` - Boolean, true for first iteration
 - `{{last}}` - Boolean, true for last iteration
 
@@ -937,34 +644,26 @@ Iterate over list. Step executes once for each item.
 
 - shell: brew install {{item}}
   with_items: "{{packages}}"
-
-# Using loop variables
-- name: "Package {{index + 1}}/{{packages|length}}: {{item}}"
-  shell: brew install {{item}}
-  with_items: "{{packages}}"
-
-# First/last checks
-- shell: echo "Processing {{item}}"
-  with_items: [a, b, c]
-  when: first == true  # Only first iteration
 ```
+
+[See Control Flow Guide →](control-flow.md#loops)
 
 ---
 
 ### with_filetree
 
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No
+**Type**: `string` (path)
+**Applies to**: All actions
+**Required**: No
 
-Iterate over files in directory tree. Step executes for each file in deterministic (sorted) order.
+Iterate over files in directory tree. Step executes for each file.
 
-**Item properties:**
+**Item properties**:
 - `{{item.name}}` - File name
 - `{{item.src}}` - Full source path
 - `{{item.is_dir}}` - Boolean, true if directory
 
-**Loop variables available:**
+**Loop variables**:
 - `{{index}}` - Zero-based iteration index
 - `{{first}}` - Boolean, true for first iteration
 - `{{last}}` - Boolean, true for last iteration
@@ -973,21 +672,18 @@ Iterate over files in directory tree. Step executes for each file in determinist
 - shell: cp "{{item.src}}" "/backup/{{item.name}}"
   with_filetree: ./dotfiles
   when: item.is_dir == false
-
-# Using loop variables
-- name: "[{{index + 1}}] Copying {{item.name}}"
-  shell: cp "{{item.src}}" "~/{{item.name}}"
-  with_filetree: ./dotfiles
 ```
+
+[See Control Flow Guide →](control-flow.md#loops)
 
 ---
 
 ### become
 
-**Type:** `boolean`
-**Applies to:** shell, file, template actions
-**Required:** No
-**Default:** `false`
+**Type**: `boolean`
+**Applies to**: shell, command, file, template, service, preset
+**Required**: No
+**Default**: `false`
 
 Execute step with sudo privileges.
 
@@ -999,93 +695,77 @@ Execute step with sudo privileges.
     path: /opt/myapp
     state: directory
   become: true
-
-- template:
-    src: nginx.conf.j2
-    dest: /etc/nginx/nginx.conf
-  become: true
 ```
 
-**Password Input Methods:**
+**Password methods**:
+1. Interactive: `mooncake run --config config.yml --ask-become-pass` or `-K`
+2. File: `mooncake run --config config.yml --sudo-pass-file ~/.mooncake/sudo_pass`
+3. Environment: `export SUDO_ASKPASS=/usr/bin/ssh-askpass`
+4. CLI (insecure): `mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass`
 
-You must provide a sudo password using one of these methods (mutually exclusive):
-
-1. **Interactive prompt (recommended):**
-   ```bash
-   mooncake run --config config.yml --ask-become-pass
-   # or
-   mooncake run --config config.yml -K
-   ```
-
-2. **File-based (secure):**
-   ```bash
-   echo "mypassword" > ~/.mooncake/sudo_pass
-   chmod 0600 ~/.mooncake/sudo_pass
-   mooncake run --config config.yml --sudo-pass-file ~/.mooncake/sudo_pass
-   ```
-   ⚠️ File must have 0600 permissions and be owned by current user
-
-3. **Environment variable (password manager integration):**
-   ```bash
-   export SUDO_ASKPASS=/usr/bin/ssh-askpass
-   mooncake run --config config.yml
-   ```
-
-4. **CLI flag (insecure, not recommended):**
-   ```bash
-   mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
-   ```
-   ⚠️ **WARNING:** Password visible in shell history and process list. Requires `--insecure-sudo-pass` flag.
-
-**Security:**
-- Passwords are automatically redacted from all log output
-- Platform support: Linux and macOS only
-- User must have sudo privileges
+**Platform support**: Linux and macOS only
 
 ---
 
-### become_user
+### register
 
-**Type:** `string`
-**Applies to:** shell, file, template actions
-**Required:** No
-**Default:** `root`
+**Type**: `string`
+**Applies to**: All actions
+**Required**: No
 
-Specify which user to become when using `become`. Works with shell commands, file operations, and template rendering.
+Variable name to store step execution result.
+
+**Result properties**:
+- `rc` - Exit code (0 = success)
+- `stdout` - Standard output (shell/command only)
+- `stderr` - Standard error (shell/command only)
+- `failed` - Boolean, true if step failed
+- `changed` - Boolean, true if step made changes
 
 ```yaml
-- name: Run as postgres user
-  shell: psql -c "SELECT version()"
+- shell: whoami
+  register: current_user
+
+- shell: echo "User is {{current_user.stdout}}"
+
+# Use in conditions
+- shell: which docker
+  register: docker_check
+
+- shell: echo "Docker not installed"
+  when: docker_check.rc != 0
+```
+
+---
+
+## Shell-Specific Properties
+
+These properties **only work with shell and command actions**. They are ignored for file, template, include, etc.
+
+### become_user
+
+**Type**: `string`
+**Applies to**: shell, command
+**Required**: No
+**Default**: `root`
+
+Specify which user to become when using `become`.
+
+```yaml
+- shell: psql -c "SELECT version()"
   become: true
   become_user: postgres
-
-- name: Create file owned by app user
-  file:
-    path: /opt/myapp/config.json
-    content: '{"key": "value"}'
-    state: file
-  become: true
-  become_user: appuser
-
-- name: Deploy config as nginx user
-  template:
-    src: site.conf.j2
-    dest: /etc/nginx/sites-enabled/mysite.conf
-  become: true
-  become_user: nginx
 ```
 
 ---
 
 ### env
 
-**Type:** `object` (string keys and values)
-**Applies to:** shell only
-**Required:** No
+**Type**: `object` (string keys and values)
+**Applies to**: shell, command
+**Required**: No
 
-⚠️ **Shell commands only** - Ignored for file/template/include.
-
-Environment variables for shell command execution. Values support template rendering.
+Environment variables for command execution. Values support template rendering.
 
 ```yaml
 - shell: make build
@@ -1100,13 +780,11 @@ Environment variables for shell command execution. Values support template rende
 
 ### cwd
 
-**Type:** `string`
-**Applies to:** shell only
-**Required:** No
+**Type**: `string`
+**Applies to**: shell, command
+**Required**: No
 
-⚠️ **Shell commands only** - Ignored for file/template/include.
-
-Working directory for shell command execution. Supports template rendering.
+Working directory for command execution. Supports template rendering.
 
 ```yaml
 - shell: npm install
@@ -1120,15 +798,13 @@ Working directory for shell command execution. Supports template rendering.
 
 ### timeout
 
-**Type:** `string` (duration)
-**Applies to:** shell only
-**Required:** No
-
-⚠️ **Shell commands only** - Ignored for file/template/include.
+**Type**: `string` (duration)
+**Applies to**: shell, command
+**Required**: No
 
 Maximum execution time. Command terminates with exit code 124 on timeout.
 
-**Format:** Number + unit (`ns`, `us`, `µs`, `ms`, `s`, `m`, `h`)
+**Format**: Number + unit (`ns`, `us`, `µs`, `ms`, `s`, `m`, `h`)
 
 ```yaml
 - shell: ./slow-script.sh
@@ -1136,48 +812,38 @@ Maximum execution time. Command terminates with exit code 124 on timeout.
 
 - shell: npm run build
   timeout: 10m
-
-- shell: integration-tests
-  timeout: 1h
 ```
 
 ---
 
 ### retries
 
-**Type:** `integer`
-**Applies to:** shell only
-**Required:** No
-**Default:** `0`
-**Range:** 0-100
-
-⚠️ **Shell commands only** - Ignored for file/template/include.
+**Type**: `integer`
+**Applies to**: shell, command
+**Required**: No
+**Default**: `0`
+**Range**: 0-100
 
 Number of times to retry on failure. Total attempts = retries + 1.
 
 ```yaml
 - shell: curl https://api.example.com/data
   retries: 3
-
-- shell: docker pull myimage:latest
-  retries: 5
-  retry_delay: 10s
+  retry_delay: 5s
 ```
 
 ---
 
 ### retry_delay
 
-**Type:** `string` (duration)
-**Applies to:** shell only
-**Required:** No
-**Default:** No delay
-
-⚠️ **Shell commands only** - Ignored for file/template/include.
+**Type**: `string` (duration)
+**Applies to**: shell, command
+**Required**: No
+**Default**: No delay
 
 Delay between retry attempts. Only used when `retries` is set.
 
-**Format:** Number + unit (`ns`, `us`, `µs`, `ms`, `s`, `m`, `h`)
+**Format**: Number + unit (`ns`, `us`, `µs`, `ms`, `s`, `m`, `h`)
 
 ```yaml
 - shell: nc -z localhost 8080
@@ -1189,15 +855,13 @@ Delay between retry attempts. Only used when `retries` is set.
 
 ### changed_when
 
-**Type:** `string` (expression)
-**Applies to:** shell only
-**Required:** No
-
-⚠️ **Shell commands only** - Ignored for file/template/include.
+**Type**: `string` (expression)
+**Applies to**: shell, command
+**Required**: No
 
 Expression to override changed status. Evaluated after command execution.
 
-**Available variables:**
+**Available variables**:
 - `result.rc` - Exit code
 - `result.stdout` - Standard output
 - `result.stderr` - Standard error
@@ -1221,15 +885,13 @@ Expression to override changed status. Evaluated after command execution.
 
 ### failed_when
 
-**Type:** `string` (expression)
-**Applies to:** shell only
-**Required:** No
-
-⚠️ **Shell commands only** - Ignored for file/template/include.
+**Type**: `string` (expression)
+**Applies to**: shell, command
+**Required**: No
 
 Expression to override failure status. Evaluated after command execution.
 
-**Available variables:** Same as `changed_when`
+**Available variables**: Same as `changed_when`
 
 ```yaml
 # Grep - 0=found, 1=not found, 2+=error
@@ -1244,41 +906,12 @@ Expression to override failure status. Evaluated after command execution.
 - shell: ./command
   failed_when: "'ERROR' in result.stderr or 'FATAL' in result.stderr"
 
-# Never fail (ignore errors)
+# Never fail
 - shell: best-effort-command
   failed_when: false
 ```
 
 ---
-
-### register
-
-**Type:** `string`
-**Applies to:** All actions
-**Required:** No
-
-Variable name to store step execution result.
-
-**Result properties:**
-- `rc` - Exit code (0 = success)
-- `stdout` - Standard output (shell only)
-- `stderr` - Standard error (shell only)
-- `failed` - Boolean, true if step failed
-- `changed` - Boolean, true if step made changes
-
-```yaml
-- shell: whoami
-  register: current_user
-
-- shell: echo "User is {{current_user.stdout}}"
-
-# Use in conditions
-- shell: which docker
-  register: docker_check
-
-- shell: echo "Docker not installed"
-  when: docker_check.rc != 0
-```
 
 ## System Facts Reference
 
@@ -1332,7 +965,7 @@ Available automatically in all steps. View with `mooncake facts` or `mooncake fa
 | `dns_servers_string` | string | `"8.8.8.8, 1.1.1.1"` | DNS servers as string |
 | `network_interfaces` | array | See below | Network interface details |
 
-**NetworkInterface Structure:**
+**NetworkInterface Structure**:
 ```yaml
 name: "eth0"
 mac_address: "00:11:22:33:44:55"
@@ -1347,7 +980,7 @@ up: true
 |----------|------|---------|-------------|
 | `disks` | array | See below | Disk/mount information |
 
-**Disk Structure:**
+**Disk Structure**:
 ```yaml
 device: "/dev/sda1"
 mount_point: "/"
@@ -1364,7 +997,7 @@ used_pct: 50
 |----------|------|---------|-------------|
 | `gpus` | array | See below | GPU information |
 
-**GPU Structure:**
+**GPU Structure**:
 ```yaml
 vendor: "nvidia"           # nvidia, amd, intel, apple
 model: "GeForce RTX 4090"
@@ -1383,6 +1016,8 @@ cuda_version: "12.3"       # NVIDIA only
 | `git_version` | string | `"2.43.0"` | Git version (if installed) |
 | `go_version` | string | `"1.21.5"` | Go version (if installed) |
 
+---
+
 ## File Mode Reference
 
 Common permission values for `mode` property:
@@ -1394,6 +1029,8 @@ Common permission values for `mode` property:
 | `"0600"` | `rw-------` | Private files, secrets |
 | `"0700"` | `rwx------` | Private directories |
 | `"0777"` | `rwxrwxrwx` | World-writable (avoid!) |
+
+---
 
 ## Expression Syntax Reference
 
@@ -1424,9 +1061,11 @@ Used in `when`, `changed_when`, `failed_when`.
 | `"string"` | String literal (single or double quotes) |
 | `123` | Number literal |
 
+---
+
 ## See Also
 
-- [Actions Guide](actions.md) - Detailed action documentation
+- [Actions Guide](actions.md) - Detailed action documentation with examples
 - [Control Flow Guide](control-flow.md) - Conditionals, loops, tags
 - [Variables Guide](variables.md) - Variable management
 - [Examples](../../examples/index.md) - Practical examples
