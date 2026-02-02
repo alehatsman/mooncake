@@ -177,6 +177,46 @@ type ServiceDropin struct {
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
 }
 
+// Assert represents an assertion/verification operation in a configuration step.
+// Assertions always have changed: false and fail if the assertion doesn't pass.
+// Supports three types: command (exit code), file (content/existence), and http (response).
+type Assert struct {
+	Command *AssertCommand `yaml:"command" json:"command,omitempty"` // Command assertion
+	File    *AssertFile    `yaml:"file" json:"file,omitempty"`       // File assertion
+	HTTP    *AssertHTTP    `yaml:"http" json:"http,omitempty"`       // HTTP assertion
+}
+
+// AssertCommand verifies a command exits with the expected code.
+type AssertCommand struct {
+	Cmd      string `yaml:"cmd" json:"cmd"`                           // Command to execute (required)
+	ExitCode int    `yaml:"exit_code" json:"exit_code,omitempty"`     // Expected exit code (default: 0)
+}
+
+// AssertFile verifies file existence, content, or properties.
+type AssertFile struct {
+	Path     string  `yaml:"path" json:"path"`                         // File path (required)
+	Exists   *bool   `yaml:"exists" json:"exists,omitempty"`           // Verify existence (true) or non-existence (false)
+	Content  *string `yaml:"content" json:"content,omitempty"`         // Expected exact content
+	Contains *string `yaml:"contains" json:"contains,omitempty"`       // Expected substring
+	Mode     *string `yaml:"mode" json:"mode,omitempty"`               // Expected file permissions (e.g., "0644")
+	Owner    *string `yaml:"owner" json:"owner,omitempty"`             // Expected owner (username or UID)
+	Group    *string `yaml:"group" json:"group,omitempty"`             // Expected group (groupname or GID)
+}
+
+// AssertHTTP verifies HTTP response status, headers, or body content.
+type AssertHTTP struct {
+	URL        string            `yaml:"url" json:"url"`                               // URL to request (required)
+	Method     string            `yaml:"method" json:"method,omitempty"`               // HTTP method (default: GET)
+	Status     int               `yaml:"status" json:"status,omitempty"`               // Expected status code (default: 200)
+	Headers    map[string]string `yaml:"headers" json:"headers,omitempty"`             // Request headers
+	Body       *string           `yaml:"body" json:"body,omitempty"`                   // Request body
+	Contains   *string           `yaml:"contains" json:"contains,omitempty"`           // Expected response body substring
+	BodyEquals *string           `yaml:"body_equals" json:"body_equals,omitempty"`     // Expected exact response body
+	JSONPath   *string           `yaml:"jsonpath" json:"jsonpath,omitempty"`           // JSONPath expression for response body
+	JSONValue  interface{}       `yaml:"jsonpath_value" json:"jsonpath_value,omitempty"` // Expected value at JSONPath
+	Timeout    string            `yaml:"timeout" json:"timeout,omitempty"`             // Request timeout (e.g., "30s")
+}
+
 // Step represents a single configuration step that can perform various actions.
 type Step struct {
 	// Identification
@@ -198,6 +238,7 @@ type Step struct {
 	Unarchive   *Unarchive      `yaml:"unarchive" json:"unarchive,omitempty"`
 	Download    *Download       `yaml:"download" json:"download,omitempty"`
 	Service     *ServiceAction  `yaml:"service" json:"service,omitempty"`
+	Assert      *Assert         `yaml:"assert" json:"assert,omitempty"`
 	Include     *string         `yaml:"include" json:"include,omitempty"`
 	IncludeVars *string         `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
@@ -281,6 +322,9 @@ func (s *Step) countActions() int {
 	if s.Service != nil {
 		count++
 	}
+	if s.Assert != nil {
+		count++
+	}
 	if s.Include != nil {
 		count++
 	}
@@ -318,6 +362,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Service != nil {
 		return "service"
+	}
+	if s.Assert != nil {
+		return "assert"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -380,6 +427,7 @@ func (s *Step) Clone() *Step {
 		Unarchive:    s.Unarchive,
 		Download:     s.Download,
 		Service:      s.Service,
+		Assert:       s.Assert,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,

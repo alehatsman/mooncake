@@ -984,6 +984,345 @@ See detailed examples with real-world use cases:
 - **macOS Services:** `examples/macos-services/` - Complete launchd examples with Node.js apps, scheduled tasks, and service management patterns
 - **Service Management README:** `examples/macos-services/README.md` - Comprehensive guide to macOS service management
 
+## Assert
+
+Verify system state, command results, file properties, or HTTP responses. Assertions **never report `changed: true`** and **fail fast** if verification doesn't pass.
+
+**Use cases:**
+- Verify prerequisites before deployment
+- Check system configuration meets requirements
+- Validate API responses
+- Test infrastructure state
+- Ensure files have correct permissions
+
+### Assert Properties
+
+Assertions require exactly **one** of these types:
+
+**Command Assertion:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `assert.command.cmd` | string | Command to execute (required) |
+| `assert.command.exit_code` | integer | Expected exit code (default: 0) |
+
+**File Assertion:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `assert.file.path` | string | File path to check (required) |
+| `assert.file.exists` | boolean | Verify file exists (true) or doesn't exist (false) |
+| `assert.file.content` | string | Expected exact file content (supports templates) |
+| `assert.file.contains` | string | Expected substring in file (supports templates) |
+| `assert.file.mode` | string | Expected file permissions (e.g., "0644") |
+| `assert.file.owner` | string | Expected file owner (UID or username) |
+| `assert.file.group` | string | Expected file group (GID or groupname) |
+
+**HTTP Assertion:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `assert.http.url` | string | URL to request (required) |
+| `assert.http.method` | string | HTTP method: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS (default: GET) |
+| `assert.http.status` | integer | Expected status code (default: 200) |
+| `assert.http.headers` | object | Request headers (supports templates) |
+| `assert.http.body` | string | Request body (supports templates) |
+| `assert.http.contains` | string | Expected substring in response body |
+| `assert.http.body_equals` | string | Expected exact response body |
+| `assert.http.timeout` | string | Request timeout (e.g., "30s", "5m") |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `tags`, `register`, `with_items`, `with_filetree`
+
+### Command Assertions
+
+#### Verify Command Succeeds
+
+```yaml
+- name: Check Docker is installed
+  assert:
+    command:
+      cmd: docker --version
+      exit_code: 0
+```
+
+#### Expect Specific Exit Code
+
+```yaml
+- name: Verify configuration is invalid
+  assert:
+    command:
+      cmd: validate-config broken.yml
+      exit_code: 1
+```
+
+#### Check Command with Template
+
+```yaml
+- name: Verify package installed
+  assert:
+    command:
+      cmd: "dpkg -l | grep {{ package_name }}"
+      exit_code: 0
+```
+
+### File Assertions
+
+#### Check File Exists
+
+```yaml
+- name: Verify config file exists
+  assert:
+    file:
+      path: /etc/nginx/nginx.conf
+      exists: true
+```
+
+#### Check File Does Not Exist
+
+```yaml
+- name: Ensure temp file removed
+  assert:
+    file:
+      path: /tmp/install.lock
+      exists: false
+```
+
+#### Verify File Content
+
+```yaml
+- name: Check hostname configuration
+  assert:
+    file:
+      path: /etc/hostname
+      content: "{{ expected_hostname }}"
+```
+
+#### Check File Contains String
+
+```yaml
+- name: Verify SSH config has setting
+  assert:
+    file:
+      path: ~/.ssh/config
+      contains: "ForwardAgent yes"
+```
+
+#### Verify File Permissions
+
+```yaml
+- name: Check private key permissions
+  assert:
+    file:
+      path: ~/.ssh/id_rsa
+      mode: "0600"
+```
+
+#### Check File Ownership
+
+```yaml
+- name: Verify log directory owner
+  assert:
+    file:
+      path: /var/log/myapp
+      owner: "1000"
+      group: "1000"
+```
+
+### HTTP Assertions
+
+#### Check HTTP Status
+
+```yaml
+- name: Verify service is up
+  assert:
+    http:
+      url: https://api.example.com/health
+      status: 200
+```
+
+#### Check Response Body Contains
+
+```yaml
+- name: Verify API returns success
+  assert:
+    http:
+      url: https://api.example.com/status
+      status: 200
+      contains: '"status":"healthy"'
+```
+
+#### POST Request with Body
+
+```yaml
+- name: Verify API accepts login
+  assert:
+    http:
+      url: https://api.example.com/auth
+      method: POST
+      status: 200
+      headers:
+        Content-Type: application/json
+      body: |
+        {"username": "test", "password": "{{ api_password }}"}
+      contains: "token"
+```
+
+#### Check Exact Response
+
+```yaml
+- name: Verify API version
+  assert:
+    http:
+      url: https://api.example.com/version
+      status: 200
+      body_equals: '{"version":"2.0.0"}'
+```
+
+#### With Custom Timeout
+
+```yaml
+- name: Check slow endpoint
+  assert:
+    http:
+      url: https://api.example.com/slow-operation
+      status: 200
+      timeout: 2m
+```
+
+### Practical Examples
+
+#### Verify Prerequisites
+
+```yaml
+- name: Check system requirements
+  block:
+    - name: Verify Docker installed
+      assert:
+        command:
+          cmd: docker --version
+
+    - name: Verify Docker Compose installed
+      assert:
+        command:
+          cmd: docker-compose --version
+
+    - name: Verify port 80 available
+      assert:
+        command:
+          cmd: "! nc -z localhost 80"
+          exit_code: 0
+
+    - name: Check SSL certificate exists
+      assert:
+        file:
+          path: /etc/ssl/certs/server.crt
+          exists: true
+```
+
+#### Validate Deployment
+
+```yaml
+- name: Verify deployment succeeded
+  block:
+    - name: Check application binary exists
+      assert:
+        file:
+          path: /usr/local/bin/myapp
+          exists: true
+          mode: "0755"
+
+    - name: Verify config has correct settings
+      assert:
+        file:
+          path: /etc/myapp/config.yml
+          contains: "production: true"
+
+    - name: Check service is running
+      assert:
+        command:
+          cmd: systemctl is-active myapp
+          exit_code: 0
+
+    - name: Verify health endpoint responds
+      assert:
+        http:
+          url: http://localhost:8080/health
+          status: 200
+          contains: "healthy"
+```
+
+#### Test Infrastructure
+
+```yaml
+- name: Run infrastructure tests
+  block:
+    - name: Check database is accessible
+      assert:
+        command:
+          cmd: "psql -U {{ db_user }} -h {{ db_host }} -c 'SELECT 1'"
+          exit_code: 0
+
+    - name: Verify Redis is responding
+      assert:
+        command:
+          cmd: redis-cli ping
+          exit_code: 0
+
+    - name: Check API returns expected data
+      assert:
+        http:
+          url: "{{ api_base_url }}/test"
+          status: 200
+          contains: "test_passed"
+```
+
+#### With Registered Results
+
+```yaml
+- name: Check API and capture result
+  assert:
+    http:
+      url: https://api.example.com/status
+      status: 200
+  register: api_check
+
+- name: Log assertion result
+  shell: echo "API check passed - changed={{ api_check.changed }}"
+  # Output: API check passed - changed=false
+```
+
+### Key Behaviors
+
+**Never Changed:**
+```yaml
+# Assertions always report changed: false
+- assert:
+    command:
+      cmd: echo "test"
+  register: result
+# result.changed is always false
+```
+
+**Fail Fast:**
+```yaml
+# Execution stops immediately on assertion failure
+- assert:
+    file:
+      path: /missing/file
+      exists: true
+# This fails - subsequent steps won't run
+
+- name: This won't execute
+  shell: echo "skipped"
+```
+
+**Detailed Error Messages:**
+```
+assertion failed (command): expected exit code 0, got exit code 1 (false)
+assertion failed (file): expected file exists: true, got file exists: false (/tmp/missing)
+assertion failed (http): expected HTTP 200, got HTTP 404 (https://example.com)
+```
+
 ## Template
 
 Render templates with variables and logic.

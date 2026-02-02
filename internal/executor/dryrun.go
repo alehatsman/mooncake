@@ -217,3 +217,8 @@ func (d *dryRunLogger) LogServiceOperation(serviceName string, serviceAction *co
 func (d *dryRunLogger) logAction(actionType, message string) {
 	d.logger.Infof("  [DRY-RUN] Would %s: %s", actionType, message)
 }
+
+// LogAssertCheck logs a dry-run message for assertion verification.
+func (d *dryRunLogger) LogAssertCheck(assertType, expected string) {
+	d.logger.Infof("  [DRY-RUN] Would assert (%s): %s", assertType, expected)
+}

@@ -11,6 +11,7 @@ import "fmt"
 // - File system operation failed? → FileOperationError
 // - Infrastructure/environment setup failed? → SetupError
 // - Step parameter validation failed? → StepValidationError
+// - Assertion verification failed? → AssertionError
 //
 // All error types support error unwrapping via errors.Is() and errors.As().
 
@@ -117,5 +118,30 @@ func (e *SetupError) Error() string {
 }
 
 func (e *SetupError) Unwrap() error {
+	return e.Cause
+}
+
+// AssertionError represents an assertion verification failure.
+// Unlike other errors, assertions are expected to fail when conditions aren't met.
+type AssertionError struct {
+	Type     string // "command", "file", "http"
+	Expected string // What was expected
+	Actual   string // What was found
+	Details  string // Additional context (optional)
+	Cause    error  // Underlying error (optional)
+}
+
+func (e *AssertionError) Error() string {
+	msg := fmt.Sprintf("assertion failed (%s): expected %s, got %s", e.Type, e.Expected, e.Actual)
+	if e.Details != "" {
+		msg += fmt.Sprintf(" (%s)", e.Details)
+	}
+	if e.Cause != nil {
+		msg += fmt.Sprintf(": %v", e.Cause)
+	}
+	return msg
+}
+
+func (e *AssertionError) Unwrap() error {
 	return e.Cause
 }

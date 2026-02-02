@@ -49,6 +49,7 @@ Available actions:
 - **unarchive** - Extract tar.gz, zip archives with security protections
 - **template** - Render configuration templates
 - **service** - Manage system services (systemd on Linux, launchd on macOS)
+- **assert** - Verify state (command results, file properties, HTTP responses)
 - **include** - Load other configuration files
 - **include_vars** - Load variables from files
 - **vars** - Define variables

@@ -85,6 +85,9 @@
         "service": {
           "$ref": "#/definitions/service"
         },
+        "assert": {
+          "$ref": "#/definitions/assert"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"
@@ -247,6 +250,11 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -302,6 +310,11 @@
               {
                 "required": [
                   "service"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
                 ]
               },
               {
@@ -365,6 +378,11 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -420,6 +438,11 @@
               {
                 "required": [
                   "service"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
                 ]
               },
               {
@@ -483,6 +506,11 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -542,6 +570,11 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -592,6 +625,16 @@
               {
                 "required": [
                   "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
                 ]
               },
               {
@@ -655,6 +698,11 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -710,6 +758,16 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
                 ]
               },
               {
@@ -773,6 +831,11 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -832,12 +895,81 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
               {
                 "required": [
                   "include_vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "assert"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
                 ]
               }
             ]
@@ -1185,6 +1317,148 @@
             "src_template": {
               "type": "string",
               "description": "Path to drop-in template file"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "assert": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": ["command"],
+          "not": {
+            "anyOf": [
+              {"required": ["file"]},
+              {"required": ["http"]}
+            ]
+          }
+        },
+        {
+          "required": ["file"],
+          "not": {
+            "anyOf": [
+              {"required": ["command"]},
+              {"required": ["http"]}
+            ]
+          }
+        },
+        {
+          "required": ["http"],
+          "not": {
+            "anyOf": [
+              {"required": ["command"]},
+              {"required": ["file"]}
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "command": {
+          "type": "object",
+          "required": ["cmd"],
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "description": "Command to execute (assertion fails if exit code doesn't match expected)"
+            },
+            "exit_code": {
+              "type": "integer",
+              "description": "Expected exit code (default: 0)",
+              "minimum": 0,
+              "maximum": 255
+            }
+          },
+          "additionalProperties": false
+        },
+        "file": {
+          "type": "object",
+          "required": ["path"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File path to check"
+            },
+            "exists": {
+              "type": "boolean",
+              "description": "Verify file exists (true) or doesn't exist (false)"
+            },
+            "content": {
+              "type": "string",
+              "description": "Expected exact file content"
+            },
+            "contains": {
+              "type": "string",
+              "description": "Expected substring in file content"
+            },
+            "mode": {
+              "type": "string",
+              "pattern": "^[0-7]{3,4}$",
+              "description": "Expected file permissions (e.g., '0644')"
+            },
+            "owner": {
+              "type": "string",
+              "description": "Expected file owner (username or UID)"
+            },
+            "group": {
+              "type": "string",
+              "description": "Expected file group (groupname or GID)"
+            }
+          },
+          "additionalProperties": false
+        },
+        "http": {
+          "type": "object",
+          "required": ["url"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "URL to request"
+            },
+            "method": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+              "description": "HTTP method (default: GET)"
+            },
+            "status": {
+              "type": "integer",
+              "description": "Expected status code (default: 200)",
+              "minimum": 100,
+              "maximum": 599
+            },
+            "headers": {
+              "type": "object",
+              "description": "Request headers",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "body": {
+              "type": "string",
+              "description": "Request body"
+            },
+            "contains": {
+              "type": "string",
+              "description": "Expected substring in response body"
+            },
+            "body_equals": {
+              "type": "string",
+              "description": "Expected exact response body"
+            },
+            "jsonpath": {
+              "type": "string",
+              "description": "JSONPath expression to extract value from response"
+            },
+            "jsonpath_value": {
+              "description": "Expected value at JSONPath location"
+            },
+            "timeout": {
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
+              "description": "Request timeout (e.g., '30s', '5m')"
             }
           },
           "additionalProperties": false

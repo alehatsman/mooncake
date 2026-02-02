@@ -20,6 +20,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `unarchive` | object | Unarchive | Extract archive files |
 | `template` | object | Template | Template rendering |
 | `service` | object | Service | Manage system services (systemd/launchd) |
+| `assert` | object | Assert | Verify state (command/file/http) |
 | `include` | string | Include | Include steps from another file |
 | `include_vars` | string | Variables | Load variables from file |
 | `vars` | object | Variables | Define inline variables |
@@ -427,6 +428,96 @@ Manage system services (systemd on Linux, launchd on macOS).
 ```
 
 📖 **See [Actions - Service](actions.md#service)** for comprehensive examples and platform-specific details.
+
+---
+
+### assert
+
+**Type:** `object`
+**Applies to:** Assert action
+**Required:** When using assert action
+
+Verify system state, command results, file properties, or HTTP responses. Assertions **always return `changed: false`** and **fail fast** if verification doesn't pass.
+
+**Assertion Types** (exactly one required):
+
+**Command Assertion:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `command.cmd` | string | Yes | Command to execute |
+| `command.exit_code` | integer | No | Expected exit code (default: 0) |
+
+**File Assertion:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `file.path` | string | Yes | File path to check |
+| `file.exists` | boolean | No | Verify file exists (true) or doesn't exist (false) |
+| `file.content` | string | No | Expected exact file content (supports templates) |
+| `file.contains` | string | No | Expected substring in file (supports templates) |
+| `file.mode` | string | No | Expected file permissions (e.g., `"0644"`) |
+| `file.owner` | string | No | Expected file owner (UID or username) |
+| `file.group` | string | No | Expected file group (GID or groupname) |
+
+**HTTP Assertion:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `http.url` | string | Yes | URL to request |
+| `http.method` | string | No | HTTP method (default: `GET`) |
+| `http.status` | integer | No | Expected status code (default: 200) |
+| `http.headers` | object | No | Request headers (supports templates) |
+| `http.body` | string | No | Request body (supports templates) |
+| `http.contains` | string | No | Expected substring in response body |
+| `http.body_equals` | string | No | Expected exact response body |
+| `http.timeout` | string | No | Request timeout (e.g., `"30s"`, `"5m"`) |
+
+```yaml
+# Command assertion
+- assert:
+    command:
+      cmd: docker --version
+      exit_code: 0
+
+# File existence
+- assert:
+    file:
+      path: /etc/nginx/nginx.conf
+      exists: true
+
+# File permissions
+- assert:
+    file:
+      path: ~/.ssh/id_rsa
+      mode: "0600"
+
+# File content
+- assert:
+    file:
+      path: /etc/hostname
+      contains: "production"
+
+# HTTP status
+- assert:
+    http:
+      url: https://api.example.com/health
+      status: 200
+
+# HTTP response body
+- assert:
+    http:
+      url: https://api.example.com/status
+      status: 200
+      contains: '"healthy":true'
+```
+
+**Key Behaviors:**
+- Always returns `changed: false` (assertions verify state, they don't change it)
+- Fails immediately if verification doesn't pass (fail-fast)
+- Provides detailed error messages with expected vs actual values
+
+📖 **See [Actions - Assert](actions.md#assert)** for comprehensive examples and use cases.
 
 ---
 

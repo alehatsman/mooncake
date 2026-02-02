@@ -329,3 +329,113 @@ func TestFileOperationError_WrappingCommandError(t *testing.T) {
 		t.Error("should preserve full error chain to base error")
 	}
 }
+
+// TestAssertionError tests assertion error functionality
+func TestAssertionError(t *testing.T) {
+	err := &AssertionError{
+		Type:     "command",
+		Expected: "exit code 0",
+		Actual:   "exit code 1",
+		Details:  "false",
+	}
+
+	// Test Error() message
+	msg := err.Error()
+	if !strings.Contains(msg, "assertion failed (command)") {
+		t.Errorf("message should contain assertion type, got: %v", msg)
+	}
+	if !strings.Contains(msg, "expected exit code 0") {
+		t.Errorf("message should contain expected value, got: %v", msg)
+	}
+	if !strings.Contains(msg, "got exit code 1") {
+		t.Errorf("message should contain actual value, got: %v", msg)
+	}
+	if !strings.Contains(msg, "(false)") {
+		t.Errorf("message should contain details, got: %v", msg)
+	}
+}
+
+// TestAssertionError_WithCause tests assertion error with underlying cause
+func TestAssertionError_WithCause(t *testing.T) {
+	baseErr := errors.New("connection refused")
+	err := &AssertionError{
+		Type:     "http",
+		Expected: "HTTP 200",
+		Actual:   "request failed",
+		Details:  "https://example.com",
+		Cause:    baseErr,
+	}
+
+	// Test Error() message includes cause
+	msg := err.Error()
+	if !strings.Contains(msg, "connection refused") {
+		t.Errorf("message should contain cause, got: %v", msg)
+	}
+
+	// Test error unwrapping
+	if !errors.Is(err, baseErr) {
+		t.Error("error chain broken")
+	}
+}
+
+// TestAssertionError_NoCause tests assertion error without cause
+func TestAssertionError_NoCause(t *testing.T) {
+	err := &AssertionError{
+		Type:     "file",
+		Expected: "file exists: true",
+		Actual:   "file exists: false",
+		Details:  "/tmp/missing.txt",
+		Cause:    nil,
+	}
+
+	msg := err.Error()
+	if strings.Contains(msg, "<nil>") {
+		t.Errorf("message should not contain '<nil>', got: %v", msg)
+	}
+	if !strings.Contains(msg, "assertion failed (file)") {
+		t.Errorf("unexpected message: %v", msg)
+	}
+}
+
+// TestAssertionError_NoDetails tests assertion error without details
+func TestAssertionError_NoDetails(t *testing.T) {
+	err := &AssertionError{
+		Type:     "command",
+		Expected: "exit code 0",
+		Actual:   "exit code 1",
+		Details:  "",
+	}
+
+	msg := err.Error()
+	// Should not have extra parentheses when details is empty
+	if strings.Contains(msg, "()") {
+		t.Errorf("message should not contain empty parentheses, got: %v", msg)
+	}
+	if !strings.Contains(msg, "expected exit code 0") {
+		t.Errorf("unexpected message: %v", msg)
+	}
+}
+
+// TestAssertionError_TypeAssertion tests error type assertion
+func TestAssertionError_TypeAssertion(t *testing.T) {
+	var assertErr *AssertionError
+	err := &AssertionError{
+		Type:     "http",
+		Expected: "HTTP 200",
+		Actual:   "HTTP 404",
+	}
+
+	if !errors.As(err, &assertErr) {
+		t.Error("errors.As() failed for AssertionError")
+	}
+
+	if assertErr.Type != "http" {
+		t.Errorf("Type = %q, want %q", assertErr.Type, "http")
+	}
+	if assertErr.Expected != "HTTP 200" {
+		t.Errorf("Expected = %q, want %q", assertErr.Expected, "HTTP 200")
+	}
+	if assertErr.Actual != "HTTP 404" {
+		t.Errorf("Actual = %q, want %q", assertErr.Actual, "HTTP 404")
+	}
+}

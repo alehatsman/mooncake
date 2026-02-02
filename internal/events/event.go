@@ -65,6 +65,12 @@ const (
 	EventServiceManaged EventType = "service.managed"
 )
 
+// Event types for assertions
+const (
+	EventAssertPassed EventType = "assert.passed"
+	EventAssertFailed EventType = "assert.failed"
+)
+
 // RunStartedData contains data for run.started events
 type RunStartedData struct {
 	RootFile   string   `json:"root_file"`
@@ -246,4 +252,13 @@ type ServiceManagementData struct {
 	Changed    bool     `json:"changed"`              // Whether changes were made
 	Operations []string `json:"operations,omitempty"` // List of operations performed
 	DryRun     bool     `json:"dry_run"`
+}
+
+// AssertionData contains data for assert.passed and assert.failed events
+type AssertionData struct {
+	Type     string `json:"type"`               // Assertion type: "command", "file", or "http"
+	Expected string `json:"expected"`           // What was expected
+	Actual   string `json:"actual"`             // What was found
+	Failed   bool   `json:"failed"`             // Whether the assertion failed
+	StepID   string `json:"step_id,omitempty"`  // Step ID (added by event bus)
 }
