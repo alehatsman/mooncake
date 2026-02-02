@@ -18,6 +18,48 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
+// executeWithRetry wraps command execution with retry logic.
+// This is shared between shell and command actions to avoid code duplication.
+func executeWithRetry(step config.Step, ec *ExecutionContext, executeFn func() error) error {
+	maxAttempts := step.Retries + 1 // Total attempts = retries + initial attempt
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		// Log retry attempts (not the first one)
+		if attempt > 1 {
+			ec.Logger.Debugf("  Retry attempt %d/%d", attempt-1, step.Retries)
+		}
+
+		err := executeFn()
+		if err == nil {
+			// Success - no need to retry
+			return nil
+		}
+
+		lastErr = err
+
+		// Don't sleep after the last attempt
+		if attempt < maxAttempts && step.RetryDelay != "" {
+			delay, parseErr := time.ParseDuration(step.RetryDelay)
+			if parseErr != nil {
+				ec.Logger.Debugf("  Invalid retry_delay %q: %v", step.RetryDelay, parseErr)
+			} else {
+				ec.Logger.Debugf("  Waiting %s before retry...", step.RetryDelay)
+				time.Sleep(delay)
+			}
+		}
+	}
+
+	// All attempts failed
+	if step.Retries > 0 {
+		return fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
+	}
+	return lastErr
+}
+
 // evaluateBoolExpression is a helper that renders and evaluates a boolean expression.
 func evaluateBoolExpression(expression, fieldName string, evalContext map[string]interface{}, ec *ExecutionContext) (bool, error) {
 	renderedExpr, err := ec.Template.Render(expression, evalContext)
@@ -74,10 +116,12 @@ func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionCont
 
 // HandleShell executes a shell command step with retry logic if configured.
 func HandleShell(step config.Step, ec *ExecutionContext) error {
-	shell := *step.Shell
+	shellAction := step.Shell
+	if shellAction == nil || shellAction.Cmd == "" {
+		return &SetupError{Component: "shell", Issue: "no command specified"}
+	}
 
-	shell = strings.Trim(shell, " ")
-	shell = strings.Trim(shell, "\n")
+	shell := strings.Trim(shellAction.Cmd, " \n")
 
 	renderedCommand, err := ec.Template.Render(shell, ec.Variables)
 	if err != nil {
@@ -94,44 +138,10 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 	ec.Logger.Debugf("  Executing: %s", renderedCommand)
 
-	// Execute with retries if configured
-	maxAttempts := step.Retries + 1 // Total attempts = retries + initial attempt
-	if maxAttempts < 1 {
-		maxAttempts = 1
-	}
-
-	var lastErr error
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		// Log retry attempts (not the first one)
-		if attempt > 1 {
-			ec.Logger.Debugf("  Retry attempt %d/%d", attempt-1, step.Retries)
-		}
-
-		err := executeShellCommand(step, ec, renderedCommand)
-		if err == nil {
-			// Success - no need to retry
-			return nil
-		}
-
-		lastErr = err
-
-		// Don't sleep after the last attempt
-		if attempt < maxAttempts && step.RetryDelay != "" {
-			delay, parseErr := time.ParseDuration(step.RetryDelay)
-			if parseErr != nil {
-				ec.Logger.Debugf("  Invalid retry_delay %q: %v", step.RetryDelay, parseErr)
-			} else {
-				ec.Logger.Debugf("  Waiting %s before retry...", step.RetryDelay)
-				time.Sleep(delay)
-			}
-		}
-	}
-
-	// All attempts failed
-	if step.Retries > 0 {
-		return fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
-	}
-	return lastErr
+	// Execute with retries using common retry logic
+	return executeWithRetry(step, ec, func() error {
+		return executeShellCommand(step, ec, renderedCommand)
+	})
 }
 
 // executeShellCommand executes a shell command once without retry logic.
@@ -155,8 +165,24 @@ func setupCommandContext(step config.Step) (context.Context, context.CancelFunc,
 	return ctx, cancel, nil
 }
 
+// getInterpreter determines the shell interpreter to use based on configuration and platform.
+func getInterpreter(shellAction *config.ShellAction) string {
+	// Use explicitly specified interpreter if provided
+	if shellAction.Interpreter != "" {
+		return shellAction.Interpreter
+	}
+
+	// Platform-specific defaults
+	if runtime.GOOS == "windows" {
+		return "pwsh" // PowerShell on Windows
+	}
+	return "bash" // Bash on Unix-like systems
+}
+
 // createShellCommand creates the exec.Cmd with or without sudo elevation
 func createShellCommand(ctx context.Context, step config.Step, renderedCommand string, ec *ExecutionContext) (*exec.Cmd, error) {
+	interpreter := getInterpreter(step.Shell)
+
 	if step.Become {
 		if !security.IsBecomeSupported() {
 			return nil, &SetupError{
@@ -176,16 +202,37 @@ func createShellCommand(ctx context.Context, step config.Step, renderedCommand s
 		if step.BecomeUser != "" {
 			args = append(args, "-u", step.BecomeUser)
 		}
-		args = append(args, "--", "bash", "-c", renderedCommand)
+		args = append(args, "--", interpreter, "-c", renderedCommand)
 
 		// #nosec G204 - This is a provisioning tool designed to execute shell commands
 		command := exec.CommandContext(ctx, "sudo", args...)
-		command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
+
+		// Handle stdin: sudo password comes first, then user stdin if provided
+		if step.Shell.Stdin != "" {
+			renderedStdin, err := ec.Template.Render(step.Shell.Stdin, ec.Variables)
+			if err != nil {
+				return nil, &RenderError{Field: "stdin", Cause: err}
+			}
+			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n" + renderedStdin))
+		} else {
+			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
+		}
 		return command, nil
 	}
 
 	// #nosec G204 - This is a provisioning tool designed to execute shell commands
-	return exec.CommandContext(ctx, "bash", "-c", renderedCommand), nil
+	command := exec.CommandContext(ctx, interpreter, "-c", renderedCommand)
+
+	// Handle stdin for non-sudo commands
+	if step.Shell.Stdin != "" {
+		renderedStdin, err := ec.Template.Render(step.Shell.Stdin, ec.Variables)
+		if err != nil {
+			return nil, &RenderError{Field: "stdin", Cause: err}
+		}
+		command.Stdin = bytes.NewBufferString(renderedStdin)
+	}
+
+	return command, nil
 }
 
 // configureCommandEnvironment sets environment variables and working directory
@@ -296,7 +343,15 @@ func processCommandResult(ctx context.Context, command *exec.Cmd, step config.St
 	return wasTimeout, waitErr, nil
 }
 
+// executeShellCommand executes a shell command once without retry logic.
 func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand string) error {
+	return executeCommandCommon(step, ec, func(ctx context.Context) (*exec.Cmd, error) {
+		return createShellCommand(ctx, step, renderedCommand, ec)
+	})
+}
+
+// executeCommandCommon is the common execution logic shared by shell and command actions.
+func executeCommandCommon(step config.Step, ec *ExecutionContext, createCmd func(context.Context) (*exec.Cmd, error)) error {
 	result := NewResult()
 	result.StartTime = time.Now()
 
@@ -308,7 +363,7 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 		defer cancel()
 	}
 
-	command, err := createShellCommand(ctx, step, renderedCommand, ec)
+	command, err := createCmd(ctx)
 	if err != nil {
 		return err
 	}

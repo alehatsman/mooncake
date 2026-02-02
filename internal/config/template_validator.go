@@ -86,7 +86,7 @@ func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, loca
 			name  string
 			value string
 			path  string
-		}{"shell", *step.Shell, fmt.Sprintf("/%d/shell", stepIndex)})
+		}{"shell", step.Shell.Cmd, fmt.Sprintf("/%d/shell", stepIndex)})
 	}
 
 	if step.WithItems != nil {

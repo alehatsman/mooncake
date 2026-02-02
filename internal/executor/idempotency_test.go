@@ -23,7 +23,7 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 
 	// Step with creates pointing to existing file
 	step := config.Step{
-		Shell:   strPtr("echo test"),
+		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
 		Creates: strPtr(tmpFile.Name()),
 	}
 
@@ -53,7 +53,7 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 func TestCheckIdempotencyConditions_Creates_FileNotExists(t *testing.T) {
 	creates := "/nonexistent/file/that/does/not/exist"
 	step := config.Step{
-		Shell:   strPtr("echo test"),
+		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
 		Creates: strPtr(creates),
 	}
 
@@ -84,7 +84,7 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 	tmpFile.Close()
 
 	step := config.Step{
-		Shell:   strPtr("echo test"),
+		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
 		Creates: strPtr("{{ output_file }}"),
 	}
 
@@ -113,7 +113,7 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 	unless := "true" // Always succeeds
 	step := config.Step{
-		Shell:  strPtr("echo test"),
+		Shell:  &config.ShellAction{Cmd: *strPtr("echo test")},
 		Unless: &unless,
 	}
 
@@ -142,7 +142,7 @@ func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 	unless := "false" // Always fails
 	step := config.Step{
-		Shell:  strPtr("echo test"),
+		Shell:  &config.ShellAction{Cmd: *strPtr("echo test")},
 		Unless: &unless,
 	}
 
@@ -164,7 +164,7 @@ func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 
 func TestCheckIdempotencyConditions_Unless_WithTemplateVariable(t *testing.T) {
 	step := config.Step{
-		Shell:  strPtr("echo test"),
+		Shell:  &config.ShellAction{Cmd: *strPtr("echo test")},
 		Unless: strPtr("test -f {{ marker_file }}"),
 	}
 
@@ -208,7 +208,7 @@ func TestCheckIdempotencyConditions_BothConditions(t *testing.T) {
 
 	// Both creates and unless are satisfied
 	step := config.Step{
-		Shell:   strPtr("echo test"),
+		Shell:   &config.ShellAction{Cmd: *strPtr("echo test")},
 		Creates: strPtr(tmpFile.Name()),
 		Unless:  strPtr("true"),
 	}
@@ -236,7 +236,7 @@ func TestCheckIdempotencyConditions_BothConditions(t *testing.T) {
 
 func TestCheckIdempotencyConditions_NoConditions(t *testing.T) {
 	step := config.Step{
-		Shell: strPtr("echo test"),
+		Shell: &config.ShellAction{Cmd: *strPtr("echo test")},
 	}
 
 	renderer := template.NewPongo2Renderer()
@@ -267,7 +267,7 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 
 	step := config.Step{
 		Name:    "Test step with creates",
-		Shell:   strPtr("echo should not run"),
+		Shell:   &config.ShellAction{Cmd: *strPtr("echo should not run")},
 		Creates: strPtr(tmpFile.Name()),
 	}
 
@@ -296,3 +296,4 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 		t.Errorf("Expected 0 executed steps, got %d", *ec.Stats.Executed)
 	}
 }
+

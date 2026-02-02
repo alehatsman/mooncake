@@ -45,6 +45,7 @@ const (
 	EventFileUpdated         EventType = "file.updated"
 	EventFileRemoved         EventType = "file.removed"
 	EventFileCopied          EventType = "file.copied"
+	EventFileDownloaded      EventType = "file.downloaded"
 	EventDirCreated          EventType = "directory.created"
 	EventDirRemoved          EventType = "directory.removed"
 	EventLinkCreated         EventType = "link.created"
@@ -178,6 +179,16 @@ type PermissionsChangedData struct {
 // FileCopiedData contains data for file.copied events
 type FileCopiedData struct {
 	Src       string `json:"src"`
+	Dest      string `json:"dest"`
+	SizeBytes int64  `json:"size_bytes"`
+	Mode      string `json:"mode"`
+	Checksum  string `json:"checksum,omitempty"`
+	DryRun    bool   `json:"dry_run"`
+}
+
+// FileDownloadedData contains data for file.downloaded events
+type FileDownloadedData struct {
+	URL       string `json:"url"`
 	Dest      string `json:"dest"`
 	SizeBytes int64  `json:"size_bytes"`
 	Mode      string `json:"mode"`

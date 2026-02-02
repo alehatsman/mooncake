@@ -14,7 +14,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "single shell action",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 			},
 			wantErr: false,
 		},
@@ -62,7 +62,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "multiple actions - shell and file",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 				File:  &File{Path: "/tmp/test"},
 			},
 			wantErr: true,
@@ -72,7 +72,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			step: Step{
 				Name:     "test",
 				Template: &Template{Src: "src", Dest: "dest"},
-				Shell:    stringPtr("echo hello"),
+				Shell:    shellActionPtr("echo hello"),
 			},
 			wantErr: true,
 		},
@@ -107,7 +107,7 @@ func TestStep_ValidateHasAction(t *testing.T) {
 			name: "has shell action",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 			},
 			wantErr: false,
 		},
@@ -155,7 +155,7 @@ func TestStep_Validate(t *testing.T) {
 			name: "valid step with shell",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 			},
 			wantErr: false,
 		},
@@ -178,7 +178,7 @@ func TestStep_Validate(t *testing.T) {
 			name: "invalid - multiple actions",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 				File:  &File{Path: "/tmp/test"},
 			},
 			wantErr: true,
@@ -187,7 +187,7 @@ func TestStep_Validate(t *testing.T) {
 			name: "valid with when condition",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 				When:  "os == 'linux'",
 			},
 			wantErr: false,
@@ -196,7 +196,7 @@ func TestStep_Validate(t *testing.T) {
 			name: "valid with tags",
 			step: Step{
 				Name:  "test",
-				Shell: stringPtr("echo hello"),
+				Shell: shellActionPtr("echo hello"),
 				Tags:  []string{"deploy", "production"},
 			},
 			wantErr: false,
@@ -217,7 +217,7 @@ func TestStep_Copy(t *testing.T) {
 	original := Step{
 		Name:    "test step",
 		When:    "os == 'linux'",
-		Shell:   stringPtr("echo hello"),
+		Shell:   shellActionPtr("echo hello"),
 		Become:  true,
 		Tags:    []string{"tag1", "tag2"},
 		File:    &File{Path: "/tmp/test", State: "file"},
@@ -261,7 +261,7 @@ func TestStep_Copy(t *testing.T) {
 func TestStep_CopyWithModification(t *testing.T) {
 	original := Step{
 		Name:  "test",
-		Shell: stringPtr("echo hello"),
+		Shell: shellActionPtr("echo hello"),
 	}
 
 	copied := original.Clone()
@@ -282,6 +282,10 @@ func stringPtr(s string) *string {
 	return &s
 }
 
+func shellActionPtr(cmd string) *ShellAction {
+	return &ShellAction{Cmd: cmd}
+}
+
 func TestStep_CountActions(t *testing.T) {
 	tests := []struct {
 		name string
@@ -295,7 +299,7 @@ func TestStep_CountActions(t *testing.T) {
 		},
 		{
 			name: "one action - shell",
-			step: Step{Name: "test", Shell: strPtr("echo test")},
+			step: Step{Name: "test", Shell: shellActionPtr("echo test")},
 			want: 1,
 		},
 		{
@@ -327,7 +331,7 @@ func TestStep_CountActions(t *testing.T) {
 			name: "two actions - shell and template",
 			step: Step{
 				Name:     "test",
-				Shell:    strPtr("echo test"),
+				Shell:    shellActionPtr("echo test"),
 				Template: &Template{Src: "src", Dest: "dest"},
 			},
 			want: 2,
@@ -352,7 +356,7 @@ func TestStep_NewCommonFields(t *testing.T) {
 	t.Run("all new fields can be set", func(t *testing.T) {
 		step := Step{
 			Name:        "test",
-			Shell:       strPtr("echo test"),
+			Shell:       shellActionPtr("echo test"),
 			BecomeUser:  "postgres",
 			Env:         map[string]string{"PATH": "/usr/bin", "HOME": "/home/user"},
 			Cwd:         "/tmp",
@@ -393,7 +397,7 @@ func TestStep_NewCommonFields(t *testing.T) {
 func TestStep_CopyWithNewFields(t *testing.T) {
 	original := Step{
 		Name:        "test",
-		Shell:       strPtr("echo test"),
+		Shell:       shellActionPtr("echo test"),
 		BecomeUser:  "postgres",
 		Env:         map[string]string{"PATH": "/usr/bin"},
 		Cwd:         "/tmp",
@@ -451,7 +455,7 @@ func TestRunConfig(t *testing.T) {
 			Steps: []Step{
 				{
 					Name:  "step1",
-					Shell: strPtr("echo test"),
+					Shell: shellActionPtr("echo test"),
 				},
 			},
 		}

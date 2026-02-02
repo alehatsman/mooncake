@@ -563,12 +563,16 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 // renderActionTemplates renders templates in a step's action fields
 func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext) error {
 	if step.Shell != nil {
+		// Make a deep copy of Shell to avoid modifying shared pointer
+		shellCopy := *step.Shell
+		step.Shell = &shellCopy
+
 		// Render shell command
-		command, err := p.template.Render(*step.Shell, ctx.Variables)
+		command, err := p.template.Render(step.Shell.Cmd, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render shell command: %w", err)
 		}
-		step.Shell = &command
+		step.Shell.Cmd = command
 	}
 
 	if step.File != nil {

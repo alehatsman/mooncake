@@ -168,6 +168,16 @@ func (d *dryRunLogger) LogArchiveExtraction(src, dest, format string, stripCompo
 	d.logAction("unarchive", msg)
 }
 
+// LogFileDownload logs a dry-run message for file download.
+func (d *dryRunLogger) LogFileDownload(url, dest string, mode os.FileMode) {
+	d.logger.Infof("  [DRY-RUN] Would download: %s -> %s (mode: %s)", url, dest, formatMode(mode))
+}
+
+// LogFileDownloadNoChange logs a dry-run message when file download is not needed.
+func (d *dryRunLogger) LogFileDownloadNoChange(_ /* url */, dest string) {
+	d.logger.Infof("  [DRY-RUN] File already downloaded with correct checksum: %s", dest)
+}
+
 // logAction formats a generic action message for dry-run mode.
 func (d *dryRunLogger) logAction(actionType, message string) {
 	d.logger.Infof("  [DRY-RUN] Would %s: %s", actionType, message)

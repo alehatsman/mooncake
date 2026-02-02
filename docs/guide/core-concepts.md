@@ -42,10 +42,14 @@ Steps are executed sequentially:
 ## Actions
 
 Available actions:
-- **shell** - Execute shell commands
-- **file** - Create files and directories
+- **shell** / **command** - Execute shell commands or direct commands
+- **file** - Create files, directories, links, and manage permissions
+- **copy** - Copy files with checksum verification
+- **download** - Download files from URLs with checksums and retry
+- **unarchive** - Extract tar.gz, zip archives with security protections
 - **template** - Render configuration templates
 - **include** - Load other configuration files
+- **include_vars** - Load variables from files
 - **vars** - Define variables
 
 ## Variables

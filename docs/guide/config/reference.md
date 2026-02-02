@@ -16,6 +16,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `shell` | string | Shell | Shell command to execute |
 | `file` | object | File | File/directory operation |
 | `copy` | object | Copy | Copy file with checksums |
+| `download` | object | Download | Download files from URLs |
 | `unarchive` | object | Unarchive | Extract archive files |
 | `template` | object | Template | Template rendering |
 | `include` | string | Include | Include steps from another file |
@@ -197,6 +198,68 @@ Extract archive files with automatic format detection and security protections.
 - `2`: Strip two levels (e.g., `app-1.0/src/file` → `file`)
 
 Files with fewer components than specified are skipped.
+
+---
+
+### download
+
+**Type:** `object`
+**Applies to:** Download action
+**Required:** When using download action
+
+Download files from remote URLs with checksum verification and retry support.
+
+**Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `url` | string | Yes | Remote URL to download from |
+| `dest` | string | Yes | Destination file path |
+| `checksum` | string | No | Expected SHA256 (64 chars) or MD5 (32 chars) checksum |
+| `mode` | string | No | File permissions (e.g., `"0644"`) |
+| `timeout` | string | No | Maximum download time (e.g., `"30s"`, `"5m"`) |
+| `retries` | integer | No | Number of retry attempts on failure (0-100) |
+| `force` | boolean | No | Force re-download even if destination exists |
+| `backup` | boolean | No | Create `.bak` backup before overwriting |
+| `headers` | object | No | Custom HTTP headers (Authorization, User-Agent, etc.) |
+
+**Idempotency:** Downloads are skipped when destination exists with matching checksum (when `checksum` is provided).
+
+**Best practice:** Always use `checksum` for reliable idempotency and security.
+
+```yaml
+# Basic download
+- download:
+    url: "https://example.com/file.tar.gz"
+    dest: "/tmp/file.tar.gz"
+    mode: "0644"
+
+# Idempotent with checksum
+- download:
+    url: "https://go.dev/dl/go1.21.5.linux-amd64.tar.gz"
+    dest: "/tmp/go.tar.gz"
+    checksum: "e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
+    mode: "0644"
+
+# With retry and timeout
+- download:
+    url: "https://releases.ubuntu.com/22.04/ubuntu.iso"
+    dest: "/tmp/ubuntu.iso"
+    timeout: "10m"
+    retries: 3
+
+# Authenticated download
+- download:
+    url: "https://api.example.com/files/document.pdf"
+    dest: "/tmp/document.pdf"
+    headers:
+      Authorization: "Bearer {{ api_token }}"
+```
+
+**Security features:**
+- Atomic writes (download to temp, verify, rename)
+- Checksum verification prevents MITM attacks
+- HTTPS support for secure downloads
 
 ---
 

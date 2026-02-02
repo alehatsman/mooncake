@@ -25,7 +25,7 @@ Space fighters provisioning tool for managing dotfiles and system configuration.
 - 🌍 **Cross-Platform** - Linux, macOS, and Windows
 - 🔧 **Powerful** - Variables, conditionals, loops, templates, system facts
 - ⚡ **Robust** - Timeouts, retries, custom environments, failure handling
-- 📁 **Advanced File Operations** - Create, remove, link, copy with checksums, ownership management
+- 📁 **Advanced File Operations** - Create, remove, link, copy, download with checksums, extract archives, ownership management
 
 ## Quick Start
 

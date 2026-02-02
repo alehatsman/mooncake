@@ -78,7 +78,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:  "test",
-					Shell: strPtr("echo {{os}}"),
+					Shell: shellActionPtr("echo {{os}}"),
 					When:  "os == 'linux'",
 					Env: map[string]string{
 						"VAR": "{{value}}",
@@ -92,7 +92,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:  "test",
-					Shell: strPtr("echo {{unclosed"),
+					Shell: shellActionPtr("echo {{unclosed"),
 				},
 			},
 			expectedDiagnostics: 1,
@@ -102,7 +102,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:  "test",
-					Shell: strPtr("echo test"),
+					Shell: shellActionPtr("echo test"),
 					When:  "{{broken",
 				},
 			},
@@ -113,7 +113,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:  "test",
-					Shell: strPtr("echo test"),
+					Shell: shellActionPtr("echo test"),
 					Env: map[string]string{
 						"BAD": "{{unclosed",
 					},
@@ -126,7 +126,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:        "test",
-					Shell:       strPtr("{{bad1"),
+					Shell:       shellActionPtr("{{bad1"),
 					When:        "{{bad2",
 					ChangedWhen: "{{bad3",
 				},
@@ -164,7 +164,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:        "test",
-					Shell:       strPtr("echo {{message}}"),
+					Shell:       shellActionPtr("echo {{message}}"),
 					When:        "os == 'linux'",
 					BecomeUser:  "{{user}}",
 					Cwd:         "/tmp/{{project}}",
@@ -183,7 +183,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:      "test",
-					Shell:     strPtr("echo {{item}}"),
+					Shell:     shellActionPtr("echo {{item}}"),
 					WithItems: strPtr("{{my_list}}"),
 				},
 			},
@@ -194,7 +194,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name:      "test",
-					Shell:     strPtr("echo test"),
+					Shell:     shellActionPtr("echo test"),
 					WithItems: strPtr("{{unclosed"),
 				},
 			},

@@ -48,9 +48,72 @@ type Template struct {
 	Mode string                  `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
 
+// ShellAction represents a structured shell command execution in a configuration step.
+// Supports both simple string form and structured object form for backward compatibility.
+type ShellAction struct {
+	// Cmd is the command to execute (required)
+	Cmd string `yaml:"cmd,omitempty" json:"cmd,omitempty"`
+
+	// Interpreter specifies the shell interpreter to use
+	// Supported values: "bash", "sh", "pwsh", "cmd"
+	// Default: "bash" on Unix, "pwsh" on Windows
+	Interpreter string `yaml:"interpreter,omitempty" json:"interpreter,omitempty"`
+
+	// Stdin provides input to the command
+	Stdin string `yaml:"stdin,omitempty" json:"stdin,omitempty"`
+
+	// Capture controls whether to capture command output
+	// When false, output is only streamed (not stored in result)
+	// Default: true
+	Capture *bool `yaml:"capture,omitempty" json:"capture,omitempty"`
+
+	// Note: env, cwd, timeout are in Step-level fields for consistency
+	// Note: this enables reuse across shell/command actions
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
+// Supports: shell: "command" AND shell: { cmd: "command", interpreter: "bash", ... }
+func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try unmarshaling as string first (backward compatibility)
+	var str string
+	if err := unmarshal(&str); err == nil {
+		s.Cmd = str
+		return nil
+	}
+
+	// Try unmarshaling as structured object
+	type rawShell ShellAction
+	var raw rawShell
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	*s = ShellAction(raw)
+	return nil
+}
+
 // Shell represents a shell command execution in a configuration step.
+//
+// Deprecated: Use ShellAction instead.
 type Shell struct {
 	Command string `yaml:"command"`
+}
+
+// CommandAction represents a direct command execution without shell interpolation.
+// This is safer than shell when you have a known command with arguments.
+type CommandAction struct {
+	// Argv is the command and arguments as a list (required)
+	// Example: ["git", "clone", "https://..."]
+	Argv []string `yaml:"argv" json:"argv"`
+
+	// Stdin provides input to the command
+	Stdin string `yaml:"stdin,omitempty" json:"stdin,omitempty"`
+
+	// Capture controls whether to capture command output
+	// When false, output is only streamed (not stored in result)
+	// Default: true
+	Capture *bool `yaml:"capture,omitempty" json:"capture,omitempty"`
+
+	// Note: env, cwd, timeout are in Step-level fields for consistency
 }
 
 // Copy represents a file copy operation in a configuration step.
@@ -74,6 +137,19 @@ type Unarchive struct {
 	Mode            string `yaml:"mode" json:"mode,omitempty"`                         // Octal directory permissions (e.g., "0755")
 }
 
+// Download represents a file download operation in a configuration step.
+type Download struct {
+	URL      string            `yaml:"url" json:"url"`                         // Remote URL (required)
+	Dest     string            `yaml:"dest" json:"dest"`                       // Destination path (required)
+	Checksum string            `yaml:"checksum" json:"checksum,omitempty"`     // Expected SHA256 or MD5 checksum
+	Mode     string            `yaml:"mode" json:"mode,omitempty"`             // Octal file permissions (e.g., "0644")
+	Timeout  string            `yaml:"timeout" json:"timeout,omitempty"`       // Maximum download time (e.g., "30s", "5m")
+	Force    bool              `yaml:"force" json:"force,omitempty"`           // Force re-download if destination exists
+	Backup   bool              `yaml:"backup" json:"backup,omitempty"`         // Create .bak backup before overwriting
+	Headers  map[string]string `yaml:"headers" json:"headers,omitempty"`       // Custom HTTP headers
+	Retries  int               `yaml:"retries" json:"retries,omitempty"`       // Number of retry attempts
+}
+
 // Step represents a single configuration step that can perform various actions.
 type Step struct {
 	// Identification
@@ -87,13 +163,15 @@ type Step struct {
 	Unless  *string `yaml:"unless" json:"unless,omitempty"`   // Skip if command succeeds
 
 	// Actions (exactly one required)
-	Template    *Template `yaml:"template" json:"template,omitempty"`
-	File        *File     `yaml:"file" json:"file,omitempty"`
-	Shell       *string   `yaml:"shell" json:"shell,omitempty"`
-	Copy        *Copy     `yaml:"copy" json:"copy,omitempty"`
-	Unarchive   *Unarchive `yaml:"unarchive" json:"unarchive,omitempty"`
-	Include     *string   `yaml:"include" json:"include,omitempty"`
-	IncludeVars *string   `yaml:"include_vars" json:"include_vars,omitempty"`
+	Template    *Template      `yaml:"template" json:"template,omitempty"`
+	File        *File          `yaml:"file" json:"file,omitempty"`
+	Shell       *ShellAction   `yaml:"shell" json:"shell,omitempty"`
+	Command     *CommandAction `yaml:"command" json:"command,omitempty"`
+	Copy        *Copy          `yaml:"copy" json:"copy,omitempty"`
+	Unarchive   *Unarchive     `yaml:"unarchive" json:"unarchive,omitempty"`
+	Download    *Download      `yaml:"download" json:"download,omitempty"`
+	Include     *string        `yaml:"include" json:"include,omitempty"`
+	IncludeVars *string        `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 
 	// Privilege escalation
@@ -160,10 +238,16 @@ func (s *Step) countActions() int {
 	if s.Shell != nil {
 		count++
 	}
+	if s.Command != nil {
+		count++
+	}
 	if s.Copy != nil {
 		count++
 	}
 	if s.Unarchive != nil {
+		count++
+	}
+	if s.Download != nil {
 		count++
 	}
 	if s.Include != nil {
@@ -183,6 +267,9 @@ func (s *Step) DetermineActionType() string {
 	if s.Shell != nil {
 		return "shell"
 	}
+	if s.Command != nil {
+		return "command"
+	}
 	if s.File != nil {
 		return "file"
 	}
@@ -194,6 +281,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Unarchive != nil {
 		return "unarchive"
+	}
+	if s.Download != nil {
+		return "download"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -251,8 +341,10 @@ func (s *Step) Clone() *Step {
 		Template:     s.Template,
 		File:         s.File,
 		Shell:        s.Shell,
+		Command:      s.Command,
 		Copy:         s.Copy,
 		Unarchive:    s.Unarchive,
+		Download:     s.Download,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,

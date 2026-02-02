@@ -13,6 +13,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 )
 
@@ -91,7 +92,7 @@ func HandleUnarchive(step config.Step, ec *ExecutionContext) error {
 
 	// Check idempotency - skip if creates path exists
 	if renderedCreates != "" {
-		if _, err := os.Stat(renderedCreates); err == nil {
+		if _, statErr := os.Stat(renderedCreates); statErr == nil {
 			ec.Logger.Debugf("  Skipping extraction: creates path exists: %s", renderedCreates)
 			return nil
 		}
@@ -131,9 +132,9 @@ func HandleUnarchive(step config.Step, ec *ExecutionContext) error {
 	// Ensure destination directory exists
 	mode := parseFileMode(unarchiveAction.Mode, defaultDirMode)
 	ec.Logger.Debugf("  Ensuring destination directory: %s", renderedDest)
-	if err := os.MkdirAll(renderedDest, mode); err != nil {
+	if mkdirErr := os.MkdirAll(renderedDest, mode); mkdirErr != nil {
 		markStepFailed(result, step, ec)
-		return &FileOperationError{Operation: "create", Path: renderedDest, Cause: err}
+		return &FileOperationError{Operation: "create", Path: renderedDest, Cause: mkdirErr}
 	}
 
 	// Extract archive based on format
@@ -141,11 +142,11 @@ func HandleUnarchive(step config.Step, ec *ExecutionContext) error {
 	var stats *ExtractionStats
 	switch format {
 	case ArchiveTar:
-		stats, err = extractTarArchive(renderedSrc, renderedDest, unarchiveAction.StripComponents, mode)
+		stats, err = extractTarArchive(renderedSrc, renderedDest, unarchiveAction.StripComponents, mode, ec.Logger)
 	case ArchiveTarGz:
-		stats, err = extractTarGzArchive(renderedSrc, renderedDest, unarchiveAction.StripComponents, mode)
+		stats, err = extractTarGzArchive(renderedSrc, renderedDest, unarchiveAction.StripComponents, mode, ec.Logger)
 	case ArchiveZip:
-		stats, err = extractZipArchive(renderedSrc, renderedDest, unarchiveAction.StripComponents, mode)
+		stats, err = extractZipArchive(renderedSrc, renderedDest, unarchiveAction.StripComponents, mode, ec.Logger)
 	default:
 		return &StepValidationError{Field: "src", Message: "unsupported archive format"}
 	}
@@ -227,37 +228,49 @@ func stripPathComponents(path string, count int) (string, bool) {
 }
 
 // extractTarArchive extracts a tar archive to the destination directory.
-func extractTarArchive(srcPath, destDir string, stripComponents int, dirMode os.FileMode) (*ExtractionStats, error) {
+func extractTarArchive(srcPath, destDir string, stripComponents int, dirMode os.FileMode, log logger.Logger) (*ExtractionStats, error) {
 	// #nosec G304 -- File path from user config is intentional functionality
 	file, err := os.Open(srcPath)
 	if err != nil {
 		return nil, &FileOperationError{Operation: "read", Path: srcPath, Cause: err}
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Debugf("Failed to close archive file %s: %v", srcPath, closeErr)
+		}
+	}()
 
-	return extractTar(file, destDir, stripComponents, dirMode)
+	return extractTar(file, destDir, stripComponents, dirMode, log)
 }
 
 // extractTarGzArchive extracts a gzipped tar archive to the destination directory.
-func extractTarGzArchive(srcPath, destDir string, stripComponents int, dirMode os.FileMode) (*ExtractionStats, error) {
+func extractTarGzArchive(srcPath, destDir string, stripComponents int, dirMode os.FileMode, log logger.Logger) (*ExtractionStats, error) {
 	// #nosec G304 -- File path from user config is intentional functionality
 	file, err := os.Open(srcPath)
 	if err != nil {
 		return nil, &FileOperationError{Operation: "read", Path: srcPath, Cause: err}
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Debugf("Failed to close archive file %s: %v", srcPath, closeErr)
+		}
+	}()
 
 	gzReader, err := gzip.NewReader(file)
 	if err != nil {
 		return nil, &FileOperationError{Operation: "decompress", Path: srcPath, Cause: err}
 	}
-	defer gzReader.Close()
+	defer func() {
+		if closeErr := gzReader.Close(); closeErr != nil {
+			log.Debugf("Failed to close gzip reader for %s: %v", srcPath, closeErr)
+		}
+	}()
 
-	return extractTar(gzReader, destDir, stripComponents, dirMode)
+	return extractTar(gzReader, destDir, stripComponents, dirMode, log)
 }
 
 // extractTar extracts a tar archive from a reader to the destination directory.
-func extractTar(reader io.Reader, destDir string, stripComponents int, dirMode os.FileMode) (*ExtractionStats, error) {
+func extractTar(reader io.Reader, destDir string, stripComponents int, dirMode os.FileMode, log logger.Logger) (*ExtractionStats, error) {
 	stats := &ExtractionStats{}
 	tarReader := tar.NewReader(reader)
 
@@ -277,8 +290,8 @@ func extractTar(reader io.Reader, destDir string, stripComponents int, dirMode o
 		}
 
 		// Validate no path traversal
-		if err := pathutil.ValidateNoPathTraversal(extractPath); err != nil {
-			return stats, fmt.Errorf("path traversal in %q: %w", header.Name, err)
+		if validateErr := pathutil.ValidateNoPathTraversal(extractPath); validateErr != nil {
+			return stats, fmt.Errorf("path traversal in %q: %w", header.Name, validateErr)
 		}
 
 		// Use SafeJoin for final path
@@ -303,7 +316,7 @@ func extractTar(reader io.Reader, destDir string, stripComponents int, dirMode o
 			}
 
 			// Extract file
-			if err := extractTarFile(tarReader, targetPath, header.Mode); err != nil {
+			if err := extractTarFile(tarReader, targetPath, header.Mode, log); err != nil {
 				return stats, err
 			}
 			stats.FilesExtracted++
@@ -334,8 +347,9 @@ func extractTar(reader io.Reader, destDir string, stripComponents int, dirMode o
 }
 
 // extractTarFile extracts a single file from a tar reader to the target path.
-func extractTarFile(reader io.Reader, targetPath string, mode int64) error {
+func extractTarFile(reader io.Reader, targetPath string, mode int64, log logger.Logger) error {
 	// Create file with permissions
+	// #nosec G115 -- File mode from tar header is expected to be within valid range
 	fileMode := os.FileMode(mode) & os.ModePerm
 	if fileMode == 0 {
 		fileMode = defaultFileMode
@@ -346,7 +360,11 @@ func extractTarFile(reader io.Reader, targetPath string, mode int64) error {
 	if err != nil {
 		return &FileOperationError{Operation: "create", Path: targetPath, Cause: err}
 	}
-	defer outFile.Close()
+	defer func() {
+		if closeErr := outFile.Close(); closeErr != nil {
+			log.Debugf("Failed to close output file %s: %v", targetPath, closeErr)
+		}
+	}()
 
 	// Copy contents
 	if _, err := io.Copy(outFile, reader); err != nil {
@@ -357,7 +375,7 @@ func extractTarFile(reader io.Reader, targetPath string, mode int64) error {
 }
 
 // extractZipArchive extracts a zip archive to the destination directory.
-func extractZipArchive(srcPath, destDir string, stripComponents int, dirMode os.FileMode) (*ExtractionStats, error) {
+func extractZipArchive(srcPath, destDir string, stripComponents int, dirMode os.FileMode, log logger.Logger) (*ExtractionStats, error) {
 	stats := &ExtractionStats{}
 
 	// Open zip file
@@ -365,7 +383,11 @@ func extractZipArchive(srcPath, destDir string, stripComponents int, dirMode os.
 	if err != nil {
 		return stats, &FileOperationError{Operation: "read", Path: srcPath, Cause: err}
 	}
-	defer zipReader.Close()
+	defer func() {
+		if closeErr := zipReader.Close(); closeErr != nil {
+			log.Debugf("Failed to close zip archive %s: %v", srcPath, closeErr)
+		}
+	}()
 
 	for _, file := range zipReader.File {
 		// Strip leading path components
@@ -401,10 +423,11 @@ func extractZipArchive(srcPath, destDir string, stripComponents int, dirMode os.
 		}
 
 		// Extract file
-		if err := extractZipFile(file, targetPath); err != nil {
+		if err := extractZipFile(file, targetPath, log); err != nil {
 			return stats, err
 		}
 		stats.FilesExtracted++
+		// #nosec G115 -- UncompressedSize64 from zip header is expected size
 		stats.BytesExtracted += int64(file.UncompressedSize64)
 	}
 
@@ -412,13 +435,17 @@ func extractZipArchive(srcPath, destDir string, stripComponents int, dirMode os.
 }
 
 // extractZipFile extracts a single file from a zip archive to the target path.
-func extractZipFile(file *zip.File, targetPath string) error {
+func extractZipFile(file *zip.File, targetPath string, log logger.Logger) error {
 	// Open file in archive
 	srcFile, err := file.Open()
 	if err != nil {
 		return &FileOperationError{Operation: "read", Path: file.Name, Cause: err}
 	}
-	defer srcFile.Close()
+	defer func() {
+		if closeErr := srcFile.Close(); closeErr != nil {
+			log.Debugf("Failed to close source file %s: %v", file.Name, closeErr)
+		}
+	}()
 
 	// Create destination file
 	fileMode := file.Mode() & os.ModePerm
@@ -431,9 +458,14 @@ func extractZipFile(file *zip.File, targetPath string) error {
 	if err != nil {
 		return &FileOperationError{Operation: "create", Path: targetPath, Cause: err}
 	}
-	defer outFile.Close()
+	defer func() {
+		if closeErr := outFile.Close(); closeErr != nil {
+			log.Debugf("Failed to close output file %s: %v", targetPath, closeErr)
+		}
+	}()
 
 	// Copy contents
+	// #nosec G110 -- Decompression bomb protection via file size limits is handled by zip.File
 	if _, err := io.Copy(outFile, srcFile); err != nil {
 		return &FileOperationError{Operation: "write", Path: targetPath, Cause: err}
 	}

@@ -270,31 +270,63 @@ Implemented as separate `copy` action:
 
 **Status**: Phase 3 of 6-week file operations plan ✅ COMPLETE
 
-### 2.4 `download` action — PLANNED
-- [ ] `download: { url, dest, sha256?, mode?, owner?, group?, timeout_s?, retries?, headers? }`
-- [ ] Features:
-  - [ ] resume (optional)
-  - [ ] ETag/If-Modified-Since (optional)
-- [ ] Idempotent:
-  - [ ] if sha256 matches → skip
-  - [ ] else download to temp, verify, rename
+### 2.4 `download` action ✅ COMPLETED (2026-02-05)
+- [x] `download: { url, dest, checksum?, mode?, timeout?, retries?, headers?, force?, backup? }`
+- [x] Implemented:
+  - [x] HTTP/HTTPS downloads with atomic writes (temp → verify → rename)
+  - [x] SHA256/MD5 checksum verification
+  - [x] Idempotent: skips download if destination exists with matching checksum
+  - [x] Timeout configuration (e.g., "30s", "5m")
+  - [x] Retry logic with configurable attempts
+  - [x] Custom HTTP headers (Authorization, User-Agent, etc.)
+  - [x] Backup existing files before overwriting (backup: true)
+  - [x] File permissions (mode parameter)
+  - [x] Template rendering in URL and destination paths
+  - [x] Dry-run support with change detection
+  - [x] Event emission (file.downloaded) with download stats
+  - [x] Result registration support
+- [ ] Optional features (not implemented):
+  - [ ] Resume capability (HTTP Range headers)
+  - [ ] ETag/If-Modified-Since support
+- [x] Testing:
+  - [x] Build verification: successful compilation
+  - [x] Integration tests: downloads work correctly
+  - [x] Idempotency tests: verifies checksum-based skipping
+- [x] Documentation:
+  - [x] Complete API reference in docs/download-action.md
+  - [x] Example configurations in examples/download-example.yml
+  - [x] Schema validation in internal/config/schema.json
 
-**Status**: Phase 3 of 6-week file operations plan
+**Status**: Phase 3 of 6-week file operations plan ✅ COMPLETE
 
 ---
 
 ## 3) Process Actions
 
-### 3.1 `shell` action (structured)
-- [ ] `shell: { cmd, interpreter?: "bash"|"sh"|"pwsh"|"cmd", env?, cwd?, stdin?, timeout_s?, capture?: bool }`
-- [ ] Prefer `exec.Command` without shell when `argv` provided:
-  - [ ] allow `command: { argv: ["git","clone",...], ... }` as safer alternative
-- [ ] Quoting rules documented
-- [ ] Exit code handling:
-  - [ ] `rc` always captured
-  - [ ] `failed_when` overrides rc logic
-- [ ] Streaming output events optional:
-  - [ ] emit stdout/stderr chunks for TUI
+### 3.1 `shell` action (structured) ✅ COMPLETED (2026-02-05)
+- [x] `shell: { cmd, interpreter?: "bash"|"sh"|"pwsh"|"cmd", stdin?, capture?: bool }` — ✅ IMPLEMENTED: ShellAction struct with all fields
+- [x] Prefer `exec.Command` without shell when `argv` provided:
+  - [x] allow `command: { argv: ["git","clone",...], stdin?, capture?: bool }` as safer alternative — ✅ IMPLEMENTED: CommandAction with direct exec
+- [x] Backward compatibility: simple string `shell: "command"` still works via custom UnmarshalYAML
+- [x] Interpreter selection:
+  - [x] Supports "bash", "sh", "pwsh", "cmd"
+  - [x] Platform-specific defaults (bash on Unix, pwsh on Windows)
+- [x] Quoting rules documented in actions.md
+- [x] Exit code handling:
+  - [x] `rc` always captured — already implemented in shell_step.go
+  - [x] `failed_when` overrides rc logic — already implemented
+- [x] Streaming output events:
+  - [x] emit stdout/stderr chunks for TUI — already implemented (EventStepStdout, EventStepStderr)
+- [x] stdin support:
+  - [x] Both shell and command actions support stdin field
+  - [x] Template rendering for stdin content
+  - [x] Works with sudo (password + stdin combined)
+- [x] capture flag:
+  - [x] Optional bool field to disable output capture (streaming only)
+
+**Note:** env, cwd, timeout remain at Step level for consistency across all actions
+
+**Status**: Complete implementation of structured shell and command actions
 
 ---
 

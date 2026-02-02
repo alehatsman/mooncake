@@ -536,7 +536,7 @@ func TestHandleShell(t *testing.T) {
 			}
 			step := config.Step{
 				Name:     "test shell",
-				Shell:    &tt.shell,
+				Shell:    &config.ShellAction{Cmd: tt.shell},
 				Register: "result",
 			}
 
@@ -775,7 +775,7 @@ func TestExecuteStep_WithShell(t *testing.T) {
 	shellCmd := "echo test"
 	step := config.Step{
 		Name:  "test step",
-		Shell: &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 	}
 
 	err := ExecuteStep(step, ec)
@@ -810,7 +810,7 @@ func TestExecuteStep_Skipped(t *testing.T) {
 	shellCmd := "echo test"
 	step := config.Step{
 		Name:  "skipped step",
-		Shell: &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 		When:  "false",
 	}
 
@@ -848,8 +848,8 @@ func TestExecuteSteps(t *testing.T) {
 	shellCmd1 := "echo step1"
 	shellCmd2 := "echo step2"
 	steps := []config.Step{
-		{Name: "step 1", Shell: &shellCmd1},
-		{Name: "step 2", Shell: &shellCmd2},
+		{Name: "step 1", Shell: &config.ShellAction{Cmd: shellCmd1}},
+		{Name: "step 2", Shell: &config.ShellAction{Cmd: shellCmd2}},
 	}
 
 	err := ExecuteSteps(steps, ec)
@@ -930,7 +930,7 @@ func TestDispatchStepAction(t *testing.T) {
 	}{
 		{
 			name:    "shell action",
-			step:    config.Step{Shell: strPtr("echo test")},
+			step:    config.Step{Shell: &config.ShellAction{Cmd: *String("echo test")}},
 			wantErr: false,
 		},
 		{
@@ -1033,7 +1033,7 @@ func TestHandleShell_DryRun(t *testing.T) {
 	shellCmd := "echo test"
 	step := config.Step{
 		Name:  "dry run shell",
-		Shell: &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 	}
 
 	err := HandleShell(step, ec)
@@ -1756,7 +1756,7 @@ func TestExecuteSteps_WithError(t *testing.T) {
 	// Step that will fail
 	shellCmd := "exit 1"
 	steps := []config.Step{
-		{Name: "failing step", Shell: &shellCmd},
+		{Name: "failing step", Shell: &config.ShellAction{Cmd: shellCmd}},
 	}
 
 	err := ExecuteSteps(steps, ec)
@@ -1792,9 +1792,9 @@ func TestExecuteSteps_MultipleSteps(t *testing.T) {
 	cmd2 := "echo step2"
 	cmd3 := "echo step3"
 	steps := []config.Step{
-		{Name: "step 1", Shell: &cmd1},
-		{Name: "step 2", Shell: &cmd2},
-		{Name: "step 3", Shell: &cmd3},
+		{Name: "step 1", Shell: &config.ShellAction{Cmd: cmd1}},
+		{Name: "step 2", Shell: &config.ShellAction{Cmd: cmd2}},
+		{Name: "step 3", Shell: &config.ShellAction{Cmd: cmd3}},
 	}
 
 	err := ExecuteSteps(steps, ec)
@@ -1834,8 +1834,8 @@ func TestExecuteSteps_UpdatesContext(t *testing.T) {
 
 	shellCmd := "echo test"
 	steps := []config.Step{
-		{Name: "step 1", Shell: &shellCmd},
-		{Name: "step 2", Shell: &shellCmd},
+		{Name: "step 1", Shell: &config.ShellAction{Cmd: shellCmd}},
+		{Name: "step 2", Shell: &config.ShellAction{Cmd: shellCmd}},
 	}
 
 	err := ExecuteSteps(steps, ec)
@@ -2045,7 +2045,7 @@ func TestExecuteStep_ValidationError(t *testing.T) {
 	shellCmd := "echo test"
 	step := config.Step{
 		Name:  "invalid step",
-		Shell: &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 		File:  &config.File{Path: "/tmp/test"},
 	}
 
@@ -2567,7 +2567,7 @@ func TestHandleShell_RegisterResult(t *testing.T) {
 	shellCmd := "echo hello"
 	step := config.Step{
 		Name:     "test shell register",
-		Shell:    &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 		Register: "shell_result",
 	}
 
@@ -2684,7 +2684,7 @@ func TestCheckSkipConditions_Tags(t *testing.T) {
 	step := config.Step{
 		Name: "test tags",
 		Tags: []string{"development"},
-		Shell: String("echo test"),
+		Shell: &config.ShellAction{Cmd: *String("echo test")},
 	}
 
 	shouldSkip, reason, err := checkSkipConditions(step, ec)
@@ -2724,7 +2724,7 @@ func TestHandleShell_TemplateError(t *testing.T) {
 	shellCmd := "echo {{ invalid_template"
 	step := config.Step{
 		Name:  "test shell template error",
-		Shell: &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 	}
 
 	err := HandleShell(step, ec)
@@ -2759,7 +2759,7 @@ func TestHandleShell_BecomeWithoutPassword(t *testing.T) {
 	shellCmd := "echo test"
 	step := config.Step{
 		Name:   "test sudo without password",
-		Shell:  &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 		Become: true,
 	}
 
@@ -2798,7 +2798,7 @@ func TestHandleShell_FailedCommand(t *testing.T) {
 	shellCmd := "exit 1"
 	step := config.Step{
 		Name:     "test failed command",
-		Shell:    &shellCmd,
+		Shell: &config.ShellAction{Cmd: shellCmd},
 		Register: "failed_result",
 	}
 
@@ -2903,7 +2903,7 @@ func TestExecuteStep_SkipByTags(t *testing.T) {
 	step := config.Step{
 		Name:  "test skip by tags",
 		Tags:  []string{"development"},
-		Shell: String("echo test"),
+		Shell: &config.ShellAction{Cmd: *String("echo test")},
 	}
 
 	err := ExecuteStep(step, ec)
@@ -3011,7 +3011,7 @@ func TestExecuteStep_NoStepName(t *testing.T) {
 
 	// Anonymous step (no name) with shell
 	step := config.Step{
-		Shell: String("echo test"),
+		Shell: &config.ShellAction{Cmd: *String("echo test")},
 	}
 
 	err := ExecuteStep(step, ec)
@@ -3046,7 +3046,7 @@ func TestHandleShell_BecomeUser(t *testing.T) {
 
 	step := config.Step{
 		Name:       "test become_user",
-		Shell:      String("whoami"),
+		Shell: &config.ShellAction{Cmd: *String("whoami")},
 		Become:     true,
 		BecomeUser: "nobody",
 	}
@@ -3078,7 +3078,7 @@ func TestHandleShell_Env(t *testing.T) {
 
 	step := config.Step{
 		Name:  "test env",
-		Shell: String("echo $TEST_VAR"),
+		Shell: &config.ShellAction{Cmd: *String("echo $TEST_VAR")},
 		Env: map[string]string{
 			"TEST_VAR": "{{custom_value}}",
 		},
@@ -3129,7 +3129,7 @@ func TestHandleShell_Cwd(t *testing.T) {
 
 	step := config.Step{
 		Name:     "test cwd",
-		Shell:    String("pwd"),
+		Shell: &config.ShellAction{Cmd: *String("pwd")},
 		Cwd:      "{{target_dir}}",
 		Register: "result",
 	}
@@ -3171,7 +3171,7 @@ func TestHandleShell_Timeout(t *testing.T) {
 
 	step := config.Step{
 		Name:     "test timeout",
-		Shell:    String("sleep 10"),
+		Shell: &config.ShellAction{Cmd: *String("sleep 10")},
 		Timeout:  "100ms",
 		Register: "result",
 	}
@@ -3213,7 +3213,7 @@ func TestHandleShell_Retries(t *testing.T) {
 
 	step := config.Step{
 		Name:    "test retries",
-		Shell:   String("exit 1"),
+		Shell: &config.ShellAction{Cmd: *String("exit 1")},
 		Retries: 2,
 	}
 
@@ -3244,7 +3244,7 @@ func TestHandleShell_RetryDelay(t *testing.T) {
 
 	step := config.Step{
 		Name:       "test retry delay",
-		Shell:      String("exit 1"),
+		Shell: &config.ShellAction{Cmd: *String("exit 1")},
 		Retries:    1,
 		RetryDelay: "50ms",
 	}
@@ -3273,7 +3273,7 @@ func TestHandleShell_ChangedWhen(t *testing.T) {
 
 		step := config.Step{
 			Name:        "test changed_when",
-			Shell:       String("echo test"),
+			Shell: &config.ShellAction{Cmd: *String("echo test")},
 			ChangedWhen: "false",
 			Register:    "result",
 		}
@@ -3309,7 +3309,7 @@ func TestHandleShell_ChangedWhen(t *testing.T) {
 
 		step := config.Step{
 			Name:        "test changed_when",
-			Shell:       String("echo test"),
+			Shell: &config.ShellAction{Cmd: *String("echo test")},
 			ChangedWhen: "result.rc == 0",
 			Register:    "result",
 		}
@@ -3352,7 +3352,7 @@ func TestHandleShell_FailedWhen(t *testing.T) {
 
 		step := config.Step{
 			Name:       "test failed_when",
-			Shell:      String("echo 'ERROR' >&2"),
+			Shell: &config.ShellAction{Cmd: *String("echo 'ERROR' >&2")},
 			FailedWhen: "result.stderr != ''",
 			Register:   "result",
 		}
@@ -3388,7 +3388,7 @@ func TestHandleShell_FailedWhen(t *testing.T) {
 
 		step := config.Step{
 			Name:       "test failed_when",
-			Shell:      String("exit 1"),
+			Shell: &config.ShellAction{Cmd: *String("exit 1")},
 			FailedWhen: "false",
 			Register:   "result",
 		}
@@ -3439,7 +3439,7 @@ func TestHandleShell_CombinedFields(t *testing.T) {
 
 	step := config.Step{
 		Name:  "test combined fields",
-		Shell: String("echo $MSG"),
+		Shell: &config.ShellAction{Cmd: *String("echo $MSG")},
 		Env: map[string]string{
 			"MSG": "{{msg}}",
 		},

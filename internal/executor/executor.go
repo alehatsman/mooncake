@@ -295,8 +295,14 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	case step.Unarchive != nil:
 		return HandleUnarchive(step, ec)
 
+	case step.Download != nil:
+		return HandleDownload(step, ec)
+
 	case step.Shell != nil:
 		return HandleShell(step, ec)
+
+	case step.Command != nil:
+		return HandleCommand(step, ec)
 
 	default:
 		return nil
@@ -316,8 +322,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	// Check idempotency conditions (creates, unless) - ONLY for shell steps
-	if !shouldSkip && step.Shell != nil {
+	// Check idempotency conditions (creates, unless) - ONLY for shell/command steps
+	if !shouldSkip && (step.Shell != nil || step.Command != nil) {
 		idempotencySkip, idempotencyReason, err := checkIdempotencyConditions(step, ec)
 		if err != nil {
 			return err

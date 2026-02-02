@@ -36,7 +36,7 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 		if steps[0].Name != "test step" {
 			t.Errorf("step[0].Name = %q, want 'test step'", steps[0].Name)
 		}
-		if steps[0].Shell == nil || *steps[0].Shell != "echo hello" {
+		if steps[0].Shell == nil || steps[0].Shell.Cmd != "echo hello" {
 			t.Error("step[0].Shell not correctly parsed")
 		}
 

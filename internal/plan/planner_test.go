@@ -54,8 +54,8 @@ steps:
 		t.Fatal("Expected shell action, got nil")
 	}
 
-	if *step.Shell != "echo \"hello\"" {
-		t.Errorf("Expected command 'echo \"hello\"', got '%s'", *step.Shell)
+	if step.Shell.Cmd != "echo \"hello\"" {
+		t.Errorf("Expected command 'echo \"hello\"', got '%s'", step.Shell.Cmd)
 	}
 }
 

@@ -6,22 +6,48 @@ Actions are the operations Mooncake performs. Each step in your configuration us
 
 ## Shell
 
-Execute shell commands.
+Execute shell commands with full shell interpolation and scripting capabilities.
 
-### Basic Usage
+### Basic Usage (Simple String)
 
 ```yaml
 - name: Run command
   shell: echo "Hello"
 ```
 
+### Structured Shell (Advanced)
+
+```yaml
+- name: Run with interpreter
+  shell:
+    cmd: echo "Hello"
+    interpreter: bash
+    stdin: "input data"
+    capture: true
+```
+
 ### Shell Properties
 
-Shell commands support these specific properties in addition to universal fields:
+Shell commands support both simple string form and structured object form:
+
+**Simple Form:**
+```yaml
+shell: "command here"
+```
+
+**Structured Form:**
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `shell` | string | Command to execute (required) |
+| `shell.cmd` | string | Command to execute (required) |
+| `shell.interpreter` | string | Shell interpreter: "bash", "sh", "pwsh", "cmd" (default: "bash" on Unix, "pwsh" on Windows) |
+| `shell.stdin` | string | Input to pipe into command (supports templates) |
+| `shell.capture` | boolean | Capture output (default: true). Set false for streaming-only mode |
+
+**Step-Level Properties** (work with all actions):
+
+| Property | Type | Description |
+|----------|------|-------------|
 | `env` | object | Environment variables |
 | `cwd` | string | Working directory |
 | `timeout` | string | Maximum execution time (e.g., '30s', '5m') |
@@ -65,6 +91,172 @@ Plus all [universal fields](#universal-fields): `name`, `when`, `become`, `tags`
     HTTP_PROXY: "{{proxy_url}}"
   cwd: /tmp/downloads
 ```
+
+### Structured Shell with Interpreter
+
+```yaml
+- name: PowerShell on Windows
+  shell:
+    cmd: Get-Process | Where-Object {$_.CPU -gt 100}
+    interpreter: pwsh
+
+- name: POSIX shell for compatibility
+  shell:
+    cmd: printf '%s\n' "Hello"
+    interpreter: sh
+```
+
+### Shell with stdin
+
+```yaml
+- name: Pipe data to command
+  shell:
+    cmd: python3 process_input.py
+    stdin: |
+      line1
+      line2
+      line3
+
+- name: Use template in stdin
+  shell:
+    cmd: psql -U {{db_user}} {{db_name}}
+    stdin: |
+      SELECT * FROM users WHERE active = true;
+```
+
+### Shell Quoting Rules
+
+**When to use shell vs command:**
+
+- Use `shell` when you need:
+  - Shell features: pipes (`|`), redirects (`>`, `<`), wildcards (`*`)
+  - Command substitution: `$(command)` or `` `command` ``
+  - Environment variable expansion: `$VAR`
+  - Shell scripting: `if`, `for`, `while` loops
+
+- Use `command` (see below) when:
+  - You have a fixed command with known arguments
+  - You don't need shell interpretation
+  - You want to avoid quoting issues
+  - You want better security (no shell injection)
+
+**Quoting in shell:**
+
+```yaml
+# Good - quotes protect spaces
+- shell: echo "hello world"
+
+# Good - single quotes prevent variable expansion
+- shell: echo 'The $PATH is set'
+
+# Template variables - use quotes if they might contain spaces
+- shell: echo "User: {{username}}"
+
+# Multiple commands
+- shell: |
+    cd /tmp
+    echo "Working in $(pwd)"
+    ls -la
+```
+
+## Command
+
+Execute commands directly without shell interpolation. This is safer and faster when you don't need shell features.
+
+### Basic Usage
+
+```yaml
+- name: Clone repository
+  command:
+    argv: ["git", "clone", "https://github.com/user/repo.git"]
+```
+
+### Command Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `command.argv` | array | Command and arguments as list (required) |
+| `command.stdin` | string | Input to pipe into command (supports templates) |
+| `command.capture` | boolean | Capture output (default: true). Set false for streaming-only mode |
+
+**Step-Level Properties** (same as shell):
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `env` | object | Environment variables |
+| `cwd` | string | Working directory |
+| `timeout` | string | Maximum execution time |
+| `retries` | integer | Number of retry attempts |
+| `retry_delay` | string | Delay between retries |
+| `changed_when` | string | Expression to override changed status |
+| `failed_when` | string | Expression to override failure status |
+| `become_user` | string | User for sudo (when become: true) |
+
+Plus all [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+### Command with Templates
+
+```yaml
+- vars:
+    repo_url: "https://github.com/user/repo.git"
+    target_dir: "/opt/repo"
+
+- name: Clone with template variables
+  command:
+    argv:
+      - git
+      - clone
+      - "{{repo_url}}"
+      - "{{target_dir}}"
+```
+
+### Command with stdin
+
+```yaml
+- name: Feed data to process
+  command:
+    argv: ["python3", "-c", "import sys; print(sys.stdin.read().upper())"]
+    stdin: "hello world"
+```
+
+### Command vs Shell Comparison
+
+```yaml
+# Shell - uses shell interpolation
+- name: Shell with pipe
+  shell: ls -la | grep myfile
+
+# Command - direct execution (no shell)
+- name: Command (no pipes/wildcards)
+  command:
+    argv: ["ls", "-la", "/tmp"]
+
+# Shell - variable expansion
+- name: Shell with $HOME
+  shell: echo $HOME
+
+# Command - literal arguments (no variable expansion)
+- name: Command (explicit paths)
+  command:
+    argv: ["echo", "{{ansible_env.HOME}}"]
+```
+
+### Security: Shell vs Command
+
+**Shell injection risk:**
+```yaml
+# UNSAFE if user_input contains "; rm -rf /"
+- shell: echo "{{user_input}}"
+
+# SAFE - no shell interpretation
+- command:
+    argv: ["echo", "{{user_input}}"]
+```
+
+**When to use each:**
+
+- `shell`: Trust the input, need shell features
+- `command`: Don't trust input, simple command execution
 
 ## File
 
@@ -403,6 +595,156 @@ All extracted paths are validated to prevent:
 - **Symlink escapes** - Validates symlink targets stay within destination
 
 These protections are always active and cannot be disabled.
+
+## Download
+
+Download files from remote URLs with checksum verification and retry support.
+
+### Download Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `download.url` | string | Remote URL to download from (required) |
+| `download.dest` | string | Destination file path (required) |
+| `download.checksum` | string | Expected SHA256 (64 chars) or MD5 (32 chars) checksum |
+| `download.mode` | string | File permissions (e.g., "0644", "0755") |
+| `download.timeout` | string | Maximum download time (e.g., "30s", "5m") |
+| `download.retries` | integer | Number of retry attempts on failure (0-100) |
+| `download.force` | boolean | Force re-download even if destination exists |
+| `download.backup` | boolean | Create `.bak` backup before overwriting |
+| `download.headers` | object | Custom HTTP headers (Authorization, User-Agent, etc.) |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+**Idempotency:** Downloads are skipped when:
+- Destination file exists with matching checksum (when `checksum` is provided)
+- Destination file exists and `force: false` (without checksum - not recommended)
+
+**Best practice:** Always use `checksum` for reliable idempotency and security.
+
+### Basic Download
+
+```yaml
+- name: Download file
+  download:
+    url: "https://example.com/file.tar.gz"
+    dest: "/tmp/file.tar.gz"
+    mode: "0644"
+```
+
+### Download with Checksum (Idempotent)
+
+```yaml
+- name: Download Go tarball
+  download:
+    url: "https://go.dev/dl/go1.21.5.linux-amd64.tar.gz"
+    dest: "/tmp/go.tar.gz"
+    checksum: "e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
+    mode: "0644"
+  register: go_download
+
+# Second run will skip download (idempotent)
+```
+
+### Download with Retry and Timeout
+
+```yaml
+- name: Download large file
+  download:
+    url: "https://releases.ubuntu.com/22.04/ubuntu.iso"
+    dest: "/tmp/ubuntu.iso"
+    timeout: "10m"
+    retries: 3
+    mode: "0644"
+```
+
+### Authenticated Download
+
+```yaml
+- name: Download from private API
+  download:
+    url: "https://api.example.com/files/document.pdf"
+    dest: "/tmp/document.pdf"
+    headers:
+      Authorization: "Bearer {{ api_token }}"
+      User-Agent: "Mooncake/1.0"
+    mode: "0644"
+```
+
+### Download with Backup
+
+```yaml
+- name: Update config file safely
+  download:
+    url: "https://example.com/config/app.conf"
+    dest: "/etc/myapp/app.conf"
+    backup: true
+    force: true
+    mode: "0644"
+  become: true
+```
+
+### Download and Extract
+
+```yaml
+- name: Download Node.js
+  download:
+    url: "https://nodejs.org/dist/v18.19.0/node-v18.19.0-linux-x64.tar.gz"
+    dest: "/tmp/node.tar.gz"
+    checksum: "f27e33ebe5a0c2ec8d5d6b5f5c7c2c0c1c3f7b1a2a3d4e5f6g7h8i9j0k1l2m3n"
+    mode: "0644"
+  register: node_download
+
+- name: Extract if downloaded
+  unarchive:
+    src: "/tmp/node.tar.gz"
+    dest: "/opt/node"
+    strip_components: 1
+  when: node_download.changed
+```
+
+### How Checksum Works
+
+The `checksum` field supports both SHA256 and MD5:
+
+```yaml
+# SHA256 (64 hexadecimal characters) - recommended
+checksum: "e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
+
+# MD5 (32 hexadecimal characters) - legacy support
+checksum: "5d41402abc4b2a76b9719d911017c592"
+```
+
+**How it works:**
+1. If destination exists, calculate its checksum
+2. If checksums match → skip download (idempotent)
+3. If checksums differ → download new version
+4. After download, verify checksum matches expected value
+
+### Security Features
+
+All downloads include these security features:
+
+- **Atomic writes** - Downloads to temp file, verifies, then renames (prevents partial downloads)
+- **Checksum verification** - Prevents man-in-the-middle attacks (when checksum provided)
+- **HTTPS support** - Secure downloads over TLS
+- **Timeout protection** - Prevents hanging on slow connections
+
+### Performance Tips
+
+```yaml
+# Good - Fast idempotency check (4ms vs 40ms)
+- download:
+    url: "https://example.com/large-file.iso"
+    dest: "/tmp/file.iso"
+    checksum: "abc123..."  # Enables fast skip on second run
+
+# Avoid - Always re-downloads without checksum verification
+- download:
+    url: "https://example.com/file.iso"
+    dest: "/tmp/file.iso"
+    force: true  # No idempotency
+```
 
 ## Template
 

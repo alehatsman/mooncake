@@ -22,7 +22,7 @@ func createTestPlan() *plan.Plan {
 		Steps: []config.Step{
 			{
 				Name:  "Test step",
-				Shell: &shellCmd,
+				Shell: &config.ShellAction{Cmd: shellCmd},
 			},
 		},
 	}

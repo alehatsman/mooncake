@@ -29,7 +29,7 @@
         },
         "become": {
           "type": "boolean",
-          "description": "Execute with sudo privileges. Works with: shell, file, template"
+          "description": "Execute with sudo privileges. Works with: shell, command, file, template"
         },
         "tags": {
           "type": "array",
@@ -51,8 +51,21 @@
           "description": "Variable expression for iterating over items (universal)"
         },
         "shell": {
-          "type": "string",
-          "description": "Shell command to execute"
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Shell command to execute (simple string format)"
+            },
+            {
+              "$ref": "#/definitions/shell_action",
+              "description": "Shell command with structured options"
+            }
+          ],
+          "description": "Shell command to execute. Supports both simple string and structured object formats."
+        },
+        "command": {
+          "$ref": "#/definitions/command_action",
+          "description": "Direct command execution without shell (safer alternative to shell)"
         },
         "template": {
           "$ref": "#/definitions/template"
@@ -62,6 +75,12 @@
         },
         "copy": {
           "$ref": "#/definitions/copy"
+        },
+        "unarchive": {
+          "$ref": "#/definitions/unarchive"
+        },
+        "download": {
+          "$ref": "#/definitions/download"
         },
         "include": {
           "type": "string",
@@ -78,59 +97,102 @@
         },
         "become_user": {
           "type": "string",
-          "description": "⚠️ SHELL ONLY: User to become via sudo (e.g., 'root', 'postgres'). Only works with 'shell' action. Ignored for file/template/include."
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
         },
         "env": {
           "type": "object",
-          "description": "⚠️ SHELL ONLY: Environment variables for shell command execution. Ignored for file/template/include.",
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Environment variables for shell command execution. Ignored for file/template/include.",
           "additionalProperties": {
             "type": "string"
           }
         },
         "cwd": {
           "type": "string",
-          "description": "⚠️ SHELL ONLY: Working directory for shell command execution. Ignored for file/template/include."
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Working directory for shell command execution. Ignored for file/template/include."
         },
         "timeout": {
           "type": "string",
-          "description": "⚠️ SHELL ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Only works with 'shell' action. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
         },
         "retries": {
           "type": "integer",
-          "description": "⚠️ SHELL ONLY: Number of retry attempts on failure. Only works with 'shell' action. Ignored for file/template/include.",
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
           "minimum": 0,
           "maximum": 100
         },
         "retry_delay": {
           "type": "string",
-          "description": "⚠️ SHELL ONLY: Delay between retry attempts (e.g., '1s', '5s'). Only works with 'shell' action. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
         },
         "changed_when": {
           "type": "string",
-          "description": "⚠️ SHELL ONLY: Expression to override 'changed' status (e.g., 'result.rc == 0'). Only works with 'shell' action. Ignored for file/template/include."
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Expression to override 'changed' status (e.g., 'result.rc == 0'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
         },
         "failed_when": {
           "type": "string",
-          "description": "⚠️ SHELL ONLY: Expression to override 'failed' status (e.g., 'result.rc != 0'). Only works with 'shell' action. Ignored for file/template/include."
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Expression to override 'failed' status (e.g., 'result.rc != 0'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
         }
       },
       "allOf": [
         {
           "if": {
             "not": {
-              "required": ["shell"]
+              "anyOf": [
+                {
+                  "required": [
+                    "shell"
+                  ]
+                },
+                {
+                  "required": [
+                    "command"
+                  ]
+                }
+              ]
             },
             "anyOf": [
-              {"required": ["become_user"]},
-              {"required": ["env"]},
-              {"required": ["cwd"]},
-              {"required": ["timeout"]},
-              {"required": ["retries"]},
-              {"required": ["retry_delay"]},
-              {"required": ["changed_when"]},
-              {"required": ["failed_when"]}
+              {
+                "required": [
+                  "become_user"
+                ]
+              },
+              {
+                "required": [
+                  "env"
+                ]
+              },
+              {
+                "required": [
+                  "cwd"
+                ]
+              },
+              {
+                "required": [
+                  "timeout"
+                ]
+              },
+              {
+                "required": [
+                  "retries"
+                ]
+              },
+              {
+                "required": [
+                  "retry_delay"
+                ]
+              },
+              {
+                "required": [
+                  "changed_when"
+                ]
+              },
+              {
+                "required": [
+                  "failed_when"
+                ]
+              }
             ]
           },
           "then": {
@@ -140,102 +202,610 @@
       ],
       "oneOf": [
         {
-          "required": ["shell"],
+          "required": [
+            "shell"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["template"]},
-              {"required": ["file"]},
-              {"required": ["copy"]},
-              {"required": ["include"]},
-              {"required": ["include_vars"]},
-              {"required": ["vars"]}
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["template"],
+          "required": [
+            "command"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["shell"]},
-              {"required": ["file"]},
-              {"required": ["copy"]},
-              {"required": ["include"]},
-              {"required": ["include_vars"]},
-              {"required": ["vars"]}
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["file"],
+          "required": [
+            "template"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["shell"]},
-              {"required": ["template"]},
-              {"required": ["copy"]},
-              {"required": ["include"]},
-              {"required": ["include_vars"]},
-              {"required": ["vars"]}
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["copy"],
+          "required": [
+            "file"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["shell"]},
-              {"required": ["template"]},
-              {"required": ["file"]},
-              {"required": ["include"]},
-              {"required": ["include_vars"]},
-              {"required": ["vars"]}
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["include"],
+          "required": [
+            "copy"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["shell"]},
-              {"required": ["template"]},
-              {"required": ["file"]},
-              {"required": ["copy"]},
-              {"required": ["include_vars"]},
-              {"required": ["vars"]}
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["include_vars"],
+          "required": [
+            "unarchive"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["shell"]},
-              {"required": ["template"]},
-              {"required": ["file"]},
-              {"required": ["copy"]},
-              {"required": ["include"]},
-              {"required": ["vars"]}
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
             ]
           }
         },
         {
-          "required": ["vars"],
+          "required": [
+            "download"
+          ],
           "not": {
             "anyOf": [
-              {"required": ["shell"]},
-              {"required": ["template"]},
-              {"required": ["file"]},
-              {"required": ["copy"]},
-              {"required": ["include"]},
-              {"required": ["include_vars"]}
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "include"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "include_vars"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "vars"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              }
             ]
           }
         }
       ],
       "additionalProperties": false
     },
+    "shell_action": {
+      "type": "object",
+      "required": [
+        "cmd"
+      ],
+      "properties": {
+        "cmd": {
+          "type": "string",
+          "description": "Shell command to execute"
+        },
+        "interpreter": {
+          "type": "string",
+          "enum": [
+            "bash",
+            "sh",
+            "pwsh",
+            "cmd"
+          ],
+          "description": "Shell interpreter to use (default: bash on Unix, pwsh on Windows)"
+        },
+        "stdin": {
+          "type": "string",
+          "description": "Input to pipe into the command"
+        },
+        "capture": {
+          "type": "boolean",
+          "description": "Whether to capture command output (default: true)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "command_action": {
+      "type": "object",
+      "required": [
+        "argv"
+      ],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Command and arguments as array (e.g., ['git', 'clone', 'url'])"
+        },
+        "stdin": {
+          "type": "string",
+          "description": "Input to pipe into the command"
+        },
+        "capture": {
+          "type": "boolean",
+          "description": "Whether to capture command output (default: true)"
+        }
+      },
+      "additionalProperties": false
+    },
     "template": {
       "type": "object",
-      "required": ["src", "dest"],
+      "required": [
+        "src",
+        "dest"
+      ],
       "properties": {
         "src": {
           "type": "string",
@@ -260,7 +830,9 @@
     },
     "file": {
       "type": "object",
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "properties": {
         "path": {
           "type": "string",
@@ -268,7 +840,15 @@
         },
         "state": {
           "type": "string",
-          "enum": ["file", "directory", "absent", "link", "hardlink", "touch", "perms"],
+          "enum": [
+            "file",
+            "directory",
+            "absent",
+            "link",
+            "hardlink",
+            "touch",
+            "perms"
+          ],
           "description": "Desired state: file (create/update), directory (create), absent (remove), link (symlink), hardlink, touch (update timestamp), perms (change permissions only)"
         },
         "content": {
@@ -309,7 +889,10 @@
     },
     "copy": {
       "type": "object",
-      "required": ["src", "dest"],
+      "required": [
+        "src",
+        "dest"
+      ],
       "properties": {
         "src": {
           "type": "string",
@@ -343,6 +926,91 @@
         "checksum": {
           "type": "string",
           "description": "Expected SHA256 or MD5 checksum for verification"
+        }
+      },
+      "additionalProperties": false
+    },
+    "unarchive": {
+      "type": "object",
+      "required": [
+        "src",
+        "dest"
+      ],
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "Source archive path (.tar.gz, .zip, etc.)"
+        },
+        "dest": {
+          "type": "string",
+          "description": "Destination directory for extraction"
+        },
+        "strip_components": {
+          "type": "integer",
+          "description": "Number of leading path components to strip during extraction",
+          "minimum": 0
+        },
+        "creates": {
+          "type": "string",
+          "description": "Skip extraction if this path exists (idempotency marker)"
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^0[0-7]{3}$",
+          "description": "Directory mode in octal format (e.g., 0755)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "download": {
+      "type": "object",
+      "required": [
+        "url",
+        "dest"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Remote URL to download from"
+        },
+        "dest": {
+          "type": "string",
+          "description": "Destination file path"
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Expected SHA256 (64 chars) or MD5 (32 chars) checksum for verification and idempotency"
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^0[0-7]{3}$",
+          "description": "File mode in octal format (e.g., 0644)"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "description": "Maximum download time (e.g., '30s', '5m', '1h')"
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Force re-download even if destination exists"
+        },
+        "backup": {
+          "type": "boolean",
+          "description": "Create .bak backup before overwriting"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Custom HTTP headers (e.g., Authorization, User-Agent)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Number of retry attempts on download failure",
+          "minimum": 0,
+          "maximum": 100
         }
       },
       "additionalProperties": false
