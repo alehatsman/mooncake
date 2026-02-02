@@ -1,0 +1,7 @@
+# Common tasks file for include example
+- name: "Common: Check system"
+  shell: uname -a
+  register: system_info
+
+- name: "Common: Display system"
+  print: "System: {{ system_info.stdout }}"

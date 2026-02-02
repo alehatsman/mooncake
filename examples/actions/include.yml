@@ -1,0 +1,425 @@
+# ============================================================================
+# Include Action - Comprehensive Examples
+# ============================================================================
+# Load and execute tasks from external YAML files for better organization.
+#
+# Run this file:
+#   mooncake run --config examples/actions/include.yml
+# ============================================================================
+
+# =============================================================================
+# Basic Include
+# =============================================================================
+
+- name: "Example 1: Include common tasks"
+  include: ./tasks/common.yml
+  tags: [basics]
+
+- name: "Example 2: Display message after include"
+  print: "Common tasks completed"
+  tags: [basics]
+
+# =============================================================================
+# Multiple Includes
+# =============================================================================
+
+- name: "Example 3: Include setup tasks"
+  include: ./tasks/setup.yml
+  tags: [multiple]
+
+- name: "Example 4: Verify setup"
+  shell: ls -la /tmp/mooncake-include-demo/
+  tags: [multiple]
+
+# =============================================================================
+# Conditional Include
+# =============================================================================
+
+- name: "Example 5: Include Linux-specific tasks"
+  include: ./tasks/linux-tasks.yml
+  when: os == "linux"
+  tags: [conditional]
+
+- name: "Example 6: Include macOS-specific tasks"
+  include: ./tasks/macos-tasks.yml
+  when: os == "darwin"
+  tags: [conditional]
+
+# =============================================================================
+# Include with Tags
+# =============================================================================
+
+- name: "Example 7: Include with tags"
+  include: ./tasks/common.yml
+  tags: [tagged, common]
+
+# Run with: mooncake run --config include.yml --tags tagged
+
+# =============================================================================
+# Include in Workflows
+# =============================================================================
+
+- name: "Example 8: Start workflow"
+  print: "=== Starting Deployment Workflow ==="
+  tags: [workflow]
+
+- name: "Example 9: Run prerequisites"
+  include: ./tasks/setup.yml
+  tags: [workflow]
+
+- name: "Example 10: Execute main tasks"
+  include: ./tasks/common.yml
+  tags: [workflow]
+
+- name: "Example 11: Complete workflow"
+  print: "=== Workflow Completed ==="
+  tags: [workflow]
+
+# =============================================================================
+# Include with Variables
+# =============================================================================
+
+- vars:
+    environment: "production"
+    app_name: "MyApp"
+
+- name: "Example 12: Include tasks (variables available to included file)"
+  include: ./tasks/common.yml
+  tags: [variables]
+
+# Note: Variables defined before include are available in included file
+
+# =============================================================================
+# Organizing Large Configurations
+# =============================================================================
+
+- name: "Example 13: Project structure"
+  print: |
+    Organizing with includes:
+
+    main.yml:
+      - include: ./tasks/prerequisites.yml
+      - include: ./tasks/install-dependencies.yml
+      - include: ./tasks/configure-application.yml
+      - include: ./tasks/deploy-services.yml
+      - include: ./tasks/verify-deployment.yml
+      - include: ./tasks/cleanup.yml
+
+    Directory structure:
+      main.yml
+      tasks/
+        prerequisites.yml
+        install-dependencies.yml
+        configure-application.yml
+        deploy-services.yml
+        verify-deployment.yml
+        cleanup.yml
+  tags: [organization]
+
+# =============================================================================
+# Multi-Level Includes
+# =============================================================================
+
+- name: "Example 14: Multi-level includes (demo)"
+  print: |
+    Included files can include other files:
+
+    main.yml:
+      - include: ./tasks/setup.yml
+
+    tasks/setup.yml:
+      - include: ./tasks/common/network.yml
+      - include: ./tasks/common/security.yml
+
+    tasks/common/network.yml:
+      - name: Configure network
+        ...
+
+    Note: Be careful with circular includes!
+  tags: [multi-level]
+
+# =============================================================================
+# Include by Environment
+# =============================================================================
+
+- vars:
+    env: development  # or staging, production
+
+- name: "Example 15: Environment-specific includes (demo)"
+  print: |
+    Include by environment:
+
+    - vars:
+        env: production
+
+    - name: Load environment tasks
+      include: ./tasks/{{ env }}/main.yml
+
+    Directory structure:
+      tasks/
+        development/
+          main.yml
+        staging/
+          main.yml
+        production/
+          main.yml
+  tags: [environment]
+
+# =============================================================================
+# Reusable Task Libraries
+# =============================================================================
+
+- name: "Example 16: Reusable task pattern"
+  print: |
+    Create reusable task libraries:
+
+    tasks/database.yml:
+      - name: Install PostgreSQL
+        ...
+      - name: Configure database
+        ...
+      - name: Create users
+        ...
+
+    tasks/webserver.yml:
+      - name: Install Nginx
+        ...
+      - name: Configure sites
+        ...
+      - name: Enable SSL
+        ...
+
+    Usage in different playbooks:
+      # setup-web.yml
+      - include: ./tasks/database.yml
+      - include: ./tasks/webserver.yml
+
+      # setup-api.yml
+      - include: ./tasks/database.yml
+        # (reuse database tasks)
+  tags: [reusable]
+
+# =============================================================================
+# Conditional Task Loading
+# =============================================================================
+
+- name: "Example 17: Load tasks based on conditions"
+  print: |
+    Conditional loading pattern:
+
+    - name: Check if setup needed
+      shell: test -f /tmp/.setup-complete
+      register: setup_check
+      failed_when: false
+
+    - name: Run setup if needed
+      include: ./tasks/setup.yml
+      when: setup_check.rc != 0
+
+    - name: Mark setup complete
+      file:
+        path: /tmp/.setup-complete
+        state: touch
+      when: setup_check.rc != 0
+  tags: [conditional-loading]
+
+# =============================================================================
+# Include for Different Platforms
+# =============================================================================
+
+- name: "Example 18: Platform-specific includes"
+  print: |
+    Include platform-specific tasks:
+
+    - name: Run Linux tasks
+      include: ./tasks/linux.yml
+      when: os == "linux"
+
+    - name: Run macOS tasks
+      include: ./tasks/macos.yml
+      when: os == "darwin"
+
+    - name: Run Windows tasks
+      include: ./tasks/windows.yml
+      when: os == "windows"
+  tags: [platform]
+
+# =============================================================================
+# Modular Configuration Pattern
+# =============================================================================
+
+- name: "Example 19: Modular setup pattern"
+  print: |
+    Complete modular pattern:
+
+    main.yml:
+      - name: Load variables
+        include_vars: ./vars/{{ environment }}.yml
+
+      - name: Prerequisites
+        include: ./tasks/prerequisites.yml
+
+      - name: Install core
+        include: ./tasks/core/install.yml
+
+      - name: Install optional components
+        include: ./tasks/optional/{{ item }}.yml
+        with_items: "{{ enabled_components }}"
+
+      - name: Configure
+        include: ./tasks/configure.yml
+
+      - name: Verify
+        include: ./tasks/verify.yml
+  tags: [modular]
+
+# =============================================================================
+# Include vs include_vars
+# =============================================================================
+
+- name: "Example 20: Difference between include and include_vars"
+  print: |
+    include vs include_vars:
+
+    include:
+      • Loads and executes YAML steps/tasks
+      • Contains action definitions (shell, file, etc.)
+      • Can be conditional
+      • Used for organizing tasks
+
+      Example:
+        - include: ./tasks/deploy.yml
+
+    include_vars:
+      • Loads variables only
+      • Contains variable definitions
+      • Makes variables available to subsequent steps
+      • Used for configuration management
+
+      Example:
+        - include_vars: ./vars/production.yml
+  tags: [comparison]
+
+# =============================================================================
+# Best Practices
+# =============================================================================
+
+- name: "Example 21: Include best practices"
+  print: |
+    Best Practices:
+
+    1. Organize by functionality
+       tasks/
+         database/
+         webserver/
+         monitoring/
+
+    2. Use descriptive names
+       ✓ ./tasks/install-dependencies.yml
+       ✗ ./tasks/task1.yml
+
+    3. Keep includes focused
+       • Each file should have a single purpose
+       • Don't create overly large included files
+
+    4. Use relative paths
+       ✓ ./tasks/common.yml
+       ✗ /absolute/path/tasks/common.yml
+
+    5. Document dependencies
+       # tasks/deploy.yml
+       # Requires: setup.yml must run first
+
+    6. Avoid circular includes
+       main.yml → tasks/a.yml → tasks/b.yml → tasks/a.yml ✗
+
+    7. Use conditionals wisely
+       - include: ./tasks/optional.yml
+         when: feature_enabled
+
+    8. Test included files independently
+       mooncake run --config tasks/database.yml
+  tags: [best-practices]
+
+# =============================================================================
+# Real-World Example
+# =============================================================================
+
+- name: "Example 22: Real-world deployment structure"
+  print: |
+    Production deployment structure:
+
+    deploy.yml (main file)
+    ├── vars/
+    │   ├── common.yml
+    │   ├── development.yml
+    │   ├── staging.yml
+    │   └── production.yml
+    ├── tasks/
+    │   ├── prerequisites.yml
+    │   ├── backup.yml
+    │   ├── database/
+    │   │   ├── install.yml
+    │   │   ├── migrate.yml
+    │   │   └── backup.yml
+    │   ├── application/
+    │   │   ├── build.yml
+    │   │   ├── deploy.yml
+    │   │   └── rollback.yml
+    │   ├── webserver/
+    │   │   ├── install.yml
+    │   │   ├── configure.yml
+    │   │   └── ssl.yml
+    │   └── verification/
+    │       ├── health-check.yml
+    │       └── smoke-tests.yml
+    └── templates/
+        ├── nginx.conf.j2
+        └── app.service.j2
+
+    Usage:
+      mooncake run --config deploy.yml --tags production
+  tags: [real-world]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Example 23: Run cleanup"
+  include: ./tasks/cleanup.yml
+  tags: [cleanup, always]
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: "Summary"
+  print: |
+
+    Include action examples completed!
+    Covered:
+      • Basic include usage
+      • Multiple includes
+      • Conditional includes
+      • Include with tags
+      • Include in workflows
+      • Variables in included files
+      • Organization patterns
+      • Multi-level includes
+      • Environment-specific includes
+      • Reusable task libraries
+      • Platform-specific includes
+      • Modular configuration
+      • include vs include_vars
+      • Best practices
+      • Real-world examples
+
+    Key points:
+      • Use include to load and execute tasks from files
+      • Use include_vars to load variables only
+      • Variables are available to included files
+      • Organize large configs with includes
+      • Use relative paths
+      • Avoid circular dependencies
+
+  tags: [always]

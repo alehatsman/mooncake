@@ -1,0 +1,475 @@
+# ============================================================================
+# Assert Action - Comprehensive Examples
+# ============================================================================
+# Verify system state, command results, file properties, and HTTP responses.
+# Assertions NEVER report changed=true and FAIL FAST if verification fails.
+#
+# Run this file:
+#   mooncake run --config examples/actions/assert.yml
+# ============================================================================
+
+# =============================================================================
+# Command Assertions
+# =============================================================================
+
+- name: "Example 1: Verify command succeeds"
+  assert:
+    command:
+      cmd: echo "test"
+      exit_code: 0
+  tags: [command]
+
+- name: "Example 2: Check Docker is installed (may fail)"
+  assert:
+    command:
+      cmd: docker --version
+      exit_code: 0
+  when: false  # Set to true if Docker is installed
+  tags: [command]
+
+- name: "Example 3: Verify directory exists via command"
+  assert:
+    command:
+      cmd: test -d /tmp
+      exit_code: 0
+  tags: [command]
+
+- name: "Example 4: Check command returns specific exit code"
+  assert:
+    command:
+      cmd: grep "nonexistent-string" /etc/hosts
+      exit_code: 1  # grep returns 1 when no match found
+  tags: [command]
+
+- name: "Example 5: Verify current user"
+  shell: whoami
+  register: current_user
+  tags: [command]
+
+- name: "Example 6: Assert on registered output"
+  assert:
+    command:
+      cmd: "echo {{ current_user.stdout }}"
+      exit_code: 0
+  tags: [command]
+
+# =============================================================================
+# File Assertions
+# =============================================================================
+
+# Setup: Create test files
+- name: "Setup: Create test file"
+  file:
+    path: /tmp/mooncake-assert-test.txt
+    state: file
+    content: "This file contains the word localhost"
+    mode: "0644"
+  tags: [setup, file]
+
+- name: "Example 7: Check file exists"
+  assert:
+    file:
+      path: /etc/hosts
+      exists: true
+  tags: [file]
+
+- name: "Example 8: Check file doesn't exist"
+  assert:
+    file:
+      path: /tmp/this-should-not-exist-12345.txt
+      exists: false
+  tags: [file]
+
+- name: "Example 9: Verify file contains string"
+  assert:
+    file:
+      path: /etc/hosts
+      contains: "localhost"
+  tags: [file]
+
+- name: "Example 10: Check test file content"
+  assert:
+    file:
+      path: /tmp/mooncake-assert-test.txt
+      contains: "localhost"
+  tags: [file]
+
+- name: "Example 11: Verify exact file content"
+  assert:
+    file:
+      path: /tmp/mooncake-assert-test.txt
+      content: "This file contains the word localhost"
+  tags: [file]
+
+- name: "Example 12: Check file permissions"
+  assert:
+    file:
+      path: /tmp/mooncake-assert-test.txt
+      mode: "0644"
+  tags: [file]
+
+# Ownership checks (requires known user/group)
+# - name: "Example 13: Check file owner"
+#   assert:
+#     file:
+#       path: /tmp/mooncake-assert-test.txt
+#       owner: "1000"
+#   tags: [file]
+
+# =============================================================================
+# HTTP Assertions
+# =============================================================================
+
+- name: "Example 14: Check HTTP endpoint is up"
+  assert:
+    http:
+      url: https://www.example.com
+      status: 200
+  tags: [http]
+
+- name: "Example 15: Verify response contains text"
+  assert:
+    http:
+      url: https://www.example.com
+      status: 200
+      contains: "Example Domain"
+  tags: [http]
+
+- name: "Example 16: Check with custom timeout"
+  assert:
+    http:
+      url: https://www.example.com
+      status: 200
+      timeout: "30s"
+  tags: [http]
+
+# Note: For POST, PUT, DELETE methods:
+# - name: "Example 17: POST request assertion"
+#   assert:
+#     http:
+#       url: https://api.example.com/test
+#       method: POST
+#       status: 200
+#       headers:
+#         Content-Type: application/json
+#       body: '{"test": true}'
+#   tags: [http]
+
+# =============================================================================
+# Assertions with Variables
+# =============================================================================
+
+- vars:
+    test_file: /tmp/mooncake-assert-test.txt
+    expected_mode: "0644"
+    search_term: "localhost"
+
+- name: "Example 18: Assert with variables"
+  assert:
+    file:
+      path: "{{ test_file }}"
+      exists: true
+  tags: [variables]
+
+- name: "Example 19: Assert file mode with variable"
+  assert:
+    file:
+      path: "{{ test_file }}"
+      mode: "{{ expected_mode }}"
+  tags: [variables]
+
+- name: "Example 20: Assert content with variable"
+  assert:
+    file:
+      path: "{{ test_file }}"
+      contains: "{{ search_term }}"
+  tags: [variables]
+
+# =============================================================================
+# Assertions with Registration
+# =============================================================================
+
+- name: "Example 21: Assert and register result"
+  assert:
+    command:
+      cmd: echo "success"
+      exit_code: 0
+  register: assert_result
+  tags: [register]
+
+- name: "Example 22: Show assertion result"
+  shell: echo "Assertion changed: {{ assert_result.changed }}"
+  tags: [register]
+
+- name: "Example 23: Verify changed is always false"
+  print: "Assertions always report changed=false: {{ assert_result.changed }}"
+  tags: [register]
+
+# =============================================================================
+# Conditional Assertions
+# =============================================================================
+
+- name: "Example 24: Assert on Linux only"
+  assert:
+    command:
+      cmd: which systemctl
+      exit_code: 0
+  when: os == "linux"
+  tags: [conditional]
+
+- name: "Example 25: Assert on macOS only"
+  assert:
+    command:
+      cmd: which launchctl
+      exit_code: 0
+  when: os == "darwin"
+  tags: [conditional]
+
+# =============================================================================
+# Assertions in Loops
+# =============================================================================
+
+- vars:
+    required_commands:
+      - ls
+      - cat
+      - grep
+      - echo
+
+- name: "Example 26: Verify multiple commands exist"
+  assert:
+    command:
+      cmd: which {{ item }}
+      exit_code: 0
+  with_items: "{{ required_commands }}"
+  tags: [loops]
+
+- vars:
+    files_to_check:
+      - /etc/hosts
+      - /tmp
+      - /etc
+
+- name: "Example 27: Verify multiple paths exist"
+  assert:
+    file:
+      path: "{{ item }}"
+      exists: true
+  with_items: "{{ files_to_check }}"
+  tags: [loops]
+
+# =============================================================================
+# Real-World: Prerequisites Check
+# =============================================================================
+
+- name: "Example 28: Check system prerequisites"
+  print: "Checking system prerequisites..."
+  tags: [real-world]
+
+- name: "Example 29: Verify OS is supported"
+  assert:
+    command:
+      cmd: "uname -s"
+      exit_code: 0
+  tags: [real-world]
+
+- name: "Example 30: Check disk space"
+  assert:
+    command:
+      cmd: test -d /tmp
+      exit_code: 0
+  tags: [real-world]
+
+- name: "Example 31: Verify network connectivity"
+  assert:
+    http:
+      url: https://www.example.com
+      status: 200
+  tags: [real-world]
+
+- name: "Example 32: Prerequisites check complete"
+  print: "✓ All prerequisites met"
+  tags: [real-world]
+
+# =============================================================================
+# Real-World: Deployment Validation
+# =============================================================================
+
+- name: "Example 33: Create mock application"
+  file:
+    path: /tmp/mock-app/{{ item }}
+    state: file
+    content: "mock"
+    mode: "0755"
+  with_items: [app, config.yml]
+  tags: [deployment]
+
+- name: "Example 34: Verify application binary exists"
+  assert:
+    file:
+      path: /tmp/mock-app/app
+      exists: true
+  tags: [deployment]
+
+- name: "Example 35: Verify binary is executable"
+  assert:
+    file:
+      path: /tmp/mock-app/app
+      mode: "0755"
+  tags: [deployment]
+
+- name: "Example 36: Verify config exists"
+  assert:
+    file:
+      path: /tmp/mock-app/config.yml
+      exists: true
+  tags: [deployment]
+
+- name: "Example 37: Deployment validation complete"
+  print: "✓ Deployment validated successfully"
+  tags: [deployment]
+
+# =============================================================================
+# Real-World: Security Checks
+# =============================================================================
+
+- name: "Example 38: Verify file has secure permissions"
+  file:
+    path: /tmp/secure-file.txt
+    state: file
+    content: "secure content"
+    mode: "0600"
+  tags: [security]
+
+- name: "Example 39: Assert secure permissions"
+  assert:
+    file:
+      path: /tmp/secure-file.txt
+      mode: "0600"
+  tags: [security]
+
+- name: "Example 40: Security check passed"
+  print: "✓ Security checks passed"
+  tags: [security]
+
+# =============================================================================
+# Assertions with Retries
+# =============================================================================
+
+- name: "Example 41: Wait for service with retries"
+  print: "Simulating service startup..."
+  tags: [retries]
+
+- name: "Example 42: Check service readiness"
+  assert:
+    command:
+      cmd: echo "service ready"
+      exit_code: 0
+  retries: 5
+  retry_delay: "1s"
+  tags: [retries]
+
+# =============================================================================
+# Error Handling (Fail Fast Demonstration)
+# =============================================================================
+
+- name: "Example 43: This assertion will pass"
+  assert:
+    command:
+      cmd: echo "test"
+      exit_code: 0
+  tags: [fail-fast]
+
+# Uncomment to see fail-fast behavior:
+# - name: "Example 44: This assertion will FAIL"
+#   assert:
+#     file:
+#       path: /nonexistent/file.txt
+#       exists: true
+#   tags: [fail-fast]
+
+# - name: "Example 45: This step won't run (skipped due to failure)"
+#   print: "You won't see this message"
+#   tags: [fail-fast]
+
+# =============================================================================
+# Assertions for Different Scenarios
+# =============================================================================
+
+- name: "Example 46: Pre-deployment checks"
+  print: |
+    Pre-deployment assertions:
+    - assert:
+        command: {cmd: "docker --version", exit_code: 0}
+    - assert:
+        command: {cmd: "git --version", exit_code: 0}
+    - assert:
+        file: {path: "/opt/app", exists: true}
+    - assert:
+        http: {url: "https://api.github.com", status: 200}
+  tags: [scenarios]
+
+- name: "Example 47: Post-deployment validation"
+  print: |
+    Post-deployment assertions:
+    - assert:
+        file: {path: "/opt/app/binary", exists: true, mode: "0755"}
+    - assert:
+        file: {path: "/opt/app/config.yml", contains: "production"}
+    - assert:
+        command: {cmd: "systemctl is-active myapp", exit_code: 0}
+    - assert:
+        http: {url: "http://localhost:8080/health", status: 200}
+  tags: [scenarios]
+
+- name: "Example 48: Configuration validation"
+  print: |
+    Configuration assertions:
+    - assert:
+        file: {path: "/etc/app/config.yml", exists: true}
+    - assert:
+        file: {path: "/etc/app/config.yml", contains: "database"}
+    - assert:
+        file: {path: "/etc/app/config.yml", mode: "0644"}
+  tags: [scenarios]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove test files"
+  file:
+    path: "{{ item }}"
+    state: absent
+    force: true
+  with_items:
+    - /tmp/mooncake-assert-test.txt
+    - /tmp/secure-file.txt
+    - /tmp/mock-app
+  tags: [cleanup]
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: "Summary"
+  print: |
+
+    Assert action examples completed!
+    Covered:
+      • Command assertions (exit codes)
+      • File assertions (exists, content, contains, mode, owner)
+      • HTTP assertions (status, response body)
+      • Assertions with variables
+      • Assertions with registration
+      • Conditional assertions
+      • Assertions in loops
+      • Real-world validation scenarios
+      • Assertions with retries
+
+    Key points:
+      • Assertions always report changed=false
+      • Assertions fail fast - execution stops on failure
+      • Use for prerequisites, validation, and testing
+
+  tags: [always]

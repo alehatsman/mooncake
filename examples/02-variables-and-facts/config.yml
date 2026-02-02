@@ -52,6 +52,11 @@
     path: "/tmp/{{app_name}}-{{version}}-{{os}}-{{arch}}"
     state: directory
     mode: "0755"
+  register: dir_result
+
+- name: Print directory creation result
+  print:
+    msg: "Created directory: /tmp/{{app_name}}-{{version}}-{{os}}-{{arch}}"
 
 - name: Create system info file
   file:
@@ -67,3 +72,9 @@
       Memory: {{memory_total_mb}} MB
       Package Manager: {{package_manager}}
     mode: "0644"
+
+- name: Print summary
+  print:
+    msg: |
+      Variables and facts example complete!
+      Check /tmp/system-info.txt for system details.

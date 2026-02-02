@@ -52,3 +52,13 @@
 - name: Show files created
   shell: ls -la /opt/myapp
   become: true
+  register: ls_result
+
+- name: Print summary
+  print:
+    msg: |
+      Sudo/become example complete!
+      Files created in /opt/myapp:
+      {{ ls_result.stdout }}
+
+      Remember: Use 'become: true' when operations need root privileges

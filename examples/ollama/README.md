@@ -1,29 +1,25 @@
 # Ollama Preset Examples
 
-This directory contains comprehensive examples demonstrating the Ollama preset for managing Ollama installations, service configuration, and LLM model management.
+This directory contains examples demonstrating the Ollama preset for managing Ollama installations, service configuration, and LLM model management.
 
-## 🚀 Quick Start
+## Quick Start
 
 **New to Ollama?** Start here:
 
-#### `ollama-quick-start.yml`
+### `ollama-quick-start.yml`
 Simple 5-minute demo that installs Ollama and runs test queries:
 ```bash
-mooncake run -c examples/ollama/ollama-quick-start.yml
+mooncake run -c examples/ollama/ollama-quick-start.yml --ask-become-pass
 ```
 - Installs Ollama
 - Pulls tinyllama (smallest model, ~637MB)
 - Starts server
 - Runs test queries (math, geography)
 
----
+## Examples
 
-## 📚 Examples Overview
-
-### Main Example
-
-#### `ollama-example.yml` (Recommended)
-Complete comprehensive example with 11 basic examples and 8 practical use cases:
+### `ollama-example.yml` (Comprehensive)
+Complete example demonstrating all Ollama preset capabilities:
 - Installation variations (basic, with service, via specific method)
 - Model management (single, multiple, force re-pull)
 - Service configuration (custom host, models directory, environment variables)
@@ -32,65 +28,22 @@ Complete comprehensive example with 11 basic examples and 8 practical use cases:
 - Platform-specific examples (Linux/macOS)
 - Integration with other actions
 
-**Start here for a complete overview of all Ollama preset capabilities.**
+```bash
+# Dry-run mode (shows what would happen)
+mooncake run -c examples/ollama/ollama-example.yml --dry-run
 
----
+# Actual execution (requires sudo)
+mooncake run -c examples/ollama/ollama-example.yml --ask-become-pass
+```
 
-### Demo Examples
+### `ollama-quick-start.yml` (Beginner-Friendly)
+Fast introduction to Ollama preset with minimal configuration:
+- Quick installation
+- Single model download
+- Simple test queries
+- Good for first-time users
 
-#### `ollama-dry-run-demo.yml`
-Demonstrates dry-run mode showing what the Ollama preset would do without executing:
-- Shows installation plan
-- Service configuration preview
-- Model pulling preview
-- Useful for understanding action behavior
-
-#### `ollama-facts-demo.yml`
-Shows system facts integration:
-- Automatic Ollama detection
-- Version information
-- Installed models
-- Conditional execution based on facts
-
-#### `ollama-simple-facts.yml`
-Simple demonstration of facts detection:
-- Ollama version from facts
-- Endpoint information
-- Model listing
-- API health check
-
----
-
-### Docker/Ubuntu Examples
-
-#### `ollama-ubuntu-working.yml`
-Complete working example for Ubuntu/Docker:
-- Official script installation
-- Server startup
-- Model pulling (tinyllama)
-- LLM inference demonstration
-- Full workflow from install to running queries
-
-#### `ollama-ubuntu-final.yml`
-Simplified Ubuntu demo with clear output:
-- Installation verification
-- Model management
-- Multiple inference examples (math, geography, code)
-
-#### `ollama-docker-demo.yml`
-Original Docker demo (reference):
-- Shows Ollama preset in Docker context
-- Historical reference
-
-#### `ollama-docker-simple.yml`
-Simplified Docker installation approach:
-- Manual installation steps
-- Server management
-- Model downloading
-
----
-
-## 🚀 Quick Start
+## Basic Usage
 
 ### 1. Basic Installation
 ```yaml
@@ -98,7 +51,6 @@ Simplified Docker installation approach:
   preset: ollama
   with:
     state: present
-
   become: true
 ```
 
@@ -109,7 +61,6 @@ Simplified Docker installation approach:
   with:
     state: present
     service: true
-
   become: true
 ```
 
@@ -123,7 +74,6 @@ Simplified Docker installation approach:
     pull:
       - "llama3.1:8b"
       - "mistral:latest"
-
   become: true
 ```
 
@@ -141,96 +91,44 @@ Simplified Docker installation approach:
       - "llama3.1:8b"
     env:
       OLLAMA_DEBUG: "1"
-
   become: true
 ```
 
----
+## Features Demonstrated
 
-## 🔧 Running the Examples
+- Installation management (auto, script, package methods)
+- Service configuration (systemd on Linux, launchd on macOS)
+- Model pulling (single, multiple, with force flag)
+- Custom configuration (host, models directory, environment variables)
+- Uninstallation (with optional model removal)
+- Facts integration (automatic detection)
+- Idempotency (won't reinstall if present)
+- Platform support (Linux, macOS)
 
-### Run with Mooncake:
-```bash
-# Dry-run mode (shows what would happen)
-mooncake run --config examples/ollama/ollama-example.yml --dry-run
+## Supported Platforms
 
-# Actual execution (requires sudo)
-mooncake run --config examples/ollama/ollama-example.yml --ask-become-pass
-```
-
-### Docker Ubuntu Demo:
-```bash
-# Build demo image
-docker build -f Dockerfile.demo -t mooncake-ollama-demo .
-
-# Run demo (installs Ollama + runs LLM inference)
-docker run --rm mooncake-ollama-demo mooncake run --config /workspace/demo.yml
-```
-
----
-
-## 📖 Documentation
-
-For complete documentation, see:
-- [Ollama Action Reference](../../docs/guide/config/actions.md#ollama) - Full property reference
-- [Configuration Reference](../../docs/guide/config/reference.md#ollama) - Property tables
-- [Core Concepts](../../docs/guide/core-concepts.md) - Overview
-
----
-
-## 🎯 Features Demonstrated
-
-- ✅ Installation management (auto, script, package methods)
-- ✅ Service configuration (systemd on Linux, launchd on macOS)
-- ✅ Model pulling (single, multiple, with force flag)
-- ✅ Custom configuration (host, models directory, environment variables)
-- ✅ Uninstallation (with optional model removal)
-- ✅ Facts integration (automatic detection)
-- ✅ Idempotency (won't reinstall if present)
-- ✅ Platform support (Linux, macOS, Docker)
-- ✅ Real LLM inference (tested with tinyllama)
-
----
-
-## 🧪 Tested Platforms
-
-- ✅ **Linux** (Ubuntu 22.04 in Docker)
+- **Linux** (Ubuntu, Debian, Fedora, Arch, etc.)
   - systemd service management
   - Package managers: apt, dnf, yum, pacman, zypper, apk
 
-- ✅ **macOS**
+- **macOS**
   - launchd service management
   - Homebrew integration
 
-- ✅ **Docker**
-  - Ubuntu 22.04 base image
-  - Full installation + LLM inference verified
-
----
-
-## 💡 Tips
+## Tips
 
 1. **Start with dry-run**: Use `--dry-run` to see what will happen
 2. **Use facts**: Check `{{ ollama_version }}` before installation
-3. **Idempotency**: The action won't reinstall if Ollama is already present
+3. **Idempotency**: The preset won't reinstall if Ollama is already present
 4. **Model size**: Consider starting with tinyllama (~637MB) for testing
 5. **Service management**: Use `service: true` for production deployments
 6. **Sudo required**: Most operations need `become: true` or `--ask-become-pass`
 
----
+## Documentation
 
-## 📝 Example Output
-
-```
-▶ Install Ollama with full configuration
-Ollama already installed              ← Idempotency working!
-Starting Ollama via Homebrew services ← Service management
-Pulling model: llama3.1:8b            ← Model pulling
-✓ Install Ollama with full configuration
-
-Duration: 180518ms (3 minutes)
-```
-
----
+For complete documentation, see:
+- [Preset Reference](../../docs/guide/presets.md) - Full preset documentation
+- [Configuration Reference](../../docs/guide/config/reference.md) - Property tables
+- [Core Concepts](../../docs/guide/core-concepts.md) - Overview
 
 For questions or issues, see the main [Mooncake documentation](../../docs/).

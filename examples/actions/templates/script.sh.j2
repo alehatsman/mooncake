@@ -1,0 +1,16 @@
+#!/bin/bash
+# Deployment script for {{ app_name }}
+# Generated automatically by Mooncake
+
+APP_NAME="{{ app_name }}"
+VERSION="{{ version }}"
+ENVIRONMENT="{{ environment }}"
+
+echo "Deploying $APP_NAME version $VERSION to $ENVIRONMENT"
+
+{% for command in deploy_commands %}
+echo "Running: {{ command }}"
+{{ command }}
+{% endfor %}
+
+echo "Deployment completed!"

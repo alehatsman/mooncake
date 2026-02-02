@@ -1,0 +1,427 @@
+# ============================================================================
+# Print Action - Comprehensive Examples
+# ============================================================================
+# Print messages to stdout for debugging, logging, and user feedback.
+# Print is simpler than shell echo and doesn't require shell quoting.
+#
+# Run this file:
+#   mooncake run --config examples/actions/print.yml
+# ============================================================================
+
+# =============================================================================
+# Basic Printing
+# =============================================================================
+
+- name: "Example 1: Simple message"
+  print: "Hello from Mooncake!"
+  tags: [basics]
+
+- name: "Example 2: Multi-word message"
+  print: "This is a message with multiple words and spaces"
+  tags: [basics]
+
+- name: "Example 3: Message with special characters"
+  print: "Special chars: !@#$%^&*()_+-={}[]|:;<>?,./"
+  tags: [basics]
+
+- name: "Example 4: Empty line for spacing"
+  print: ""
+  tags: [basics]
+
+# =============================================================================
+# Printing with Variables
+# =============================================================================
+
+- vars:
+    app_name: "Mooncake"
+    version: "1.0.0"
+    author: "Developer"
+    environment: "production"
+
+- name: "Example 5: Print with single variable"
+  print: "Application name: {{ app_name }}"
+  tags: [variables]
+
+- name: "Example 6: Print with multiple variables"
+  print: "Deploying {{ app_name }} version {{ version }}"
+  tags: [variables]
+
+- name: "Example 7: Print with system facts"
+  print: "Running on {{ os }}/{{ arch }}"
+  tags: [variables]
+
+- name: "Example 8: Print with all info"
+  print: "{{ app_name }} v{{ version }} by {{ author }} on {{ os }}/{{ arch }} ({{ environment }})"
+  tags: [variables]
+
+# =============================================================================
+# Printing Registered Results
+# =============================================================================
+
+- name: "Example 9: Get current user"
+  shell: whoami
+  register: current_user
+  tags: [register]
+
+- name: "Example 10: Print command output"
+  print: "Current user: {{ current_user.stdout }}"
+  tags: [register]
+
+- name: "Example 11: Get system info"
+  shell: uname -a
+  register: system_info
+  tags: [register]
+
+- name: "Example 12: Print system info"
+  print: "System: {{ system_info.stdout }}"
+  tags: [register]
+
+- name: "Example 13: Get date and time"
+  shell: date "+%Y-%m-%d %H:%M:%S"
+  register: current_time
+  tags: [register]
+
+- name: "Example 14: Print formatted timestamp"
+  print: "Report generated at: {{ current_time.stdout }}"
+  tags: [register]
+
+- name: "Example 15: Command with exit code"
+  shell: test -d /tmp
+  register: test_result
+  tags: [register]
+
+- name: "Example 16: Print exit code result"
+  print: "Directory exists check returned: {{ test_result.rc }}"
+  tags: [register]
+
+# =============================================================================
+# Multi-line Messages
+# =============================================================================
+
+- name: "Example 17: Multi-line message with pipe"
+  print: |
+    ==========================================
+    Mooncake Configuration Management
+    ==========================================
+    Version: 1.0.0
+    Status: Running
+    ==========================================
+  tags: [multiline]
+
+- name: "Example 18: Multi-line with variables"
+  print: |
+    Application: {{ app_name }}
+    Version: {{ version }}
+    Environment: {{ environment }}
+    System: {{ os }}/{{ arch }}
+  tags: [multiline]
+
+- name: "Example 19: Multi-line report"
+  print: |
+
+    DEPLOYMENT SUMMARY
+    ------------------
+    App:         {{ app_name }}
+    Version:     {{ version }}
+    Target:      {{ environment }}
+    Platform:    {{ os }}/{{ arch }}
+    Status:      Ready
+
+  tags: [multiline]
+
+# =============================================================================
+# Conditional Printing
+# =============================================================================
+
+- name: "Example 20: Print on Linux only"
+  print: "This is a Linux system"
+  when: os == "linux"
+  tags: [conditional]
+
+- name: "Example 21: Print on macOS only"
+  print: "This is a macOS system"
+  when: os == "darwin"
+  tags: [conditional]
+
+- name: "Example 22: Print based on environment"
+  print: "Running in PRODUCTION mode"
+  when: environment == "production"
+  tags: [conditional]
+
+- name: "Example 23: Check if directory exists"
+  shell: test -d /tmp
+  register: tmp_exists
+  failed_when: false
+  tags: [conditional]
+
+- name: "Example 24: Print if condition is met"
+  print: "/tmp directory exists"
+  when: tmp_exists.rc == 0
+  tags: [conditional]
+
+- name: "Example 25: Print if condition is not met"
+  print: "/tmp directory does not exist"
+  when: tmp_exists.rc != 0
+  tags: [conditional]
+
+# =============================================================================
+# Printing in Loops
+# =============================================================================
+
+- vars:
+    packages:
+      - git
+      - vim
+      - tmux
+      - curl
+      - wget
+    servers:
+      - name: web-01
+        ip: 192.168.1.10
+      - name: web-02
+        ip: 192.168.1.11
+      - name: db-01
+        ip: 192.168.1.20
+
+- name: "Example 26: Print each item in list"
+  print: "Package: {{ item }}"
+  with_items: "{{ packages }}"
+  tags: [loops]
+
+- name: "Example 27: Print with loop counter (simulated)"
+  print: "Installing package: {{ item }}"
+  with_items: "{{ packages }}"
+  tags: [loops]
+
+- name: "Example 28: Print complex items"
+  print: "Server {{ item.name }} at {{ item.ip }}"
+  with_items: "{{ servers }}"
+  tags: [loops]
+
+- name: "Example 29: Print formatted list"
+  print: "  - {{ item }}"
+  with_items: "{{ packages }}"
+  tags: [loops]
+
+# =============================================================================
+# Debugging Output
+# =============================================================================
+
+- name: "Example 30: Debug separator"
+  print: "========================================"
+  tags: [debug]
+
+- name: "Example 31: Debug message"
+  print: "[DEBUG] Starting deployment process"
+  tags: [debug]
+
+- name: "Example 32: Debug with variables"
+  print: "[DEBUG] app_name={{ app_name }}, version={{ version }}"
+  tags: [debug]
+
+- name: "Example 33: Debug command execution"
+  shell: echo "test output"
+  register: debug_cmd
+  tags: [debug]
+
+- name: "Example 34: Print debug result"
+  print: "[DEBUG] Command returned: rc={{ debug_cmd.rc }}, stdout={{ debug_cmd.stdout }}"
+  tags: [debug]
+
+- name: "Example 35: Another debug separator"
+  print: "========================================"
+  tags: [debug]
+
+# =============================================================================
+# Progress Indicators
+# =============================================================================
+
+- name: "Example 36: Step 1 indicator"
+  print: "[1/5] Checking prerequisites..."
+  tags: [progress]
+
+- name: "Example 37: Simulate step 1"
+  shell: sleep 0.5
+  tags: [progress]
+
+- name: "Example 38: Step 2 indicator"
+  print: "[2/5] Downloading packages..."
+  tags: [progress]
+
+- name: "Example 39: Simulate step 2"
+  shell: sleep 0.5
+  tags: [progress]
+
+- name: "Example 40: Step 3 indicator"
+  print: "[3/5] Installing dependencies..."
+  tags: [progress]
+
+- name: "Example 41: Simulate step 3"
+  shell: sleep 0.5
+  tags: [progress]
+
+- name: "Example 42: Step 4 indicator"
+  print: "[4/5] Configuring application..."
+  tags: [progress]
+
+- name: "Example 43: Simulate step 4"
+  shell: sleep 0.5
+  tags: [progress]
+
+- name: "Example 44: Step 5 indicator"
+  print: "[5/5] Starting services..."
+  tags: [progress]
+
+- name: "Example 45: Simulate step 5"
+  shell: sleep 0.5
+  tags: [progress]
+
+- name: "Example 46: Completion message"
+  print: "✓ All steps completed successfully!"
+  tags: [progress]
+
+# =============================================================================
+# Formatted Output (Tables, Lists, etc.)
+# =============================================================================
+
+- name: "Example 47: Header for table"
+  print: |
+
+    Server Inventory
+    ================
+    NAME       IP ADDRESS      STATUS
+    ------     ------------    ------
+  tags: [formatting]
+
+- name: "Example 48: Table rows"
+  print: "{{ item.name | ljust(10) }} {{ item.ip | ljust(15) }} online"
+  with_items: "{{ servers }}"
+  tags: [formatting]
+
+- name: "Example 49: Configuration summary"
+  print: |
+
+    Configuration Summary:
+      • Application: {{ app_name }}
+      • Version: {{ version }}
+      • Environment: {{ environment }}
+      • Author: {{ author }}
+      • Platform: {{ os }}/{{ arch }}
+  tags: [formatting]
+
+- name: "Example 50: Status report"
+  print: |
+
+    ┌─────────────────────────────────────┐
+    │      Deployment Status Report       │
+    ├─────────────────────────────────────┤
+    │ Application: {{ app_name | ljust(19) }}│
+    │ Version:     {{ version | ljust(19) }}│
+    │ Status:      Complete               │
+    └─────────────────────────────────────┘
+  tags: [formatting]
+
+# =============================================================================
+# Error and Warning Messages
+# =============================================================================
+
+- name: "Example 51: Info message"
+  print: "[INFO] This is an informational message"
+  tags: [messages]
+
+- name: "Example 52: Warning message"
+  print: "[WARN] This is a warning message"
+  tags: [messages]
+
+- name: "Example 53: Success message"
+  print: "[SUCCESS] Operation completed successfully"
+  tags: [messages]
+
+- name: "Example 54: Notice message"
+  print: "[NOTICE] Please review the configuration before proceeding"
+  tags: [messages]
+
+# =============================================================================
+# Combining Print with Register
+# =============================================================================
+
+- name: "Example 55: Print and register"
+  print: "This message was printed"
+  register: print_result
+  tags: [register]
+
+- name: "Example 56: Check print result"
+  shell: echo "Print returned changed={{ print_result.changed }}"
+  tags: [register]
+
+# =============================================================================
+# Real-World Examples
+# =============================================================================
+
+- name: "Example 57: Deployment banner"
+  print: |
+
+    ╔══════════════════════════════════════════╗
+    ║   🚀 Starting Deployment Process        ║
+    ╚══════════════════════════════════════════╝
+
+  tags: [real-world]
+
+- name: "Example 58: Pre-flight checks"
+  print: "⚙️  Running pre-flight checks..."
+  tags: [real-world]
+
+- name: "Example 59: Simulate checks"
+  shell: |
+    echo "Checking disk space... OK"
+    echo "Checking network... OK"
+    echo "Checking permissions... OK"
+  register: checks
+  tags: [real-world]
+
+- name: "Example 60: Print check results"
+  print: "✓ All pre-flight checks passed"
+  tags: [real-world]
+
+- name: "Example 61: Final summary"
+  print: |
+
+    ════════════════════════════════════════════
+    🎉 Deployment Complete!
+    ════════════════════════════════════════════
+
+    Summary:
+      • {{ app_name }} {{ version }} deployed
+      • Environment: {{ environment }}
+      • Platform: {{ os }}/{{ arch }}
+      • All systems operational
+
+    Next steps:
+      1. Verify application is running
+      2. Check logs for any issues
+      3. Run smoke tests
+
+    ════════════════════════════════════════════
+
+  tags: [real-world]
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: "Completion message"
+  print: |
+
+    Print action examples completed!
+    Explored 60+ different use cases including:
+      • Basic messages
+      • Variable interpolation
+      • Multi-line output
+      • Conditional printing
+      • Loops
+      • Debugging
+      • Progress indicators
+      • Formatted output
+      • Real-world scenarios
+
+  tags: [always]

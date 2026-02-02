@@ -32,3 +32,15 @@
       #!/bin/bash
       echo "Running {{app_name}}"
     mode: "0755"
+
+- name: Test executable script
+  shell:
+    cmd: "{{app_dir}}/run.sh"
+  register: script_output
+
+- name: Print summary
+  print:
+    msg: |
+      Files and directories example complete!
+      Created: {{app_dir}}
+      Check {{app_dir}} for created files.

@@ -46,3 +46,13 @@
 
 - name: Show if file was created
   shell: echo "File operation changed={{ file_result.changed }}"
+
+- name: Print summary
+  print:
+    msg: |
+      Register example complete!
+      This example showed how to:
+      - Capture command output with 'register'
+      - Use captured output in conditions with 'when'
+      - Access stdout, stderr, rc (return code)
+      - Use register with file operations

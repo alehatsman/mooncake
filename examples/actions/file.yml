@@ -1,0 +1,608 @@
+# ============================================================================
+# File Action - Comprehensive Examples
+# ============================================================================
+# Create and manage files, directories, symlinks, and permissions.
+#
+# Run this file:
+#   mooncake run --config examples/actions/file.yml
+#
+# Run specific sections with tags:
+#   mooncake run --config examples/actions/file.yml --tags basics
+# ============================================================================
+
+# =============================================================================
+# Create Files
+# =============================================================================
+
+- name: "Example 1: Create empty file"
+  file:
+    path: /tmp/mooncake-examples/empty-file.txt
+    state: file
+    mode: "0644"
+  tags: [basics, files]
+
+- name: "Example 2: Create file with content"
+  file:
+    path: /tmp/mooncake-examples/hello.txt
+    state: file
+    content: "Hello from Mooncake!"
+    mode: "0644"
+  tags: [basics, files]
+
+- name: "Example 3: Create file with multi-line content"
+  file:
+    path: /tmp/mooncake-examples/config.txt
+    state: file
+    content: |
+      # Configuration file
+      app_name=MyApp
+      version=1.0.0
+      debug=true
+    mode: "0644"
+  tags: [basics, files]
+
+- name: "Example 4: Create file with template variables"
+  file:
+    path: /tmp/mooncake-examples/info.txt
+    state: file
+    content: |
+      System Information
+      ==================
+      OS: {{ os }}
+      Architecture: {{ arch }}
+      Generated: $(date)
+    mode: "0644"
+  tags: [files, templates]
+
+# =============================================================================
+# Create Directories
+# =============================================================================
+
+- name: "Example 5: Create single directory"
+  file:
+    path: /tmp/mooncake-examples/my-directory
+    state: directory
+    mode: "0755"
+  tags: [basics, directories]
+
+- name: "Example 6: Create nested directories"
+  file:
+    path: /tmp/mooncake-examples/app/config/production
+    state: directory
+    mode: "0755"
+  tags: [directories]
+
+- name: "Example 7: Create directory structure"
+  file:
+    path: /tmp/mooncake-examples/project/{{ item }}
+    state: directory
+    mode: "0755"
+  with_items:
+    - src
+    - bin
+    - config
+    - logs
+    - data
+  tags: [directories, loops]
+
+# =============================================================================
+# File Permissions
+# =============================================================================
+
+- name: "Example 8: Create file with specific permissions"
+  file:
+    path: /tmp/mooncake-examples/private.txt
+    state: file
+    content: "This is a private file"
+    mode: "0600"
+  tags: [permissions]
+
+- name: "Example 9: Create executable script"
+  file:
+    path: /tmp/mooncake-examples/script.sh
+    state: file
+    content: |
+      #!/bin/bash
+      echo "Hello from script!"
+    mode: "0755"
+  tags: [permissions]
+
+- name: "Example 10: Create read-only file"
+  file:
+    path: /tmp/mooncake-examples/readonly.txt
+    state: file
+    content: "This file is read-only"
+    mode: "0444"
+  tags: [permissions]
+
+- name: "Example 11: Create restricted directory"
+  file:
+    path: /tmp/mooncake-examples/private-dir
+    state: directory
+    mode: "0700"
+  tags: [permissions]
+
+# =============================================================================
+# File Ownership (requires sudo for non-current user)
+# =============================================================================
+
+- name: "Example 12: Create file with ownership (current user)"
+  file:
+    path: /tmp/mooncake-examples/owned-file.txt
+    state: file
+    content: "File with explicit ownership"
+    mode: "0644"
+  tags: [ownership]
+
+# Note: The following examples require sudo (become: true)
+# Uncomment if running with sudo privileges
+#
+# - name: "Example 13: Create file owned by specific user"
+#   file:
+#     path: /tmp/mooncake-examples/system-file.txt
+#     state: file
+#     content: "System file"
+#     mode: "0644"
+#     owner: root
+#     group: root
+#   become: true
+#   tags: [ownership, sudo]
+
+# =============================================================================
+# Touch Files (Update Timestamp)
+# =============================================================================
+
+- name: "Example 14: Touch file (create if doesn't exist)"
+  file:
+    path: /tmp/mooncake-examples/marker.txt
+    state: touch
+    mode: "0644"
+  tags: [touch]
+
+- name: "Example 15: Touch file again (updates timestamp)"
+  file:
+    path: /tmp/mooncake-examples/marker.txt
+    state: touch
+  tags: [touch]
+
+- name: "Example 16: Create marker file for idempotency"
+  file:
+    path: /tmp/mooncake-examples/.installed
+    state: touch
+    mode: "0644"
+  tags: [touch, idempotency]
+
+# =============================================================================
+# Symbolic Links
+# =============================================================================
+
+- name: "Example 17: Create file to link to"
+  file:
+    path: /tmp/mooncake-examples/original.txt
+    state: file
+    content: "This is the original file"
+    mode: "0644"
+  tags: [symlinks]
+
+- name: "Example 18: Create symbolic link"
+  file:
+    path: /tmp/mooncake-examples/link-to-original.txt
+    src: /tmp/mooncake-examples/original.txt
+    state: link
+  tags: [symlinks]
+
+- name: "Example 19: Create link to directory"
+  file:
+    path: /tmp/mooncake-examples/link-to-config
+    src: /tmp/mooncake-examples/app/config
+    state: link
+  tags: [symlinks]
+
+- name: "Example 20: Create link with force (replace existing)"
+  file:
+    path: /tmp/mooncake-examples/forced-link.txt
+    src: /tmp/mooncake-examples/original.txt
+    state: link
+    force: true
+  tags: [symlinks]
+
+# =============================================================================
+# Hard Links
+# =============================================================================
+
+- name: "Example 21: Create hard link"
+  file:
+    path: /tmp/mooncake-examples/hardlink.txt
+    src: /tmp/mooncake-examples/original.txt
+    state: hardlink
+  tags: [hardlinks]
+
+- name: "Example 22: Verify hard link"
+  shell: |
+    echo "Original file:"
+    ls -li /tmp/mooncake-examples/original.txt
+    echo "Hard link:"
+    ls -li /tmp/mooncake-examples/hardlink.txt
+  tags: [hardlinks]
+
+# =============================================================================
+# Remove Files and Directories
+# =============================================================================
+
+- name: "Example 23: Create file to remove"
+  file:
+    path: /tmp/mooncake-examples/to-delete.txt
+    state: file
+    content: "This file will be deleted"
+    mode: "0644"
+  tags: [remove]
+
+- name: "Example 24: Remove file"
+  file:
+    path: /tmp/mooncake-examples/to-delete.txt
+    state: absent
+  tags: [remove]
+
+- name: "Example 25: Create directory to remove"
+  file:
+    path: /tmp/mooncake-examples/empty-dir-to-delete
+    state: directory
+    mode: "0755"
+  tags: [remove]
+
+- name: "Example 26: Remove empty directory"
+  file:
+    path: /tmp/mooncake-examples/empty-dir-to-delete
+    state: absent
+  tags: [remove]
+
+- name: "Example 27: Create non-empty directory"
+  shell: |
+    mkdir -p /tmp/mooncake-examples/non-empty-dir
+    echo "file1" > /tmp/mooncake-examples/non-empty-dir/file1.txt
+    echo "file2" > /tmp/mooncake-examples/non-empty-dir/file2.txt
+  tags: [remove]
+
+- name: "Example 28: Remove non-empty directory (force)"
+  file:
+    path: /tmp/mooncake-examples/non-empty-dir
+    state: absent
+    force: true
+  tags: [remove]
+
+# =============================================================================
+# Change Permissions Only (state: perms)
+# =============================================================================
+
+- name: "Example 29: Create file with default permissions"
+  file:
+    path: /tmp/mooncake-examples/perms-test.txt
+    state: file
+    content: "Testing permission changes"
+    mode: "0644"
+  tags: [perms]
+
+- name: "Example 30: Change file permissions only"
+  file:
+    path: /tmp/mooncake-examples/perms-test.txt
+    state: perms
+    mode: "0600"
+  tags: [perms]
+
+- name: "Example 31: Create directory structure for recursive perms"
+  shell: |
+    mkdir -p /tmp/mooncake-examples/perms-dir/sub1/sub2
+    touch /tmp/mooncake-examples/perms-dir/file1.txt
+    touch /tmp/mooncake-examples/perms-dir/sub1/file2.txt
+    touch /tmp/mooncake-examples/perms-dir/sub1/sub2/file3.txt
+  tags: [perms]
+
+- name: "Example 32: Recursively change permissions"
+  file:
+    path: /tmp/mooncake-examples/perms-dir
+    state: perms
+    mode: "0755"
+    recurse: true
+  tags: [perms]
+
+# =============================================================================
+# File Backup
+# =============================================================================
+
+- name: "Example 33: Create file for backup demo"
+  file:
+    path: /tmp/mooncake-examples/backup-demo.txt
+    state: file
+    content: "Original content"
+    mode: "0644"
+  tags: [backup]
+
+- name: "Example 34: Update file with backup"
+  file:
+    path: /tmp/mooncake-examples/backup-demo.txt
+    state: file
+    content: "Updated content"
+    mode: "0644"
+    backup: true
+  tags: [backup]
+
+- name: "Example 35: List backup files"
+  shell: ls -la /tmp/mooncake-examples/backup-demo.txt*
+  tags: [backup]
+
+# =============================================================================
+# Using with Variables
+# =============================================================================
+
+- vars:
+    app_root: /tmp/mooncake-examples/myapp
+    config_file: config.yml
+    data_dir: data
+    log_dir: logs
+
+- name: "Example 36: Create directory with variable"
+  file:
+    path: "{{ app_root }}"
+    state: directory
+    mode: "0755"
+  tags: [variables]
+
+- name: "Example 37: Create config file with variables"
+  file:
+    path: "{{ app_root }}/{{ config_file }}"
+    state: file
+    content: |
+      application:
+        name: MyApp
+        version: 1.0.0
+        data_dir: {{ data_dir }}
+        log_dir: {{ log_dir }}
+    mode: "0644"
+  tags: [variables]
+
+- name: "Example 38: Create directories from list"
+  file:
+    path: "{{ app_root }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items:
+    - "{{ data_dir }}"
+    - "{{ log_dir }}"
+    - cache
+    - tmp
+  tags: [variables, loops]
+
+# =============================================================================
+# Conditional File Operations
+# =============================================================================
+
+- name: "Example 39: Create Linux-specific file"
+  file:
+    path: /tmp/mooncake-examples/linux-only.txt
+    state: file
+    content: "This file exists only on Linux"
+    mode: "0644"
+  when: os == "linux"
+  tags: [conditional]
+
+- name: "Example 40: Create macOS-specific file"
+  file:
+    path: /tmp/mooncake-examples/macos-only.txt
+    state: file
+    content: "This file exists only on macOS"
+    mode: "0644"
+  when: os == "darwin"
+  tags: [conditional]
+
+# =============================================================================
+# File Operations in Loops
+# =============================================================================
+
+- vars:
+    environments:
+      - development
+      - staging
+      - production
+
+- name: "Example 41: Create config files for each environment"
+  file:
+    path: /tmp/mooncake-examples/configs/{{ item }}.yml
+    state: file
+    content: |
+      environment: {{ item }}
+      debug: {{ 'true' if item == 'development' else 'false' }}
+    mode: "0644"
+  with_items: "{{ environments }}"
+  tags: [loops]
+
+- vars:
+    services:
+      - name: web
+        port: 8080
+      - name: api
+        port: 3000
+      - name: db
+        port: 5432
+
+- name: "Example 42: Create service config files"
+  file:
+    path: /tmp/mooncake-examples/services/{{ item.name }}.conf
+    state: file
+    content: |
+      [{{ item.name }}]
+      port={{ item.port }}
+      enabled=true
+    mode: "0644"
+  with_items: "{{ services }}"
+  tags: [loops]
+
+# =============================================================================
+# Real-World Scenarios
+# =============================================================================
+
+- name: "Example 43: Setup application directory structure"
+  file:
+    path: /tmp/mooncake-examples/webapp/{{ item }}
+    state: directory
+    mode: "0755"
+  with_items:
+    - config
+    - logs
+    - data
+    - tmp
+    - uploads
+    - backups
+  tags: [real-world]
+
+- name: "Example 44: Create application configuration"
+  file:
+    path: /tmp/mooncake-examples/webapp/config/app.yml
+    state: file
+    content: |
+      application:
+        name: WebApp
+        version: 1.0.0
+        environment: production
+
+      server:
+        host: 0.0.0.0
+        port: 8080
+
+      database:
+        host: localhost
+        port: 5432
+        name: webapp_db
+
+      logging:
+        level: info
+        file: logs/app.log
+    mode: "0644"
+  tags: [real-world]
+
+- name: "Example 45: Create environment-specific configs"
+  file:
+    path: /tmp/mooncake-examples/webapp/config/{{ item }}.yml
+    state: file
+    content: |
+      environment: {{ item }}
+      debug: {{ 'true' if item == 'development' else 'false' }}
+      log_level: {{ 'debug' if item == 'development' else 'info' }}
+    mode: "0644"
+  with_items:
+    - development
+    - production
+  tags: [real-world]
+
+- name: "Example 46: Create initialization marker"
+  file:
+    path: /tmp/mooncake-examples/webapp/.initialized
+    state: touch
+    mode: "0644"
+  tags: [real-world]
+
+- name: "Example 47: Create executable management script"
+  file:
+    path: /tmp/mooncake-examples/webapp/manage.sh
+    state: file
+    content: |
+      #!/bin/bash
+      # Application management script
+
+      case "$1" in
+        start)
+          echo "Starting application..."
+          ;;
+        stop)
+          echo "Stopping application..."
+          ;;
+        restart)
+          echo "Restarting application..."
+          ;;
+        status)
+          echo "Application status: running"
+          ;;
+        *)
+          echo "Usage: $0 {start|stop|restart|status}"
+          exit 1
+          ;;
+      esac
+    mode: "0755"
+  tags: [real-world]
+
+# =============================================================================
+# Idempotency Demonstration
+# =============================================================================
+
+- name: "Example 48: Create file (first time - changes)"
+  file:
+    path: /tmp/mooncake-examples/idempotent.txt
+    state: file
+    content: "This content is idempotent"
+    mode: "0644"
+  register: first_run
+  tags: [idempotency]
+
+- name: "Example 49: Create same file again (no changes)"
+  file:
+    path: /tmp/mooncake-examples/idempotent.txt
+    state: file
+    content: "This content is idempotent"
+    mode: "0644"
+  register: second_run
+  tags: [idempotency]
+
+- name: "Example 50: Show idempotency results"
+  shell: |
+    echo "First run changed: {{ first_run.changed }}"
+    echo "Second run changed: {{ second_run.changed }}"
+  tags: [idempotency]
+
+# =============================================================================
+# Verify Created Files
+# =============================================================================
+
+- name: "Example 51: List all created files"
+  shell: |
+    echo "Created files and directories:"
+    find /tmp/mooncake-examples -type f | head -20
+  tags: [verify]
+
+- name: "Example 52: Show directory structure"
+  shell: |
+    echo "Directory structure:"
+    find /tmp/mooncake-examples -type d | head -20
+  tags: [verify]
+
+- name: "Example 53: Show symbolic links"
+  shell: |
+    echo "Symbolic links:"
+    find /tmp/mooncake-examples -type l -ls
+  tags: [verify]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove all example files"
+  file:
+    path: /tmp/mooncake-examples
+    state: absent
+    force: true
+  tags: [cleanup]
+
+- name: "Summary"
+  print: |
+
+    File action examples completed!
+    Explored 50+ different use cases including:
+      • Creating files with content
+      • Creating directories
+      • Setting permissions (0644, 0755, 0600, etc.)
+      • Creating symbolic and hard links
+      • Removing files and directories
+      • File backups
+      • Recursive operations
+      • Template variable usage
+      • Idempotency
+
+  tags: [always]

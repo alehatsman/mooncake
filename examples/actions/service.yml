@@ -1,0 +1,536 @@
+# ============================================================================
+# Service Action - Comprehensive Examples (systemd focus)
+# ============================================================================
+# Manage system services using systemd (Linux).
+# For macOS launchd examples, see examples/macos-services/
+#
+# Note: Most examples require sudo (become: true)
+# Run this file:
+#   mooncake run --config examples/actions/service.yml --sudo-pass
+# ============================================================================
+
+# Note: This file contains examples for systemd on Linux.
+# Many operations require root privileges.
+# To run: mooncake run --config examples/actions/service.yml --sudo-pass
+
+# =============================================================================
+# Basic Service Management
+# =============================================================================
+
+- name: "Example 1: Start a service (demo)"
+  print: |
+    Start service:
+    service:
+      name: nginx
+      state: started
+    become: true
+  tags: [basics]
+
+- name: "Example 2: Stop a service (demo)"
+  print: |
+    Stop service:
+    service:
+      name: nginx
+      state: stopped
+    become: true
+  tags: [basics]
+
+- name: "Example 3: Restart a service (demo)"
+  print: |
+    Restart service:
+    service:
+      name: nginx
+      state: restarted
+    become: true
+  tags: [basics]
+
+- name: "Example 4: Reload service configuration (demo)"
+  print: |
+    Reload service:
+    service:
+      name: nginx
+      state: reloaded
+    become: true
+  tags: [basics]
+
+# =============================================================================
+# Enable/Disable Services
+# =============================================================================
+
+- name: "Example 5: Enable service on boot (demo)"
+  print: |
+    Enable on boot:
+    service:
+      name: nginx
+      enabled: true
+    become: true
+  tags: [enable]
+
+- name: "Example 6: Disable service on boot (demo)"
+  print: |
+    Disable on boot:
+    service:
+      name: nginx
+      enabled: false
+    become: true
+  tags: [enable]
+
+- name: "Example 7: Start and enable (demo)"
+  print: |
+    Start and enable:
+    service:
+      name: nginx
+      state: started
+      enabled: true
+    become: true
+  tags: [enable]
+
+# =============================================================================
+# Create Service Unit File
+# =============================================================================
+
+- name: "Example 8: Create service with inline content"
+  print: |
+    Create service:
+    service:
+      name: myapp
+      unit:
+        content: |
+          [Unit]
+          Description=My Application
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/myapp
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+      daemon_reload: true
+      state: started
+      enabled: true
+    become: true
+  tags: [create]
+
+- name: "Example 9: Create service from template"
+  print: |
+    Create from template:
+    service:
+      name: myapp
+      unit:
+        src_template: templates/myapp.service.j2
+        dest: /etc/systemd/system/myapp.service
+      daemon_reload: true
+      state: started
+      enabled: true
+    become: true
+  tags: [create]
+
+# =============================================================================
+# Service with Environment Variables
+# =============================================================================
+
+- name: "Example 10: Service with environment"
+  print: |
+    Service with environment:
+    service:
+      name: myapp
+      unit:
+        content: |
+          [Unit]
+          Description=My App with Environment
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/myapp
+          Environment="NODE_ENV=production"
+          Environment="PORT=8080"
+          Environment="LOG_LEVEL=info"
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+      daemon_reload: true
+      state: started
+    become: true
+  tags: [environment]
+
+# =============================================================================
+# Drop-in Configuration
+# =============================================================================
+
+- name: "Example 11: Add drop-in override"
+  print: |
+    Add drop-in configuration:
+    service:
+      name: myapp
+      dropin:
+        name: "10-env.conf"
+        content: |
+          [Service]
+          Environment="API_KEY=secret123"
+          Environment="DEBUG=true"
+      daemon_reload: true
+      state: restarted
+    become: true
+  tags: [dropin]
+
+- name: "Example 12: Drop-in from template"
+  print: |
+    Drop-in from template:
+    service:
+      name: myapp
+      dropin:
+        name: "20-override.conf"
+        src_template: templates/override.conf.j2
+      daemon_reload: true
+      state: restarted
+    become: true
+  tags: [dropin]
+
+# =============================================================================
+# Complete Service Deployment
+# =============================================================================
+
+- name: "Example 13: Full service deployment"
+  print: |
+    Complete deployment:
+    - name: Deploy application binary
+      copy:
+        src: ./bin/myapp
+        dest: /usr/local/bin/myapp
+        mode: "0755"
+      become: true
+
+    - name: Create service user
+      shell: useradd -r -s /bin/false myapp
+      become: true
+      failed_when: false
+
+    - name: Create service directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: myapp
+        group: myapp
+      with_items:
+        - /var/lib/myapp
+        - /var/log/myapp
+      become: true
+
+    - name: Deploy service
+      service:
+        name: myapp
+        unit:
+          content: |
+            [Unit]
+            Description=My Application
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=myapp
+            Group=myapp
+            WorkingDirectory=/var/lib/myapp
+            ExecStart=/usr/local/bin/myapp
+            Restart=on-failure
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+        daemon_reload: true
+        state: started
+        enabled: true
+      become: true
+  tags: [deployment]
+
+# =============================================================================
+# Service Templates with Variables
+# =============================================================================
+
+- vars:
+    app_name: "webapp"
+    app_user: "webapp"
+    app_port: 8080
+    working_dir: "/opt/webapp"
+
+- name: "Example 14: Service with template variables"
+  print: |
+    Service with variables:
+    service:
+      name: "{{ app_name }}"
+      unit:
+        content: |
+          [Unit]
+          Description={{ app_name | title }} Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User={{ app_user }}
+          WorkingDirectory={{ working_dir }}
+          ExecStart={{ working_dir }}/bin/server
+          Environment="PORT={{ app_port }}"
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+      daemon_reload: true
+      state: started
+      enabled: true
+    become: true
+  tags: [variables]
+
+# =============================================================================
+# Different Service Types
+# =============================================================================
+
+- name: "Example 15: Forking service"
+  print: |
+    Forking service:
+    service:
+      name: myapp
+      unit:
+        content: |
+          [Unit]
+          Description=Forking Service
+          After=network.target
+
+          [Service]
+          Type=forking
+          PIDFile=/var/run/myapp.pid
+          ExecStart=/usr/local/bin/myapp --daemon
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+    become: true
+  tags: [types]
+
+- name: "Example 16: Oneshot service"
+  print: |
+    Oneshot service (runs once):
+    service:
+      name: myapp-setup
+      unit:
+        content: |
+          [Unit]
+          Description=Application Setup
+          After=network.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/myapp-setup
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+    become: true
+  tags: [types]
+
+# =============================================================================
+# Service Dependencies
+# =============================================================================
+
+- name: "Example 17: Service with dependencies"
+  print: |
+    Service with dependencies:
+    service:
+      name: myapp
+      unit:
+        content: |
+          [Unit]
+          Description=App with Dependencies
+          After=network.target postgresql.service redis.service
+          Requires=postgresql.service
+          Wants=redis.service
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/myapp
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+    become: true
+  tags: [dependencies]
+
+# =============================================================================
+# Service Resource Limits
+# =============================================================================
+
+- name: "Example 18: Service with resource limits"
+  print: |
+    Service with limits:
+    service:
+      name: myapp
+      unit:
+        content: |
+          [Unit]
+          Description=Limited Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/myapp
+          MemoryLimit=512M
+          CPUQuota=50%
+          TasksMax=10
+
+          [Install]
+          WantedBy=multi-user.target
+    become: true
+  tags: [limits]
+
+# =============================================================================
+# Checking Service Status
+# =============================================================================
+
+- name: "Example 19: Check service status"
+  shell: systemctl status nginx || true
+  register: service_status
+  tags: [status]
+
+- name: "Example 20: Check if service is active"
+  shell: systemctl is-active nginx || echo "inactive"
+  register: is_active
+  tags: [status]
+
+- name: "Example 21: Check if service is enabled"
+  shell: systemctl is-enabled nginx || echo "disabled"
+  register: is_enabled
+  tags: [status]
+
+# =============================================================================
+# Conditional Service Management
+# =============================================================================
+
+- name: "Example 22: Manage service on Linux only"
+  print: |
+    Conditional service:
+    service:
+      name: nginx
+      state: started
+      enabled: true
+    when: os == "linux"
+    become: true
+  tags: [conditional]
+
+# =============================================================================
+# Real-World Scenarios
+# =============================================================================
+
+- name: "Example 23: Web application deployment"
+  print: |
+    Full web app deployment:
+
+    - name: Install Node.js application
+      copy:
+        src: ./app
+        dest: /opt/webapp
+        mode: "0755"
+      become: true
+
+    - name: Create webapp service
+      service:
+        name: webapp
+        unit:
+          content: |
+            [Unit]
+            Description=Web Application
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=webapp
+            WorkingDirectory=/opt/webapp
+            ExecStart=/usr/bin/node server.js
+            Environment="NODE_ENV=production"
+            Environment="PORT=3000"
+            Restart=on-failure
+            RestartSec=10
+
+            [Install]
+            WantedBy=multi-user.target
+        daemon_reload: true
+        state: started
+        enabled: true
+      become: true
+
+    - name: Verify service is running
+      assert:
+        command:
+          cmd: systemctl is-active webapp
+          exit_code: 0
+  tags: [real-world]
+
+# =============================================================================
+# Timer Units (Scheduled Tasks)
+# =============================================================================
+
+- name: "Example 24: Create timer for scheduled task"
+  print: |
+    Timer unit (like cron):
+
+    - name: Create backup service
+      service:
+        name: backup
+        unit:
+          dest: /etc/systemd/system/backup.service
+          content: |
+            [Unit]
+            Description=Backup Service
+
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/local/bin/backup.sh
+      become: true
+
+    - name: Create backup timer
+      file:
+        path: /etc/systemd/system/backup.timer
+        state: file
+        content: |
+          [Unit]
+          Description=Backup Timer
+
+          [Timer]
+          OnCalendar=daily
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+        mode: "0644"
+      become: true
+
+    - name: Enable timer
+      shell: systemctl enable --now backup.timer
+      become: true
+  tags: [timers]
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: "Summary"
+  print: |
+
+    Service action examples completed!
+    Covered:
+      • Starting/stopping/restarting services
+      • Enable/disable on boot
+      • Creating service unit files
+      • Drop-in configurations
+      • Environment variables
+      • Service types (simple, forking, oneshot)
+      • Dependencies and resource limits
+      • Status checking
+      • Real-world deployment patterns
+
+    Note: Most operations require sudo (become: true)
+    Run with: mooncake run --config service.yml --sudo-pass
+
+  tags: [always]

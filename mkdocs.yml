@@ -72,10 +72,17 @@ plugins:
 # Navigation structure
 nav:
   - Home: index.md
-  - Getting Started:
-    - Quick Start: getting-started/quick-start.md
-    - Installation: getting-started/installation.md
-    - Your First Config: getting-started/first-config.md
+  - Guide:
+    - Core Concepts: guide/core-concepts.md
+    - Actions: guide/config/actions.md
+    - Control Flow: guide/config/control-flow.md
+    - Variables: guide/config/variables.md
+    - Commands: guide/commands.md
+    - Presets: guide/presets.md
+    - Preset Authoring: guide/preset-authoring.md
+    - Best Practices: guide/best-practices.md
+    - Advanced: guide/config/advanced.md
+  - Complete Reference: guide/config/reference.md
   - Examples:
     - Examples Index: examples/index.md
     - Beginner:
@@ -96,18 +103,7 @@ nav:
     - Real-World:
       - Dotfiles Manager: examples/real-world-dotfiles.md
       - Idempotency: examples/idempotency.md
-  - User Guide:
-    - Core Concepts: guide/core-concepts.md
-    - Commands: guide/commands.md
-    - Presets: guide/presets.md
-    - Preset Authoring: guide/preset-authoring.md
-    - Best Practices: guide/best-practices.md
-  - Configuration:
-    - Actions: guide/config/actions.md
-    - Complete Reference: guide/config/reference.md
-    - Control Flow: guide/config/control-flow.md
-    - Variables: guide/config/variables.md
-    - Advanced: guide/config/advanced.md
+  - AI Specification: ai-specification.md
   - Development:
     - Contributing: development/contributing.md
     - Development Guide: development/development.md
