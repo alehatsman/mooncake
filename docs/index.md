@@ -52,10 +52,10 @@ Mooncake provides a safe, validated execution environment for AI agents to confi
 
 **Target Audiences:**
 
-- **🤖 AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
-- **🏗️ Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
-- **👨‍💻 Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
-- **⚙️ DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
+- **AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
+- **Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
+- **Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
+- **DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
 
 **Why AI Agents Choose Mooncake:**
 
@@ -123,7 +123,7 @@ cat /tmp/mooncake-test.txt
 
 Quick reference of available actions with examples:
 
-### 🐚 Run Commands
+### Run Commands
 
 Execute shell commands with variables and conditionals.
 
@@ -140,7 +140,7 @@ Execute shell commands with variables and conditionals.
 
 ---
 
-### 📁 Manage Files & Directories
+### Manage Files & Directories
 
 Create files, directories, links with permissions and ownership.
 
@@ -167,7 +167,7 @@ Create files, directories, links with permissions and ownership.
 
 ---
 
-### 📝 Render Templates
+### Render Templates
 
 Render configuration files from templates with variables and logic.
 
@@ -188,7 +188,7 @@ Render configuration files from templates with variables and logic.
 
 ---
 
-### 📦 Copy Files
+### Copy Files
 
 Copy files with checksum verification and backup support.
 
@@ -229,7 +229,7 @@ Download files from URLs with checksums and retry logic.
 
 ---
 
-### 📂 Extract Archives
+### Extract Archives
 
 Extract tar, tar.gz, and zip archives with security protections.
 
@@ -267,7 +267,7 @@ Manage system services (systemd on Linux, launchd on macOS).
 
 ---
 
-### ✓ Verify State
+### Verify State
 
 Assert command results, file properties, and HTTP responses.
 
@@ -291,7 +291,7 @@ Assert command results, file properties, and HTTP responses.
 
 ---
 
-### 🎯 Reusable Workflows
+### Reusable Workflows
 
 Use presets for complex, parameterized workflows.
 
@@ -416,7 +416,7 @@ mooncake run --config config.yml --tags dev,test
 
 ## Key Features
 
-### 🔍 Dry-Run Mode
+### Dry-Run Mode
 
 Preview all changes before applying with `--dry-run`:
 
@@ -428,7 +428,7 @@ mooncake run --config config.yml --dry-run
 
 ---
 
-### 📊 System Facts Collection
+### System Facts Collection
 
 Mooncake automatically detects system information:
 
@@ -448,7 +448,7 @@ mooncake facts --format json  # JSON output
 
 ---
 
-### 📋 Execution Planning
+### Execution Planning
 
 Generate deterministic execution plans before running:
 
@@ -469,7 +469,7 @@ mooncake run --from-plan plan.json
 
 ---
 
-### ⚡ Robust Execution
+### Robust Execution
 
 Control command execution with timeouts, retries, and custom conditions:
 
@@ -486,7 +486,7 @@ Control command execution with timeouts, retries, and custom conditions:
 
 ---
 
-### 🔐 Sudo Support
+### Sudo Support
 
 Execute privileged operations securely:
 
@@ -655,11 +655,11 @@ Set up new machines automatically:
 |---------|----------|---------|---------------|
 | **Setup** | Single binary | Python + modules | Text editor |
 | **Dependencies** | None | Python, modules | System tools |
-| **AI Agent Friendly** | ✅ Native support | ⚠️ Complex | ❌ Unsafe |
-| **Dry-run** | ✅ Native | ✅ Check mode | ❌ Manual |
-| **Idempotency** | ✅ Guaranteed | ✅ Yes | ❌ Manual |
-| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
-| **System Facts** | ✅ Auto-detected | ✅ Gathered | ❌ Manual |
+| **AI Agent Friendly** | Native support | Complex | Unsafe |
+| **Dry-run** | Native | Check mode | Manual |
+| **Idempotency** | Guaranteed | Yes | Manual |
+| **Cross-platform** | Built-in | Limited | OS-specific |
+| **System Facts** | Auto-detected | Gathered | Manual |
 | **Best For** | AI agents, dotfiles | Enterprise automation | Quick tasks |
 
 **Mooncake is the execution layer for AI-driven system configuration** - providing safety, validation, and observability that AI agents need.

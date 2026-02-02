@@ -23,10 +23,13 @@ Built for AI-driven infrastructure with idempotency guarantees, dry-run validati
 
 ## Who It's For
 
-**🤖 AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
-**🏗️ Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
-**👨‍💻 Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
-**⚙️ DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
+**AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
+
+**Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
+
+**Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
+
+**DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
 
 ## Quick Start
 
@@ -76,14 +79,14 @@ mooncake facts  # See all available facts
 
 ## Why AI Agents Choose Mooncake
 
-- 🛡️ **Safe by Default** - Dry-run validation, idempotency guarantees, rollback support
-- 📊 **Full Observability** - Structured events, audit trails, execution logs
-- ✅ **Validated Operations** - Schema validation, type checking, state verification
-- 🎯 **AI-Friendly Format** - Simple YAML that any AI can generate and understand
-- 🚀 **Zero Dependencies** - Single binary, no Python, no modules, no setup
-- 🌍 **Cross-Platform** - Linux, macOS, Windows with unified interface
-- 🔍 **Dry-run Everything** - Preview all changes before applying
-- 📝 **Declarative** - Describe desired state, not steps to get there
+- **Safe by Default** - Dry-run validation, idempotency guarantees, rollback support
+- **Full Observability** - Structured events, audit trails, execution logs
+- **Validated Operations** - Schema validation, type checking, state verification
+- **AI-Friendly Format** - Simple YAML that any AI can generate and understand
+- **Zero Dependencies** - Single binary, no Python, no modules, no setup
+- **Cross-Platform** - Linux, macOS, Windows with unified interface
+- **Dry-run Everything** - Preview all changes before applying
+- **Declarative** - Describe desired state, not steps to get there
 
 ## Comparison
 
@@ -91,22 +94,22 @@ mooncake facts  # See all available facts
 |---------|----------|---------|---------------|
 | **Setup** | Single binary | Python + modules | Text editor |
 | **Dependencies** | None | Python, modules | System tools |
-| **AI Agent Friendly** | ✅ Native support | ⚠️ Complex | ❌ Unsafe |
-| **Dry-run** | ✅ Native | ✅ Check mode | ❌ Manual |
-| **Idempotency** | ✅ Guaranteed | ✅ Yes | ❌ Manual |
-| **Cross-platform** | ✅ Built-in | ⚠️ Limited | ❌ OS-specific |
+| **AI Agent Friendly** | Native support | Complex | Unsafe |
+| **Dry-run** | Native | Check mode | Manual |
+| **Idempotency** | Guaranteed | Yes | Manual |
+| **Cross-platform** | Built-in | Limited | OS-specific |
 | **Best For** | AI agents, dotfiles | Enterprise automation | Quick tasks |
 
 ## Documentation
 
-**📚 [Full Documentation](https://mooncake.alehatsman.com)** - Complete guide with examples
+**[Full Documentation](https://mooncake.alehatsman.com)** - Complete guide with examples
 
 Quick links:
-- 🚀 **[Quick Start](https://mooncake.alehatsman.com/getting-started/quick-start/)** - 30 second tutorial
-- 📚 **[Examples](https://mooncake.alehatsman.com/examples/)** - Learn by doing (beginner → advanced)
-- 📖 **[Actions Guide](https://mooncake.alehatsman.com/guide/config/actions/)** - What you can do
-- 📋 **[Complete Reference](https://mooncake.alehatsman.com/guide/config/reference/)** - All properties
-- 🎯 **[Presets](https://mooncake.alehatsman.com/guide/presets/)** - Reusable workflows
+- **[Guide](https://mooncake.alehatsman.com/guide/core-concepts/)** - Core concepts and how it works
+- **[Actions](https://mooncake.alehatsman.com/guide/config/actions/)** - All available actions
+- **[Complete Reference](https://mooncake.alehatsman.com/guide/config/reference/)** - All properties and types
+- **[AI Specification](https://mooncake.alehatsman.com/ai-specification/)** - For AI agents and LLMs
+- **[Presets](https://mooncake.alehatsman.com/guide/presets/)** - Reusable workflows
 
 ### Local Examples
 
@@ -170,9 +173,9 @@ See [Testing Documentation](docs/testing/README.md) for details.
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-- 🐛 [Report bugs](https://github.com/alehatsman/mooncake/issues)
-- 💡 [Request features](https://github.com/alehatsman/mooncake/issues)
-- 🗺️ [Roadmap](docs/development/roadmap.md)
+- [Report bugs](https://github.com/alehatsman/mooncake/issues)
+- [Request features](https://github.com/alehatsman/mooncake/issues)
+- [Roadmap](docs/development/roadmap.md)
 
 ## License
 
@@ -182,4 +185,4 @@ See [LICENSE](LICENSE) file for details.
 
 ---
 
-**[📚 Read the Full Documentation](https://mooncake.alehatsman.com)** for detailed guides, examples, and reference materials.
+**[Read the Full Documentation](https://mooncake.alehatsman.com)** for detailed guides, examples, and reference materials.
