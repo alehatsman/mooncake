@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -18,7 +17,7 @@ func readAndRenderTemplate(src string, renderer template.Renderer, variables map
 	// #nosec G304 -- Template source path from user config is intentional functionality
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return "", err
+		return "", &FileOperationError{Operation: "read", Path: src, Cause: err}
 	}
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
@@ -28,10 +27,14 @@ func readAndRenderTemplate(src string, renderer template.Renderer, variables map
 
 	srcBytes, err := io.ReadAll(srcFile)
 	if err != nil {
-		return "", err
+		return "", &FileOperationError{Operation: "read", Path: src, Cause: err}
 	}
 
-	return renderer.Render(string(srcBytes), variables)
+	output, err := renderer.Render(string(srcBytes), variables)
+	if err != nil {
+		return "", &RenderError{Field: "template file content", Cause: err}
+	}
+	return output, nil
 }
 
 // logTemplateComparison compares rendered output with existing file and logs appropriate message.
@@ -97,7 +100,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 		// Check if source file exists
 		if _, err = os.Stat(src); os.IsNotExist(err) {
 			ec.Logger.Errorf("  [DRY-RUN] Template source file does not exist: %s", src)
-			return fmt.Errorf("template source file not found: %s", src)
+			return &FileOperationError{Operation: "read", Path: src, Cause: err}
 		}
 
 		// Prepare variables for rendering
@@ -123,7 +126,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	templateFile, err := os.Open(src)
 	if err != nil {
 		markStepFailed(result, step, ec)
-		return err
+		return &FileOperationError{Operation: "read", Path: src, Cause: err}
 	}
 	defer func() {
 		if err = templateFile.Close(); err != nil {
@@ -134,7 +137,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	templateBytes, err := io.ReadAll(templateFile)
 	if err != nil {
 		markStepFailed(result, step, ec)
-		return err
+		return &FileOperationError{Operation: "read", Path: src, Cause: err}
 	}
 
 	variables := ec.Variables
@@ -145,7 +148,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	output, err := ec.Template.Render(string(templateBytes), variables)
 	if err != nil {
 		markStepFailed(result, step, ec)
-		return err
+		return &RenderError{Field: "template file content", Cause: err}
 	}
 
 	// Check if content would change
@@ -158,7 +161,7 @@ func HandleTemplate(step config.Step, ec *ExecutionContext) error {
 	mode := parseFileMode(template.Mode, 0644)
 	if err := createFileWithBecome(dest, []byte(output), mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
-		return fmt.Errorf("failed to write template output to %s: %w", dest, err)
+		return &FileOperationError{Operation: "write", Path: dest, Cause: err}
 	}
 
 	// Emit template.rendered event

@@ -31,19 +31,22 @@ func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionCont
 	if step.ChangedWhen != "" {
 		renderedExpr, err := ec.Template.Render(step.ChangedWhen, evalContext)
 		if err != nil {
-			return fmt.Errorf("failed to render changed_when: %w", err)
+			return &RenderError{Field: "changed_when", Cause: err}
 		}
 
 		changedResult, err := ec.Evaluator.Evaluate(renderedExpr, evalContext)
 		if err != nil {
-			return fmt.Errorf("failed to evaluate changed_when: %w", err)
+			return &EvaluationError{Expression: renderedExpr, Cause: err}
 		}
 
 		if boolResult, ok := changedResult.(bool); ok {
 			result.Changed = boolResult
 			ec.Logger.Debugf("  changed_when evaluated to: %v", boolResult)
 		} else {
-			return fmt.Errorf("changed_when expression did not evaluate to boolean: %v", changedResult)
+			return &EvaluationError{
+				Expression: renderedExpr,
+				Cause:      fmt.Errorf("expression evaluated to %T, expected bool", changedResult),
+			}
 		}
 	}
 
@@ -51,19 +54,22 @@ func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionCont
 	if step.FailedWhen != "" {
 		renderedExpr, err := ec.Template.Render(step.FailedWhen, evalContext)
 		if err != nil {
-			return fmt.Errorf("failed to render failed_when: %w", err)
+			return &RenderError{Field: "failed_when", Cause: err}
 		}
 
 		failedResult, err := ec.Evaluator.Evaluate(renderedExpr, evalContext)
 		if err != nil {
-			return fmt.Errorf("failed to evaluate failed_when: %w", err)
+			return &EvaluationError{Expression: renderedExpr, Cause: err}
 		}
 
 		if boolResult, ok := failedResult.(bool); ok {
 			result.Failed = boolResult
 			ec.Logger.Debugf("  failed_when evaluated to: %v", boolResult)
 		} else {
-			return fmt.Errorf("failed_when expression did not evaluate to boolean: %v", failedResult)
+			return &EvaluationError{
+				Expression: renderedExpr,
+				Cause:      fmt.Errorf("expression evaluated to %T, expected bool", failedResult),
+			}
 		}
 	}
 
@@ -79,7 +85,7 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 
 	renderedCommand, err := ec.Template.Render(shell, ec.Variables)
 	if err != nil {
-		return err
+		return &RenderError{Field: "shell command", Cause: err}
 	}
 
 	// Check for dry-run mode
@@ -141,7 +147,11 @@ func setupCommandContext(step config.Step) (context.Context, context.CancelFunc,
 	if step.Timeout != "" {
 		timeout, err := time.ParseDuration(step.Timeout)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid timeout duration %q: %w", step.Timeout, err)
+			return nil, nil, &SetupError{
+				Component: "timeout",
+				Issue:     fmt.Sprintf("invalid duration %q", step.Timeout),
+				Cause:     err,
+			}
 		}
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 	}
@@ -153,10 +163,16 @@ func setupCommandContext(step config.Step) (context.Context, context.CancelFunc,
 func createShellCommand(ctx context.Context, step config.Step, renderedCommand string, ec *ExecutionContext) (*exec.Cmd, error) {
 	if step.Become {
 		if !security.IsBecomeSupported() {
-			return nil, fmt.Errorf("become is not supported on %s", runtime.GOOS)
+			return nil, &SetupError{
+				Component: "become",
+				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
+			}
 		}
 		if ec.SudoPass == "" {
-			return nil, fmt.Errorf("step requires sudo but no password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
+			return nil, &SetupError{
+				Component: "sudo",
+				Issue:     "no password provided. Use --sudo-pass flag or --raw mode for interactive sudo",
+			}
 		}
 
 		// Build sudo arguments
@@ -184,7 +200,7 @@ func configureCommandEnvironment(command *exec.Cmd, step config.Step, ec *Execut
 		for key, value := range step.Env {
 			renderedValue, err := ec.Template.Render(value, ec.Variables)
 			if err != nil {
-				return fmt.Errorf("failed to render env var %s: %w", key, err)
+				return &RenderError{Field: fmt.Sprintf("env var %s", key), Cause: err}
 			}
 			envVars = append(envVars, fmt.Sprintf("%s=%s", key, renderedValue))
 		}
@@ -195,7 +211,7 @@ func configureCommandEnvironment(command *exec.Cmd, step config.Step, ec *Execut
 	if step.Cwd != "" {
 		renderedCwd, err := ec.Template.Render(step.Cwd, ec.Variables)
 		if err != nil {
-			return fmt.Errorf("failed to render cwd: %w", err)
+			return &RenderError{Field: "cwd", Cause: err}
 		}
 		command.Dir = renderedCwd
 	}
@@ -207,16 +223,16 @@ func configureCommandEnvironment(command *exec.Cmd, step config.Step, ec *Execut
 func executeAndCaptureOutput(command *exec.Cmd, ec *ExecutionContext) (string, string, error) {
 	stderr, err := command.StderrPipe()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create stderr pipe: %w", err)
+		return "", "", &SetupError{Component: "command execution", Issue: "failed to create stderr pipe", Cause: err}
 	}
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create stdout pipe: %w", err)
+		return "", "", &SetupError{Component: "command execution", Issue: "failed to create stdout pipe", Cause: err}
 	}
 
 	if err = command.Start(); err != nil {
-		return "", "", fmt.Errorf("failed to start command: %w", err)
+		return "", "", &SetupError{Component: "command execution", Issue: "failed to start command", Cause: err}
 	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -229,8 +245,9 @@ func executeAndCaptureOutput(command *exec.Cmd, ec *ExecutionContext) (string, s
 	return strings.TrimSpace(stdoutBuf.String()), strings.TrimSpace(stderrBuf.String()), nil
 }
 
-// processCommandResult handles command completion, exit codes, and result registration
-func processCommandResult(ctx context.Context, command *exec.Cmd, step config.Step, result *Result, stdoutLen, stderrLen int, ec *ExecutionContext) (bool, error) {
+// processCommandResult handles command completion, exit codes, and result registration.
+// Returns (wasTimeout, underlyingError, evaluationError).
+func processCommandResult(ctx context.Context, command *exec.Cmd, step config.Step, result *Result, stdoutLen, stderrLen int, ec *ExecutionContext) (bool, error, error) {
 	waitErr := command.Wait()
 	wasTimeout := false
 
@@ -254,7 +271,7 @@ func processCommandResult(ctx context.Context, command *exec.Cmd, step config.St
 
 	// Evaluate changed_when and failed_when overrides
 	if err := evaluateResultOverrides(step, result, ec); err != nil {
-		return wasTimeout, err
+		return wasTimeout, waitErr, err
 	}
 
 	// Register the result if register is specified
@@ -280,7 +297,7 @@ func processCommandResult(ctx context.Context, command *exec.Cmd, step config.St
 		}
 	}
 
-	return wasTimeout, nil
+	return wasTimeout, waitErr, nil
 }
 
 func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand string) error {
@@ -314,7 +331,7 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 	result.Stderr = stderr
 	result.Changed = true
 
-	wasTimeout, err := processCommandResult(ctx, command, step, result, len(stdout), len(stderr), ec)
+	wasTimeout, underlyingErr, err := processCommandResult(ctx, command, step, result, len(stdout), len(stderr), ec)
 	if err != nil {
 		return err
 	}
@@ -324,9 +341,18 @@ func executeShellCommand(step config.Step, ec *ExecutionContext, renderedCommand
 
 	if result.Failed {
 		if wasTimeout {
-			return fmt.Errorf("command timed out after %s", step.Timeout)
+			return &CommandError{
+				Timeout:  true,
+				Duration: step.Timeout,
+				ExitCode: result.Rc,
+				Cause:    underlyingErr,
+			}
 		}
-		return fmt.Errorf("command execution failed with exit code %d", result.Rc)
+		return &CommandError{
+			Timeout:  false,
+			ExitCode: result.Rc,
+			Cause:    underlyingErr,
+		}
 	}
 
 	return nil

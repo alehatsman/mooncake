@@ -15,19 +15,22 @@ import (
 func HandleCopy(step config.Step, ec *ExecutionContext) error {
 	copyAction := step.Copy
 
-	if copyAction.Src == "" || copyAction.Dest == "" {
-		return fmt.Errorf("both src and dest are required for copy action")
+	if copyAction.Src == "" {
+		return &StepValidationError{Field: "src", Message: "required for copy"}
+	}
+	if copyAction.Dest == "" {
+		return &StepValidationError{Field: "dest", Message: "required for copy"}
 	}
 
 	// Render paths
 	renderedSrc, err := ec.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ec.Variables)
 	if err != nil {
-		return fmt.Errorf("failed to render src path: %w", err)
+		return &RenderError{Field: "src path", Cause: err}
 	}
 
 	renderedDest, err := ec.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ec.Variables)
 	if err != nil {
-		return fmt.Errorf("failed to render dest path: %w", err)
+		return &RenderError{Field: "dest path", Cause: err}
 	}
 
 	// Create result object
@@ -43,20 +46,20 @@ func HandleCopy(step config.Step, ec *ExecutionContext) error {
 	// Verify source exists
 	srcInfo, err := os.Stat(renderedSrc)
 	if err != nil {
-		return fmt.Errorf("source file does not exist: %w", err)
+		return &FileOperationError{Operation: "read", Path: renderedSrc, Cause: err}
 	}
 	if srcInfo.IsDir() {
-		return fmt.Errorf("source is a directory, use recursive copy action instead")
+		return &StepValidationError{Field: "src", Message: "is a directory, use recursive copy action instead"}
 	}
 
 	// Verify source checksum if provided
 	if copyAction.Checksum != "" {
 		matches, checksumErr := utils.VerifyChecksum(renderedSrc, copyAction.Checksum)
 		if checksumErr != nil {
-			return fmt.Errorf("failed to verify source checksum: %w", checksumErr)
+			return &FileOperationError{Operation: "read", Path: renderedSrc, Cause: checksumErr}
 		}
 		if !matches {
-			return fmt.Errorf("source checksum mismatch")
+			return &StepValidationError{Field: "checksum", Message: "source checksum mismatch"}
 		}
 	}
 
@@ -101,7 +104,7 @@ func HandleCopy(step config.Step, ec *ExecutionContext) error {
 		backupPath, err := utils.CreateBackup(renderedDest)
 		if err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to create backup: %w", err)
+			return &FileOperationError{Operation: "create", Path: renderedDest + ".backup", Cause: err}
 		}
 		ec.Logger.Debugf("  Backup created: %s", backupPath)
 	}
@@ -110,7 +113,7 @@ func HandleCopy(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("  Copying file: %s -> %s", renderedSrc, renderedDest)
 	if err := copyFile(renderedSrc, renderedDest, mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
-		return fmt.Errorf("failed to copy file: %w", err)
+		return err
 	}
 
 	// Set ownership if specified
@@ -118,7 +121,7 @@ func HandleCopy(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Debugf("  Setting ownership: %s (owner: %s, group: %s)", renderedDest, copyAction.Owner, copyAction.Group)
 		if err := setOwnership(renderedDest, copyAction.Owner, copyAction.Group, false, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to set ownership: %w", err)
+			return err
 		}
 	}
 
@@ -127,11 +130,11 @@ func HandleCopy(step config.Step, ec *ExecutionContext) error {
 		matches, err := utils.VerifyChecksum(renderedDest, copyAction.Checksum)
 		if err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to verify destination checksum: %w", err)
+			return &FileOperationError{Operation: "read", Path: renderedDest, Cause: err}
 		}
 		if !matches {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("destination checksum mismatch after copy")
+			return &StepValidationError{Field: "checksum", Message: "destination checksum mismatch after copy"}
 		}
 	}
 
@@ -162,7 +165,7 @@ func copyFile(src, dest string, mode os.FileMode, step config.Step, ec *Executio
 	// #nosec G304 -- File path from user config is intentional functionality
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
+		return &FileOperationError{Operation: "read", Path: src, Cause: err}
 	}
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
@@ -173,7 +176,7 @@ func copyFile(src, dest string, mode os.FileMode, step config.Step, ec *Executio
 	// Create temporary file for atomic write
 	tmpFile, err := os.CreateTemp("", "mooncake-copy-*")
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return &FileOperationError{Operation: "create", Path: "temp file in " + os.TempDir(), Cause: err}
 	}
 	tmpPath := tmpFile.Name()
 	defer func() {
@@ -187,17 +190,17 @@ func copyFile(src, dest string, mode os.FileMode, step config.Step, ec *Executio
 
 	// Copy contents
 	if _, err := io.Copy(tmpFile, srcFile); err != nil {
-		return fmt.Errorf("failed to copy file contents: %w", err)
+		return &FileOperationError{Operation: "write", Path: tmpPath, Cause: err}
 	}
 
 	// Close temp file before moving
 	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %w", err)
+		return &FileOperationError{Operation: "write", Path: tmpPath, Cause: err}
 	}
 
 	// Set permissions on temp file
 	if err := os.Chmod(tmpPath, mode); err != nil {
-		return fmt.Errorf("failed to set permissions on temp file: %w", err)
+		return &FileOperationError{Operation: "chmod", Path: tmpPath, Cause: err}
 	}
 
 	// Move temp file to destination (atomic)
@@ -205,11 +208,11 @@ func copyFile(src, dest string, mode os.FileMode, step config.Step, ec *Executio
 		// Use sudo for final move
 		cmd := fmt.Sprintf("mv %q %q", tmpPath, dest)
 		if err := executeSudoCommand(cmd, step, ec); err != nil {
-			return fmt.Errorf("failed to move file with sudo: %w", err)
+			return &FileOperationError{Operation: "write", Path: dest, Cause: err}
 		}
 	} else {
 		if err := os.Rename(tmpPath, dest); err != nil {
-			return fmt.Errorf("failed to move file to destination: %w", err)
+			return &FileOperationError{Operation: "write", Path: dest, Cause: err}
 		}
 	}
 

@@ -1530,8 +1530,16 @@ func TestHandleFile_SetPermissionsRecursiveWithoutSudo(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for recursive permission change without sudo")
 	}
-	if err.Error() != "recursive permission change without sudo not yet implemented (use become: true)" {
-		t.Errorf("Unexpected error message: %v", err)
+	// Check for SetupError with correct component and message
+	setupErr, ok := err.(*SetupError)
+	if !ok {
+		t.Fatalf("Expected SetupError, got %T: %v", err, err)
+	}
+	if setupErr.Component != "become" {
+		t.Errorf("Expected Component 'become', got %q", setupErr.Component)
+	}
+	if setupErr.Issue != "recursive permission change without sudo not yet implemented (use become: true)" {
+		t.Errorf("Unexpected Issue: %v", setupErr.Issue)
 	}
 }
 

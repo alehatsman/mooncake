@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -1560,10 +1561,17 @@ func TestStart_EmptyConfigPath(t *testing.T) {
 	defer publisher.Close()
 	err := Start(startConfig, testLogger, publisher)
 	if err == nil {
-		t.Error("Start() should error with empty config path")
+		t.Fatal("Start() should error with empty config path")
 	}
-	if err.Error() != "config file path is empty" {
-		t.Errorf("Start() error = %v, want 'config file path is empty'", err)
+	var setupErr *SetupError
+	if !errors.As(err, &setupErr) {
+		t.Fatalf("expected SetupError, got %T: %v", err, err)
+	}
+	if setupErr.Component != "config" {
+		t.Errorf("SetupError.Component = %q, want %q", setupErr.Component, "config")
+	}
+	if !strings.Contains(setupErr.Issue, "empty") {
+		t.Errorf("SetupError.Issue = %q, should contain 'empty'", setupErr.Issue)
 	}
 }
 

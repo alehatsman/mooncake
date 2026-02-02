@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -97,14 +96,14 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 
 	whenExpression, err := ec.Template.Render(whenString, ec.Variables)
 	if err != nil {
-		return false, err
+		return false, &RenderError{Field: "when", Cause: err}
 	}
 
 	ec.Logger.Debugf("whenExpression: %v", whenExpression)
 
 	evalResult, err := ec.Evaluator.Evaluate(whenExpression, ec.Variables)
 	if err != nil {
-		return false, err
+		return false, &EvaluationError{Expression: whenExpression, Cause: err}
 	}
 
 	ec.Logger.Debugf("evalResult: %v", evalResult)
@@ -116,7 +115,10 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 
 	boolResult, ok := evalResult.(bool)
 	if !ok {
-		return false, fmt.Errorf("when expression did not evaluate to boolean: %v", evalResult)
+		return false, &EvaluationError{
+			Expression: whenExpression,
+			Cause:      fmt.Errorf("expression evaluated to %T, expected bool", evalResult),
+		}
 	}
 
 	return !boolResult, nil
@@ -153,12 +155,12 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 	if step.Creates != nil {
 		path, err := ec.Template.Render(*step.Creates, ec.Variables)
 		if err != nil {
-			return false, "", fmt.Errorf("failed to render creates path: %w", err)
+			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
 
 		expandedPath, err := ec.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
 		if err != nil {
-			return false, "", fmt.Errorf("failed to expand creates path: %w", err)
+			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
 
 		if _, err := os.Stat(expandedPath); err == nil {
@@ -171,7 +173,7 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 	if step.Unless != nil {
 		command, err := ec.Template.Render(*step.Unless, ec.Variables)
 		if err != nil {
-			return false, "", fmt.Errorf("failed to render unless command: %w", err)
+			return false, "", &RenderError{Field: "unless command", Cause: err}
 		}
 
 		// Execute unless command (silently, no logging)
@@ -522,7 +524,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	log.Debugf("config: %v", startConfig)
 
 	if startConfig.ConfigFilePath == "" {
-		return errors.New("config file path is empty")
+		return &SetupError{Component: "config", Issue: "config file path is empty"}
 	}
 
 	// Resolve sudo password early (before plan building)
@@ -535,7 +537,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 
 	sudoPassword, err := security.ResolvePassword(passwordCfg)
 	if err != nil {
-		return fmt.Errorf("failed to resolve sudo password: %w", err)
+		return &SetupError{Component: "sudo password", Issue: "failed to resolve password", Cause: err}
 	}
 
 	// Create path expander for resolving paths
@@ -552,7 +554,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	if startConfig.VarsFilePath != "" {
 		expandedPath, expandErr := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
 		if expandErr != nil {
-			return expandErr
+			return &RenderError{Field: "vars file path", Cause: expandErr}
 		}
 
 		log.Debugf("Reading variables from file: %v", expandedPath)
@@ -582,7 +584,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		Tags:       startConfig.Tags,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to build plan: %w", err)
+		return &SetupError{Component: "planner", Issue: "failed to build plan", Cause: err}
 	}
 
 	log.Debugf("Plan built with %d steps", len(planData.Steps))
@@ -605,7 +607,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 			systemFacts,
 		)
 		if err != nil {
-			return fmt.Errorf("failed to create artifact writer: %w", err)
+			return &SetupError{Component: "artifacts", Issue: "failed to create artifact writer", Cause: err}
 		}
 		defer artifactWriter.Close()
 

@@ -12,12 +12,12 @@ func HandleIncludeVars(step config.Step, ec *ExecutionContext) error {
 
 	expandedPath, err := ec.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ec.Variables)
 	if err != nil {
-		return err
+		return &RenderError{Field: "include_vars path", Cause: err}
 	}
 
 	vars, err := config.ReadVariables(expandedPath)
 	if err != nil {
-		return err
+		return &FileOperationError{Operation: "read", Path: expandedPath, Cause: err}
 	}
 
 	ec.HandleDryRun(func(dryRun *dryRunLogger) {

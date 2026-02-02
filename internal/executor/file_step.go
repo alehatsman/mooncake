@@ -61,7 +61,7 @@ func createDirectory(file *config.File, renderedPath string, result *Result, ste
 	ec.Logger.Debugf("  Creating directory: %s", renderedPath)
 	if err := createDirectoryWithBecome(renderedPath, mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
-		return fmt.Errorf("failed to create directory %s: %w", renderedPath, err)
+		return &FileOperationError{Operation: "create", Path: renderedPath, Cause: err}
 	}
 
 	// Emit directory.created event
@@ -120,7 +120,7 @@ func createOrUpdateFile(file *config.File, renderedPath string, result *Result, 
 		fileCreated := result.Changed
 		if err := createFileWithBecome(renderedPath, []byte(""), mode, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to create file %s: %w", renderedPath, err)
+			return &FileOperationError{Operation: "create", Path: renderedPath, Cause: err}
 		}
 
 		// Emit file.created or file.updated event
@@ -164,7 +164,7 @@ func createOrUpdateFile(file *config.File, renderedPath string, result *Result, 
 	fileCreated := result.Changed
 	if err := createFileWithBecome(renderedPath, []byte(renderedContent), mode, step, ec); err != nil {
 		markStepFailed(result, step, ec)
-		return fmt.Errorf("failed to write file %s: %w", renderedPath, err)
+		return &FileOperationError{Operation: "write", Path: renderedPath, Cause: err}
 	}
 
 	// Emit file.created or file.updated event
@@ -187,7 +187,7 @@ func createOrUpdateFile(file *config.File, renderedPath string, result *Result, 
 func removeFileOrDirectory(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
 	// Safety checks
 	if renderedPath == "" || renderedPath == "/" || renderedPath == "C:\\" {
-		return fmt.Errorf("refusing to remove empty, root, or system path: %q", renderedPath)
+		return &StepValidationError{Field: "path", Message: "refusing to remove empty, root, or system path"}
 	}
 
 	// Check if path exists
@@ -197,7 +197,7 @@ func removeFileOrDirectory(file *config.File, renderedPath string, result *Resul
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("failed to stat path: %w", err)
+		return &FileOperationError{Operation: "read", Path: renderedPath, Cause: err}
 	}
 
 	// Determine what we're removing
@@ -229,13 +229,13 @@ func removeFileOrDirectory(file *config.File, renderedPath string, result *Resul
 			ec.Logger.Debugf("  Removing directory (recursive): %s", renderedPath)
 			if err := os.RemoveAll(renderedPath); err != nil {
 				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to remove directory: %w", err)
+				return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 			}
 		} else {
 			ec.Logger.Debugf("  Removing directory: %s", renderedPath)
 			if err := os.Remove(renderedPath); err != nil {
 				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to remove directory (use force: true for non-empty): %w", err)
+				return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 			}
 		}
 
@@ -249,7 +249,7 @@ func removeFileOrDirectory(file *config.File, renderedPath string, result *Resul
 		ec.Logger.Debugf("  Removing file: %s", renderedPath)
 		if err := os.Remove(renderedPath); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to remove file: %w", err)
+			return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 		}
 
 		// Emit file.removed event
@@ -289,7 +289,7 @@ func touchFile(file *config.File, renderedPath string, result *Result, step conf
 		ec.Logger.Debugf("  Creating empty file: %s", renderedPath)
 		if err := createFileWithBecome(renderedPath, []byte(""), mode, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to create file: %w", err)
+			return &FileOperationError{Operation: "create", Path: renderedPath, Cause: err}
 		}
 
 		// Emit file.created event
@@ -313,12 +313,12 @@ func touchFile(file *config.File, renderedPath string, result *Result, step conf
 		cmd := fmt.Sprintf("touch %q", renderedPath)
 		if err := executeSudoCommand(cmd, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to touch file: %w", err)
+			return &FileOperationError{Operation: "write", Path: renderedPath, Cause: err}
 		}
 	} else {
 		if err := os.Chtimes(renderedPath, now, now); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to update timestamps: %w", err)
+			return &FileOperationError{Operation: "write", Path: renderedPath, Cause: err}
 		}
 	}
 
@@ -337,13 +337,13 @@ func touchFile(file *config.File, renderedPath string, result *Result, step conf
 // createSymlink creates a symbolic link from src to dest.
 func createSymlink(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
 	if file.Src == "" {
-		return fmt.Errorf("src is required for link state")
+		return &StepValidationError{Field: "src", Message: "required for link state"}
 	}
 
 	// Render source path
 	renderedSrc, err := ec.PathUtil.ExpandPath(file.Src, ec.CurrentDir, ec.Variables)
 	if err != nil {
-		return fmt.Errorf("failed to render src path: %w", err)
+		return &RenderError{Field: "src path", Cause: err}
 	}
 
 	// Check existing link
@@ -356,7 +356,7 @@ func createSymlink(file *config.File, renderedPath string, result *Result, step 
 		if _, statErr := os.Stat(renderedPath); statErr == nil {
 			// Path exists but is not a symlink
 			if !file.Force {
-				return fmt.Errorf("path exists and is not a symlink (use force: true to replace)")
+				return &StepValidationError{Field: "force", Message: "path exists and is not a symlink (use force: true to replace)"}
 			}
 		}
 	}
@@ -388,12 +388,12 @@ func createSymlink(file *config.File, renderedPath string, result *Result, step 
 			cmd := fmt.Sprintf("rm -f %q", renderedPath)
 			if err := executeSudoCommand(cmd, step, ec); err != nil {
 				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to remove existing path: %w", err)
+				return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 			}
 		} else {
 			if err := os.Remove(renderedPath); err != nil && !os.IsNotExist(err) {
 				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to remove existing path: %w", err)
+				return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 			}
 		}
 	}
@@ -404,16 +404,12 @@ func createSymlink(file *config.File, renderedPath string, result *Result, step 
 		cmd := fmt.Sprintf("ln -s %q %q", renderedSrc, renderedPath)
 		if err := executeSudoCommand(cmd, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to create symlink: %w", err)
+			return &FileOperationError{Operation: "link", Path: renderedPath, Cause: err}
 		}
 	} else {
 		if err := os.Symlink(renderedSrc, renderedPath); err != nil {
 			markStepFailed(result, step, ec)
-			// Check for Windows-specific errors
-			if runtime.GOOS == "windows" {
-				return fmt.Errorf("failed to create symlink (Windows requires administrator privileges or developer mode): %w", err)
-			}
-			return fmt.Errorf("failed to create symlink: %w", err)
+			return &FileOperationError{Operation: "link", Path: renderedPath, Cause: err}
 		}
 	}
 
@@ -431,22 +427,22 @@ func createSymlink(file *config.File, renderedPath string, result *Result, step 
 // createHardlink creates a hard link from src to dest.
 func createHardlink(file *config.File, renderedPath string, result *Result, step config.Step, ec *ExecutionContext) error {
 	if file.Src == "" {
-		return fmt.Errorf("src is required for hardlink state")
+		return &StepValidationError{Field: "src", Message: "required for hardlink state"}
 	}
 
 	// Render source path
 	renderedSrc, err := ec.PathUtil.ExpandPath(file.Src, ec.CurrentDir, ec.Variables)
 	if err != nil {
-		return fmt.Errorf("failed to render src path: %w", err)
+		return &RenderError{Field: "src path", Cause: err}
 	}
 
 	// Verify source exists and is not a directory
 	srcInfo, err := os.Stat(renderedSrc)
 	if err != nil {
-		return fmt.Errorf("source file does not exist: %w", err)
+		return &FileOperationError{Operation: "read", Path: renderedSrc, Cause: err}
 	}
 	if srcInfo.IsDir() {
-		return fmt.Errorf("cannot create hardlink to directory (OS limitation)")
+		return &StepValidationError{Field: "state", Message: "cannot create hardlink to directory (OS limitation)"}
 	}
 
 	// Check if destination exists and points to same file
@@ -481,19 +477,19 @@ func createHardlink(file *config.File, renderedPath string, result *Result, step
 	// Remove existing path if force is set
 	if linkExists {
 		if !file.Force {
-			return fmt.Errorf("destination exists (use force: true to replace)")
+			return &StepValidationError{Field: "force", Message: "destination exists (use force: true to replace)"}
 		}
 		ec.Logger.Debugf("  Removing existing path: %s", renderedPath)
 		if step.Become {
 			cmd := fmt.Sprintf("rm -f %q", renderedPath)
 			if err := executeSudoCommand(cmd, step, ec); err != nil {
 				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to remove existing path: %w", err)
+				return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 			}
 		} else {
 			if err := os.Remove(renderedPath); err != nil {
 				markStepFailed(result, step, ec)
-				return fmt.Errorf("failed to remove existing path: %w", err)
+				return &FileOperationError{Operation: "delete", Path: renderedPath, Cause: err}
 			}
 		}
 	}
@@ -504,17 +500,12 @@ func createHardlink(file *config.File, renderedPath string, result *Result, step
 		cmd := fmt.Sprintf("ln %q %q", renderedSrc, renderedPath)
 		if err := executeSudoCommand(cmd, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			// Check for cross-filesystem error
-			if err.Error() != "" {
-				return fmt.Errorf("failed to create hardlink (may be cross-filesystem): %w", err)
-			}
-			return fmt.Errorf("failed to create hardlink: %w", err)
+			return &FileOperationError{Operation: "link", Path: renderedPath, Cause: err}
 		}
 	} else {
 		if err := os.Link(renderedSrc, renderedPath); err != nil {
 			markStepFailed(result, step, ec)
-			// Check for cross-filesystem error
-			return fmt.Errorf("failed to create hardlink (ensure both paths are on same filesystem): %w", err)
+			return &FileOperationError{Operation: "link", Path: renderedPath, Cause: err}
 		}
 	}
 
@@ -539,12 +530,12 @@ func parseUserID(owner string) (int, error) {
 	// Lookup user by name
 	u, err := user.Lookup(owner)
 	if err != nil {
-		return -1, fmt.Errorf("user not found: %s", owner)
+		return -1, &SetupError{Component: "user", Issue: "user not found: " + owner, Cause: err}
 	}
 
 	uid, err := strconv.Atoi(u.Uid)
 	if err != nil {
-		return -1, fmt.Errorf("invalid UID for user %s: %w", owner, err)
+		return -1, &SetupError{Component: "user", Issue: "invalid UID for user " + owner, Cause: err}
 	}
 
 	return uid, nil
@@ -560,12 +551,12 @@ func parseGroupID(group string) (int, error) {
 	// Lookup group by name
 	g, err := user.LookupGroup(group)
 	if err != nil {
-		return -1, fmt.Errorf("group not found: %s", group)
+		return -1, &SetupError{Component: "group", Issue: "group not found: " + group, Cause: err}
 	}
 
 	gid, err := strconv.Atoi(g.Gid)
 	if err != nil {
-		return -1, fmt.Errorf("invalid GID for group %s: %w", group, err)
+		return -1, &SetupError{Component: "group", Issue: "invalid GID for group " + group, Cause: err}
 	}
 
 	return gid, nil
@@ -605,11 +596,11 @@ func setOwnership(path string, owner, group string, recurse bool, step config.St
 	if recurse {
 		// For directories, walk and change ownership recursively
 		// This is a simplified version - a production implementation would use filepath.Walk
-		return fmt.Errorf("recursive ownership change without sudo not yet implemented (use become: true)")
+		return &SetupError{Component: "become", Issue: "recursive ownership change without sudo not yet implemented (use become: true)"}
 	}
 
 	if err := os.Chown(path, uid, gid); err != nil {
-		return fmt.Errorf("failed to change ownership: %w", err)
+		return &FileOperationError{Operation: "chown", Path: path, Cause: err}
 	}
 
 	return nil
@@ -619,11 +610,11 @@ func setOwnership(path string, owner, group string, recurse bool, step config.St
 func chownWithBecome(path, owner, group string, recurse bool, step config.Step, ec *ExecutionContext) error {
 	// Validate platform support
 	if !security.IsBecomeSupported() {
-		return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+		return &SetupError{Component: "become", Issue: "not supported on " + runtime.GOOS}
 	}
 
 	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
+		return &SetupError{Component: "sudo", Issue: "step requires sudo but no password provided"}
 	}
 
 	// Build chown command
@@ -651,7 +642,7 @@ func setPermissions(file *config.File, renderedPath string, result *Result, step
 	// Check if path exists
 	info, err := os.Stat(renderedPath)
 	if err != nil {
-		return fmt.Errorf("path does not exist: %w", err)
+		return &FileOperationError{Operation: "read", Path: renderedPath, Cause: err}
 	}
 
 	isDir := info.IsDir()
@@ -690,11 +681,11 @@ func setPermissions(file *config.File, renderedPath string, result *Result, step
 				cmd := fmt.Sprintf("chmod -R %#o %q", targetMode, renderedPath)
 				if err := executeSudoCommand(cmd, step, ec); err != nil {
 					markStepFailed(result, step, ec)
-					return fmt.Errorf("failed to change permissions: %w", err)
+					return &FileOperationError{Operation: "chmod", Path: renderedPath, Cause: err}
 				}
 			} else {
 				// For non-sudo recursive, we'd need filepath.Walk - simplified for now
-				return fmt.Errorf("recursive permission change without sudo not yet implemented (use become: true)")
+				return &SetupError{Component: "become", Issue: "recursive permission change without sudo not yet implemented (use become: true)"}
 			}
 		} else {
 			// Single file/directory
@@ -702,12 +693,12 @@ func setPermissions(file *config.File, renderedPath string, result *Result, step
 				cmd := fmt.Sprintf("chmod %#o %q", targetMode, renderedPath)
 				if err := executeSudoCommand(cmd, step, ec); err != nil {
 					markStepFailed(result, step, ec)
-					return fmt.Errorf("failed to change permissions: %w", err)
+					return &FileOperationError{Operation: "chmod", Path: renderedPath, Cause: err}
 				}
 			} else {
 				if err := os.Chmod(renderedPath, targetMode); err != nil {
 					markStepFailed(result, step, ec)
-					return fmt.Errorf("failed to change permissions: %w", err)
+					return &FileOperationError{Operation: "chmod", Path: renderedPath, Cause: err}
 				}
 			}
 		}
@@ -718,7 +709,7 @@ func setPermissions(file *config.File, renderedPath string, result *Result, step
 		ec.Logger.Debugf("  Changing ownership: %s (owner: %s, group: %s)", renderedPath, file.Owner, file.Group)
 		if err := setOwnership(renderedPath, file.Owner, file.Group, file.Recurse, step, ec); err != nil {
 			markStepFailed(result, step, ec)
-			return fmt.Errorf("failed to change ownership: %w", err)
+			return &FileOperationError{Operation: "chown", Path: renderedPath, Cause: err}
 		}
 	}
 
@@ -739,11 +730,11 @@ func setPermissions(file *config.File, renderedPath string, result *Result, step
 func removeWithBecome(path string, isDir bool, force bool, step config.Step, ec *ExecutionContext) error {
 	// Validate platform support
 	if !security.IsBecomeSupported() {
-		return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+		return &SetupError{Component: "become", Issue: "not supported on " + runtime.GOOS}
 	}
 
 	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
+		return &SetupError{Component: "sudo", Issue: "step requires sudo but no password provided"}
 	}
 
 	// Build remove command
@@ -836,18 +827,18 @@ func createFileWithBecome(path string, content []byte, mode os.FileMode, step co
 
 	// Validate platform support
 	if !security.IsBecomeSupported() {
-		return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+		return &SetupError{Component: "become", Issue: "not supported on " + runtime.GOOS}
 	}
 
 	// Become required - use temp file + sudo move pattern
 	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
+		return &SetupError{Component: "sudo", Issue: "step requires sudo but no password provided"}
 	}
 
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "mooncake-*")
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return &FileOperationError{Operation: "create", Path: path, Cause: err}
 	}
 	tmpPath := tmpFile.Name()
 	defer func() {
@@ -858,7 +849,7 @@ func createFileWithBecome(path string, content []byte, mode os.FileMode, step co
 
 	// Write content to temp file
 	if err := os.WriteFile(tmpPath, content, 0600); err != nil {
-		return fmt.Errorf("failed to write temp file: %w", err)
+		return &FileOperationError{Operation: "write", Path: tmpPath, Cause: err}
 	}
 
 	// Use sudo to move and set permissions
@@ -874,12 +865,12 @@ func createDirectoryWithBecome(path string, mode os.FileMode, step config.Step, 
 
 	// Validate platform support
 	if !security.IsBecomeSupported() {
-		return fmt.Errorf("become is not supported on %s", runtime.GOOS)
+		return &SetupError{Component: "become", Issue: "not supported on " + runtime.GOOS}
 	}
 
 	// Become required - use sudo
 	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
+		return &SetupError{Component: "sudo", Issue: "step requires sudo but no password provided"}
 	}
 
 	// Build sudo mkdir command
@@ -918,9 +909,14 @@ func executeSudoCommand(command string, step config.Step, ec *ExecutionContext) 
 	cmd.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
 
 	// Capture output for error reporting
-	output, err := cmd.CombinedOutput()
+	_, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("sudo command failed: %w\nOutput: %s", err, ec.Redactor.Redact(string(output)))
+		// Extract exit code if possible
+		exitCode := -1
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		}
+		return &CommandError{ExitCode: exitCode, Timeout: false, Duration: "", Cause: err}
 	}
 
 	return nil

@@ -1,9 +1,11 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -79,8 +81,16 @@ func TestHandleCopy_MissingSrc(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for missing src, got nil")
 	}
-	if err.Error() != "both src and dest are required for copy action" {
-		t.Errorf("Expected error about missing src and dest, got: %v", err)
+
+	var validationErr *StepValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected StepValidationError, got %T: %v", err, err)
+	}
+	if validationErr.Field != "src" {
+		t.Errorf("Field = %q, want %q", validationErr.Field, "src")
+	}
+	if !strings.Contains(validationErr.Message, "required") {
+		t.Errorf("Message should contain 'required', got: %q", validationErr.Message)
 	}
 }
 
@@ -96,8 +106,16 @@ func TestHandleCopy_MissingDest(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for missing dest, got nil")
 	}
-	if err.Error() != "both src and dest are required for copy action" {
-		t.Errorf("Expected error about missing src and dest, got: %v", err)
+
+	var validationErr *StepValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected StepValidationError, got %T: %v", err, err)
+	}
+	if validationErr.Field != "dest" {
+		t.Errorf("Field = %q, want %q", validationErr.Field, "dest")
+	}
+	if !strings.Contains(validationErr.Message, "required") {
+		t.Errorf("Message should contain 'required', got: %q", validationErr.Message)
 	}
 }
 
@@ -116,8 +134,9 @@ func TestHandleCopy_SourceDoesNotExist(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for non-existent source, got nil")
 	}
-	if !os.IsNotExist(err) && err.Error() != fmt.Sprintf("source file does not exist: stat %s: no such file or directory", nonExistentSrc) {
-		t.Errorf("Expected error about non-existent source, got: %v", err)
+	// Check that it's a FileOperationError with read operation
+	if _, ok := err.(*FileOperationError); !ok {
+		t.Errorf("Expected FileOperationError, got: %T", err)
 	}
 }
 
@@ -139,8 +158,16 @@ func TestHandleCopy_SourceIsDirectory(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for source being a directory, got nil")
 	}
-	if err.Error() != "source is a directory, use recursive copy action instead" {
-		t.Errorf("Expected error about source being directory, got: %v", err)
+
+	var validationErr *StepValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected StepValidationError, got %T: %v", err, err)
+	}
+	if validationErr.Field != "src" {
+		t.Errorf("Field = %q, want %q", validationErr.Field, "src")
+	}
+	if !strings.Contains(validationErr.Message, "directory") {
+		t.Errorf("Message should contain 'directory', got: %q", validationErr.Message)
 	}
 }
 
@@ -489,8 +516,16 @@ func TestHandleCopy_ChecksumInvalid(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for invalid checksum, got nil")
 	}
-	if err.Error() != "source checksum mismatch" {
-		t.Errorf("Expected checksum mismatch error, got: %v", err)
+
+	var validationErr *StepValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected StepValidationError, got %T: %v", err, err)
+	}
+	if validationErr.Field != "checksum" {
+		t.Errorf("Field = %q, want %q", validationErr.Field, "checksum")
+	}
+	if !strings.Contains(validationErr.Message, "mismatch") {
+		t.Errorf("Message should contain 'mismatch', got: %q", validationErr.Message)
 	}
 }
 
@@ -895,8 +930,16 @@ func TestHandleCopy_MD5ChecksumInvalid(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for invalid MD5 checksum, got nil")
 	}
-	if err.Error() != "source checksum mismatch" {
-		t.Errorf("Expected checksum mismatch error, got: %v", err)
+
+	var validationErr *StepValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected StepValidationError, got %T: %v", err, err)
+	}
+	if validationErr.Field != "checksum" {
+		t.Errorf("Field = %q, want %q", validationErr.Field, "checksum")
+	}
+	if !strings.Contains(validationErr.Message, "mismatch") {
+		t.Errorf("Message should contain 'mismatch', got: %q", validationErr.Message)
 	}
 }
 
