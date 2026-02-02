@@ -74,9 +74,9 @@ mooncake --help
 
 ## 30 Second Quick Start
 
-Create `config.yml`:
-
-```yaml
+```bash
+# Create config.yml
+cat > config.yml <<'EOF'
 - name: Hello Mooncake
   shell: echo "Chookity! Running on {{os}}/{{arch}}"
 
@@ -85,11 +85,8 @@ Create `config.yml`:
     path: /tmp/mooncake-test.txt
     state: file
     content: "Hello from Mooncake!"
-```
+EOF
 
-Run it:
-
-```bash
 # Preview changes (safe!)
 mooncake run --config config.yml --dry-run
 

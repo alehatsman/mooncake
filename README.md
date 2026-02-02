@@ -23,7 +23,17 @@ Lightweight automation tool for dotfiles and system configuration. Single binary
 # Install
 go install github.com/alehatsman/mooncake@latest
 
-# Create config.yml (example above)
+# Create config.yml
+cat > config.yml <<'EOF'
+- name: Hello Mooncake
+  shell: echo "Running on {{os}}/{{arch}}"
+
+- name: Create file
+  file:
+    path: /tmp/hello.txt
+    state: file
+    content: "Hello from Mooncake!"
+EOF
 
 # Preview changes (safe!)
 mooncake run --config config.yml --dry-run
