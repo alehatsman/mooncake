@@ -101,6 +101,19 @@
           ],
           "description": "Invoke a preset with optional parameters"
         },
+        "print": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Message to print (simple string format)"
+            },
+            {
+              "$ref": "#/definitions/print",
+              "description": "Print action with message"
+            }
+          ],
+          "description": "Print a message (supports template variables)"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"
@@ -273,6 +286,11 @@
               },
               {
                 "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -338,6 +356,11 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               },
               {
@@ -411,6 +434,11 @@
               },
               {
                 "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -476,6 +504,11 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               },
               {
@@ -549,6 +582,11 @@
               },
               {
                 "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -614,6 +652,11 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               },
               {
@@ -687,6 +730,11 @@
               },
               {
                 "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -752,6 +800,11 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               },
               {
@@ -894,6 +947,11 @@
               },
               {
                 "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -963,6 +1021,11 @@
               },
               {
                 "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1023,6 +1086,11 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               },
               {
@@ -1092,6 +1160,85 @@
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "print"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
                 ]
               },
               {
@@ -1661,6 +1808,19 @@
           "type": "object",
           "description": "Parameters to pass to the preset",
           "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "print": {
+      "type": "object",
+      "required": [
+        "msg"
+      ],
+      "properties": {
+        "msg": {
+          "type": "string",
+          "description": "Message to print (supports template variables)"
         }
       },
       "additionalProperties": false

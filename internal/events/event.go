@@ -77,6 +77,11 @@ const (
 	EventPresetCompleted EventType = "preset.completed"
 )
 
+// Event types for print
+const (
+	EventPrintMessage EventType = "print.message"
+)
+
 // RunStartedData contains data for run.started events
 type RunStartedData struct {
 	RootFile   string   `json:"root_file"`
@@ -275,4 +280,9 @@ type PresetData struct {
 	Parameters map[string]interface{} `json:"parameters,omitempty"`  // Parameters passed to preset
 	StepsCount int                    `json:"steps_count"`           // Number of steps in preset
 	Changed    bool                   `json:"changed,omitempty"`     // Whether any step changed (only in completed event)
+}
+
+// PrintData contains data for print.message events
+type PrintData struct {
+	Message string `json:"message"` // The message that was printed
 }

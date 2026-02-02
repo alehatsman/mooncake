@@ -262,6 +262,31 @@ func (p *PresetInvocation) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	return nil
 }
 
+// PrintAction represents a print/output action for displaying messages.
+type PrintAction struct {
+	Msg string `yaml:"msg,omitempty" json:"msg,omitempty"` // Message to print (supports templates)
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
+// Supports: print: "message" AND print: { msg: "message" }
+func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try unmarshaling as string first (simple form)
+	var str string
+	if err := unmarshal(&str); err == nil {
+		p.Msg = str
+		return nil
+	}
+
+	// Try unmarshaling as structured object
+	type rawPrint PrintAction
+	var raw rawPrint
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	*p = PrintAction(raw)
+	return nil
+}
+
 // Step represents a single configuration step that can perform various actions.
 type Step struct {
 	// Identification
@@ -285,6 +310,7 @@ type Step struct {
 	Service     *ServiceAction     `yaml:"service" json:"service,omitempty"`
 	Assert      *Assert            `yaml:"assert" json:"assert,omitempty"`
 	Preset      *PresetInvocation  `yaml:"preset" json:"preset,omitempty"`
+	Print       *PrintAction       `yaml:"print" json:"print,omitempty"`
 	Include     *string            `yaml:"include" json:"include,omitempty"`
 	IncludeVars *string            `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
@@ -374,6 +400,9 @@ func (s *Step) countActions() int {
 	if s.Preset != nil {
 		count++
 	}
+	if s.Print != nil {
+		count++
+	}
 	if s.Include != nil {
 		count++
 	}
@@ -417,6 +446,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Preset != nil {
 		return "preset"
+	}
+	if s.Print != nil {
+		return "print"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -481,6 +513,7 @@ func (s *Step) Clone() *Step {
 		Service:      s.Service,
 		Assert:       s.Assert,
 		Preset:       s.Preset,
+		Print:        s.Print,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,

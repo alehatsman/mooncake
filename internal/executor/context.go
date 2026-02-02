@@ -183,3 +183,42 @@ func (ec *ExecutionContext) HandleDryRun(logFn func(*dryRunLogger)) bool {
 	logFn(dryRun)
 	return true
 }
+
+// --- actions.Context interface implementation ---
+// These methods allow ExecutionContext to be used as an actions.Context,
+// avoiding circular import dependencies between executor and actions packages.
+
+// GetTemplate returns the template renderer.
+func (ec *ExecutionContext) GetTemplate() template.Renderer {
+	return ec.Template
+}
+
+// GetEvaluator returns the expression evaluator.
+func (ec *ExecutionContext) GetEvaluator() expression.Evaluator {
+	return ec.Evaluator
+}
+
+// GetLogger returns the logger.
+func (ec *ExecutionContext) GetLogger() logger.Logger {
+	return ec.Logger
+}
+
+// GetVariables returns the execution variables.
+func (ec *ExecutionContext) GetVariables() map[string]interface{} {
+	return ec.Variables
+}
+
+// GetEventPublisher returns the event publisher.
+func (ec *ExecutionContext) GetEventPublisher() events.Publisher {
+	return ec.EventPublisher
+}
+
+// IsDryRun returns true if this is a dry-run execution.
+func (ec *ExecutionContext) IsDryRun() bool {
+	return ec.DryRun
+}
+
+// GetCurrentStepID returns the current step ID.
+func (ec *ExecutionContext) GetCurrentStepID() string {
+	return ec.CurrentStepID
+}

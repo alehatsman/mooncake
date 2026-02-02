@@ -15,6 +15,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/plan"
+	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )

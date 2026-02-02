@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/artifacts"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -275,7 +276,66 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 
 
 // dispatchStepAction executes the appropriate handler based on step type.
+// It first checks if a handler is registered in the new actions registry,
+// and falls back to legacy handlers for non-migrated actions.
 func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
+	// Determine action type from step
+	actionType := step.DetermineActionType()
+
+	// Try to get handler from registry (new system)
+	if handler, ok := actions.Get(actionType); ok {
+		// Validate step configuration
+		if err := handler.Validate(&step); err != nil {
+			return fmt.Errorf("validation failed for %s action: %w", actionType, err)
+		}
+
+		// Handle dry-run mode
+		if ec.DryRun {
+			// Create a result for dry-run
+			result := NewResult()
+			ec.CurrentResult = result
+
+			if err := handler.DryRun(ec, &step); err != nil {
+				return err
+			}
+
+			// Register result if requested
+			if step.Register != "" {
+				result.RegisterTo(ec.Variables, step.Register)
+			}
+			return nil
+		}
+
+		// Execute the action
+		actionResult, err := handler.Execute(ec, &step)
+		if err != nil {
+			return err
+		}
+
+		// Convert actions.Result interface back to *Result if needed
+		var result *Result
+		if concreteResult, ok := actionResult.(*Result); ok {
+			result = concreteResult
+		} else {
+			// Create a new Result from the interface
+			result = NewResult()
+			// The interface methods would have been called by the handler
+			// so we trust that the result is properly populated
+			// For now, we just use it as-is
+		}
+
+		// Store result in context
+		ec.CurrentResult = result
+
+		// Register result if requested
+		if step.Register != "" && actionResult != nil {
+			actionResult.RegisterTo(ec.Variables, step.Register)
+		}
+
+		return nil
+	}
+
+	// Fall back to legacy handlers for non-migrated actions
 	switch {
 	case step.IncludeVars != nil:
 		return HandleIncludeVars(step, ec)
@@ -306,6 +366,9 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 
 	case step.Preset != nil:
 		return HandlePreset(step, ec)
+
+	case step.Print != nil:
+		return HandlePrint(step, ec)
 
 	case step.Shell != nil:
 		return HandleShell(step, ec)

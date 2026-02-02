@@ -231,3 +231,8 @@ func (d *dryRunLogger) LogPresetOperation(invocation *config.PresetInvocation, p
 		d.logger.Infof("  [DRY-RUN] Would expand preset '%s'", invocation.Name)
 	}
 }
+
+// LogPrintMessage logs a print message in dry-run mode.
+func (d *dryRunLogger) LogPrintMessage(message string) {
+	d.logger.Infof("  [DRY-RUN] Would print: %s", message)
+}

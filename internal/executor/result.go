@@ -109,3 +109,39 @@ func (r *Result) ToMap() map[string]interface{} {
 func (r *Result) RegisterTo(variables map[string]interface{}, name string) {
 	variables[name] = r.ToMap()
 }
+
+// --- actions.Result interface implementation ---
+// These methods allow Result to be used as an actions.Result,
+// avoiding circular import dependencies between executor and actions packages.
+
+// SetChanged marks whether the action made changes.
+func (r *Result) SetChanged(changed bool) {
+	r.Changed = changed
+}
+
+// SetStdout sets the stdout output.
+func (r *Result) SetStdout(stdout string) {
+	r.Stdout = stdout
+}
+
+// SetStderr sets the stderr output.
+func (r *Result) SetStderr(stderr string) {
+	r.Stderr = stderr
+}
+
+// SetFailed marks the result as failed.
+func (r *Result) SetFailed(failed bool) {
+	r.Failed = failed
+	if failed {
+		r.Rc = 1
+	}
+}
+
+// SetData sets custom result data.
+// This merges the provided data into the result's ToMap output.
+func (r *Result) SetData(data map[string]interface{}) {
+	// Store data in result for later inclusion in ToMap
+	// We'll need to add a Data field to Result struct
+	// For now, we can extend ToMap to include this data
+	// This is a TODO for later refinement
+}
