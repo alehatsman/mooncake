@@ -57,17 +57,15 @@ preset:
       failed_when: false
       when: parameters.state == "present"
 
-    # Try package manager installation (auto or package method)
+    # Package manager installation
     - name: Install Ollama via apt (Debian/Ubuntu)
       shell: apt-get update && apt-get install -y ollama
       become: true
       when: >
         parameters.state == "present" and
         ollama_check.rc != 0 and
-        (parameters.method == "auto" or parameters.method == "package") and
-        apt_available and
-        os == "linux"
-      register: apt_install
+        parameters.method == "package" and
+        package_manager == "apt"
       failed_when: false
 
     - name: Install Ollama via dnf (Fedora/RHEL 8+)
@@ -76,11 +74,8 @@ preset:
       when: >
         parameters.state == "present" and
         ollama_check.rc != 0 and
-        (parameters.method == "auto" or parameters.method == "package") and
-        dnf_available and
-        os == "linux" and
-        (apt_install is undefined or apt_install.rc != 0)
-      register: dnf_install
+        parameters.method == "package" and
+        package_manager == "dnf"
       failed_when: false
 
     - name: Install Ollama via yum (RHEL/CentOS 7)
@@ -89,12 +84,8 @@ preset:
       when: >
         parameters.state == "present" and
         ollama_check.rc != 0 and
-        (parameters.method == "auto" or parameters.method == "package") and
-        yum_available and
-        os == "linux" and
-        (apt_install is undefined or apt_install.rc != 0) and
-        (dnf_install is undefined or dnf_install.rc != 0)
-      register: yum_install
+        parameters.method == "package" and
+        package_manager == "yum"
       failed_when: false
 
     - name: Install Ollama via Homebrew (macOS)
@@ -102,24 +93,18 @@ preset:
       when: >
         parameters.state == "present" and
         ollama_check.rc != 0 and
-        (parameters.method == "auto" or parameters.method == "package") and
-        brew_available and
-        os == "darwin"
-      register: brew_install
+        parameters.method == "package" and
+        package_manager == "brew"
       failed_when: false
 
-    # Fallback to script installation
+    # Script installation (auto or script method)
     - name: Install Ollama via official script
       shell: curl -fsSL https://ollama.com/install.sh | sh
       become: true
       when: >
         parameters.state == "present" and
         ollama_check.rc != 0 and
-        (parameters.method == "auto" or parameters.method == "script") and
-        (apt_install is undefined or apt_install.rc != 0) and
-        (dnf_install is undefined or dnf_install.rc != 0) and
-        (yum_install is undefined or yum_install.rc != 0) and
-        (brew_install is undefined or brew_install.rc != 0)
+        (parameters.method == "auto" or parameters.method == "script")
 
     # ========================================
     # SERVICE CONFIGURATION
@@ -207,18 +192,12 @@ preset:
         {% endfor %}
       when: >
         parameters.state == "present" and
-        parameters.pull | length > 0
+        len(parameters.pull) > 0
       register: model_pull
 
     # ========================================
     # UNINSTALLATION (state: absent)
     # ========================================
-
-    - name: Check if Ollama is installed (for removal)
-      shell: command -v ollama
-      register: ollama_removal_check
-      failed_when: false
-      when: parameters.state == "absent"
 
     - name: Stop Ollama service (Linux)
       service:
@@ -228,7 +207,6 @@ preset:
       become: true
       when: >
         parameters.state == "absent" and
-        ollama_removal_check.rc == 0 and
         os == "linux"
       failed_when: false
 
@@ -239,45 +217,13 @@ preset:
         enabled: false
       when: >
         parameters.state == "absent" and
-        ollama_removal_check.rc == 0 and
         os == "darwin"
       failed_when: false
 
-    - name: Remove Ollama via apt
-      shell: apt-get remove -y ollama
-      become: true
-      when: >
-        parameters.state == "absent" and
-        ollama_removal_check.rc == 0 and
-        apt_available and
-        os == "linux"
-      failed_when: false
-
-    - name: Remove Ollama via dnf
-      shell: dnf remove -y ollama
-      become: true
-      when: >
-        parameters.state == "absent" and
-        ollama_removal_check.rc == 0 and
-        dnf_available and
-        os == "linux"
-      failed_when: false
-
-    - name: Remove Ollama via Homebrew
-      shell: brew uninstall ollama
-      when: >
-        parameters.state == "absent" and
-        ollama_removal_check.rc == 0 and
-        brew_available and
-        os == "darwin"
-      failed_when: false
-
-    - name: Remove Ollama binary (script installation)
+    - name: Remove Ollama binary
       shell: rm -f /usr/local/bin/ollama /usr/bin/ollama
       become: true
-      when: >
-        parameters.state == "absent" and
-        ollama_removal_check.rc == 0
+      when: parameters.state == "absent"
       failed_when: false
 
     - name: Remove Ollama models directory (if force)
