@@ -50,6 +50,7 @@ const (
 	EventLinkCreated         EventType = "link.created"
 	EventPermissionsChanged  EventType = "permissions.changed"
 	EventTemplateRender      EventType = "template.rendered"
+	EventArchiveExtracted    EventType = "archive.extracted"
 )
 
 // Event types for variables
@@ -206,4 +207,17 @@ type VarsLoadedData struct {
 	Count    int      `json:"count"`
 	Keys     []string `json:"keys"`
 	DryRun   bool     `json:"dry_run"`
+}
+
+// ArchiveExtractedData contains data for archive.extracted events
+type ArchiveExtractedData struct {
+	Src             string `json:"src"`
+	Dest            string `json:"dest"`
+	Format          string `json:"format"`
+	FilesExtracted  int    `json:"files_extracted"`
+	DirsCreated     int    `json:"dirs_created"`
+	BytesExtracted  int64  `json:"bytes_extracted"`
+	StripComponents int    `json:"strip_components,omitempty"`
+	DurationMs      int64  `json:"duration_ms"`
+	DryRun          bool   `json:"dry_run"`
 }

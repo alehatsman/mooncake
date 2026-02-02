@@ -158,3 +158,17 @@ func (d *dryRunLogger) LogFileCopy(src, dest string, mode os.FileMode, size int6
 func (d *dryRunLogger) LogFileCopyNoChange(src, dest string) {
 	d.logger.Infof("  [DRY-RUN] File already up to date: %s -> %s", src, dest)
 }
+
+// LogArchiveExtraction logs a dry-run message for archive extraction.
+func (d *dryRunLogger) LogArchiveExtraction(src, dest, format string, stripComponents int) {
+	msg := fmt.Sprintf("extract %s archive %s to %s", format, src, dest)
+	if stripComponents > 0 {
+		msg += fmt.Sprintf(" (stripping %d components)", stripComponents)
+	}
+	d.logAction("unarchive", msg)
+}
+
+// logAction formats a generic action message for dry-run mode.
+func (d *dryRunLogger) logAction(actionType, message string) {
+	d.logger.Infof("  [DRY-RUN] Would %s: %s", actionType, message)
+}

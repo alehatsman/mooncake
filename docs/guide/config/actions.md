@@ -277,6 +277,133 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
     checksum: "sha256:a3b5c6d7e8f9..."
 ```
 
+## Unarchive
+
+Extract archive files with automatic format detection and security protections.
+
+### Unarchive Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `unarchive.src` | string | Path to archive file (required) |
+| `unarchive.dest` | string | Destination directory (required) |
+| `unarchive.strip_components` | integer | Number of leading path components to strip (default: 0) |
+| `unarchive.creates` | string | Skip extraction if this path exists (idempotency marker) |
+| `unarchive.mode` | string | Directory permissions (e.g., "0755") |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
+
+**Supported formats:** `.tar`, `.tar.gz`, `.tgz`, `.zip` (auto-detected from extension)
+
+**Security:** Automatically blocks path traversal attacks (`../` sequences) and validates all extracted paths.
+
+### Basic Extraction
+
+```yaml
+- name: Extract Node.js
+  unarchive:
+    src: /tmp/node-v20.tar.gz
+    dest: /opt/node
+    mode: "0755"
+```
+
+### Extract with Path Stripping
+
+Strip leading path components (like tar's `--strip-components`):
+
+```yaml
+# Archive contains: node-v20/bin/node, node-v20/lib/...
+# Result: /opt/node/bin/node, /opt/node/lib/...
+- name: Extract Node.js without top-level directory
+  unarchive:
+    src: /tmp/node-v20.tar.gz
+    dest: /opt/node
+    strip_components: 1
+```
+
+### Extract with Idempotency
+
+Skip extraction if marker file already exists:
+
+```yaml
+- name: Extract application
+  unarchive:
+    src: /tmp/myapp.tar.gz
+    dest: /opt/myapp
+    creates: /opt/myapp/.installed
+    mode: "0755"
+
+# Run again - will skip because marker exists
+```
+
+### Extract Multiple Archives
+
+```yaml
+- vars:
+    archives:
+      - name: app
+        file: app-v1.2.3.tar.gz
+      - name: data
+        file: data.zip
+
+- name: Extract {{item.name}}
+  unarchive:
+    src: /tmp/{{item.file}}
+    dest: /opt/{{item.name}}
+    strip_components: 1
+  with_items: "{{archives}}"
+```
+
+### Extract with Become
+
+```yaml
+- name: Extract to system directory
+  unarchive:
+    src: /tmp/archive.tar.gz
+    dest: /opt/myapp
+    mode: "0755"
+  become: true
+```
+
+### Supported Archive Formats
+
+- **tar** - Uncompressed tar archives (`.tar`)
+- **tar.gz** - Gzip compressed tar archives (`.tar.gz`)
+- **tgz** - Alternative gzip tar extension (`.tgz`)
+- **zip** - ZIP archives (`.zip`)
+
+Format is detected automatically from the file extension (case-insensitive).
+
+### How strip_components Works
+
+```yaml
+# Archive structure:
+#   project-1.0/src/main.go
+#   project-1.0/src/utils.go
+#   project-1.0/README.md
+
+# strip_components: 0 (default)
+# Result: dest/project-1.0/src/main.go
+
+# strip_components: 1
+# Result: dest/src/main.go
+
+# strip_components: 2
+# Result: dest/main.go
+```
+
+Files with fewer path components than `strip_components` are skipped.
+
+### Security Features
+
+All extracted paths are validated to prevent:
+
+- **Path traversal attacks** - Blocks `../` sequences
+- **Absolute paths** - Prevents extracting to system paths
+- **Symlink escapes** - Validates symlink targets stay within destination
+
+These protections are always active and cannot be disabled.
+
 ## Template
 
 Render templates with variables and logic.

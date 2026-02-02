@@ -1137,6 +1137,138 @@ See [complete example](11-execution-control.md) for detailed deployment workflow
 
 ---
 
+### 12 - Unarchive / Extract Archives
+
+Learn how to extract archive files with automatic format detection and security protections.
+
+#### What You'll Learn
+
+- Extracting tar, tar.gz, tgz, and zip archives
+- Using `strip_components` to remove leading directories
+- Idempotency with `creates` parameter
+- Security protections against path traversal
+
+#### Quick Start
+
+```bash
+cd examples/12-unarchive
+mooncake run --config config.yml
+```
+
+⚠️ **Note:** This example demonstrates archive extraction patterns. You'll need to provide your own test archives or download sample ones.
+
+#### What It Does
+
+1. Extracts various archive formats
+2. Demonstrates path stripping with `strip_components`
+3. Shows idempotent extraction with `creates`
+4. Extracts to system directories with sudo
+
+#### Key Concepts
+
+**Basic Extraction**
+
+```yaml
+- name: Extract Node.js
+  unarchive:
+    src: /tmp/node-v20.tar.gz
+    dest: /opt/node
+    mode: "0755"
+```
+
+**Supported Formats**
+
+Auto-detected from extension:
+- `.tar` - Uncompressed tar archives
+- `.tar.gz`, `.tgz` - Gzip compressed tar
+- `.zip` - ZIP archives
+
+**Strip Components**
+
+Remove leading directories (like tar's `--strip-components`):
+
+```yaml
+# Archive: project-1.0/src/main.go
+- name: Extract without top-level directory
+  unarchive:
+    src: /tmp/project.tar.gz
+    dest: /opt/project
+    strip_components: 1
+    # Result: /opt/project/src/main.go (without project-1.0/)
+```
+
+**Idempotency**
+
+Skip extraction if marker file exists:
+
+```yaml
+- name: Extract application
+  unarchive:
+    src: /tmp/app.tar.gz
+    dest: /opt/app
+    creates: /opt/app/bin/app
+```
+
+Run again - extraction skipped because marker exists.
+
+**Security Features**
+
+Automatically blocks:
+- Path traversal (`../` sequences)
+- Absolute paths (`/etc/passwd`)
+- Symlink escapes outside destination
+
+**Extract Multiple Archives**
+
+```yaml
+- vars:
+    archives:
+      - {name: app, file: app.tar.gz, strip: 1}
+      - {name: data, file: data.zip, strip: 0}
+
+- name: Extract {{item.name}}
+  unarchive:
+    src: /tmp/{{item.file}}
+    dest: /opt/{{item.name}}
+    strip_components: "{{item.strip}}"
+  with_items: "{{archives}}"
+```
+
+**Real-World Use Cases**
+
+Software Installation:
+```yaml
+- name: Install Go
+  unarchive:
+    src: /tmp/go1.21.linux-amd64.tar.gz
+    dest: /usr/local
+    creates: /usr/local/go/bin/go
+  become: true
+```
+
+Application Deployment:
+```yaml
+- name: Deploy release
+  unarchive:
+    src: /tmp/myapp-{{version}}.tar.gz
+    dest: /opt/myapp
+    strip_components: 1
+  become: true
+```
+
+Backup Restoration:
+```yaml
+- name: Restore data
+  unarchive:
+    src: /backups/data-{{date}}.tar.gz
+    dest: /var/lib/app
+    creates: /var/lib/app/.restored
+```
+
+See [complete example](12-unarchive.md) for detailed archive handling patterns including Node.js installation workflow.
+
+---
+
 ## Real-World Example
 
 ### Dotfiles Manager
@@ -1278,13 +1410,15 @@ You've learned all core Mooncake features through these examples:
 |---------|----------|
 | **Shell Commands** | 01, 04, 06, 08, 11 |
 | **File Operations** | 03, 06, Real-World |
+| **Copy** | Real-World |
+| **Unarchive** | 12 |
 | **Templates** | 05, Real-World |
 | **Variables** | 02, 05, 06, 10 |
 | **Conditionals** | 04, 08, 09 |
-| **Loops** | 06, Real-World |
+| **Loops** | 06, 12, Real-World |
 | **Register** | 07, 11 |
 | **Tags** | 08, Real-World |
-| **Sudo** | 09, 11 |
+| **Sudo** | 09, 11, 12 |
 | **Multi-file** | 10, Real-World |
 | **Execution Control** | 11 |
 | **Timeouts & Retries** | 11 |

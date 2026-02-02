@@ -244,16 +244,31 @@ Implemented as separate `copy` action:
   - [ ] optional `newline: lf|crlf` — not implemented
 - [x] Template validation pre-run (Phase 0) — implemented in 0.1
 
-### 2.3 `unarchive` action — PLANNED
-- [ ] `unarchive: { src, dest, strip_components?, creates?, mode? }`
-- [ ] Supported:
-  - [ ] `.tar`, `.tar.gz`, `.tgz`, `.zip`
-- [ ] Idempotent:
-  - [ ] if `creates` exists → skip
-- [ ] Safety:
-  - [ ] prevent path traversal (`../`) entries
+### 2.3 `unarchive` action ✅ COMPLETED (2026-02-05)
+- [x] `unarchive: { src, dest, strip_components?, creates?, mode? }`
+- [x] Supported:
+  - [x] `.tar`, `.tar.gz`, `.tgz`, `.zip`
+- [x] Idempotent:
+  - [x] if `creates` exists → skip
+- [x] Safety:
+  - [x] prevent path traversal (`../`) entries using pathutil.ValidateNoPathTraversal() and SafeJoin()
+  - [x] validate symlink targets don't escape destination
+  - [x] block absolute paths in archive entries
+- [x] Implementation:
+  - [x] Automatic format detection from file extension
+  - [x] Strip N leading path components (like tar --strip-components)
+  - [x] Preserve file permissions from archive
+  - [x] Custom directory permissions via mode parameter
+  - [x] Event emission (archive.extracted) with extraction stats
+  - [x] Dry-run support
+  - [x] Variable rendering in all paths (src, dest, creates)
+  - [x] Result registration support
+- [x] Testing:
+  - [x] 17 comprehensive tests covering validation, extraction, security, idempotency
+  - [x] Security tests for path traversal attacks
+  - [x] All archive formats tested (tar, tar.gz, tgz, zip)
 
-**Status**: Phase 3 of 6-week file operations plan
+**Status**: Phase 3 of 6-week file operations plan ✅ COMPLETE
 
 ### 2.4 `download` action — PLANNED
 - [ ] `download: { url, dest, sha256?, mode?, owner?, group?, timeout_s?, retries?, headers? }`

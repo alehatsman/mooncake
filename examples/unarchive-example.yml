@@ -1,0 +1,35 @@
+version: "1.0"
+
+vars:
+  node_version: "20.11.0"
+  install_dir: "/opt/node"
+
+steps:
+  - name: Download Node.js tarball
+    shell: "curl -fsSL https://nodejs.org/dist/v{{ node_version }}/node-v{{ node_version }}-linux-x64.tar.gz -o /tmp/node.tar.gz"
+    creates: "/tmp/node.tar.gz"
+
+  - name: Extract Node.js
+    unarchive:
+      src: "/tmp/node.tar.gz"
+      dest: "{{ install_dir }}"
+      strip_components: 1
+      creates: "{{ install_dir }}/bin/node"
+      mode: "0755"
+    register: extract_result
+
+  - name: Verify Node.js installation
+    shell: "{{ install_dir }}/bin/node --version"
+    when: extract_result.changed
+
+  - name: Extract ZIP archive
+    unarchive:
+      src: "/path/to/archive.zip"
+      dest: "/opt/app"
+      mode: "0755"
+
+  - name: Extract with idempotency
+    unarchive:
+      src: "/tmp/backup.tar.gz"
+      dest: "/opt/backup"
+      creates: "/opt/backup/.extracted"

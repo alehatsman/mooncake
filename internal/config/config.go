@@ -65,6 +65,15 @@ type Copy struct {
 	Checksum string `yaml:"checksum" json:"checksum,omitempty"`   // Expected SHA256 or MD5 checksum
 }
 
+// Unarchive represents an archive extraction operation in a configuration step.
+type Unarchive struct {
+	Src             string `yaml:"src" json:"src"`                                     // Source archive path
+	Dest            string `yaml:"dest" json:"dest"`                                   // Destination directory
+	StripComponents int    `yaml:"strip_components" json:"strip_components,omitempty"` // Number of leading path components to strip
+	Creates         string `yaml:"creates" json:"creates,omitempty"`                   // Skip if this path exists (idempotency marker)
+	Mode            string `yaml:"mode" json:"mode,omitempty"`                         // Octal directory permissions (e.g., "0755")
+}
+
 // Step represents a single configuration step that can perform various actions.
 type Step struct {
 	// Identification
@@ -82,6 +91,7 @@ type Step struct {
 	File        *File     `yaml:"file" json:"file,omitempty"`
 	Shell       *string   `yaml:"shell" json:"shell,omitempty"`
 	Copy        *Copy     `yaml:"copy" json:"copy,omitempty"`
+	Unarchive   *Unarchive `yaml:"unarchive" json:"unarchive,omitempty"`
 	Include     *string   `yaml:"include" json:"include,omitempty"`
 	IncludeVars *string   `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
@@ -153,6 +163,9 @@ func (s *Step) countActions() int {
 	if s.Copy != nil {
 		count++
 	}
+	if s.Unarchive != nil {
+		count++
+	}
 	if s.Include != nil {
 		count++
 	}
@@ -178,6 +191,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Copy != nil {
 		return "copy"
+	}
+	if s.Unarchive != nil {
+		return "unarchive"
 	}
 	if s.Vars != nil {
 		return "vars"
@@ -236,6 +252,7 @@ func (s *Step) Clone() *Step {
 		File:         s.File,
 		Shell:        s.Shell,
 		Copy:         s.Copy,
+		Unarchive:    s.Unarchive,
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,

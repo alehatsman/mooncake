@@ -292,6 +292,9 @@ func dispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	case step.Copy != nil:
 		return HandleCopy(step, ec)
 
+	case step.Unarchive != nil:
+		return HandleUnarchive(step, ec)
+
 	case step.Shell != nil:
 		return HandleShell(step, ec)
 

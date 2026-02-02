@@ -15,6 +15,8 @@ Every step in your configuration can use these properties. Properties are groupe
 | **Actions** (one required) ||||
 | `shell` | string | Shell | Shell command to execute |
 | `file` | object | File | File/directory operation |
+| `copy` | object | Copy | Copy file with checksums |
+| `unarchive` | object | Unarchive | Extract archive files |
 | `template` | object | Template | Template rendering |
 | `include` | string | Include | Include steps from another file |
 | `include_vars` | string | Variables | Load variables from file |
@@ -116,6 +118,85 @@ File or directory operation.
     content: "key: value"
     mode: "0644"
 ```
+
+---
+
+### copy
+
+**Type:** `object`
+**Applies to:** Copy action
+**Required:** When using copy action
+
+Copy file from source to destination with optional checksum verification.
+
+**Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `src` | string | Yes | Source file path |
+| `dest` | string | Yes | Destination file path |
+| `mode` | string | No | Permissions (e.g., `"0644"`) |
+| `owner` | string | No | File owner (username or UID) |
+| `group` | string | No | File group (group name or GID) |
+| `backup` | boolean | No | Create `.bak` backup before overwrite |
+| `force` | boolean | No | Force overwrite if destination exists |
+| `checksum` | string | No | Expected SHA256 or MD5 checksum |
+
+```yaml
+- copy:
+    src: ./app.conf
+    dest: /etc/app/app.conf
+    mode: "0644"
+    owner: app
+    group: app
+    backup: true
+```
+
+---
+
+### unarchive
+
+**Type:** `object`
+**Applies to:** Unarchive action
+**Required:** When using unarchive action
+
+Extract archive files with automatic format detection and security protections.
+
+**Properties:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `src` | string | Yes | Path to archive file |
+| `dest` | string | Yes | Destination directory (created if missing) |
+| `strip_components` | integer | No | Number of leading path components to strip (default: 0) |
+| `creates` | string | No | Skip extraction if this path exists (idempotency) |
+| `mode` | string | No | Directory permissions (e.g., `"0755"`) |
+
+**Supported formats:** `.tar`, `.tar.gz`, `.tgz`, `.zip` (auto-detected from extension, case-insensitive)
+
+**Security:** Automatically blocks path traversal attacks (`../`), absolute paths, and validates symlink targets.
+
+```yaml
+# Basic extraction
+- unarchive:
+    src: /tmp/node-v20.tar.gz
+    dest: /opt/node
+    mode: "0755"
+
+# With path stripping (like tar --strip-components)
+- unarchive:
+    src: /tmp/app.tar.gz
+    dest: /opt/app
+    strip_components: 1
+    creates: /opt/app/bin/app
+```
+
+**strip_components** removes leading path components from extracted files:
+- `0` (default): Extract with full paths
+- `1`: Strip first directory level (e.g., `app-1.0/src/file` → `src/file`)
+- `2`: Strip two levels (e.g., `app-1.0/src/file` → `file`)
+
+Files with fewer components than specified are skipped.
 
 ---
 
