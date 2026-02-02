@@ -8,6 +8,130 @@ import "github.com/alehatsman/mooncake/internal/config"
 
 Package config provides data structures and validation for mooncake configuration files.
 
+This package defines the complete YAML schema for mooncake plans, including:
+
+- Step structure and universal fields
+- Action\-specific configuration structs
+- Validation logic and error reporting
+- YAML unmarshaling with custom behavior
+- JSON schema validation
+
+### Configuration Structure
+
+A mooncake configuration file is a YAML document containing an array of steps:
+
+- name: Install nginx package: name: nginx state: present become: true when: os == "linux"
+
+- name: Start nginx service: name: nginx state: started become: true
+
+Each step consists of:
+
+- Universal fields: name, when, register, tags, become, env, cwd, timeout, etc.
+- Exactly one action: shell, file, template, package, service, assert, etc.
+- Optional control flow: with\_items, with\_filetree
+
+### Step Structure
+
+The Step struct represents a single configuration step. Key fields:
+
+```
+type Step struct {
+    // Universal fields (apply to all actions)
+    Name     string   // Human-readable step name
+    When     string   // Conditional expression (e.g., "os == 'linux'")
+    Register string   // Variable name to store result
+    Tags     []string // Tag filter for selective execution
+    Become   bool     // Run with sudo/privilege escalation
+
+    // Action fields (exactly one must be set)
+    Shell    *ShellAction
+    File     *File
+    Template *Template
+    Package  *Package
+    Service  *ServiceAction
+    Assert   *Assert
+    // ... other actions
+}
+```
+
+### Action Types
+
+Each action type has its own struct defining required and optional fields:
+
+- ShellAction: Execute shell commands \(cmd, interpreter, stdin, capture\)
+- File: Manage files/directories \(path, state, content, mode, owner, group\)
+- Template: Render Jinja2 templates \(src, dest, vars, mode\)
+- Package: Install/remove packages \(name/names, state, manager, update\_cache\)
+- ServiceAction: Manage services \(name, state, enabled, unit, daemon\_reload\)
+- Assert: Verify state \(command, file, http assertions\)
+- Copy: Copy files \(src, dest, mode, owner, group, backup, checksum\)
+- Download: Download files \(url, dest, checksum, timeout, retries\)
+- Unarchive: Extract archives \(src, dest, format, strip\_components\)
+- PrintAction: Output messages \(msg\)
+- PresetInvocation: Invoke presets \(name, with parameters\)
+
+### Validation
+
+Configuration is validated at multiple levels:
+
+1. YAML syntax: Parser errors caught during ReadConfig\(\)
+2. Schema validation: JSON schema enforces structure \(SchemaValidator\)
+3. Template syntax: Jinja2 templates validated \(TemplateValidator\)
+4. Step validation: Each step must have exactly one action
+5. Action validation: Handler\-specific validation before execution
+
+Validation produces Diagnostic objects with:
+
+- Severity: error, warning, info
+- Message: Human\-readable error description
+- Path: YAML path to the error \(e.g., "steps\[0\].when"\)
+- Position: Line and column in source file
+- Context: Surrounding YAML for better error messages
+
+### Custom Unmarshaling
+
+Some actions support multiple YAML forms for convenience:
+
+```
+# Simple string form
+shell: "apt install nginx"
+
+# Structured object form
+shell:
+  cmd: "apt install nginx"
+  interpreter: bash
+  capture: true
+```
+
+This is implemented via UnmarshalYAML\(\) methods that try string first, then fall back to struct unmarshaling.
+
+### Usage Example
+
+```
+// Read and validate configuration
+steps, diagnostics, err := config.ReadConfigWithValidation("config.yml")
+if err != nil {
+    return fmt.Errorf("failed to read config: %w", err)
+}
+
+// Check for validation errors
+if config.HasErrors(diagnostics) {
+    fmt.Println(config.FormatDiagnosticsWithContext(diagnostics))
+    return fmt.Errorf("configuration validation failed")
+}
+
+// Validate each step has one action
+for i, step := range steps {
+    if err := step.ValidateOneAction(); err != nil {
+        return fmt.Errorf("step %d: %w", i, err)
+    }
+}
+```
+
+### Thread Safety
+
+Config structures are designed to be read\-only after parsing. The executor clones steps when expanding loops to avoid modifying shared structures. Use step.Clone\(\) to create independent copies.
+
 ## Index
 
 - [func FormatDiagnostics\(diagnostics \[\]Diagnostic\) string](<#FormatDiagnostics>)
@@ -119,7 +243,7 @@ func ReadVariables(path string) (map[string]interface{}, error)
 ReadVariables is a convenience function using the default YAML reader
 
 <a name="Assert"></a>
-## type [Assert](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L195-L199>)
+## type [Assert](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L322-L326>)
 
 Assert represents an assertion/verification operation in a configuration step. Assertions always have changed: false and fail if the assertion doesn't pass. Supports three types: command \(exit code\), file \(content/existence\), and http \(response\).
 
@@ -132,7 +256,7 @@ type Assert struct {
 ```
 
 <a name="AssertCommand"></a>
-## type [AssertCommand](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L202-L205>)
+## type [AssertCommand](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L329-L332>)
 
 AssertCommand verifies a command exits with the expected code.
 
@@ -144,7 +268,7 @@ type AssertCommand struct {
 ```
 
 <a name="AssertFile"></a>
-## type [AssertFile](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L208-L216>)
+## type [AssertFile](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L335-L343>)
 
 AssertFile verifies file existence, content, or properties.
 
@@ -161,7 +285,7 @@ type AssertFile struct {
 ```
 
 <a name="AssertHTTP"></a>
-## type [AssertHTTP](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L219-L230>)
+## type [AssertHTTP](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L346-L357>)
 
 AssertHTTP verifies HTTP response status, headers, or body content.
 
@@ -181,7 +305,7 @@ type AssertHTTP struct {
 ```
 
 <a name="CommandAction"></a>
-## type [CommandAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L103-L117>)
+## type [CommandAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L230-L244>)
 
 CommandAction represents a direct command execution without shell interpolation. This is safer than shell when you have a known command with arguments.
 
@@ -202,7 +326,7 @@ type CommandAction struct {
 ```
 
 <a name="Copy"></a>
-## type [Copy](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L120-L129>)
+## type [Copy](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L247-L256>)
 
 Copy represents a file copy operation in a configuration step.
 
@@ -244,7 +368,7 @@ func (d *Diagnostic) String() string
 String formats the diagnostic as "path/to/file.yml:line:col: message"
 
 <a name="Download"></a>
-## type [Download](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L141-L151>)
+## type [Download](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L268-L278>)
 
 Download represents a file download operation in a configuration step.
 
@@ -263,7 +387,7 @@ type Download struct {
 ```
 
 <a name="File"></a>
-## type [File](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L24-L41>)
+## type [File](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L151-L168>)
 
 File represents a file or directory operation in a configuration step.
 
@@ -336,7 +460,7 @@ func (lm *LocationMap) Set(path string, line, column int)
 Set stores a position for a given JSON pointer path
 
 <a name="LoopContext"></a>
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L374-L382>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L501-L509>)
 
 LoopContext captures loop iteration metadata
 
@@ -353,7 +477,7 @@ type LoopContext struct {
 ```
 
 <a name="Origin"></a>
-## type [Origin](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L366-L371>)
+## type [Origin](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L493-L498>)
 
 Origin tracks source location and include chain for plan traceability
 
@@ -367,7 +491,7 @@ type Origin struct {
 ```
 
 <a name="Package"></a>
-## type [Package](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L155-L163>)
+## type [Package](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L282-L290>)
 
 Package represents a package management operation \(install/remove/update packages\). Supports apt, dnf, yum, pacman, zypper, apk \(Linux\), brew, port \(macOS\), choco, scoop \(Windows\).
 
@@ -396,7 +520,7 @@ type Position struct {
 ```
 
 <a name="PresetDefinition"></a>
-## type [PresetDefinition](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L234-L241>)
+## type [PresetDefinition](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L361-L368>)
 
 PresetDefinition represents a reusable preset loaded from a YAML file. Presets are parameterized collections of steps that can be invoked as a single action.
 
@@ -412,7 +536,7 @@ type PresetDefinition struct {
 ```
 
 <a name="PresetInvocation"></a>
-## type [PresetInvocation](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L253-L256>)
+## type [PresetInvocation](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L380-L383>)
 
 PresetInvocation represents a user's invocation of a preset in their playbook.
 
@@ -424,7 +548,7 @@ type PresetInvocation struct {
 ```
 
 <a name="PresetInvocation.UnmarshalYAML"></a>
-### func \(\*PresetInvocation\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L260>)
+### func \(\*PresetInvocation\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L387>)
 
 ```go
 func (p *PresetInvocation) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -433,7 +557,7 @@ func (p *PresetInvocation) UnmarshalYAML(unmarshal func(interface{}) error) erro
 UnmarshalYAML implements custom YAML unmarshaling to support string form. Supports: preset: "ollama" AND preset: \{ name: "ollama", with: \{...\} \}
 
 <a name="PresetParameter"></a>
-## type [PresetParameter](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L244-L250>)
+## type [PresetParameter](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L371-L377>)
 
 PresetParameter defines a parameter that can be passed to a preset.
 
@@ -448,7 +572,7 @@ type PresetParameter struct {
 ```
 
 <a name="PrintAction"></a>
-## type [PrintAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L279-L281>)
+## type [PrintAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L406-L408>)
 
 PrintAction represents a print/output action for displaying messages.
 
@@ -459,7 +583,7 @@ type PrintAction struct {
 ```
 
 <a name="PrintAction.UnmarshalYAML"></a>
-### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L285>)
+### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L412>)
 
 ```go
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -489,7 +613,7 @@ func NewYAMLConfigReader() Reader
 NewYAMLConfigReader creates a new YAMLConfigReader
 
 <a name="RunConfig"></a>
-## type [RunConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L12-L21>)
+## type [RunConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L139-L148>)
 
 RunConfig represents the root configuration structure. This can be either: \- A simple array of steps \(for backward compatibility\) \- A structured config with version, global settings, and steps
 
@@ -536,7 +660,7 @@ func (v *SchemaValidator) Validate(steps []Step, locationMap *LocationMap, fileP
 Validate validates steps against the JSON Schema and returns diagnostics
 
 <a name="ServiceAction"></a>
-## type [ServiceAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L167-L174>)
+## type [ServiceAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L294-L301>)
 
 ServiceAction represents a service management operation in a configuration step. Supports systemd \(Linux\), launchd \(macOS\), and Windows services.
 
@@ -552,7 +676,7 @@ type ServiceAction struct {
 ```
 
 <a name="ServiceDropin"></a>
-## type [ServiceDropin](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L186-L190>)
+## type [ServiceDropin](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L313-L317>)
 
 ServiceDropin represents a systemd drop\-in configuration file. Drop\-in files are placed in /etc/systemd/system/\<service\>.service.d/\<name\>.conf
 
@@ -565,7 +689,7 @@ type ServiceDropin struct {
 ```
 
 <a name="ServiceUnit"></a>
-## type [ServiceUnit](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L177-L182>)
+## type [ServiceUnit](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L304-L309>)
 
 ServiceUnit represents a systemd unit file or launchd plist configuration.
 
@@ -579,7 +703,7 @@ type ServiceUnit struct {
 ```
 
 <a name="Shell"></a>
-## type [Shell](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L97-L99>)
+## type [Shell](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L224-L226>)
 
 Shell represents a shell command execution in a configuration step.
 
@@ -592,7 +716,7 @@ type Shell struct {
 ```
 
 <a name="ShellAction"></a>
-## type [ShellAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L53-L72>)
+## type [ShellAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L180-L199>)
 
 ShellAction represents a structured shell command execution in a configuration step. Supports both simple string form and structured object form for backward compatibility.
 
@@ -617,7 +741,7 @@ type ShellAction struct {
 ```
 
 <a name="ShellAction.UnmarshalYAML"></a>
-### func \(\*ShellAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L76>)
+### func \(\*ShellAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L203>)
 
 ```go
 func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -626,7 +750,7 @@ func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error
 UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms. Supports: shell: "command" AND shell: \{ cmd: "command", interpreter: "bash", ... \}
 
 <a name="Step"></a>
-## type [Step](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L304-L363>)
+## type [Step](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L431-L490>)
 
 Step represents a single configuration step that can perform various actions.
 
@@ -703,7 +827,7 @@ func ReadConfig(path string) ([]Step, error)
 ReadConfig is a convenience function using the default YAML reader
 
 <a name="Step.Clone"></a>
-### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L520>)
+### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L647>)
 
 ```go
 func (s *Step) Clone() *Step
@@ -712,7 +836,7 @@ func (s *Step) Clone() *Step
 Clone creates a shallow copy of the step.
 
 <a name="Step.DetermineActionType"></a>
-### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L436>)
+### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L563>)
 
 ```go
 func (s *Step) DetermineActionType() string
@@ -721,7 +845,7 @@ func (s *Step) DetermineActionType() string
 DetermineActionType returns the action type for this step based on which action field is populated.
 
 <a name="Step.Validate"></a>
-### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L505>)
+### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L632>)
 
 ```go
 func (s *Step) Validate() error
@@ -730,7 +854,7 @@ func (s *Step) Validate() error
 Validate checks that the step configuration is valid.
 
 <a name="Step.ValidateHasAction"></a>
-### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L497>)
+### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L624>)
 
 ```go
 func (s *Step) ValidateHasAction() error
@@ -739,7 +863,7 @@ func (s *Step) ValidateHasAction() error
 ValidateHasAction checks that the step has at least one action defined.
 
 <a name="Step.ValidateOneAction"></a>
-### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L489>)
+### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L616>)
 
 ```go
 func (s *Step) ValidateOneAction() error
@@ -748,7 +872,7 @@ func (s *Step) ValidateOneAction() error
 ValidateOneAction checks that the step has at most one action defined.
 
 <a name="Template"></a>
-## type [Template](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L44-L49>)
+## type [Template](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L171-L176>)
 
 Template represents a template rendering operation in a configuration step.
 
@@ -798,7 +922,7 @@ func (v *TemplateValidator) ValidateSyntax(template string) error
 ValidateSyntax checks if a template string has valid pongo2 syntax Returns an error if the syntax is invalid
 
 <a name="Unarchive"></a>
-## type [Unarchive](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L132-L138>)
+## type [Unarchive](<https://github.com/alehatsman/mooncake/blob/master/internal/config/config.go#L259-L265>)
 
 Unarchive represents an archive extraction operation in a configuration step.
 

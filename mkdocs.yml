@@ -80,10 +80,10 @@ nav:
     - Commands: guide/commands.md
     - Best Practices: guide/best-practices.md
     - Advanced: guide/config/advanced.md
-  - Complete Reference: guide/config/reference.md
   - Presets:
     - Using Presets: guide/presets.md
     - Authoring Presets: guide/preset-authoring.md
+  - Complete Reference: guide/config/reference.md
   - API Reference:
     - Overview: api/index.md
     - Actions: api/actions.md
@@ -95,12 +95,6 @@ nav:
     - Logger: api/logger.md
     - Commands: api/cmd.md
   - AI Specification: ai-specification.md
-  - Development:
-    - Contributing: development/contributing.md
-    - Development Guide: development/development.md
-    - Roadmap: development/roadmap.md
-    - Releasing: development/releasing.md
-    - Proposals: development/proposals.md
   - About:
     - Changelog: about/changelog.md
     - License: about/license.md

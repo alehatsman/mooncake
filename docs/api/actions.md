@@ -146,7 +146,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 
 <a name="Count"></a>
-## func [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L109>)
+## func [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L135>)
 
 ```go
 func Count() int
@@ -155,7 +155,7 @@ func Count() int
 Count returns the number of handlers in the global registry.
 
 <a name="Has"></a>
-## func [Has](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L104>)
+## func [Has](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L130>)
 
 ```go
 func Has(actionType string) bool
@@ -164,7 +164,7 @@ func Has(actionType string) bool
 Has checks if a handler exists in the global registry.
 
 <a name="Register"></a>
-## func [Register](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L89>)
+## func [Register](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L115>)
 
 ```go
 func Register(handler Handler)
@@ -244,7 +244,7 @@ type ActionMetadata struct {
 ```
 
 <a name="List"></a>
-### func [List](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L99>)
+### func [List](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L125>)
 
 ```go
 func List() []ActionMetadata
@@ -253,31 +253,122 @@ func List() []ActionMetadata
 List returns all handlers from the global registry.
 
 <a name="Context"></a>
-## type [Context](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L12-L33>)
+## type [Context](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L43-L121>)
 
-Context defines the interface for action execution context. This avoids circular imports with the executor package.
+Context provides the execution environment for action handlers.
+
+Context is the primary interface through which handlers interact with the mooncake runtime. It provides access to:
+
+- Template rendering \(Jinja2\-like syntax with variables and filters\)
+- Expression evaluation \(when/changed\_when/failed\_when conditions\)
+- Logging \(structured output to TUI or text\)
+- Variables \(step vars, global vars, facts, registered results\)
+- Event publishing \(for observability and artifacts\)
+- Execution mode \(dry\-run vs actual execution\)
+
+This interface avoids circular imports between actions and executor packages.
+
+Example usage in a handler:
+
+```
+func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+    // Render template strings
+    path, err := ctx.GetTemplate().RenderString(step.File.Path, ctx.GetVariables())
+
+    // Log progress
+    ctx.GetLogger().Infof("Creating file at %s", path)
+
+    // Emit events for observability
+    ctx.GetEventPublisher().Publish(events.Event{
+        Type: events.EventFileCreated,
+        Data: events.FileOperationData{Path: path},
+    })
+
+    // Return result
+    result := executor.NewResult()
+    result.SetChanged(true)
+    return result, nil
+}
+```
 
 ```go
 type Context interface {
-    // Template provides template rendering
+    // GetTemplate returns the template renderer for processing Jinja2-like templates.
+    //
+    // Use this to render:
+    //   - Path strings with variables: "{{ home }}/{{ item }}"
+    //   - Content with logic: "{% if os == 'linux' %}...{% endif %}"
+    //   - Filters: "{{ path | expanduser }}"
+    //
+    // The renderer has access to all variables in scope (step vars, globals, facts).
     GetTemplate() template.Renderer
 
-    // Evaluator provides expression evaluation
+    // GetEvaluator returns the expression evaluator for conditions.
+    //
+    // Use this to evaluate:
+    //   - when: "os == 'linux' && arch == 'amd64'"
+    //   - changed_when: "result.rc == 0 and 'changed' in result.stdout"
+    //   - failed_when: "result.rc != 0 and result.rc != 5"
+    //
+    // Returns interface{} which should be cast to bool for conditions.
     GetEvaluator() expression.Evaluator
 
-    // Logger provides logging
+    // GetLogger returns the logger for handler output.
+    //
+    // Use levels appropriately:
+    //   - Infof: User-visible progress ("Installing package nginx")
+    //   - Debugf: Detailed info ("Command: apt install nginx")
+    //   - Warnf: Non-fatal issues ("File already exists, skipping")
+    //   - Errorf: Failures ("Failed to create directory: permission denied")
+    //
+    // Output is formatted for TUI or text mode automatically.
     GetLogger() logger.Logger
 
-    // Variables provides access to execution variables
+    // GetVariables returns all variables in the current scope.
+    //
+    // Includes:
+    //   - Step-level vars (defined in step.Vars)
+    //   - Global vars (from vars actions)
+    //   - System facts (os, arch, cpu_cores, memory_total_mb, etc.)
+    //   - Registered results (from register: field on previous steps)
+    //   - Loop context (item, item_index when in with_items/with_filetree)
+    //
+    // Keys are strings, values are interface{} (string, int, bool, []interface{}, map[string]interface{}).
     GetVariables() map[string]interface{}
 
-    // EventPublisher provides event publishing
+    // GetEventPublisher returns the event publisher for observability.
+    //
+    // Emit events for:
+    //   - State changes (EventFileCreated, EventServiceStarted)
+    //   - Progress tracking (custom events for long operations)
+    //   - Artifact generation (paths to created files)
+    //
+    // Events are consumed by:
+    //   - Artifact collector (for rollback support)
+    //   - External observers (CI/CD integrations)
+    //   - Audit logs
     GetEventPublisher() events.Publisher
 
-    // DryRun indicates if this is a dry-run execution
+    // IsDryRun returns true if this is a dry-run execution.
+    //
+    // In dry-run mode:
+    //   - Handlers MUST NOT make actual changes
+    //   - Handlers SHOULD log what would happen
+    //   - Template rendering should still work (to validate syntax)
+    //   - File existence checks are OK (read-only operations)
+    //   - Writing/deleting/executing is NOT OK
+    //
+    // The DryRun() method handles this automatically, but Execute() can also check.
     IsDryRun() bool
 
-    // CurrentStepID returns the current step ID
+    // GetCurrentStepID returns the unique ID of the currently executing step.
+    //
+    // Format: "step-{global_step_number}"
+    //
+    // Use this when:
+    //   - Emitting events (so they're associated with the step)
+    //   - Creating temporary files (include step ID to avoid conflicts)
+    //   - Logging (though step ID is usually added automatically)
     GetCurrentStepID() string
 }
 ```
@@ -335,7 +426,7 @@ type Handler interface {
 ```
 
 <a name="Get"></a>
-### func [Get](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L94>)
+### func [Get](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L120>)
 
 ```go
 func Get(actionType string) (Handler, bool)
@@ -400,9 +491,40 @@ func (h *HandlerFunc) Validate(step *config.Step) error
 
 
 <a name="Registry"></a>
-## type [Registry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L10-L13>)
+## type [Registry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L36-L39>)
 
-Registry manages registered action handlers. It provides thread\-safe registration and lookup of handlers by action type.
+Registry manages registered action handlers through a thread\-safe map.
+
+The registry pattern enables:
+
+1. Dynamic action discovery \- handlers register themselves via init\(\)
+2. Loose coupling \- executor doesn't import all action packages
+3. Extensibility \- new actions added without changing executor
+4. Thread safety \- concurrent access from multiple goroutines
+
+Registration flow:
+
+1. Action package imports actions: import "github.com/.../internal/actions"
+2. Action package defines handler: type Handler struct\{\}
+3. Action package registers in init\(\): func init\(\) \{ actions.Register\(&Handler\{\}\) \}
+4. Main imports register package: import \_ "github.com/.../internal/register"
+5. Register package imports all actions: import \_ ".../actions/shell"
+6. All handlers automatically registered before main\(\) runs
+
+Lookup flow:
+
+1. Executor determines action type from step: actionType := step.DetermineActionType\(\)
+2. Executor queries registry: handler, ok := actions.Get\(actionType\)
+3. If found, executor calls: handler.Validate\(step\), handler.Execute\(ctx, step\)
+4. If not found, executor falls back to legacy implementation
+
+This avoids circular imports because:
+
+- actions package defines Handler interface
+- action implementations \(shell, file, etc.\) import actions
+- executor imports actions but NOT action implementations
+- register package imports action implementations \(triggers init\(\)\)
+- cmd imports register \(triggers all registrations\)
 
 ```go
 type Registry struct {
@@ -411,7 +533,7 @@ type Registry struct {
 ```
 
 <a name="NewRegistry"></a>
-### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L16>)
+### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L42>)
 
 ```go
 func NewRegistry() *Registry
@@ -420,7 +542,7 @@ func NewRegistry() *Registry
 NewRegistry creates a new action registry.
 
 <a name="Registry.Count"></a>
-### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L71>)
+### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L97>)
 
 ```go
 func (r *Registry) Count() int
@@ -429,7 +551,7 @@ func (r *Registry) Count() int
 Count returns the number of registered handlers.
 
 <a name="Registry.Get"></a>
-### func \(\*Registry\) [Get](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L40>)
+### func \(\*Registry\) [Get](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L66>)
 
 ```go
 func (r *Registry) Get(actionType string) (Handler, bool)
@@ -438,7 +560,7 @@ func (r *Registry) Get(actionType string) (Handler, bool)
 Get retrieves a handler by action type name. Returns the handler and true if found, nil and false otherwise.
 
 <a name="Registry.Has"></a>
-### func \(\*Registry\) [Has](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L62>)
+### func \(\*Registry\) [Has](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L88>)
 
 ```go
 func (r *Registry) Has(actionType string) bool
@@ -447,7 +569,7 @@ func (r *Registry) Has(actionType string) bool
 Has checks if a handler is registered for the given action type.
 
 <a name="Registry.List"></a>
-### func \(\*Registry\) [List](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L50>)
+### func \(\*Registry\) [List](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L76>)
 
 ```go
 func (r *Registry) List() []ActionMetadata
@@ -456,7 +578,7 @@ func (r *Registry) List() []ActionMetadata
 List returns metadata for all registered handlers. Useful for introspection and documentation generation.
 
 <a name="Registry.Register"></a>
-### func \(\*Registry\) [Register](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L25>)
+### func \(\*Registry\) [Register](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L51>)
 
 ```go
 func (r *Registry) Register(handler Handler)
@@ -465,28 +587,117 @@ func (r *Registry) Register(handler Handler)
 Register adds a handler to the registry. This is typically called from init\(\) functions in action packages. Panics if a handler with the same name is already registered.
 
 <a name="Result"></a>
-## type [Result](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L37-L55>)
+## type [Result](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L149-L229>)
 
-Result defines the interface for action results. This avoids circular imports with the executor package.
+Result represents the outcome of an action execution.
+
+Results track:
+
+- Whether changes were made \(for idempotency reporting\)
+- Output data \(stdout/stderr from commands\)
+- Success/failure status
+- Custom data \(for result registration\)
+
+Results can be registered to variables for use in subsequent steps via the register: field.
+
+Example:
+
+```
+result := executor.NewResult()
+result.SetChanged(true)  // File was created/modified
+result.SetData(map[string]interface{}{
+    "path": "/etc/myapp/config.yml",
+    "size": 1024,
+    "checksum": "sha256:abc123...",
+})
+
+// If step has register: myfile, data is available as:
+// {{ myfile.changed }} = true
+// {{ myfile.path }} = "/etc/myapp/config.yml"
+```
+
+This interface avoids circular imports between actions and executor packages.
 
 ```go
 type Result interface {
-    // SetChanged marks whether the action made changes
+    // SetChanged marks whether this action modified system state.
+    //
+    // Set to true if the action:
+    //   - Created/modified/deleted files or directories
+    //   - Started/stopped/restarted services
+    //   - Installed/removed packages
+    //   - Executed commands that changed state
+    //
+    // Set to false if the action:
+    //   - Found state already as desired (idempotent)
+    //   - Only read/queried information
+    //   - Failed before making changes
+    //
+    // Changed count is reported in run summary and used for idempotency tracking.
     SetChanged(changed bool)
 
-    // SetStdout sets the stdout output
+    // SetStdout captures standard output from the action.
+    //
+    // Used primarily by shell/command actions. Output is:
+    //   - Available in registered results as {{ result.stdout }}
+    //   - Shown in TUI output view
+    //   - Logged to artifacts
+    //   - Used in changed_when/failed_when expressions
     SetStdout(stdout string)
 
-    // SetStderr sets the stderr output
+    // SetStderr captures standard error from the action.
+    //
+    // Used primarily by shell/command actions. Error output is:
+    //   - Available in registered results as {{ result.stderr }}
+    //   - Shown in TUI output view (usually in red)
+    //   - Logged to artifacts
+    //   - Used in changed_when/failed_when expressions
     SetStderr(stderr string)
 
-    // SetFailed marks the result as failed
+    // SetFailed marks the result as failed.
+    //
+    // Usually you should return an error instead of calling this. Use this when:
+    //   - The action completed but didn't achieve desired state
+    //   - failed_when expression evaluated to true
+    //   - Assertion failed (assert action)
+    //
+    // Failed steps:
+    //   - Increment failure count in run summary
+    //   - Stop execution (unless ignore_errors: true)
+    //   - Are highlighted in TUI
     SetFailed(failed bool)
 
-    // SetData sets custom result data
+    // SetData attaches custom data to the result.
+    //
+    // Data becomes available when the result is registered via register: field.
+    //
+    // Example:
+    //
+    //	result.SetData(map[string]interface{}{
+    //	    "checksum": "sha256:abc123",
+    //	    "size_bytes": 1024,
+    //	    "format": "json",
+    //	})
+    //
+    // Then in subsequent steps:
+    //	  when: myfile.checksum == "sha256:abc123"
+    //	  shell: echo "File size: {{ myfile.size_bytes }}"
+    //
+    // Keys should be snake_case. Values should be JSON-serializable.
     SetData(data map[string]interface{})
 
-    // RegisterTo registers the result to variables
+    // RegisterTo registers this result to the variables map.
+    //
+    // Called automatically by the executor when a step has register: field.
+    // Creates a map in variables with:
+    //   - changed: bool
+    //   - failed: bool
+    //   - stdout: string (if set)
+    //   - stderr: string (if set)
+    //   - rc: int (if applicable)
+    //   - ...custom data from SetData()
+    //
+    // Handlers typically don't call this directly.
     RegisterTo(variables map[string]interface{}, name string)
 }
 ```

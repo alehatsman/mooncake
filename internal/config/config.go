@@ -1,4 +1,131 @@
 // Package config provides data structures and validation for mooncake configuration files.
+//
+// This package defines the complete YAML schema for mooncake plans, including:
+//   - Step structure and universal fields
+//   - Action-specific configuration structs
+//   - Validation logic and error reporting
+//   - YAML unmarshaling with custom behavior
+//   - JSON schema validation
+//
+// # Configuration Structure
+//
+// A mooncake configuration file is a YAML document containing an array of steps:
+//
+//	- name: Install nginx
+//	  package:
+//	    name: nginx
+//	    state: present
+//	  become: true
+//	  when: os == "linux"
+//
+//	- name: Start nginx
+//	  service:
+//	    name: nginx
+//	    state: started
+//	  become: true
+//
+// Each step consists of:
+//   - Universal fields: name, when, register, tags, become, env, cwd, timeout, etc.
+//   - Exactly one action: shell, file, template, package, service, assert, etc.
+//   - Optional control flow: with_items, with_filetree
+//
+// # Step Structure
+//
+// The Step struct represents a single configuration step. Key fields:
+//
+//	type Step struct {
+//	    // Universal fields (apply to all actions)
+//	    Name     string   // Human-readable step name
+//	    When     string   // Conditional expression (e.g., "os == 'linux'")
+//	    Register string   // Variable name to store result
+//	    Tags     []string // Tag filter for selective execution
+//	    Become   bool     // Run with sudo/privilege escalation
+//
+//	    // Action fields (exactly one must be set)
+//	    Shell    *ShellAction
+//	    File     *File
+//	    Template *Template
+//	    Package  *Package
+//	    Service  *ServiceAction
+//	    Assert   *Assert
+//	    // ... other actions
+//	}
+//
+// # Action Types
+//
+// Each action type has its own struct defining required and optional fields:
+//
+//   - ShellAction: Execute shell commands (cmd, interpreter, stdin, capture)
+//   - File: Manage files/directories (path, state, content, mode, owner, group)
+//   - Template: Render Jinja2 templates (src, dest, vars, mode)
+//   - Package: Install/remove packages (name/names, state, manager, update_cache)
+//   - ServiceAction: Manage services (name, state, enabled, unit, daemon_reload)
+//   - Assert: Verify state (command, file, http assertions)
+//   - Copy: Copy files (src, dest, mode, owner, group, backup, checksum)
+//   - Download: Download files (url, dest, checksum, timeout, retries)
+//   - Unarchive: Extract archives (src, dest, format, strip_components)
+//   - PrintAction: Output messages (msg)
+//   - PresetInvocation: Invoke presets (name, with parameters)
+//
+// # Validation
+//
+// Configuration is validated at multiple levels:
+//
+//  1. YAML syntax: Parser errors caught during ReadConfig()
+//  2. Schema validation: JSON schema enforces structure (SchemaValidator)
+//  3. Template syntax: Jinja2 templates validated (TemplateValidator)
+//  4. Step validation: Each step must have exactly one action
+//  5. Action validation: Handler-specific validation before execution
+//
+// Validation produces Diagnostic objects with:
+//   - Severity: error, warning, info
+//   - Message: Human-readable error description
+//   - Path: YAML path to the error (e.g., "steps[0].when")
+//   - Position: Line and column in source file
+//   - Context: Surrounding YAML for better error messages
+//
+// # Custom Unmarshaling
+//
+// Some actions support multiple YAML forms for convenience:
+//
+//	# Simple string form
+//	shell: "apt install nginx"
+//
+//	# Structured object form
+//	shell:
+//	  cmd: "apt install nginx"
+//	  interpreter: bash
+//	  capture: true
+//
+// This is implemented via UnmarshalYAML() methods that try string first,
+// then fall back to struct unmarshaling.
+//
+// # Usage Example
+//
+//	// Read and validate configuration
+//	steps, diagnostics, err := config.ReadConfigWithValidation("config.yml")
+//	if err != nil {
+//	    return fmt.Errorf("failed to read config: %w", err)
+//	}
+//
+//	// Check for validation errors
+//	if config.HasErrors(diagnostics) {
+//	    fmt.Println(config.FormatDiagnosticsWithContext(diagnostics))
+//	    return fmt.Errorf("configuration validation failed")
+//	}
+//
+//	// Validate each step has one action
+//	for i, step := range steps {
+//	    if err := step.ValidateOneAction(); err != nil {
+//	        return fmt.Errorf("step %d: %w", i, err)
+//	    }
+//	}
+//
+// # Thread Safety
+//
+// Config structures are designed to be read-only after parsing. The executor
+// clones steps when expanding loops to avoid modifying shared structures.
+// Use step.Clone() to create independent copies.
 package config
 
 import (

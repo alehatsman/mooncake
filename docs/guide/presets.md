@@ -434,14 +434,14 @@ Use `when` conditions in preset steps:
 
 ## Limitations
 
-Current preset system limitations:
+Current architectural constraints:
 
-1. **No nesting**: Presets cannot call other presets
-2. **Flat parameters**: No nested parameter validation
-3. **No outputs**: Presets don't define explicit output schemas
-4. **No dependencies**: Can't declare preset-level dependencies
+1. **No nesting**: Presets cannot call other presets (prevents circular dependencies)
+2. **Flat parameters**: Parameter definitions are not nested (use object type for structured data)
+3. **No output schemas**: Presets return aggregate results, not structured outputs
+4. **Sequential execution**: Steps run in order, not parallel
 
-These are architectural decisions to keep presets simple and predictable.
+**Note**: Preset steps support all mooncake features - includes, loops (with_items, with_filetree), conditionals (when), and templates. These limitations are intentional design choices for simplicity and predictability.
 
 ## Troubleshooting
 

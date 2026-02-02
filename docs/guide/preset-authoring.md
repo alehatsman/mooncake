@@ -837,12 +837,13 @@ Share presets via:
 
 ## Limitations
 
-Current limitations:
+Current architectural constraints:
 
-1. **No Nesting**: Presets cannot call other presets
-2. **Flat Structure**: All steps are sequential
-3. **No Dynamic Steps**: Step list must be static
-4. **Limited Types**: Only string, bool, array, object
+1. **No Nesting**: Presets cannot call other presets (architectural decision for simplicity)
+2. **Sequential Execution**: Steps execute in order, not parallel (may be relaxed in future)
+3. **Parameter Types**: Only string, bool, array, object types supported
+
+**Note**: Preset steps fully support includes, loops (with_items, with_filetree), and conditionals (when). The preset definition file itself must be static YAML, but the steps within can be dynamically expanded.
 
 ## Next Steps
 

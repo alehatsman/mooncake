@@ -2386,9 +2386,11 @@ Usage:
 
 ### Limitations
 
-- **No Nesting**: Presets cannot call other presets
-- **Flat Parameters**: No nested parameter structures
-- **Static Steps**: Step list must be defined in preset file
+- **No Nesting**: Presets cannot call other presets (architectural constraint)
+- **Flat Parameters**: No nested parameter structures (use object type for complex data)
+- **Sequential Execution**: Steps run in order, not parallel
+
+**Note**: Preset steps support includes, loops, and conditionals - the preset definition is static, but steps can be dynamically expanded.
 
 ### See Also
 

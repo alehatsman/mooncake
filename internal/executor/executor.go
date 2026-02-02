@@ -1,3 +1,106 @@
+// Package executor implements the core execution engine for mooncake configuration plans.
+//
+// The executor is responsible for:
+//   - Loading and validating configuration plans
+//   - Expanding steps (loops, includes, presets)
+//   - Evaluating conditions (when, unless, creates)
+//   - Dispatching actions to handlers
+//   - Managing execution context and variables
+//   - Tracking results and statistics
+//   - Emitting events for observability
+//   - Handling dry-run mode
+//   - Supporting privilege escalation (sudo/become)
+//
+// # Architecture
+//
+// The executor follows a pipeline architecture:
+//
+//	Plan Loading → Step Expansion → Condition Evaluation → Action Dispatch → Result Handling
+//
+// Each step goes through:
+//  1. Pre-execution: Check when/unless/creates, apply tags filter
+//  2. Variable processing: Merge step vars into context
+//  3. Loop expansion: Expand with_items/with_filetree into multiple executions
+//  4. Action execution: Dispatch to handler or legacy implementation
+//  5. Post-execution: Evaluate changed_when/failed_when, register results
+//  6. Event emission: Publish lifecycle events
+//
+// # Execution Context
+//
+// ExecutionContext carries all state needed during execution:
+//   - Variables: Step vars, global vars, facts, registered results
+//   - Template: Jinja2-like template renderer
+//   - Evaluator: Expression evaluator for conditions
+//   - Logger: Structured logging (TUI or text)
+//   - PathUtil: Path resolution and expansion
+//   - EventPublisher: Event emission for observability
+//   - Stats: Execution statistics (total, success, failed, changed, skipped)
+//
+// # Action Dispatch
+//
+// Actions are dispatched through two paths:
+//
+//  1. Handler-based (new): Look up handler in actions.Registry, call handler.Execute()
+//  2. Legacy: Direct executor methods (HandleShell, HandleFile, etc.)
+//
+// The executor prefers handlers when available, falling back to legacy for non-migrated actions.
+//
+// # Idempotency
+//
+// The executor enforces idempotency through:
+//   - creates: Skip if path exists
+//   - unless: Skip if command succeeds
+//   - changed_when: Custom change detection
+//   - Handler implementations: Built-in state checking
+//
+// # Dry-Run Mode
+//
+// When DryRun is true:
+//   - No actual changes are made to the system
+//   - Handlers log what would happen
+//   - Template rendering still occurs (validates syntax)
+//   - File existence checks are performed (read-only)
+//   - Statistics track what would have changed
+//
+// # Error Handling
+//
+// Errors are wrapped with context using custom error types:
+//   - RenderError: Template rendering failures (field + cause)
+//   - EvaluationError: Expression evaluation failures (expression + cause)
+//   - CommandError: Command execution failures (command + exit code)
+//   - FileOperationError: File operation failures (path + operation + cause)
+//   - StepValidationError: Configuration validation failures
+//   - SetupError: Infrastructure/environment setup failures
+//
+// Use errors.Is() and errors.As() for programmatic error inspection.
+//
+// # Usage Example
+//
+//	// Load configuration
+//	steps, err := config.ReadConfig("config.yml")
+//	if err != nil {
+//	    return err
+//	}
+//
+//	// Create executor
+//	log := logger.NewTextLogger()
+//	exec := NewExecutor(log)
+//
+//	// Execute with options
+//	result, err := exec.Execute(config.Plan{Steps: steps}, ExecuteOptions{
+//	    DryRun: false,
+//	    Tags: []string{"setup", "deploy"},
+//	    Variables: map[string]interface{}{
+//	        "environment": "production",
+//	    },
+//	})
+//
+//	// Check results
+//	if !result.Success {
+//	    log.Errorf("Execution failed: %d failed steps", result.FailedSteps)
+//	}
+//	log.Infof("Summary: %d changed, %d unchanged, %d failed",
+//	    result.ChangedSteps, result.SuccessSteps-result.ChangedSteps, result.FailedSteps)
 package executor
 
 import (

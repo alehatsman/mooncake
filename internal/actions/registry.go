@@ -5,11 +5,37 @@ import (
 	"sync"
 )
 
-// Registry manages registered action handlers.
-// It provides thread-safe registration and lookup of handlers by action type.
+// Registry manages registered action handlers through a thread-safe map.
+//
+// The registry pattern enables:
+//  1. Dynamic action discovery - handlers register themselves via init()
+//  2. Loose coupling - executor doesn't import all action packages
+//  3. Extensibility - new actions added without changing executor
+//  4. Thread safety - concurrent access from multiple goroutines
+//
+// Registration flow:
+//   1. Action package imports actions: import "github.com/.../internal/actions"
+//   2. Action package defines handler: type Handler struct{}
+//   3. Action package registers in init(): func init() { actions.Register(&Handler{}) }
+//   4. Main imports register package: import _ "github.com/.../internal/register"
+//   5. Register package imports all actions: import _ ".../actions/shell"
+//   6. All handlers automatically registered before main() runs
+//
+// Lookup flow:
+//   1. Executor determines action type from step: actionType := step.DetermineActionType()
+//   2. Executor queries registry: handler, ok := actions.Get(actionType)
+//   3. If found, executor calls: handler.Validate(step), handler.Execute(ctx, step)
+//   4. If not found, executor falls back to legacy implementation
+//
+// This avoids circular imports because:
+//   - actions package defines Handler interface
+//   - action implementations (shell, file, etc.) import actions
+//   - executor imports actions but NOT action implementations
+//   - register package imports action implementations (triggers init())
+//   - cmd imports register (triggers all registrations)
 type Registry struct {
-	mu       sync.RWMutex
-	handlers map[string]Handler
+	mu       sync.RWMutex        // Protects concurrent access to handlers map
+	handlers map[string]Handler  // Maps action names ("shell", "file") to handlers
 }
 
 // NewRegistry creates a new action registry.

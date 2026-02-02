@@ -8,6 +8,120 @@ import "github.com/alehatsman/mooncake/internal/executor"
 
 Package executor provides the execution engine for mooncake configuration steps.
 
+Package executor implements the core execution engine for mooncake configuration plans.
+
+The executor is responsible for:
+
+- Loading and validating configuration plans
+- Expanding steps \(loops, includes, presets\)
+- Evaluating conditions \(when, unless, creates\)
+- Dispatching actions to handlers
+- Managing execution context and variables
+- Tracking results and statistics
+- Emitting events for observability
+- Handling dry\-run mode
+- Supporting privilege escalation \(sudo/become\)
+
+### Architecture
+
+The executor follows a pipeline architecture:
+
+```
+Plan Loading → Step Expansion → Condition Evaluation → Action Dispatch → Result Handling
+```
+
+Each step goes through:
+
+1. Pre\-execution: Check when/unless/creates, apply tags filter
+2. Variable processing: Merge step vars into context
+3. Loop expansion: Expand with\_items/with\_filetree into multiple executions
+4. Action execution: Dispatch to handler or legacy implementation
+5. Post\-execution: Evaluate changed\_when/failed\_when, register results
+6. Event emission: Publish lifecycle events
+
+### Execution Context
+
+ExecutionContext carries all state needed during execution:
+
+- Variables: Step vars, global vars, facts, registered results
+- Template: Jinja2\-like template renderer
+- Evaluator: Expression evaluator for conditions
+- Logger: Structured logging \(TUI or text\)
+- PathUtil: Path resolution and expansion
+- EventPublisher: Event emission for observability
+- Stats: Execution statistics \(total, success, failed, changed, skipped\)
+
+### Action Dispatch
+
+Actions are dispatched through two paths:
+
+1. Handler\-based \(new\): Look up handler in actions.Registry, call handler.Execute\(\)
+2. Legacy: Direct executor methods \(HandleShell, HandleFile, etc.\)
+
+The executor prefers handlers when available, falling back to legacy for non\-migrated actions.
+
+### Idempotency
+
+The executor enforces idempotency through:
+
+- creates: Skip if path exists
+- unless: Skip if command succeeds
+- changed\_when: Custom change detection
+- Handler implementations: Built\-in state checking
+
+### Dry\\\-Run Mode
+
+When DryRun is true:
+
+- No actual changes are made to the system
+- Handlers log what would happen
+- Template rendering still occurs \(validates syntax\)
+- File existence checks are performed \(read\-only\)
+- Statistics track what would have changed
+
+### Error Handling
+
+Errors are wrapped with context using custom error types:
+
+- RenderError: Template rendering failures \(field \+ cause\)
+- EvaluationError: Expression evaluation failures \(expression \+ cause\)
+- CommandError: Command execution failures \(command \+ exit code\)
+- FileOperationError: File operation failures \(path \+ operation \+ cause\)
+- StepValidationError: Configuration validation failures
+- SetupError: Infrastructure/environment setup failures
+
+Use errors.Is\(\) and errors.As\(\) for programmatic error inspection.
+
+### Usage Example
+
+```
+// Load configuration
+steps, err := config.ReadConfig("config.yml")
+if err != nil {
+    return err
+}
+
+// Create executor
+log := logger.NewTextLogger()
+exec := NewExecutor(log)
+
+// Execute with options
+result, err := exec.Execute(config.Plan{Steps: steps}, ExecuteOptions{
+    DryRun: false,
+    Tags: []string{"setup", "deploy"},
+    Variables: map[string]interface{}{
+        "environment": "production",
+    },
+})
+
+// Check results
+if !result.Success {
+    log.Errorf("Execution failed: %d failed steps", result.FailedSteps)
+}
+log.Infof("Summary: %d changed, %d unchanged, %d failed",
+    result.ChangedSteps, result.SuccessSteps-result.ChangedSteps, result.FailedSteps)
+```
+
 ## Index
 
 - [func AddGlobalVariables\(variables map\[string\]interface\{\}\)](<#AddGlobalVariables>)
@@ -71,7 +185,7 @@ Package executor provides the execution engine for mooncake configuration steps.
 
 
 <a name="AddGlobalVariables"></a>
-## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L57>)
+## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L160>)
 
 ```go
 func AddGlobalVariables(variables map[string]interface{})
@@ -80,7 +194,7 @@ func AddGlobalVariables(variables map[string]interface{})
 AddGlobalVariables injects system facts into the variables map. This makes facts like ansible\_os\_family, ansible\_distribution, etc. available during planning.
 
 <a name="CheckIdempotencyConditions"></a>
-## func [CheckIdempotencyConditions](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L175>)
+## func [CheckIdempotencyConditions](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L278>)
 
 ```go
 func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error)
@@ -91,7 +205,7 @@ CheckIdempotencyConditions evaluates creates and unless conditions for shell ste
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="CheckSkipConditions"></a>
-## func [CheckSkipConditions](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L231>)
+## func [CheckSkipConditions](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L334>)
 
 ```go
 func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error)
@@ -112,7 +226,7 @@ Returns:
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="DispatchStepAction"></a>
-## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L310>)
+## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L413>)
 
 ```go
 func DispatchStepAction(step config.Step, ec *ExecutionContext) error
@@ -123,7 +237,7 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="ExecutePlan"></a>
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L694>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L797>)
 
 ```go
 func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, publisher events.Publisher) error
@@ -132,7 +246,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 ExecutePlan executes a pre\-compiled plan. Emits events through the provided publisher for all execution progress.
 
 <a name="ExecuteStep"></a>
-## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L372>)
+## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L475>)
 
 ```go
 func ExecuteStep(step config.Step, ec *ExecutionContext) error
@@ -141,7 +255,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error
 ExecuteStep executes a single configuration step within the given execution context.
 
 <a name="ExecuteSteps"></a>
-## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L531>)
+## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L634>)
 
 ```go
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error
@@ -150,7 +264,7 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error
 ExecuteSteps executes a sequence of configuration steps within the given execution context.
 
 <a name="GetStepDisplayName"></a>
-## func [GetStepDisplayName](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L264>)
+## func [GetStepDisplayName](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L367>)
 
 ```go
 func GetStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool)
@@ -172,7 +286,7 @@ Returns:
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="HandleVars"></a>
-## func [HandleVars](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L71>)
+## func [HandleVars](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L174>)
 
 ```go
 func HandleVars(step config.Step, ec *ExecutionContext) error
@@ -183,7 +297,7 @@ HandleVars processes the vars field of a step, rendering templates and merging i
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="HandleWhenExpression"></a>
-## func [HandleWhenExpression](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L106>)
+## func [HandleWhenExpression](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L209>)
 
 ```go
 func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error)
@@ -194,7 +308,7 @@ HandleWhenExpression evaluates the when condition and returns whether the step s
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="MarkStepFailed"></a>
-## func [MarkStepFailed](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L47>)
+## func [MarkStepFailed](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L150>)
 
 ```go
 func MarkStepFailed(result *Result, step config.Step, ec *ExecutionContext)
@@ -205,7 +319,7 @@ MarkStepFailed marks a result as failed and registers it if needed. The caller i
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="ParseFileMode"></a>
-## func [ParseFileMode](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L832>)
+## func [ParseFileMode](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L935>)
 
 ```go
 func ParseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode
@@ -216,7 +330,7 @@ ParseFileMode parses a mode string \(e.g., "0644"\) into os.FileMode. Returns de
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="ShouldSkipByTags"></a>
-## func [ShouldSkipByTags](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L146>)
+## func [ShouldSkipByTags](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L249>)
 
 ```go
 func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool
@@ -227,7 +341,7 @@ ShouldSkipByTags determines if a step should be skipped based on tag filtering. 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
 <a name="Start"></a>
-## func [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L591>)
+## func [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L694>)
 
 ```go
 func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -784,7 +898,7 @@ func (e *SetupError) Unwrap() error
 
 
 <a name="StartConfig"></a>
-## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L571-L586>)
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L674-L689>)
 
 StartConfig contains configuration for starting a mooncake execution.
 
