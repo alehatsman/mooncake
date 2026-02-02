@@ -106,7 +106,7 @@ Learn about all features in the [User Guide](../guide/core-concepts.md).
 
 !!! info "See available system facts"
     ```bash
-    mooncake explain
+    mooncake facts
     ```
     Shows OS, hardware, network info available as variables
 

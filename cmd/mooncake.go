@@ -104,6 +104,16 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
 	}
 
+	// Collect facts early if facts-json requested
+	factsJSONPath := c.String("facts-json")
+	if factsJSONPath != "" {
+		systemFacts := facts.Collect()
+		if err := writeFactsJSON(systemFacts, factsJSONPath); err != nil {
+			log.Printf("Warning: failed to write facts JSON: %v", err)
+			// Non-fatal, continue execution
+		}
+	}
+
 	// Always use event-driven architecture
 	// Create event publisher
 	publisher := events.NewPublisher()
@@ -194,13 +204,39 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, internalLog, publisher)
 }
 
-func explainCommand(_ *cli.Context) error {
-	// Collect system facts
+func factsCommand(c *cli.Context) error {
+	format := c.String("format")
+
+	// Validate format
+	if format != outputFormatText && format != outputFormatJSON {
+		return fmt.Errorf("invalid format: %s (use 'text' or 'json')", format)
+	}
+
+	// Collect facts
 	f := facts.Collect()
 
-	// Display facts
-	explain.DisplayFacts(f)
+	// Output based on format
+	switch format {
+	case outputFormatJSON:
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(f)
+	case outputFormatText:
+		explain.DisplayFacts(f)
+		return nil
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
 
+func writeFactsJSON(f *facts.Facts, path string) error {
+	data, err := json.MarshalIndent(f, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal facts: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
 	return nil
 }
 
@@ -472,6 +508,10 @@ func createApp() *cli.App {
 						Name:  "from-plan",
 						Usage: "Execute from saved plan file (JSON or YAML)",
 					},
+					&cli.StringFlag{
+						Name:  "facts-json",
+						Usage: "Path to write collected facts as JSON",
+					},
 				},
 				Action: run,
 			},
@@ -515,10 +555,17 @@ func createApp() *cli.App {
 				Action: planCommand,
 			},
 			{
-				Name:    "explain",
-				Aliases: []string{"info"},
-				Usage:   "Explain machine state - show system information",
-				Action:  explainCommand,
+				Name:  "facts",
+				Usage: "Display system facts",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Value:   "text",
+						Usage:   "Output format: text or json",
+					},
+				},
+				Action: factsCommand,
 			},
 			{
 				Name:  "validate",

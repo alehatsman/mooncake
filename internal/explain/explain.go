@@ -9,53 +9,76 @@ import (
 )
 
 // DisplayFacts prints system information in a readable format
+//
+//nolint:gocyclo // Display function with many simple conditionals for optional fields
 func DisplayFacts(f *facts.Facts) {
 	fmt.Println("╭─────────────────────────────────────────────────────────────────────────────────────╮")
 	fmt.Println("│                              System Information                                     │")
 	fmt.Println("╰─────────────────────────────────────────────────────────────────────────────────────╯")
 	fmt.Println()
 
-	// Calculate column widths for alignment based on actual content
-	osStr := fmt.Sprintf("OS: %s %s", f.Distribution, f.DistributionVersion)
-	cpuStr := fmt.Sprintf("CPU Cores: %d", f.CPUCores)
-	pkgMgrStr := fmt.Sprintf("Package Manager: %s", f.PackageManager)
-
-	col1Width := len(osStr)
-	if len(cpuStr) > col1Width {
-		col1Width = len(cpuStr)
+	// System Information
+	fmt.Printf("OS:         %s %s\n", f.Distribution, f.DistributionVersion)
+	fmt.Printf("Arch:       %s\n", f.Arch)
+	fmt.Printf("Hostname:   %s\n", f.Hostname)
+	if f.KernelVersion != "" {
+		fmt.Printf("Kernel:     %s\n", f.KernelVersion)
 	}
-	if f.PackageManager != "" && len(pkgMgrStr) > col1Width {
-		col1Width = len(pkgMgrStr)
-	}
-
-	col2Width := 30  // Second label + value
-
-	// System
-	archStr := fmt.Sprintf("Arch: %s", f.Arch)
-	hostnameStr := f.Hostname
-	fmt.Printf("%-*s  |  %-*s  |  Hostname: %s\n",
-		col1Width, osStr,
-		col2Width, archStr,
-		hostnameStr)
 	fmt.Println()
 
-	// CPU & Memory
-	memStr := fmt.Sprintf("%d MB (%.1f GB)", f.MemoryTotalMB, float64(f.MemoryTotalMB)/1024)
-	fmt.Printf("%-*s  |  Memory: %s\n",
-		col1Width, cpuStr,
-		memStr)
+	// CPU Information
+	fmt.Println("CPU:")
+	fmt.Printf("  Cores:    %d\n", f.CPUCores)
+	if f.CPUModel != "" {
+		fmt.Printf("  Model:    %s\n", f.CPUModel)
+	}
+	if len(f.CPUFlags) > 0 {
+		// Show only relevant flags (AVX, SSE, etc.)
+		importantFlags := []string{}
+		for _, flag := range f.CPUFlags {
+			lowerFlag := strings.ToLower(flag)
+			if strings.HasPrefix(lowerFlag, "avx") ||
+				strings.HasPrefix(lowerFlag, "sse") ||
+				strings.Contains(lowerFlag, "fma") ||
+				strings.Contains(lowerFlag, "aes") {
+				importantFlags = append(importantFlags, flag)
+			}
+		}
+		if len(importantFlags) > 0 {
+			fmt.Printf("  Flags:    %s\n", strings.Join(importantFlags, " "))
+		}
+	}
 	fmt.Println()
 
-	// Software
-	if f.PackageManager != "" || f.PythonVersion != "" {
-		parts := []string{}
+	// Memory Information
+	fmt.Println("Memory:")
+	fmt.Printf("  Total:    %d MB (%.1f GB)\n", f.MemoryTotalMB, float64(f.MemoryTotalMB)/1024)
+	if f.MemoryFreeMB > 0 {
+		fmt.Printf("  Free:     %d MB (%.1f GB)\n", f.MemoryFreeMB, float64(f.MemoryFreeMB)/1024)
+	}
+	if f.SwapTotalMB > 0 {
+		fmt.Printf("  Swap:     %d MB total, %d MB free\n", f.SwapTotalMB, f.SwapFreeMB)
+	}
+	fmt.Println()
+
+	// Software & Development Tools
+	if f.PackageManager != "" || f.PythonVersion != "" || f.DockerVersion != "" || f.GitVersion != "" || f.GoVersion != "" {
+		fmt.Println("Software:")
 		if f.PackageManager != "" {
-			parts = append(parts, fmt.Sprintf("%-*s", col1Width, pkgMgrStr))
+			fmt.Printf("  Package Manager: %s\n", f.PackageManager)
 		}
 		if f.PythonVersion != "" {
-			parts = append(parts, fmt.Sprintf("Python: %s", f.PythonVersion))
+			fmt.Printf("  Python:          %s\n", f.PythonVersion)
 		}
-		fmt.Println(strings.Join(parts, "  |  "))
+		if f.DockerVersion != "" {
+			fmt.Printf("  Docker:          %s\n", f.DockerVersion)
+		}
+		if f.GitVersion != "" {
+			fmt.Printf("  Git:             %s\n", f.GitVersion)
+		}
+		if f.GoVersion != "" {
+			fmt.Printf("  Go:              %s\n", f.GoVersion)
+		}
 		fmt.Println()
 	}
 
@@ -71,6 +94,9 @@ func DisplayFacts(f *facts.Facts) {
 			}
 			if gpu.Driver != "" {
 				parts = append(parts, fmt.Sprintf("Driver: %s", gpu.Driver))
+			}
+			if gpu.CUDAVersion != "" {
+				parts = append(parts, fmt.Sprintf("CUDA: %s", gpu.CUDAVersion))
 			}
 			fmt.Printf("  • %s\n", strings.Join(parts, ", "))
 		}
@@ -123,6 +149,16 @@ func DisplayFacts(f *facts.Facts) {
 		}
 		fmt.Println()
 	}
+
+	// Network Information
+	fmt.Println("Network:")
+	if f.DefaultGateway != "" {
+		fmt.Printf("  Gateway:  %s\n", f.DefaultGateway)
+	}
+	if len(f.DNSServers) > 0 {
+		fmt.Printf("  DNS:      %s\n", strings.Join(f.DNSServers, ", "))
+	}
+	fmt.Println()
 
 	// Network - only show interfaces that are up and have addresses
 	var relevantIfaces []facts.NetworkInterface

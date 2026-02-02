@@ -249,24 +249,37 @@ mooncake run --config config.yml --raw --output-format json
 - 🔐 **Sudo support** - Execute privileged operations
 - ✅ **Validation** - YAML syntax and step structure checking
 
-### mooncake explain
+### mooncake facts
 
-Display detailed system information.
+Display system facts available as template variables.
 
 **Syntax:**
 ```bash
-mooncake explain
-# or
-mooncake info
+mooncake facts [--format text|json]
 ```
+
+**Options:**
+- `--format, -f`: Output format (text or json, default: text)
 
 **What it shows:**
 
-- **System**: OS, distribution, version, architecture, hostname
-- **Hardware**: CPU cores, memory, GPUs (vendor, model, memory, driver)
-- **Storage**: Disks with mount points, filesystem types, size, used, available
-- **Network**: Active interfaces with MAC addresses and IP addresses
-- **Software**: Package manager, Python version
+- **System**: OS, distribution, kernel version, architecture, hostname
+- **CPU**: Model, cores, feature flags (AVX, SSE, etc.)
+- **Memory**: Total, free, swap (total/free)
+- **GPUs**: Vendor, model, memory, driver, CUDA version
+- **Storage**: Disks with mount points, filesystem, size, used, available
+- **Network**: Interfaces, gateway, DNS, IP addresses
+- **Software**: Package manager, Python, Docker, Git, Go versions
+
+**Example output:**
+```
+OS:         ubuntu 22.04
+Kernel:     6.5.0-14-generic
+CPU:        Intel Core i7-10700K (8 cores)
+Memory:     16384 MB total, 8192 MB free
+Docker:     24.0.7
+Git:        2.43.0
+```
 
 **Use cases:**
 
@@ -598,7 +611,7 @@ Mooncake automatically collects system information available as variables.
 
 **Check your system:**
 ```bash
-mooncake explain
+mooncake facts
 ```
 
 **Example usage:**

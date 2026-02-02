@@ -484,3 +484,138 @@ func TestCollectNetworkInterfaces_Integration(t *testing.T) {
 		t.Log("Warning: No network interfaces found (might be expected in some environments)")
 	}
 }
+
+func TestToMap_NewFields(t *testing.T) {
+	facts := &Facts{
+		OS:                  "linux",
+		Arch:                "amd64",
+		KernelVersion:       "6.5.0-14-generic",
+		CPUModel:            "Intel(R) Core(TM) i9-9900K",
+		CPUFlags:            []string{"avx", "avx2", "sse4_2"},
+		MemoryTotalMB:       16384,
+		MemoryFreeMB:        8192,
+		SwapTotalMB:         4096,
+		SwapFreeMB:          2048,
+		DefaultGateway:      "192.168.1.1",
+		DNSServers:          []string{"8.8.8.8", "1.1.1.1"},
+		DockerVersion:       "24.0.7",
+		GitVersion:          "2.43.0",
+		GoVersion:           "1.21.5",
+		Disks:               []Disk{{Device: "/dev/sda1", MountPoint: "/"}},
+		GPUs:                []GPU{{Vendor: "nvidia", Model: "RTX 4090"}},
+		NetworkInterfaces:   []NetworkInterface{{Name: "eth0", Up: true}},
+	}
+
+	m := facts.ToMap()
+
+	// Check new OS fields
+	if m["kernel_version"] != "6.5.0-14-generic" {
+		t.Errorf("kernel_version = %v, want 6.5.0-14-generic", m["kernel_version"])
+	}
+
+	// Check CPU extended fields
+	if m["cpu_model"] != "Intel(R) Core(TM) i9-9900K" {
+		t.Errorf("cpu_model = %v", m["cpu_model"])
+	}
+	cpuFlags := m["cpu_flags"].([]string)
+	if len(cpuFlags) != 3 {
+		t.Errorf("cpu_flags length = %d, want 3", len(cpuFlags))
+	}
+	if m["cpu_flags_string"] != "avx avx2 sse4_2" {
+		t.Errorf("cpu_flags_string = %v", m["cpu_flags_string"])
+	}
+
+	// Check memory extended fields
+	if m["memory_free_mb"] != int64(8192) {
+		t.Errorf("memory_free_mb = %v, want 8192", m["memory_free_mb"])
+	}
+	if m["swap_total_mb"] != int64(4096) {
+		t.Errorf("swap_total_mb = %v, want 4096", m["swap_total_mb"])
+	}
+	if m["swap_free_mb"] != int64(2048) {
+		t.Errorf("swap_free_mb = %v, want 2048", m["swap_free_mb"])
+	}
+
+	// Check network extended fields
+	if m["default_gateway"] != "192.168.1.1" {
+		t.Errorf("default_gateway = %v, want 192.168.1.1", m["default_gateway"])
+	}
+	dnsServers := m["dns_servers"].([]string)
+	if len(dnsServers) != 2 {
+		t.Errorf("dns_servers length = %d, want 2", len(dnsServers))
+	}
+	if m["dns_servers_string"] != "8.8.8.8, 1.1.1.1" {
+		t.Errorf("dns_servers_string = %v", m["dns_servers_string"])
+	}
+
+	// Check toolchain versions
+	if m["docker_version"] != "24.0.7" {
+		t.Errorf("docker_version = %v, want 24.0.7", m["docker_version"])
+	}
+	if m["git_version"] != "2.43.0" {
+		t.Errorf("git_version = %v, want 2.43.0", m["git_version"])
+	}
+	if m["go_version"] != "1.21.5" {
+		t.Errorf("go_version = %v, want 1.21.5", m["go_version"])
+	}
+}
+
+func TestToMap_Arrays(t *testing.T) {
+	facts := &Facts{
+		Disks: []Disk{
+			{Device: "/dev/sda1", MountPoint: "/", SizeGB: 100},
+			{Device: "/dev/sdb1", MountPoint: "/data", SizeGB: 500},
+		},
+		GPUs: []GPU{
+			{Vendor: "nvidia", Model: "RTX 4090", CUDAVersion: "12.3"},
+		},
+		NetworkInterfaces: []NetworkInterface{
+			{Name: "eth0", Up: true},
+			{Name: "eth1", Up: false},
+		},
+	}
+
+	m := facts.ToMap()
+
+	// CRITICAL: Verify arrays are exposed for template iteration
+	disks, ok := m["disks"].([]Disk)
+	if !ok {
+		t.Fatal("disks should be []Disk type")
+	}
+	if len(disks) != 2 {
+		t.Errorf("disks length = %d, want 2", len(disks))
+	}
+
+	gpus, ok := m["gpus"].([]GPU)
+	if !ok {
+		t.Fatal("gpus should be []GPU type")
+	}
+	if len(gpus) != 1 {
+		t.Errorf("gpus length = %d, want 1", len(gpus))
+	}
+	if gpus[0].CUDAVersion != "12.3" {
+		t.Errorf("GPU CUDAVersion = %s, want 12.3", gpus[0].CUDAVersion)
+	}
+
+	ifaces, ok := m["network_interfaces"].([]NetworkInterface)
+	if !ok {
+		t.Fatal("network_interfaces should be []NetworkInterface type")
+	}
+	if len(ifaces) != 2 {
+		t.Errorf("network_interfaces length = %d, want 2", len(ifaces))
+	}
+}
+
+func TestGPU_CUDAVersion(t *testing.T) {
+	gpu := GPU{
+		Vendor:      "nvidia",
+		Model:       "RTX 4090",
+		Memory:      "24GB",
+		Driver:      "535.54.03",
+		CUDAVersion: "12.3",
+	}
+
+	if gpu.CUDAVersion != "12.3" {
+		t.Errorf("CUDAVersion = %s, want 12.3", gpu.CUDAVersion)
+	}
+}

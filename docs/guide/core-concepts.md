@@ -67,7 +67,7 @@ Automatically available variables:
 - `hostname` - System hostname
 - `distribution` - Linux/macOS distribution
 
-See all facts: `mooncake explain`
+See all facts: `mooncake facts`
 
 ## Next
 

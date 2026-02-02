@@ -33,9 +33,30 @@ type Facts struct {
 	Disks         []Disk
 	GPUs          []GPU
 
+	// OS Details
+	KernelVersion string // "6.5.0-14-generic" (Linux), "23.6.0" (macOS)
+
+	// CPU Extended
+	CPUModel string   // "Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz"
+	CPUFlags []string // ["avx", "avx2", "sse4_2", "fma", ...]
+
+	// Memory Extended
+	MemoryFreeMB int64 // Available memory
+	SwapTotalMB  int64 // Swap size
+	SwapFreeMB   int64 // Swap available
+
+	// Network Extended
+	DefaultGateway string   // "192.168.1.1"
+	DNSServers     []string // ["8.8.8.8", "1.1.1.1"]
+
 	// Software
 	PythonVersion  string
 	PackageManager string
+
+	// Toolchains
+	DockerVersion string // "24.0.7"
+	GitVersion    string // "2.43.0"
+	GoVersion     string // "1.21.5"
 }
 
 // NetworkInterface represents a network interface.
@@ -60,14 +81,16 @@ type Disk struct {
 
 // GPU represents a graphics card.
 type GPU struct {
-	Vendor string // nvidia, amd, intel
-	Model  string
-	Memory string // e.g. "8GB", "24GB"
-	Driver string
+	Vendor      string // nvidia, amd, intel
+	Model       string
+	Memory      string // e.g. "8GB", "24GB"
+	Driver      string
+	CUDAVersion string // "12.3" (NVIDIA only)
 }
 
-// Collect gathers all system facts.
-func Collect() *Facts {
+// collectUncached gathers all system facts without caching.
+// This is called internally by Collect() in cache.go.
+func collectUncached() *Facts {
 	f := &Facts{
 		OS:   runtime.GOOS,
 		Arch: runtime.GOARCH,
@@ -94,12 +117,16 @@ func Collect() *Facts {
 		collectWindowsFacts(f)
 	}
 
+	// Toolchains (cross-platform)
+	f.DockerVersion, f.GitVersion, f.GoVersion = detectToolchains()
+
 	return f
 }
 
 // ToMap converts Facts to a map for use in templates.
 func (f *Facts) ToMap() map[string]interface{} {
 	return map[string]interface{}{
+		// Basic
 		"os":                   f.OS,
 		"arch":                 f.Arch,
 		"hostname":             f.Hostname,
@@ -108,12 +135,46 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"distribution":         f.Distribution,
 		"distribution_version": f.DistributionVersion,
 		"distribution_major":   f.DistributionMajor,
-		"ip_addresses":         f.IPAddresses,                        // Array for iteration
-		"ip_addresses_string":  strings.Join(f.IPAddresses, ", "),   // String for display
-		"cpu_cores":            f.CPUCores,
-		"memory_total_mb":      f.MemoryTotalMB,
-		"python_version":       f.PythonVersion,
-		"package_manager":      f.PackageManager,
+
+		// Network
+		"ip_addresses":        f.IPAddresses,
+		"ip_addresses_string": strings.Join(f.IPAddresses, ", "),
+		"network_interfaces":  f.NetworkInterfaces, // CRITICAL: Array for templates
+
+		// Hardware - Basic
+		"cpu_cores":       f.CPUCores,
+		"memory_total_mb": f.MemoryTotalMB,
+
+		// Hardware - Arrays (CRITICAL: Enable template iteration)
+		"disks": f.Disks,
+		"gpus":  f.GPUs,
+
+		// OS Details
+		"kernel_version": f.KernelVersion,
+
+		// CPU Extended
+		"cpu_model":        f.CPUModel,
+		"cpu_flags":        f.CPUFlags,
+		"cpu_flags_string": strings.Join(f.CPUFlags, " "),
+
+		// Memory Extended
+		"memory_free_mb": f.MemoryFreeMB,
+		"swap_total_mb":  f.SwapTotalMB,
+		"swap_free_mb":   f.SwapFreeMB,
+
+		// Network Extended
+		"default_gateway":    f.DefaultGateway,
+		"dns_servers":        f.DNSServers,
+		"dns_servers_string": strings.Join(f.DNSServers, ", "),
+
+		// Software
+		"python_version":  f.PythonVersion,
+		"package_manager": f.PackageManager,
+
+		// Toolchains
+		"docker_version": f.DockerVersion,
+		"git_version":    f.GitVersion,
+		"go_version":     f.GoVersion,
 	}
 }
 

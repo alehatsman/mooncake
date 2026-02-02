@@ -126,7 +126,7 @@ ls examples/
   shell: echo "{{cpu_cores}} cores, {{memory_total_mb}}MB RAM"
 ```
 
-Run `mooncake explain` to see all available system facts.
+Run `mooncake facts` to see all available system facts.
 
 ### Execution Control
 ```yaml
@@ -200,7 +200,7 @@ mooncake run --config config.yml --sudo-pass <password>
 mooncake run --config config.yml --log-level debug
 
 # Show system information
-mooncake explain
+mooncake facts
 ```
 
 ## Why Mooncake?

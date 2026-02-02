@@ -97,10 +97,12 @@ Mooncake automatically provides system information as variables.
 
 ```yaml
 # Operating system
-os: "linux"        # linux, darwin, windows
-arch: "amd64"      # amd64, arm64, 386, etc.
+os: "linux"                    # linux, darwin, windows
+arch: "amd64"                  # amd64, arm64, 386, etc.
 hostname: "myserver"
-user_home: "/home/user"
+username: "admin"
+user_home: "/home/admin"
+kernel_version: "6.5.0-14"     # Kernel/Darwin version
 ```
 
 ### Distribution Info
@@ -111,73 +113,100 @@ distribution_version: "22.04"    # Full version
 distribution_major: "22"         # Major version only
 ```
 
-### Hardware Facts
+### CPU Facts
 
 ```yaml
-cpu_cores: 8                # Number of CPU cores
-memory_total_mb: 16384      # Total RAM in megabytes
+cpu_cores: 8                                        # Number of CPU cores
+cpu_model: "Intel(R) Core(TM) i7-10700K"           # CPU model name
+cpu_flags: ["avx", "avx2", "sse4_2", "fma", "aes"] # CPU feature flags
+cpu_flags_string: "avx avx2 sse4_2 fma aes"        # Flags as string
 ```
 
-### Software Detection
+### Memory Facts
 
 ```yaml
-package_manager: "apt"      # apt, yum, brew, pacman, etc.
-python_version: "3.10.0"    # Installed Python version
+memory_total_mb: 16384      # Total RAM in megabytes
+memory_free_mb: 8192        # Available RAM in megabytes
+swap_total_mb: 4096         # Total swap space
+swap_free_mb: 2048          # Available swap space
 ```
 
 ### Network Facts
 
 ```yaml
+# IP addresses
 ip_addresses: ["192.168.1.100", "10.0.0.5"]
 ip_addresses_string: "192.168.1.100, 10.0.0.5"
+
+# Network configuration
+default_gateway: "192.168.1.1"
+dns_servers: ["8.8.8.8", "1.1.1.1"]
+dns_servers_string: "8.8.8.8, 1.1.1.1"
+
+# Network interfaces (array - can iterate)
+network_interfaces:
+  - name: "eth0"
+    mac_address: "00:11:22:33:44:55"
+    mtu: 1500
+    addresses: ["192.168.1.100/24"]
+    up: true
 ```
 
 ### GPU Facts
 
 ```yaml
+# GPUs array - can iterate with {% for gpu in gpus %}
 gpus:
-  - vendor: "NVIDIA"
-    model: "RTX 4090"
-  - vendor: "AMD"
-    model: "RX 7900"
+  - vendor: "nvidia"
+    model: "GeForce RTX 4090"
+    memory: "24GB"
+    driver: "535.54.03"
+    cuda_version: "12.3"     # NVIDIA only
 ```
 
 ### Storage Facts
 
 ```yaml
-storage_devices:
-  - name: "sda"
-    size_bytes: 500000000000
-  - name: "nvme0n1"
-    size_bytes: 1000000000000
+# Disks array - can iterate with {% for disk in disks %}
+disks:
+  - device: "/dev/sda1"
+    mount_point: "/"
+    filesystem: "ext4"
+    size_gb: 500
+    used_gb: 250
+    avail_gb: 250
+    used_pct: 50
 ```
 
-### Network Interfaces
+### Software Detection
 
 ```yaml
-network_interfaces:
-  - name: "eth0"
-    mac_address: "00:11:22:33:44:55"
-  - name: "wlan0"
-    mac_address: "AA:BB:CC:DD:EE:FF"
+# Package managers and languages
+package_manager: "apt"      # apt, yum, brew, pacman, etc.
+python_version: "3.11.5"    # Installed Python version
+
+# Development tools
+docker_version: "24.0.7"    # Docker version (if installed)
+git_version: "2.43.0"       # Git version (if installed)
+go_version: "1.21.5"        # Go version (if installed)
 ```
 
 ## Viewing System Facts
 
-Run `mooncake explain` to see all available facts:
+Run `mooncake facts` to see all available facts:
 
 ```bash
-mooncake explain
+mooncake facts
 ```
 
 Output shows:
-- Operating system details
-- CPU and memory
-- GPUs
-- Storage devices
-- Network interfaces
-- Package manager
-- Python version
+- Operating system details (OS, distribution, kernel version)
+- CPU (cores, model, flags)
+- Memory (total, free, swap)
+- GPUs (vendor, model, memory, driver, CUDA version)
+- Storage devices (disks with mount points and sizes)
+- Network (interfaces, gateway, DNS)
+- Software (package manager, Python, Docker, Git, Go)
 
 ## Using System Facts
 
@@ -217,6 +246,9 @@ Output shows:
 - name: Configure for high-memory system
   shell: set-large-buffers
   when: memory_total_mb >= 32000
+
+- name: Check available memory
+  shell: echo "Free memory: {{memory_free_mb}}MB"
 ```
 
 ### Package Manager Detection
@@ -224,6 +256,52 @@ Output shows:
 ```yaml
 - shell: "{{package_manager}} install neovim"
   when: os == "linux"
+```
+
+### Iterating Over Arrays
+
+```yaml
+# Iterate over disks
+- name: Show disk info
+  shell: |
+    {% for disk in disks %}
+    echo "Disk: {{ disk.Device }} mounted at {{ disk.MountPoint }} ({{ disk.SizeGB }}GB)"
+    {% endfor %}
+
+# Iterate over GPUs
+- name: Setup GPU
+  shell: nvidia-smi -i {{loop.index0}}
+  with_items: "{{gpus}}"
+  when: gpus|length > 0
+
+# Iterate over network interfaces
+- name: Configure interface
+  shell: |
+    {% for iface in network_interfaces %}
+    {% if iface.Up %}
+    echo "Active: {{ iface.Name }} ({{ iface.MACAddress }})"
+    {% endif %}
+    {% endfor %}
+```
+
+### Toolchain Detection
+
+```yaml
+# Check if Docker is installed
+- name: Run Docker container
+  shell: docker run hello-world
+  when: docker_version != ""
+
+# Use Git if available
+- name: Clone repository
+  shell: git clone https://github.com/user/repo.git
+  when: git_version != ""
+
+# Show installed versions
+- shell: |
+    echo "Docker: {{docker_version}}"
+    echo "Git: {{git_version}}"
+    echo "Go: {{go_version}}"
 ```
 
 ## Variable Precedence
@@ -355,4 +433,4 @@ Special `item` variable in loops:
 - [Actions](actions.md) - Using variables in actions
 - [Control Flow](control-flow.md) - Using variables in conditions
 - [Examples](../../examples/index.md#02-variables-and-system-facts) - Variable examples
-- [Commands](../../index.md#mooncake-explain) - View system facts
+- [Commands](../commands.md#mooncake-facts) - View system facts

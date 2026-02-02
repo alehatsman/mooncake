@@ -97,7 +97,7 @@ mooncake run --config 10-multi-file-configs/main.yml --vars custom-vars.yml
 Before running examples, check what system facts are available:
 
 ```bash
-mooncake explain
+mooncake facts
 ```
 
 This shows:
@@ -153,7 +153,7 @@ The [validation-examples/](validation-examples/) directory contains intentionall
 
 - **Main Documentation** - [../../README.md](../../README.md)
 - **Configuration Guide** - All available options and syntax
-- **System Facts** - Use `mooncake explain` to see available variables
+- **System Facts** - Use `mooncake facts` to see available variables
 
 ## 🤝 Contributing Examples
 
@@ -168,7 +168,7 @@ Want to add an example? Great! Make sure it:
 **Example not working?**
 1. Try `--dry-run` first
 2. Check `--log-level debug` output
-3. Verify system facts with `mooncake explain`
+3. Verify system facts with `mooncake facts`
 4. Review the example's README
 
 **Want to learn more?**

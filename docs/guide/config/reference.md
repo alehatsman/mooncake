@@ -749,7 +749,7 @@ Variable name to store step execution result.
 
 ## System Facts Reference
 
-Available automatically in all steps. View with `mooncake explain`.
+Available automatically in all steps. View with `mooncake facts` or `mooncake facts --format json`.
 
 ### Basic Facts
 
@@ -757,37 +757,98 @@ Available automatically in all steps. View with `mooncake explain`.
 |----------|------|---------|-------------|
 | `os` | string | `"linux"`, `"darwin"`, `"windows"` | Operating system |
 | `arch` | string | `"amd64"`, `"arm64"` | CPU architecture |
-| `hostname` | string | `"myserver"` | System hostname |
-| `user_home` | string | `"/home/user"` | Current user's home directory |
+| `hostname` | string | `"server01"` | System hostname |
+| `username` | string | `"admin"` | Current username |
+| `user_home` | string | `"/home/admin"` | Current user's home directory |
+| `kernel_version` | string | `"6.5.0-14"` | Kernel/Darwin version |
 
 ### Distribution Info
 
 | Variable | Type | Example | Description |
 |----------|------|---------|-------------|
 | `distribution` | string | `"ubuntu"`, `"macos"` | OS distribution |
-| `distribution_version` | string | `"22.04"`, `"13.0"` | Full version |
-| `distribution_major` | string | `"22"`, `"13"` | Major version number |
+| `distribution_version` | string | `"22.04"`, `"15.7"` | Full version |
+| `distribution_major` | string | `"22"`, `"15"` | Major version number |
 
-### Hardware Facts
+### CPU Facts
 
 | Variable | Type | Example | Description |
 |----------|------|---------|-------------|
 | `cpu_cores` | integer | `8` | Number of CPU cores |
-| `memory_total_mb` | integer | `16384` | Total RAM in MB |
+| `cpu_model` | string | `"Intel Core i7-10700K"` | CPU model name |
+| `cpu_flags` | array | `["avx", "avx2", "sse4_2"]` | CPU feature flags |
+| `cpu_flags_string` | string | `"avx avx2 sse4_2"` | CPU flags as string |
 
-### Software Detection
+### Memory Facts
 
 | Variable | Type | Example | Description |
 |----------|------|---------|-------------|
-| `package_manager` | string | `"apt"`, `"brew"`, `"yum"` | Detected package manager |
-| `python_version` | string | `"3.10.0"` | Python version (if installed) |
+| `memory_total_mb` | integer | `16384` | Total RAM in MB |
+| `memory_free_mb` | integer | `8192` | Available RAM in MB |
+| `swap_total_mb` | integer | `4096` | Total swap space in MB |
+| `swap_free_mb` | integer | `2048` | Available swap space in MB |
 
 ### Network Facts
 
 | Variable | Type | Example | Description |
 |----------|------|---------|-------------|
 | `ip_addresses` | array | `["192.168.1.100"]` | List of IP addresses |
-| `ip_addresses_string` | string | `"192.168.1.100"` | First IP address |
+| `ip_addresses_string` | string | `"192.168.1.100"` | IP addresses as string |
+| `default_gateway` | string | `"192.168.1.1"` | Default network gateway |
+| `dns_servers` | array | `["8.8.8.8", "1.1.1.1"]` | DNS servers |
+| `dns_servers_string` | string | `"8.8.8.8, 1.1.1.1"` | DNS servers as string |
+| `network_interfaces` | array | See below | Network interface details |
+
+**NetworkInterface Structure:**
+```yaml
+name: "eth0"
+mac_address: "00:11:22:33:44:55"
+mtu: 1500
+addresses: ["192.168.1.100/24"]
+up: true
+```
+
+### Storage Facts
+
+| Variable | Type | Example | Description |
+|----------|------|---------|-------------|
+| `disks` | array | See below | Disk/mount information |
+
+**Disk Structure:**
+```yaml
+device: "/dev/sda1"
+mount_point: "/"
+filesystem: "ext4"
+size_gb: 500
+used_gb: 250
+avail_gb: 250
+used_pct: 50
+```
+
+### GPU Facts
+
+| Variable | Type | Example | Description |
+|----------|------|---------|-------------|
+| `gpus` | array | See below | GPU information |
+
+**GPU Structure:**
+```yaml
+vendor: "nvidia"           # nvidia, amd, intel, apple
+model: "GeForce RTX 4090"
+memory: "24GB"
+driver: "535.54.03"
+cuda_version: "12.3"       # NVIDIA only
+```
+
+### Software Detection
+
+| Variable | Type | Example | Description |
+|----------|------|---------|-------------|
+| `package_manager` | string | `"apt"`, `"brew"`, `"yum"` | Detected package manager |
+| `python_version` | string | `"3.11.5"` | Python version (if installed) |
+| `docker_version` | string | `"24.0.7"` | Docker version (if installed) |
+| `git_version` | string | `"2.43.0"` | Git version (if installed) |
+| `go_version` | string | `"1.21.5"` | Go version (if installed) |
 
 ## File Mode Reference
 

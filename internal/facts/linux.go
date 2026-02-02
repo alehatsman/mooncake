@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+const (
+	vendorNVIDIA = "nvidia"
+	vendorAMD    = "amd"
+	vendorIntel  = "intel"
+)
+
 // collectLinuxFacts gathers Linux-specific system information
 func collectLinuxFacts(f *Facts) {
 	f.Distribution, f.DistributionVersion = detectLinuxDistribution()
@@ -15,6 +21,26 @@ func collectLinuxFacts(f *Facts) {
 	f.MemoryTotalMB = detectLinuxMemory()
 	f.Disks = detectLinuxDisks()
 	f.GPUs = detectLinuxGPUs()
+
+	// Extended facts
+	f.KernelVersion = detectLinuxKernel()
+	f.CPUModel = detectLinuxCPUModel()
+	f.CPUFlags = detectLinuxCPUFlags()
+	f.MemoryFreeMB = detectLinuxMemoryFree()
+	f.SwapTotalMB, f.SwapFreeMB = detectLinuxSwap()
+	f.DefaultGateway = detectLinuxDefaultRoute()
+	f.DNSServers = detectLinuxDNS()
+
+	// Add CUDA version to NVIDIA GPUs
+	if len(f.GPUs) > 0 {
+		for i := range f.GPUs {
+			if f.GPUs[i].Vendor == vendorNVIDIA {
+				if f.GPUs[i].CUDAVersion == "" {
+					f.GPUs[i].CUDAVersion = detectCUDAVersion()
+				}
+			}
+		}
+	}
 }
 
 // detectLinuxDistribution reads /etc/os-release to identify distribution
@@ -172,7 +198,7 @@ func detectLinuxGPUs() []GPU {
 				parts := strings.Split(line, ",")
 				if len(parts) >= 3 {
 					gpu := GPU{
-						Vendor: "nvidia",
+						Vendor: vendorNVIDIA,
 						Model:  strings.TrimSpace(parts[0]),
 						Memory: strings.TrimSpace(parts[1]),
 						Driver: strings.TrimSpace(parts[2]),
@@ -194,7 +220,7 @@ func detectLinuxGPUs() []GPU {
 					parts := strings.Split(line, ":")
 					if len(parts) >= 2 {
 						gpu := GPU{
-							Vendor: "amd",
+							Vendor: vendorAMD,
 							Model:  strings.TrimSpace(parts[1]),
 						}
 						gpus = append(gpus, gpu)
@@ -217,11 +243,11 @@ func detectLinuxGPUs() []GPU {
 						var vendor string
 						switch {
 						case strings.Contains(lower, "nvidia"):
-							vendor = "nvidia"
+							vendor = vendorNVIDIA
 						case strings.Contains(lower, "amd") || strings.Contains(lower, "ati"):
-							vendor = "amd"
+							vendor = vendorAMD
 						case strings.Contains(lower, "intel"):
-							vendor = "intel"
+							vendor = vendorIntel
 						}
 
 						if vendor != "" {
@@ -259,4 +285,239 @@ func parsePercent(s string) int {
 	s = strings.TrimSuffix(s, "%")
 	val, _ := strconv.Atoi(s)
 	return val
+}
+
+// detectLinuxKernel reads kernel version
+func detectLinuxKernel() string {
+	// Try /proc/version first
+	data, err := os.ReadFile("/proc/version")
+	if err == nil {
+		// Format: "Linux version 6.5.0-14-generic ..."
+		version := string(data)
+		if strings.HasPrefix(version, "Linux version ") {
+			version = strings.TrimPrefix(version, "Linux version ")
+			fields := strings.Fields(version)
+			if len(fields) > 0 {
+				return fields[0]
+			}
+		}
+	}
+
+	// Fallback to uname -r
+	out, err := exec.Command("uname", "-r").Output()
+	if err == nil {
+		return strings.TrimSpace(string(out))
+	}
+
+	return ""
+}
+
+// detectLinuxCPUModel reads CPU model from /proc/cpuinfo
+func detectLinuxCPUModel() string {
+	data, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "model name") {
+			// Format: "model name	: Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz"
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+	}
+
+	return ""
+}
+
+// detectLinuxCPUFlags reads CPU flags from /proc/cpuinfo
+func detectLinuxCPUFlags() []string {
+	data, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return nil
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "flags") {
+			// Format: "flags		: fpu vme de pse tsc msr pae mce cx8 apic ..."
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				flags := strings.Fields(strings.TrimSpace(parts[1]))
+				return flags
+			}
+		}
+	}
+
+	return nil
+}
+
+// detectLinuxMemoryFree reads available memory from /proc/meminfo
+func detectLinuxMemoryFree() int64 {
+	data, err := os.ReadFile("/proc/meminfo")
+	if err != nil {
+		return 0
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "MemAvailable:") {
+			// Format: "MemAvailable:    8192000 kB"
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				kb, err := strconv.ParseInt(fields[1], 10, 64)
+				if err == nil {
+					return kb / 1024 // Convert KB to MB
+				}
+			}
+			break
+		}
+	}
+
+	return 0
+}
+
+// detectLinuxSwap reads swap information from /proc/meminfo
+func detectLinuxSwap() (swapTotal, swapFree int64) {
+	data, err := os.ReadFile("/proc/meminfo")
+	if err != nil {
+		return 0, 0
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "SwapTotal:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				kb, err := strconv.ParseInt(fields[1], 10, 64)
+				if err == nil {
+					swapTotal = kb / 1024
+				}
+			}
+		} else if strings.HasPrefix(line, "SwapFree:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				kb, err := strconv.ParseInt(fields[1], 10, 64)
+				if err == nil {
+					swapFree = kb / 1024
+				}
+			}
+		}
+	}
+
+	return swapTotal, swapFree
+}
+
+// detectLinuxDefaultRoute finds the default gateway
+func detectLinuxDefaultRoute() string {
+	// Try ip route first
+	if ip, err := exec.LookPath("ip"); err == nil {
+		// #nosec G204 -- ip path is validated via exec.LookPath
+		out, err := exec.Command(ip, "route", "show", "default").Output()
+		if err == nil {
+			// Format: "default via 192.168.1.1 dev eth0 ..."
+			line := strings.TrimSpace(string(out))
+			fields := strings.Fields(line)
+			for i, field := range fields {
+				if field == "via" && i+1 < len(fields) {
+					return fields[i+1]
+				}
+			}
+		}
+	}
+
+	// Fallback to /proc/net/route
+	data, err := os.ReadFile("/proc/net/route")
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		if i == 0 {
+			continue // Skip header
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 3 && fields[1] == "00000000" {
+			// Destination is 0.0.0.0 (default route)
+			// Gateway is in hex format in field[2]
+			gateway := fields[2]
+			if len(gateway) == 8 {
+				// Convert hex to IP (little endian)
+				var ip [4]byte
+				for i := 0; i < 4; i++ {
+					val, _ := strconv.ParseUint(gateway[i*2:i*2+2], 16, 8)
+					ip[3-i] = byte(val)
+				}
+				return strconv.Itoa(int(ip[0])) + "." +
+					strconv.Itoa(int(ip[1])) + "." +
+					strconv.Itoa(int(ip[2])) + "." +
+					strconv.Itoa(int(ip[3]))
+			}
+		}
+	}
+
+	return ""
+}
+
+// detectLinuxDNS reads DNS servers from /etc/resolv.conf
+func detectLinuxDNS() []string {
+	var servers []string
+
+	data, err := os.ReadFile("/etc/resolv.conf")
+	if err != nil {
+		return servers
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "nameserver") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				servers = append(servers, fields[1])
+			}
+		}
+	}
+
+	return servers
+}
+
+// detectCUDAVersion detects NVIDIA CUDA version
+func detectCUDAVersion() string {
+	nvidiaSmi, err := exec.LookPath("nvidia-smi")
+	if err != nil {
+		return ""
+	}
+
+	// #nosec G204 -- nvidia-smi path is validated via exec.LookPath
+	out, err := exec.Command(nvidiaSmi, "--query-gpu=driver_version", "--format=csv,noheader").Output()
+	if err != nil {
+		return ""
+	}
+
+	// Try to get CUDA version from nvidia-smi
+	// #nosec G204 -- nvidia-smi path is validated via exec.LookPath
+	cudaOut, err := exec.Command(nvidiaSmi).Output()
+	if err == nil {
+		lines := strings.Split(string(cudaOut), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "CUDA Version:") {
+				// Format: "| CUDA Version: 12.3     |"
+				parts := strings.Split(line, ":")
+				if len(parts) >= 2 {
+					version := strings.TrimSpace(parts[1])
+					version = strings.Split(version, " ")[0]
+					version = strings.TrimRight(version, "|")
+					version = strings.TrimSpace(version)
+					return version
+				}
+			}
+		}
+	}
+
+	return strings.TrimSpace(string(out))
 }

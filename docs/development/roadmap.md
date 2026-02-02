@@ -396,11 +396,10 @@ Implemented as separate `copy` action:
 ---
 
 ## 9) Detailed CLI checklist
-- [ ] `mooncake run --config ... --vars ... --tags ... --dry-run`
-- [ ] `mooncake plan --config ... --format json|yaml`
-- [ ] `mooncake validate --config ...`
-- [ ] `mooncake facts --json`
-- [ ] `mooncake explain` (later)
+- [x] `mooncake run --config ... --vars ... --tags ... --dry-run`
+- [x] `mooncake plan --config ... --format json|yaml`
+- [x] `mooncake validate --config ...`
+- [x] `mooncake facts --format json|text` ✅ IMPLEMENTED
 - [ ] `mooncake doctor` (later)
 
 ---

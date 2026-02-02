@@ -76,9 +76,9 @@ Variables work everywhere:
 
 ## Seeing All Facts
 
-Run `mooncake explain` to see all facts for your system:
+Run `mooncake facts` to see all facts for your system:
 ```bash
-mooncake explain
+mooncake facts
 ```
 
 ## Next Steps
