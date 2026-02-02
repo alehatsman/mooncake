@@ -945,7 +945,7 @@ func TestHandleFile_EventEmission(t *testing.T) {
 			}
 
 			// Wait for events to be processed asynchronously
-			time.Sleep(50 * time.Millisecond)
+			ec.EventPublisher.Flush()
 
 			// Find the expected event
 			allEvents := collector.getEvents()
@@ -1091,7 +1091,7 @@ func TestHandleFile_RemoveFileEmitsCorrectEvent(t *testing.T) {
 	}
 
 	// Wait for events to be processed
-	time.Sleep(50 * time.Millisecond)
+	ec.EventPublisher.Flush()
 
 	// Find the file.removed event
 	allEvents := collector.getEvents()
@@ -1137,7 +1137,7 @@ func TestHandleFile_RemoveDirectoryEmitsCorrectEvent(t *testing.T) {
 	}
 
 	// Wait for events to be processed
-	time.Sleep(50 * time.Millisecond)
+	ec.EventPublisher.Flush()
 
 	// Find the directory.removed event
 	allEvents := collector.getEvents()
@@ -1399,7 +1399,7 @@ func TestHandleFile_TouchFileEmitsCorrectEvent(t *testing.T) {
 	}
 
 	// Wait for events to be processed
-	time.Sleep(50 * time.Millisecond)
+	ec.EventPublisher.Flush()
 
 	// Find the file.created event
 	allEvents := collector.getEvents()
@@ -1442,7 +1442,7 @@ func TestHandleFile_CreateFileEventHasSize(t *testing.T) {
 	}
 
 	// Wait for events to be processed
-	time.Sleep(50 * time.Millisecond)
+	ec.EventPublisher.Flush()
 
 	// Find the file.created event
 	allEvents := collector.getEvents()
@@ -1490,7 +1490,7 @@ func TestHandleFile_SetPermissionsEmitsEvent(t *testing.T) {
 	}
 
 	// Wait for events to be processed
-	time.Sleep(50 * time.Millisecond)
+	ec.EventPublisher.Flush()
 
 	// Find the permissions.changed event
 	allEvents := collector.getEvents()

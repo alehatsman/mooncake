@@ -85,7 +85,7 @@ func TestEventSystemIntegration(t *testing.T) {
 	})
 
 	// Wait for events to be processed
-	time.Sleep(100 * time.Millisecond)
+	publisher.Flush()
 
 	// Verify events were collected
 	collector.mu.Lock()
@@ -141,7 +141,7 @@ func TestMultipleSubscribers(t *testing.T) {
 	}
 
 	// Wait for processing
-	time.Sleep(100 * time.Millisecond)
+	publisher.Flush()
 
 	// Both collectors should have all events
 	collector1.mu.Lock()
@@ -179,7 +179,7 @@ func TestEventOrdering(t *testing.T) {
 	}
 
 	// Wait for processing
-	time.Sleep(200 * time.Millisecond)
+	publisher.Flush()
 
 	// Verify order
 	collector.mu.Lock()

@@ -590,7 +590,7 @@ func TestHandleCopy_EventEmission(t *testing.T) {
 	}
 
 	// Wait for events to be processed asynchronously
-	time.Sleep(50 * time.Millisecond)
+	ec.EventPublisher.Flush()
 
 	// Get events and find the file.copied event
 	allEvents := collector.getEvents()

@@ -9,7 +9,7 @@ type Publisher interface {
 	Publish(event Event)
 	Subscribe(subscriber Subscriber) int
 	Unsubscribe(id int)
-	Flush() // Wait for all pending events to be processed
+	Flush()
 	Close()
 }
 
@@ -26,14 +26,19 @@ type ChannelPublisher struct {
 	mu          sync.RWMutex
 	closed      bool
 	wg          sync.WaitGroup
+	pendingMu   sync.Mutex
+	pending     int
+	flushCond   *sync.Cond
 }
 
 // NewPublisher creates a new channel-based event publisher
 func NewPublisher() Publisher {
-	return &ChannelPublisher{
+	cp := &ChannelPublisher{
 		subscribers: make(map[int]chan Event),
 		nextID:      1,
 	}
+	cp.flushCond = sync.NewCond(&cp.pendingMu)
+	return cp
 }
 
 // Publish sends an event to all subscribers
@@ -46,14 +51,17 @@ func (p *ChannelPublisher) Publish(event Event) {
 		return
 	}
 
+	p.pendingMu.Lock()
 	for _, ch := range p.subscribers {
 		// Non-blocking send - drop if channel is full
 		select {
 		case ch <- event:
+			p.pending++
 		default:
 			// Channel full, drop event
 		}
 	}
+	p.pendingMu.Unlock()
 }
 
 // Subscribe adds a new subscriber and returns its ID
@@ -78,6 +86,14 @@ func (p *ChannelPublisher) Subscribe(subscriber Subscriber) int {
 		defer p.wg.Done()
 		for event := range ch {
 			subscriber.OnEvent(event)
+
+			// Decrement pending count after processing
+			p.pendingMu.Lock()
+			p.pending--
+			if p.pending == 0 {
+				p.flushCond.Broadcast()
+			}
+			p.pendingMu.Unlock()
 		}
 	}()
 
@@ -95,11 +111,15 @@ func (p *ChannelPublisher) Unsubscribe(id int) {
 	}
 }
 
-// Flush is a no-op for ChannelPublisher (async by design).
-// Use SyncPublisher for tests that need synchronous event delivery.
+// Flush waits for all pending events to be processed by subscribers
 func (p *ChannelPublisher) Flush() {
-	// No-op - async publisher doesn't support flushing
+	p.pendingMu.Lock()
+	for p.pending > 0 {
+		p.flushCond.Wait()
+	}
+	p.pendingMu.Unlock()
 }
+
 
 // Close closes the publisher and all subscriber channels
 func (p *ChannelPublisher) Close() {

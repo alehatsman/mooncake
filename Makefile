@@ -105,5 +105,3 @@ test-docker-all:
 
 test-all-platforms:
 	@./scripts/test-all-platforms.sh
-
-

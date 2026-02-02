@@ -60,7 +60,8 @@ func executeWithRetry(step config.Step, ec *ExecutionContext, executeFn func() e
 	return lastErr
 }
 
-// evaluateBoolExpression is a helper that renders and evaluates a boolean expression.
+// evaluateBoolExpression renders and evaluates a boolean expression for shell step conditions.
+// Returns the boolean result, or an error if rendering, evaluation, or type conversion fails.
 func evaluateBoolExpression(expression, fieldName string, evalContext map[string]interface{}, ec *ExecutionContext) (bool, error) {
 	renderedExpr, err := ec.Template.Render(expression, evalContext)
 	if err != nil {
@@ -80,7 +81,6 @@ func evaluateBoolExpression(expression, fieldName string, evalContext map[string
 		}
 	}
 
-	ec.Logger.Debugf("  %s evaluated to: %v", fieldName, boolResult)
 	return boolResult, nil
 }
 
@@ -100,6 +100,7 @@ func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionCont
 			return err
 		}
 		result.Changed = boolResult
+		ec.Logger.Debugf("  changed_when evaluated to: %v", boolResult)
 	}
 
 	// Evaluate failed_when if specified
@@ -109,6 +110,7 @@ func evaluateResultOverrides(step config.Step, result *Result, ec *ExecutionCont
 			return err
 		}
 		result.Failed = boolResult
+		ec.Logger.Debugf("  failed_when evaluated to: %v", boolResult)
 	}
 
 	return nil
@@ -144,7 +146,6 @@ func HandleShell(step config.Step, ec *ExecutionContext) error {
 	})
 }
 
-// executeShellCommand executes a shell command once without retry logic.
 // setupCommandContext creates a context with timeout if specified in the step
 func setupCommandContext(step config.Step) (context.Context, context.CancelFunc, error) {
 	ctx := context.Background()

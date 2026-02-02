@@ -52,8 +52,8 @@ func TestPublisherBasic(t *testing.T) {
 	publisher.Publish(event1)
 	publisher.Publish(event2)
 
-	// Give events time to be processed
-	time.Sleep(50 * time.Millisecond)
+	// Wait for all events to be processed
+	publisher.Flush()
 
 	// Check received events
 	mu.Lock()
@@ -114,8 +114,8 @@ func TestPublisherMultipleSubscribers(t *testing.T) {
 
 	publisher.Publish(event)
 
-	// Give events time to be processed
-	time.Sleep(50 * time.Millisecond)
+	// Wait for all events to be processed
+	publisher.Flush()
 
 	// Both subscribers should receive the event
 	mu1.Lock()
@@ -161,8 +161,8 @@ func TestPublisherUnsubscribe(t *testing.T) {
 
 	publisher.Publish(event)
 
-	// Give time for processing
-	time.Sleep(50 * time.Millisecond)
+	// Wait for all events to be processed
+	publisher.Flush()
 
 	// Should not receive event
 	mu.Lock()
