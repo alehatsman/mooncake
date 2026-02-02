@@ -2036,6 +2036,184 @@ Useful for commands where certain non-zero exit codes are acceptable.
   changed_when: "'deployed successfully' in result.stdout"
 ```
 
+## Preset
+
+Invoke reusable, parameterized collections of steps. Presets encapsulate complex workflows into simple declarations.
+
+📖 **See [Presets Guide](../presets.md)** for complete documentation and **[Preset Authoring](../preset-authoring.md)** for creating your own.
+
+### Basic Usage
+
+Simple string form (no parameters):
+```yaml
+- name: Quick preset
+  preset: my-preset
+```
+
+With parameters:
+```yaml
+- name: Install Ollama
+  preset: ollama
+  with:
+    state: present
+    service: true
+    pull: [llama3.1:8b]
+```
+
+Full object form:
+```yaml
+- name: Deploy application
+  preset:
+    name: deploy-webapp
+    with:
+      app_name: myapp
+      version: v1.2.3
+      port: 8080
+      environment: production
+  become: true
+  register: deploy_result
+```
+
+### Preset Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `preset` | string or object | Preset name (string) or preset invocation (object) |
+| `preset.name` | string | Preset name (when using object form) |
+| `preset.with` | object | Parameters to pass to preset (optional) |
+
+### Parameter Passing
+
+Parameters are validated by the preset definition:
+
+```yaml
+- preset: ollama
+  with:
+    state: present         # string (required, enum: [present, absent])
+    service: true          # bool (optional, default: true)
+    pull: [model1, model2] # array (optional, default: [])
+    force: false           # bool (optional, default: false)
+```
+
+### Result Registration
+
+Presets return aggregate results:
+
+```yaml
+- name: Install Ollama
+  preset: ollama
+  with:
+    state: present
+  register: ollama_result
+
+- name: Check result
+  shell: echo "Changed = {{ ollama_result.changed }}"
+```
+
+**Result fields:**
+- `changed`: `true` if any step in preset changed
+- `failed`: `true` if preset execution failed
+- `rc`: Exit code (0 = success)
+- `stdout`: Summary message
+
+### Conditionals
+
+Presets work with standard conditionals:
+
+```yaml
+- name: Install Ollama on Linux only
+  preset: ollama
+  with:
+    state: present
+  when: os == "linux"
+```
+
+### Tags
+
+```yaml
+- name: Setup LLM
+  preset: ollama
+  with:
+    state: present
+  tags: [setup, ml]
+```
+
+### Become (Privilege Escalation)
+
+```yaml
+- name: Install system-wide
+  preset: my-preset
+  with:
+    scope: system
+  become: true
+```
+
+### Available Presets
+
+Built-in presets:
+
+- **ollama**: Install and manage Ollama LLM runtime
+  - Parameters: `state`, `service`, `pull`, `method`, `host`, `models_dir`, `force`
+  - See: [examples/ollama/](../../examples/ollama/)
+
+### Creating Custom Presets
+
+Place preset files in:
+1. `./presets/` (playbook directory)
+2. `~/.mooncake/presets/` (user directory)
+3. `/usr/share/mooncake/presets/` (system directory)
+
+Example preset (`presets/hello.yml`):
+```yaml
+preset:
+  name: hello
+  description: Print a greeting
+  version: 1.0.0
+
+  parameters:
+    name:
+      type: string
+      required: true
+      description: Name to greet
+
+    excited:
+      type: bool
+      default: false
+      description: Use exclamation mark
+
+  steps:
+    - name: Print greeting
+      shell: echo "Hello, {{ parameters.name }}{% if parameters.excited %}!{% endif %}"
+```
+
+Usage:
+```yaml
+- preset: hello
+  with:
+    name: World
+    excited: true
+```
+
+### Key Features
+
+✅ **Reusability**: Write once, use everywhere
+✅ **Type Safety**: Parameters validated before execution
+✅ **Idempotency**: Presets inherit step idempotency
+✅ **Platform-aware**: Can detect and adapt to OS/package managers
+✅ **Composable**: Use with all standard step features (when, tags, register)
+
+### Limitations
+
+- **No Nesting**: Presets cannot call other presets
+- **Flat Parameters**: No nested parameter structures
+- **Static Steps**: Step list must be defined in preset file
+
+### See Also
+
+- [Presets User Guide](../presets.md) - Using presets
+- [Preset Authoring Guide](../preset-authoring.md) - Creating presets
+- [Ollama Examples](../../examples/ollama/) - Real-world preset usage
+
 ## See Also
 
 - [Control Flow](control-flow.md) - Conditionals, loops, tags

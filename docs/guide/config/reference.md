@@ -20,8 +20,8 @@ Every step in your configuration can use these properties. Properties are groupe
 | `unarchive` | object | Unarchive | Extract archive files |
 | `template` | object | Template | Template rendering |
 | `service` | object | Service | Manage system services (systemd/launchd) |
-| `ollama` | object | Ollama | Manage Ollama installation and models |
 | `assert` | object | Assert | Verify state (command/file/http) |
+| `preset` | string/object | Preset | Invoke parameterized preset |
 | `include` | string | Include | Include steps from another file |
 | `include_vars` | string | Variables | Load variables from file |
 | `vars` | object | Variables | Define inline variables |
@@ -34,7 +34,7 @@ Every step in your configuration can use these properties. Properties are groupe
 | `with_items` | string | All | Iterate over list |
 | `with_filetree` | string | All | Iterate over directory |
 | **Privilege** ||||
-| `become` | boolean | shell, file, template, service, ollama | Execute with sudo |
+| `become` | boolean | shell, file, template, service, preset | Execute with sudo |
 | `become_user` | string | shell, file, template | User for sudo (e.g., 'postgres') |
 | **Shell Execution Control** ||||
 | `env` | object | shell only | Environment variables |
@@ -597,6 +597,87 @@ Verify system state, command results, file properties, or HTTP responses. Assert
 - Provides detailed error messages with expected vs actual values
 
 📖 **See [Actions - Assert](actions.md#assert)** for comprehensive examples and use cases.
+
+---
+
+### preset
+
+**Type:** `string` or `object`
+**Applies to:** Preset action
+**Required:** When using preset action
+
+Invoke a reusable preset with optional parameters.
+
+```yaml
+# Simple string form (no parameters)
+- preset: my-preset
+
+# With parameters
+- preset: ollama
+  with:
+    state: present
+    service: true
+    pull: [llama3.1:8b]
+
+# Full object form
+- preset:
+    name: deploy-webapp
+    with:
+      app_name: myapp
+      version: v1.2.3
+```
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `preset` | string | Preset name (simple form) |
+| `preset.name` | string | Preset name (object form) |
+| `preset.with` | object | Parameters to pass to preset |
+
+**Examples:**
+
+```yaml
+# Install Ollama
+- name: Setup LLM runtime
+  preset: ollama
+  with:
+    state: present
+    service: true
+    pull:
+      - llama3.1:8b
+      - mistral:latest
+  become: true
+  register: ollama_result
+
+# Conditional preset
+- name: Install on production only
+  preset: deploy-webapp
+  with:
+    environment: production
+    replicas: 5
+  when: env == "production"
+
+# With result checking
+- name: Deploy application
+  preset: deploy-webapp
+  with:
+    app_name: myapp
+    version: v1.2.3
+  register: deploy_result
+
+- name: Show result
+  shell: echo "Deployment changed{{ ":" }} {{ deploy_result.changed }}"
+```
+
+**Key Behaviors:**
+- Parameters are validated against preset definition (type, required, enum)
+- Returns `changed: true` if any step in preset changed
+- Supports all standard step features (when, tags, register, become)
+- Fails if required parameters missing or invalid
+- Cannot nest presets (presets cannot call other presets)
+
+📖 **See [Presets Guide](../presets.md)** for complete documentation and **[Preset Authoring](../preset-authoring.md)** for creating custom presets.
 
 ---
 
