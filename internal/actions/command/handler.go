@@ -137,9 +137,9 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 	if len(step.Env) > 0 {
 		envVars := make([]string, 0, len(step.Env))
 		for key, value := range step.Env {
-			rendered, err := ctx.GetTemplate().Render(value, ctx.GetVariables())
-			if err != nil {
-				return nil, fmt.Errorf("failed to render env var %s: %w", key, err)
+			rendered, renderErr := ctx.GetTemplate().Render(value, ctx.GetVariables())
+			if renderErr != nil {
+				return nil, fmt.Errorf("failed to render env var %s: %w", key, renderErr)
 			}
 			envVars = append(envVars, fmt.Sprintf("%s=%s", key, rendered))
 		}
@@ -148,9 +148,9 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 
 	// Set working directory if specified
 	if step.Cwd != "" {
-		rendered, err := ctx.GetTemplate().Render(step.Cwd, ctx.GetVariables())
-		if err != nil {
-			return nil, fmt.Errorf("failed to render cwd: %w", err)
+		rendered, renderErr := ctx.GetTemplate().Render(step.Cwd, ctx.GetVariables())
+		if renderErr != nil {
+			return nil, fmt.Errorf("failed to render cwd: %w", renderErr)
 		}
 		cmd.Dir = rendered
 	}

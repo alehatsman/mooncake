@@ -2378,11 +2378,11 @@ Usage:
 
 ### Key Features
 
-✅ **Reusability**: Write once, use everywhere
-✅ **Type Safety**: Parameters validated before execution
-✅ **Idempotency**: Presets inherit step idempotency
-✅ **Platform-aware**: Can detect and adapt to OS/package managers
-✅ **Composable**: Use with all standard step features (when, tags, register)
+ **Reusability**: Write once, use everywhere
+ **Type Safety**: Parameters validated before execution
+ **Idempotency**: Presets inherit step idempotency
+ **Platform-aware**: Can detect and adapt to OS/package managers
+ **Composable**: Use with all standard step features (when, tags, register)
 
 ### Limitations
 

@@ -1,0 +1,20 @@
+# Modern Unix Tools Installation
+
+- name: Install tools via {{ package_manager }}
+  package:
+    names: "{{ parameters.tools }}"
+    state: "{{ parameters.state }}"
+  become: "{{ package_manager != 'brew' }}"
+
+- name: Print installation complete message
+  print: |
+    Modern Unix tools installed! Try these commands:
+      bat file.txt          # Pretty cat
+      rg pattern           # Fast grep
+      fd pattern           # Fast find
+      exa -la              # Better ls
+      z directory          # Smart cd (after first use)
+      dust                 # Disk usage
+      duf                  # Disk free
+      btm                  # System monitor
+  when: parameters.state == "present"

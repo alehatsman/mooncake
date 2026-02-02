@@ -174,8 +174,8 @@ func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface
 
 // HandleDryRun executes dry-run logging if in dry-run mode.
 // Returns true if in dry-run mode (caller should return early).
-// The logFn is called with a dryRunLogger to perform logging.
-func (ec *ExecutionContext) HandleDryRun(logFn func(*dryRunLogger)) bool {
+// The logFn is called with a DryRunLogger to perform logging.
+func (ec *ExecutionContext) HandleDryRun(logFn func(*DryRunLogger)) bool {
 	if !ec.DryRun {
 		return false
 	}

@@ -776,7 +776,7 @@ mooncake run --config config.yml --sudo-pass <your-password>
 mooncake run --config config.yml --sudo-pass <password> --dry-run
 ```
 
-⚠️ **Warning:** This example contains commands that require root privileges. Review the config before running!
+ **Warning:** This example contains commands that require root privileges. Review the config before running!
 
 #### What It Does
 
@@ -1155,7 +1155,7 @@ cd examples/12-unarchive
 mooncake run --config config.yml
 ```
 
-⚠️ **Note:** This example demonstrates archive extraction patterns. You'll need to provide your own test archives or download sample ones.
+ **Note:** This example demonstrates archive extraction patterns. You'll need to provide your own test archives or download sample ones.
 
 #### What It Does
 

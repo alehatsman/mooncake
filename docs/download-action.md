@@ -4,16 +4,16 @@ The `download` action downloads files from remote URLs with support for checksum
 
 ## Features
 
-- ✅ HTTP/HTTPS downloads
-- ✅ Checksum verification (SHA256 or MD5)
-- ✅ Idempotent (skips download if checksum matches)
-- ✅ Retry logic with configurable attempts
-- ✅ Timeout configuration
-- ✅ Custom HTTP headers (for authentication)
-- ✅ Backup existing files before overwriting
-- ✅ File permissions configuration
-- ✅ Atomic writes (download to temp, then move)
-- ✅ Dry-run support
+-  HTTP/HTTPS downloads
+-  Checksum verification (SHA256 or MD5)
+-  Idempotent (skips download if checksum matches)
+-  Retry logic with configurable attempts
+-  Timeout configuration
+-  Custom HTTP headers (for authentication)
+-  Backup existing files before overwriting
+-  File permissions configuration
+-  Atomic writes (download to temp, then move)
+-  Dry-run support
 
 ## Basic Usage
 

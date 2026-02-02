@@ -21,7 +21,7 @@ mooncake run --config config.yml --sudo-pass <your-password>
 mooncake run --config config.yml --sudo-pass <password> --dry-run
 ```
 
-⚠️ **Warning:** This example contains commands that require root privileges. Review the config before running!
+ **Warning:** This example contains commands that require root privileges. Review the config before running!
 
 ## What It Does
 

@@ -207,7 +207,7 @@ Copy files with checksum verification and backup support.
 
 ---
 
-### ⬇️ Download Files
+### Download Files
 
 Download files from URLs with checksums and retry logic.
 
@@ -246,7 +246,7 @@ Extract tar, tar.gz, and zip archives with security protections.
 
 ---
 
-### 📦 Install Packages
+### Install Packages
 
 Manage system packages with automatic package manager detection.
 
@@ -267,7 +267,7 @@ Manage system packages with automatic package manager detection.
 
 ---
 
-### ⚙️ Manage Services
+### Manage Services
 
 Manage system services (systemd on Linux, launchd on macOS).
 

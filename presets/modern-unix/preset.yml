@@ -1,0 +1,28 @@
+name: modern-unix
+description: Install modern replacements for classic Unix tools
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or remove the tools
+
+  tools:
+    type: array
+    required: false
+    default:
+      - bat        # cat with syntax highlighting
+      - ripgrep    # grep replacement
+      - fd         # find replacement
+      - exa        # ls replacement
+      - zoxide     # cd replacement
+      - dust       # du replacement
+      - duf        # df replacement
+      - bottom     # top/htop replacement
+    description: List of tools to install
+
+steps:
+  - include: tasks/install.yml

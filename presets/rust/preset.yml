@@ -1,0 +1,53 @@
+name: rust
+description: Install Rust via rustup (Rust toolchain installer)
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or remove Rust/rustup
+
+  toolchain:
+    type: string
+    required: false
+    default: stable
+    description: Rust toolchain to install (stable, beta, nightly, or specific version like "1.75.0")
+
+  set_default:
+    type: bool
+    required: false
+    default: true
+    description: Set this toolchain as the default
+
+  profile:
+    type: string
+    required: false
+    default: default
+    enum: [minimal, default, complete]
+    description: |
+      Rustup profile:
+        minimal - Just rustc, rust-std, and cargo
+        default - Adds rust-docs, rustfmt, and clippy
+        complete - All components
+
+  components:
+    type: array
+    required: false
+    default: []
+    description: Additional components to install (rust-src, rust-analyzer, clippy, rustfmt, etc.)
+
+  targets:
+    type: array
+    required: false
+    default: []
+    description: Compilation targets to add (wasm32-unknown-unknown, x86_64-pc-windows-gnu, etc.)
+
+steps:
+  - include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - include: tasks/uninstall.yml
+    when: parameters.state == "absent"

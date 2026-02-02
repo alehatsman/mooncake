@@ -1,0 +1,42 @@
+name: nodejs
+description: Install Node.js via nvm (Node Version Manager)
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or remove Node.js/nvm
+
+  version:
+    type: string
+    required: false
+    default: lts
+    description: Node.js version to install (e.g., "20.10.0", "lts", "latest", "18")
+
+  set_default:
+    type: bool
+    required: false
+    default: true
+    description: Set this version as the default Node.js version
+
+  additional_versions:
+    type: array
+    required: false
+    default: []
+    description: Additional Node.js versions to install
+
+  global_packages:
+    type: array
+    required: false
+    default: []
+    description: npm packages to install globally (e.g., ["typescript", "eslint"])
+
+steps:
+  - include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - include: tasks/uninstall.yml
+    when: parameters.state == "absent"

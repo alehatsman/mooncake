@@ -1,0 +1,94 @@
+# Rust/rustup Installation
+
+# Check if rustup is already installed
+- name: Check if rustup is installed
+  shell: command -v rustup
+  register: rustup_check
+  changed_when: false
+  failed_when: false
+
+# Install rustup on Linux/macOS
+- name: Install rustup (Linux/macOS)
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --profile {{ parameters.profile }} --default-toolchain {{ parameters.toolchain }}
+  when: os in ["linux", "darwin"] and rustup_check.rc != 0
+
+# Source cargo env for current execution
+- name: Install Rust toolchain {{ parameters.toolchain }}
+  shell: |
+    source "$HOME/.cargo/env"
+    rustup toolchain install {{ parameters.toolchain }}
+  creates: "{{ home }}/.cargo/bin/rustc"
+
+# Set default toolchain
+- name: Set {{ parameters.toolchain }} as default toolchain
+  shell: |
+    source "$HOME/.cargo/env"
+    rustup default {{ parameters.toolchain }}
+  when: parameters.set_default
+
+# Install additional components
+- name: Install Rust component {{ item }}
+  shell: |
+    source "$HOME/.cargo/env"
+    rustup component add {{ item }}
+  with_items: "{{ parameters.components }}"
+  when: parameters.components | length > 0
+
+# Install compilation targets
+- name: Install Rust target {{ item }}
+  shell: |
+    source "$HOME/.cargo/env"
+    rustup target add {{ item }}
+  with_items: "{{ parameters.targets }}"
+  when: parameters.targets | length > 0
+
+# Verify installation
+- name: Verify Rust installation
+  shell: |
+    source "$HOME/.cargo/env"
+    rustc --version
+  register: rustc_version
+
+- name: Verify Cargo installation
+  shell: |
+    source "$HOME/.cargo/env"
+    cargo --version
+  register: cargo_version
+
+- name: List installed toolchains
+  shell: |
+    source "$HOME/.cargo/env"
+    rustup toolchain list
+  register: toolchains
+
+- name: List installed components
+  shell: |
+    source "$HOME/.cargo/env"
+    rustup component list --installed
+  register: components_installed
+
+- name: Print installation summary
+  print: |
+    Rust installed successfully!
+
+    Rust compiler: {{ rustc_version.stdout }}
+    Cargo: {{ cargo_version.stdout }}
+
+    Installed toolchains:
+    {{ toolchains.stdout }}
+
+    Installed components:
+    {{ components_installed.stdout }}
+
+    To use Rust in new shells, restart your terminal or run:
+      source ~/.cargo/env
+
+    Available commands:
+      rustc             # Rust compiler
+      cargo             # Package manager and build tool
+      rustup            # Toolchain manager
+      cargo new myapp   # Create new project
+      cargo build       # Build project
+      cargo run         # Run project

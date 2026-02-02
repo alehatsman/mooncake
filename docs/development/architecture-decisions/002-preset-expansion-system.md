@@ -76,7 +76,7 @@ preset:
 - Easier to debug and trace
 
 ```yaml
-# ❌ NOT ALLOWED
+#  NOT ALLOWED
 preset:
   steps:
     - preset: base-setup  # Would fail validation
@@ -88,8 +88,8 @@ preset:
 - Prevents naming collisions
 
 ```yaml
-- shell: echo "{{ parameters.state }}"  # ✅ Explicit namespace
-- shell: echo "{{ state }}"              # ❌ Would look in variables
+- shell: echo "{{ parameters.state }}"  #  Explicit namespace
+- shell: echo "{{ state }}"              #  Would look in variables
 ```
 
 #### Register at Preset Level

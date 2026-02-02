@@ -328,8 +328,8 @@ func (h *Handler) executeAndCaptureOutput(command *exec.Cmd, ctx actions.Context
 		return "", "", fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
-	if err := command.Start(); err != nil {
-		return "", "", fmt.Errorf("failed to start command: %w", err)
+	if startErr := command.Start(); startErr != nil {
+		return "", "", fmt.Errorf("failed to start command: %w", startErr)
 	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer

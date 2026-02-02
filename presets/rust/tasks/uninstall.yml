@@ -1,0 +1,30 @@
+# Rust/rustup Uninstallation
+
+- name: Run rustup self uninstall
+  shell: rustup self uninstall -y
+  failed_when: false
+
+- name: Remove cargo directory
+  file:
+    path: "{{ home }}/.cargo"
+    state: absent
+
+- name: Remove rustup directory
+  file:
+    path: "{{ home }}/.rustup"
+    state: absent
+
+- name: Remove cargo env from shell profiles
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ]; then
+        sed -i.bak '/\.cargo\/env/d' "$profile" 2>/dev/null || \
+        sed -i '' '/\.cargo\/env/d' "$profile" 2>/dev/null || true
+      fi
+    done
+
+- name: Print uninstallation complete
+  print: |
+    Rust and rustup have been uninstalled.
+
+    Restart your terminal for changes to take effect.

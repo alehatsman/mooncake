@@ -10,7 +10,7 @@ This page provides specifications for AI agents to generate, validate, and execu
 
 Mooncake is a **safe, validated execution layer** for system configuration. When generating Mooncake configurations:
 
-✅ **DO:**
+ **DO:**
 - Always use dry-run mode first (`--dry-run`)
 - Validate configurations before execution
 - Use idempotent actions (file, template, service)
@@ -19,7 +19,7 @@ Mooncake is a **safe, validated execution layer** for system configuration. When
 - Use `when` conditions for platform-specific logic
 - Register results for conditional workflows
 
-❌ **DON'T:**
+ **DON'T:**
 - Execute arbitrary shell commands without validation
 - Assume file paths exist without checking
 - Ignore error handling (use `failed_when`, `changed_when`)
@@ -65,18 +65,18 @@ Mooncake is a **safe, validated execution layer** for system configuration. When
 
 | Action | Purpose | Safety | Idempotent |
 |--------|---------|--------|------------|
-| **shell** | Execute shell commands | ⚠️ High risk | ⚠️ Manual |
-| **command** | Execute binary directly | ⚠️ High risk | ⚠️ Manual |
-| **file** | Manage files/directories | ✅ Safe | ✅ Yes |
-| **template** | Render Jinja2 templates | ✅ Safe | ✅ Yes |
-| **copy** | Copy with checksums | ✅ Safe | ✅ Yes |
-| **download** | Fetch from URLs | ⚠️ Medium | ✅ Yes |
-| **unarchive** | Extract archives | ⚠️ Medium | ✅ Yes |
-| **service** | Manage systemd/launchd | ⚠️ Medium | ✅ Yes |
-| **assert** | Verify system state | ✅ Safe | ✅ Yes |
+| **shell** | Execute shell commands |  High risk |  Manual |
+| **command** | Execute binary directly |  High risk |  Manual |
+| **file** | Manage files/directories |  Safe |  Yes |
+| **template** | Render Jinja2 templates |  Safe |  Yes |
+| **copy** | Copy with checksums |  Safe |  Yes |
+| **download** | Fetch from URLs |  Medium |  Yes |
+| **unarchive** | Extract archives |  Medium |  Yes |
+| **service** | Manage systemd/launchd |  Medium |  Yes |
+| **assert** | Verify system state |  Safe |  Yes |
 | **preset** | Reusable workflows | Varies | Varies |
-| **vars** | Define variables | ✅ Safe | ✅ Yes |
-| **include_vars** | Load from YAML | ✅ Safe | ✅ Yes |
+| **vars** | Define variables |  Safe |  Yes |
+| **include_vars** | Load from YAML |  Safe |  Yes |
 
 ---
 
@@ -126,11 +126,11 @@ Auto-detected variables available in templates:
 ### Pattern 1: Safe Shell Execution
 
 ```yaml
-# ❌ Unsafe
+#  Unsafe
 - name: Install package
   shell: sudo apt-get install -y nginx
 
-# ✅ Safe
+#  Safe
 - name: Check if nginx installed
   shell: which nginx
   register: nginx_check
@@ -159,7 +159,7 @@ Auto-detected variables available in templates:
 ### Pattern 3: Idempotent File Management
 
 ```yaml
-# ✅ Idempotent
+#  Idempotent
 - name: Create config directory
   file:
     path: "{{home}}/.config/myapp"

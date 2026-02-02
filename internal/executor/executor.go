@@ -127,13 +127,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/utils"
 )
 
-const (
-	actionTypeFile        = "file"
-	actionTypeTemplate    = "template"
-	actionTypeVars        = "vars"
-	actionTypeIncludeVars = "include_vars"
-)
-
 // generateStepID creates a unique identifier for a step
 func generateStepID(step config.Step, ec *ExecutionContext) string {
 	if step.ID != "" {
@@ -180,7 +173,7 @@ func HandleVars(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Debugf("  %v: %v", k, v)
 	}
 
-	ec.HandleDryRun(func(dryRun *dryRunLogger) {
+	ec.HandleDryRun(func(dryRun *DryRunLogger) {
 		dryRun.LogVariableSet(len(*vars))
 		// Still set variables in dry-run mode so subsequent steps can use them
 	})
@@ -691,19 +684,19 @@ type StartConfig struct {
 // Start begins execution of a mooncake configuration with the given settings.
 // Always goes through the planner to expand loops, includes, and variables.
 // Emits events through the provided publisher for all execution progress.
-func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
-	log.Debugf("config: %v", StartConfig)
+func Start(startConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
+	log.Debugf("config: %v", startConfig)
 
-	if StartConfig.ConfigFilePath == "" {
+	if startConfig.ConfigFilePath == "" {
 		return &SetupError{Component: "config", Issue: "config file path is empty"}
 	}
 
 	// Resolve sudo password early (before plan building)
 	passwordCfg := security.PasswordConfig{
-		CLIPassword:    StartConfig.SudoPass,
-		AskInteractive: StartConfig.AskBecomePass,
-		PasswordFile:   StartConfig.SudoPassFile,
-		InsecureCLI:    StartConfig.InsecureSudoPass,
+		CLIPassword:    startConfig.SudoPass,
+		AskInteractive: startConfig.AskBecomePass,
+		PasswordFile:   startConfig.SudoPassFile,
+		InsecureCLI:    startConfig.InsecureSudoPass,
 	}
 
 	sudoPassword, err := security.ResolvePassword(passwordCfg)
@@ -722,8 +715,8 @@ func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publishe
 
 	// Load variables if specified
 	var variables map[string]interface{}
-	if StartConfig.VarsFilePath != "" {
-		expandedPath, expandErr := pathExpander.ExpandPath(StartConfig.VarsFilePath, currentDir, nil)
+	if startConfig.VarsFilePath != "" {
+		expandedPath, expandErr := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
 		if expandErr != nil {
 			return &RenderError{Field: "vars file path", Cause: expandErr}
 		}
@@ -740,7 +733,7 @@ func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publishe
 	}
 
 	// Expand config file path
-	configFilePath, err := pathExpander.ExpandPath(StartConfig.ConfigFilePath, currentDir, nil)
+	configFilePath, err := pathExpander.ExpandPath(startConfig.ConfigFilePath, currentDir, nil)
 	if err != nil {
 		return err
 	}
@@ -752,7 +745,7 @@ func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publishe
 	planData, err := planner.BuildPlan(plan.PlannerConfig{
 		ConfigPath: configFilePath,
 		Variables:  variables,
-		Tags:       StartConfig.Tags,
+		Tags:       startConfig.Tags,
 	})
 	if err != nil {
 		return &SetupError{Component: "planner", Issue: "failed to build plan", Cause: err}
@@ -761,18 +754,18 @@ func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publishe
 	log.Debugf("Plan built with %d steps", len(planData.Steps))
 
 	// Setup artifact writer if artifacts-dir is specified
-	if StartConfig.ArtifactsDir != "" {
+	if startConfig.ArtifactsDir != "" {
 		// Gather system facts for artifact generation
 		systemFacts := facts.Collect()
 
 		// Create artifact writer
 		artifactWriter, err := artifacts.NewWriter(
 			artifacts.Config{
-				BaseDir:        StartConfig.ArtifactsDir,
-				CaptureStdout:  StartConfig.CaptureFullOutput,
-				CaptureStderr:  StartConfig.CaptureFullOutput,
-				MaxOutputBytes: StartConfig.MaxOutputBytes,
-				MaxOutputLines: StartConfig.MaxOutputLines,
+				BaseDir:        startConfig.ArtifactsDir,
+				CaptureStdout:  startConfig.CaptureFullOutput,
+				CaptureStderr:  startConfig.CaptureFullOutput,
+				MaxOutputBytes: startConfig.MaxOutputBytes,
+				MaxOutputLines: startConfig.MaxOutputLines,
 			},
 			planData,
 			systemFacts,
@@ -785,11 +778,11 @@ func Start(StartConfig StartConfig, log logger.Logger, publisher events.Publishe
 		// Subscribe artifact writer to events
 		publisher.Subscribe(artifactWriter)
 
-		log.Debugf("Artifacts will be written to: %s/runs/%s", StartConfig.ArtifactsDir, "...")
+		log.Debugf("Artifacts will be written to: %s/runs/%s", startConfig.ArtifactsDir, "...")
 	}
 
 	// Execute the plan with event publisher
-	return ExecutePlan(planData, sudoPassword, StartConfig.DryRun, log, publisher)
+	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, log, publisher)
 }
 
 // ExecutePlan executes a pre-compiled plan.

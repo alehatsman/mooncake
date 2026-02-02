@@ -1,10 +1,12 @@
-// Package package implements the package action handler.
+// Package package_handler implements the package action handler.
 //
 // The package action manages system packages with support for:
 // - Auto-detection of package manager (apt, dnf, yum, pacman, zypper, apk, brew, port, choco, scoop)
 // - Manual package manager selection
 // - Install, remove, and update operations
 // - Cache management and system upgrades
+//
+//nolint:revive,staticcheck // package_handler name required to avoid conflict with Go keyword
 package package_handler
 
 import (
@@ -17,6 +19,27 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+)
+
+// Package manager constants
+const (
+	pmApt    = "apt"
+	pmDnf    = "dnf"
+	pmYum    = "yum"
+	pmPacman = "pacman"
+	pmZypper = "zypper"
+	pmApk    = "apk"
+	pmBrew   = "brew"
+	pmPort   = "port"
+	pmChoco  = "choco"
+	pmScoop  = "scoop"
+)
+
+// State constants
+const (
+	statePresent = "present"
+	stateAbsent  = "absent"
+	stateLatest  = "latest"
 )
 
 // Handler implements the Handler interface for package actions.
@@ -54,7 +77,7 @@ func (h *Handler) Validate(step *config.Step) error {
 	}
 
 	// Validate state
-	if pkg.State != "" && pkg.State != "present" && pkg.State != "absent" && pkg.State != "latest" {
+	if pkg.State != "" && pkg.State != statePresent && pkg.State != stateAbsent && pkg.State != stateLatest {
 		return fmt.Errorf("state must be one of: present, absent, latest (got %q)", pkg.State)
 	}
 
@@ -106,9 +129,9 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Execute based on state
 	switch state {
-	case "present", "latest":
+	case statePresent, "latest":
 		return h.installPackages(ec, manager, packages, state == "latest", pkg.Extra)
-	case "absent":
+	case stateAbsent:
 		return h.removePackages(ec, manager, packages, pkg.Extra)
 	default:
 		return nil, fmt.Errorf("unsupported state: %s", state)
@@ -143,11 +166,14 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		ctx.GetLogger().Infof("  Would update package cache using %s", manager)
 	}
 
-	operation := "install"
-	if state == "absent" {
+	var operation string
+	switch state {
+	case stateAbsent:
 		operation = "remove"
-	} else if state == "latest" {
+	case stateLatest:
 		operation = "install/upgrade"
+	default:
+		operation = "install"
 	}
 
 	for _, pkgName := range packages {
@@ -184,7 +210,7 @@ func (h *Handler) determinePackageManager(specified string, variables map[string
 
 // detectLinuxPackageManager detects the package manager on Linux.
 func (h *Handler) detectLinuxPackageManager() (string, error) {
-	managers := []string{"apt", "dnf", "yum", "pacman", "zypper", "apk"}
+	managers := []string{pmApt, pmDnf, pmYum, pmPacman, pmZypper, pmApk}
 	for _, mgr := range managers {
 		if _, err := exec.LookPath(mgr); err == nil {
 			return mgr, nil
@@ -196,12 +222,12 @@ func (h *Handler) detectLinuxPackageManager() (string, error) {
 // detectMacOSPackageManager detects the package manager on macOS.
 func (h *Handler) detectMacOSPackageManager() (string, error) {
 	// Check for brew first (most common)
-	if _, err := exec.LookPath("brew"); err == nil {
-		return "brew", nil
+	if _, err := exec.LookPath(pmBrew); err == nil {
+		return pmBrew, nil
 	}
 	// Check for MacPorts
-	if _, err := exec.LookPath("port"); err == nil {
-		return "port", nil
+	if _, err := exec.LookPath(pmPort); err == nil {
+		return pmPort, nil
 	}
 	return "", fmt.Errorf("no supported package manager found (install Homebrew or MacPorts)")
 }
@@ -209,12 +235,12 @@ func (h *Handler) detectMacOSPackageManager() (string, error) {
 // detectWindowsPackageManager detects the package manager on Windows.
 func (h *Handler) detectWindowsPackageManager() (string, error) {
 	// Check for choco
-	if _, err := exec.LookPath("choco"); err == nil {
-		return "choco", nil
+	if _, err := exec.LookPath(pmChoco); err == nil {
+		return pmChoco, nil
 	}
 	// Check for scoop
-	if _, err := exec.LookPath("scoop"); err == nil {
-		return "scoop", nil
+	if _, err := exec.LookPath(pmScoop); err == nil {
+		return pmScoop, nil
 	}
 	return "", fmt.Errorf("no supported package manager found (install Chocolatey or Scoop)")
 }
@@ -232,19 +258,20 @@ func (h *Handler) buildPackageList(pkg *config.Package) []string {
 }
 
 // updateCache updates the package manager cache.
+//nolint:unparam // Returns error for future implementation
 func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string) error {
 	var cmd []string
 	switch manager {
-	case "apt":
+	case pmApt:
 		cmd = []string{"apt-get", "update"}
-	case "dnf", "yum":
+	case pmDnf, pmYum:
 		cmd = []string{manager, "makecache"}
-	case "pacman":
-		cmd = []string{"pacman", "-Sy"}
-	case "apk":
-		cmd = []string{"apk", "update"}
-	case "brew":
-		cmd = []string{"brew", "update"}
+	case pmPacman:
+		cmd = []string{pmPacman, "-Sy"}
+	case pmApk:
+		cmd = []string{pmApk, "update"}
+	case pmBrew:
+		cmd = []string{pmBrew, "update"}
 	default:
 		// Other package managers don't need cache updates or do it automatically
 		return nil
@@ -330,29 +357,30 @@ func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, 
 }
 
 // isPackageInstalled checks if a package is installed.
+//nolint:unparam // Returns bool for future implementation
 func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg string) (bool, error) {
 	// Build check command based on package manager
 	var checkCmd []string
 
 	switch manager {
-	case "apt":
+	case pmApt:
 		checkCmd = []string{"dpkg", "-s", pkg}
-	case "dnf", "yum":
+	case pmDnf, pmYum:
 		checkCmd = []string{"rpm", "-q", pkg}
-	case "pacman":
-		checkCmd = []string{"pacman", "-Q", pkg}
-	case "zypper":
+	case pmPacman:
+		checkCmd = []string{pmPacman, "-Q", pkg}
+	case pmZypper:
 		checkCmd = []string{"rpm", "-q", pkg}
-	case "apk":
-		checkCmd = []string{"apk", "info", "-e", pkg}
-	case "brew":
-		checkCmd = []string{"brew", "list", pkg}
-	case "port":
-		checkCmd = []string{"port", "installed", pkg}
-	case "choco":
-		checkCmd = []string{"choco", "list", "--local-only", pkg}
-	case "scoop":
-		checkCmd = []string{"scoop", "list", pkg}
+	case pmApk:
+		checkCmd = []string{pmApk, "info", "-e", pkg}
+	case pmBrew:
+		checkCmd = []string{pmBrew, "list", pkg}
+	case pmPort:
+		checkCmd = []string{pmPort, "installed", pkg}
+	case pmChoco:
+		checkCmd = []string{pmChoco, "list", "--local-only", pkg}
+	case pmScoop:
+		checkCmd = []string{pmScoop, "list", pkg}
 	default:
 		return false, fmt.Errorf("unsupported package manager: %s", manager)
 	}
@@ -365,30 +393,32 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 }
 
 // buildInstallCommand builds the install command for a package manager.
+//nolint:dupl,unparam // Similar structure to buildRemoveCommand; upgrade parameter for future use
 func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, extra []string) []string {
-	var cmd []string
+	// Preallocate: base command (3) + extra + package name (1)
+	cmd := make([]string, 0, 3+len(extra)+1)
 
 	switch manager {
-	case "apt":
+	case pmApt:
 		cmd = []string{"apt-get", "install", "-y"}
-	case "dnf":
-		cmd = []string{"dnf", "install", "-y"}
-	case "yum":
-		cmd = []string{"yum", "install", "-y"}
-	case "pacman":
-		cmd = []string{"pacman", "-S", "--noconfirm"}
-	case "zypper":
-		cmd = []string{"zypper", "install", "-y"}
-	case "apk":
-		cmd = []string{"apk", "add"}
-	case "brew":
-		cmd = []string{"brew", "install"}
-	case "port":
-		cmd = []string{"port", "install"}
-	case "choco":
-		cmd = []string{"choco", "install", "-y"}
-	case "scoop":
-		cmd = []string{"scoop", "install"}
+	case pmDnf:
+		cmd = []string{pmDnf, "install", "-y"}
+	case pmYum:
+		cmd = []string{pmYum, "install", "-y"}
+	case pmPacman:
+		cmd = []string{pmPacman, "-S", "--noconfirm"}
+	case pmZypper:
+		cmd = []string{pmZypper, "install", "-y"}
+	case pmApk:
+		cmd = []string{pmApk, "add"}
+	case pmBrew:
+		cmd = []string{pmBrew, "install"}
+	case pmPort:
+		cmd = []string{pmPort, "install"}
+	case pmChoco:
+		cmd = []string{pmChoco, "install", "-y"}
+	case pmScoop:
+		cmd = []string{pmScoop, "install"}
 	}
 
 	// Add extra arguments
@@ -401,30 +431,32 @@ func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, extra [
 }
 
 // buildRemoveCommand builds the remove command for a package manager.
+//nolint:dupl // Similar structure to buildInstallCommand but different semantics
 func (h *Handler) buildRemoveCommand(manager, pkg string, extra []string) []string {
-	var cmd []string
+	// Preallocate: base command (3) + extra + package name (1)
+	cmd := make([]string, 0, 3+len(extra)+1)
 
 	switch manager {
-	case "apt":
+	case pmApt:
 		cmd = []string{"apt-get", "remove", "-y"}
-	case "dnf":
-		cmd = []string{"dnf", "remove", "-y"}
-	case "yum":
-		cmd = []string{"yum", "remove", "-y"}
-	case "pacman":
-		cmd = []string{"pacman", "-R", "--noconfirm"}
-	case "zypper":
-		cmd = []string{"zypper", "remove", "-y"}
-	case "apk":
-		cmd = []string{"apk", "del"}
-	case "brew":
-		cmd = []string{"brew", "uninstall"}
-	case "port":
-		cmd = []string{"port", "uninstall"}
-	case "choco":
-		cmd = []string{"choco", "uninstall", "-y"}
-	case "scoop":
-		cmd = []string{"scoop", "uninstall"}
+	case pmDnf:
+		cmd = []string{pmDnf, "remove", "-y"}
+	case pmYum:
+		cmd = []string{pmYum, "remove", "-y"}
+	case pmPacman:
+		cmd = []string{pmPacman, "-R", "--noconfirm"}
+	case pmZypper:
+		cmd = []string{pmZypper, "remove", "-y"}
+	case pmApk:
+		cmd = []string{pmApk, "del"}
+	case pmBrew:
+		cmd = []string{pmBrew, "uninstall"}
+	case pmPort:
+		cmd = []string{pmPort, "uninstall"}
+	case pmChoco:
+		cmd = []string{pmChoco, "uninstall", "-y"}
+	case pmScoop:
+		cmd = []string{pmScoop, "uninstall"}
 	}
 
 	// Add extra arguments
@@ -438,29 +470,30 @@ func (h *Handler) buildRemoveCommand(manager, pkg string, extra []string) []stri
 
 // buildUpgradeCommand builds the upgrade all command for a package manager.
 func (h *Handler) buildUpgradeCommand(manager string, extra []string) []string {
-	var cmd []string
+	// Preallocate: base command (3) + extra
+	cmd := make([]string, 0, 3+len(extra))
 
 	switch manager {
-	case "apt":
+	case pmApt:
 		cmd = []string{"apt-get", "upgrade", "-y"}
-	case "dnf":
-		cmd = []string{"dnf", "upgrade", "-y"}
-	case "yum":
-		cmd = []string{"yum", "upgrade", "-y"}
-	case "pacman":
-		cmd = []string{"pacman", "-Syu", "--noconfirm"}
-	case "zypper":
-		cmd = []string{"zypper", "update", "-y"}
-	case "apk":
-		cmd = []string{"apk", "upgrade"}
-	case "brew":
-		cmd = []string{"brew", "upgrade"}
-	case "port":
-		cmd = []string{"port", "upgrade", "outdated"}
-	case "choco":
-		cmd = []string{"choco", "upgrade", "all", "-y"}
-	case "scoop":
-		cmd = []string{"scoop", "update", "*"}
+	case pmDnf:
+		cmd = []string{pmDnf, "upgrade", "-y"}
+	case pmYum:
+		cmd = []string{pmYum, "upgrade", "-y"}
+	case pmPacman:
+		cmd = []string{pmPacman, "-Syu", "--noconfirm"}
+	case pmZypper:
+		cmd = []string{pmZypper, "update", "-y"}
+	case pmApk:
+		cmd = []string{pmApk, "upgrade"}
+	case pmBrew:
+		cmd = []string{pmBrew, "upgrade"}
+	case pmPort:
+		cmd = []string{pmPort, "upgrade", "outdated"}
+	case pmChoco:
+		cmd = []string{pmChoco, "upgrade", "all", "-y"}
+	case pmScoop:
+		cmd = []string{pmScoop, "update", "*"}
 	}
 
 	// Add extra arguments

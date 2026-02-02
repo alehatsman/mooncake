@@ -1,0 +1,167 @@
+# Python/pyenv Installation
+
+# Install build dependencies for Python compilation
+- name: Install Python build dependencies via {{ package_manager }}
+  package:
+    names:
+      - make
+      - build-essential
+      - libssl-dev
+      - zlib1g-dev
+      - libbz2-dev
+      - libreadline-dev
+      - libsqlite3-dev
+      - wget
+      - curl
+      - llvm
+      - libncursesw5-dev
+      - xz-utils
+      - tk-dev
+      - libxml2-dev
+      - libxmlsec1-dev
+      - libffi-dev
+      - liblzma-dev
+    state: present
+  become: "{{ package_manager != 'brew' }}"
+  when: os == "linux" and package_manager == "apt"
+
+- name: Install Python build dependencies via {{ package_manager }}
+  package:
+    names:
+      - make
+      - gcc
+      - zlib-devel
+      - bzip2
+      - bzip2-devel
+      - readline-devel
+      - sqlite
+      - sqlite-devel
+      - openssl-devel
+      - tk-devel
+      - libffi-devel
+      - xz-devel
+    state: present
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+- name: Install Python build dependencies via {{ package_manager }}
+  package:
+    names:
+      - openssl
+      - readline
+      - sqlite3
+      - xz
+      - zlib
+      - tcl-tk
+    state: present
+  when: package_manager == "brew"
+
+# Check if pyenv is installed
+- name: Check if pyenv is installed
+  shell: command -v pyenv
+  register: pyenv_check
+  changed_when: false
+  failed_when: false
+
+# Install pyenv
+- name: Install pyenv
+  shell: curl https://pyenv.run | bash
+  when: pyenv_check.rc != 0
+
+# Configure shell profiles
+- name: Add pyenv to shell profile
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ] && ! grep -q 'PYENV_ROOT' "$profile"; then
+        echo '' >> "$profile"
+        echo '# pyenv configuration' >> "$profile"
+        echo 'export PYENV_ROOT="$HOME/.pyenv"' >> "$profile"
+        echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> "$profile"
+        echo 'eval "$(pyenv init -)"' >> "$profile"
+      fi
+    done
+  when: pyenv_check.rc != 0
+
+# Install Python version
+- name: Install Python {{ parameters.version }}
+  shell: |
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv install -s {{ parameters.version }}
+  creates: "{{ home }}/.pyenv/versions/{{ parameters.version }}"
+
+# Set global version
+- name: Set Python {{ parameters.version }} as global version
+  shell: |
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv global {{ parameters.version }}
+  when: parameters.set_global
+
+# Install additional versions
+- name: Install additional Python version {{ item }}
+  shell: |
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv install -s {{ item }}
+  with_items: "{{ parameters.additional_versions }}"
+  when: parameters.additional_versions | length > 0
+
+# Install pyenv-virtualenv plugin
+- name: Install pyenv-virtualenv plugin
+  shell: |
+    if [ ! -d "$HOME/.pyenv/plugins/pyenv-virtualenv" ]; then
+      git clone https://github.com/pyenv/pyenv-virtualenv.git \
+        "$HOME/.pyenv/plugins/pyenv-virtualenv"
+    fi
+  when: parameters.install_virtualenv
+
+- name: Add pyenv-virtualenv to shell profile
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc"; do
+      if [ -f "$profile" ] && ! grep -q 'pyenv-virtualenv' "$profile"; then
+        echo 'eval "$(pyenv virtualenv-init -)"' >> "$profile"
+      fi
+    done
+  when: parameters.install_virtualenv and pyenv_check.rc != 0
+
+# Verify installation
+- name: Verify Python installation
+  shell: |
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    python --version
+  register: python_version
+
+- name: List installed Python versions
+  shell: |
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv versions
+  register: pyenv_versions
+
+- name: Print installation summary
+  print: |
+    Python installed successfully via pyenv!
+
+    Current Python: {{ python_version.stdout }}
+
+    Installed versions:
+    {{ pyenv_versions.stdout }}
+
+    To use Python in new shells, restart your terminal or run:
+      source ~/.bashrc  # or ~/.zshrc
+
+    Available commands:
+      python            # Python interpreter
+      pip               # Package installer
+      pyenv versions    # List installed versions
+      pyenv install X   # Install Python version X
+      pyenv global X    # Set global version
+      pyenv local X     # Set version for current directory
+      pyenv virtualenv X myenv  # Create virtual environment

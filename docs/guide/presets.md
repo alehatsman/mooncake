@@ -388,6 +388,174 @@ Use `when` conditions in preset steps:
   when: brew_available and os == "darwin"
 ```
 
+## Available Presets
+
+Mooncake includes several built-in presets for common development tools and workflows.
+
+### Development Tools
+
+#### modern-unix - Modern CLI Tools
+
+Install modern replacements for classic Unix commands.
+
+```yaml
+- name: Install modern Unix tools
+  preset: modern-unix
+```
+
+**What's included**: bat (cat), ripgrep (grep), fd (find), exa (ls), zoxide (cd), dust (du), duf (df), bottom (top)
+
+**Parameters**:
+- `tools` (array): List of tools to install (default: all)
+- `state` (string): "present" or "absent"
+
+**Platform support**: Linux (apt, dnf, yum, pacman, zypper), macOS (brew)
+
+[Full documentation →](../../presets/modern-unix/)
+
+---
+
+#### nodejs - Node.js via nvm
+
+Install Node.js using nvm (Node Version Manager) for easy version management.
+
+```yaml
+- name: Install Node.js LTS with tools
+  preset: nodejs
+  with:
+    version: lts
+    global_packages:
+      - typescript
+      - eslint
+      - prettier
+```
+
+**Parameters**:
+- `version` (string): Node version ("lts", "latest", "20.10.0")
+- `set_default` (bool): Set as default version (default: true)
+- `additional_versions` (array): Other versions to install
+- `global_packages` (array): npm packages to install globally
+
+**Platform support**: Linux, macOS
+
+[Full documentation →](../../presets/nodejs/)
+
+---
+
+#### rust - Rust via rustup
+
+Install Rust programming language using rustup.
+
+```yaml
+- name: Install Rust with dev tools
+  preset: rust
+  with:
+    toolchain: stable
+    components:
+      - clippy
+      - rustfmt
+      - rust-analyzer
+    targets:
+      - wasm32-unknown-unknown
+```
+
+**Parameters**:
+- `toolchain` (string): "stable", "beta", "nightly", or version (default: stable)
+- `profile` (string): "minimal", "default", "complete" (default: default)
+- `components` (array): Additional components (clippy, rustfmt, rust-analyzer, rust-src)
+- `targets` (array): Compilation targets (wasm32, cross-compile)
+
+**Platform support**: Linux, macOS, Windows
+
+[Full documentation →](../../presets/rust/)
+
+---
+
+#### python - Python via pyenv
+
+Install Python using pyenv for version management.
+
+```yaml
+- name: Install Python 3.12
+  preset: python
+  with:
+    version: "3.12.1"
+    install_virtualenv: true
+```
+
+**Parameters**:
+- `version` (string): Python version to install (default: "3.12.1")
+- `set_global` (bool): Set as global Python version (default: true)
+- `additional_versions` (array): Other versions to install
+- `install_virtualenv` (bool): Install pyenv-virtualenv plugin (default: true)
+
+**Platform support**: Linux (with build dependencies), macOS
+
+[Full documentation →](../../presets/python/)
+
+---
+
+### Productivity Tools
+
+#### tmux - Terminal Multiplexer
+
+Install and configure tmux with sensible defaults.
+
+```yaml
+- name: Install tmux with custom config
+  preset: tmux
+  with:
+    prefix_key: "C-a"
+    mouse_mode: true
+    vi_mode: true
+```
+
+**Parameters**:
+- `configure` (bool): Install configuration file (default: true)
+- `prefix_key` (string): Tmux prefix key (default: "C-a")
+- `mouse_mode` (bool): Enable mouse support (default: true)
+- `vi_mode` (bool): Use vi key bindings (default: true)
+- `config_path` (string): Path to config file (default: "~/.tmux.conf")
+
+**Platform support**: Linux, macOS
+
+[Full documentation →](../../presets/tmux/)
+
+---
+
+### AI/ML Tools
+
+#### ollama - Ollama LLM Runtime
+
+Install and configure Ollama for running large language models locally.
+
+```yaml
+- name: Install Ollama with models
+  preset: ollama
+  with:
+    state: present
+    service: true
+    pull:
+      - llama3.1:8b
+      - mistral:latest
+  become: true
+```
+
+**Parameters**:
+- `state` (string): "present" or "absent" (default: present)
+- `service` (bool): Configure as system service (default: false)
+- `method` (string): Installation method - "auto", "package", "script" (default: auto)
+- `pull` (array): Models to download
+- `force` (bool): Force model re-download (default: false)
+- `host` (string): Ollama server host (default: "localhost:11434")
+- `models_dir` (string): Models storage directory
+
+**Platform support**: Linux (systemd), macOS (launchd)
+
+[Full documentation →](../../presets/ollama/)
+
+---
+
 ## Common Patterns
 
 ### Configuration Template
@@ -477,5 +645,5 @@ Error: unknown parameter 'services' (preset 'ollama' does not define this parame
 ## Next Steps
 
 - [Create your own presets](preset-authoring.md)
-- [View available presets](#) <!-- TODO: Add preset catalog -->
+- [View available presets](#available-presets)
 - [Examples directory](../../examples/)

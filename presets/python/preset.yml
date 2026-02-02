@@ -1,0 +1,42 @@
+name: python
+description: Install Python via pyenv (Python version manager)
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or remove Python/pyenv
+
+  version:
+    type: string
+    required: false
+    default: "3.12.1"
+    description: Python version to install (e.g., "3.11.7", "3.12.1")
+
+  set_global:
+    type: bool
+    required: false
+    default: true
+    description: Set this version as the global Python version
+
+  additional_versions:
+    type: array
+    required: false
+    default: []
+    description: Additional Python versions to install
+
+  install_virtualenv:
+    type: bool
+    required: false
+    default: true
+    description: Install pyenv-virtualenv plugin for virtual environment support
+
+steps:
+  - include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - include: tasks/uninstall.yml
+    when: parameters.state == "absent"

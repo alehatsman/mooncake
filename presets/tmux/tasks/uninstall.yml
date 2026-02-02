@@ -1,0 +1,18 @@
+# Tmux Uninstallation
+
+- name: Remove tmux via {{ package_manager }}
+  package:
+    name: tmux
+    state: absent
+  become: "{{ package_manager != 'brew' }}"
+
+- name: Remove tmux configuration
+  file:
+    path: "{{ parameters.config_path }}"
+    state: absent
+
+- name: Print uninstallation complete
+  print: |
+    Tmux has been uninstalled.
+
+    Note: Any running tmux sessions were terminated.

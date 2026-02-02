@@ -139,7 +139,7 @@ func (r *Result) SetFailed(failed bool) {
 
 // SetData sets custom result data.
 // This merges the provided data into the result's ToMap output.
-func (r *Result) SetData(data map[string]interface{}) {
+func (r *Result) SetData(_ map[string]interface{}) {
 	// Store data in result for later inclusion in ToMap
 	// We'll need to add a Data field to Result struct
 	// For now, we can extend ToMap to include this data

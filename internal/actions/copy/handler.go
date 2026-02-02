@@ -451,7 +451,7 @@ func (h *Handler) parseGroupID(group string) (int, error) {
 	return gid, nil
 }
 
-func (h *Handler) executeSudoCommand(command string, step *config.Step, ec *executor.ExecutionContext) error {
+func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
 	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")

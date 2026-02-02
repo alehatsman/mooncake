@@ -585,6 +585,7 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 }
 
 // renderActionTemplates renders templates in a step's action fields
+//nolint:gocyclo,dupl // Complexity necessary for handling all action types; similar patterns are intentional
 func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext) error {
 	if step.Shell != nil {
 		// Make a deep copy of Shell to avoid modifying shared pointer

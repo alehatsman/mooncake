@@ -30,6 +30,8 @@ const (
 	defaultFileMode os.FileMode = 0644
 	defaultDirMode  os.FileMode = 0755
 	actionTypeFile                = "file"
+	stateLink                     = "link"
+	stateHardlink                 = "hardlink"
 )
 
 // Handler implements the Handler interface for file actions.
@@ -75,14 +77,14 @@ func (h *Handler) Validate(step *config.Step) error {
 	// Validate state
 	validStates := map[string]bool{
 		"file": true, "directory": true, "absent": true,
-		"touch": true, "link": true, "hardlink": true, "perms": true,
+		"touch": true, stateLink: true, stateHardlink: true, "perms": true,
 	}
 	if file.State != "" && !validStates[file.State] {
 		return fmt.Errorf("invalid state: %s", file.State)
 	}
 
 	// Validate link operations require src
-	if (file.State == "link" || file.State == "hardlink") && file.Src == "" {
+	if (file.State == stateLink || file.State == stateHardlink) && file.Src == "" {
 		return fmt.Errorf("state %s requires src parameter", file.State)
 	}
 
@@ -129,9 +131,9 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		err = h.removeFileOrDirectory(ctx, ec, file, renderedPath, result, step)
 	case "touch":
 		err = h.touchFile(ctx, ec, file, renderedPath, result, step)
-	case "link":
+	case stateLink:
 		err = h.createSymlink(ctx, ec, file, renderedPath, result, step)
-	case "hardlink":
+	case stateHardlink:
 		err = h.createHardlink(ctx, ec, file, renderedPath, result, step)
 	case "perms":
 		err = h.setPermissions(ctx, ec, file, renderedPath, result, step)
@@ -176,9 +178,9 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		ctx.GetLogger().Infof("  [DRY-RUN] Would remove: %s", renderedPath)
 	case "touch":
 		ctx.GetLogger().Infof("  [DRY-RUN] Would touch file: %s", renderedPath)
-	case "link":
+	case stateLink:
 		ctx.GetLogger().Infof("  [DRY-RUN] Would create symlink: %s -> %s", renderedPath, file.Src)
-	case "hardlink":
+	case stateHardlink:
 		ctx.GetLogger().Infof("  [DRY-RUN] Would create hardlink: %s -> %s", renderedPath, file.Src)
 	case "perms":
 		ctx.GetLogger().Infof("  [DRY-RUN] Would set permissions: %s (mode: %s)", renderedPath, h.formatMode(mode))
@@ -488,7 +490,7 @@ func (h *Handler) createHardlink(ctx actions.Context, ec *executor.ExecutionCont
 		srcInfo, err1 := os.Stat(expandedSrc)
 		dstInfo, err2 := os.Stat(renderedPath)
 		if err1 == nil && err2 == nil && os.SameFile(srcInfo, dstInfo) {
-			// Already hardlinked
+			// Already hard linked
 			result.Changed = false
 			return nil
 		}
@@ -526,7 +528,7 @@ func (h *Handler) createHardlink(ctx actions.Context, ec *executor.ExecutionCont
 			Data: events.LinkCreatedData{
 				Src:    expandedSrc,
 				Dest:   renderedPath,
-				Type:   "hardlink",
+				Type:   stateHardlink,
 				DryRun: ctx.IsDryRun(),
 			},
 		})
@@ -649,7 +651,7 @@ func (h *Handler) createDirectoryWithBecome(path string, mode os.FileMode, step 
 	return h.executeSudoCommand(cmd, step, ec)
 }
 
-func (h *Handler) removeWithBecome(path string, isDir bool, force bool, step *config.Step, ec *executor.ExecutionContext) error {
+func (h *Handler) removeWithBecome(path string, isDir bool, _ bool, step *config.Step, ec *executor.ExecutionContext) error {
 	if !step.Become {
 		if isDir {
 			return os.RemoveAll(path)
@@ -779,7 +781,7 @@ func (h *Handler) executeSudoFileOperation(tmpPath, destPath string, mode os.Fil
 	return h.executeSudoCommand(cmd, step, ec)
 }
 
-func (h *Handler) executeSudoCommand(command string, step *config.Step, ec *executor.ExecutionContext) error {
+func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
 	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")

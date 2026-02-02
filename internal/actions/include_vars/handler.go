@@ -2,6 +2,8 @@
 //
 // The include_vars action loads variables from YAML files into the execution context.
 // This is useful for organizing variables across multiple files.
+
+//nolint:revive,staticcheck // include_vars name matches action name for consistency
 package include_vars
 
 import (

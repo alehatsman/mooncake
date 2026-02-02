@@ -1,0 +1,42 @@
+# Tmux Installation
+
+- name: Install tmux via {{ package_manager }}
+  package:
+    name: tmux
+    state: present
+  become: "{{ package_manager != 'brew' }}"
+
+- name: Deploy tmux configuration
+  template:
+    src: templates/tmux.conf.j2
+    dest: "{{ parameters.config_path }}"
+    mode: "0644"
+  when: parameters.configure
+
+- name: Verify tmux installation
+  shell: tmux -V
+  register: tmux_version
+
+- name: Print installation summary
+  print: |
+    Tmux installed successfully!
+
+    Version: {{ tmux_version.stdout }}
+    {% if parameters.configure %}Configuration: {{ parameters.config_path }}
+    Prefix key: {{ parameters.prefix_key }}
+    Mouse mode: {{ parameters.mouse_mode }}
+    Vi mode: {{ parameters.vi_mode }}
+    {% endif %}
+
+    Quick start:
+      tmux                  # Start new session
+      tmux ls               # List sessions
+      tmux attach           # Attach to session
+      {{ parameters.prefix_key }} c         # Create window
+      {{ parameters.prefix_key }} |         # Split vertically
+      {{ parameters.prefix_key }} -         # Split horizontally
+      {{ parameters.prefix_key }} h/j/k/l   # Navigate panes
+      {{ parameters.prefix_key }} d         # Detach session
+      {{ parameters.prefix_key }} ?         # Show all key bindings
+
+    Learn more: https://github.com/tmux/tmux/wiki

@@ -1,0 +1,26 @@
+# Node.js/nvm Uninstallation
+
+- name: Remove nvm directory
+  file:
+    path: "{{ home }}/.nvm"
+    state: absent
+
+- name: Remove nvm from shell profiles
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ]; then
+        # Remove nvm configuration block
+        sed -i.bak '/# nvm configuration/,+3d' "$profile" 2>/dev/null || \
+        sed -i '' '/# nvm configuration/,+3d' "$profile" 2>/dev/null || true
+        # Remove individual nvm lines if they exist
+        sed -i.bak '/NVM_DIR/d' "$profile" 2>/dev/null || \
+        sed -i '' '/NVM_DIR/d' "$profile" 2>/dev/null || true
+      fi
+    done
+
+- name: Print uninstallation complete
+  print: |
+    nvm and Node.js have been uninstalled.
+
+    Note: npm global packages were removed with Node.js.
+    Restart your terminal for changes to take effect.

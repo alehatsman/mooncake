@@ -185,7 +185,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Check if source file exists
-	if _, err := os.Stat(src); os.IsNotExist(err) {
+	if _, statErr := os.Stat(src); os.IsNotExist(statErr) {
 		ctx.GetLogger().Errorf("  [DRY-RUN] Template source file does not exist: %s", src)
 		return fmt.Errorf("template source not found: %s", src)
 	}
@@ -249,7 +249,7 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 	return os.FileMode(mode)
 }
 
-func (h *Handler) readAndRenderTemplate(src string, ctx actions.Context, variables map[string]interface{}, ec *executor.ExecutionContext) (string, error) {
+func (h *Handler) readAndRenderTemplate(src string, ctx actions.Context, variables map[string]interface{}, _ *executor.ExecutionContext) (string, error) {
 	// #nosec G304 -- Template source path from user config is intentional
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -304,7 +304,7 @@ func (h *Handler) executeSudoFileOperation(tmpPath, destPath string, mode os.Fil
 	return h.executeSudoCommand(cmd, step, ec)
 }
 
-func (h *Handler) executeSudoCommand(command string, step *config.Step, ec *executor.ExecutionContext) error {
+func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
 	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")

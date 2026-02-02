@@ -174,16 +174,16 @@ Mooncake automatically protects against path traversal attacks:
 These malicious patterns are automatically blocked:
 
 ```yaml
-# ❌ Path traversal with ../
+#  Path traversal with ../
 Archive entry: ../../../etc/passwd
 
-# ❌ Absolute paths
+#  Absolute paths
 Archive entry: /etc/passwd
 
-# ❌ Traversal in nested paths
+#  Traversal in nested paths
 Archive entry: legit/../../sensitive
 
-# ❌ Symlinks escaping destination
+#  Symlinks escaping destination
 Symlink target: ../../../etc/shadow
 ```
 

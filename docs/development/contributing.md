@@ -1,14 +1,14 @@
 # Contributing to Mooncake
 
-Thanks for your interest in contributing to Mooncake! 🎉
+Thanks for your interest in contributing to Mooncake! 
 
 ## Ways to Contribute
 
 - 🐛 Report bugs
-- 💡 Suggest features
-- 📝 Improve documentation
+-  Suggest features
+-  Improve documentation
 - 🧪 Add tests
-- ✨ Implement features
+-  Implement features
 - 📚 Create examples
 - 🎨 Improve UX
 
@@ -413,4 +413,4 @@ Contributors are recognized in:
 - Release notes
 - CONTRIBUTORS.md (if we create it)
 
-Thank you for contributing to Mooncake! 🚀
+Thank you for contributing to Mooncake! 

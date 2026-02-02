@@ -1,0 +1,94 @@
+# Node.js/nvm Installation
+
+# Check if nvm is already installed
+- name: Check if nvm is installed
+  shell: "[ -s \"$HOME/.nvm/nvm.sh\" ] && echo 'installed' || echo 'not_installed'"
+  register: nvm_check
+  changed_when: false
+  failed_when: false
+
+# Install nvm on Linux/macOS
+- name: Install nvm (Linux/macOS)
+  shell: |
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  when: os in ["linux", "darwin"] and nvm_check.stdout != "installed"
+
+# Configure shell profile for nvm
+- name: Add nvm to shell profile
+  shell: |
+    # Add nvm initialization to shell profiles if not already present
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ] && ! grep -q 'NVM_DIR' "$profile"; then
+        echo '' >> "$profile"
+        echo '# nvm configuration' >> "$profile"
+        echo 'export NVM_DIR="$HOME/.nvm"' >> "$profile"
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> "$profile"
+        echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> "$profile"
+      fi
+    done
+  when: os in ["linux", "darwin"] and nvm_check.stdout != "installed"
+
+# Source nvm for current execution
+- name: Install Node.js {{ parameters.version }}
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install {{ parameters.version }}
+  creates: "{{ home }}/.nvm/versions/node"
+
+# Set default version
+- name: Set Node.js {{ parameters.version }} as default
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm alias default {{ parameters.version }}
+  when: parameters.set_default
+
+# Install additional versions
+- name: Install additional Node.js version {{ item }}
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install {{ item }}
+  with_items: "{{ parameters.additional_versions }}"
+  when: parameters.additional_versions | length > 0
+
+# Install global npm packages
+- name: Install global npm package {{ item }}
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g {{ item }}
+  with_items: "{{ parameters.global_packages }}"
+  when: parameters.global_packages | length > 0
+
+# Verify installation
+- name: Verify Node.js installation
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    node --version
+  register: node_version
+
+- name: Verify npm installation
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm --version
+  register: npm_version
+
+- name: Print installation summary
+  print: |
+    Node.js installed successfully!
+
+    Node version: {{ node_version.stdout }}
+    npm version: {{ npm_version.stdout }}
+
+    To use Node.js in new shells, restart your terminal or run:
+      source ~/.bashrc  # or ~/.zshrc
+
+    Available commands:
+      node              # Run Node.js
+      npm               # Node package manager
+      nvm ls            # List installed versions
+      nvm use <version> # Switch Node.js version

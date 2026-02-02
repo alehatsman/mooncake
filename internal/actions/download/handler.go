@@ -263,7 +263,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		ctx.GetLogger().Debugf("  Would verify checksum: %s", downloadAction.Checksum)
 	}
 
-	if downloadAction.Headers != nil && len(downloadAction.Headers) > 0 {
+	if len(downloadAction.Headers) > 0 {
 		ctx.GetLogger().Debugf("  Would use %d custom headers", len(downloadAction.Headers))
 	}
 
@@ -400,7 +400,7 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 	return downloadedSize, nil
 }
 
-func (h *Handler) executeSudoCommand(command string, step *config.Step, ec *executor.ExecutionContext) error {
+func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
 	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")

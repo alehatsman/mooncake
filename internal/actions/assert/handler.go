@@ -18,6 +18,11 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
+const (
+	msgFileDoesNotExist = "file does not exist"
+	msgFileExists       = "file exists"
+)
+
 // Handler implements the assert action handler.
 type Handler struct{}
 
@@ -239,24 +244,24 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 		expectedExists := *assertFile.Exists
 		if fileExists != expectedExists {
 			if expectedExists {
-				return "file exists", "file does not exist", &executor.AssertionError{
+				return msgFileExists, msgFileDoesNotExist, &executor.AssertionError{
 					Type:     "file",
-					Expected: "file exists",
-					Actual:   "file does not exist",
+					Expected: msgFileExists,
+					Actual:   msgFileDoesNotExist,
 					Details:  path,
 				}
 			}
-			return "file does not exist", "file exists", &executor.AssertionError{
+			return msgFileDoesNotExist, msgFileExists, &executor.AssertionError{
 				Type:     "file",
-				Expected: "file does not exist",
-				Actual:   "file exists",
+				Expected: msgFileDoesNotExist,
+				Actual:   msgFileExists,
 				Details:  path,
 			}
 		}
 		if expectedExists {
-			return "file exists", "file exists", nil
+			return msgFileExists, msgFileExists, nil
 		}
-		return "file does not exist", "file does not exist", nil
+		return msgFileDoesNotExist, msgFileDoesNotExist, nil
 	}
 
 	// If file doesn't exist and we're checking content/mode/owner, fail
@@ -367,7 +372,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 	}
 
 	// No specific assertion, just check file exists
-	return "file exists", "file exists", nil
+	return msgFileExists, msgFileExists, nil
 }
 
 // executeAssertHTTP executes an HTTP assertion.
