@@ -1,8 +1,9 @@
-# Ollama Action Demo - Dry Run Mode
-# Shows what the ollama action would do without actually executing
+# Ollama Preset Demo - Dry Run Mode
+# Shows what the ollama preset would do without actually executing
 
 - name: Install Ollama with all features (DRY RUN)
-  ollama:
+  preset: ollama
+  with:
     state: present
     service: true
     method: auto
@@ -12,10 +13,6 @@
       - "llama3.1:8b"
       - "mistral:latest"
       - "codellama:7b"
-    env:
-      OLLAMA_DEBUG: "1"
-      OLLAMA_ORIGINS: "*"
-      OLLAMA_MAX_LOADED_MODELS: "2"
   become: true
   register: ollama_result
 
@@ -25,7 +22,7 @@
     echo "Ollama Installation Plan (Dry Run)"
     echo "========================================="
     echo ""
-    echo "This demonstrates the Ollama action which:"
+    echo "This demonstrates the Ollama preset which:"
     echo ""
     echo "1. INSTALLATION:"
     echo "   - Method: auto (tries package manager, then script)"

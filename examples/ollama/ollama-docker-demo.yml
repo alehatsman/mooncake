@@ -2,7 +2,8 @@
 # Installs Ollama, pulls a small model, and runs inference
 
 - name: Install Ollama via official script
-  ollama:
+  preset: ollama
+  with:
     state: present
     service: false  # Don't need systemd in container
     method: script

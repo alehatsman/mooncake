@@ -1,6 +1,6 @@
-# Ollama Action Examples
+# Ollama Preset Examples
 
-This directory contains comprehensive examples demonstrating the Ollama action for managing Ollama installations, service configuration, and LLM model management.
+This directory contains comprehensive examples demonstrating the Ollama preset for managing Ollama installations, service configuration, and LLM model management.
 
 ## 📚 Examples Overview
 
@@ -16,14 +16,14 @@ Complete comprehensive example with 11 basic examples and 8 practical use cases:
 - Platform-specific examples (Linux/macOS)
 - Integration with other actions
 
-**Start here for a complete overview of all Ollama action capabilities.**
+**Start here for a complete overview of all Ollama preset capabilities.**
 
 ---
 
 ### Demo Examples
 
 #### `ollama-dry-run-demo.yml`
-Demonstrates dry-run mode showing what the Ollama action would do without executing:
+Demonstrates dry-run mode showing what the Ollama preset would do without executing:
 - Shows installation plan
 - Service configuration preview
 - Model pulling preview
@@ -63,7 +63,7 @@ Simplified Ubuntu demo with clear output:
 
 #### `ollama-docker-demo.yml`
 Original Docker demo (reference):
-- Shows Ollama action in Docker context
+- Shows Ollama preset in Docker context
 - Historical reference
 
 #### `ollama-docker-simple.yml`
@@ -79,36 +79,43 @@ Simplified Docker installation approach:
 ### 1. Basic Installation
 ```yaml
 - name: Install Ollama
-  ollama:
+  preset: ollama
+  with:
     state: present
+
   become: true
 ```
 
 ### 2. Install with Service
 ```yaml
 - name: Install Ollama with service
-  ollama:
+  preset: ollama
+  with:
     state: present
     service: true
+
   become: true
 ```
 
 ### 3. Install and Pull Models
 ```yaml
 - name: Install Ollama and pull models
-  ollama:
+  preset: ollama
+  with:
     state: present
     service: true
     pull:
       - "llama3.1:8b"
       - "mistral:latest"
+
   become: true
 ```
 
 ### 4. Complete Configuration
 ```yaml
 - name: Full Ollama deployment
-  ollama:
+  preset: ollama
+  with:
     state: present
     service: true
     method: auto
@@ -118,6 +125,7 @@ Simplified Docker installation approach:
       - "llama3.1:8b"
     env:
       OLLAMA_DEBUG: "1"
+
   become: true
 ```
 
