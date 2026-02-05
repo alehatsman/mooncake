@@ -18,9 +18,18 @@
   when: os == "darwin"
   failed_when: false
 
-- name: Remove Ollama binary
+- name: Uninstall Ollama via package manager
+  package:
+    name: ollama
+    state: absent
+  become: true
+  when: parameters.method == "package"
+  failed_when: false
+
+- name: Remove Ollama binary (script installation)
   shell: rm -f /usr/local/bin/ollama /usr/bin/ollama
   become: true
+  when: parameters.method != "package"
   failed_when: false
 
 - name: Remove Ollama models directory (if force)

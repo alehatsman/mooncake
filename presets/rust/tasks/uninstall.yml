@@ -6,20 +6,26 @@
 
 - name: Remove cargo directory
   file:
-    path: "{{ home }}/.cargo"
+    path: "~/.cargo"
     state: absent
 
 - name: Remove rustup directory
   file:
-    path: "{{ home }}/.rustup"
+    path: "~/.rustup"
+    state: absent
+
+- name: Remove cargo init file
+  file:
+    path: "~/.cargo_init"
     state: absent
 
 - name: Remove cargo env from shell profiles
   shell: |
-    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+    for profile in "~/.bashrc" "~/.zshrc" "~/.profile"; do
       if [ -f "$profile" ]; then
-        sed -i.bak '/\.cargo\/env/d' "$profile" 2>/dev/null || \
-        sed -i '' '/\.cargo\/env/d' "$profile" 2>/dev/null || true
+        # Remove lines that source .cargo_init
+        sed -i.bak '/.cargo_init/d' "$profile" 2>/dev/null || \
+        sed -i '' '/.cargo_init/d' "$profile" 2>/dev/null || true
       fi
     done
 

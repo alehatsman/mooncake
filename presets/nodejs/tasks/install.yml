@@ -2,39 +2,48 @@
 
 # Check if nvm is already installed
 - name: Check if nvm is installed
-  shell: "[ -s \"$HOME/.nvm/nvm.sh\" ] && echo 'installed' || echo 'not_installed'"
-  register: nvm_check
-  changed_when: false
+  assert:
+    file:
+      path: "~/.nvm/nvm.sh"
+      exists: true
+  register: nvm_installed
   failed_when: false
 
 # Install nvm on Linux/macOS
 - name: Install nvm (Linux/macOS)
   shell: |
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  when: os in ["linux", "darwin"] and nvm_check.stdout != "installed"
+  when: os in ["linux", "darwin"] and nvm_installed.failed
 
-# Configure shell profile for nvm
+# Create nvm initialization file
+- name: Create nvm init file
+  file:
+    path: "~/.nvm_init"
+    content: |
+      # nvm configuration
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    mode: "0644"
+  when: os in ["linux", "darwin"] and nvm_installed.failed
+
+# Add nvm init to shell profiles
 - name: Add nvm to shell profile
   shell: |
-    # Add nvm initialization to shell profiles if not already present
     for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
-      if [ -f "$profile" ] && ! grep -q 'NVM_DIR' "$profile"; then
-        echo '' >> "$profile"
-        echo '# nvm configuration' >> "$profile"
-        echo 'export NVM_DIR="$HOME/.nvm"' >> "$profile"
-        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> "$profile"
-        echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> "$profile"
+      if [ -f "$profile" ] && ! grep -q '.nvm_init' "$profile"; then
+        echo '[ -f "$HOME/.nvm_init" ] && source "$HOME/.nvm_init"' >> "$profile"
       fi
     done
-  when: os in ["linux", "darwin"] and nvm_check.stdout != "installed"
+  when: os in ["linux", "darwin"] and nvm_installed.failed
 
-# Source nvm for current execution
+# Install Node.js version
 - name: Install Node.js {{ parameters.version }}
   shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install {{ parameters.version }}
-  creates: "{{ home }}/.nvm/versions/node"
+  creates: "~/.nvm/versions/node"
 
 # Set default version
 - name: Set Node.js {{ parameters.version }} as default
@@ -50,7 +59,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install {{ item }}
-  with_items: "{{ parameters.additional_versions }}"
+  with_items: parameters.additional_versions
   when: parameters.additional_versions | length > 0
 
 # Install global npm packages
@@ -59,7 +68,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     npm install -g {{ item }}
-  with_items: "{{ parameters.global_packages }}"
+  with_items: parameters.global_packages
   when: parameters.global_packages | length > 0
 
 # Verify installation

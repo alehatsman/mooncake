@@ -2,9 +2,11 @@
 
 # Check if rustup is already installed
 - name: Check if rustup is installed
-  shell: command -v rustup
-  register: rustup_check
-  changed_when: false
+  assert:
+    file:
+      path: "~/.cargo/bin/rustup"
+      exists: true
+  register: rustup_installed
   failed_when: false
 
 # Install rustup on Linux/macOS
@@ -12,60 +14,80 @@
   shell: |
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --profile {{ parameters.profile }} --default-toolchain {{ parameters.toolchain }}
-  when: os in ["linux", "darwin"] and rustup_check.rc != 0
+  when: os in ["linux", "darwin"] and rustup_installed.failed
+
+# Create cargo environment init file
+- name: Create cargo env init file
+  file:
+    path: "~/.cargo_init"
+    content: |
+      # Rust/Cargo configuration
+      [ -f "~/.cargo/env" ] && source "~/.cargo/env"
+    mode: "0644"
+  when: rustup_installed.failed
+
+# Add cargo env to shell profiles
+- name: Add cargo env to shell profiles
+  shell: |
+    for profile in "~/.bashrc" "~/.zshrc" "~/.profile"; do
+      if [ -f "$profile" ] && ! grep -q '.cargo_init' "$profile"; then
+        echo '[ -f "~/.cargo_init" ] && source "~/.cargo_init"' >> "$profile"
+      fi
+    done
+  when: rustup_installed.failed
 
 # Source cargo env for current execution
 - name: Install Rust toolchain {{ parameters.toolchain }}
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustup toolchain install {{ parameters.toolchain }}
-  creates: "{{ home }}/.cargo/bin/rustc"
+  creates: "~/.cargo/bin/rustc"
 
 # Set default toolchain
 - name: Set {{ parameters.toolchain }} as default toolchain
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustup default {{ parameters.toolchain }}
   when: parameters.set_default
 
 # Install additional components
 - name: Install Rust component {{ item }}
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustup component add {{ item }}
-  with_items: "{{ parameters.components }}"
+  with_items: parameters.components
   when: parameters.components | length > 0
 
 # Install compilation targets
 - name: Install Rust target {{ item }}
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustup target add {{ item }}
-  with_items: "{{ parameters.targets }}"
+  with_items: parameters.targets
   when: parameters.targets | length > 0
 
 # Verify installation
 - name: Verify Rust installation
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustc --version
   register: rustc_version
 
 - name: Verify Cargo installation
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     cargo --version
   register: cargo_version
 
 - name: List installed toolchains
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustup toolchain list
   register: toolchains
 
 - name: List installed components
   shell: |
-    source "$HOME/.cargo/env"
+    source "~/.cargo/env"
     rustup component list --installed
   register: components_installed
 

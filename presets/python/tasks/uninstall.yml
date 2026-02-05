@@ -2,19 +2,21 @@
 
 - name: Remove pyenv directory
   file:
-    path: "{{ home }}/.pyenv"
+    path: "~/.pyenv"
+    state: absent
+
+- name: Remove pyenv init file
+  file:
+    path: "~/.pyenv_init"
     state: absent
 
 - name: Remove pyenv from shell profiles
   shell: |
-    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+    for profile in "~/.bashrc" "~/.zshrc" "~/.profile"; do
       if [ -f "$profile" ]; then
-        # Remove pyenv configuration block
-        sed -i.bak '/# pyenv configuration/,+3d' "$profile" 2>/dev/null || \
-        sed -i '' '/# pyenv configuration/,+3d' "$profile" 2>/dev/null || true
-        # Remove individual pyenv lines
-        sed -i.bak '/PYENV_ROOT/d; /pyenv init/d; /pyenv virtualenv-init/d' "$profile" 2>/dev/null || \
-        sed -i '' '/PYENV_ROOT/d; /pyenv init/d; /pyenv virtualenv-init/d' "$profile" 2>/dev/null || true
+        # Remove lines that source .pyenv_init
+        sed -i.bak '/.pyenv_init/d' "$profile" 2>/dev/null || \
+        sed -i '' '/.pyenv_init/d' "$profile" 2>/dev/null || true
       fi
     done
 

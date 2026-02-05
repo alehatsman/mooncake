@@ -1,10 +1,34 @@
 # Modern Unix Tools Installation
 
-- name: Install tools via {{ package_manager }}
+- name: Install {{ item }} via {{ package_manager }}
   package:
-    names: "{{ parameters.tools }}"
-    state: "{{ parameters.state }}"
-  become: "{{ package_manager != 'brew' }}"
+    name: "{{ item }}"
+    state: present
+  with_items: parameters.tools
+  become: true
+  when: package_manager != "brew" and parameters.state == "present"
+
+- name: Install {{ item }} via {{ package_manager }}
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: parameters.tools
+  when: package_manager == "brew" and parameters.state == "present"
+
+- name: Remove {{ item }} via {{ package_manager }}
+  package:
+    name: "{{ item }}"
+    state: absent
+  with_items: parameters.tools
+  become: true
+  when: package_manager != "brew" and parameters.state == "absent"
+
+- name: Remove {{ item }} via {{ package_manager }}
+  package:
+    name: "{{ item }}"
+    state: absent
+  with_items: parameters.tools
+  when: package_manager == "brew" and parameters.state == "absent"
 
 - name: Print installation complete message
   print: |
