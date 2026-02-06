@@ -275,3 +275,224 @@ func TestAddGlobalVariables_NonDestructive(t *testing.T) {
 		t.Error("System facts should overwrite existing values")
 	}
 }
+
+// TestEmitEvent_WithNilPublisher tests EmitEvent doesn't panic with nil publisher
+func TestEmitEvent_WithNilPublisher(t *testing.T) {
+	ec := &ExecutionContext{
+		EventPublisher: nil, // Nil publisher
+	}
+
+	// Should not panic
+	ec.EmitEvent(events.EventStepStarted, events.StepStartedData{
+		StepID: "test",
+		Name:   "Test",
+	})
+}
+
+// TestCheckIdempotencyConditions_UnlessSuccess tests unless when command succeeds
+func TestCheckIdempotencyConditions_UnlessSuccess(t *testing.T) {
+	unlessCmd := "true" // Command that succeeds
+	step := config.Step{
+		Unless: &unlessCmd,
+	}
+
+	renderer := template.NewPongo2Renderer()
+	ec := &ExecutionContext{
+		Template:      renderer,
+		Logger:        logger.NewTestLogger(),
+		Variables:     make(map[string]interface{}),
+		CurrentResult: NewResult(),
+		PathUtil:      pathutil.NewPathExpander(renderer),
+		CurrentDir:    "/tmp",
+	}
+
+	shouldSkip, reason, err := CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Fatalf("Failed: %v", err)
+	}
+
+	// Should skip when unless command succeeds
+	if !shouldSkip {
+		t.Error("Should skip when unless command succeeds")
+	}
+	if reason == "" {
+		t.Error("Should have reason")
+	}
+}
+
+// TestCheckIdempotencyConditions_UnlessFail tests unless when command fails
+func TestCheckIdempotencyConditions_UnlessFail(t *testing.T) {
+	unlessCmd := "false" // Command that fails
+	step := config.Step{
+		Unless: &unlessCmd,
+	}
+
+	renderer := template.NewPongo2Renderer()
+	ec := &ExecutionContext{
+		Template:      renderer,
+		Logger:        logger.NewTestLogger(),
+		Variables:     make(map[string]interface{}),
+		CurrentResult: NewResult(),
+		PathUtil:      pathutil.NewPathExpander(renderer),
+		CurrentDir:    "/tmp",
+	}
+
+	shouldSkip, _, err := CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Fatalf("Failed: %v", err)
+	}
+
+	// Should NOT skip when unless command fails
+	if shouldSkip {
+		t.Error("Should not skip when unless command fails")
+	}
+}
+
+// TestGetStepDisplayName_NoName tests step without name
+func TestGetStepDisplayName_NoName(t *testing.T) {
+	step := config.Step{
+		// No name
+	}
+
+	ec := &ExecutionContext{
+		Variables: make(map[string]interface{}),
+	}
+
+	displayName, hasName := GetStepDisplayName(step, ec)
+	if hasName {
+		t.Error("Should not have name for anonymous step")
+	}
+	if displayName != "" {
+		t.Error("Display name should be empty")
+	}
+}
+
+// TestGetStepDisplayName_WithItem tests with_items item display
+func TestGetStepDisplayName_WithItem(t *testing.T) {
+	step := config.Step{
+		Name: "Test",
+	}
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{
+			"item": "test-item",
+		},
+	}
+
+	displayName, hasName := GetStepDisplayName(step, ec)
+	if !hasName {
+		t.Error("Should have name with item")
+	}
+	if displayName != "test-item" {
+		t.Errorf("Display name = %s, want 'test-item'", displayName)
+	}
+}
+
+// TestGetStepDisplayName_FileTreeItemPath tests filetree item with path
+func TestGetStepDisplayName_FileTreeItemPath(t *testing.T) {
+	step := config.Step{
+		Name: "Test",
+	}
+
+	ec := &ExecutionContext{
+		Variables: map[string]interface{}{
+			"item": filetree.Item{
+				Name:  "",
+				IsDir: false,
+				Path:  "/some/file.txt",
+			},
+		},
+	}
+
+	displayName, hasName := GetStepDisplayName(step, ec)
+	if !hasName {
+		t.Error("Should have name")
+	}
+	if displayName == "" {
+		t.Error("Display name should not be empty")
+	}
+}
+
+// TestHandleWhenExpression_NilResult tests when evaluating to nil
+func TestHandleWhenExpression_NilResult(t *testing.T) {
+	step := config.Step{
+		When: "undefined_var", // Will evaluate to nil
+	}
+
+	ec := &ExecutionContext{
+		Evaluator: expression.NewGovaluateEvaluator(),
+		Template:  template.NewPongo2Renderer(),
+		Logger:    logger.NewTestLogger(),
+		Variables: make(map[string]interface{}),
+	}
+
+	shouldSkip, err := HandleWhenExpression(step, ec)
+	if err != nil {
+		t.Fatalf("Failed: %v", err)
+	}
+
+	// Nil should cause skip
+	if !shouldSkip {
+		t.Error("Should skip when expression is nil")
+	}
+}
+
+// TestHandleWhenExpression_NonBool tests non-boolean result
+func TestHandleWhenExpression_NonBool(t *testing.T) {
+	step := config.Step{
+		When: "42", // Number, not bool
+	}
+
+	ec := &ExecutionContext{
+		Evaluator: expression.NewGovaluateEvaluator(),
+		Template:  template.NewPongo2Renderer(),
+		Logger:    logger.NewTestLogger(),
+		Variables: make(map[string]interface{}),
+	}
+
+	_, err := HandleWhenExpression(step, ec)
+	if err == nil {
+		t.Error("Should error on non-bool result")
+	}
+}
+
+// TestCheckSkipConditions_WhenFalse tests when expression is false
+func TestCheckSkipConditions_WhenFalse(t *testing.T) {
+	step := config.Step{
+		When: "false",
+	}
+
+	renderer := template.NewPongo2Renderer()
+	ec := &ExecutionContext{
+		Evaluator: expression.NewGovaluateEvaluator(),
+		Template:  renderer,
+		Logger:    logger.NewTestLogger(),
+		Variables: make(map[string]interface{}),
+	}
+
+	shouldSkip, reason, err := CheckSkipConditions(step, ec)
+	if err != nil {
+		t.Fatalf("Failed: %v", err)
+	}
+
+	if !shouldSkip {
+		t.Error("Should skip when when is false")
+	}
+	if reason != "when" {
+		t.Errorf("Reason = %s, want 'when'", reason)
+	}
+}
+
+// TestLogServiceOperation_DisableService tests disabled service logging
+func TestLogServiceOperation_DisableService(t *testing.T) {
+	dryRun := NewDryRunLogger(logger.NewTestLogger())
+
+	disabled := false
+	serviceAction := &config.ServiceAction{
+		Name:    "test-service",
+		Enabled: &disabled, // Explicitly disable
+	}
+
+	// Should not panic
+	dryRun.LogServiceOperation("test-service", serviceAction, false)
+}

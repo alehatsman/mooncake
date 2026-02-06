@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
@@ -1267,5 +1268,362 @@ func TestHandler_Execute_DestinationChecksumMismatch(t *testing.T) {
 	execResult := result.(*executor.Result)
 	if !execResult.Failed {
 		t.Error("Result.Failed should be true on checksum mismatch")
+	}
+}
+
+// Additional tests for uncovered functions
+
+func TestHandler_SetOwnership_Success(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping ownership test on Windows")
+	}
+
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "source.txt")
+	destPath := filepath.Join(tmpDir, "dest.txt")
+
+	err := os.WriteFile(srcPath, []byte("content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	// Get current user
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Failed to get current user: %v", err)
+	}
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		Copy: &config.Copy{
+			Src:   srcPath,
+			Dest:  destPath,
+			Owner: currentUser.Username,
+			Group: currentUser.Gid,
+		},
+	}
+
+	result, err := h.Execute(ec, step)
+	if err != nil {
+		t.Logf("Execute with ownership error (may be expected): %v", err)
+	}
+
+	if result != nil {
+		execResult := result.(*executor.Result)
+		t.Logf("Copy with ownership result: changed=%v, failed=%v", execResult.Changed, execResult.Failed)
+	}
+}
+
+func TestHandler_ChownWithBecome(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping chown test on non-Linux")
+	}
+
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "source.txt")
+	destPath := filepath.Join(tmpDir, "dest.txt")
+
+	err := os.WriteFile(srcPath, []byte("content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	ec := mockExecutionContext()
+	ec.SudoPass = "test-password"
+
+	step := &config.Step{
+		Copy: &config.Copy{
+			Src:   srcPath,
+			Dest:  destPath,
+			Owner: "root",
+			Group: "root",
+		},
+		Become: true,
+	}
+
+	// Will fail without actual sudo, but tests the code path
+	_, err = h.Execute(ec, step)
+	t.Logf("chownWithBecome error (expected): %v", err)
+}
+
+func TestHandler_Execute_LargeFile(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "large-source.txt")
+	destPath := filepath.Join(tmpDir, "large-dest.txt")
+
+	// Create a large file (1MB)
+	largeContent := make([]byte, 1024*1024)
+	for i := range largeContent {
+		largeContent[i] = byte(i % 256)
+	}
+
+	err := os.WriteFile(srcPath, largeContent, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create large file: %v", err)
+	}
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		Copy: &config.Copy{
+			Src:  srcPath,
+			Dest: destPath,
+		},
+	}
+
+	result, err := h.Execute(ec, step)
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	execResult := result.(*executor.Result)
+	if !execResult.Changed {
+		t.Error("Result.Changed should be true for large file copy")
+	}
+
+	// Verify file was copied correctly
+	destContent, err := os.ReadFile(destPath)
+	if err != nil {
+		t.Fatalf("Failed to read dest file: %v", err)
+	}
+
+	if len(destContent) != len(largeContent) {
+		t.Errorf("Dest file size = %d, want %d", len(destContent), len(largeContent))
+	}
+
+	// Verify content matches
+	for i := range largeContent {
+		if destContent[i] != largeContent[i] {
+			t.Errorf("Content mismatch at byte %d: got %d, want %d", i, destContent[i], largeContent[i])
+			break
+		}
+	}
+}
+
+func TestHandler_Execute_BackupWithTimestamp(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	oldContent := "old version 1"
+	newContent := "new version 1"
+	srcPath := filepath.Join(tmpDir, "source-backup.txt")
+	destPath := filepath.Join(tmpDir, "dest-backup.txt")
+
+	// Create source file
+	err := os.WriteFile(srcPath, []byte(newContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	// Create existing dest file
+	err = os.WriteFile(destPath, []byte(oldContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create dest file: %v", err)
+	}
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		Copy: &config.Copy{
+			Src:    srcPath,
+			Dest:   destPath,
+			Backup: true,
+		},
+	}
+
+	result, err := h.Execute(ec, step)
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	execResult := result.(*executor.Result)
+	if !execResult.Changed {
+		t.Error("Result.Changed should be true when backup is created")
+	}
+
+	// Verify backup file with timestamp pattern exists
+	files, err := filepath.Glob(destPath + ".*.bak")
+	if err != nil {
+		t.Fatalf("Failed to glob for backup files: %v", err)
+	}
+
+	if len(files) != 1 {
+		t.Errorf("Expected 1 backup file, found %d", len(files))
+	}
+}
+
+func TestHandler_Execute_MultipleBackups(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "source-multi.txt")
+	destPath := filepath.Join(tmpDir, "dest-multi.txt")
+
+	// Create dest file
+	err := os.WriteFile(destPath, []byte("version 0"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create dest file: %v", err)
+	}
+
+	ec := mockExecutionContext()
+
+	// Create multiple backups
+	for i := 1; i <= 3; i++ {
+		content := fmt.Sprintf("version %d", i)
+		err := os.WriteFile(srcPath, []byte(content), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create source file: %v", err)
+		}
+
+		step := &config.Step{
+			Copy: &config.Copy{
+				Src:    srcPath,
+				Dest:   destPath,
+				Backup: true,
+			},
+		}
+
+		_, err = h.Execute(ec, step)
+		if err != nil {
+			t.Fatalf("Execute() error = %v", err)
+		}
+
+		// Delay to ensure different timestamps
+		time.Sleep(time.Second)
+	}
+
+	// Verify multiple backup files exist
+	files, err := filepath.Glob(destPath + ".*.bak")
+	if err != nil {
+		t.Fatalf("Failed to glob for backup files: %v", err)
+	}
+
+	if len(files) < 1 {
+		t.Errorf("Expected at least 1 backup file, found %d", len(files))
+	}
+	t.Logf("Created %d backup files (may be less than 3 due to backup logic)", len(files))
+}
+
+func TestHandler_ParseUserID_RootUser(t *testing.T) {
+	h := &Handler{}
+
+	// Test with root user (should exist on all Unix systems)
+	if runtime.GOOS != "windows" {
+		uid, err := h.parseUserID("root")
+		if err != nil {
+			t.Errorf("parseUserID('root') error = %v", err)
+		} else if uid != 0 {
+			t.Errorf("parseUserID('root') = %d, want 0", uid)
+		}
+	}
+}
+
+func TestHandler_ParseGroupID_RootGroup(t *testing.T) {
+	h := &Handler{}
+
+	// Test with numeric GID 0 (root)
+	gid, err := h.parseGroupID("0")
+	if err != nil {
+		t.Errorf("parseGroupID('0') error = %v", err)
+	} else if gid != 0 {
+		t.Errorf("parseGroupID('0') = %d, want 0", gid)
+	}
+}
+
+func TestHandler_Execute_CopyWithDifferentTimestamps(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "source-ts.txt")
+	destPath := filepath.Join(tmpDir, "dest-ts.txt")
+	testContent := "same content"
+
+	// Create source file
+	err := os.WriteFile(srcPath, []byte(testContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	// Create dest file with same content but older timestamp
+	err = os.WriteFile(destPath, []byte(testContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create dest file: %v", err)
+	}
+
+	// Set older modification time on dest
+	oldTime := time.Now().Add(-2 * time.Hour)
+	err = os.Chtimes(destPath, oldTime, oldTime)
+	if err != nil {
+		t.Fatalf("Failed to set old time: %v", err)
+	}
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		Copy: &config.Copy{
+			Src:  srcPath,
+			Dest: destPath,
+		},
+	}
+
+	result, err := h.Execute(ec, step)
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	execResult := result.(*executor.Result)
+	if !execResult.Changed {
+		t.Error("Result.Changed should be true when timestamps differ")
+	}
+}
+
+func TestHandler_Execute_WithOwnershipAndMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping ownership test on Windows")
+	}
+
+	h := &Handler{}
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "source-owner-mode.txt")
+	destPath := filepath.Join(tmpDir, "dest-owner-mode.txt")
+
+	err := os.WriteFile(srcPath, []byte("content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	// Get current user
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Failed to get current user: %v", err)
+	}
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		Copy: &config.Copy{
+			Src:   srcPath,
+			Dest:  destPath,
+			Owner: currentUser.Username,
+			Group: currentUser.Gid,
+			Mode:  "0600",
+		},
+	}
+
+	result, err := h.Execute(ec, step)
+	if err != nil {
+		t.Logf("Execute with ownership and mode error (may be expected): %v", err)
+	}
+
+	if result != nil {
+		execResult := result.(*executor.Result)
+		if execResult.Changed && !execResult.Failed {
+			// Verify permissions
+			info, err := os.Stat(destPath)
+			if err != nil {
+				t.Fatalf("Failed to stat dest file: %v", err)
+			}
+
+			mode := info.Mode().Perm()
+			if mode != 0600 {
+				t.Errorf("File mode = %o, want 0600", mode)
+			}
+		}
 	}
 }

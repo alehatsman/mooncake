@@ -661,3 +661,196 @@ func TestGetValueType(t *testing.T) {
 		}
 	}
 }
+
+// TestDiscoverAllPresets_EmptyDirectories tests discovery with no presets
+func TestDiscoverAllPresets_EmptyDirectories(t *testing.T) {
+	// Clean up any existing presets directory
+	presetsDir := filepath.Join(".", "presets")
+	os.RemoveAll(presetsDir)
+	defer os.RemoveAll(presetsDir)
+
+	// Create empty presets directory
+	os.MkdirAll(presetsDir, 0755)
+
+	presets, err := DiscoverAllPresets()
+	if err != nil {
+		t.Fatalf("DiscoverAllPresets failed: %v", err)
+	}
+
+	// Should return empty slice, not error
+	if len(presets) != 0 {
+		t.Errorf("Expected 0 presets, got %d", len(presets))
+	}
+}
+
+// TestDiscoverAllPresets_LocalPresets tests discovery of local presets
+func TestDiscoverAllPresets_LocalPresets(t *testing.T) {
+	// Create local presets directory
+	presetsDir := filepath.Join(".", "presets")
+	os.RemoveAll(presetsDir)
+	defer os.RemoveAll(presetsDir)
+	os.MkdirAll(presetsDir, 0755)
+
+	// Create test presets
+	preset1 := filepath.Join(presetsDir, "preset1.yml")
+	preset1Content := `name: preset1
+description: First preset
+version: 1.0.0
+steps:
+  - name: Step 1
+    print: "test1"
+`
+	os.WriteFile(preset1, []byte(preset1Content), 0644)
+
+	preset2 := filepath.Join(presetsDir, "preset2.yml")
+	preset2Content := `name: preset2
+description: Second preset
+version: 2.0.0
+steps:
+  - name: Step 1
+    print: "test2"
+`
+	os.WriteFile(preset2, []byte(preset2Content), 0644)
+
+	presets, err := DiscoverAllPresets()
+	if err != nil {
+		t.Fatalf("DiscoverAllPresets failed: %v", err)
+	}
+
+	if len(presets) < 2 {
+		t.Errorf("Expected at least 2 presets, got %d", len(presets))
+	}
+
+	// Find our test presets
+	found1, found2 := false, false
+	for _, p := range presets {
+		if p.Name == "preset1" {
+			found1 = true
+			if p.Description != "First preset" {
+				t.Errorf("preset1 description = %s, want 'First preset'", p.Description)
+			}
+			if p.Version != "1.0.0" {
+				t.Errorf("preset1 version = %s, want '1.0.0'", p.Version)
+			}
+			if p.Source != "local" {
+				t.Errorf("preset1 source = %s, want 'local'", p.Source)
+			}
+		}
+		if p.Name == "preset2" {
+			found2 = true
+			if p.Description != "Second preset" {
+				t.Errorf("preset2 description = %s, want 'Second preset'", p.Description)
+			}
+			if p.Version != "2.0.0" {
+				t.Errorf("preset2 version = %s, want '2.0.0'", p.Version)
+			}
+		}
+	}
+
+	if !found1 {
+		t.Error("preset1 not found in discovered presets")
+	}
+	if !found2 {
+		t.Error("preset2 not found in discovered presets")
+	}
+}
+
+// TestDiscoverAllPresets_DuplicateHandling tests that higher priority presets override lower ones
+func TestDiscoverAllPresets_DuplicateHandling(t *testing.T) {
+	// Create local presets directory
+	presetsDir := filepath.Join(".", "presets")
+	os.RemoveAll(presetsDir)
+	defer os.RemoveAll(presetsDir)
+	os.MkdirAll(presetsDir, 0755)
+
+	// Create local preset
+	localPreset := filepath.Join(presetsDir, "duplicate.yml")
+	localContent := `name: duplicate
+description: Local version
+version: 1.0.0
+steps:
+  - name: Step 1
+    print: "local"
+`
+	os.WriteFile(localPreset, []byte(localContent), 0644)
+
+	// Note: We can't easily test actual duplicate handling with user/system presets
+	// without setting up those directories, but this tests the basic flow
+
+	presets, err := DiscoverAllPresets()
+	if err != nil {
+		t.Fatalf("DiscoverAllPresets failed: %v", err)
+	}
+
+	// Find our duplicate preset (should be local version)
+	found := false
+	for _, p := range presets {
+		if p.Name == "duplicate" {
+			found = true
+			if p.Description != "Local version" {
+				t.Errorf("Expected local version, got description: %s", p.Description)
+			}
+			if p.Source != "local" {
+				t.Errorf("Expected source 'local', got: %s", p.Source)
+			}
+			break
+		}
+	}
+
+	if !found {
+		t.Error("duplicate preset not found in discovered presets")
+	}
+}
+
+// TestDiscoverAllPresets_InvalidPreset tests handling of invalid preset files
+func TestDiscoverAllPresets_InvalidPreset(t *testing.T) {
+	// Create local presets directory
+	presetsDir := filepath.Join(".", "presets")
+	os.RemoveAll(presetsDir)
+	defer os.RemoveAll(presetsDir)
+	os.MkdirAll(presetsDir, 0755)
+
+	// Create valid preset
+	validPreset := filepath.Join(presetsDir, "valid.yml")
+	validContent := `name: valid
+description: Valid preset
+version: 1.0.0
+steps:
+  - name: Step 1
+    print: "test"
+`
+	os.WriteFile(validPreset, []byte(validContent), 0644)
+
+	// Create invalid preset (missing required fields)
+	invalidPreset := filepath.Join(presetsDir, "invalid.yml")
+	invalidContent := `steps:
+  - name: Step 1
+    print: "test"
+`
+	os.WriteFile(invalidPreset, []byte(invalidContent), 0644)
+
+	presets, err := DiscoverAllPresets()
+	if err != nil {
+		t.Fatalf("DiscoverAllPresets failed: %v", err)
+	}
+
+	// Should still discover valid preset, skip invalid one
+	foundValid := false
+	foundInvalid := false
+	for _, p := range presets {
+		if p.Name == "valid" {
+			foundValid = true
+		}
+		if p.Name == "invalid" {
+			foundInvalid = true
+		}
+	}
+
+	if !foundValid {
+		t.Error("valid preset should be discovered")
+	}
+	// Invalid preset should be skipped (not cause error)
+	if foundInvalid {
+		t.Error("invalid preset should be skipped")
+	}
+}

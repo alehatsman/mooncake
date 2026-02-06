@@ -263,6 +263,65 @@ func TestPackageLevelFunctions(t *testing.T) {
 			t.Errorf("ReadVariables() test = %v, want 'value'", vars["test"])
 		}
 	})
+
+	t.Run("ReadConfigWithValidation package function - valid", func(t *testing.T) {
+		tmpFile := createTempYAML(t, `
+- name: test step
+  shell: echo hello
+`)
+		defer os.Remove(tmpFile)
+
+		steps, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		if err != nil {
+			t.Fatalf("ReadConfigWithValidation() error = %v", err)
+		}
+
+		if len(steps) != 1 {
+			t.Errorf("ReadConfigWithValidation() got %d steps, want 1", len(steps))
+		}
+
+		if len(diagnostics) != 0 {
+			t.Errorf("ReadConfigWithValidation() got %d diagnostics, want 0", len(diagnostics))
+		}
+	})
+
+	t.Run("ReadConfigWithValidation package function - invalid", func(t *testing.T) {
+		tmpFile := createTempYAML(t, `
+- name: invalid step
+  shell: echo hello
+  file:
+    path: /tmp/test
+`)
+		defer os.Remove(tmpFile)
+
+		_, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		if err != nil {
+			t.Fatalf("ReadConfigWithValidation() error = %v", err)
+		}
+
+		// Should have diagnostics for multiple actions
+		if len(diagnostics) == 0 {
+			t.Error("ReadConfigWithValidation() should return diagnostics for invalid config")
+		}
+	})
+
+	t.Run("ReadConfigWithValidation package function - missing action", func(t *testing.T) {
+		tmpFile := createTempYAML(t, `
+- name: no action step
+  when: os == 'linux'
+`)
+		defer os.Remove(tmpFile)
+
+		_, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		if err != nil {
+			t.Fatalf("ReadConfigWithValidation() error = %v", err)
+		}
+
+		// Should have diagnostics for missing action
+		if len(diagnostics) == 0 {
+			t.Error("ReadConfigWithValidation() should return diagnostics for step with no action")
+		}
+	})
 }
 
 func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {

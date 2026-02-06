@@ -2,6 +2,8 @@ package config
 
 import (
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestStep_ValidateOneAction(t *testing.T) {
@@ -470,4 +472,258 @@ func TestRunConfig(t *testing.T) {
 			t.Errorf("len(Steps) = %d, want 1", len(rc.Steps))
 		}
 	})
+}
+
+func TestShellAction_UnmarshalYAML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  ShellAction
+	}{
+		{
+			name:  "string form",
+			input: `"echo hello"`,
+			want:  ShellAction{Cmd: "echo hello"},
+		},
+		{
+			name:  "object form with cmd only",
+			input: `{cmd: "echo hello"}`,
+			want:  ShellAction{Cmd: "echo hello"},
+		},
+		{
+			name:  "object form with interpreter",
+			input: `{cmd: "echo hello", interpreter: "/bin/bash"}`,
+			want:  ShellAction{Cmd: "echo hello", Interpreter: "/bin/bash"},
+		},
+		{
+			name:  "multiline string",
+			input: `"echo line1\necho line2"`,
+			want:  ShellAction{Cmd: "echo line1\necho line2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got ShellAction
+			err := yaml.Unmarshal([]byte(tt.input), &got)
+			if err != nil {
+				t.Fatalf("UnmarshalYAML() error = %v", err)
+			}
+			if got.Cmd != tt.want.Cmd {
+				t.Errorf("Cmd = %v, want %v", got.Cmd, tt.want.Cmd)
+			}
+			if got.Interpreter != tt.want.Interpreter {
+				t.Errorf("Interpreter = %v, want %v", got.Interpreter, tt.want.Interpreter)
+			}
+		})
+	}
+}
+
+func TestPresetInvocation_UnmarshalYAML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  PresetInvocation
+	}{
+		{
+			name:  "string form",
+			input: `"ollama"`,
+			want:  PresetInvocation{Name: "ollama"},
+		},
+		{
+			name:  "object form with name only",
+			input: `{name: "ollama"}`,
+			want:  PresetInvocation{Name: "ollama"},
+		},
+		{
+			name:  "object form with parameters",
+			input: `{name: "ollama", with: {state: "present"}}`,
+			want: PresetInvocation{
+				Name: "ollama",
+				With: map[string]interface{}{"state": "present"},
+			},
+		},
+		{
+			name:  "object form with multiple parameters",
+			input: `{name: "deploy-webapp", with: {port: 8080, domain: "example.com"}}`,
+			want: PresetInvocation{
+				Name: "deploy-webapp",
+				With: map[string]interface{}{"port": 8080, "domain": "example.com"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got PresetInvocation
+			err := yaml.Unmarshal([]byte(tt.input), &got)
+			if err != nil {
+				t.Fatalf("UnmarshalYAML() error = %v", err)
+			}
+			if got.Name != tt.want.Name {
+				t.Errorf("Name = %v, want %v", got.Name, tt.want.Name)
+			}
+			if tt.want.With != nil {
+				if got.With == nil {
+					t.Error("With should not be nil")
+				} else {
+					for k, v := range tt.want.With {
+						if got.With[k] != v {
+							t.Errorf("With[%s] = %v, want %v", k, got.With[k], v)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestPrintAction_UnmarshalYAML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  PrintAction
+	}{
+		{
+			name:  "string form",
+			input: `"Hello World"`,
+			want:  PrintAction{Msg: "Hello World"},
+		},
+		{
+			name:  "object form",
+			input: `{msg: "Hello World"}`,
+			want:  PrintAction{Msg: "Hello World"},
+		},
+		{
+			name:  "template string",
+			input: `"Hello {{ name }}"`,
+			want:  PrintAction{Msg: "Hello {{ name }}"},
+		},
+		{
+			name:  "multiline string",
+			input: `"Line 1\nLine 2\nLine 3"`,
+			want:  PrintAction{Msg: "Line 1\nLine 2\nLine 3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got PrintAction
+			err := yaml.Unmarshal([]byte(tt.input), &got)
+			if err != nil {
+				t.Fatalf("UnmarshalYAML() error = %v", err)
+			}
+			if got.Msg != tt.want.Msg {
+				t.Errorf("Msg = %v, want %v", got.Msg, tt.want.Msg)
+			}
+		})
+	}
+}
+
+func TestStep_DetermineActionType(t *testing.T) {
+	tests := []struct {
+		name string
+		step Step
+		want string
+	}{
+		{
+			name: "shell action",
+			step: Step{Shell: shellActionPtr("echo hello")},
+			want: "shell",
+		},
+		{
+			name: "command action",
+			step: Step{Command: &CommandAction{Argv: []string{"ls", "-la"}}},
+			want: "command",
+		},
+		{
+			name: "file action",
+			step: Step{File: &File{Path: "/tmp/test"}},
+			want: "file",
+		},
+		{
+			name: "template action",
+			step: Step{Template: &Template{Src: "src", Dest: "dest"}},
+			want: "template",
+		},
+		{
+			name: "copy action",
+			step: Step{Copy: &Copy{Src: "src", Dest: "dest"}},
+			want: "copy",
+		},
+		{
+			name: "unarchive action",
+			step: Step{Unarchive: &Unarchive{Src: "file.tar.gz", Dest: "/tmp"}},
+			want: "unarchive",
+		},
+		{
+			name: "download action",
+			step: Step{Download: &Download{URL: "http://example.com", Dest: "/tmp/file"}},
+			want: "download",
+		},
+		{
+			name: "package action",
+			step: Step{Package: &Package{Name: "nginx", State: "present"}},
+			want: "package",
+		},
+		{
+			name: "service action",
+			step: Step{Service: &ServiceAction{Name: "nginx", State: "started"}},
+			want: "service",
+		},
+		{
+			name: "assert action",
+			step: Step{Assert: &Assert{Command: &AssertCommand{Cmd: "test -f /tmp/file"}}},
+			want: "assert",
+		},
+		{
+			name: "preset action",
+			step: Step{Preset: &PresetInvocation{Name: "ollama"}},
+			want: "preset",
+		},
+		{
+			name: "print action",
+			step: Step{Print: &PrintAction{Msg: "Hello"}},
+			want: "print",
+		},
+		{
+			name: "vars action",
+			step: Step{Vars: &map[string]interface{}{"key": "value"}},
+			want: "vars",
+		},
+		{
+			name: "include_vars action",
+			step: Step{IncludeVars: stringPtr("vars.yml")},
+			want: "include_vars",
+		},
+		{
+			name: "include action",
+			step: Step{Include: stringPtr("other.yml")},
+			want: "include",
+		},
+		{
+			name: "loop with_items",
+			step: Step{WithItems: stringPtr("['item1', 'item2']")},
+			want: "loop",
+		},
+		{
+			name: "loop with_file_tree",
+			step: Step{WithFileTree: stringPtr("/tmp")},
+			want: "loop",
+		},
+		{
+			name: "no action",
+			step: Step{Name: "empty"},
+			want: "unknown",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.step.DetermineActionType()
+			if got != tt.want {
+				t.Errorf("DetermineActionType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
