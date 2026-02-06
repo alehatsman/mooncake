@@ -1,0 +1,490 @@
+# ============================================================================
+# Preset Action - Comprehensive Examples
+# ============================================================================
+# Use reusable, parameterized presets for complex workflows.
+#
+# Run this file:
+#   mooncake run --config examples/actions/preset.yml
+#
+# Note: The ollama preset requires sudo for system-wide installation
+# ============================================================================
+
+# =============================================================================
+# Basic Preset Usage
+# =============================================================================
+
+- name: "Example 1: Simple preset invocation (string form)"
+  print: |
+    Using preset with string form:
+    - preset: ollama
+  tags: [basics]
+
+- name: "Example 2: Preset with parameters"
+  print: |
+    Using preset with parameters:
+    - preset: ollama
+      with:
+        state: present
+        service: true
+  tags: [basics]
+
+- name: "Example 3: Preset with full object form"
+  print: |
+    Using full preset object:
+    - preset:
+        name: ollama
+        with:
+          state: present
+          service: true
+          pull: [llama3.1:8b]
+  tags: [basics]
+
+# =============================================================================
+# Ollama Preset Examples
+# =============================================================================
+
+- name: "Example 4: Install Ollama (demo)"
+  print: |
+    Install Ollama:
+    - name: Install Ollama
+      preset: ollama
+      with:
+        state: present
+      become: true
+  tags: [ollama]
+
+- name: "Example 5: Install with service"
+  print: |
+    Install with service:
+    - name: Install Ollama with service
+      preset: ollama
+      with:
+        state: present
+        service: true
+      become: true
+  tags: [ollama]
+
+- name: "Example 6: Install and pull models"
+  print: |
+    Install and pull models:
+    - name: Setup Ollama with models
+      preset: ollama
+      with:
+        state: present
+        service: true
+        pull:
+          - "llama3.1:8b"
+          - "mistral:latest"
+          - "codellama:7b"
+      become: true
+  tags: [ollama]
+
+- name: "Example 7: Full Ollama configuration"
+  print: |
+    Complete Ollama setup:
+    - name: Deploy Ollama
+      preset: ollama
+      with:
+        state: present
+        service: true
+        method: auto
+        host: "0.0.0.0:11434"
+        models_dir: "/data/ollama"
+        pull: ["llama3.1:8b", "mistral"]
+        env:
+          OLLAMA_DEBUG: "1"
+          OLLAMA_ORIGINS: "*"
+      become: true
+      register: ollama_result
+
+    - name: Verify Ollama API
+      assert:
+        http:
+          url: "http://localhost:11434/api/tags"
+          status: 200
+  tags: [ollama]
+
+- name: "Example 8: Uninstall Ollama"
+  print: |
+    Uninstall Ollama:
+    - name: Remove Ollama
+      preset: ollama
+      with:
+        state: absent
+      become: true
+  tags: [ollama]
+
+- name: "Example 9: Complete removal with models"
+  print: |
+    Complete Ollama removal:
+    - name: Remove Ollama and models
+      preset: ollama
+      with:
+        state: absent
+        force: true  # Also removes models directory
+      become: true
+  tags: [ollama]
+
+# =============================================================================
+# Preset with Variables
+# =============================================================================
+
+- vars:
+    ollama_models:
+      - "llama3.1:8b"
+      - "mistral:latest"
+    ollama_host: "localhost:11434"
+    environment: "development"
+
+- name: "Example 10: Preset with template variables"
+  print: |
+    Using variables:
+    - preset: ollama
+      with:
+        state: present
+        service: true
+        host: "{{ ollama_host }}"
+        pull: "{{ ollama_models }}"
+      become: true
+  tags: [variables]
+
+# =============================================================================
+# Conditional Preset Execution
+# =============================================================================
+
+- name: "Example 11: Conditional on OS"
+  print: |
+    Run on Linux only:
+    - name: Install Ollama on Linux
+      preset: ollama
+      with:
+        state: present
+        service: true
+      when: os == "linux"
+      become: true
+  tags: [conditional]
+
+- name: "Example 12: Conditional on environment"
+  print: |
+    Development environment only:
+    - name: Install dev tools
+      preset: ollama
+      with:
+        state: present
+        service: true
+        pull: ["codellama:7b"]
+      when: environment == "development"
+      become: true
+  tags: [conditional]
+
+# =============================================================================
+# Preset with Registration
+# =============================================================================
+
+- name: "Example 13: Register preset result"
+  print: |
+    Register and use result:
+    - name: Install Ollama
+      preset: ollama
+      with:
+        state: present
+        service: true
+      become: true
+      register: ollama_install
+
+    - name: Check result
+      print: "Installation changed: {{ ollama_install.changed }}"
+
+    - name: Show operations
+      print: "Operations: {{ ollama_install.stdout }}"
+  tags: [register]
+
+# =============================================================================
+# Preset with Tags
+# =============================================================================
+
+- name: "Example 14: Preset with tags"
+  print: |
+    Using tags:
+    - name: Setup ML environment
+      preset: ollama
+      with:
+        state: present
+        service: true
+        pull: ["llama3.1:8b"]
+      tags: [ml, setup]
+      become: true
+
+    Run with: mooncake run --tags ml
+  tags: [tagging]
+
+# =============================================================================
+# Combining Presets with Other Actions
+# =============================================================================
+
+- name: "Example 15: Integration workflow"
+  print: |
+    Complete deployment workflow:
+
+    # Step 1: Install Ollama
+    - name: Install Ollama
+      preset: ollama
+      with:
+        state: present
+        service: true
+        pull: ["llama3.1:8b"]
+      become: true
+      register: ollama_setup
+
+    # Step 2: Wait for service
+    - name: Wait for Ollama to start
+      assert:
+        http:
+          url: "http://localhost:11434/api/tags"
+          status: 200
+          timeout: "30s"
+      retries: 5
+      retry_delay: "5s"
+
+    # Step 3: Test inference
+    - name: Run test inference
+      shell: ollama run llama3.1:8b 'Say hello'
+      register: test_result
+
+    # Step 4: Display result
+    - name: Show test output
+      print: "Test result: {{ test_result.stdout }}"
+
+    # Step 5: Create wrapper script
+    - name: Create API wrapper
+      file:
+        path: ~/bin/ask-llm
+        state: file
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          ollama run llama3.1:8b "$@"
+  tags: [integration]
+
+# =============================================================================
+# Development Environment Setup
+# =============================================================================
+
+- name: "Example 16: LLM development environment"
+  print: |
+    Setup dev environment:
+
+    - name: Install Ollama with dev models
+      preset: ollama
+      with:
+        state: present
+        service: true
+        host: "localhost:11434"
+        pull:
+          - "llama3.1:8b"      # General purpose
+          - "codellama:7b"     # Code generation
+          - "mistral:latest"   # Alternative model
+        env:
+          OLLAMA_DEBUG: "1"
+          OLLAMA_MAX_LOADED_MODELS: "1"
+      become: true
+
+    - name: Create project directory
+      file:
+        path: ~/llm-projects
+        state: directory
+        mode: "0755"
+
+    - name: Create README
+      file:
+        path: ~/llm-projects/README.md
+        state: file
+        content: |
+          # LLM Projects
+
+          Models installed:
+          - llama3.1:8b for general tasks
+          - codellama:7b for code generation
+          - mistral for experiments
+
+          Usage:
+          ```bash
+          ollama run llama3.1:8b 'your prompt here'
+          ```
+        mode: "0644"
+  tags: [dev-env]
+
+# =============================================================================
+# Production Deployment
+# =============================================================================
+
+- name: "Example 17: Production deployment"
+  print: |
+    Production setup:
+
+    - name: Deploy Ollama for production
+      preset: ollama
+      with:
+        state: present
+        service: true
+        method: package  # Prefer package manager
+        host: "0.0.0.0:11434"
+        models_dir: "/var/lib/ollama/models"
+        pull: ["llama3.1:8b"]
+        env:
+          OLLAMA_DEBUG: "0"
+          OLLAMA_MAX_LOADED_MODELS: "2"
+          OLLAMA_NUM_PARALLEL: "4"
+      become: true
+      register: production_deploy
+
+    - name: Configure firewall
+      shell: |
+        ufw allow 11434/tcp
+        ufw reload
+      become: true
+      when: production_deploy.changed
+
+    - name: Create monitoring script
+      file:
+        path: /usr/local/bin/ollama-health-check
+        state: file
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          curl -s http://localhost:11434/api/tags > /dev/null
+          if [ $? -eq 0 ]; then
+            echo "Ollama is healthy"
+            exit 0
+          else
+            echo "Ollama is down"
+            exit 1
+          fi
+      become: true
+  tags: [production]
+
+# =============================================================================
+# Error Handling
+# =============================================================================
+
+- name: "Example 18: Preset with error handling"
+  print: |
+    Handle preset errors:
+
+    - name: Try to install Ollama
+      preset: ollama
+      with:
+        state: present
+        service: true
+      become: true
+      register: ollama_result
+      failed_when: false
+
+    - name: Handle failure
+      print: "Installation failed: {{ ollama_result.stderr }}"
+      when: ollama_result.failed
+
+    - name: Handle success
+      print: "Installation successful"
+      when: not ollama_result.failed
+  tags: [error-handling]
+
+# =============================================================================
+# Preset Parameters Reference
+# =============================================================================
+
+- name: "Example 19: All ollama preset parameters"
+  print: |
+    Complete parameter reference:
+
+    preset: ollama
+    with:
+      # Required
+      state: present | absent
+
+      # Optional
+      service: true | false        # Enable systemd/launchd service
+      method: auto | script | package  # Installation method
+      host: "localhost:11434"      # Server bind address
+      models_dir: "/path/to/models"  # Custom models directory
+      pull: ["model1", "model2"]   # Models to pull
+      force: true | false          # Force operations
+      env:                         # Additional environment vars
+        OLLAMA_DEBUG: "1"
+        OLLAMA_ORIGINS: "*"
+        OLLAMA_MAX_LOADED_MODELS: "2"
+  tags: [reference]
+
+# =============================================================================
+# Custom Preset Creation (Conceptual)
+# =============================================================================
+
+- name: "Example 20: Creating custom presets"
+  print: |
+    Create your own presets in:
+      • ./presets/          (playbook directory)
+      • ~/.mooncake/presets/  (user directory)
+      • /usr/share/mooncake/presets/  (system directory)
+
+    Example preset file (presets/hello.yml):
+    ```yaml
+    preset:
+      name: hello
+      description: Print a greeting
+      version: 1.0.0
+
+      parameters:
+        name:
+          type: string
+          required: true
+          description: Name to greet
+
+        excited:
+          type: bool
+          default: false
+          description: Use exclamation mark
+
+      steps:
+        - name: Print greeting
+          shell: echo "Hello, {{ parameters.name }}{% if parameters.excited %}!{% endif %}"
+    ```
+
+    Usage:
+    ```yaml
+    - preset: hello
+      with:
+        name: World
+        excited: true
+    ```
+
+    See docs/guide/preset-authoring.md for more details.
+  tags: [custom]
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: "Summary"
+  print: |
+
+    Preset action examples completed!
+    Covered:
+      • Basic preset invocation
+      • Ollama preset (install, configure, models)
+      • Parameters and variables
+      • Conditional execution
+      • Registration and result handling
+      • Integration with other actions
+      • Development and production patterns
+      • Error handling
+      • Custom preset creation
+
+    Available presets:
+      • ollama - Install and manage Ollama LLM runtime
+
+    For more information:
+      • docs/guide/presets.md
+      • docs/guide/preset-authoring.md
+      • examples/ollama/
+
+  tags: [always]

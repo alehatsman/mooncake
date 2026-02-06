@@ -1,0 +1,58 @@
+# Example showing tag-based filtering
+#
+# Tags allow you to selectively run parts of your configuration.
+# Run with: mooncake run --config config.yml --tags <tag>
+
+- name: Always runs (no tags)
+  shell: echo "This step always runs when no tags filter is specified"
+
+- name: Development setup
+  shell: echo "Setting up development environment"
+  tags:
+    - dev
+    - setup
+
+- name: Install development tools
+  shell: echo "Installing dev tools: neovim, ripgrep, fzf"
+  tags:
+    - dev
+    - tools
+
+- name: Production deployment
+  shell: echo "Deploying to production"
+  tags:
+    - prod
+    - deploy
+
+- name: Configure production services
+  shell: echo "Configuring production services"
+  tags:
+    - prod
+    - setup
+
+- name: Run tests
+  shell: echo "Running test suite"
+  tags:
+    - test
+    - dev
+
+- name: Run security audit
+  shell: echo "Running security audit"
+  tags:
+    - test
+    - prod
+    - security
+
+- name: Deploy to staging
+  shell: echo "Deploying to staging environment"
+  tags:
+    - staging
+    - deploy
+
+# Example with multiple tags - runs if ANY tag matches
+- name: Build application
+  shell: echo "Building application"
+  tags:
+    - dev
+    - prod
+    - staging

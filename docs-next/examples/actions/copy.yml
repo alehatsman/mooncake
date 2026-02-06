@@ -1,0 +1,281 @@
+# ============================================================================
+# Copy Action - Comprehensive Examples
+# ============================================================================
+# Copy files with checksum verification and backup support.
+#
+# Run this file:
+#   mooncake run --config examples/actions/copy.yml
+# ============================================================================
+
+# Setup
+- name: "Setup: Create test directories"
+  file:
+    path: /tmp/mooncake-copy-{{ item }}
+    state: directory
+    mode: "0755"
+  with_items: [source, dest]
+  tags: [setup]
+
+# Create source files
+- name: "Setup: Create source files"
+  file:
+    path: /tmp/mooncake-copy-source/{{ item }}
+    state: file
+    content: "Content of {{ item }}"
+    mode: "0644"
+  with_items: [file1.txt, file2.txt, config.yml]
+  tags: [setup]
+
+# =============================================================================
+# Basic Copy Operations
+# =============================================================================
+
+- name: "Example 1: Simple file copy"
+  copy:
+    src: /tmp/mooncake-copy-source/file1.txt
+    dest: /tmp/mooncake-copy-dest/file1.txt
+    mode: "0644"
+  tags: [basics]
+
+- name: "Example 2: Copy with different name"
+  copy:
+    src: /tmp/mooncake-copy-source/file2.txt
+    dest: /tmp/mooncake-copy-dest/renamed-file.txt
+    mode: "0644"
+  tags: [basics]
+
+- name: "Example 3: Copy with specific permissions"
+  copy:
+    src: /tmp/mooncake-copy-source/config.yml
+    dest: /tmp/mooncake-copy-dest/config-readonly.yml
+    mode: "0444"
+  tags: [basics]
+
+# =============================================================================
+# Copy with Backup
+# =============================================================================
+
+- name: "Example 4: Initial copy"
+  copy:
+    src: /tmp/mooncake-copy-source/file1.txt
+    dest: /tmp/mooncake-copy-dest/backup-test.txt
+    mode: "0644"
+  tags: [backup]
+
+- name: "Example 5: Update with backup"
+  file:
+    path: /tmp/mooncake-copy-source/file1-updated.txt
+    state: file
+    content: "Updated content"
+    mode: "0644"
+  tags: [backup]
+
+- name: "Example 6: Copy with backup enabled"
+  copy:
+    src: /tmp/mooncake-copy-source/file1-updated.txt
+    dest: /tmp/mooncake-copy-dest/backup-test.txt
+    mode: "0644"
+    backup: true
+  tags: [backup]
+
+- name: "Example 7: List backup files"
+  shell: ls -la /tmp/mooncake-copy-dest/backup-test.txt*
+  tags: [backup]
+
+# =============================================================================
+# Copy with Force
+# =============================================================================
+
+- name: "Example 8: Copy with force (overwrite)"
+  copy:
+    src: /tmp/mooncake-copy-source/file1.txt
+    dest: /tmp/mooncake-copy-dest/forced-copy.txt
+    mode: "0644"
+    force: true
+  tags: [force]
+
+# =============================================================================
+# Copy with Checksum Verification
+# =============================================================================
+
+- name: "Example 9: Get file checksum"
+  shell: |
+    if command -v sha256sum > /dev/null; then
+      sha256sum /tmp/mooncake-copy-source/file1.txt | awk '{print $1}'
+    else
+      shasum -a 256 /tmp/mooncake-copy-source/file1.txt | awk '{print $1}'
+    fi
+  register: file_checksum
+  tags: [checksum]
+
+- name: "Example 10: Display checksum"
+  print: "File checksum: {{ file_checksum.stdout }}"
+  tags: [checksum]
+
+# Note: Copy action supports checksum verification
+# checksum: "sha256:abc123..." or checksum: "md5:def456..."
+
+# =============================================================================
+# Copy with Ownership (requires sudo)
+# =============================================================================
+
+# Uncomment if running with sudo
+# - name: "Example 11: Copy with ownership"
+#   copy:
+#     src: /tmp/mooncake-copy-source/config.yml
+#     dest: /tmp/mooncake-copy-dest/owned-config.yml
+#     mode: "0644"
+#     owner: root
+#     group: root
+#   become: true
+#   tags: [ownership]
+
+# =============================================================================
+# Copy in Loops
+# =============================================================================
+
+- vars:
+    files_to_copy:
+      - name: app.conf
+        mode: "0644"
+      - name: database.conf
+        mode: "0600"
+      - name: script.sh
+        mode: "0755"
+
+- name: "Example 12: Create source files for loop"
+  file:
+    path: /tmp/mooncake-copy-source/{{ item.name }}
+    state: file
+    content: "Content of {{ item.name }}"
+    mode: "{{ item.mode }}"
+  with_items: "{{ files_to_copy }}"
+  tags: [loops]
+
+- name: "Example 13: Copy multiple files"
+  copy:
+    src: /tmp/mooncake-copy-source/{{ item.name }}
+    dest: /tmp/mooncake-copy-dest/{{ item.name }}
+    mode: "{{ item.mode }}"
+  with_items: "{{ files_to_copy }}"
+  tags: [loops]
+
+# =============================================================================
+# Conditional Copy
+# =============================================================================
+
+- name: "Example 14: Copy on Linux only"
+  file:
+    path: /tmp/mooncake-copy-source/linux-specific.txt
+    state: file
+    content: "Linux only file"
+    mode: "0644"
+  when: os == "linux"
+  tags: [conditional]
+
+- name: "Example 15: Copy Linux file"
+  copy:
+    src: /tmp/mooncake-copy-source/linux-specific.txt
+    dest: /tmp/mooncake-copy-dest/linux-specific.txt
+    mode: "0644"
+  when: os == "linux"
+  tags: [conditional]
+
+# =============================================================================
+# Copy with Registration
+# =============================================================================
+
+- name: "Example 16: Copy and register result"
+  copy:
+    src: /tmp/mooncake-copy-source/file2.txt
+    dest: /tmp/mooncake-copy-dest/registered-copy.txt
+    mode: "0644"
+  register: copy_result
+  tags: [register]
+
+- name: "Example 17: Display copy result"
+  print: "Copy operation changed: {{ copy_result.changed }}"
+  tags: [register]
+
+# =============================================================================
+# Real-World: Deployment Scenario
+# =============================================================================
+
+- name: "Example 18: Create deployment files"
+  file:
+    path: /tmp/mooncake-copy-source/deploy/{{ item }}
+    state: file
+    content: "{{ item }} content"
+    mode: "0644"
+  with_items: [app.jar, config.properties, database.yml]
+  tags: [real-world]
+
+- name: "Example 19: Deploy application files"
+  copy:
+    src: /tmp/mooncake-copy-source/deploy/{{ item }}
+    dest: /tmp/mooncake-copy-dest/production/{{ item }}
+    mode: "0644"
+    backup: true
+  with_items: [app.jar, config.properties, database.yml]
+  tags: [real-world]
+
+# =============================================================================
+# Idempotency
+# =============================================================================
+
+- name: "Example 20: First copy (changes)"
+  copy:
+    src: /tmp/mooncake-copy-source/file1.txt
+    dest: /tmp/mooncake-copy-dest/idempotent.txt
+    mode: "0644"
+  register: first_copy
+  tags: [idempotency]
+
+- name: "Example 21: Second copy (no changes)"
+  copy:
+    src: /tmp/mooncake-copy-source/file1.txt
+    dest: /tmp/mooncake-copy-dest/idempotent.txt
+    mode: "0644"
+  register: second_copy
+  tags: [idempotency]
+
+- name: "Example 22: Show idempotency"
+  print: "First: {{ first_copy.changed }}, Second: {{ second_copy.changed }}"
+  tags: [idempotency]
+
+# =============================================================================
+# Verification
+# =============================================================================
+
+- name: "Example 23: List all copied files"
+  shell: |
+    echo "Copied files:"
+    find /tmp/mooncake-copy-dest -type f | sort
+  tags: [verify]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove test directories"
+  file:
+    path: /tmp/mooncake-copy-{{ item }}
+    state: absent
+    force: true
+  with_items: [source, dest]
+  tags: [cleanup]
+
+- name: "Summary"
+  print: |
+
+    Copy action examples completed!
+    Covered:
+      • Basic copy operations
+      • Backups
+      • Force overwrite
+      • Checksum verification
+      • Permission handling
+      • Loops and conditionals
+      • Idempotency
+
+  tags: [always]

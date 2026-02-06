@@ -1,0 +1,442 @@
+# ============================================================================
+# Shell Action - Comprehensive Examples
+# ============================================================================
+# Execute shell commands with full shell interpolation and scripting capabilities.
+#
+# Run this file:
+#   mooncake run --config examples/actions/shell.yml
+#
+# Run specific sections with tags:
+#   mooncake run --config examples/actions/shell.yml --tags basics
+# ============================================================================
+
+# =============================================================================
+# Basic Command Execution
+# =============================================================================
+
+- name: "Example 1: Simple command"
+  shell: echo "Hello from Mooncake!"
+  tags: [basics]
+
+- name: "Example 2: Command with arguments"
+  shell: echo "Current user is $(whoami)"
+  tags: [basics]
+
+- name: "Example 3: Multi-line script"
+  shell: |
+    echo "=== System Information ==="
+    echo "Hostname: $(hostname)"
+    echo "OS: $(uname -s)"
+    echo "Kernel: $(uname -r)"
+    echo "Architecture: $(uname -m)"
+  tags: [basics]
+
+# =============================================================================
+# Output Capture with Register
+# =============================================================================
+
+- name: "Example 4: Capture command output"
+  shell: whoami
+  register: current_user
+  tags: [register]
+
+- name: "Example 5: Use captured output"
+  shell: echo "Running as user: {{ current_user.stdout }}"
+  tags: [register]
+
+- name: "Example 6: Capture multi-line output"
+  shell: |
+    cat <<EOF
+    Line 1: Hello
+    Line 2: World
+    Line 3: From Mooncake
+    EOF
+  register: multi_line_output
+  tags: [register]
+
+- name: "Example 7: Display captured multi-line output"
+  shell: echo "Captured output was {{ multi_line_output.stdout }}"
+  tags: [register]
+
+- name: "Example 8: Check exit code"
+  shell: test -d /tmp
+  register: test_result
+  tags: [register]
+
+- name: "Example 9: Show exit code"
+  shell: echo "Exit code was {{ test_result.rc }}"
+  tags: [register]
+
+# =============================================================================
+# Environment Variables
+# =============================================================================
+
+- name: "Example 10: Command with environment variable"
+  shell: echo "Custom env var: $MY_VAR"
+  env:
+    MY_VAR: "Hello World"
+  tags: [environment]
+
+- name: "Example 11: Multiple environment variables"
+  shell: |
+    echo "App: $APP_NAME"
+    echo "Version: $APP_VERSION"
+    echo "Environment: $ENVIRONMENT"
+  env:
+    APP_NAME: "MyApp"
+    APP_VERSION: "1.2.3"
+    ENVIRONMENT: "production"
+  tags: [environment]
+
+- name: "Example 12: Environment with template variables"
+  shell: echo "Path includes: $CUSTOM_PATH"
+  env:
+    CUSTOM_PATH: "/opt/{{os}}/bin"
+  tags: [environment]
+
+# =============================================================================
+# Working Directory
+# =============================================================================
+
+- name: "Example 13: Create test directory"
+  shell: mkdir -p /tmp/mooncake-shell-examples
+  tags: [cwd]
+
+- name: "Example 14: Run command in specific directory"
+  shell: pwd
+  cwd: /tmp/mooncake-shell-examples
+  register: pwd_result
+  tags: [cwd]
+
+- name: "Example 15: Show working directory"
+  shell: echo "Command ran in: {{ pwd_result.stdout }}"
+  tags: [cwd]
+
+- name: "Example 16: Create file in working directory"
+  shell: echo "test content" > test.txt
+  cwd: /tmp/mooncake-shell-examples
+  tags: [cwd]
+
+- name: "Example 17: Verify file was created"
+  shell: cat /tmp/mooncake-shell-examples/test.txt
+  tags: [cwd]
+
+# =============================================================================
+# Timeouts
+# =============================================================================
+
+- name: "Example 18: Fast command with timeout"
+  shell: echo "This completes quickly"
+  timeout: 10s
+  tags: [timeout]
+
+- name: "Example 19: Command with longer timeout"
+  shell: sleep 2 && echo "Completed after 2 seconds"
+  timeout: 5s
+  tags: [timeout]
+
+# Uncomment to test timeout failure (will exit with code 124)
+# - name: "Example 20: Command that times out"
+#   shell: sleep 10
+#   timeout: 2s
+#   tags: [timeout]
+
+# =============================================================================
+# Retries
+# =============================================================================
+
+- name: "Example 21: Command with retry configuration"
+  shell: echo "This will succeed first try"
+  retries: 3
+  retry_delay: 1s
+  tags: [retry]
+
+# Simulate a flaky command
+- name: "Example 22: Create a flaky test script"
+  shell: |
+    cat > /tmp/flaky-script.sh <<'EOF'
+    #!/bin/bash
+    # Fails 2 times, succeeds on 3rd try
+    COUNTER_FILE=/tmp/flaky-counter
+    if [ ! -f "$COUNTER_FILE" ]; then
+      echo 0 > "$COUNTER_FILE"
+    fi
+    COUNT=$(cat "$COUNTER_FILE")
+    COUNT=$((COUNT + 1))
+    echo $COUNT > "$COUNTER_FILE"
+    echo "Attempt $COUNT"
+    if [ "$COUNT" -lt 3 ]; then
+      exit 1
+    fi
+    rm -f "$COUNTER_FILE"
+    exit 0
+    EOF
+    chmod +x /tmp/flaky-script.sh
+    rm -f /tmp/flaky-counter
+  tags: [retry]
+
+- name: "Example 23: Run flaky script with retries"
+  shell: /tmp/flaky-script.sh
+  retries: 3
+  retry_delay: 1s
+  register: flaky_result
+  tags: [retry]
+
+- name: "Example 24: Show retry result"
+  shell: echo "Flaky script eventually succeeded"
+  when: flaky_result.rc == 0
+  tags: [retry]
+
+# =============================================================================
+# Failed When (Custom Failure Conditions)
+# =============================================================================
+
+- name: "Example 25: Accept multiple exit codes"
+  shell: grep "nonexistent" /etc/hosts || true
+  register: grep_result
+  failed_when: result.rc != 0 and result.rc != 1
+  tags: [failed_when]
+
+- name: "Example 26: Fail on specific string in output"
+  shell: echo "Operation completed successfully"
+  register: operation_result
+  failed_when: "'ERROR' in result.stdout or 'FAILED' in result.stdout"
+  tags: [failed_when]
+
+- name: "Example 27: Fail if stderr contains errors"
+  shell: echo "Some output" 2>&1
+  register: cmd_result
+  failed_when: "'error' in result.stderr.lower()"
+  tags: [failed_when]
+
+- name: "Example 28: Complex failure condition"
+  shell: echo "Status: 200"
+  register: status_check
+  failed_when: "result.rc != 0 or '404' in result.stdout or '500' in result.stdout"
+  tags: [failed_when]
+
+# =============================================================================
+# Changed When (Custom Change Detection)
+# =============================================================================
+
+- name: "Example 29: Mark as not changed"
+  shell: echo "This is a read-only operation"
+  changed_when: false
+  tags: [changed_when]
+
+- name: "Example 30: Mark as changed based on output"
+  shell: echo "Updated 3 files"
+  register: update_result
+  changed_when: "'Updated' in result.stdout and result.stdout != 'Updated 0 files'"
+  tags: [changed_when]
+
+- name: "Example 31: Git pull with smart change detection"
+  shell: |
+    # Create a test git repo
+    mkdir -p /tmp/test-repo
+    cd /tmp/test-repo
+    if [ ! -d .git ]; then
+      git init
+      git config user.email "test@example.com"
+      git config user.name "Test User"
+      echo "test" > README.md
+      git add README.md
+      git commit -m "Initial commit"
+    fi
+    # Simulate git pull
+    echo "Already up to date."
+  register: git_pull
+  changed_when: "'Already up to date' not in result.stdout"
+  tags: [changed_when]
+
+- name: "Example 32: Show git pull result"
+  shell: echo "Git repo {{ 'was updated' if git_pull.changed else 'had no changes' }}"
+  tags: [changed_when]
+
+# =============================================================================
+# Conditional Execution
+# =============================================================================
+
+- name: "Example 33: Run only on Linux"
+  shell: echo "This is a Linux system"
+  when: os == "linux"
+  tags: [conditional]
+
+- name: "Example 34: Run only on macOS"
+  shell: echo "This is a macOS system"
+  when: os == "darwin"
+  tags: [conditional]
+
+- name: "Example 35: Conditional based on previous result"
+  shell: test -f /tmp/mooncake-shell-examples/test.txt
+  register: file_check
+  failed_when: false
+  tags: [conditional]
+
+- name: "Example 36: Run if file exists"
+  shell: echo "File exists!"
+  when: file_check.rc == 0
+  tags: [conditional]
+
+- name: "Example 37: Run if file doesn't exist"
+  shell: echo "File doesn't exist!"
+  when: file_check.rc != 0
+  tags: [conditional]
+
+# =============================================================================
+# Shell Interpreters
+# =============================================================================
+
+- name: "Example 38: Bash script (default)"
+  shell:
+    cmd: echo "Using bash: $BASH_VERSION"
+    interpreter: bash
+  tags: [interpreter]
+
+- name: "Example 39: POSIX sh for compatibility"
+  shell:
+    cmd: echo "Using sh"
+    interpreter: sh
+  tags: [interpreter]
+
+# =============================================================================
+# Shell with stdin
+# =============================================================================
+
+- name: "Example 40: Pipe data to command via stdin"
+  shell:
+    cmd: cat
+    stdin: |
+      Line 1: Hello
+      Line 2: World
+      Line 3: From stdin
+  register: stdin_result
+  tags: [stdin]
+
+- name: "Example 41: Show stdin result"
+  shell: echo "{{ stdin_result.stdout }}"
+  tags: [stdin]
+
+- name: "Example 42: Use stdin with grep"
+  shell:
+    cmd: grep "World"
+    stdin: |
+      Hello
+      World
+      Test
+  register: grep_stdin
+  tags: [stdin]
+
+- name: "Example 43: Process JSON with jq via stdin"
+  shell:
+    cmd: jq '.name'
+    stdin: '{"name": "Mooncake", "version": "1.0"}'
+  register: jq_result
+  tags: [stdin]
+
+# =============================================================================
+# Advanced Shell Scripting
+# =============================================================================
+
+- name: "Example 44: Shell script with variables and logic"
+  shell: |
+    NAME="Mooncake"
+    VERSION="1.0.0"
+
+    if [ -n "$NAME" ]; then
+      echo "Application: $NAME"
+      echo "Version: $VERSION"
+    fi
+
+    for i in 1 2 3; do
+      echo "  Item $i"
+    done
+  tags: [advanced]
+
+- name: "Example 45: Command substitution"
+  shell: |
+    NOW=$(date +%Y-%m-%d)
+    USER=$(whoami)
+    echo "Report generated on $NOW by $USER"
+  tags: [advanced]
+
+- name: "Example 46: Process text with pipes"
+  shell: |
+    echo "apple,banana,cherry,date" | \
+      tr ',' '\n' | \
+      sort | \
+      head -2
+  register: pipe_result
+  tags: [advanced]
+
+- name: "Example 47: Create function and use it"
+  shell: |
+    greet() {
+      echo "Hello, $1!"
+    }
+
+    greet "User"
+    greet "World"
+  tags: [advanced]
+
+- name: "Example 48: Error handling in script"
+  shell: |
+    set -e  # Exit on error
+
+    echo "Step 1: Creating directory"
+    mkdir -p /tmp/mooncake-test
+
+    echo "Step 2: Writing file"
+    echo "test" > /tmp/mooncake-test/file.txt
+
+    echo "Step 3: Reading file"
+    cat /tmp/mooncake-test/file.txt
+
+    echo "All steps completed successfully"
+  tags: [advanced]
+
+# =============================================================================
+# Combining Multiple Features
+# =============================================================================
+
+- name: "Example 49: Complex command with all features"
+  shell: |
+    echo "Starting deployment..."
+    echo "Environment: $DEPLOY_ENV"
+    echo "Target: $DEPLOY_TARGET"
+    sleep 1
+    echo "Deployment completed successfully"
+  env:
+    DEPLOY_ENV: "production"
+    DEPLOY_TARGET: "/opt/app"
+  cwd: /tmp
+  timeout: 10s
+  retries: 2
+  retry_delay: 5s
+  register: complex_deploy
+  changed_when: "'completed successfully' in result.stdout"
+  failed_when: "result.rc != 0 or 'ERROR' in result.stdout"
+  tags: [complex]
+
+- name: "Example 50: Display complex result"
+  shell: |
+    echo "Deployment result:"
+    echo "  Changed: {{ complex_deploy.changed }}"
+    echo "  Exit code: {{ complex_deploy.rc }}"
+    echo "  Output: {{ complex_deploy.stdout }}"
+  tags: [complex]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove test files"
+  shell: |
+    rm -rf /tmp/mooncake-shell-examples
+    rm -f /tmp/flaky-script.sh /tmp/flaky-counter
+    rm -rf /tmp/test-repo
+  tags: [cleanup, always]
+
+- name: "Summary"
+  shell: echo "Shell examples completed! Explored 50+ different use cases."
+  tags: [always]

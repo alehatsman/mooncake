@@ -55,28 +55,20 @@ test-cover: ## Run tests with coverage report
 	@echo "✓ Coverage report: testing-output/coverage.html"
 
 # ==============================================================================
-# Docker Testing (Linux environment)
+# Preset Testing (see testing-next/ directory)
 # ==============================================================================
 
-.PHONY: test-docker
-test-docker: ## Run tests in Docker (Ubuntu, matches CI)
-	@echo "Running tests in Ubuntu Docker (matches CI environment)..."
-	@./scripts/test-ubuntu-quick.sh
-
-.PHONY: test-docker-full
-test-docker-full: ## Run full test suite in Docker (build + test + coverage + race)
-	@echo "Running full test suite in Ubuntu Docker..."
-	@./scripts/test-ubuntu-docker.sh
-
-.PHONY: test-integration
-test-integration: ## Run integration tests
-	@echo "Running integration tests..."
-	@./scripts/run-integration-tests.sh
-
-.PHONY: test-linux
-test-linux: ## Build Linux binary and run smoke tests in Docker
-	@echo "Building Linux binary and running smoke tests..."
-	@./scripts/test-docker.sh ubuntu-22.04 smoke
+.PHONY: test-presets-help
+test-presets-help: ## Show preset testing help
+	@echo "Preset testing has moved to testing-next/"
+	@echo ""
+	@echo "Quick start:"
+	@echo "  cd testing-next && make help"
+	@echo ""
+	@echo "Common commands:"
+	@echo "  cd testing-next && make test-ubuntu          # Test all presets (native arch)"
+	@echo "  cd testing-next && make test-preset PRESET=jq  # Test single preset"
+	@echo "  cd testing-next && make clean-all            # Cleanup"
 
 # ==============================================================================
 # Code Quality
@@ -114,21 +106,11 @@ ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
 # Documentation
 # ==============================================================================
 
-.PHONY: docs-gen
-docs-gen: ## Generate preset documentation
-	@echo "Generating preset documentation..."
-	@python3 scripts/generate-preset-docs.py
-	@echo "✓ Preset docs generated"
-
-.PHONY: docs-serve
-docs-serve: docs-gen ## Build and serve documentation locally
-	@echo "Serving documentation at http://127.0.0.1:8000"
-	@mkdocs serve
-
-.PHONY: docs-build
-docs-build: docs-gen ## Build documentation for deployment
-	@echo "Building documentation..."
-	@mkdocs build
+.PHONY: docs
+docs:
+	@echo "Documentation built in site/ directory"
+	pipenv run mkdocs build
+	pipenv run mkdocs serve
 
 # ==============================================================================
 # Release
@@ -138,32 +120,3 @@ docs-build: docs-gen ## Build documentation for deployment
 release: ## Create a new release (runs release script)
 	@bash ./scripts/release.sh
 
-# ==============================================================================
-# Preset Testing
-# ==============================================================================
-
-.PHONY: test-presets
-test-presets: ## Test all presets in Docker Ubuntu
-	@echo "Testing all presets in Docker Ubuntu..."
-	@./scripts/test-presets-docker.sh
-
-.PHONY: test-presets-advanced
-test-presets-advanced: ## Test all presets with advanced configuration
-	@echo "Running advanced preset tests..."
-	@./scripts/test-presets-advanced.sh
-
-.PHONY: test-presets-quick
-test-presets-quick: ## Quick preset tests (skip slow presets)
-	@echo "Running quick preset tests..."
-	@./scripts/test-presets-advanced.sh --quick
-
-.PHONY: test-preset
-test-preset: ## Test specific preset locally (usage: make test-preset PRESET=docker)
-	@if [ -z "$(PRESET)" ]; then \
-		echo "Error: PRESET variable is required"; \
-		echo "Usage: make test-preset PRESET=docker"; \
-		echo "       make test-preset PRESET=postgres PARAMS='version=14'"; \
-		exit 1; \
-	fi
-	@echo "Testing preset: $(PRESET)"
-	@./scripts/test-preset-local.sh $(PRESET) $(PARAMS)

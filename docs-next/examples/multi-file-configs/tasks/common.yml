@@ -1,0 +1,11 @@
+- name: Create project directory
+  file:
+    path: /tmp/{{project_name}}
+    state: directory
+
+- name: Display configuration
+  shell: |
+    echo "Project: {{project_name}}"
+    echo "Environment: {{env}}"
+    echo "Debug: {{debug}}"
+    echo "Port: {{port}}"

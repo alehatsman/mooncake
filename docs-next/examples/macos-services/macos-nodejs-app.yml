@@ -1,0 +1,127 @@
+version: "1.0"
+
+# Real-world example: Deploy a Node.js application as a macOS launchd service
+# This demonstrates a complete setup with:
+# - Application directory creation
+# - Log directory setup
+# - Service configuration
+# - Automatic restart on crash
+# - Environment variables
+
+vars:
+  app_name: my-nodejs-app
+  app_user: "{{ lookup('env', 'USER') }}"
+  app_dir: ~/apps/my-nodejs-app
+  log_dir: ~/Library/Logs/my-nodejs-app
+  node_path: /usr/local/bin/node
+  port: 3000
+
+steps:
+  # 1. Create application directory
+  - name: Create application directory
+    file:
+      path: "{{ app_dir }}"
+      state: directory
+      mode: "0755"
+
+  # 2. Create log directory
+  - name: Create log directory
+    file:
+      path: "{{ log_dir }}"
+      state: directory
+      mode: "0755"
+
+  # 3. Deploy application code (example - copy from source)
+  - name: Copy application files
+    copy:
+      src: ./src/
+      dest: "{{ app_dir }}/"
+
+  # 4. Install dependencies
+  - name: Install npm dependencies
+    shell:
+      cmd: npm install --production
+      cwd: "{{ app_dir }}"
+
+  # 5. Create launchd service for the Node.js app
+  - name: Create launchd service
+    service:
+      name: com.example.{{ app_name }}
+      state: started
+      enabled: true
+      unit:
+        dest: ~/Library/LaunchAgents/com.example.{{ app_name }}.plist
+        mode: "0644"
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <!-- Service identifier -->
+            <key>Label</key>
+            <string>com.example.{{ app_name }}</string>
+
+            <!-- Command to run -->
+            <key>ProgramArguments</key>
+            <array>
+              <string>{{ node_path }}</string>
+              <string>{{ app_dir }}/server.js</string>
+            </array>
+
+            <!-- Start when loaded (on login/boot) -->
+            <key>RunAtLoad</key>
+            <true/>
+
+            <!-- Restart on crash -->
+            <key>KeepAlive</key>
+            <dict>
+              <key>SuccessfulExit</key>
+              <false/>
+              <key>Crashed</key>
+              <true/>
+            </dict>
+
+            <!-- Logging -->
+            <key>StandardOutPath</key>
+            <string>{{ log_dir }}/stdout.log</string>
+            <key>StandardErrorPath</key>
+            <string>{{ log_dir }}/stderr.log</string>
+
+            <!-- Working directory -->
+            <key>WorkingDirectory</key>
+            <string>{{ app_dir }}</string>
+
+            <!-- Environment variables -->
+            <key>EnvironmentVariables</key>
+            <dict>
+              <key>NODE_ENV</key>
+              <string>production</string>
+              <key>PORT</key>
+              <string>{{ port }}</string>
+              <key>LOG_DIR</key>
+              <string>{{ log_dir }}</string>
+            </dict>
+
+            <!-- Prevent rapid restarts (wait 10 seconds) -->
+            <key>ThrottleInterval</key>
+            <integer>10</integer>
+
+            <!-- Process type -->
+            <key>ProcessType</key>
+            <string>Interactive</string>
+          </dict>
+          </plist>
+    register: service_result
+
+  # 6. Display service status
+  - name: Show service status
+    shell:
+      cmd: launchctl list | grep "{{ app_name }}"
+    when: service_result.changed
+
+  # 7. Wait for service to be ready
+  - name: Wait for application to be ready
+    shell:
+      cmd: curl -f http://localhost:{{ port }}/health || exit 1
+    retries: 5
+    retry_delay: 2s

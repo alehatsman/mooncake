@@ -1,0 +1,101 @@
+# Example 11: Execution Control
+#
+# This example demonstrates advanced execution control features:
+# - Timeouts
+# - Retries with delays
+# - Environment variables
+# - Working directory changes
+# - Custom change detection (changed_when)
+# - Custom failure detection (failed_when)
+# - Privilege escalation with become_user
+
+- name: Example 1 - Basic timeout
+  shell: echo "This command completes quickly"
+  timeout: 5s
+
+- name: Example 2 - Retry with delay
+  shell: |
+    # Simulate flaky command (50% failure rate)
+    if [ $((RANDOM % 2)) -eq 0 ]; then
+      echo "Success!"
+      exit 0
+    else
+      echo "Failed, will retry..." >&2
+      exit 1
+    fi
+  retries: 3
+  retry_delay: 1s
+  failed_when: false  # Ignore failures for demo purposes
+
+- name: Example 3 - Environment variables
+  shell: |
+    echo "Custom CC: $CC"
+    echo "Custom PATH: $PATH"
+    echo "Template var: $MY_VAR"
+  env:
+    CC: gcc-11
+    PATH: "/custom/bin:/usr/bin:/bin"
+    MY_VAR: "{{os}}-{{arch}}"
+
+- name: Example 4 - Working directory
+  shell: |
+    echo "Current directory: $(pwd)"
+    ls -la
+  cwd: /tmp
+
+- name: Example 5 - Custom change detection
+  shell: echo "This command always runs but rarely 'changes'"
+  changed_when: false
+  register: always_runs
+
+- name: Example 6 - Git-style change detection
+  shell: |
+    # Simulate git pull
+    echo "Already up to date."
+  register: git_result
+  changed_when: "'Already up to date' not in result.stdout"
+
+- name: Example 7 - Custom failure detection (grep)
+  shell: |
+    # Grep returns: 0=found, 1=not found, 2+=error
+    echo "searching for text" | grep "text" || true
+  register: grep_result
+  failed_when: "result.rc >= 2"
+
+- name: Example 8 - Acceptable exit codes
+  shell: |
+    # Return exit code 2 (still considered success)
+    exit 2
+  failed_when: "result.rc not in [0, 2]"
+
+- name: Example 9 - Combined timeout and retry
+  shell: echo "Robust command with timeout and retry"
+  timeout: 10s
+  retries: 2
+  retry_delay: 2s
+
+- name: Example 10 - Full featured command
+  shell: |
+    echo "Working in: $(pwd)"
+    echo "Environment: $ENV_TYPE"
+    echo "Debug: $DEBUG"
+  cwd: /tmp
+  env:
+    ENV_TYPE: development
+    DEBUG: "true"
+  timeout: 30s
+  retries: 1
+  retry_delay: 5s
+  register: result
+  changed_when: "result.rc == 0"
+  failed_when: "result.rc != 0"
+
+- name: Summary
+  shell: |
+    echo "✓ All execution control examples completed"
+    echo "  - Timeouts: Prevent infinite hangs"
+    echo "  - Retries: Handle transient failures"
+    echo "  - Environment: Custom execution context"
+    echo "  - Working Dir: Execute in specific locations"
+    echo "  - changed_when: Control change reporting"
+    echo "  - failed_when: Custom failure conditions"

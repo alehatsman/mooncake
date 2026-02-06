@@ -1,0 +1,328 @@
+# ============================================================================
+# Unarchive Action - Comprehensive Examples
+# ============================================================================
+# Extract archive files (.tar, .tar.gz, .tgz, .zip) with security protections.
+#
+# Run this file:
+#   mooncake run --config examples/actions/unarchive.yml
+# ============================================================================
+
+# Setup
+- name: "Setup: Create directories"
+  file:
+    path: /tmp/mooncake-unarchive-{{ item }}
+    state: directory
+    mode: "0755"
+  with_items: [archives, extracted]
+  tags: [setup]
+
+# =============================================================================
+# Create Test Archives
+# =============================================================================
+
+- name: "Setup: Create test content"
+  shell: |
+    mkdir -p /tmp/mooncake-unarchive-archives/test-content/app-1.0/{bin,lib,config}
+    echo "main app" > /tmp/mooncake-unarchive-archives/test-content/app-1.0/bin/app
+    echo "library" > /tmp/mooncake-unarchive-archives/test-content/app-1.0/lib/libapp.so
+    echo "config" > /tmp/mooncake-unarchive-archives/test-content/app-1.0/config/app.conf
+  tags: [setup]
+
+- name: "Setup: Create .tar.gz archive"
+  shell: |
+    cd /tmp/mooncake-unarchive-archives/test-content
+    tar czf ../test-app.tar.gz app-1.0/
+  tags: [setup]
+
+- name: "Setup: Create .tar archive"
+  shell: |
+    cd /tmp/mooncake-unarchive-archives/test-content
+    tar cf ../test-app.tar app-1.0/
+  tags: [setup]
+
+- name: "Setup: Create .zip archive"
+  shell: |
+    cd /tmp/mooncake-unarchive-archives/test-content
+    zip -r ../test-app.zip app-1.0/ > /dev/null 2>&1 || true
+  tags: [setup]
+
+# =============================================================================
+# Basic Extraction
+# =============================================================================
+
+- name: "Example 1: Extract .tar.gz archive"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/basic-targz
+    mode: "0755"
+  tags: [basics]
+
+- name: "Example 2: Verify extraction"
+  shell: |
+    echo "Extracted files:"
+    find /tmp/mooncake-unarchive-extracted/basic-targz -type f
+  tags: [basics]
+
+- name: "Example 3: Extract .tar archive"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar
+    dest: /tmp/mooncake-unarchive-extracted/basic-tar
+    mode: "0755"
+  tags: [basics]
+
+- name: "Example 4: Extract .zip archive"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.zip
+    dest: /tmp/mooncake-unarchive-extracted/basic-zip
+    mode: "0755"
+  tags: [basics]
+
+# =============================================================================
+# Strip Components
+# =============================================================================
+
+- name: "Example 5: Extract without stripping (default)"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/no-strip
+    mode: "0755"
+  tags: [strip]
+
+- name: "Example 6: Show structure without stripping"
+  shell: |
+    echo "Without strip_components:"
+    find /tmp/mooncake-unarchive-extracted/no-strip -type d | head -5
+  tags: [strip]
+
+- name: "Example 7: Extract with strip_components=1"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/strip-1
+    strip_components: 1
+    mode: "0755"
+  tags: [strip]
+
+- name: "Example 8: Show structure with stripping"
+  shell: |
+    echo "With strip_components=1:"
+    find /tmp/mooncake-unarchive-extracted/strip-1 -type d | head -5
+  tags: [strip]
+
+# =============================================================================
+# Idempotency with creates
+# =============================================================================
+
+- name: "Example 9: Extract with marker file"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/with-marker
+    creates: /tmp/mooncake-unarchive-extracted/with-marker/.extracted
+    mode: "0755"
+  register: first_extract
+  tags: [idempotency]
+
+- name: "Example 10: Create marker file"
+  file:
+    path: /tmp/mooncake-unarchive-extracted/with-marker/.extracted
+    state: touch
+    mode: "0644"
+  tags: [idempotency]
+
+- name: "Example 11: Try to extract again (skipped)"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/with-marker
+    creates: /tmp/mooncake-unarchive-extracted/with-marker/.extracted
+    mode: "0755"
+  register: second_extract
+  tags: [idempotency]
+
+- name: "Example 12: Show idempotency"
+  print: "First: {{ first_extract.changed }}, Second: {{ second_extract.changed }}"
+  tags: [idempotency]
+
+# =============================================================================
+# Real-World: Software Installation
+# =============================================================================
+
+- name: "Example 13: Download and extract pattern (demo)"
+  print: |
+    Real-world pattern - Install Node.js:
+
+    - name: Download Node.js
+      download:
+        url: "https://nodejs.org/dist/v20.11.0/node-v20.11.0-linux-x64.tar.gz"
+        dest: "/tmp/node.tar.gz"
+        checksum: "CHECKSUM_HERE"
+        mode: "0644"
+
+    - name: Extract Node.js
+      unarchive:
+        src: "/tmp/node.tar.gz"
+        dest: "/opt/node"
+        strip_components: 1
+        creates: "/opt/node/bin/node"
+        mode: "0755"
+      become: true
+
+    - name: Verify installation
+      shell: "/opt/node/bin/node --version"
+  tags: [real-world]
+
+# =============================================================================
+# Extract Multiple Archives
+# =============================================================================
+
+- vars:
+    archives:
+      - name: app1
+        file: test-app.tar.gz
+      - name: app2
+        file: test-app.zip
+
+- name: "Example 14: Extract multiple archives"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/{{ item.file }}
+    dest: /tmp/mooncake-unarchive-extracted/{{ item.name }}
+    strip_components: 1
+    mode: "0755"
+  with_items: "{{ archives }}"
+  tags: [loops]
+
+# =============================================================================
+# Conditional Extraction
+# =============================================================================
+
+- name: "Example 15: Extract on Linux only"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/linux-only
+    mode: "0755"
+  when: os == "linux"
+  tags: [conditional]
+
+# =============================================================================
+# Extract with Registration
+# =============================================================================
+
+- name: "Example 16: Extract and register"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/registered
+    strip_components: 1
+    mode: "0755"
+  register: extract_result
+  tags: [register]
+
+- name: "Example 17: Show extract result"
+  print: "Extraction changed: {{ extract_result.changed }}"
+  tags: [register]
+
+# =============================================================================
+# Different Archive Formats
+# =============================================================================
+
+- name: "Example 18: Supported formats summary"
+  print: |
+    Supported archive formats:
+      • .tar       - Uncompressed tar archives
+      • .tar.gz    - Gzip compressed tar archives
+      • .tgz       - Alternative gzip tar extension
+      • .zip       - ZIP archives
+
+    Format is auto-detected from file extension.
+
+    Security features:
+      • Blocks path traversal attacks (../)
+      • Validates all extracted paths
+      • Prevents symlink escapes
+  tags: [formats]
+
+# =============================================================================
+# Extract with Different Permissions
+# =============================================================================
+
+- name: "Example 19: Extract with restrictive permissions"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/restricted
+    mode: "0700"
+  tags: [permissions]
+
+- name: "Example 20: Extract with standard permissions"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/standard
+    mode: "0755"
+  tags: [permissions]
+
+# =============================================================================
+# Real-World: Backup Restoration
+# =============================================================================
+
+- name: "Example 21: Create backup archive"
+  shell: |
+    mkdir -p /tmp/mooncake-unarchive-archives/backup-data
+    echo "data1" > /tmp/mooncake-unarchive-archives/backup-data/file1.txt
+    echo "data2" > /tmp/mooncake-unarchive-archives/backup-data/file2.txt
+    cd /tmp/mooncake-unarchive-archives
+    tar czf backup.tar.gz backup-data/
+  tags: [real-world]
+
+- name: "Example 22: Restore backup"
+  unarchive:
+    src: /tmp/mooncake-unarchive-archives/backup.tar.gz
+    dest: /tmp/mooncake-unarchive-extracted/restored
+    creates: /tmp/mooncake-unarchive-extracted/restored/.restored
+    mode: "0755"
+  tags: [real-world]
+
+- name: "Example 23: Mark restoration complete"
+  file:
+    path: /tmp/mooncake-unarchive-extracted/restored/.restored
+    state: touch
+    mode: "0644"
+  tags: [real-world]
+
+# =============================================================================
+# Verification
+# =============================================================================
+
+- name: "Example 24: List all extracted directories"
+  shell: |
+    echo "Extracted directories:"
+    find /tmp/mooncake-unarchive-extracted -maxdepth 1 -type d | sort
+  tags: [verify]
+
+- name: "Example 25: Count extracted files"
+  shell: |
+    count=$(find /tmp/mooncake-unarchive-extracted -type f | wc -l)
+    echo "Total files extracted: $count"
+  tags: [verify]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove test directories"
+  file:
+    path: /tmp/mooncake-unarchive-{{ item }}
+    state: absent
+    force: true
+  with_items: [archives, extracted]
+  tags: [cleanup]
+
+- name: "Summary"
+  print: |
+
+    Unarchive action examples completed!
+    Covered:
+      • Extracting .tar, .tar.gz, .tgz, .zip
+      • strip_components for path manipulation
+      • Idempotency with creates marker
+      • Permission management
+      • Integration with download
+      • Backup restoration patterns
+      • Security features
+
+  tags: [always]

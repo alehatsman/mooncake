@@ -1,0 +1,7 @@
+- name: Install Homebrew packages
+  shell: echo "brew install git curl wget"
+  tags:
+    - install
+
+- name: Configure macOS settings
+  shell: echo "Configuring macOS-specific settings"

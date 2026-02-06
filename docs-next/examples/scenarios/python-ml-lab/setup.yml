@@ -1,0 +1,155 @@
+---
+name: Python ML Lab Setup
+description: |
+  Set up a Python machine learning environment on Ubuntu.
+  Installs Python, creates a virtual environment, and installs
+  popular ML libraries (numpy, pandas, matplotlib, scikit-learn, jupyter).
+
+vars:
+  workspace_dir: "{{ facts.env.HOME }}/ml-workspace"
+  venv_dir: "{{ workspace_dir }}/venv"
+  python_version: "3"
+
+steps:
+  - name: Update apt cache
+    shell:
+      cmd: apt-get update
+    become: true
+
+  - name: Install Python3 and pip
+    shell:
+      cmd: apt-get install -y python3 python3-pip python3-venv
+    become: true
+    register: python_install
+
+  - name: Print Python installation status
+    print:
+      msg: "Python installed successfully"
+
+  - name: Check Python version
+    shell:
+      cmd: python3 --version
+    register: python_ver
+
+  - name: Print Python version
+    print:
+      msg: "Python version: {{ python_ver.stdout }}"
+
+  - name: Create workspace directory
+    file:
+      path: "{{ workspace_dir }}"
+      state: directory
+      mode: "0755"
+
+  - name: Create Python virtual environment
+    shell:
+      cmd: python3 -m venv {{ venv_dir }}
+    register: venv_create
+
+  - name: Print venv creation status
+    print:
+      msg: "Virtual environment created at {{ venv_dir }}"
+
+  - name: Copy requirements.txt
+    copy:
+      src: files/requirements.txt
+      dest: "{{ workspace_dir }}/requirements.txt"
+      mode: "0644"
+
+  - name: Install ML packages in virtual environment
+    shell:
+      cmd: |
+        source {{ venv_dir }}/bin/activate
+        pip install --upgrade pip
+        pip install -r {{ workspace_dir }}/requirements.txt
+    register: pip_install
+
+  - name: Print package installation status
+    print:
+      msg: "ML packages installed successfully"
+
+  - name: List installed packages
+    shell:
+      cmd: |
+        source {{ venv_dir }}/bin/activate
+        pip list
+    register: pip_list
+
+  - name: Copy sample ML script
+    copy:
+      src: files/hello_ml.py
+      dest: "{{ workspace_dir }}/hello_ml.py"
+      mode: "0755"
+
+  - name: Create notebooks directory
+    file:
+      path: "{{ workspace_dir }}/notebooks"
+      state: directory
+      mode: "0755"
+
+  - name: Verify numpy installation
+    shell:
+      cmd: |
+        source {{ venv_dir }}/bin/activate
+        python3 -c "import numpy; print(f'NumPy {numpy.__version__}')"
+    register: numpy_check
+
+  - name: Verify pandas installation
+    shell:
+      cmd: |
+        source {{ venv_dir }}/bin/activate
+        python3 -c "import pandas; print(f'Pandas {pandas.__version__}')"
+    register: pandas_check
+
+  - name: Verify scikit-learn installation
+    shell:
+      cmd: |
+        source {{ venv_dir }}/bin/activate
+        python3 -c "import sklearn; print(f'scikit-learn {sklearn.__version__}')"
+    register: sklearn_check
+
+  - name: Assert all packages installed correctly
+    assert:
+      that:
+        - "'NumPy' in numpy_check.stdout"
+        - "'Pandas' in pandas_check.stdout"
+        - "'scikit-learn' in sklearn_check.stdout"
+      success_msg: "All ML packages verified successfully!"
+
+  - name: Run sample ML script
+    shell:
+      cmd: |
+        source {{ venv_dir }}/bin/activate
+        python3 {{ workspace_dir }}/hello_ml.py
+    register: ml_output
+
+  - name: Print ML script output
+    print:
+      msg: "{{ ml_output.stdout }}"
+
+  - name: Print success message
+    print:
+      msg: |
+        ========================================
+        Python ML Lab Setup Complete!
+        ========================================
+
+        Workspace: {{ workspace_dir }}
+        Virtual environment: {{ venv_dir }}
+
+        Installed packages:
+        {{ pip_list.stdout }}
+
+        To activate the environment:
+          source {{ venv_dir }}/bin/activate
+
+        To start Jupyter Notebook:
+          source {{ venv_dir }}/bin/activate
+          jupyter notebook --notebook-dir={{ workspace_dir }}/notebooks
+
+        To run the sample script:
+          source {{ venv_dir }}/bin/activate
+          python3 {{ workspace_dir }}/hello_ml.py
+
+        Happy machine learning!
+        ========================================

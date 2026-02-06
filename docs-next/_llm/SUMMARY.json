@@ -1,0 +1,560 @@
+{
+  "source_directory": "docs-next",
+  "total_files": 78,
+  "total_size_bytes": 787967,
+  "total_lines": 29551,
+  "by_directory": {
+    "about": {
+      "files": 2,
+      "size": 11868,
+      "lines": 280
+    },
+    "api": {
+      "files": 9,
+      "size": 202603,
+      "lines": 5760
+    },
+    "architecture-decisions": {
+      "files": 4,
+      "size": 57934,
+      "lines": 1664
+    },
+    "development": {
+      "files": 5,
+      "size": 59379,
+      "lines": 1727
+    },
+    "examples": {
+      "files": 16,
+      "size": 63805,
+      "lines": 2928
+    },
+    "examples/actions": {
+      "files": 1,
+      "size": 11580,
+      "lines": 478
+    },
+    "examples/advanced-file-operations": {
+      "files": 1,
+      "size": 2125,
+      "lines": 124
+    },
+    "examples/conditionals": {
+      "files": 1,
+      "size": 2177,
+      "lines": 102
+    },
+    "examples/execution-control": {
+      "files": 1,
+      "size": 3125,
+      "lines": 94
+    },
+    "examples/files-and-directories": {
+      "files": 1,
+      "size": 1752,
+      "lines": 90
+    },
+    "examples/hello-world": {
+      "files": 1,
+      "size": 1281,
+      "lines": 69
+    },
+    "examples/loops": {
+      "files": 1,
+      "size": 2623,
+      "lines": 137
+    },
+    "examples/macos-services": {
+      "files": 1,
+      "size": 9477,
+      "lines": 447
+    },
+    "examples/multi-file-configs": {
+      "files": 1,
+      "size": 4925,
+      "lines": 238
+    },
+    "examples/ollama": {
+      "files": 1,
+      "size": 3667,
+      "lines": 135
+    },
+    "examples/real-world": {
+      "files": 1,
+      "size": 1828,
+      "lines": 57
+    },
+    "examples/real-world/dotfiles-manager": {
+      "files": 1,
+      "size": 2890,
+      "lines": 135
+    },
+    "examples/register": {
+      "files": 1,
+      "size": 2965,
+      "lines": 147
+    },
+    "examples/scenarios/docker-stack": {
+      "files": 1,
+      "size": 6471,
+      "lines": 316
+    },
+    "examples/scenarios/nginx-ubuntu": {
+      "files": 1,
+      "size": 1957,
+      "lines": 89
+    },
+    "examples/scenarios/nodejs-webapp": {
+      "files": 1,
+      "size": 4250,
+      "lines": 204
+    },
+    "examples/scenarios/postgresql-db": {
+      "files": 1,
+      "size": 5224,
+      "lines": 263
+    },
+    "examples/scenarios/python-ml-lab": {
+      "files": 1,
+      "size": 2952,
+      "lines": 132
+    },
+    "examples/sudo": {
+      "files": 1,
+      "size": 5994,
+      "lines": 239
+    },
+    "examples/tags": {
+      "files": 1,
+      "size": 3233,
+      "lines": 173
+    },
+    "examples/templates": {
+      "files": 1,
+      "size": 2419,
+      "lines": 129
+    },
+    "examples/variables-and-facts": {
+      "files": 1,
+      "size": 1935,
+      "lines": 87
+    },
+    "guide": {
+      "files": 8,
+      "size": 82165,
+      "lines": 3944
+    },
+    "guide/config": {
+      "files": 4,
+      "size": 76857,
+      "lines": 3527
+    },
+    "root": {
+      "files": 1,
+      "size": 15638,
+      "lines": 712
+    },
+    "presets": {
+      "files": 2,
+      "size": 83490,
+      "lines": 3753
+    },
+    "testing": {
+      "files": 5,
+      "size": 49378,
+      "lines": 1371
+    }
+  },
+  "files": [
+    {
+      "path": "about/changelog.md",
+      "size": 10317,
+      "lines": 241
+    },
+    {
+      "path": "about/license.md",
+      "size": 1551,
+      "lines": 39
+    },
+    {
+      "path": "api/actions.md",
+      "size": 55650,
+      "lines": 1665
+    },
+    {
+      "path": "api/cmd.md",
+      "size": 244,
+      "lines": 16
+    },
+    {
+      "path": "api/config.md",
+      "size": 42166,
+      "lines": 997
+    },
+    {
+      "path": "api/events.md",
+      "size": 21581,
+      "lines": 672
+    },
+    {
+      "path": "api/executor.md",
+      "size": 35399,
+      "lines": 946
+    },
+    {
+      "path": "api/facts.md",
+      "size": 4385,
+      "lines": 173
+    },
+    {
+      "path": "api/index.md",
+      "size": 4511,
+      "lines": 175
+    },
+    {
+      "path": "api/logger.md",
+      "size": 35776,
+      "lines": 1060
+    },
+    {
+      "path": "api/presets.md",
+      "size": 2891,
+      "lines": 56
+    },
+    {
+      "path": "architecture-decisions/000-planner-execution-model.md",
+      "size": 31987,
+      "lines": 852
+    },
+    {
+      "path": "architecture-decisions/001-handler-based-action-architecture.md",
+      "size": 9887,
+      "lines": 314
+    },
+    {
+      "path": "architecture-decisions/002-preset-expansion-system.md",
+      "size": 14761,
+      "lines": 466
+    },
+    {
+      "path": "architecture-decisions/README.md",
+      "size": 1299,
+      "lines": 32
+    },
+    {
+      "path": "development/adding-actions.md",
+      "size": 10258,
+      "lines": 414
+    },
+    {
+      "path": "development/contributing.md",
+      "size": 9137,
+      "lines": 417
+    },
+    {
+      "path": "development/proposals.md",
+      "size": 4563,
+      "lines": 245
+    },
+    {
+      "path": "development/releasing.md",
+      "size": 2210,
+      "lines": 98
+    },
+    {
+      "path": "development/roadmap.md",
+      "size": 33211,
+      "lines": 553
+    },
+    {
+      "path": "examples/01-hello-world.md",
+      "size": 1303,
+      "lines": 70
+    },
+    {
+      "path": "examples/02-variables-and-facts.md",
+      "size": 2042,
+      "lines": 93
+    },
+    {
+      "path": "examples/03-files-and-directories.md",
+      "size": 1784,
+      "lines": 91
+    },
+    {
+      "path": "examples/04-conditionals.md",
+      "size": 2201,
+      "lines": 104
+    },
+    {
+      "path": "examples/05-templates.md",
+      "size": 2439,
+      "lines": 130
+    },
+    {
+      "path": "examples/06-loops.md",
+      "size": 3765,
+      "lines": 183
+    },
+    {
+      "path": "examples/07-register.md",
+      "size": 2984,
+      "lines": 148
+    },
+    {
+      "path": "examples/08-tags.md",
+      "size": 3249,
+      "lines": 175
+    },
+    {
+      "path": "examples/09-sudo.md",
+      "size": 4044,
+      "lines": 195
+    },
+    {
+      "path": "examples/10-multi-file-configs.md",
+      "size": 4977,
+      "lines": 240
+    },
+    {
+      "path": "examples/11-execution-control.md",
+      "size": 5784,
+      "lines": 268
+    },
+    {
+      "path": "examples/12-unarchive.md",
+      "size": 8905,
+      "lines": 388
+    },
+    {
+      "path": "examples/actions/README.md",
+      "size": 11580,
+      "lines": 478
+    },
+    {
+      "path": "examples/advanced-file-operations/README.md",
+      "size": 2125,
+      "lines": 124
+    },
+    {
+      "path": "examples/conditionals/README.md",
+      "size": 2177,
+      "lines": 102
+    },
+    {
+      "path": "examples/execution-control/README.md",
+      "size": 3125,
+      "lines": 94
+    },
+    {
+      "path": "examples/files-and-directories/README.md",
+      "size": 1752,
+      "lines": 90
+    },
+    {
+      "path": "examples/hello-world/README.md",
+      "size": 1281,
+      "lines": 69
+    },
+    {
+      "path": "examples/idempotency.md",
+      "size": 10448,
+      "lines": 430
+    },
+    {
+      "path": "examples/index.md",
+      "size": 1421,
+      "lines": 50
+    },
+    {
+      "path": "examples/json-output-example.md",
+      "size": 5544,
+      "lines": 226
+    },
+    {
+      "path": "examples/loops/README.md",
+      "size": 2623,
+      "lines": 137
+    },
+    {
+      "path": "examples/macos-services/README.md",
+      "size": 9477,
+      "lines": 447
+    },
+    {
+      "path": "examples/multi-file-configs/README.md",
+      "size": 4925,
+      "lines": 238
+    },
+    {
+      "path": "examples/ollama/README.md",
+      "size": 3667,
+      "lines": 135
+    },
+    {
+      "path": "examples/real-world/README.md",
+      "size": 1828,
+      "lines": 57
+    },
+    {
+      "path": "examples/real-world/dotfiles-manager/README.md",
+      "size": 2890,
+      "lines": 135
+    },
+    {
+      "path": "examples/real-world-dotfiles.md",
+      "size": 2915,
+      "lines": 137
+    },
+    {
+      "path": "examples/register/README.md",
+      "size": 2965,
+      "lines": 147
+    },
+    {
+      "path": "examples/scenarios/docker-stack/README.md",
+      "size": 6471,
+      "lines": 316
+    },
+    {
+      "path": "examples/scenarios/nginx-ubuntu/README.md",
+      "size": 1957,
+      "lines": 89
+    },
+    {
+      "path": "examples/scenarios/nodejs-webapp/README.md",
+      "size": 4250,
+      "lines": 204
+    },
+    {
+      "path": "examples/scenarios/postgresql-db/README.md",
+      "size": 5224,
+      "lines": 263
+    },
+    {
+      "path": "examples/scenarios/python-ml-lab/README.md",
+      "size": 2952,
+      "lines": 132
+    },
+    {
+      "path": "examples/sudo/README.md",
+      "size": 5994,
+      "lines": 239
+    },
+    {
+      "path": "examples/tags/README.md",
+      "size": 3233,
+      "lines": 173
+    },
+    {
+      "path": "examples/templates/README.md",
+      "size": 2419,
+      "lines": 129
+    },
+    {
+      "path": "examples/variables-and-facts/README.md",
+      "size": 1935,
+      "lines": 87
+    },
+    {
+      "path": "guide/best-practices.md",
+      "size": 1179,
+      "lines": 77
+    },
+    {
+      "path": "guide/commands.md",
+      "size": 9262,
+      "lines": 364
+    },
+    {
+      "path": "guide/config/actions.md",
+      "size": 55966,
+      "lines": 2406
+    },
+    {
+      "path": "guide/config/advanced.md",
+      "size": 7606,
+      "lines": 404
+    },
+    {
+      "path": "guide/config/control-flow.md",
+      "size": 5132,
+      "lines": 280
+    },
+    {
+      "path": "guide/config/variables.md",
+      "size": 8153,
+      "lines": 437
+    },
+    {
+      "path": "guide/core-concepts.md",
+      "size": 2457,
+      "lines": 82
+    },
+    {
+      "path": "guide/faq.md",
+      "size": 14103,
+      "lines": 645
+    },
+    {
+      "path": "guide/preset-authoring.md",
+      "size": 18256,
+      "lines": 853
+    },
+    {
+      "path": "guide/presets.md",
+      "size": 14019,
+      "lines": 650
+    },
+    {
+      "path": "guide/quick-reference.md",
+      "size": 9796,
+      "lines": 566
+    },
+    {
+      "path": "guide/troubleshooting.md",
+      "size": 13093,
+      "lines": 707
+    },
+    {
+      "path": "index.md",
+      "size": 15638,
+      "lines": 712
+    },
+    {
+      "path": "presets/catalog.md",
+      "size": 52187,
+      "lines": 2363
+    },
+    {
+      "path": "presets/style-guide.md",
+      "size": 31303,
+      "lines": 1390
+    },
+    {
+      "path": "testing/README.md",
+      "size": 3632,
+      "lines": 119
+    },
+    {
+      "path": "testing/architecture.md",
+      "size": 21123,
+      "lines": 380
+    },
+    {
+      "path": "testing/guide.md",
+      "size": 9802,
+      "lines": 363
+    },
+    {
+      "path": "testing/implementation-summary.md",
+      "size": 10697,
+      "lines": 316
+    },
+    {
+      "path": "testing/quick-reference.md",
+      "size": 4124,
+      "lines": 193
+    }
+  ]
+}

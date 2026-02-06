@@ -1,0 +1,498 @@
+# ============================================================================
+# Vars Action - Comprehensive Examples
+# ============================================================================
+# Define and manage variables within your configuration.
+#
+# Run this file:
+#   mooncake run --config examples/actions/vars.yml
+# ============================================================================
+
+# =============================================================================
+# Basic Variable Definition
+# =============================================================================
+
+- name: "Example 1: Simple variables"
+  vars:
+    app_name: "MyApplication"
+    version: "1.0.0"
+  tags: [basics]
+
+- name: "Example 2: Use defined variables"
+  print: "Application: {{ app_name }} version {{ version }}"
+  tags: [basics]
+
+# =============================================================================
+# Different Variable Types
+# =============================================================================
+
+- name: "Example 3: String variables"
+  vars:
+    string_var: "Hello World"
+    multi_line_string: |
+      This is a
+      multi-line
+      string
+  tags: [types]
+
+- name: "Example 4: Number variables"
+  vars:
+    port: 8080
+    timeout: 30
+    pi: 3.14159
+  tags: [types]
+
+- name: "Example 5: Boolean variables"
+  vars:
+    debug: true
+    enable_ssl: false
+    is_production: true
+  tags: [types]
+
+- name: "Example 6: List variables"
+  vars:
+    packages:
+      - git
+      - vim
+      - curl
+      - wget
+    ports:
+      - 80
+      - 443
+      - 8080
+  tags: [types]
+
+- name: "Example 7: Dictionary/Object variables"
+  vars:
+    database:
+      host: localhost
+      port: 5432
+      name: myapp_db
+      user: dbuser
+    server:
+      host: "0.0.0.0"
+      port: 8080
+      workers: 4
+  tags: [types]
+
+- name: "Example 8: Nested data structures"
+  vars:
+    application:
+      name: "WebApp"
+      version: "2.0.0"
+      config:
+        database:
+          host: "db.example.com"
+          port: 5432
+        cache:
+          host: "redis.example.com"
+          port: 6379
+      features:
+        - authentication
+        - api
+        - admin
+  tags: [types]
+
+# =============================================================================
+# Using Variables
+# =============================================================================
+
+- vars:
+    greeting: "Hello"
+    name: "World"
+
+- name: "Example 9: String interpolation"
+  print: "{{ greeting }}, {{ name }}!"
+  tags: [usage]
+
+- vars:
+    service_name: "nginx"
+    service_port: 80
+
+- name: "Example 10: Variables in commands"
+  shell: echo "Service {{ service_name }} runs on port {{ service_port }}"
+  tags: [usage]
+
+- vars:
+    filename: "config.txt"
+    content: "Configuration data"
+
+- name: "Example 11: Variables in file operations"
+  file:
+    path: /tmp/{{ filename }}
+    state: file
+    content: "{{ content }}"
+    mode: "0644"
+  tags: [usage]
+
+# =============================================================================
+# Variable Scope
+# =============================================================================
+
+- name: "Example 12: Global variables (set early)"
+  vars:
+    global_var: "Available everywhere"
+  tags: [scope]
+
+- name: "Example 13: Use global variable"
+  print: "Global: {{ global_var }}"
+  tags: [scope]
+
+- name: "Example 14: Update variable"
+  vars:
+    global_var: "Updated value"
+  tags: [scope]
+
+- name: "Example 15: Show updated value"
+  print: "Updated: {{ global_var }}"
+  tags: [scope]
+
+# =============================================================================
+# Variables from External Files
+# =============================================================================
+
+# Note: include_vars is a separate action
+- name: "Example 16: Include vars from file (demo)"
+  print: |
+    Include variables from external file:
+    - name: Load environment variables
+      include_vars: ./vars/development.yml
+
+    # vars/development.yml contains:
+    # debug: true
+    # log_level: debug
+    # api_url: http://localhost:3000
+  tags: [external]
+
+# =============================================================================
+# System Facts as Variables
+# =============================================================================
+
+- name: "Example 17: Use system facts"
+  print: |
+    System information:
+      OS: {{ os }}
+      Architecture: {{ arch }}
+  tags: [facts]
+
+- name: "Example 18: Conditional based on OS"
+  print: "This is a {{ os }} system"
+  tags: [facts]
+
+- name: "Example 19: OS-specific logic"
+  vars:
+    package_manager: "{{ 'apt' if os == 'linux' else 'brew' }}"
+  tags: [facts]
+
+- name: "Example 20: Show package manager"
+  print: "Package manager: {{ package_manager }}"
+  tags: [facts]
+
+# =============================================================================
+# Variables in Loops
+# =============================================================================
+
+- vars:
+    environments:
+      - development
+      - staging
+      - production
+
+- name: "Example 21: Iterate over list variable"
+  print: "Environment: {{ item }}"
+  with_items: "{{ environments }}"
+  tags: [loops]
+
+- vars:
+    servers:
+      - name: web-01
+        ip: 192.168.1.10
+      - name: web-02
+        ip: 192.168.1.11
+      - name: db-01
+        ip: 192.168.1.20
+
+- name: "Example 22: Iterate over complex items"
+  print: "Server: {{ item.name }} ({{ item.ip }})"
+  with_items: "{{ servers }}"
+  tags: [loops]
+
+# =============================================================================
+# Conditional Variables
+# =============================================================================
+
+- vars:
+    environment: production
+
+- name: "Example 23: Set conditional variables"
+  vars:
+    debug_mode: "{{ true if environment == 'development' else false }}"
+    log_level: "{{ 'debug' if environment == 'development' else 'info' }}"
+    port: "{{ 3000 if environment == 'development' else 80 }}"
+  tags: [conditional]
+
+- name: "Example 24: Show conditional values"
+  print: |
+    Environment: {{ environment }}
+    Debug: {{ debug_mode }}
+    Log Level: {{ log_level }}
+    Port: {{ port }}
+  tags: [conditional]
+
+# =============================================================================
+# Variables with Default Values
+# =============================================================================
+
+- name: "Example 25: Variables with defaults"
+  vars:
+    custom_port: "{{ user_port | default(8080) }}"
+    custom_host: "{{ user_host | default('localhost') }}"
+  tags: [defaults]
+
+- name: "Example 26: Show default values"
+  print: "Server: {{ custom_host }}:{{ custom_port }}"
+  tags: [defaults]
+
+# =============================================================================
+# Complex Variable Structures
+# =============================================================================
+
+- vars:
+    deployment:
+      application:
+        name: "webapp"
+        version: "1.2.3"
+        repository: "https://github.com/user/webapp"
+      infrastructure:
+        provider: "aws"
+        region: "us-east-1"
+        instances:
+          - type: "t2.micro"
+            count: 2
+          - type: "t2.small"
+            count: 1
+      configuration:
+        database:
+          engine: "postgresql"
+          version: "15"
+          multi_az: true
+        cache:
+          engine: "redis"
+          version: "7"
+
+- name: "Example 27: Access nested variables"
+  print: |
+    Deploying: {{ deployment.application.name }} v{{ deployment.application.version }}
+    Provider: {{ deployment.infrastructure.provider }}
+    Region: {{ deployment.infrastructure.region }}
+    Database: {{ deployment.configuration.database.engine }} {{ deployment.configuration.database.version }}
+  tags: [complex]
+
+# =============================================================================
+# Variables for Configuration Management
+# =============================================================================
+
+- vars:
+    app_config:
+      name: "MyApp"
+      version: "1.0.0"
+      server:
+        host: "0.0.0.0"
+        port: 8080
+        workers: 4
+      database:
+        host: "localhost"
+        port: 5432
+        name: "myapp_db"
+        pool_size: 10
+      logging:
+        level: "info"
+        file: "/var/log/myapp/app.log"
+        max_size: "100MB"
+      features:
+        - "authentication"
+        - "api"
+        - "websockets"
+
+- name: "Example 28: Generate config file from variables"
+  file:
+    path: /tmp/app-config.yml
+    state: file
+    content: |
+      application:
+        name: {{ app_config.name }}
+        version: {{ app_config.version }}
+
+      server:
+        host: {{ app_config.server.host }}
+        port: {{ app_config.server.port }}
+        workers: {{ app_config.server.workers }}
+
+      database:
+        host: {{ app_config.database.host }}
+        port: {{ app_config.database.port }}
+        name: {{ app_config.database.name }}
+        pool_size: {{ app_config.database.pool_size }}
+
+      logging:
+        level: {{ app_config.logging.level }}
+        file: {{ app_config.logging.file }}
+        max_size: {{ app_config.logging.max_size }}
+
+      features:
+      {% for feature in app_config.features %}
+        - {{ feature }}
+      {% endfor %}
+    mode: "0644"
+  tags: [config]
+
+- name: "Example 29: Display generated config"
+  shell: cat /tmp/app-config.yml
+  tags: [config]
+
+# =============================================================================
+# Variable Precedence
+# =============================================================================
+
+- name: "Example 30: Initial value"
+  vars:
+    override_test: "original"
+  tags: [precedence]
+
+- name: "Example 31: Show original"
+  print: "Value: {{ override_test }}"
+  tags: [precedence]
+
+- name: "Example 32: Override value"
+  vars:
+    override_test: "overridden"
+  tags: [precedence]
+
+- name: "Example 33: Show overridden"
+  print: "Value: {{ override_test }}"
+  tags: [precedence]
+
+# =============================================================================
+# Real-World: Multi-Environment Configuration
+# =============================================================================
+
+- vars:
+    env: production  # Change to: development, staging, production
+
+- name: "Example 34: Set environment-specific variables"
+  vars:
+    config:
+      development:
+        debug: true
+        log_level: "debug"
+        api_url: "http://localhost:3000"
+        database_host: "localhost"
+      staging:
+        debug: false
+        log_level: "info"
+        api_url: "https://staging-api.example.com"
+        database_host: "staging-db.example.com"
+      production:
+        debug: false
+        log_level: "warn"
+        api_url: "https://api.example.com"
+        database_host: "prod-db.example.com"
+  tags: [multi-env]
+
+- name: "Example 35: Use environment config (demo)"
+  print: |
+    Environment: {{ env }}
+    Debug: {{ config[env].debug }}
+    Log Level: {{ config[env].log_level }}
+    API URL: {{ config[env].api_url }}
+    Database: {{ config[env].database_host }}
+  when: false  # Disabled due to complex syntax
+  tags: [multi-env]
+
+# =============================================================================
+# Variables Best Practices
+# =============================================================================
+
+- name: "Example 36: Best practices"
+  print: |
+    Variables Best Practices:
+
+    1. Use descriptive names
+       ✓ database_host
+       ✗ dbh
+
+    2. Group related variables
+       vars:
+         database:
+           host: localhost
+           port: 5432
+
+    3. Use consistent naming
+       - snake_case: database_host
+       - camelCase: databaseHost
+       (Pick one and stick with it)
+
+    4. Set defaults for optional values
+       port: "{{ custom_port | default(8080) }}"
+
+    5. Use external files for environment-specific vars
+       - include_vars: ./vars/{{ environment }}.yml
+
+    6. Document complex structures
+       # deployment configuration
+       vars:
+         deployment:
+           # application settings
+           application:
+             name: "myapp"
+
+    7. Keep sensitive data separate
+       # Don't commit secrets in vars
+       # Use environment variables or secret management
+  tags: [best-practices]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove test file"
+  file:
+    path: /tmp/app-config.yml
+    state: absent
+  tags: [cleanup]
+
+- name: "Cleanup: Remove var test file"
+  file:
+    path: /tmp/config.txt
+    state: absent
+  tags: [cleanup]
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: "Summary"
+  print: |
+
+    Vars action examples completed!
+    Covered:
+      • Basic variable definition
+      • Variable types (string, number, boolean, list, dict)
+      • Variable usage and interpolation
+      • Variable scope and updates
+      • System facts as variables
+      • Variables in loops
+      • Conditional variables
+      • Default values
+      • Complex nested structures
+      • Configuration management
+      • Multi-environment patterns
+      • Best practices
+
+    Key points:
+      • Variables are defined with the vars action
+      • Access with {{ variable_name }}
+      • System facts (os, arch) are automatically available
+      • Use include_vars to load from external files
+      • Variables can be overridden
+
+  tags: [always]

@@ -1,0 +1,27 @@
+# User Configuration Variables
+
+# Git configuration
+git_user_name: "Your Name"
+git_user_email: "your@email.com"
+git_editor: nvim
+
+# Editor preferences
+editor: nvim
+color_scheme: gruvbox
+
+# Shell preferences
+shell: zsh
+shell_theme: powerlevel10k
+
+# Terminal
+terminal_font: "FiraCode Nerd Font"
+terminal_font_size: 14
+
+# Directories
+config_dir: ~/.config
+backup_dir: ~/.dotfiles-backup
+
+# Development
+use_python: true
+use_nodejs: true
+use_rust: false

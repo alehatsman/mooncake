@@ -6,7 +6,8 @@ site_description: Space fighters provisioning tool - Simple, powerful system con
 site_author: Aleh Atsman
 repo_url: https://github.com/alehatsman/mooncake
 repo_name: alehatsman/mooncake
-edit_uri: edit/master/docs/
+edit_uri: edit/master/docs-next/
+docs_dir: docs-next
 
 # Theme configuration
 theme:
@@ -72,21 +73,30 @@ plugins:
 # Navigation structure
 nav:
   - Home: index.md
-  - Quick Reference: quick-reference.md
+  - Quick Reference: guide/quick-reference.md
+
   - Guide:
     - Core Concepts: guide/core-concepts.md
-    - Actions: guide/config/actions.md
-    - Control Flow: guide/config/control-flow.md
-    - Variables: guide/config/variables.md
+    - Configuration:
+      - Actions: guide/config/actions.md
+      - Variables: guide/config/variables.md
+      - Control Flow: guide/config/control-flow.md
+      - Expressions: guide/config/expressions.md
+      - Advanced: guide/config/advanced.md
     - Commands: guide/commands.md
     - Best Practices: guide/best-practices.md
     - Troubleshooting: guide/troubleshooting.md
-    - Advanced: guide/config/advanced.md
+    - FAQ: guide/faq.md
+
   - Presets:
-    - Available Presets: presets/available.md
+    - Catalog: presets/catalog.md
     - Using Presets: guide/presets.md
-    - Authoring Presets: guide/preset-authoring.md
-  - Complete Reference: guide/config/reference.md
+    - Authoring Guide: guide/preset-authoring.md
+    - Style Guide: presets/style-guide.md
+
+  - Examples:
+    - Overview: examples/index.md
+
   - API Reference:
     - Overview: api/index.md
     - Actions: api/actions.md
@@ -97,8 +107,18 @@ nav:
     - Presets: api/presets.md
     - Logger: api/logger.md
     - Commands: api/cmd.md
-  - AI Specification: ai-specification.md
-  - FAQ: faq.md
+
+  - Architecture:
+    - Overview: architecture-decisions/README.md
+
+  - Development:
+    - AI Development Guide: development/ai-development-guide.md
+
+  - Testing:
+    - Overview: testing/README.md
+    - Architecture: testing/architecture.md
+    - Guide: testing/guide.md
+
   - About:
     - Changelog: about/changelog.md
     - License: about/license.md

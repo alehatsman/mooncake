@@ -1,0 +1,251 @@
+---
+name: Docker Stack Setup
+description: |
+  Install Docker and Docker Compose on Ubuntu and deploy a simple
+  multi-container stack (Flask app + Nginx). Demonstrates container
+  orchestration with docker-compose.
+
+vars:
+  project_name: mooncake-stack
+  project_dir: /opt/{{ project_name }}
+  app_port: 5000
+  nginx_port: 8080
+  docker_user: "{{ facts.env.USER }}"
+
+steps:
+  - name: Update apt cache
+    shell:
+      cmd: apt-get update
+    become: true
+
+  - name: Install prerequisites
+    shell:
+      cmd: apt-get install -y ca-certificates curl gnupg lsb-release
+    become: true
+
+  - name: Add Docker GPG key
+    shell:
+      cmd: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+    become: true
+
+  - name: Add Docker repository
+    shell:
+      cmd: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    become: true
+
+  - name: Update apt cache again
+    shell:
+      cmd: apt-get update
+    become: true
+
+  - name: Install Docker
+    shell:
+      cmd: apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    become: true
+    register: docker_install
+
+  - name: Print Docker installation status
+    print:
+      msg: "Docker installed successfully"
+
+  - name: Start Docker service
+    service:
+      name: docker
+      state: started
+      enabled: true
+    become: true
+
+  - name: Verify Docker is running
+    shell:
+      cmd: systemctl is-active docker
+    become: true
+    register: docker_status
+
+  - name: Assert Docker is active
+    assert:
+      that:
+        - docker_status.stdout == "active"
+      success_msg: "Docker service is running"
+
+  - name: Check Docker version
+    shell:
+      cmd: docker --version
+    register: docker_version
+
+  - name: Check Docker Compose version
+    shell:
+      cmd: docker compose version
+    register: compose_version
+
+  - name: Print versions
+    print:
+      msg: |
+        {{ docker_version.stdout }}
+        {{ compose_version.stdout }}
+
+  - name: Add user to docker group
+    shell:
+      cmd: usermod -aG docker {{ docker_user }}
+    become: true
+
+  - name: Print docker group info
+    print:
+      msg: "User {{ docker_user }} added to docker group (re-login required)"
+
+  - name: Create project directory
+    file:
+      path: "{{ project_dir }}"
+      state: directory
+      mode: "0755"
+    become: true
+
+  - name: Create app subdirectory
+    file:
+      path: "{{ project_dir }}/app"
+      state: directory
+      mode: "0755"
+    become: true
+
+  - name: Copy Flask app
+    copy:
+      src: files/app.py
+      dest: "{{ project_dir }}/app/app.py"
+      mode: "0644"
+    become: true
+
+  - name: Copy Dockerfile
+    copy:
+      src: files/Dockerfile
+      dest: "{{ project_dir }}/app/Dockerfile"
+      mode: "0644"
+    become: true
+
+  - name: Generate docker-compose.yml
+    template:
+      src: templates/docker-compose.yml.j2
+      dest: "{{ project_dir }}/docker-compose.yml"
+      mode: "0644"
+    become: true
+
+  - name: Generate nginx config
+    template:
+      src: templates/nginx.conf.j2
+      dest: "{{ project_dir }}/nginx.conf"
+      mode: "0644"
+    become: true
+
+  - name: Stop any existing containers
+    shell:
+      cmd: docker compose down || true
+      chdir: "{{ project_dir }}"
+    become: true
+
+  - name: Build and start containers
+    shell:
+      cmd: docker compose up -d --build
+      chdir: "{{ project_dir }}"
+    become: true
+    register: compose_up
+
+  - name: Print compose output
+    print:
+      msg: "{{ compose_up.stdout }}"
+
+  - name: Wait for containers to be ready
+    shell:
+      cmd: sleep 5
+
+  - name: List running containers
+    shell:
+      cmd: docker compose ps
+      chdir: "{{ project_dir }}"
+    become: true
+    register: containers_list
+
+  - name: Print container status
+    print:
+      msg: "{{ containers_list.stdout }}"
+
+  - name: Verify containers are running
+    shell:
+      cmd: docker compose ps --format json
+      chdir: "{{ project_dir }}"
+    become: true
+    register: containers_json
+
+  - name: Test Flask app directly
+    shell:
+      cmd: curl -s http://localhost:{{ app_port }}
+    register: app_response
+
+  - name: Test through Nginx
+    shell:
+      cmd: curl -s http://localhost:{{ nginx_port }}
+    register: nginx_response
+
+  - name: Verify app is responding
+    assert:
+      that:
+        - "'Hello from Mooncake' in app_response.stdout"
+        - "'Hello from Mooncake' in nginx_response.stdout"
+      success_msg: "Docker stack is running successfully!"
+
+  - name: Get container logs
+    shell:
+      cmd: docker compose logs --tail=20
+      chdir: "{{ project_dir }}"
+    become: true
+    register: container_logs
+
+  - name: Print success message
+    print:
+      msg: |
+        ========================================
+        Docker Stack Deployment Complete!
+        ========================================
+
+        Project: {{ project_name }}
+        Directory: {{ project_dir }}
+
+        Services:
+          - Flask app (port {{ app_port }})
+          - Nginx proxy (port {{ nginx_port }})
+
+        Access your app:
+          http://localhost:{{ nginx_port }}
+
+        Direct app access:
+          http://localhost:{{ app_port }}
+
+        Docker commands:
+          cd {{ project_dir }}
+
+          # View status
+          sudo docker compose ps
+
+          # View logs
+          sudo docker compose logs -f
+
+          # Restart services
+          sudo docker compose restart
+
+          # Stop services
+          sudo docker compose down
+
+          # Rebuild and restart
+          sudo docker compose up -d --build
+
+        Container info:
+          sudo docker ps
+          sudo docker stats
+
+        Note: Re-login or run 'newgrp docker' to use
+        docker without sudo as {{ docker_user }}
+
+        Recent logs:
+        {{ container_logs.stdout }}
+        ========================================

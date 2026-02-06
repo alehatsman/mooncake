@@ -1,0 +1,120 @@
+# Dotfiles Manager - Deploy your development environment
+
+# Load user configuration
+- name: Load user variables
+  include_vars: ./vars.yml
+
+# Create backup of existing configs
+- name: Create backup directory
+  file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: "0755"
+  tags:
+    - backup
+
+- name: Backup existing dotfiles
+  shell: |
+    for file in .bashrc .zshrc .vimrc .gitconfig .tmux.conf; do
+      if [ -f ~/$file ]; then
+        cp ~/$file {{ backup_dir }}/$file.$(date +%Y%m%d-%H%M%S)
+        echo "Backed up $file"
+      fi
+    done
+  tags:
+    - backup
+
+# Create necessary directories
+- name: Create config directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items:
+    - "{{ config_dir }}"
+    - "{{ config_dir }}/nvim"
+    - "{{ config_dir }}/tmux"
+  tags:
+    - setup
+
+# Deploy shell configurations
+- name: Deploy bashrc
+  shell: cp ./dotfiles/shell/.bashrc ~/.bashrc
+  when: os == "linux"
+  tags:
+    - shell
+    - bash
+
+- name: Deploy zshrc
+  shell: cp ./dotfiles/shell/.zshrc ~/.zshrc
+  tags:
+    - shell
+    - zsh
+
+# Deploy Git configuration
+- name: Render git config
+  template:
+    src: ./templates/gitconfig.j2
+    dest: ~/.gitconfig
+    mode: "0644"
+  tags:
+    - git
+
+# Deploy Vim configuration
+- name: Deploy vimrc
+  shell: cp ./dotfiles/vim/.vimrc ~/.vimrc
+  tags:
+    - vim
+
+# Deploy Neovim configuration
+- name: Render neovim config
+  template:
+    src: ./templates/init.lua.j2
+    dest: "{{ config_dir }}/nvim/init.lua"
+    mode: "0644"
+  tags:
+    - vim
+    - nvim
+
+# Deploy tmux configuration
+- name: Render tmux config
+  template:
+    src: ./templates/tmux.conf.j2
+    dest: ~/.tmux.conf
+    mode: "0644"
+  tags:
+    - tmux
+
+# OS-specific configurations
+- name: Deploy macOS-specific configs
+  shell: |
+    # Set macOS defaults
+    defaults write com.apple.finder AppleShowAllFiles YES
+    defaults write com.apple.dock autohide -bool true
+  when: os == "darwin"
+  tags:
+    - macos
+    - os-specific
+
+- name: Deploy Linux-specific configs
+  shell: echo "Linux-specific configuration applied"
+  when: os == "linux"
+  tags:
+    - linux
+    - os-specific
+
+# Summary
+- name: Show deployment summary
+  shell: |
+    echo "======================================"
+    echo "Dotfiles deployed successfully!"
+    echo "======================================"
+    echo "Backup location: {{ backup_dir }}"
+    echo "Editor: {{ editor }}"
+    echo "Shell: {{ shell }}"
+    echo "Color scheme: {{ color_scheme }}"
+    echo ""
+    echo "Restart your shell to apply changes:"
+    echo "  exec $SHELL"
+  tags:
+    - always

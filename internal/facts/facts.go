@@ -191,6 +191,22 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"python_version":  f.PythonVersion,
 		"package_manager": f.PackageManager,
 
+		// Package manager convenience booleans (for cleaner conditionals)
+		"apt_available":    f.PackageManager == "apt",
+		"dnf_available":    f.PackageManager == "dnf",
+		"yum_available":    f.PackageManager == "yum",
+		"pacman_available": f.PackageManager == "pacman",
+		"zypper_available": f.PackageManager == "zypper",
+		"apk_available":    f.PackageManager == "apk",
+		"brew_available":   f.PackageManager == "brew",
+		"port_available":   f.PackageManager == "port",
+
+		// OS convenience booleans (for cleaner conditionals)
+		"linux":   f.OS == "linux",
+		"darwin":  f.OS == "darwin",
+		"macos":   f.OS == "darwin", // Alias
+		"windows": f.OS == "windows",
+
 		// Toolchains
 		"docker_version": f.DockerVersion,
 		"git_version":    f.GitVersion,

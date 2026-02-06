@@ -1,0 +1,79 @@
+# Example showing template rendering with pongo2
+
+- vars:
+    # Application config
+    app_name: MyApp
+    version: "1.0.0"
+    environment: development
+    project_name: example-project
+
+    # Server config
+    host: "0.0.0.0"
+    port: 8080
+    debug: true
+
+    # Database config
+    db_host: localhost
+    db_port: 5432
+    db_name: myapp_db
+
+    # Features
+    features:
+      - authentication
+      - api
+      - websockets
+
+    # Nginx config
+    server_name: example.com
+    document_root: /var/www/html
+    enable_ssl: false
+    log_dir: /var/log/nginx
+
+    # Script config
+    commands:
+      - "npm install"
+      - "npm run build"
+      - "npm test"
+
+- name: Create output directory
+  file:
+    path: /tmp/mooncake-templates
+    state: directory
+    mode: "0755"
+
+# Render application config
+- name: Render application config
+  template:
+    src: ./templates/config.yml.j2
+    dest: /tmp/mooncake-templates/config.yml
+    mode: "0644"
+
+# Render nginx config
+- name: Render nginx config
+  template:
+    src: ./templates/nginx.conf.j2
+    dest: /tmp/mooncake-templates/nginx.conf
+    mode: "0644"
+
+# Render executable script
+- name: Render deployment script
+  template:
+    src: ./templates/script.sh.j2
+    dest: /tmp/mooncake-templates/deploy.sh
+    mode: "0755"
+
+# You can also pass additional vars to templates
+- name: Render with additional vars
+  template:
+    src: ./templates/config.yml.j2
+    dest: /tmp/mooncake-templates/config-prod.yml
+    mode: "0644"
+    vars:
+      environment: production
+      debug: false
+      port: 80
+
+- name: Display rendered files
+  shell: |
+    echo "Rendered files in /tmp/mooncake-templates:"
+    ls -lh /tmp/mooncake-templates/

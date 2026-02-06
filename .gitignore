@@ -62,3 +62,4 @@ testing-output/
 .claude/
 .claude_temp/
 site/
+artifacts/

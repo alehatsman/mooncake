@@ -1,0 +1,129 @@
+---
+name: Nginx Ubuntu Setup
+description: |
+  Simple nginx web server setup on Ubuntu.
+  This example demonstrates installing and configuring nginx,
+  creating a basic site, and verifying it's running.
+
+vars:
+  site_name: mysite
+  site_port: 8080
+  document_root: /var/www/{{ site_name }}
+
+steps:
+  - name: Update apt cache
+    shell:
+      cmd: apt-get update
+    become: true
+
+  - name: Install nginx
+    shell:
+      cmd: apt-get install -y nginx
+    become: true
+    register: nginx_install
+
+  - name: Print installation status
+    print:
+      msg: "Nginx installed: {{ nginx_install.stdout }}"
+
+  - name: Create document root directory
+    file:
+      path: "{{ document_root }}"
+      state: directory
+      mode: "0755"
+    become: true
+
+  - name: Deploy welcome page
+    copy:
+      src: files/index.html
+      dest: "{{ document_root }}/index.html"
+      mode: "0644"
+    become: true
+
+  - name: Generate nginx main config
+    template:
+      src: templates/nginx.conf.j2
+      dest: /etc/nginx/nginx.conf
+      mode: "0644"
+    become: true
+
+  - name: Generate site configuration
+    template:
+      src: templates/site.conf.j2
+      dest: /etc/nginx/sites-available/{{ site_name }}
+      mode: "0644"
+    become: true
+
+  - name: Enable site (create symlink)
+    file:
+      src: /etc/nginx/sites-available/{{ site_name }}
+      dest: /etc/nginx/sites-enabled/{{ site_name }}
+      state: link
+    become: true
+
+  - name: Remove default site if present
+    file:
+      path: /etc/nginx/sites-enabled/default
+      state: absent
+    become: true
+
+  - name: Test nginx configuration
+    shell:
+      cmd: nginx -t
+    become: true
+    register: nginx_test
+
+  - name: Print config test result
+    print:
+      msg: "Nginx config test: {{ nginx_test.stdout }}"
+
+  - name: Start nginx service
+    service:
+      name: nginx
+      state: started
+      enabled: true
+    become: true
+
+  - name: Verify nginx is running
+    shell:
+      cmd: systemctl is-active nginx
+    register: nginx_status
+    become: true
+
+  - name: Assert nginx is active
+    assert:
+      that:
+        - nginx_status.stdout == "active"
+      fail_msg: "Nginx is not running!"
+      success_msg: "Nginx is running successfully"
+
+  - name: Test HTTP response
+    shell:
+      cmd: curl -s http://localhost:{{ site_port }}
+    register: http_response
+
+  - name: Verify site is responding
+    assert:
+      that:
+        - "'Welcome to Mooncake' in http_response.stdout"
+      success_msg: "Site is responding correctly!"
+
+  - name: Print success message
+    print:
+      msg: |
+        ========================================
+        Nginx Setup Complete!
+        ========================================
+
+        Your site is now running at:
+        http://localhost:{{ site_port }}
+
+        Site name: {{ site_name }}
+        Document root: {{ document_root }}
+
+        To view the page:
+          curl http://localhost:{{ site_port }}
+
+        To check status:
+          sudo systemctl status nginx
+        ========================================

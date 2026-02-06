@@ -1,0 +1,64 @@
+# Example showing privilege escalation with become/sudo
+#
+# Run with: mooncake run --config sudo.yml --sudo-pass <your-password>
+#
+# WARNING: This example contains commands that require root privileges.
+# Only run this if you understand what these commands do.
+
+- name: Regular command (no sudo)
+  shell: whoami
+
+- name: Check sudo access
+  shell: echo "This command will run with sudo"
+  become: true
+
+# Linux package management
+- name: Update package list (Linux)
+  shell: apt update
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Install system package (Linux)
+  shell: apt install -y curl
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+# macOS doesn't typically need sudo for brew, but showing the concept
+- name: System-level operation (macOS)
+  shell: echo "Would install system-level package"
+  become: true
+  when: os == "darwin"
+
+# Create system directory
+- name: Create system directory
+  file:
+    path: /opt/myapp
+    state: directory
+    mode: "0755"
+  become: true
+
+# Create system config file
+- name: Create system config
+  file:
+    path: /opt/myapp/config.txt
+    state: file
+    content: |
+      System configuration
+      Created with sudo privileges
+    mode: "0644"
+  become: true
+
+# Show the difference
+- name: Show files created
+  shell: ls -la /opt/myapp
+  become: true
+  register: ls_result
+
+- name: Print summary
+  print:
+    msg: |
+      Sudo/become example complete!
+      Files created in /opt/myapp:
+      {{ ls_result.stdout }}
+
+      Remember: Use 'become: true' when operations need root privileges

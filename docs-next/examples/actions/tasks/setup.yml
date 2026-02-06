@@ -1,0 +1,13 @@
+# Setup tasks
+- name: "Setup: Create directory"
+  file:
+    path: /tmp/mooncake-include-demo
+    state: directory
+    mode: "0755"
+
+- name: "Setup: Create test file"
+  file:
+    path: /tmp/mooncake-include-demo/test.txt
+    state: file
+    content: "Test content"
+    mode: "0644"

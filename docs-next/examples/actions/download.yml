@@ -1,0 +1,322 @@
+# ============================================================================
+# Download Action - Comprehensive Examples
+# ============================================================================
+# Download files from URLs with checksum verification and retry support.
+#
+# Run this file:
+#   mooncake run --config examples/actions/download.yml
+# ============================================================================
+
+# Setup
+- name: "Setup: Create download directory"
+  file:
+    path: /tmp/mooncake-downloads
+    state: directory
+    mode: "0755"
+  tags: [setup]
+
+# =============================================================================
+# Basic Downloads
+# =============================================================================
+
+- name: "Example 1: Simple download"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/example.html"
+    mode: "0644"
+  tags: [basics]
+
+- name: "Example 2: Download with timeout"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/example-with-timeout.html"
+    timeout: "30s"
+    mode: "0644"
+  tags: [basics]
+
+# =============================================================================
+# Download with Retries
+# =============================================================================
+
+- name: "Example 3: Download with retry logic"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/retried-download.html"
+    timeout: "15s"
+    retries: 3
+    mode: "0644"
+  tags: [retry]
+
+# =============================================================================
+# Download with Custom Headers
+# =============================================================================
+
+- vars:
+    user_agent: "Mooncake/1.0"
+
+- name: "Example 4: Download with custom headers"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/custom-headers.html"
+    headers:
+      User-Agent: "{{ user_agent }}"
+    mode: "0644"
+  tags: [headers]
+
+# Example with authentication (use your own token)
+# - name: "Example 5: Download with authentication"
+#   download:
+#     url: "https://api.example.com/files/document.pdf"
+#     dest: "/tmp/mooncake-downloads/document.pdf"
+#     headers:
+#       Authorization: "Bearer YOUR_TOKEN_HERE"
+#     mode: "0644"
+#   tags: [headers]
+
+# =============================================================================
+# Download with Force
+# =============================================================================
+
+- name: "Example 6: Download with force (re-download)"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/forced-download.html"
+    force: true
+    mode: "0644"
+  tags: [force]
+
+# =============================================================================
+# Download with Backup
+# =============================================================================
+
+- name: "Example 7: Initial download"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/backup-test.html"
+    mode: "0644"
+  tags: [backup]
+
+- name: "Example 8: Download with backup"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/backup-test.html"
+    backup: true
+    force: true
+    mode: "0644"
+  tags: [backup]
+
+# =============================================================================
+# Download with Checksum (Idempotent)
+# =============================================================================
+
+# Note: Using actual checksums would require knowing the file content in advance
+# This is a demonstration of the syntax
+
+- name: "Example 9: Download with checksum verification"
+  print: |
+    Download with checksum example:
+    download:
+      url: "https://go.dev/dl/go1.21.5.linux-amd64.tar.gz"
+      dest: "/tmp/go.tar.gz"
+      checksum: "e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
+      mode: "0644"
+  tags: [checksum]
+
+# =============================================================================
+# Download Multiple Files
+# =============================================================================
+
+- vars:
+    files_to_download:
+      - url: "https://www.example.com"
+        dest: "example1.html"
+      - url: "https://www.example.org"
+        dest: "example2.html"
+
+- name: "Example 10: Download multiple files"
+  download:
+    url: "{{ item.url }}"
+    dest: "/tmp/mooncake-downloads/{{ item.dest }}"
+    mode: "0644"
+  with_items: "{{ files_to_download }}"
+  tags: [loops]
+
+# =============================================================================
+# Download with Registration
+# =============================================================================
+
+- name: "Example 11: Download and register result"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/registered-download.html"
+    mode: "0644"
+  register: download_result
+  tags: [register]
+
+- name: "Example 12: Show download result"
+  print: "Download changed: {{ download_result.changed }}"
+  tags: [register]
+
+# =============================================================================
+# Conditional Downloads
+# =============================================================================
+
+- name: "Example 13: Check if file exists"
+  shell: test -f /tmp/mooncake-downloads/conditional.html
+  register: file_check
+  failed_when: false
+  tags: [conditional]
+
+- name: "Example 14: Download only if file doesn't exist"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/conditional.html"
+    mode: "0644"
+  when: file_check.rc != 0
+  tags: [conditional]
+
+# =============================================================================
+# Real-World: Download and Extract
+# =============================================================================
+
+- name: "Example 15: Download archive (demo)"
+  print: |
+    Real-world pattern - Download and extract:
+
+    - name: Download Node.js
+      download:
+        url: "https://nodejs.org/dist/v18.19.0/node-v18.19.0-linux-x64.tar.gz"
+        dest: "/tmp/node.tar.gz"
+        checksum: "SHA256_CHECKSUM_HERE"
+        mode: "0644"
+      register: node_download
+
+    - name: Extract if downloaded
+      unarchive:
+        src: "/tmp/node.tar.gz"
+        dest: "/opt/node"
+        strip_components: 1
+      when: node_download.changed
+  tags: [real-world]
+
+# =============================================================================
+# Download Configuration Files
+# =============================================================================
+
+- name: "Example 16: Download config from CDN"
+  print: |
+    Download configuration pattern:
+
+    - name: Download application config
+      download:
+        url: "https://cdn.example.com/configs/{{ environment }}/app.yml"
+        dest: "/etc/myapp/config.yml"
+        backup: true
+        mode: "0644"
+      become: true
+  tags: [real-world]
+
+# =============================================================================
+# Download with Progress
+# =============================================================================
+
+- name: "Example 17: Simulate large download"
+  print: "Downloading large file with progress tracking..."
+  tags: [progress]
+
+- name: "Example 18: Download (simulated)"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/large-file.html"
+    timeout: "5m"
+    mode: "0644"
+  tags: [progress]
+
+- name: "Example 19: Download complete"
+  print: "✓ Download completed successfully"
+  tags: [progress]
+
+# =============================================================================
+# Idempotency Demonstration
+# =============================================================================
+
+- name: "Example 20: First download (changes)"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/idempotent.html"
+    mode: "0644"
+  register: first_download
+  tags: [idempotency]
+
+- name: "Example 21: Second download (no changes, skipped)"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/idempotent.html"
+    mode: "0644"
+  register: second_download
+  tags: [idempotency]
+
+- name: "Example 22: Show idempotency"
+  print: "First: {{ first_download.changed }}, Second: {{ second_download.changed }}"
+  tags: [idempotency]
+
+# =============================================================================
+# Error Handling
+# =============================================================================
+
+- name: "Example 23: Download with error handling"
+  download:
+    url: "https://www.example.com"
+    dest: "/tmp/mooncake-downloads/error-handled.html"
+    timeout: "10s"
+    mode: "0644"
+  register: download_attempt
+  failed_when: false
+  tags: [error-handling]
+
+- name: "Example 24: Check download result"
+  print: "Download {{ 'succeeded' if download_attempt.rc == 0 else 'failed' }}"
+  tags: [error-handling]
+
+# =============================================================================
+# Verification
+# =============================================================================
+
+- name: "Example 25: List all downloads"
+  shell: |
+    echo "Downloaded files:"
+    ls -lh /tmp/mooncake-downloads/
+  tags: [verify]
+
+- name: "Example 26: Count downloads"
+  shell: |
+    count=$(find /tmp/mooncake-downloads -type f | wc -l)
+    echo "Total files downloaded: $count"
+  tags: [verify]
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+- name: "Cleanup: Remove download directory"
+  file:
+    path: /tmp/mooncake-downloads
+    state: absent
+    force: true
+  tags: [cleanup]
+
+- name: "Summary"
+  print: |
+
+    Download action examples completed!
+    Covered:
+      • Basic downloads
+      • Timeouts and retries
+      • Custom headers and authentication
+      • Checksums for idempotency
+      • Backups and force re-download
+      • Multiple file downloads
+      • Error handling
+      • Integration with unarchive
+
+  tags: [always]
