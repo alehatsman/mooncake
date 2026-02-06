@@ -2,7 +2,7 @@ package facts
 
 // collectWindowsFacts gathers Windows-specific system information
 func collectWindowsFacts(f *Facts) {
-	f.Distribution = "windows"
+	f.Distribution = osWindows
 	f.Disks = detectWindowsDisks()
 	f.GPUs = detectWindowsGPUs()
 	// TODO: Implement more Windows-specific fact collection

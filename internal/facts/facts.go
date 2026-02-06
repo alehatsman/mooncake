@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+const (
+	// OS constants
+	osLinux   = "linux"
+	osDarwin  = "darwin"
+	osWindows = "windows"
+
+	// Package manager constants
+	pkgManagerDnf = "dnf"
+)
+
 // Facts contains collected system information.
 type Facts struct {
 	// Basic
@@ -122,11 +132,11 @@ func collectUncached() *Facts {
 
 	// Platform-specific facts
 	switch runtime.GOOS {
-	case "linux":
+	case osLinux:
 		collectLinuxFacts(f)
-	case "darwin":
+	case osDarwin:
 		collectDarwinFacts(f)
-	case "windows":
+	case osWindows:
 		collectWindowsFacts(f)
 	}
 
@@ -193,7 +203,7 @@ func (f *Facts) ToMap() map[string]interface{} {
 
 		// Package manager convenience booleans (for cleaner conditionals)
 		"apt_available":    f.PackageManager == "apt",
-		"dnf_available":    f.PackageManager == "dnf",
+		"dnf_available":    f.PackageManager == pkgManagerDnf,
 		"yum_available":    f.PackageManager == "yum",
 		"pacman_available": f.PackageManager == "pacman",
 		"zypper_available": f.PackageManager == "zypper",
@@ -202,10 +212,10 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"port_available":   f.PackageManager == "port",
 
 		// OS convenience booleans (for cleaner conditionals)
-		"linux":   f.OS == "linux",
-		"darwin":  f.OS == "darwin",
-		"macos":   f.OS == "darwin", // Alias
-		"windows": f.OS == "windows",
+		"linux":   f.OS == osLinux,
+		"darwin":  f.OS == osDarwin,
+		"macos":   f.OS == osDarwin, // Alias
+		"windows": f.OS == osWindows,
 
 		// Toolchains
 		"docker_version": f.DockerVersion,

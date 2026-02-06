@@ -77,12 +77,12 @@ func detectLinuxPackageManager(distro string) string {
 		return "apt"
 	case "centos", "rhel":
 		// Check if dnf is available (CentOS 8+)
-		if _, err := exec.LookPath("dnf"); err == nil {
-			return "dnf"
+		if _, err := exec.LookPath(pkgManagerDnf); err == nil {
+			return pkgManagerDnf
 		}
 		return "yum"
 	case "fedora":
-		return "dnf"
+		return pkgManagerDnf
 	case "arch", "manjaro":
 		return "pacman"
 	case "opensuse", "sles":
