@@ -312,18 +312,13 @@ func TestCollectExtraLinuxFacts_AllFields(t *testing.T) {
 	t.Logf("Default Gateway: %s", facts.DefaultGateway)
 	t.Logf("DNS Servers: %d", len(facts.DNSServers))
 
-	// Verify required fields
-	if facts.OS == "" {
-		t.Error("OS should not be empty")
-	}
-	if facts.Arch == "" {
-		t.Error("Arch should not be empty")
-	}
-	if facts.CPUCores <= 0 {
-		t.Error("CPUCores should be positive")
-	}
+	// Verify required fields (that collectLinuxFacts is responsible for)
+	// Note: OS, Arch, and CPUCores are set by collectUncached(), not collectLinuxFacts()
 	if facts.MemoryTotalMB <= 0 {
 		t.Error("MemoryTotalMB should be positive")
+	}
+	if facts.Distribution == "" {
+		t.Error("Distribution should not be empty on Linux")
 	}
 }
 

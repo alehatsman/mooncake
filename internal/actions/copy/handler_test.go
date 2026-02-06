@@ -568,7 +568,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
-	oldContent := "old content"
+	oldContent := "old content here"
 	newContent := "new content"
 	srcPath := filepath.Join(tmpDir, "source.txt")
 	destPath := filepath.Join(tmpDir, "dest.txt")
@@ -612,7 +612,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 
 	if len(files) > 0 {
 		backupPath := files[0]
-		// Verify backup content
+		// Verify backup content (should be the old content)
 		backupContent, err := os.ReadFile(backupPath)
 		if err != nil {
 			t.Fatalf("Failed to read backup file: %v", err)
@@ -1405,7 +1405,7 @@ func TestHandler_Execute_LargeFile(t *testing.T) {
 func TestHandler_Execute_BackupWithTimestamp(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
-	oldContent := "old version 1"
+	oldContent := "old version 1 content"
 	newContent := "new version 1"
 	srcPath := filepath.Join(tmpDir, "source-backup.txt")
 	destPath := filepath.Join(tmpDir, "dest-backup.txt")

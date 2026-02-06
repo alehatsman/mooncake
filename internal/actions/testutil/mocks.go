@@ -65,11 +65,11 @@ func (m *MockPublisher) Publish(event events.Event) {
 	m.Events = append(m.Events, event)
 }
 
-func (m *MockPublisher) Subscribe(subscriber events.Subscriber) int {
+func (m *MockPublisher) Subscribe(_ events.Subscriber) int {
 	return 0
 }
 
-func (m *MockPublisher) Unsubscribe(id int) {}
+func (m *MockPublisher) Unsubscribe(_ int) {}
 
 func (m *MockPublisher) Flush() {}
 
@@ -80,23 +80,23 @@ type MockLogger struct {
 	Logs []string
 }
 
-func (m *MockLogger) Infof(format string, args ...interface{}) {
+func (m *MockLogger) Infof(format string, _ ...interface{}) {
 	m.Logs = append(m.Logs, format)
 }
 
-func (m *MockLogger) Debugf(format string, args ...interface{}) {
+func (m *MockLogger) Debugf(format string, _ ...interface{}) {
 	m.Logs = append(m.Logs, format)
 }
 
-func (m *MockLogger) Errorf(format string, args ...interface{}) {
+func (m *MockLogger) Errorf(format string, _ ...interface{}) {
 	m.Logs = append(m.Logs, format)
 }
 
-func (m *MockLogger) Codef(format string, args ...interface{}) {
+func (m *MockLogger) Codef(format string, _ ...interface{}) {
 	m.Logs = append(m.Logs, format)
 }
 
-func (m *MockLogger) Textf(format string, args ...interface{}) {
+func (m *MockLogger) Textf(format string, _ ...interface{}) {
 	m.Logs = append(m.Logs, format)
 }
 
@@ -104,13 +104,13 @@ func (m *MockLogger) Mooncake() {
 	m.Logs = append(m.Logs, "mooncake")
 }
 
-func (m *MockLogger) SetLogLevel(logLevel int) {}
+func (m *MockLogger) SetLogLevel(_ int) {}
 
-func (m *MockLogger) SetLogLevelStr(logLevel string) error {
+func (m *MockLogger) SetLogLevelStr(_ string) error {
 	return nil
 }
 
-func (m *MockLogger) WithPadLevel(padLevel int) logger.Logger {
+func (m *MockLogger) WithPadLevel(_ int) logger.Logger {
 	return m
 }
 
@@ -118,11 +118,11 @@ func (m *MockLogger) LogStep(info logger.StepInfo) {
 	m.Logs = append(m.Logs, info.Name)
 }
 
-func (m *MockLogger) Complete(stats logger.ExecutionStats) {
+func (m *MockLogger) Complete(_ logger.ExecutionStats) {
 	m.Logs = append(m.Logs, "complete")
 }
 
-func (m *MockLogger) SetRedactor(redactor logger.Redactor) {}
+func (m *MockLogger) SetRedactor(_ logger.Redactor) {}
 
 // NewMockContext creates a new mock context with sensible defaults
 func NewMockContext() *MockContext {
