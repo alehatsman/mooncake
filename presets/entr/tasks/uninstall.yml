@@ -1,6 +1,7 @@
-- name: Uninstall entr (macOS)
-  shell: brew uninstall entr
-  when: os == "darwin"
+- name: Uninstall entr
+  package:
+    name: entr
+    state: absent
   failed_when: false
 
 - name: Display confirmation

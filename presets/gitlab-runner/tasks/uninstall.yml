@@ -1,6 +1,7 @@
-- name: Uninstall gitlab-runner (macOS)
-  shell: brew uninstall gitlab-runner
-  when: os == "darwin"
+- name: Uninstall gitlab-runner
+  package:
+    name: gitlab-runner
+    state: absent
   failed_when: false
 
 - name: Display confirmation

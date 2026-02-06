@@ -1,6 +1,7 @@
-- name: Uninstall golangci-lint (macOS)
-  shell: brew uninstall golangci-lint
-  when: os == "darwin"
+- name: Uninstall golangci-lint
+  package:
+    name: golangci-lint
+    state: absent
   failed_when: false
 
 - name: Display confirmation

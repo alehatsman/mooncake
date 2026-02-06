@@ -3,13 +3,15 @@
   register: flyte_check
   failed_when: false
 
-- name: Install flytectl (macOS)
-  shell: brew install flytectl
-  when: os == "darwin" and flyte_check.rc != 0
+- name: Install flyte
+  package:
+    name: flyte
+    state: present
+  when: flyte_check.rc != 0
 
 - name: Verify installation
   shell: flytectl --version 2>&1 || flytectl -v 2>&1 || echo "installed"
   register: flyte_version
 
 - name: Display version
-  print: "flytectl installed"
+  print: "flyte installed"

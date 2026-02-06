@@ -1,7 +1,8 @@
-- name: Uninstall edgectl (macOS)
-  shell: brew uninstall edgectl
-  when: os == "darwin"
+- name: Uninstall emissary
+  package:
+    name: emissary
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "edgectl uninstalled"
+  print: "emissary uninstalled"

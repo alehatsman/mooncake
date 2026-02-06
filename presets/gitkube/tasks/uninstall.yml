@@ -1,6 +1,7 @@
-- name: Uninstall gitkube (macOS)
-  shell: brew uninstall gitkube
-  when: os == "darwin"
+- name: Uninstall gitkube
+  package:
+    name: gitkube
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,15 +1,17 @@
 - name: Check if golangci-lint is installed
   shell: command -v golangci-lint
-  register: golangci-lint_check
+  register: golangci_lint_check
   failed_when: false
 
-- name: Install golangci-lint (macOS)
-  shell: brew install golangci-lint
-  when: os == "darwin" and golangci-lint_check.rc != 0
+- name: Install golangci-lint
+  package:
+    name: golangci-lint
+    state: present
+  when: golangci_lint_check.rc != 0
 
 - name: Verify installation
   shell: golangci-lint --version 2>&1 || golangci-lint -v 2>&1 || echo "installed"
-  register: golangci-lint_version
+  register: golangci_lint_version
 
 - name: Display version
   print: "golangci-lint installed"

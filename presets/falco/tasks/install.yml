@@ -3,9 +3,11 @@
   register: falco_check
   failed_when: false
 
-- name: Install falco (macOS)
-  shell: brew install falco
-  when: os == "darwin" and falco_check.rc != 0
+- name: Install falco
+  package:
+    name: falco
+    state: present
+  when: falco_check.rc != 0
 
 - name: Verify installation
   shell: falco --version 2>&1 || falco -v 2>&1 || echo "installed"

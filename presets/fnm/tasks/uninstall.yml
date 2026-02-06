@@ -1,6 +1,7 @@
-- name: Uninstall fnm (macOS)
-  shell: brew uninstall fnm
-  when: os == "darwin"
+- name: Uninstall fnm
+  package:
+    name: fnm
+    state: absent
   failed_when: false
 
 - name: Display confirmation

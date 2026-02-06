@@ -3,13 +3,15 @@
   register: gloo_check
   failed_when: false
 
-- name: Install glooctl (macOS)
-  shell: brew install glooctl
-  when: os == "darwin" and gloo_check.rc != 0
+- name: Install gloo
+  package:
+    name: gloo
+    state: present
+  when: gloo_check.rc != 0
 
 - name: Verify installation
   shell: glooctl --version 2>&1 || glooctl -v 2>&1 || echo "installed"
   register: gloo_version
 
 - name: Display version
-  print: "glooctl installed"
+  print: "gloo installed"

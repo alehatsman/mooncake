@@ -3,9 +3,11 @@
   register: garnet_check
   failed_when: false
 
-- name: Install garnet (macOS)
-  shell: brew install garnet
-  when: os == "darwin" and garnet_check.rc != 0
+- name: Install garnet
+  package:
+    name: garnet
+    state: present
+  when: garnet_check.rc != 0
 
 - name: Verify installation
   shell: garnet --version 2>&1 || garnet -v 2>&1 || echo "installed"

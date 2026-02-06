@@ -1,6 +1,7 @@
-- name: Uninstall falco (macOS)
-  shell: brew uninstall falco
-  when: os == "darwin"
+- name: Uninstall falco
+  package:
+    name: falco
+    state: absent
   failed_when: false
 
 - name: Display confirmation

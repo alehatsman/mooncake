@@ -3,9 +3,11 @@
   register: gitkube_check
   failed_when: false
 
-- name: Install gitkube (macOS)
-  shell: brew install gitkube
-  when: os == "darwin" and gitkube_check.rc != 0
+- name: Install gitkube
+  package:
+    name: gitkube
+    state: present
+  when: gitkube_check.rc != 0
 
 - name: Verify installation
   shell: gitkube --version 2>&1 || gitkube -v 2>&1 || echo "installed"

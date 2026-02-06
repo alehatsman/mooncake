@@ -3,9 +3,11 @@
   register: gatsby_check
   failed_when: false
 
-- name: Install gatsby (macOS)
-  shell: brew install gatsby
-  when: os == "darwin" and gatsby_check.rc != 0
+- name: Install gatsby
+  package:
+    name: gatsby
+    state: present
+  when: gatsby_check.rc != 0
 
 - name: Verify installation
   shell: gatsby --version 2>&1 || gatsby -v 2>&1 || echo "installed"

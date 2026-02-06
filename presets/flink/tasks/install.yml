@@ -3,9 +3,11 @@
   register: flink_check
   failed_when: false
 
-- name: Install flink (macOS)
-  shell: brew install flink
-  when: os == "darwin" and flink_check.rc != 0
+- name: Install flink
+  package:
+    name: flink
+    state: present
+  when: flink_check.rc != 0
 
 - name: Verify installation
   shell: flink --version 2>&1 || flink -v 2>&1 || echo "installed"

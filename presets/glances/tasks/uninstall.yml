@@ -1,6 +1,7 @@
-- name: Uninstall glances (macOS)
-  shell: brew uninstall glances
-  when: os == "darwin"
+- name: Uninstall glances
+  package:
+    name: glances
+    state: absent
   failed_when: false
 
 - name: Display confirmation

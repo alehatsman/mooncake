@@ -1,7 +1,8 @@
-- name: Uninstall fluxctl (macOS)
-  shell: brew uninstall fluxctl
-  when: os == "darwin"
+- name: Uninstall fluxcd
+  package:
+    name: fluxcd
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "fluxctl uninstalled"
+  print: "fluxcd uninstalled"

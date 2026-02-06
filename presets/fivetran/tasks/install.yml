@@ -3,9 +3,11 @@
   register: fivetran_check
   failed_when: false
 
-- name: Install fivetran (macOS)
-  shell: brew install fivetran
-  when: os == "darwin" and fivetran_check.rc != 0
+- name: Install fivetran
+  package:
+    name: fivetran
+    state: present
+  when: fivetran_check.rc != 0
 
 - name: Verify installation
   shell: fivetran --version 2>&1 || fivetran -v 2>&1 || echo "installed"

@@ -3,13 +3,15 @@
   register: fluxcd_check
   failed_when: false
 
-- name: Install fluxctl (macOS)
-  shell: brew install fluxctl
-  when: os == "darwin" and fluxcd_check.rc != 0
+- name: Install fluxcd
+  package:
+    name: fluxcd
+    state: present
+  when: fluxcd_check.rc != 0
 
 - name: Verify installation
   shell: fluxctl --version 2>&1 || fluxctl -v 2>&1 || echo "installed"
   register: fluxcd_version
 
 - name: Display version
-  print: "fluxctl installed"
+  print: "fluxcd installed"

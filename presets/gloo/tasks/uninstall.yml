@@ -1,7 +1,8 @@
-- name: Uninstall glooctl (macOS)
-  shell: brew uninstall glooctl
-  when: os == "darwin"
+- name: Uninstall gloo
+  package:
+    name: gloo
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "glooctl uninstalled"
+  print: "gloo uninstalled"

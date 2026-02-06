@@ -3,9 +3,11 @@
   register: glances_check
   failed_when: false
 
-- name: Install glances (macOS)
-  shell: brew install glances
-  when: os == "darwin" and glances_check.rc != 0
+- name: Install glances
+  package:
+    name: glances
+    state: present
+  when: glances_check.rc != 0
 
 - name: Verify installation
   shell: glances --version 2>&1 || glances -v 2>&1 || echo "installed"

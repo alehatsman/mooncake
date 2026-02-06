@@ -1,6 +1,7 @@
-- name: Uninstall garnet (macOS)
-  shell: brew uninstall garnet
-  when: os == "darwin"
+- name: Uninstall garnet
+  package:
+    name: garnet
+    state: absent
   failed_when: false
 
 - name: Display confirmation

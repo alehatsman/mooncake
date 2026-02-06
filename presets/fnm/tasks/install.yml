@@ -3,9 +3,11 @@
   register: fnm_check
   failed_when: false
 
-- name: Install fnm (macOS)
-  shell: brew install fnm
-  when: os == "darwin" and fnm_check.rc != 0
+- name: Install fnm
+  package:
+    name: fnm
+    state: present
+  when: fnm_check.rc != 0
 
 - name: Verify installation
   shell: fnm --version 2>&1 || fnm -v 2>&1 || echo "installed"

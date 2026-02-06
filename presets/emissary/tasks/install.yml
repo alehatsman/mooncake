@@ -3,13 +3,15 @@
   register: emissary_check
   failed_when: false
 
-- name: Install edgectl (macOS)
-  shell: brew install edgectl
-  when: os == "darwin" and emissary_check.rc != 0
+- name: Install emissary
+  package:
+    name: emissary
+    state: present
+  when: emissary_check.rc != 0
 
 - name: Verify installation
   shell: edgectl --version 2>&1 || edgectl -v 2>&1 || echo "installed"
   register: emissary_version
 
 - name: Display version
-  print: "edgectl installed"
+  print: "emissary installed"

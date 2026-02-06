@@ -1,7 +1,8 @@
-- name: Uninstall flytectl (macOS)
-  shell: brew uninstall flytectl
-  when: os == "darwin"
+- name: Uninstall flyte
+  package:
+    name: flyte
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "flytectl uninstalled"
+  print: "flyte uninstalled"

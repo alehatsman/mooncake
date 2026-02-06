@@ -3,9 +3,11 @@
   register: fleet_check
   failed_when: false
 
-- name: Install fleet (macOS)
-  shell: brew install fleet
-  when: os == "darwin" and fleet_check.rc != 0
+- name: Install fleet
+  package:
+    name: fleet
+    state: present
+  when: fleet_check.rc != 0
 
 - name: Verify installation
   shell: fleet --version 2>&1 || fleet -v 2>&1 || echo "installed"

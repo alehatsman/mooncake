@@ -1,6 +1,7 @@
-- name: Uninstall fly (macOS)
-  shell: brew uninstall fly
-  when: os == "darwin"
+- name: Uninstall fly
+  package:
+    name: fly
+    state: absent
   failed_when: false
 
 - name: Display confirmation

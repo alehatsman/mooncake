@@ -1,6 +1,7 @@
-- name: Uninstall flink (macOS)
-  shell: brew uninstall flink
-  when: os == "darwin"
+- name: Uninstall flink
+  package:
+    name: flink
+    state: absent
   failed_when: false
 
 - name: Display confirmation

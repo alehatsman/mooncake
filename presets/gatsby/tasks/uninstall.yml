@@ -1,6 +1,7 @@
-- name: Uninstall gatsby (macOS)
-  shell: brew uninstall gatsby
-  when: os == "darwin"
+- name: Uninstall gatsby
+  package:
+    name: gatsby
+    state: absent
   failed_when: false
 
 - name: Display confirmation

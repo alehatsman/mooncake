@@ -3,9 +3,11 @@
   register: entr_check
   failed_when: false
 
-- name: Install entr (macOS)
-  shell: brew install entr
-  when: os == "darwin" and entr_check.rc != 0
+- name: Install entr
+  package:
+    name: entr
+    state: present
+  when: entr_check.rc != 0
 
 - name: Verify installation
   shell: entr --version 2>&1 || entr -v 2>&1 || echo "installed"

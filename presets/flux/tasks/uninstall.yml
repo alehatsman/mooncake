@@ -1,6 +1,7 @@
-- name: Uninstall flux (macOS)
-  shell: brew uninstall flux
-  when: os == "darwin"
+- name: Uninstall flux
+  package:
+    name: flux
+    state: absent
   failed_when: false
 
 - name: Display confirmation
