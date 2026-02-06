@@ -72,6 +72,7 @@ plugins:
 # Navigation structure
 nav:
   - Home: index.md
+  - Quick Reference: quick-reference.md
   - Guide:
     - Core Concepts: guide/core-concepts.md
     - Actions: guide/config/actions.md
@@ -79,6 +80,7 @@ nav:
     - Variables: guide/config/variables.md
     - Commands: guide/commands.md
     - Best Practices: guide/best-practices.md
+    - Troubleshooting: guide/troubleshooting.md
     - Advanced: guide/config/advanced.md
   - Presets:
     - Available Presets: presets/available.md
@@ -96,6 +98,7 @@ nav:
     - Logger: api/logger.md
     - Commands: api/cmd.md
   - AI Specification: ai-specification.md
+  - FAQ: faq.md
   - About:
     - Changelog: about/changelog.md
     - License: about/license.md
