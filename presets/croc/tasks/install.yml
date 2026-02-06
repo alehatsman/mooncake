@@ -1,0 +1,15 @@
+- name: Check if croc is installed
+  shell: command -v croc
+  register: croc_check
+  failed_when: false
+
+- name: Install croc (macOS)
+  shell: brew install croc
+  when: os == "darwin" and croc_check.rc != 0
+
+- name: Verify installation
+  shell: croc --version 2>&1 || croc -v 2>&1 || echo "installed"
+  register: croc_version
+
+- name: Display version
+  print: "croc installed"

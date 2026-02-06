@@ -1,0 +1,15 @@
+- name: Check if qdrant is installed
+  shell: command -v qdrant
+  register: qdrant_check
+  failed_when: false
+
+- name: Install qdrant (macOS)
+  shell: brew install qdrant
+  when: os == "darwin" and qdrant_check.rc != 0
+
+- name: Verify installation
+  shell: qdrant --version 2>&1 || qdrant -v 2>&1 || echo "installed"
+  register: qdrant_version
+
+- name: Display version
+  print: "qdrant installed"

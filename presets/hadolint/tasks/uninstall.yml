@@ -1,0 +1,7 @@
+- name: Uninstall hadolint (macOS)
+  shell: brew uninstall hadolint
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "hadolint uninstalled"

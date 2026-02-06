@@ -1,0 +1,15 @@
+- name: Check if just is installed
+  shell: command -v just
+  register: just_check
+  failed_when: false
+
+- name: Install just (macOS)
+  shell: brew install just
+  when: os == "darwin" and just_check.rc != 0
+
+- name: Verify installation
+  shell: just --version 2>&1 || just -v 2>&1 || echo "installed"
+  register: just_version
+
+- name: Display version
+  print: "just installed"

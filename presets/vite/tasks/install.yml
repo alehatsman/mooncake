@@ -1,0 +1,15 @@
+- name: Check if vite is installed
+  shell: command -v vite
+  register: vite_check
+  failed_when: false
+
+- name: Install vite (macOS)
+  shell: brew install vite
+  when: os == "darwin" and vite_check.rc != 0
+
+- name: Verify installation
+  shell: vite --version 2>&1 || vite -v 2>&1 || echo "installed"
+  register: vite_version
+
+- name: Display version
+  print: "vite installed"

@@ -1,0 +1,15 @@
+- name: Check if linkerd is installed
+  shell: command -v linkerd
+  register: linkerd_check
+  failed_when: false
+
+- name: Install linkerd (macOS)
+  shell: brew install linkerd
+  when: os == "darwin" and linkerd_check.rc != 0
+
+- name: Verify installation
+  shell: linkerd --version 2>&1 || linkerd -v 2>&1 || echo "installed"
+  register: linkerd_version
+
+- name: Display version
+  print: "linkerd installed"

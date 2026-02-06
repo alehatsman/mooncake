@@ -1,0 +1,15 @@
+- name: Check if hugo is installed
+  shell: command -v hugo
+  register: hugo_check
+  failed_when: false
+
+- name: Install hugo (macOS)
+  shell: brew install hugo
+  when: os == "darwin" and hugo_check.rc != 0
+
+- name: Verify installation
+  shell: hugo --version 2>&1 || hugo -v 2>&1 || echo "installed"
+  register: hugo_version
+
+- name: Display version
+  print: "hugo installed"

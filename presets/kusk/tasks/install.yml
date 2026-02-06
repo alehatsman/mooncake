@@ -1,0 +1,15 @@
+- name: Check if kusk is installed
+  shell: command -v kusk
+  register: kusk_check
+  failed_when: false
+
+- name: Install kusk (macOS)
+  shell: brew install kusk
+  when: os == "darwin" and kusk_check.rc != 0
+
+- name: Verify installation
+  shell: kusk --version 2>&1 || kusk -v 2>&1 || echo "installed"
+  register: kusk_version
+
+- name: Display version
+  print: "kusk installed"

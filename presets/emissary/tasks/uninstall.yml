@@ -1,0 +1,7 @@
+- name: Uninstall edgectl (macOS)
+  shell: brew uninstall edgectl
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "edgectl uninstalled"

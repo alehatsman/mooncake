@@ -1,0 +1,7 @@
+- name: Uninstall nats (macOS)
+  shell: brew uninstall nats
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "nats uninstalled"

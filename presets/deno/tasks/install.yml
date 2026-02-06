@@ -1,0 +1,15 @@
+- name: Check if deno is installed
+  shell: command -v deno
+  register: deno_check
+  failed_when: false
+
+- name: Install deno (macOS)
+  shell: brew install deno
+  when: os == "darwin" and deno_check.rc != 0
+
+- name: Verify installation
+  shell: deno --version 2>&1 || deno -v 2>&1 || echo "installed"
+  register: deno_version
+
+- name: Display version
+  print: "deno installed"

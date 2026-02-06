@@ -1,0 +1,16 @@
+name: tide
+description: Modern Fish prompt
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install tide
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall tide
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

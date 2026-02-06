@@ -1,0 +1,7 @@
+- name: Uninstall airbyte (macOS)
+  shell: brew uninstall airbyte
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "airbyte uninstalled"

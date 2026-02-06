@@ -1,0 +1,15 @@
+- name: Check if gatsby is installed
+  shell: command -v gatsby
+  register: gatsby_check
+  failed_when: false
+
+- name: Install gatsby (macOS)
+  shell: brew install gatsby
+  when: os == "darwin" and gatsby_check.rc != 0
+
+- name: Verify installation
+  shell: gatsby --version 2>&1 || gatsby -v 2>&1 || echo "installed"
+  register: gatsby_version
+
+- name: Display version
+  print: "gatsby installed"

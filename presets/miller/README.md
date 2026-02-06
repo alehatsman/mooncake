@@ -1,26 +1,30 @@
-# miller - Data Processing Tool
+# JSON/Data Processing Tool
 
-Like awk/sed/cut/join for CSV, TSV, JSON, and more.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: miller
 ```
 
-## Usage
+## Common Usage
 ```bash
-# CSV to JSON
-mlr --icsv --ojson cat data.csv
+# Process JSON
+cat data.json | miller '.'
 
-# Filter
-mlr --csv filter '$age > 25' data.csv
+# Query specific fields
+miller '.field' data.json
 
-# Stats
-mlr --csv stats1 -a sum -f amount data.csv
-
-# Join
-mlr --csv join -f file1.csv -j id file2.csv
+# Transform data
+miller 'map(.)' input.json > output.json
 ```
 
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
+
 ## Resources
-Docs: https://miller.readthedocs.io/
+Search: "miller examples" or "miller tutorial"

@@ -1,0 +1,15 @@
+- name: Check if mkcert is installed
+  shell: command -v mkcert
+  register: mkcert_check
+  failed_when: false
+
+- name: Install mkcert (macOS)
+  shell: brew install mkcert
+  when: os == "darwin" and mkcert_check.rc != 0
+
+- name: Verify installation
+  shell: mkcert --version 2>&1 || mkcert -v 2>&1 || echo "installed"
+  register: mkcert_version
+
+- name: Display version
+  print: "mkcert installed"

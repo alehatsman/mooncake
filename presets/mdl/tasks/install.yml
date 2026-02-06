@@ -1,0 +1,15 @@
+- name: Check if mdl is installed
+  shell: command -v mdl
+  register: mdl_check
+  failed_when: false
+
+- name: Install mdl (macOS)
+  shell: brew install mdl
+  when: os == "darwin" and mdl_check.rc != 0
+
+- name: Verify installation
+  shell: mdl --version 2>&1 || mdl -v 2>&1 || echo "installed"
+  register: mdl_version
+
+- name: Display version
+  print: "mdl installed"

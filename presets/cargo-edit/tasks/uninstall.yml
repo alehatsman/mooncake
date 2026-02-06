@@ -1,0 +1,7 @@
+- name: Uninstall cargo-edit (macOS)
+  shell: brew uninstall cargo-edit
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "cargo-edit uninstalled"

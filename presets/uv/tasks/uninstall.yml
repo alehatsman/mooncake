@@ -1,0 +1,7 @@
+- name: Uninstall uv (macOS)
+  shell: brew uninstall uv
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "uv uninstalled"

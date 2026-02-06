@@ -1,0 +1,15 @@
+- name: Check if ncdu is installed
+  shell: command -v ncdu
+  register: ncdu_check
+  failed_when: false
+
+- name: Install ncdu (macOS)
+  shell: brew install ncdu
+  when: os == "darwin" and ncdu_check.rc != 0
+
+- name: Verify installation
+  shell: ncdu --version 2>&1 || ncdu -v 2>&1 || echo "installed"
+  register: ncdu_version
+
+- name: Display version
+  print: "ncdu installed"

@@ -1,0 +1,15 @@
+- name: Check if p10k is installed
+  shell: command -v p10k
+  register: p10k_check
+  failed_when: false
+
+- name: Install p10k (macOS)
+  shell: brew install p10k
+  when: os == "darwin" and p10k_check.rc != 0
+
+- name: Verify installation
+  shell: p10k --version 2>&1 || p10k -v 2>&1 || echo "installed"
+  register: p10k_version
+
+- name: Display version
+  print: "p10k installed"

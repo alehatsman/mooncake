@@ -1,0 +1,7 @@
+- name: Uninstall ko (macOS)
+  shell: brew uninstall ko
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "ko uninstalled"

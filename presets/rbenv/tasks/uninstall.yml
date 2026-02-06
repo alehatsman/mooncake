@@ -1,0 +1,7 @@
+- name: Uninstall rbenv (macOS)
+  shell: brew uninstall rbenv
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "rbenv uninstalled"

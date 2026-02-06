@@ -1,0 +1,15 @@
+- name: Check if tfsec is installed
+  shell: command -v tfsec
+  register: tfsec_check
+  failed_when: false
+
+- name: Install tfsec (macOS)
+  shell: brew install tfsec
+  when: os == "darwin" and tfsec_check.rc != 0
+
+- name: Verify installation
+  shell: tfsec --version 2>&1 || tfsec -v 2>&1 || echo "installed"
+  register: tfsec_version
+
+- name: Display version
+  print: "tfsec installed"

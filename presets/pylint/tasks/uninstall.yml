@@ -1,0 +1,7 @@
+- name: Uninstall pylint (macOS)
+  shell: brew uninstall pylint
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "pylint uninstalled"

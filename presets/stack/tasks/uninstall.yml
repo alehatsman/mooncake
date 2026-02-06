@@ -1,0 +1,7 @@
+- name: Uninstall stack (macOS)
+  shell: brew uninstall stack
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "stack uninstalled"

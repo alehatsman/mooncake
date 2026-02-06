@@ -1,0 +1,7 @@
+- name: Uninstall sops (macOS)
+  shell: brew uninstall sops
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "sops uninstalled"

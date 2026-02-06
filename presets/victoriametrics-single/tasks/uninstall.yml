@@ -1,0 +1,7 @@
+- name: Uninstall victoria-metrics-prod (macOS)
+  shell: brew uninstall victoria-metrics-prod
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "victoria-metrics-prod uninstalled"

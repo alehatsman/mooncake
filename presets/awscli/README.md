@@ -1,82 +1,40 @@
-# AWS CLI Preset
+# Cloud CLI Tool
 
-**Status:** ✓ Installed successfully
+Manage cloud resources from the command line.
 
 ## Quick Start
-
-```bash
-# Check version
-aws --version
-
-# Configure AWS CLI (interactive)
-aws configure
-
-# Test connection
-aws sts get-caller-identity
+```yaml
+- preset: awscli
 ```
 
-## Configuration
-
-- **Config directory:** `~/.aws/`
-- **Credentials file:** `~/.aws/credentials`
-- **Config file:** `~/.aws/config`
-
-## Manual Configuration
-
+## Authentication
 ```bash
-# Edit credentials
-cat > ~/.aws/credentials <<EOF
-[default]
-aws_access_key_id = YOUR_ACCESS_KEY
-aws_secret_access_key = YOUR_SECRET_KEY
-EOF
-
-# Edit config
-cat > ~/.aws/config <<EOF
-[default]
-region = us-east-1
-output = json
-EOF
+# Login/configure
+awscli auth login
+awscli configure
 ```
 
 ## Common Operations
-
 ```bash
-# List S3 buckets
-aws s3 ls
+# List resources
+awscli list
 
-# List EC2 instances
-aws ec2 describe-instances
+# Create resource
+awscli create --name myresource
 
-# Get caller identity
-aws sts get-caller-identity
+# Get status
+awscli status
 
-# Use specific profile
-aws s3 ls --profile myprofile
-
-# Use specific region
-aws ec2 describe-instances --region us-west-2
+# Delete resource
+awscli delete myresource
 ```
 
-## Multiple Profiles
+## Agent Use
+- Automate cloud infrastructure
+- Deploy resources programmatically
+- Query cloud state
+- CI/CD integration
+- Infrastructure automation
 
-```ini
-# ~/.aws/credentials
-[default]
-aws_access_key_id = KEY1
-aws_secret_access_key = SECRET1
-
-[project1]
-aws_access_key_id = KEY2
-aws_secret_access_key = SECRET2
-```
-
-## Uninstall
-
-```yaml
-- preset: awscli
-  with:
-    state: absent
-```
-
-**Note:** Configuration in `~/.aws/` is preserved after uninstall.
+## Resources
+Official docs: Search "awscli cli documentation"

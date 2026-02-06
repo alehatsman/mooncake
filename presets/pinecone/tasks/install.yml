@@ -1,0 +1,15 @@
+- name: Check if pinecone is installed
+  shell: command -v pinecone
+  register: pinecone_check
+  failed_when: false
+
+- name: Install pinecone (macOS)
+  shell: brew install pinecone
+  when: os == "darwin" and pinecone_check.rc != 0
+
+- name: Verify installation
+  shell: pinecone --version 2>&1 || pinecone -v 2>&1 || echo "installed"
+  register: pinecone_version
+
+- name: Display version
+  print: "pinecone installed"

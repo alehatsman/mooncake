@@ -1,23 +1,30 @@
-# jless - JSON Viewer
+# JSON/Data Processing Tool
 
-Interactive JSON viewer with collapsing, search, and syntax highlighting.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: jless
 ```
 
-## Usage
+## Common Usage
 ```bash
-jless data.json
-curl https://api.github.com/users/github | jless
+# Process JSON
+cat data.json | jless '.'
+
+# Query specific fields
+jless '.field' data.json
+
+# Transform data
+jless 'map(.)' input.json > output.json
 ```
 
-## Keys
-- `Space` - Page down
-- `/` - Search
-- `q` - Quit
-- `←/→` - Collapse/expand
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
 
 ## Resources
-GitHub: https://github.com/PaulJuliusMartinez/jless
+Search: "jless examples" or "jless tutorial"

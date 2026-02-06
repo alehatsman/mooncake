@@ -1,0 +1,7 @@
+- name: Uninstall rtx (macOS)
+  shell: brew uninstall rtx
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "rtx uninstalled"

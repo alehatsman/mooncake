@@ -1,0 +1,7 @@
+- name: Uninstall cabal (macOS)
+  shell: brew uninstall cabal
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "cabal uninstalled"

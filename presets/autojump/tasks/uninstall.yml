@@ -1,0 +1,7 @@
+- name: Uninstall autojump (macOS)
+  shell: brew uninstall autojump
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "autojump uninstalled"

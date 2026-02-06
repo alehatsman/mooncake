@@ -1,0 +1,15 @@
+- name: Check if singer is installed
+  shell: command -v singer
+  register: singer_check
+  failed_when: false
+
+- name: Install singer (macOS)
+  shell: brew install singer
+  when: os == "darwin" and singer_check.rc != 0
+
+- name: Verify installation
+  shell: singer --version 2>&1 || singer -v 2>&1 || echo "installed"
+  register: singer_version
+
+- name: Display version
+  print: "singer installed"

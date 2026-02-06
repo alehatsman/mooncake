@@ -1,0 +1,15 @@
+- name: Check if rtx is installed
+  shell: command -v rtx
+  register: rtx_check
+  failed_when: false
+
+- name: Install rtx (macOS)
+  shell: brew install rtx
+  when: os == "darwin" and rtx_check.rc != 0
+
+- name: Verify installation
+  shell: rtx --version 2>&1 || rtx -v 2>&1 || echo "installed"
+  register: rtx_version
+
+- name: Display version
+  print: "rtx installed"

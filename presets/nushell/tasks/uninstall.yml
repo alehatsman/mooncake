@@ -1,0 +1,7 @@
+- name: Uninstall nu (macOS)
+  shell: brew uninstall nu
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "nu uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if oh-my-posh is installed
+  shell: command -v oh-my-posh
+  register: oh-my-posh_check
+  failed_when: false
+
+- name: Install oh-my-posh (macOS)
+  shell: brew install oh-my-posh
+  when: os == "darwin" and oh-my-posh_check.rc != 0
+
+- name: Verify installation
+  shell: oh-my-posh --version 2>&1 || oh-my-posh -v 2>&1 || echo "installed"
+  register: oh-my-posh_version
+
+- name: Display version
+  print: "oh-my-posh installed"

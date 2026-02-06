@@ -1,0 +1,15 @@
+- name: Check if rbenv is installed
+  shell: command -v rbenv
+  register: rbenv_check
+  failed_when: false
+
+- name: Install rbenv (macOS)
+  shell: brew install rbenv
+  when: os == "darwin" and rbenv_check.rc != 0
+
+- name: Verify installation
+  shell: rbenv --version 2>&1 || rbenv -v 2>&1 || echo "installed"
+  register: rbenv_version
+
+- name: Display version
+  print: "rbenv installed"

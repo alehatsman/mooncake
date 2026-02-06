@@ -1,0 +1,7 @@
+- name: Uninstall werf (macOS)
+  shell: brew uninstall werf
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "werf uninstalled"

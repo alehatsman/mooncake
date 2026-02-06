@@ -1,0 +1,16 @@
+name: just
+description: Command runner and task automation
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install just
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall just
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

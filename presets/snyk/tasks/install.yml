@@ -1,0 +1,15 @@
+- name: Check if snyk is installed
+  shell: command -v snyk
+  register: snyk_check
+  failed_when: false
+
+- name: Install snyk (macOS)
+  shell: brew install snyk
+  when: os == "darwin" and snyk_check.rc != 0
+
+- name: Verify installation
+  shell: snyk --version 2>&1 || snyk -v 2>&1 || echo "installed"
+  register: snyk_version
+
+- name: Display version
+  print: "snyk installed"

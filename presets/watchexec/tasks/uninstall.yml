@@ -1,0 +1,7 @@
+- name: Uninstall watchexec (macOS)
+  shell: brew uninstall watchexec
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "watchexec uninstalled"

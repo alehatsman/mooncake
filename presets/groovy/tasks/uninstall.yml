@@ -1,0 +1,7 @@
+- name: Uninstall groovy (macOS)
+  shell: brew uninstall groovy
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "groovy uninstalled"

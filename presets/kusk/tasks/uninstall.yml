@@ -1,0 +1,7 @@
+- name: Uninstall kusk (macOS)
+  shell: brew uninstall kusk
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "kusk uninstalled"

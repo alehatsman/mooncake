@@ -1,0 +1,7 @@
+- name: Uninstall valkey (macOS)
+  shell: brew uninstall valkey
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "valkey uninstalled"

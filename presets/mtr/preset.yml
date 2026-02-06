@@ -1,0 +1,16 @@
+name: mtr
+description: Network diagnostic tool (traceroute + ping)
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install mtr
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall mtr
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

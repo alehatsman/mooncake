@@ -1,0 +1,7 @@
+- name: Uninstall airflow (macOS)
+  shell: brew uninstall airflow
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "airflow uninstalled"

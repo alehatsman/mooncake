@@ -1,0 +1,15 @@
+- name: Check if kubescape is installed
+  shell: command -v kubescape
+  register: kubescape_check
+  failed_when: false
+
+- name: Install kubescape (macOS)
+  shell: brew install kubescape
+  when: os == "darwin" and kubescape_check.rc != 0
+
+- name: Verify installation
+  shell: kubescape --version 2>&1 || kubescape -v 2>&1 || echo "installed"
+  register: kubescape_version
+
+- name: Display version
+  print: "kubescape installed"

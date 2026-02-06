@@ -1,0 +1,7 @@
+- name: Uninstall rclone (macOS)
+  shell: brew uninstall rclone
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "rclone uninstalled"

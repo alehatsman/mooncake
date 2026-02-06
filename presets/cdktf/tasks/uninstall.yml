@@ -1,0 +1,7 @@
+- name: Uninstall cdktf (macOS)
+  shell: brew uninstall cdktf
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "cdktf uninstalled"

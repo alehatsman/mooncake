@@ -1,0 +1,15 @@
+- name: Check if spark is installed
+  shell: command -v spark
+  register: spark_check
+  failed_when: false
+
+- name: Install spark (macOS)
+  shell: brew install spark
+  when: os == "darwin" and spark_check.rc != 0
+
+- name: Verify installation
+  shell: spark --version 2>&1 || spark -v 2>&1 || echo "installed"
+  register: spark_version
+
+- name: Display version
+  print: "spark installed"

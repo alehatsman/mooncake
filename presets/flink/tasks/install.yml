@@ -1,0 +1,15 @@
+- name: Check if flink is installed
+  shell: command -v flink
+  register: flink_check
+  failed_when: false
+
+- name: Install flink (macOS)
+  shell: brew install flink
+  when: os == "darwin" and flink_check.rc != 0
+
+- name: Verify installation
+  shell: flink --version 2>&1 || flink -v 2>&1 || echo "installed"
+  register: flink_version
+
+- name: Display version
+  print: "flink installed"

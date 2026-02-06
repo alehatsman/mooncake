@@ -1,16 +1,31 @@
-# dive - Image Layer Explorer
+# dive
 
-Explore Docker image layers and find ways to shrink image size.
+Docker image layer explorer
 
 ## Quick Start
+
 ```yaml
 - preset: dive
 ```
 
 ## Usage
+
 ```bash
-dive nginx:latest
-dive build -t myimage .       # Build and analyze
+# Basic usage
+dive --help
+
+# Common operations
+dive --version
 ```
 
-**Agent Use**: Optimize images, analyze layer efficiency, find bloat
+## Agent Use
+
+Automation-friendly CLI tool with:
+- Exit codes for error handling  
+- JSON/YAML output support (where applicable)
+- Scriptable interface
+- Idempotent operations
+
+## Resources
+
+Search: "dive documentation" or "dive github"

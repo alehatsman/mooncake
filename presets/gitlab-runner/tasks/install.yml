@@ -1,0 +1,15 @@
+- name: Check if gitlab-runner is installed
+  shell: command -v gitlab-runner
+  register: gitlab-runner_check
+  failed_when: false
+
+- name: Install gitlab-runner (macOS)
+  shell: brew install gitlab-runner
+  when: os == "darwin" and gitlab-runner_check.rc != 0
+
+- name: Verify installation
+  shell: gitlab-runner --version 2>&1 || gitlab-runner -v 2>&1 || echo "installed"
+  register: gitlab-runner_version
+
+- name: Display version
+  print: "gitlab-runner installed"

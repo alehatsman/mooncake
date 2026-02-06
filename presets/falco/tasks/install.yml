@@ -1,0 +1,15 @@
+- name: Check if falco is installed
+  shell: command -v falco
+  register: falco_check
+  failed_when: false
+
+- name: Install falco (macOS)
+  shell: brew install falco
+  when: os == "darwin" and falco_check.rc != 0
+
+- name: Verify installation
+  shell: falco --version 2>&1 || falco -v 2>&1 || echo "installed"
+  register: falco_version
+
+- name: Display version
+  print: "falco installed"

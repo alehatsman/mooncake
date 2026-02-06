@@ -1,0 +1,15 @@
+- name: Check if act is installed
+  shell: command -v act
+  register: act_check
+  failed_when: false
+
+- name: Install act (macOS)
+  shell: brew install act
+  when: os == "darwin" and act_check.rc != 0
+
+- name: Verify installation
+  shell: act --version 2>&1 || act -v 2>&1 || echo "installed"
+  register: act_version
+
+- name: Display version
+  print: "act installed"

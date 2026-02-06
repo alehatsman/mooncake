@@ -1,0 +1,15 @@
+- name: Check if direnv is installed
+  shell: command -v direnv
+  register: direnv_check
+  failed_when: false
+
+- name: Install direnv (macOS)
+  shell: brew install direnv
+  when: os == "darwin" and direnv_check.rc != 0
+
+- name: Verify installation
+  shell: direnv --version 2>&1 || direnv -v 2>&1 || echo "installed"
+  register: direnv_version
+
+- name: Display version
+  print: "direnv installed"

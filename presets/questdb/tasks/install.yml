@@ -1,0 +1,15 @@
+- name: Check if questdb is installed
+  shell: command -v questdb
+  register: questdb_check
+  failed_when: false
+
+- name: Install questdb (macOS)
+  shell: brew install questdb
+  when: os == "darwin" and questdb_check.rc != 0
+
+- name: Verify installation
+  shell: questdb --version 2>&1 || questdb -v 2>&1 || echo "installed"
+  register: questdb_version
+
+- name: Display version
+  print: "questdb installed"

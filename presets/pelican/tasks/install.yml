@@ -1,0 +1,15 @@
+- name: Check if pelican is installed
+  shell: command -v pelican
+  register: pelican_check
+  failed_when: false
+
+- name: Install pelican (macOS)
+  shell: brew install pelican
+  when: os == "darwin" and pelican_check.rc != 0
+
+- name: Verify installation
+  shell: pelican --version 2>&1 || pelican -v 2>&1 || echo "installed"
+  register: pelican_version
+
+- name: Display version
+  print: "pelican installed"

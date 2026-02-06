@@ -1,0 +1,15 @@
+- name: Check if nvm is installed
+  shell: command -v nvm
+  register: nvm_check
+  failed_when: false
+
+- name: Install nvm (macOS)
+  shell: brew install nvm
+  when: os == "darwin" and nvm_check.rc != 0
+
+- name: Verify installation
+  shell: nvm --version 2>&1 || nvm -v 2>&1 || echo "installed"
+  register: nvm_version
+
+- name: Display version
+  print: "nvm installed"

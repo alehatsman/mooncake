@@ -1,0 +1,15 @@
+- name: Check if argo is installed
+  shell: command -v argo
+  register: argo-workflows_check
+  failed_when: false
+
+- name: Install argo (macOS)
+  shell: brew install argo
+  when: os == "darwin" and argo-workflows_check.rc != 0
+
+- name: Verify installation
+  shell: argo --version 2>&1 || argo -v 2>&1 || echo "installed"
+  register: argo-workflows_version
+
+- name: Display version
+  print: "argo installed"

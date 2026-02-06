@@ -1,20 +1,30 @@
-# gron - Make JSON Greppable
+# JSON/Data Processing Tool
 
-Transform JSON into discrete assignments to make it greppable.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: gron
 ```
 
-## Usage
+## Common Usage
 ```bash
-# Make greppable
-gron data.json | grep "email"
+# Process JSON
+cat data.json | gron '.'
 
-# Ungron back to JSON
-gron data.json | grep "active" | gron --ungron
+# Query specific fields
+gron '.field' data.json
+
+# Transform data
+gron 'map(.)' input.json > output.json
 ```
 
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
+
 ## Resources
-GitHub: https://github.com/tomnomnom/gron
+Search: "gron examples" or "gron tutorial"

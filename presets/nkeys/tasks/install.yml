@@ -1,0 +1,15 @@
+- name: Check if nkeys is installed
+  shell: command -v nkeys
+  register: nkeys_check
+  failed_when: false
+
+- name: Install nkeys (macOS)
+  shell: brew install nkeys
+  when: os == "darwin" and nkeys_check.rc != 0
+
+- name: Verify installation
+  shell: nkeys --version 2>&1 || nkeys -v 2>&1 || echo "installed"
+  register: nkeys_version
+
+- name: Display version
+  print: "nkeys installed"

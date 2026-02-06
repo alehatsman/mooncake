@@ -1,0 +1,7 @@
+- name: Uninstall envoy-gateway (macOS)
+  shell: brew uninstall envoy-gateway
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "envoy-gateway uninstalled"

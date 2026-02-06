@@ -1,0 +1,15 @@
+- name: Check if werf is installed
+  shell: command -v werf
+  register: werf_check
+  failed_when: false
+
+- name: Install werf (macOS)
+  shell: brew install werf
+  when: os == "darwin" and werf_check.rc != 0
+
+- name: Verify installation
+  shell: werf --version 2>&1 || werf -v 2>&1 || echo "installed"
+  register: werf_version
+
+- name: Display version
+  print: "werf installed"

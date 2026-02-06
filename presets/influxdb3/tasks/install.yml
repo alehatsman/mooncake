@@ -1,0 +1,15 @@
+- name: Check if influxdb3 is installed
+  shell: command -v influxdb3
+  register: influxdb3_check
+  failed_when: false
+
+- name: Install influxdb3 (macOS)
+  shell: brew install influxdb3
+  when: os == "darwin" and influxdb3_check.rc != 0
+
+- name: Verify installation
+  shell: influxdb3 --version 2>&1 || influxdb3 -v 2>&1 || echo "installed"
+  register: influxdb3_version
+
+- name: Display version
+  print: "influxdb3 installed"

@@ -1,23 +1,30 @@
-# fx - Interactive JSON Viewer
+# JSON/Data Processing Tool
 
-Terminal JSON viewer with JavaScript expressions and interactive mode.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: fx
 ```
 
-## Usage
+## Common Usage
 ```bash
-# Interactive
-echo '{"name":"John","age":30}' | fx
+# Process JSON
+cat data.json | fx '.'
 
-# JavaScript expressions
-echo '[1,2,3]' | fx 'x => x.map(n => n * 2)'
+# Query specific fields
+fx '.field' data.json
 
-# Object access
-cat data.json | fx .users[0].name
+# Transform data
+fx 'map(.)' input.json > output.json
 ```
 
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
+
 ## Resources
-GitHub: https://github.com/antonmedv/fx
+Search: "fx examples" or "fx tutorial"

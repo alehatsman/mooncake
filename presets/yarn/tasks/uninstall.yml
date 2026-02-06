@@ -1,0 +1,7 @@
+- name: Uninstall yarn (macOS)
+  shell: brew uninstall yarn
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "yarn uninstalled"

@@ -1,0 +1,7 @@
+- name: Uninstall terrascan (macOS)
+  shell: brew uninstall terrascan
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "terrascan uninstalled"

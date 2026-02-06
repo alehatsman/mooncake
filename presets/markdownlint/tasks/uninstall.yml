@@ -1,0 +1,7 @@
+- name: Uninstall markdownlint (macOS)
+  shell: brew uninstall markdownlint
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "markdownlint uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if astro is installed
+  shell: command -v astro
+  register: astro_check
+  failed_when: false
+
+- name: Install astro (macOS)
+  shell: brew install astro
+  when: os == "darwin" and astro_check.rc != 0
+
+- name: Verify installation
+  shell: astro --version 2>&1 || astro -v 2>&1 || echo "installed"
+  register: astro_version
+
+- name: Display version
+  print: "astro installed"

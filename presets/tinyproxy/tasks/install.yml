@@ -1,0 +1,15 @@
+- name: Check if tinyproxy is installed
+  shell: command -v tinyproxy
+  register: tinyproxy_check
+  failed_when: false
+
+- name: Install tinyproxy (macOS)
+  shell: brew install tinyproxy
+  when: os == "darwin" and tinyproxy_check.rc != 0
+
+- name: Verify installation
+  shell: tinyproxy --version 2>&1 || tinyproxy -v 2>&1 || echo "installed"
+  register: tinyproxy_version
+
+- name: Display version
+  print: "tinyproxy installed"

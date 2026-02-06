@@ -1,0 +1,7 @@
+- name: Uninstall actionlint (macOS)
+  shell: brew uninstall actionlint
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "actionlint uninstalled"

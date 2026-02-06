@@ -1,0 +1,7 @@
+- name: Uninstall sonic (macOS)
+  shell: brew uninstall sonic
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "sonic uninstalled"

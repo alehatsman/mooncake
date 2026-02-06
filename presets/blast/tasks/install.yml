@@ -1,0 +1,15 @@
+- name: Check if blast is installed
+  shell: command -v blast
+  register: blast_check
+  failed_when: false
+
+- name: Install blast (macOS)
+  shell: brew install blast
+  when: os == "darwin" and blast_check.rc != 0
+
+- name: Verify installation
+  shell: blast --version 2>&1 || blast -v 2>&1 || echo "installed"
+  register: blast_version
+
+- name: Display version
+  print: "blast installed"

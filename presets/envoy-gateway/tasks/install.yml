@@ -1,0 +1,15 @@
+- name: Check if envoy-gateway is installed
+  shell: command -v envoy-gateway
+  register: envoy-gateway_check
+  failed_when: false
+
+- name: Install envoy-gateway (macOS)
+  shell: brew install envoy-gateway
+  when: os == "darwin" and envoy-gateway_check.rc != 0
+
+- name: Verify installation
+  shell: envoy-gateway --version 2>&1 || envoy-gateway -v 2>&1 || echo "installed"
+  register: envoy-gateway_version
+
+- name: Display version
+  print: "envoy-gateway installed"

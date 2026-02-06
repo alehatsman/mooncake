@@ -1,0 +1,7 @@
+- name: Uninstall woodpecker-cli (macOS)
+  shell: brew uninstall woodpecker-cli
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "woodpecker-cli uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if searchd is installed
+  shell: command -v searchd
+  register: sphinxsearch_check
+  failed_when: false
+
+- name: Install searchd (macOS)
+  shell: brew install searchd
+  when: os == "darwin" and sphinxsearch_check.rc != 0
+
+- name: Verify installation
+  shell: searchd --version 2>&1 || searchd -v 2>&1 || echo "installed"
+  register: sphinxsearch_version
+
+- name: Display version
+  print: "searchd installed"

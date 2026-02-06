@@ -1,29 +1,30 @@
-# xsv - Fast CSV Toolkit
+# JSON/Data Processing Tool
 
-Blazing fast CSV command-line toolkit written in Rust.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: xsv
 ```
 
-## Usage
+## Common Usage
 ```bash
-# Stats
-xsv stats data.csv
+# Process JSON
+cat data.json | xsv '.'
 
-# Select columns
-xsv select name,email data.csv
+# Query specific fields
+xsv '.field' data.json
 
-# Search
-xsv search -s name "John" data.csv
-
-# Sort
-xsv sort -s age data.csv
-
-# Count rows
-xsv count data.csv
+# Transform data
+xsv 'map(.)' input.json > output.json
 ```
 
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
+
 ## Resources
-GitHub: https://github.com/BurntSushi/xsv
+Search: "xsv examples" or "xsv tutorial"

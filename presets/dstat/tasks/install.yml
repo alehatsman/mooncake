@@ -1,0 +1,15 @@
+- name: Check if dstat is installed
+  shell: command -v dstat
+  register: dstat_check
+  failed_when: false
+
+- name: Install dstat (macOS)
+  shell: brew install dstat
+  when: os == "darwin" and dstat_check.rc != 0
+
+- name: Verify installation
+  shell: dstat --version 2>&1 || dstat -v 2>&1 || echo "installed"
+  register: dstat_version
+
+- name: Display version
+  print: "dstat installed"

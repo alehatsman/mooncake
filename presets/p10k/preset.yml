@@ -1,0 +1,16 @@
+name: p10k
+description: Powerlevel10k Zsh theme
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install p10k
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall p10k
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

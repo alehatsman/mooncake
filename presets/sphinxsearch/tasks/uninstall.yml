@@ -1,0 +1,7 @@
+- name: Uninstall searchd (macOS)
+  shell: brew uninstall searchd
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "searchd uninstalled"

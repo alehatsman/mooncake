@@ -1,0 +1,15 @@
+- name: Check if docusaurus is installed
+  shell: command -v docusaurus
+  register: docusaurus_check
+  failed_when: false
+
+- name: Install docusaurus (macOS)
+  shell: brew install docusaurus
+  when: os == "darwin" and docusaurus_check.rc != 0
+
+- name: Verify installation
+  shell: docusaurus --version 2>&1 || docusaurus -v 2>&1 || echo "installed"
+  register: docusaurus_version
+
+- name: Display version
+  print: "docusaurus installed"

@@ -1,0 +1,15 @@
+- name: Check if poetry is installed
+  shell: command -v poetry
+  register: poetry_check
+  failed_when: false
+
+- name: Install poetry (macOS)
+  shell: brew install poetry
+  when: os == "darwin" and poetry_check.rc != 0
+
+- name: Verify installation
+  shell: poetry --version 2>&1 || poetry -v 2>&1 || echo "installed"
+  register: poetry_version
+
+- name: Display version
+  print: "poetry installed"

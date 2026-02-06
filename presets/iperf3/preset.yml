@@ -1,0 +1,16 @@
+name: iperf3
+description: Network bandwidth measurement
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install iperf3
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall iperf3
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,7 @@
+- name: Uninstall contour (macOS)
+  shell: brew uninstall contour
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "contour uninstalled"

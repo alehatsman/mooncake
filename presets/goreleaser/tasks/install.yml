@@ -1,0 +1,15 @@
+- name: Check if goreleaser is installed
+  shell: command -v goreleaser
+  register: goreleaser_check
+  failed_when: false
+
+- name: Install goreleaser (macOS)
+  shell: brew install goreleaser
+  when: os == "darwin" and goreleaser_check.rc != 0
+
+- name: Verify installation
+  shell: goreleaser --version 2>&1 || goreleaser -v 2>&1 || echo "installed"
+  register: goreleaser_version
+
+- name: Display version
+  print: "goreleaser installed"

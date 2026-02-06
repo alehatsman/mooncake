@@ -1,0 +1,7 @@
+- name: Uninstall nsc (macOS)
+  shell: brew uninstall nsc
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "nsc uninstalled"

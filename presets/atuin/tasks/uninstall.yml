@@ -1,0 +1,7 @@
+- name: Uninstall atuin (macOS)
+  shell: brew uninstall atuin
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "atuin uninstalled"

@@ -1,0 +1,7 @@
+- name: Uninstall gping (macOS)
+  shell: brew uninstall gping
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "gping uninstalled"

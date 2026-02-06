@@ -1,0 +1,7 @@
+- name: Uninstall pwsh (macOS)
+  shell: brew uninstall pwsh
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "pwsh uninstalled"

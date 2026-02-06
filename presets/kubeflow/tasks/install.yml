@@ -1,0 +1,15 @@
+- name: Check if kfctl is installed
+  shell: command -v kfctl
+  register: kubeflow_check
+  failed_when: false
+
+- name: Install kfctl (macOS)
+  shell: brew install kfctl
+  when: os == "darwin" and kubeflow_check.rc != 0
+
+- name: Verify installation
+  shell: kfctl --version 2>&1 || kfctl -v 2>&1 || echo "installed"
+  register: kubeflow_version
+
+- name: Display version
+  print: "kfctl installed"

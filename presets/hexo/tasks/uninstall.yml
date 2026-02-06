@@ -1,0 +1,7 @@
+- name: Uninstall hexo (macOS)
+  shell: brew uninstall hexo
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "hexo uninstalled"

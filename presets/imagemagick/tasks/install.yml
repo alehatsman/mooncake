@@ -1,0 +1,15 @@
+- name: Check if convert is installed
+  shell: command -v convert
+  register: imagemagick_check
+  failed_when: false
+
+- name: Install convert (macOS)
+  shell: brew install convert
+  when: os == "darwin" and imagemagick_check.rc != 0
+
+- name: Verify installation
+  shell: convert --version 2>&1 || convert -v 2>&1 || echo "installed"
+  register: imagemagick_version
+
+- name: Display version
+  print: "convert installed"

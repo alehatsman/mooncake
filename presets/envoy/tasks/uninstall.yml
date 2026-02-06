@@ -1,0 +1,7 @@
+- name: Uninstall envoy (macOS)
+  shell: brew uninstall envoy
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "envoy uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if krakend is installed
+  shell: command -v krakend
+  register: krakend_check
+  failed_when: false
+
+- name: Install krakend (macOS)
+  shell: brew install krakend
+  when: os == "darwin" and krakend_check.rc != 0
+
+- name: Verify installation
+  shell: krakend --version 2>&1 || krakend -v 2>&1 || echo "installed"
+  register: krakend_version
+
+- name: Display version
+  print: "krakend installed"

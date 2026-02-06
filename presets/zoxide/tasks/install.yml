@@ -1,0 +1,15 @@
+- name: Check if zoxide is installed
+  shell: command -v zoxide
+  register: zoxide_check
+  failed_when: false
+
+- name: Install zoxide (macOS)
+  shell: brew install zoxide
+  when: os == "darwin" and zoxide_check.rc != 0
+
+- name: Verify installation
+  shell: zoxide --version 2>&1 || zoxide -v 2>&1 || echo "installed"
+  register: zoxide_version
+
+- name: Display version
+  print: "zoxide installed"

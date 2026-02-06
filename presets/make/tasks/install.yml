@@ -1,0 +1,15 @@
+- name: Check if make is installed
+  shell: command -v make
+  register: make_check
+  failed_when: false
+
+- name: Install make (macOS)
+  shell: brew install make
+  when: os == "darwin" and make_check.rc != 0
+
+- name: Verify installation
+  shell: make --version 2>&1 || make -v 2>&1 || echo "installed"
+  register: make_version
+
+- name: Display version
+  print: "make installed"

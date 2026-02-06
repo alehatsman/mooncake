@@ -1,0 +1,7 @@
+- name: Uninstall thanos (macOS)
+  shell: brew uninstall thanos
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "thanos uninstalled"

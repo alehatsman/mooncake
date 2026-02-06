@@ -1,0 +1,7 @@
+- name: Uninstall lite-xl (macOS)
+  shell: brew uninstall lite-xl
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "lite-xl uninstalled"

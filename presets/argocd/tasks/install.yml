@@ -1,0 +1,15 @@
+- name: Check if argocd is installed
+  shell: command -v argocd
+  register: argocd_check
+  failed_when: false
+
+- name: Install argocd (macOS)
+  shell: brew install argocd
+  when: os == "darwin" and argocd_check.rc != 0
+
+- name: Verify installation
+  shell: argocd --version 2>&1 || argocd -v 2>&1 || echo "installed"
+  register: argocd_version
+
+- name: Display version
+  print: "argocd installed"

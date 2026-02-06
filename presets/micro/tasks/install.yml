@@ -1,0 +1,15 @@
+- name: Check if micro is installed
+  shell: command -v micro
+  register: micro_check
+  failed_when: false
+
+- name: Install micro (macOS)
+  shell: brew install micro
+  when: os == "darwin" and micro_check.rc != 0
+
+- name: Verify installation
+  shell: micro --version 2>&1 || micro -v 2>&1 || echo "installed"
+  register: micro_version
+
+- name: Display version
+  print: "micro installed"

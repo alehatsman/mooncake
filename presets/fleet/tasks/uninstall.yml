@@ -1,0 +1,7 @@
+- name: Uninstall fleet (macOS)
+  shell: brew uninstall fleet
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "fleet uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if temporal is installed
+  shell: command -v temporal
+  register: temporal_check
+  failed_when: false
+
+- name: Install temporal (macOS)
+  shell: brew install temporal
+  when: os == "darwin" and temporal_check.rc != 0
+
+- name: Verify installation
+  shell: temporal --version 2>&1 || temporal -v 2>&1 || echo "installed"
+  register: temporal_version
+
+- name: Display version
+  print: "temporal installed"

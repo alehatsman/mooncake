@@ -1,0 +1,7 @@
+- name: Uninstall subl (macOS)
+  shell: brew uninstall subl
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "subl uninstalled"

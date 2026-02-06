@@ -1,0 +1,16 @@
+name: meson
+description: Build system focused on speed
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install meson
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall meson
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,16 @@
+name: ninja
+description: Fast build system
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install ninja
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall ninja
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

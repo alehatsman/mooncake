@@ -1,0 +1,7 @@
+- name: Uninstall navi (macOS)
+  shell: brew uninstall navi
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "navi uninstalled"

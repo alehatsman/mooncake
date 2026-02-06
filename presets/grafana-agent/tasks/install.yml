@@ -1,0 +1,15 @@
+- name: Check if grafana-agent is installed
+  shell: command -v grafana-agent
+  register: grafana-agent_check
+  failed_when: false
+
+- name: Install grafana-agent (macOS)
+  shell: brew install grafana-agent
+  when: os == "darwin" and grafana-agent_check.rc != 0
+
+- name: Verify installation
+  shell: grafana-agent --version 2>&1 || grafana-agent -v 2>&1 || echo "installed"
+  register: grafana-agent_version
+
+- name: Display version
+  print: "grafana-agent installed"

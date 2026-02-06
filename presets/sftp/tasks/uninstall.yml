@@ -1,0 +1,7 @@
+- name: Uninstall sftp (macOS)
+  shell: brew uninstall sftp
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "sftp uninstalled"

@@ -1,0 +1,7 @@
+- name: Uninstall nebula (macOS)
+  shell: brew uninstall nebula
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "nebula uninstalled"

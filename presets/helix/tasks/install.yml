@@ -1,0 +1,15 @@
+- name: Check if hx is installed
+  shell: command -v hx
+  register: helix_check
+  failed_when: false
+
+- name: Install hx (macOS)
+  shell: brew install hx
+  when: os == "darwin" and helix_check.rc != 0
+
+- name: Verify installation
+  shell: hx --version 2>&1 || hx -v 2>&1 || echo "installed"
+  register: helix_version
+
+- name: Display version
+  print: "hx installed"

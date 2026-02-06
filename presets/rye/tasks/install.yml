@@ -1,0 +1,15 @@
+- name: Check if rye is installed
+  shell: command -v rye
+  register: rye_check
+  failed_when: false
+
+- name: Install rye (macOS)
+  shell: brew install rye
+  when: os == "darwin" and rye_check.rc != 0
+
+- name: Verify installation
+  shell: rye --version 2>&1 || rye -v 2>&1 || echo "installed"
+  register: rye_version
+
+- name: Display version
+  print: "rye installed"

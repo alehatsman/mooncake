@@ -1,0 +1,7 @@
+- name: Uninstall sbt (macOS)
+  shell: brew uninstall sbt
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "sbt uninstalled"

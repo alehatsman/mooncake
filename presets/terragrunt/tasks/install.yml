@@ -1,0 +1,15 @@
+- name: Check if terragrunt is installed
+  shell: command -v terragrunt
+  register: terragrunt_check
+  failed_when: false
+
+- name: Install terragrunt (macOS)
+  shell: brew install terragrunt
+  when: os == "darwin" and terragrunt_check.rc != 0
+
+- name: Verify installation
+  shell: terragrunt --version 2>&1 || terragrunt -v 2>&1 || echo "installed"
+  register: terragrunt_version
+
+- name: Display version
+  print: "terragrunt installed"

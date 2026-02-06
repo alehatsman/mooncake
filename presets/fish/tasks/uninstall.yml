@@ -1,0 +1,7 @@
+- name: Uninstall fish (macOS)
+  shell: brew uninstall fish
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "fish uninstalled"

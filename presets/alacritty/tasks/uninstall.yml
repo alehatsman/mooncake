@@ -1,0 +1,7 @@
+- name: Uninstall alacritty (macOS)
+  shell: brew uninstall alacritty
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "alacritty uninstalled"

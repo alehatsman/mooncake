@@ -1,0 +1,7 @@
+- name: Uninstall snyk (macOS)
+  shell: brew uninstall snyk
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "snyk uninstalled"

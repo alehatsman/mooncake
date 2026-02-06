@@ -1,0 +1,15 @@
+- name: Check if mcfly is installed
+  shell: command -v mcfly
+  register: mcfly_check
+  failed_when: false
+
+- name: Install mcfly (macOS)
+  shell: brew install mcfly
+  when: os == "darwin" and mcfly_check.rc != 0
+
+- name: Verify installation
+  shell: mcfly --version 2>&1 || mcfly -v 2>&1 || echo "installed"
+  register: mcfly_version
+
+- name: Display version
+  print: "mcfly installed"

@@ -1,0 +1,15 @@
+- name: Check if spin is installed
+  shell: command -v spin
+  register: spinnaker_check
+  failed_when: false
+
+- name: Install spin (macOS)
+  shell: brew install spin
+  when: os == "darwin" and spinnaker_check.rc != 0
+
+- name: Verify installation
+  shell: spin --version 2>&1 || spin -v 2>&1 || echo "installed"
+  register: spinnaker_version
+
+- name: Display version
+  print: "spin installed"

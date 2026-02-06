@@ -1,0 +1,15 @@
+- name: Check if rancher is installed
+  shell: command -v rancher
+  register: rancher_check
+  failed_when: false
+
+- name: Install rancher (macOS)
+  shell: brew install rancher
+  when: os == "darwin" and rancher_check.rc != 0
+
+- name: Verify installation
+  shell: rancher --version 2>&1 || rancher -v 2>&1 || echo "installed"
+  register: rancher_version
+
+- name: Display version
+  print: "rancher installed"

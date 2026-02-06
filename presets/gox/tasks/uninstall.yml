@@ -1,0 +1,7 @@
+- name: Uninstall gox (macOS)
+  shell: brew uninstall gox
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "gox uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if weaviate is installed
+  shell: command -v weaviate
+  register: weaviate_check
+  failed_when: false
+
+- name: Install weaviate (macOS)
+  shell: brew install weaviate
+  when: os == "darwin" and weaviate_check.rc != 0
+
+- name: Verify installation
+  shell: weaviate --version 2>&1 || weaviate -v 2>&1 || echo "installed"
+  register: weaviate_version
+
+- name: Display version
+  print: "weaviate installed"

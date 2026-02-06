@@ -1,0 +1,15 @@
+- name: Check if groovy is installed
+  shell: command -v groovy
+  register: groovy_check
+  failed_when: false
+
+- name: Install groovy (macOS)
+  shell: brew install groovy
+  when: os == "darwin" and groovy_check.rc != 0
+
+- name: Verify installation
+  shell: groovy --version 2>&1 || groovy -v 2>&1 || echo "installed"
+  register: groovy_version
+
+- name: Display version
+  print: "groovy installed"

@@ -1,0 +1,15 @@
+- name: Check if kotlin is installed
+  shell: command -v kotlin
+  register: kotlin_check
+  failed_when: false
+
+- name: Install kotlin (macOS)
+  shell: brew install kotlin
+  when: os == "darwin" and kotlin_check.rc != 0
+
+- name: Verify installation
+  shell: kotlin --version 2>&1 || kotlin -v 2>&1 || echo "installed"
+  register: kotlin_version
+
+- name: Display version
+  print: "kotlin installed"

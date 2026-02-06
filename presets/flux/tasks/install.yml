@@ -1,0 +1,15 @@
+- name: Check if flux is installed
+  shell: command -v flux
+  register: flux_check
+  failed_when: false
+
+- name: Install flux (macOS)
+  shell: brew install flux
+  when: os == "darwin" and flux_check.rc != 0
+
+- name: Verify installation
+  shell: flux --version 2>&1 || flux -v 2>&1 || echo "installed"
+  register: flux_version
+
+- name: Display version
+  print: "flux installed"

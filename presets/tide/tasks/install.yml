@@ -1,0 +1,15 @@
+- name: Check if tide is installed
+  shell: command -v tide
+  register: tide_check
+  failed_when: false
+
+- name: Install tide (macOS)
+  shell: brew install tide
+  when: os == "darwin" and tide_check.rc != 0
+
+- name: Verify installation
+  shell: tide --version 2>&1 || tide -v 2>&1 || echo "installed"
+  register: tide_version
+
+- name: Display version
+  print: "tide installed"

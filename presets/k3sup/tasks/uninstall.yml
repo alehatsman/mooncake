@@ -1,0 +1,7 @@
+- name: Uninstall k3sup (macOS)
+  shell: brew uninstall k3sup
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "k3sup uninstalled"

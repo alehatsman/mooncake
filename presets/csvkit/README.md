@@ -1,29 +1,30 @@
-# csvkit - CSV Tools Suite
+# JSON/Data Processing Tool
 
-Comprehensive suite of tools for working with CSV files.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: csvkit
 ```
 
-## Usage
+## Common Usage
 ```bash
-# Stats
-csvstat data.csv
+# Process JSON
+cat data.json | csvkit '.'
 
-# SQL queries
-csvsql --query "SELECT * FROM data WHERE age > 25" data.csv
+# Query specific fields
+csvkit '.field' data.json
 
-# Convert Excel to CSV
-in2csv data.xlsx > data.csv
-
-# Pretty print
-csvlook data.csv
-
-# Join files
-csvjoin -c id file1.csv file2.csv
+# Transform data
+csvkit 'map(.)' input.json > output.json
 ```
 
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
+
 ## Resources
-Docs: https://csvkit.readthedocs.io/
+Search: "csvkit examples" or "csvkit tutorial"

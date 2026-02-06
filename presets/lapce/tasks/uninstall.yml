@@ -1,0 +1,7 @@
+- name: Uninstall lapce (macOS)
+  shell: brew uninstall lapce
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "lapce uninstalled"

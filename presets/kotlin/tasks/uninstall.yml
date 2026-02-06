@@ -1,0 +1,7 @@
+- name: Uninstall kotlin (macOS)
+  shell: brew uninstall kotlin
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "kotlin uninstalled"

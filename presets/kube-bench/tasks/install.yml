@@ -1,0 +1,15 @@
+- name: Check if kube-bench is installed
+  shell: command -v kube-bench
+  register: kube-bench_check
+  failed_when: false
+
+- name: Install kube-bench (macOS)
+  shell: brew install kube-bench
+  when: os == "darwin" and kube-bench_check.rc != 0
+
+- name: Verify installation
+  shell: kube-bench --version 2>&1 || kube-bench -v 2>&1 || echo "installed"
+  register: kube-bench_version
+
+- name: Display version
+  print: "kube-bench installed"

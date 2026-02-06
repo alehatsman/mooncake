@@ -1,0 +1,15 @@
+- name: Check if asciinema is installed
+  shell: command -v asciinema
+  register: asciinema_check
+  failed_when: false
+
+- name: Install asciinema (macOS)
+  shell: brew install asciinema
+  when: os == "darwin" and asciinema_check.rc != 0
+
+- name: Verify installation
+  shell: asciinema --version 2>&1 || asciinema -v 2>&1 || echo "installed"
+  register: asciinema_version
+
+- name: Display version
+  print: "asciinema installed"

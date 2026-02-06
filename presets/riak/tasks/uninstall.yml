@@ -1,0 +1,7 @@
+- name: Uninstall riak (macOS)
+  shell: brew uninstall riak
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "riak uninstalled"

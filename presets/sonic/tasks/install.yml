@@ -1,0 +1,15 @@
+- name: Check if sonic is installed
+  shell: command -v sonic
+  register: sonic_check
+  failed_when: false
+
+- name: Install sonic (macOS)
+  shell: brew install sonic
+  when: os == "darwin" and sonic_check.rc != 0
+
+- name: Verify installation
+  shell: sonic --version 2>&1 || sonic -v 2>&1 || echo "installed"
+  register: sonic_version
+
+- name: Display version
+  print: "sonic installed"

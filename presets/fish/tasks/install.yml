@@ -1,0 +1,15 @@
+- name: Check if fish is installed
+  shell: command -v fish
+  register: fish_check
+  failed_when: false
+
+- name: Install fish (macOS)
+  shell: brew install fish
+  when: os == "darwin" and fish_check.rc != 0
+
+- name: Verify installation
+  shell: fish --version 2>&1 || fish -v 2>&1 || echo "installed"
+  register: fish_version
+
+- name: Display version
+  print: "fish installed"

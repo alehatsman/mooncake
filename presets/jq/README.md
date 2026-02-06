@@ -1,54 +1,30 @@
-# jq Preset
+# JSON/Data Processing Tool
 
-Lightweight command-line JSON processor. Filter, transform, and query JSON data with ease.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
-
 ```yaml
 - preset: jq
 ```
 
 ## Common Usage
-
 ```bash
-# Pretty print
-echo '{"name":"John"}' | jq '.'
+# Process JSON
+cat data.json | jq '.'
 
-# Extract field
-jq '.name' data.json
+# Query specific fields
+jq '.field' data.json
 
-# Filter array
-jq '.[] | select(.age > 25)' users.json
-
-# Map transformation
-jq 'map(.price * 1.1)' products.json
-
-# Get keys
-jq 'keys' object.json
-
-# Combine filters
-jq '.users[] | {name, email}' data.json
+# Transform data
+jq 'map(.)' input.json > output.json
 ```
 
-## Examples
-
-```bash
-# API response processing
-curl https://api.github.com/users/github | jq '.name, .followers'
-
-# Extract specific fields from array
-jq '.[].{name, price}' products.json
-
-# Conditional filtering
-jq '.[] | select(.status == "active")' items.json
-
-# Count items
-jq '. | length' array.json
-
-# Pretty print with colors
-jq -C '.' data.json | less -R
-```
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
 
 ## Resources
-- Docs: https://jqlang.github.io/jq/
-- Tutorial: https://jqlang.github.io/jq/tutorial/
+Search: "jq examples" or "jq tutorial"

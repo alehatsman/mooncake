@@ -1,0 +1,7 @@
+- name: Uninstall fivetran (macOS)
+  shell: brew uninstall fivetran
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "fivetran uninstalled"

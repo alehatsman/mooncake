@@ -1,0 +1,16 @@
+name: nushell
+description: Modern shell with structured data
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install nushell
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall nushell
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

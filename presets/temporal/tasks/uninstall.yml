@@ -1,0 +1,7 @@
+- name: Uninstall temporal (macOS)
+  shell: brew uninstall temporal
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "temporal uninstalled"

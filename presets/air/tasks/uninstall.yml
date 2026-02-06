@@ -1,0 +1,7 @@
+- name: Uninstall air (macOS)
+  shell: brew uninstall air
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "air uninstalled"

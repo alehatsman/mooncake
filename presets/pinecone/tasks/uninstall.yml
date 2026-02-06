@@ -1,0 +1,7 @@
+- name: Uninstall pinecone (macOS)
+  shell: brew uninstall pinecone
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "pinecone uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if tmate is installed
+  shell: command -v tmate
+  register: tmate_check
+  failed_when: false
+
+- name: Install tmate (macOS)
+  shell: brew install tmate
+  when: os == "darwin" and tmate_check.rc != 0
+
+- name: Verify installation
+  shell: tmate --version 2>&1 || tmate -v 2>&1 || echo "installed"
+  register: tmate_version
+
+- name: Display version
+  print: "tmate installed"

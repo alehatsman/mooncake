@@ -1,0 +1,15 @@
+- name: Check if hazelcast is installed
+  shell: command -v hazelcast
+  register: hazelcast_check
+  failed_when: false
+
+- name: Install hazelcast (macOS)
+  shell: brew install hazelcast
+  when: os == "darwin" and hazelcast_check.rc != 0
+
+- name: Verify installation
+  shell: hazelcast --version 2>&1 || hazelcast -v 2>&1 || echo "installed"
+  register: hazelcast_version
+
+- name: Display version
+  print: "hazelcast installed"

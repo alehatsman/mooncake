@@ -1,0 +1,7 @@
+- name: Uninstall kong (macOS)
+  shell: brew uninstall kong
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "kong uninstalled"

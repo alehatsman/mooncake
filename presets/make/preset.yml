@@ -1,0 +1,16 @@
+name: make
+description: GNU Make build tool
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install make
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall make
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

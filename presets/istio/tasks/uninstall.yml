@@ -1,0 +1,7 @@
+- name: Uninstall istioctl (macOS)
+  shell: brew uninstall istioctl
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "istioctl uninstalled"

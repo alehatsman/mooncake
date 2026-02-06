@@ -1,0 +1,7 @@
+- name: Uninstall kube-bench (macOS)
+  shell: brew uninstall kube-bench
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "kube-bench uninstalled"

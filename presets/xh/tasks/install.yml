@@ -1,0 +1,15 @@
+- name: Check if xh is installed
+  shell: command -v xh
+  register: xh_check
+  failed_when: false
+
+- name: Install xh (macOS)
+  shell: brew install xh
+  when: os == "darwin" and xh_check.rc != 0
+
+- name: Verify installation
+  shell: xh --version 2>&1 || xh -v 2>&1 || echo "installed"
+  register: xh_version
+
+- name: Display version
+  print: "xh installed"

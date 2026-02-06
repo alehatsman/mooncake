@@ -1,0 +1,7 @@
+- name: Uninstall ant (macOS)
+  shell: brew uninstall ant
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "ant uninstalled"

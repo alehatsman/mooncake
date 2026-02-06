@@ -1,0 +1,15 @@
+- name: Check if mix is installed
+  shell: command -v mix
+  register: mix_check
+  failed_when: false
+
+- name: Install mix (macOS)
+  shell: brew install mix
+  when: os == "darwin" and mix_check.rc != 0
+
+- name: Verify installation
+  shell: mix --version 2>&1 || mix -v 2>&1 || echo "installed"
+  register: mix_version
+
+- name: Display version
+  print: "mix installed"

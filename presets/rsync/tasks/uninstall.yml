@@ -1,0 +1,7 @@
+- name: Uninstall rsync (macOS)
+  shell: brew uninstall rsync
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "rsync uninstalled"

@@ -1,0 +1,16 @@
+name: bazel
+description: Fast, scalable build system
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install bazel
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall bazel
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,7 @@
+- name: Uninstall zig (macOS)
+  shell: brew uninstall zig
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "zig uninstalled"

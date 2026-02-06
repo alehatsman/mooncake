@@ -1,0 +1,7 @@
+- name: Uninstall editorconfig (macOS)
+  shell: brew uninstall editorconfig
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "editorconfig uninstalled"

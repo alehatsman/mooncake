@@ -1,0 +1,15 @@
+- name: Check if jenv is installed
+  shell: command -v jenv
+  register: jenv_check
+  failed_when: false
+
+- name: Install jenv (macOS)
+  shell: brew install jenv
+  when: os == "darwin" and jenv_check.rc != 0
+
+- name: Verify installation
+  shell: jenv --version 2>&1 || jenv -v 2>&1 || echo "installed"
+  register: jenv_version
+
+- name: Display version
+  print: "jenv installed"

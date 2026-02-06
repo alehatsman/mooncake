@@ -1,0 +1,7 @@
+- name: Uninstall tinyproxy (macOS)
+  shell: brew uninstall tinyproxy
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "tinyproxy uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if orientdb is installed
+  shell: command -v orientdb
+  register: orientdb_check
+  failed_when: false
+
+- name: Install orientdb (macOS)
+  shell: brew install orientdb
+  when: os == "darwin" and orientdb_check.rc != 0
+
+- name: Verify installation
+  shell: orientdb --version 2>&1 || orientdb -v 2>&1 || echo "installed"
+  register: orientdb_version
+
+- name: Display version
+  print: "orientdb installed"

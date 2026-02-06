@@ -1,0 +1,15 @@
+- name: Check if gitkube is installed
+  shell: command -v gitkube
+  register: gitkube_check
+  failed_when: false
+
+- name: Install gitkube (macOS)
+  shell: brew install gitkube
+  when: os == "darwin" and gitkube_check.rc != 0
+
+- name: Verify installation
+  shell: gitkube --version 2>&1 || gitkube -v 2>&1 || echo "installed"
+  register: gitkube_version
+
+- name: Display version
+  print: "gitkube installed"

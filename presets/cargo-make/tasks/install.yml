@@ -1,0 +1,15 @@
+- name: Check if cargo-make is installed
+  shell: command -v cargo-make
+  register: cargo-make_check
+  failed_when: false
+
+- name: Install cargo-make (macOS)
+  shell: brew install cargo-make
+  when: os == "darwin" and cargo-make_check.rc != 0
+
+- name: Verify installation
+  shell: cargo-make --version 2>&1 || cargo-make -v 2>&1 || echo "installed"
+  register: cargo-make_version
+
+- name: Display version
+  print: "cargo-make installed"

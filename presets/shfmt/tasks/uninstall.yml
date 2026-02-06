@@ -1,0 +1,7 @@
+- name: Uninstall shfmt (macOS)
+  shell: brew uninstall shfmt
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "shfmt uninstalled"

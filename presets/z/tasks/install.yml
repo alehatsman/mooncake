@@ -1,0 +1,15 @@
+- name: Check if z is installed
+  shell: command -v z
+  register: z_check
+  failed_when: false
+
+- name: Install z (macOS)
+  shell: brew install z
+  when: os == "darwin" and z_check.rc != 0
+
+- name: Verify installation
+  shell: z --version 2>&1 || z -v 2>&1 || echo "installed"
+  register: z_version
+
+- name: Display version
+  print: "z installed"

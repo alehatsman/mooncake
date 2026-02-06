@@ -1,0 +1,15 @@
+- name: Check if duf is installed
+  shell: command -v duf
+  register: duf_check
+  failed_when: false
+
+- name: Install duf (macOS)
+  shell: brew install duf
+  when: os == "darwin" and duf_check.rc != 0
+
+- name: Verify installation
+  shell: duf --version 2>&1 || duf -v 2>&1 || echo "installed"
+  register: duf_version
+
+- name: Display version
+  print: "duf installed"

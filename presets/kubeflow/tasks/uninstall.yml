@@ -1,0 +1,7 @@
+- name: Uninstall kfctl (macOS)
+  shell: brew uninstall kfctl
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "kfctl uninstalled"

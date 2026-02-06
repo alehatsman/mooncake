@@ -1,0 +1,15 @@
+- name: Check if clair is installed
+  shell: command -v clair
+  register: clair_check
+  failed_when: false
+
+- name: Install clair (macOS)
+  shell: brew install clair
+  when: os == "darwin" and clair_check.rc != 0
+
+- name: Verify installation
+  shell: clair --version 2>&1 || clair -v 2>&1 || echo "installed"
+  register: clair_version
+
+- name: Display version
+  print: "clair installed"

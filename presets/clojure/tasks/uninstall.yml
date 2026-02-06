@@ -1,0 +1,7 @@
+- name: Uninstall clj (macOS)
+  shell: brew uninstall clj
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "clj uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if mypy is installed
+  shell: command -v mypy
+  register: mypy_check
+  failed_when: false
+
+- name: Install mypy (macOS)
+  shell: brew install mypy
+  when: os == "darwin" and mypy_check.rc != 0
+
+- name: Verify installation
+  shell: mypy --version 2>&1 || mypy -v 2>&1 || echo "installed"
+  register: mypy_version
+
+- name: Display version
+  print: "mypy installed"

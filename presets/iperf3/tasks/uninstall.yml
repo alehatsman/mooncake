@@ -1,0 +1,7 @@
+- name: Uninstall iperf3 (macOS)
+  shell: brew uninstall iperf3
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "iperf3 uninstalled"

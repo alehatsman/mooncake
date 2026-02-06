@@ -1,0 +1,16 @@
+name: alacritty
+description: GPU-accelerated terminal emulator
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install alacritty
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall alacritty
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

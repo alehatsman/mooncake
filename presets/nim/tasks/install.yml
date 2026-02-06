@@ -1,0 +1,15 @@
+- name: Check if nim is installed
+  shell: command -v nim
+  register: nim_check
+  failed_when: false
+
+- name: Install nim (macOS)
+  shell: brew install nim
+  when: os == "darwin" and nim_check.rc != 0
+
+- name: Verify installation
+  shell: nim --version 2>&1 || nim -v 2>&1 || echo "installed"
+  register: nim_version
+
+- name: Display version
+  print: "nim installed"

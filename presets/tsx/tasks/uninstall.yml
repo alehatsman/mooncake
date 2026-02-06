@@ -1,0 +1,7 @@
+- name: Uninstall tsx (macOS)
+  shell: brew uninstall tsx
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "tsx uninstalled"

@@ -1,0 +1,16 @@
+name: dog
+description: Modern DNS client
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install dog
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall dog
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

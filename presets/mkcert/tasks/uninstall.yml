@@ -1,0 +1,7 @@
+- name: Uninstall mkcert (macOS)
+  shell: brew uninstall mkcert
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "mkcert uninstalled"

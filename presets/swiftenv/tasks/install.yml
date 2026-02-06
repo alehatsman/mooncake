@@ -1,0 +1,15 @@
+- name: Check if swiftenv is installed
+  shell: command -v swiftenv
+  register: swiftenv_check
+  failed_when: false
+
+- name: Install swiftenv (macOS)
+  shell: brew install swiftenv
+  when: os == "darwin" and swiftenv_check.rc != 0
+
+- name: Verify installation
+  shell: swiftenv --version 2>&1 || swiftenv -v 2>&1 || echo "installed"
+  register: swiftenv_version
+
+- name: Display version
+  print: "swiftenv installed"

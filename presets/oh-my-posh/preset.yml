@@ -1,0 +1,16 @@
+name: oh-my-posh
+description: Prompt theme engine
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install oh-my-posh
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall oh-my-posh
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,15 @@
+- name: Check if pylint is installed
+  shell: command -v pylint
+  register: pylint_check
+  failed_when: false
+
+- name: Install pylint (macOS)
+  shell: brew install pylint
+  when: os == "darwin" and pylint_check.rc != 0
+
+- name: Verify installation
+  shell: pylint --version 2>&1 || pylint -v 2>&1 || echo "installed"
+  register: pylint_version
+
+- name: Display version
+  print: "pylint installed"

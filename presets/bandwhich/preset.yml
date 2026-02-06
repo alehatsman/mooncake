@@ -1,0 +1,16 @@
+name: bandwhich
+description: Network bandwidth monitor
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install bandwhich
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall bandwhich
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

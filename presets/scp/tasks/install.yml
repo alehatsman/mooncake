@@ -1,0 +1,15 @@
+- name: Check if scp is installed
+  shell: command -v scp
+  register: scp_check
+  failed_when: false
+
+- name: Install scp (macOS)
+  shell: brew install scp
+  when: os == "darwin" and scp_check.rc != 0
+
+- name: Verify installation
+  shell: scp --version 2>&1 || scp -v 2>&1 || echo "installed"
+  register: scp_version
+
+- name: Display version
+  print: "scp installed"

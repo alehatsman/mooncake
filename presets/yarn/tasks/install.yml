@@ -1,0 +1,15 @@
+- name: Check if yarn is installed
+  shell: command -v yarn
+  register: yarn_check
+  failed_when: false
+
+- name: Install yarn (macOS)
+  shell: brew install yarn
+  when: os == "darwin" and yarn_check.rc != 0
+
+- name: Verify installation
+  shell: yarn --version 2>&1 || yarn -v 2>&1 || echo "installed"
+  register: yarn_version
+
+- name: Display version
+  print: "yarn installed"

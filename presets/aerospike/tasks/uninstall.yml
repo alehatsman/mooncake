@@ -1,0 +1,7 @@
+- name: Uninstall aerospike (macOS)
+  shell: brew uninstall aerospike
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "aerospike uninstalled"

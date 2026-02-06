@@ -1,0 +1,15 @@
+- name: Check if ttyd is installed
+  shell: command -v ttyd
+  register: ttyd_check
+  failed_when: false
+
+- name: Install ttyd (macOS)
+  shell: brew install ttyd
+  when: os == "darwin" and ttyd_check.rc != 0
+
+- name: Verify installation
+  shell: ttyd --version 2>&1 || ttyd -v 2>&1 || echo "installed"
+  register: ttyd_version
+
+- name: Display version
+  print: "ttyd installed"

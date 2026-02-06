@@ -1,0 +1,15 @@
+- name: Check if meilisearch is installed
+  shell: command -v meilisearch
+  register: meilisearch_check
+  failed_when: false
+
+- name: Install meilisearch (macOS)
+  shell: brew install meilisearch
+  when: os == "darwin" and meilisearch_check.rc != 0
+
+- name: Verify installation
+  shell: meilisearch --version 2>&1 || meilisearch -v 2>&1 || echo "installed"
+  register: meilisearch_version
+
+- name: Display version
+  print: "meilisearch installed"

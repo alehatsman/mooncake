@@ -1,0 +1,7 @@
+- name: Uninstall masscan (macOS)
+  shell: brew uninstall masscan
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "masscan uninstalled"

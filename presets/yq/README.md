@@ -1,29 +1,30 @@
-# yq - YAML/XML/JSON Processor
+# JSON/Data Processing Tool
 
-jq for YAML. Query, modify, and format YAML/XML/JSON files.
+Process, query, and transform JSON/YAML/CSV data.
 
 ## Quick Start
 ```yaml
 - preset: yq
 ```
 
-## Usage
+## Common Usage
 ```bash
-# Read value
-yq '.name' config.yaml
+# Process JSON
+cat data.json | yq '.'
 
-# Update value
-yq '.version = "2.0"' -i config.yaml
+# Query specific fields
+yq '.field' data.json
 
-# Merge files
-yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' file1.yaml file2.yaml
-
-# Convert YAML to JSON
-yq -o=json '.' config.yaml
-
-# Filter array
-yq '.items[] | select(.active == true)' data.yaml
+# Transform data
+yq 'map(.)' input.json > output.json
 ```
 
+## Agent Use
+- Parse API responses
+- Transform data formats
+- Extract specific fields
+- Filter and map collections
+- Automate data processing pipelines
+
 ## Resources
-Docs: https://github.com/mikefarah/yq
+Search: "yq examples" or "yq tutorial"

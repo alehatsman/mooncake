@@ -1,0 +1,7 @@
+- name: Uninstall act (macOS)
+  shell: brew uninstall act
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "act uninstalled"

@@ -1,0 +1,7 @@
+- name: Uninstall hazelcast (macOS)
+  shell: brew uninstall hazelcast
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "hazelcast uninstalled"

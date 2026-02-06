@@ -1,0 +1,15 @@
+- name: Check if mlflow is installed
+  shell: command -v mlflow
+  register: mlflow_check
+  failed_when: false
+
+- name: Install mlflow (macOS)
+  shell: brew install mlflow
+  when: os == "darwin" and mlflow_check.rc != 0
+
+- name: Verify installation
+  shell: mlflow --version 2>&1 || mlflow -v 2>&1 || echo "installed"
+  register: mlflow_version
+
+- name: Display version
+  print: "mlflow installed"

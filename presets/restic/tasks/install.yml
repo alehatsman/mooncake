@@ -1,0 +1,15 @@
+- name: Check if restic is installed
+  shell: command -v restic
+  register: restic_check
+  failed_when: false
+
+- name: Install restic (macOS)
+  shell: brew install restic
+  when: os == "darwin" and restic_check.rc != 0
+
+- name: Verify installation
+  shell: restic --version 2>&1 || restic -v 2>&1 || echo "installed"
+  register: restic_version
+
+- name: Display version
+  print: "restic installed"

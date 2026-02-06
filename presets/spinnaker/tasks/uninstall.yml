@@ -1,0 +1,7 @@
+- name: Uninstall spin (macOS)
+  shell: brew uninstall spin
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "spin uninstalled"

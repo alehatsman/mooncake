@@ -1,0 +1,7 @@
+- name: Uninstall polaris (macOS)
+  shell: brew uninstall polaris
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "polaris uninstalled"

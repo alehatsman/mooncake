@@ -1,0 +1,7 @@
+- name: Uninstall eleventy (macOS)
+  shell: brew uninstall eleventy
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "eleventy uninstalled"

@@ -1,0 +1,7 @@
+- name: Uninstall cargo-watch (macOS)
+  shell: brew uninstall cargo-watch
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "cargo-watch uninstalled"

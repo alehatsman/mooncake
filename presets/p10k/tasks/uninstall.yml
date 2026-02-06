@@ -1,0 +1,7 @@
+- name: Uninstall p10k (macOS)
+  shell: brew uninstall p10k
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "p10k uninstalled"

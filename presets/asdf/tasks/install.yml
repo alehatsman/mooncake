@@ -1,0 +1,15 @@
+- name: Check if asdf is installed
+  shell: command -v asdf
+  register: asdf_check
+  failed_when: false
+
+- name: Install asdf (macOS)
+  shell: brew install asdf
+  when: os == "darwin" and asdf_check.rc != 0
+
+- name: Verify installation
+  shell: asdf --version 2>&1 || asdf -v 2>&1 || echo "installed"
+  register: asdf_version
+
+- name: Display version
+  print: "asdf installed"

@@ -1,0 +1,7 @@
+- name: Uninstall beam (macOS)
+  shell: brew uninstall beam
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "beam uninstalled"

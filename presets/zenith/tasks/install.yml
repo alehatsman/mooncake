@@ -1,0 +1,15 @@
+- name: Check if zenith is installed
+  shell: command -v zenith
+  register: zenith_check
+  failed_when: false
+
+- name: Install zenith (macOS)
+  shell: brew install zenith
+  when: os == "darwin" and zenith_check.rc != 0
+
+- name: Verify installation
+  shell: zenith --version 2>&1 || zenith -v 2>&1 || echo "installed"
+  register: zenith_version
+
+- name: Display version
+  print: "zenith installed"

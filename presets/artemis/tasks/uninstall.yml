@@ -1,0 +1,7 @@
+- name: Uninstall artemis (macOS)
+  shell: brew uninstall artemis
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "artemis uninstalled"

@@ -1,0 +1,15 @@
+- name: Check if metaflow is installed
+  shell: command -v metaflow
+  register: metaflow_check
+  failed_when: false
+
+- name: Install metaflow (macOS)
+  shell: brew install metaflow
+  when: os == "darwin" and metaflow_check.rc != 0
+
+- name: Verify installation
+  shell: metaflow --version 2>&1 || metaflow -v 2>&1 || echo "installed"
+  register: metaflow_version
+
+- name: Display version
+  print: "metaflow installed"

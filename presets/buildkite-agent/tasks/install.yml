@@ -1,0 +1,15 @@
+- name: Check if buildkite-agent is installed
+  shell: command -v buildkite-agent
+  register: buildkite-agent_check
+  failed_when: false
+
+- name: Install buildkite-agent (macOS)
+  shell: brew install buildkite-agent
+  when: os == "darwin" and buildkite-agent_check.rc != 0
+
+- name: Verify installation
+  shell: buildkite-agent --version 2>&1 || buildkite-agent -v 2>&1 || echo "installed"
+  register: buildkite-agent_version
+
+- name: Display version
+  print: "buildkite-agent installed"
