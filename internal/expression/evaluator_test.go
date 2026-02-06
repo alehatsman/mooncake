@@ -215,6 +215,36 @@ func TestContainsFunction(t *testing.T) {
 			vars: map[string]interface{}{},
 			want: false,
 		},
+		{
+			name: "has with wrong number of params",
+			expr: `has("only_one_arg")`,
+			vars: map[string]interface{}{},
+			want: false, // Function returns false for invalid params
+		},
+		{
+			name: "has with three params",
+			expr: `has("arg1", "arg2", "arg3")`,
+			vars: map[string]interface{}{},
+			want: false, // Function returns false for invalid params
+		},
+		{
+			name: "has with non-string first param",
+			expr: `has(123, "test")`,
+			vars: map[string]interface{}{},
+			want: false, // Function returns false for non-string params
+		},
+		{
+			name: "has with non-string second param",
+			expr: `has("test", 123)`,
+			vars: map[string]interface{}{},
+			want: false, // Function returns false for non-string params
+		},
+		{
+			name: "has with both non-string params",
+			expr: `has(123, 456)`,
+			vars: map[string]interface{}{},
+			want: false, // Function returns false for non-string params
+		},
 	}
 
 	for _, tt := range tests {

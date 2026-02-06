@@ -401,12 +401,12 @@ func TestFormatMinLengthError(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "with minimum",
-			message:  "length must be >= 5 characters",
-			expected: "Value is too short. Increase the length",
+			name:     "with minimum keyword",
+			message:  "length must be minimum 5 characters",
+			expected: "Value is too short. Must be at least minimum 5 characters",
 		},
 		{
-			name:     "without minimum",
+			name:     "without minimum keyword",
 			message:  "string too short",
 			expected: "Value is too short. Increase the length",
 		},
@@ -429,12 +429,12 @@ func TestFormatMaxLengthError(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "with maximum",
-			message:  "length must be <= 100 characters",
-			expected: "Value is too long. Reduce the length",
+			name:     "with maximum keyword",
+			message:  "length must be maximum 100 characters",
+			expected: "Value is too long. Must be at most maximum 100 characters",
 		},
 		{
-			name:     "without maximum",
+			name:     "without maximum keyword",
 			message:  "string too long",
 			expected: "Value is too long. Reduce the length",
 		},
@@ -673,6 +673,78 @@ func TestFormatValidationErrorMessage(t *testing.T) {
 				InstanceLocation: "/tags",
 			},
 			expected: "List contains duplicate items. Each item must be unique",
+		},
+		{
+			name: "oneOf error returns empty string",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/oneOf",
+				Message:          "must match one of the schemas",
+				InstanceLocation: "/steps/0",
+			},
+			expected: "",
+		},
+		{
+			name: "format error",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/format",
+				Message:          "invalid email format",
+				InstanceLocation: "/contact",
+			},
+			expected: "Invalid email format. Must be like: user@example.com",
+		},
+		{
+			name: "minLength error",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/minLength",
+				Message:          "length must be minimum 5",
+				InstanceLocation: "/name",
+			},
+			expected: "Value is too short. Must be at least minimum 5",
+		},
+		{
+			name: "maxLength error",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/maxLength",
+				Message:          "length must be maximum 100",
+				InstanceLocation: "/description",
+			},
+			expected: "Value is too long. Must be at most maximum 100",
+		},
+		{
+			name: "minimum error",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/minimum",
+				Message:          "must be >= 1",
+				InstanceLocation: "/retries",
+			},
+			expected: "Value is too small. Must be at least >= 1",
+		},
+		{
+			name: "maximum error",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/maximum",
+				Message:          "must be <= 10",
+				InstanceLocation: "/retries",
+			},
+			expected: "Value is too large. Must be at most <= 10",
+		},
+		{
+			name: "unknown keyword with empty message",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/customKeyword",
+				Message:          "",
+				InstanceLocation: "/field",
+			},
+			expected: "",
+		},
+		{
+			name: "unknown keyword with message",
+			err: &jsonschema.ValidationError{
+				KeywordLocation:  "#/customKeyword",
+				Message:          "custom validation failed",
+				InstanceLocation: "/field",
+			},
+			expected: "Custom validation failed",
 		},
 	}
 
