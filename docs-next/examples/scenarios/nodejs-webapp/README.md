@@ -5,6 +5,7 @@ Deploy a simple Node.js Express application with PM2 process manager and nginx r
 ## What This Does
 
 This scenario demonstrates a complete web application deployment stack:
+
 - Installing Node.js and npm from NodeSource
 - Creating an Express.js web application
 - Managing the app with PM2 process manager
@@ -50,12 +51,14 @@ You can customize these variables:
 ## What Gets Deployed
 
 ### System Components
+
 - Node.js LTS (from NodeSource)
 - npm (Node Package Manager)
 - PM2 (Process Manager)
 - nginx (Reverse Proxy)
 
 ### Application Stack
+
 - Express.js web framework
 - PM2 process management with auto-restart
 - Nginx reverse proxy with proper headers
@@ -172,6 +175,7 @@ sudo apt-get remove --purge nodejs npm
 ## Learning Points
 
 This example teaches:
+
 - Installing Node.js from NodeSource repository
 - Creating Express.js applications
 - Using PM2 for process management
@@ -184,6 +188,7 @@ This example teaches:
 ## Production Considerations
 
 For production use, also consider:
+
 - SSL/TLS certificates with Let's Encrypt
 - Environment variable management
 - Database connections
@@ -196,6 +201,7 @@ For production use, also consider:
 ## Next Steps
 
 After deployment, try:
+
 - Modify the app to add new routes
 - Scale with PM2: `pm2 scale myapp 4`
 - Add SSL with certbot

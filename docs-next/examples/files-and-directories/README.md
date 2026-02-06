@@ -60,6 +60,7 @@ mooncake run --config config.yml
 ### File Permissions
 
 Use octal notation in quotes:
+
 - `"0644"` - rw-r--r-- (readable by all, writable by owner)
 - `"0755"` - rwxr-xr-x (executable by all, writable by owner)
 - `"0600"` - rw------- (only owner can read/write)

@@ -29,27 +29,32 @@ mooncake run --config myconfig.yml --raw --output-format json | \
 ## Event Types
 
 ### Run Lifecycle
+
 - `run.started` - Execution begins
 - `plan.loaded` - Plan has been built
 - `run.completed` - Execution finished
 
 ### Step Lifecycle
+
 - `step.started` - Step begins execution
 - `step.completed` - Step completed successfully
 - `step.failed` - Step failed with error
 - `step.skipped` - Step was skipped
 
 ### Output Streaming
+
 - `step.stdout` - Standard output line from shell step
 - `step.stderr` - Standard error line from shell step
 
 ### File Operations
+
 - `file.created` - File was created
 - `file.updated` - File was updated
 - `directory.created` - Directory was created
 - `template.rendered` - Template was rendered
 
 ### Variables
+
 - `variables.set` - Variables were set inline
 - `variables.loaded` - Variables were loaded from file
 

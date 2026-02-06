@@ -5,6 +5,7 @@ Install Docker and Docker Compose on Ubuntu, then deploy a simple multi-containe
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing Docker Engine from official Docker repository
 - Installing Docker Compose plugin
 - Building a custom Flask application image
@@ -51,16 +52,19 @@ You can customize these variables:
 ## What Gets Deployed
 
 ### Docker Components
+
 - Docker Engine (latest stable)
 - Docker Compose plugin
 - containerd runtime
 - Docker Buildx plugin
 
 ### Container Stack
+
 - **Flask App Container** - Python web application
 - **Nginx Container** - Reverse proxy and load balancer
 
 ### Network
+
 - Custom bridge network for container communication
 - Port mappings for external access
 
@@ -266,6 +270,7 @@ sudo rm -rf /var/lib/docker
 ## Learning Points
 
 This example teaches:
+
 - Installing Docker from official repositories
 - Building custom Docker images with Dockerfile
 - Multi-container orchestration with Docker Compose
@@ -306,6 +311,7 @@ For production deployments, also consider:
 ## Next Steps
 
 After deployment, try:
+
 - Adding a PostgreSQL database service
 - Implementing Redis for caching
 - Adding more API endpoints

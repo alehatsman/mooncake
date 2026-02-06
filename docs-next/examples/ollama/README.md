@@ -20,6 +20,7 @@ mooncake run -c examples/ollama/ollama-quick-start.yml --ask-become-pass
 
 ### `ollama-example.yml` (Comprehensive)
 Complete example demonstrating all Ollama preset capabilities:
+
 - Installation variations (basic, with service, via specific method)
 - Model management (single, multiple, force re-pull)
 - Service configuration (custom host, models directory, environment variables)
@@ -38,6 +39,7 @@ mooncake run -c examples/ollama/ollama-example.yml --ask-become-pass
 
 ### `ollama-quick-start.yml` (Beginner-Friendly)
 Fast introduction to Ollama preset with minimal configuration:
+
 - Quick installation
 - Single model download
 - Simple test queries
@@ -127,6 +129,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ## Documentation
 
 For complete documentation, see:
+
 - [Preset Reference](../../docs/guide/presets.md) - Full preset documentation
 - [Configuration Reference](../../docs/guide/config/reference.md) - Property tables
 - [Core Concepts](../../docs/guide/core-concepts.md) - Overview

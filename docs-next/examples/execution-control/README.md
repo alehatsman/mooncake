@@ -72,6 +72,7 @@ These features are essential for production deployments:
 ## Note on become_user
 
 The `become_user` feature (running as different users) is not demonstrated in this example as it requires:
+
 - Root privileges
 - Sudo password
 - Specific users to exist on the system

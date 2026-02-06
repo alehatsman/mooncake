@@ -31,6 +31,7 @@ Learn the basics: running shell commands and printing output.
 ```
 
 **You'll learn:**
+
 - Basic step syntax (name + action)
 - Using system facts (os, arch, cpu_cores)
 - Shell and print actions
@@ -61,6 +62,7 @@ Learn the basics: running shell commands and printing output.
 ```
 
 **You'll learn:**
+
 - Defining variables with `vars`
 - Templating with `{{ variable }}`
 - Auto-detected facts (os, distribution, package_manager)
@@ -99,6 +101,7 @@ Learn the basics: running shell commands and printing output.
 ```
 
 **You'll learn:**
+
 - Creating directories with permissions
 - Writing file content inline
 - Creating symlinks
@@ -136,6 +139,7 @@ Learn the basics: running shell commands and printing output.
 ```
 
 **You'll learn:**
+
 - `when` conditionals (==, !=, &&, ||)
 - Platform-specific execution
 - `register` to capture results
@@ -167,6 +171,7 @@ Learn the basics: running shell commands and printing output.
 ```
 
 **You'll learn:**
+
 - `with_items` loops over lists
 - `with_filetree` loops over directory contents
 - Accessing loop item properties
@@ -207,6 +212,7 @@ server {
 ```
 
 **You'll learn:**
+
 - Jinja2 template syntax
 - Variables in templates `{{ var }}`
 - Conditionals in templates `{% if %}`
@@ -235,6 +241,7 @@ server {
 ```
 
 **You'll learn:**
+
 - Capturing command output with `register`
 - Accessing result properties (rc, stdout, stderr)
 - Conditional execution based on results
@@ -266,6 +273,7 @@ mooncake run config.yml --tags prod,ci # prod OR ci steps
 ```
 
 **You'll learn:**
+
 - Tagging steps for organization
 - Filtering execution by tags
 - Building workflow stages (dev, test, prod)
@@ -296,6 +304,7 @@ mooncake run config.yml -K  # shorthand
 ```
 
 **You'll learn:**
+
 - `become: true` for sudo operations
 - Password handling (interactive, file, env var)
 - Security best practices
@@ -328,6 +337,7 @@ mooncake run config.yml -K  # shorthand
 ```
 
 **You'll learn:**
+
 - `include` for splitting configs
 - Variable sharing across files
 - Organizing by function (vars, tasks, handlers)
@@ -358,6 +368,7 @@ mooncake run config.yml -K  # shorthand
 ```
 
 **You'll learn:**
+
 - `timeout` for long operations
 - `retries` and `retry_delay` for resilience
 - `failed_when` for custom failure detection
@@ -390,6 +401,7 @@ mooncake run config.yml -K  # shorthand
 ```
 
 **You'll learn:**
+
 - Downloading with checksum verification
 - Extracting tar, tar.gz, zip archives
 - `strip_components` for path manipulation
@@ -406,6 +418,7 @@ mooncake run config.yml -K  # shorthand
 **Complete dotfiles deployment and configuration**
 
 A production-ready example showing:
+
 - Cross-platform dotfiles (macOS/Linux)
 - Git repository management
 - Symlink creation with backup
@@ -434,6 +447,7 @@ A production-ready example showing:
 ```
 
 **What you'll build:**
+
 - Automated dotfiles deployment
 - Backup strategy before changes
 - Conditional installation based on OS
@@ -471,6 +485,7 @@ Learn how Mooncake ensures operations are safe to run multiple times:
 ```
 
 **You'll learn:**
+
 - How Mooncake detects changes
 - Using `creates` for idempotency
 - Checksum-based file operations

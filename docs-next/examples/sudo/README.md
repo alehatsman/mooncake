@@ -77,6 +77,7 @@ mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
 ⚠️ **WARNING:** Password visible in shell history and process list. Requires explicit `--insecure-sudo-pass` flag.
 
 **Security Features:**
+
 - Passwords are automatically redacted from all log output
 - Only one password method can be used at a time
 - File permissions are strictly validated
@@ -84,6 +85,7 @@ mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
 ### Which Operations Need Sudo?
 
 **Typically require sudo:**
+
 - Package management (`apt`, `yum`, `dnf`)
 - System file operations (`/etc`, `/opt`, `/usr/local`)
 - Service management (`systemctl`)
@@ -92,6 +94,7 @@ mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
 - Network configuration
 
 **Don't require sudo:**
+
 - User-space operations
 - Home directory files
 - `/tmp` directory
@@ -208,28 +211,35 @@ mooncake run --config config.yml -K --log-level debug | grep -i password
 ## Troubleshooting
 
 **"step requires sudo but no password provided"**
+
 - Provide password using `--ask-become-pass`, `--sudo-pass-file`, or `SUDO_ASKPASS`
 
 **"--sudo-pass requires --insecure-sudo-pass flag"**
+
 - CLI password flag requires explicit security acknowledgment
 - Use `--ask-become-pass` instead (more secure)
 
 **"password file must have 0600 permissions"**
+
 - Fix permissions: `chmod 0600 /path/to/password/file`
 - Verify ownership: `ls -l /path/to/password/file`
 
 **"only one password method can be specified"**
+
 - Remove conflicting password flags
 - Use only one of: `--ask-become-pass`, `--sudo-pass-file`, or `--sudo-pass`
 
 **"become is not supported on windows"**
+
 - Privilege escalation only works on Linux and macOS
 - Use platform-specific conditionals with `when`
 
 **Permission denied without sudo**
+
 - Add `become: true` to the step
 
 **Command not found**
+
 - Check if command exists: `which <command>`
 - Some commands need full paths with sudo
 

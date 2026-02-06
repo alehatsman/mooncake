@@ -63,6 +63,7 @@ Some systems may prompt automatically (if configured)
 ### Which Operations Need Sudo?
 
 **Typically require sudo:**
+
 - Package management (`apt`, `yum`, `dnf`)
 - System file operations (`/etc`, `/opt`, `/usr/local`)
 - Service management (`systemctl`)
@@ -71,6 +72,7 @@ Some systems may prompt automatically (if configured)
 - Network configuration
 
 **Don't require sudo:**
+
 - User-space operations
 - Home directory files
 - `/tmp` directory
@@ -180,12 +182,15 @@ ls -la /opt/myapp/
 ## Troubleshooting
 
 **"sudo: no tty present"**
+
 - Make sure to provide `--sudo-pass` flag
 
 **Permission denied without sudo**
+
 - Add `become: true` to the step
 
 **Command not found**
+
 - Check if command exists: `which <command>`
 - Some commands need full paths with sudo
 

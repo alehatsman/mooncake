@@ -5,6 +5,7 @@ Presets are reusable, parameterized collections of steps that can be invoked as 
 ## What is a Preset?
 
 A preset is essentially a YAML file that defines:
+
 - **Parameters**: Configurable inputs with types, defaults, and validation
 - **Steps**: A sequence of mooncake steps to execute
 - **Metadata**: Name, description, and version information
@@ -14,6 +15,7 @@ Think of presets as functions or modules - they take parameters and execute a pr
 ## Why Use Presets?
 
 **Benefits:**
+
 - **Reusability**: Write once, use everywhere
 - **Maintainability**: Update logic in one place
 - **Discoverability**: Share presets as files, no code changes needed
@@ -191,6 +193,7 @@ presets/
 ```
 
 When both exist, the directory format takes precedence:
+
 - `presets/ollama/preset.yml` is loaded before `presets/ollama.yml`
 
 ### Example Directory Structure
@@ -233,6 +236,7 @@ Presets support result registration at the preset level:
 ```
 
 **Preset results contain:**
+
 - `changed`: `true` if any step changed
 - `stdout`: Summary message
 - `rc`: Always 0 (success) or error
@@ -322,6 +326,7 @@ Output:
 ```
 
 In dry-run mode, presets:
+
 - Show parameter count
 - Don't execute steps (but may expand them for display)
 - Return `changed: true` (pessimistic assumption)

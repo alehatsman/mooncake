@@ -37,6 +37,7 @@ Iterate over lists of items:
 ```
 
 **What it does:**
+
 - Defines lists in variables
 - Installs multiple packages
 - Creates directories for multiple users
@@ -52,6 +53,7 @@ Iterate over files in a directory:
 ```
 
 **What it does:**
+
 - Iterates over files in `./files/` directory
 - Copies dotfiles to backup location
 - Filters directories vs files
@@ -73,6 +75,7 @@ Iterate over files in a directory:
 ```
 
 This creates:
+
 - `/home/alice`
 - `/home/bob`
 - `/home/charlie`
@@ -87,6 +90,7 @@ This creates:
 ```
 
 **Available properties:**
+
 - `item.src` - Full source path
 - `item.name` - File name
 - `item.is_dir` - Boolean, true if directory
@@ -104,12 +108,14 @@ Skip directories:
 ## Real-World Use Cases
 
 **with_items:**
+
 - Installing multiple packages
 - Creating multiple users/groups
 - Setting up multiple services
 - Deploying to multiple servers
 
 **with_filetree:**
+
 - Managing dotfiles
 - Deploying configuration directories
 - Backing up files

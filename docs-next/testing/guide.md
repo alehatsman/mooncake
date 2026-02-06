@@ -87,6 +87,7 @@ testing/
 ### Smoke Tests
 
 Fast validation tests that verify basic functionality:
+
 - Binary execution and version check
 - Simple file operations
 - Basic shell commands
@@ -98,6 +99,7 @@ Fast validation tests that verify basic functionality:
 ### Integration Tests
 
 Comprehensive tests that validate full features:
+
 - Complete file management operations
 - Loop iteration
 - Conditional execution
@@ -289,6 +291,7 @@ go build -v -o out/mooncake ./cmd
 ### Coverage Reports
 
 Code coverage is automatically calculated and uploaded to Codecov:
+
 - Only runs on Ubuntu (to avoid duplicate reports)
 - View at: https://codecov.io/gh/alehatsman/mooncake
 

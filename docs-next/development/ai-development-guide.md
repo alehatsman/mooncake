@@ -374,6 +374,7 @@ steps:
 ### Preset Style Guide
 
 See [Definitive Preset Style Guide](../presets/style-guide.md) for:
+
 - Naming conventions
 - File structure standards
 - Platform handling patterns
@@ -393,6 +394,7 @@ See [Definitive Preset Style Guide](../presets/style-guide.md) for:
 ```
 
 **Benefits:**
+
 - Deterministic (same config → same plan → same result)
 - Inspectable (view plan before execution)
 - Reproducible (save plan, execute later)
@@ -408,6 +410,7 @@ Action Request → Registry.Get(name) → Handler.Execute(ctx, config) → Resul
 ```
 
 **Benefits:**
+
 - Add actions with 1 file (~200-500 lines)
 - No dispatcher updates needed
 - No dry-run logger updates needed
@@ -424,6 +427,7 @@ Preset Invocation → Loader.Load() → Validator.Validate() → Expander.Expand
 ```
 
 **Benefits:**
+
 - Flat presets (no nesting)
 - Parameter validation
 - Type safety
@@ -449,6 +453,7 @@ Preset Invocation → Loader.Load() → Validator.Validate() → Expander.Expand
 - print - Output display
 
 **Core Features:**
+
 - ✅ Deterministic plan compiler (parse → plan → execute)
 - ✅ Idempotency guarantees (creates, unless, state checks)
 - ✅ Dry-run mode (preview without changes)
@@ -542,6 +547,7 @@ Preset Invocation → Loader.Load() → Validator.Validate() → Expander.Expand
 ### Test Coverage
 
 All code must have tests:
+
 - **Unit tests** for handlers (>80% coverage)
 - **Integration tests** for complex workflows
 - **Platform tests** for OS-specific code
@@ -604,6 +610,7 @@ for _, tt := range tests {
 ### Go Style
 
 Follow standard Go conventions:
+
 - `gofmt` formatting (enforced by CI)
 - Exported functions have doc comments
 - Error messages lowercase, no trailing punctuation
@@ -617,6 +624,7 @@ golangci-lint run
 ```
 
 Zero warnings allowed. Common issues:
+
 - Unused variables/imports
 - Error checking (errcheck)
 - Cyclomatic complexity (gocyclo)
@@ -742,6 +750,7 @@ ctx.Events().Emit(events.Event{
 ## Resources
 
 ### Documentation
+
 - **[Actions Guide](../guide/config/actions.md)** - Complete action reference
 - **[Variables Guide](../guide/config/variables.md)** - Variables and facts
 - **[Control Flow](../guide/config/control-flow.md)** - Conditionals and loops
@@ -749,11 +758,13 @@ ctx.Events().Emit(events.Event{
 - **[Examples](../examples/index.md)** - Runnable examples
 
 ### Architecture
+
 - **[ADR 000](../architecture-decisions/000-planner-execution-model.md)** - Planner execution
 - **[ADR 001](../architecture-decisions/001-handler-based-action-architecture.md)** - Handler architecture
 - **[ADR 002](../architecture-decisions/002-preset-expansion-system.md)** - Preset system
 
 ### External
+
 - **[Go Documentation](https://go.dev/doc/)** - Go language reference
 - **[Expr Language](https://expr-lang.org/)** - Expression syntax
 - **[Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)** - Docs framework

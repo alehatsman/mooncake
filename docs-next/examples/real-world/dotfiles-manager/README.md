@@ -128,6 +128,7 @@ mooncake run --config setup.yml --tags backup
 ## See Also
 
 This example combines concepts from:
+
 - [06-loops](../../06-loops/) - File iteration
 - [05-templates](../../05-templates/) - Config rendering
 - [08-tags](../../08-tags/) - Selective deployment

@@ -75,11 +75,13 @@ Use `when` to conditionally execute steps:
 ### Tags vs Conditionals
 
 **Conditionals (`when`):**
+
 - Evaluated at runtime
 - Based on system facts or variables
 - Step-level decision making
 
 **Tags:**
+
 - User-controlled filtering
 - Specified via CLI `--tags` flag
 - Workflow-level decision making

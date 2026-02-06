@@ -7,6 +7,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 ### For Getting Started
 
 **[Quick Reference](quick-reference.md)** - Start here for common commands
+
 - One-line commands for daily use
 - Quick examples and usage patterns
 - Troubleshooting quick fixes
@@ -15,6 +16,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 ### For Understanding the System
 
 **[Testing Guide](guide.md)** - Complete testing guide
+
 - Overview of the testing setup
 - Detailed instructions for local and CI testing
 - Test structure and organization
@@ -23,6 +25,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 - Best practices
 
 **[Architecture](architecture.md)** - System architecture and design
+
 - Visual diagrams of the testing infrastructure
 - How components work together
 - Data flow and execution paths
@@ -32,6 +35,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 ### For Implementation Details
 
 **[Implementation Summary](implementation-summary.md)** - What was built
+
 - Complete list of files created and modified
 - Phase-by-phase implementation breakdown
 - Success criteria checklist

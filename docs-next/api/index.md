@@ -8,6 +8,7 @@ Complete Go package documentation for Mooncake.
 Action handler registry and interfaces. All actions (shell, file, template, etc.) are registered here.
 
 **Key Interfaces:**
+
 - `Handler` - Base interface for all actions
 - `Context` - Execution context passed to handlers
 - `Result` - Action execution results
@@ -16,6 +17,7 @@ Action handler registry and interfaces. All actions (shell, file, template, etc.
 Configuration structures and validation. Defines the YAML schema for plans and steps.
 
 **Key Types:**
+
 - `Plan` - Top-level configuration
 - `Step` - Individual execution steps
 - Action structs (Shell, File, Template, etc.)
@@ -24,6 +26,7 @@ Configuration structures and validation. Defines the YAML schema for plans and s
 Execution engine that runs plans and steps. Handles dry-run mode, variable expansion, and result tracking.
 
 **Key Types:**
+
 - `Executor` - Main execution engine
 - `ExecutionContext` - Runtime context
 - Custom error types (RenderError, CommandError, etc.)
@@ -32,6 +35,7 @@ Execution engine that runs plans and steps. Handles dry-run mode, variable expan
 Event system for execution lifecycle. All events emitted during runs are defined here.
 
 **Key Types:**
+
 - `Event` - Base event structure
 - `EventType` - Event type constants
 - Event data types (StepStartedData, FileOperationData, etc.)
@@ -42,6 +46,7 @@ Event system for execution lifecycle. All events emitted during runs are defined
 System information collection. Auto-detects OS, hardware, network, and software facts.
 
 **Key Types:**
+
 - `Facts` - Complete system information
 - Platform-specific collectors (Linux, macOS, Windows)
 
@@ -49,6 +54,7 @@ System information collection. Auto-detects OS, hardware, network, and software 
 Preset system for reusable workflows. Loads, validates, and expands preset definitions.
 
 **Key Functions:**
+
 - `LoadPreset()` - Load preset from file
 - `ValidateParameters()` - Validate preset parameters
 - `ExpandSteps()` - Expand preset into steps
@@ -57,6 +63,7 @@ Preset system for reusable workflows. Loads, validates, and expands preset defin
 Logging infrastructure with TUI and text output modes.
 
 **Key Types:**
+
 - `Logger` - Base logger interface
 - `TUILogger` - Terminal UI logger
 - `TextLogger` - Plain text logger
@@ -67,6 +74,7 @@ Logging infrastructure with TUI and text output modes.
 CLI command implementations (run, plan, facts, etc.)
 
 **Commands:**
+
 - `run` - Execute a plan
 - `plan` - Generate execution plan
 - `facts` - Display system facts

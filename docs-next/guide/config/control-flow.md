@@ -93,13 +93,16 @@ mooncake run --config config.yml
 ### Tag Behavior
 
 **No `--tags` flag:**
+
 - All steps run (tagged and untagged)
 
 **With `--tags dev`:**
+
 - Only steps with `dev` tag run
 - Untagged steps are skipped
 
 **With `--tags dev,prod`:**
+
 - Steps run if they have ANY matching tag (OR logic)
 - Step with `[dev]` runs
 - Step with `[prod]` runs
@@ -157,6 +160,7 @@ Avoid repetition by iterating over lists or files.
 ```
 
 **Available properties:**
+
 - `item.src` - Full source path
 - `item.name` - File name
 - `item.is_dir` - Boolean (true for directories)
@@ -226,6 +230,7 @@ Capture command output for use in later steps.
 ### Available Fields
 
 **For shell commands:**
+
 - `.stdout` - Standard output
 - `.stderr` - Standard error
 - `.rc` - Return code (0 = success)
@@ -233,6 +238,7 @@ Capture command output for use in later steps.
 - `.changed` - Boolean
 
 **For file/template:**
+
 - `.rc` - 0 for success, 1 for failure
 - `.failed` - Boolean
 - `.changed` - Boolean (true if file modified)
@@ -266,6 +272,7 @@ All control flow features work together:
 ```
 
 This step:
+
 - ✓ Iterates over packages
 - ✓ Only runs on macOS
 - ✓ Only runs with `--tags dev` or `--tags tools`

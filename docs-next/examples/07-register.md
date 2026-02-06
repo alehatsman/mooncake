@@ -43,6 +43,7 @@ mooncake run --config config.yml
 After registering a result, you can access:
 
 **For shell commands:**
+
 - `register_name.stdout` - Standard output
 - `register_name.stderr` - Standard error
 - `register_name.rc` - Return/exit code (0 = success)
@@ -50,11 +51,13 @@ After registering a result, you can access:
 - `register_name.changed` - Boolean, always true for shell
 
 **For file operations:**
+
 - `register_name.rc` - 0 for success, 1 for failure
 - `register_name.failed` - Boolean, true if operation failed
 - `register_name.changed` - Boolean, true if file created/modified
 
 **For template operations:**
+
 - `register_name.rc` - 0 for success, 1 for failure
 - `register_name.failed` - Boolean, true if rendering failed
 - `register_name.changed` - Boolean, true if output file changed

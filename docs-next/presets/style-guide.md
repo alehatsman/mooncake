@@ -29,26 +29,31 @@ This guide defines the gold standard for creating Mooncake presets. Following th
 ### Core Values
 
 **1. Simplicity First**
+
 - Presets should make complex operations simple, not simple operations complex
 - Minimize required parameters, maximize sensible defaults
 - A basic installation should be ONE command: `preset: tool-name`
 
 **2. Copy-Paste Ready**
+
 - Every example must work without modification
 - No placeholders without clear substitution instructions
 - Provide complete, working configurations
 
 **3. Production Grade**
+
 - Assume presets run on real infrastructure
 - Include error handling, validation, and safety checks
 - Document security implications and best practices
 
 **4. AI-Agent Friendly**
+
 - Structure documentation for both human and LLM consumption
 - Include "Agent Use" sections describing automation use cases
 - Provide machine-readable success criteria
 
 **5. Discoverability**
+
 - Users should understand what a preset does in 10 seconds
 - Quick Start section must come first
 - Common operations clearly documented
@@ -86,6 +91,7 @@ presets/
 ```
 
 **When to use directory format:**
+
 - Tool requires service configuration (systemd/launchd)
 - Multiple installation methods (package manager, script, source)
 - Platform-specific logic (Linux vs macOS vs Windows)
@@ -93,6 +99,7 @@ presets/
 - More than 50 lines of preset logic
 
 **When to use flat format:**
+
 - Simple package installation (single command)
 - No service configuration
 - Minimal platform differences
@@ -131,6 +138,7 @@ steps:
 ```
 
 **Naming Conventions:**
+
 - **Preset name**: Use tool's official name (lowercase, hyphens for multi-word)
   - ✅ `kubectl`, `helm`, `modern-unix`
   - ❌ `kube-ctl`, `Helm`, `modern_unix`
@@ -215,6 +223,7 @@ How AI agents can leverage this tool:
 ### Section Guidelines
 
 #### 1. Quick Start (REQUIRED)
+
 - **First code block users see**
 - **Must work without modification**
 - **Shows simplest possible usage**
@@ -227,6 +236,7 @@ How AI agents can leverage this tool:
 ```
 
 #### 2. Features (REQUIRED)
+
 - **Bullet list of key capabilities**
 - **Focus on value, not implementation**
 - **3-8 items maximum**
@@ -240,6 +250,7 @@ How AI agents can leverage this tool:
 ```
 
 #### 3. Basic Usage (REQUIRED)
+
 - **Real commands users will run**
 - **Common operations first**
 - **Include expected output when helpful**
@@ -259,6 +270,7 @@ kubectl create deployment nginx --image=nginx
 ```
 
 #### 4. Advanced Configuration (REQUIRED)
+
 - **Show all parameter options**
 - **Real working examples, not just parameter lists**
 - **Group related parameters**
@@ -278,6 +290,7 @@ kubectl create deployment nginx --image=nginx
 ```
 
 #### 5. Real-World Examples (HIGHLY RECOMMENDED)
+
 - **Show tool in realistic scenarios**
 - **Complete workflows, not isolated commands**
 - **Include context (why you'd do this)**
@@ -302,6 +315,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 6. Agent Use (REQUIRED)
+
 - **How AI agents can use this tool**
 - **Automation-friendly use cases**
 - **Decision criteria for agents**
@@ -316,6 +330,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 7. Configuration (RECOMMENDED)
+
 - **File locations (absolute paths)**
 - **Default ports/addresses**
 - **Directory permissions**
@@ -330,6 +345,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 8. Platform Support (REQUIRED)
+
 - **Clear matrix of what works where**
 - **Use ✅ ❌ symbols for clarity**
 - **Note installation methods**
@@ -342,6 +358,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 9. Troubleshooting (RECOMMENDED)
+
 - **Common issues and solutions**
 - **How to check logs**
 - **Debug mode instructions**
@@ -361,6 +378,7 @@ Most operations require `become: true` (sudo).
 ```
 
 #### 10. Resources (REQUIRED)
+
 - **Official documentation link**
 - **Search suggestions (for AI agents)**
 - **Community resources**
@@ -375,6 +393,7 @@ Most operations require `become: true` (sudo).
 ### Writing Style
 
 **DO:**
+
 - ✅ Use active voice ("Install Docker" not "Docker installation")
 - ✅ Write concise descriptions (one sentence per bullet)
 - ✅ Include concrete examples, not abstract descriptions
@@ -382,6 +401,7 @@ Most operations require `become: true` (sudo).
 - ✅ Add context to code blocks (what it does, when to use)
 
 **DON'T:**
+
 - ❌ Write marketing copy ("the best tool", "amazing")
 - ❌ Use vague placeholders (`<your-value>` without guidance)
 - ❌ Assume prior knowledge (explain domain-specific terms)
@@ -391,6 +411,7 @@ Most operations require `become: true` (sudo).
 ### Code Block Standards
 
 **Always include:**
+
 - Language identifier (yaml, bash, python, etc.)
 - Context comment (what this does, when to use)
 - Complete working example
@@ -399,6 +420,7 @@ Most operations require `become: true` (sudo).
 ## Example
 ```yaml
 # Production deployment with custom settings
+
 - preset: myapp
   with:
     environment: production
@@ -439,6 +461,7 @@ parameters:
 ### Parameter Naming Conventions
 
 **Standard names** (use these for consistency):
+
 - `state`: Installation state (present/absent)
 - `version`: Specific version to install
 - `service`: Enable as system service (bool)
@@ -451,6 +474,7 @@ parameters:
 - `config_file`: Configuration file path
 
 **Naming rules:**
+
 - Use snake_case (not camelCase)
 - Be specific: `database_url` not `url`
 - Avoid abbreviations: `configuration` not `cfg`
@@ -550,6 +574,7 @@ parameters:
 ### Required vs Optional
 
 **Make required ONLY when:**
+
 - No sensible default exists
 - Value is user-specific (API keys, hostnames)
 - Incorrect guess would be dangerous
@@ -612,24 +637,28 @@ parameters:
 ### Task File Guidelines
 
 **install.yml:**
+
 - Platform detection
 - Multiple installation methods with fallback
 - Idempotency (check if already installed)
 - Exit early if already present
 
 **configure.yml:**
+
 - Create configuration files
 - Set up service files (systemd/launchd)
 - Apply configuration changes
 - Restart services if needed
 
 **verify.yml** (optional):
+
 - Health checks
 - Connectivity tests
 - Version verification
 - Configuration validation
 
 **uninstall.yml:**
+
 - Stop services
 - Remove binaries
 - Clean up configuration (optional)
@@ -733,6 +762,7 @@ parameters:
 ### Available Facts
 
 **Package managers:**
+
 - `apt_available` (Debian, Ubuntu)
 - `dnf_available` (Fedora, RHEL 8+)
 - `yum_available` (CentOS, RHEL 7)
@@ -743,11 +773,13 @@ parameters:
 - `port_available` (macOS)
 
 **Operating systems:**
+
 - `os` ("linux", "darwin", "windows")
 - `arch` ("amd64", "arm64")
 - `hostname`
 
 **System info:**
+
 - `cpu_cores`
 - `memory_total_mb`
 - `distribution` (Linux only: "ubuntu", "fedora", etc.)
@@ -816,6 +848,7 @@ parameters:
 ### Installation Method Hierarchy
 
 **Preferred order:**
+
 1. Package manager (most reliable, gets updates)
 2. Official installation script (maintained by tool vendor)
 3. Binary download (with checksum verification)
@@ -1030,6 +1063,7 @@ mooncake run -c test.yml --dry-run
 ### Multi-Platform Testing
 
 **Test matrix:**
+
 - [ ] Ubuntu 22.04 (apt)
 - [ ] Fedora 39 (dnf)
 - [ ] macOS 14 (Homebrew)
@@ -1268,6 +1302,7 @@ commands here
 ### Use Case 2
 ```yaml
 # Mooncake example
+
 - preset: tool-name
   with:
     specific: configuration
@@ -1309,11 +1344,13 @@ Solution and explanation.
 ### Before Submitting Preset
 
 **Structure:**
+
 - [ ] Directory structure follows conventions
 - [ ] All files in correct locations
 - [ ] No unnecessary files included
 
 **preset.yml:**
+
 - [ ] Name matches directory/filename
 - [ ] Description is clear and concise (one line)
 - [ ] Version follows semver (1.0.0)
@@ -1324,6 +1361,7 @@ Solution and explanation.
 - [ ] Conditionals use system facts (not hardcoded OS checks)
 
 **README.md:**
+
 - [ ] Quick Start section comes first
 - [ ] Quick Start example works without modification
 - [ ] Features section lists 3-8 key capabilities
@@ -1337,6 +1375,7 @@ Solution and explanation.
 - [ ] Resources include official docs and search terms
 
 **Code Quality:**
+
 - [ ] All steps have descriptive names
 - [ ] No hardcoded values (use parameters)
 - [ ] Idempotency: runs safely multiple times
@@ -1346,6 +1385,7 @@ Solution and explanation.
 - [ ] Task files use action-oriented names
 
 **Testing:**
+
 - [ ] Tested with `--dry-run`
 - [ ] Tested on at least one Linux distro
 - [ ] Tested on macOS (if claiming support)
@@ -1354,6 +1394,7 @@ Solution and explanation.
 - [ ] All examples in README tested
 
 **Documentation:**
+
 - [ ] No typos or grammatical errors
 - [ ] Code blocks have language identifiers
 - [ ] All examples are complete and working
@@ -1365,6 +1406,7 @@ Solution and explanation.
 ## Version History
 
 **1.0.0** (2026-02-06)
+
 - Initial comprehensive style guide
 - Consolidated patterns from 16 production presets
 - Added templates and checklists
@@ -1377,12 +1419,14 @@ Solution and explanation.
 This guide is a living document. When you create a great preset that establishes a new pattern, update this guide with that pattern.
 
 **To propose changes:**
+
 1. Create example preset demonstrating the pattern
 2. Document the pattern with rationale
 3. Update relevant sections of this guide
 4. Submit for review
 
 **Principles for guide updates:**
+
 - Patterns must be proven in production presets
 - Keep the guide concise - quality over quantity
 - Examples must be complete and tested

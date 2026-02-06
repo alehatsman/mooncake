@@ -5,6 +5,7 @@ Install and configure PostgreSQL on Ubuntu with a sample database schema.
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing PostgreSQL database server
 - Starting and enabling the PostgreSQL service
 - Creating a database and user
@@ -50,20 +51,25 @@ You can customize these variables:
 **Database:** `myapp_db`
 
 **Tables:**
+
 - `users` - User accounts with username, email, full_name
 - `posts` - User posts with title and content
 
 **Views:**
+
 - `active_users` - View of active users only
 
 **Functions:**
+
 - `get_user_post_count()` - Count posts for a user
 
 **Sample Data:**
+
 - 4 users (Alice, Bob, Charlie, Diana)
 - 4 posts
 
 ### Indexes
+
 - Username index
 - Email index
 - User ID foreign key index
@@ -228,6 +234,7 @@ sudo rm -rf /etc/postgresql/
 ## Learning Points
 
 This example teaches:
+
 - Installing PostgreSQL from Ubuntu repositories
 - Starting and managing PostgreSQL service
 - Creating databases and users programmatically
@@ -253,6 +260,7 @@ This example teaches:
 ## Next Steps
 
 After setup, try:
+
 - Adding more tables and relationships
 - Creating triggers and stored procedures
 - Setting up replication

@@ -3,6 +3,7 @@
 ## v0.3 - Current
 
 ### Breaking Changes
+
 - **Ollama action removed** - Replaced with `preset: ollama`
   - Old syntax: `ollama: {state: present, ...}`
   - New syntax: `preset: {name: ollama, with: {state: present, ...}}`
@@ -10,6 +11,7 @@
   - Benefit: 81% code reduction, user-extensible workflows
 
 ### Preset System
+
 - **Preset action** - Reusable, parameterized workflows
   - Package complex workflows as YAML files
   - Type-safe parameters with validation (string, bool, array, object)
@@ -31,6 +33,7 @@
   - Platform-aware logic using system facts
 
 ### New Actions
+
 - **Print action** - Simple output to console
   - Display messages during execution
   - Variable interpolation support
@@ -80,6 +83,7 @@
   - Safety checks (prevent accidental root deletion)
 
 ### Planning & Execution
+
 - **Deterministic plan compiler**
   - Expand all loops and includes into linear plan
   - Origin tracking (file:line:col) for every step
@@ -100,6 +104,7 @@
   - JSON output format for CI/CD (`--output-format json`)
 
 ### System Facts
+
 - **Comprehensive system facts collection**
   - CPU: model, cores, instruction set flags (AVX, AVX2, SSE4_2, FMA, AES)
   - Memory: total/free, swap total/free
@@ -112,6 +117,7 @@
   - `mooncake facts` command with text/JSON output
 
 ### Execution Control & Flow
+
 - **Timeout support** - Prevent long-running commands
   - Per-step timeout configuration
   - Standard exit code (124) on timeout
@@ -126,6 +132,7 @@
   - `failed_when` - Define custom failure conditions
 
 ### Template & Expression Language
+
 - **Expression language (expr-lang)** - Powerful expression evaluation
   - Used in `when`, `changed_when`, `failed_when`, `with_items`
   - Rich operators and functions
@@ -135,6 +142,7 @@
   - All facts available as template variables
 
 ### Security & Privilege Escalation
+
 - **Improved sudo handling**
   - Interactive password prompt (`-K`, `--ask-become-pass`) - recommended
   - File-based password (`--sudo-pass-file`) with 0600 permission check
@@ -142,6 +150,7 @@
   - Better error messages for privilege escalation failures
 
 ### User Interface & Output
+
 - **Animated TUI** with progress tracking
   - Real-time step status updates
   - Spinner animations
@@ -157,6 +166,7 @@
   - Performance metrics in summary
 
 ### Documentation & Architecture
+
 - **Architecture Decision Records (ADRs)** - Documented key design decisions
   - ADR-001: Handler-Based Action Architecture
   - ADR-002: Preset Expansion System
@@ -177,6 +187,7 @@
   - Positioned as "The Standard Runtime for AI System Configuration"
 
 ### Developer Experience
+
 - **Handler-based action architecture** - Modular action system
   - Each action self-contained in one file (100-1000 lines)
   - Registry pattern for automatic action discovery
@@ -212,6 +223,7 @@
 ## v0.2
 
 ### Features
+
 - **Loop iteration**
   - `with_items` - Iterate over lists/arrays
   - `with_filetree` - Recursively iterate over directory contents
@@ -229,6 +241,7 @@
 ## v0.1 - Initial Release
 
 ### Features
+
 - **Shell command execution** - Run shell commands
 - **File and directory operations** - Basic file/directory creation and management
 - **Template rendering** - Pongo2 template engine with variable substitution

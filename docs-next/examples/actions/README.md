@@ -5,6 +5,7 @@ This directory contains extensive examples for every Mooncake action, demonstrat
 ## Overview
 
 Each file focuses on a single action type with 20-50+ examples covering:
+
 - Basic usage
 - Advanced features
 - Real-world scenarios
@@ -87,6 +88,7 @@ mooncake run --config file.yml --tags cleanup
 
 ### shell.yml - Shell Commands
 Execute commands with full shell capabilities:
+
 - Basic commands and multi-line scripts
 - Output capture with `register`
 - Environment variables
@@ -113,6 +115,7 @@ Execute commands with full shell capabilities:
 
 ### print.yml - Print Messages
 Simple message output without shell:
+
 - Basic messages
 - Variable interpolation
 - Multi-line output
@@ -133,6 +136,7 @@ Simple message output without shell:
 
 ### file.yml - File Management
 Create and manage files, directories, and links:
+
 - Create files with content
 - Create directories (nested)
 - Set permissions (0644, 0755, 0600, etc.)
@@ -157,6 +161,7 @@ Create and manage files, directories, and links:
 
 ### copy.yml - Copy Files
 Copy files with integrity verification:
+
 - Simple file copy
 - Copy with permissions
 - Backup before overwrite
@@ -176,6 +181,7 @@ Copy files with integrity verification:
 
 ### template.yml - Template Rendering
 Render Jinja2 templates with variables:
+
 - Basic template rendering
 - Variables and system facts
 - Conditionals and loops
@@ -198,6 +204,7 @@ Render Jinja2 templates with variables:
 
 ### download.yml - Download Files
 Download from URLs with retry support:
+
 - Simple downloads
 - Checksum verification (SHA256/MD5)
 - Timeouts and retries
@@ -220,6 +227,7 @@ Download from URLs with retry support:
 
 ### unarchive.yml - Extract Archives
 Extract .tar, .tar.gz, .tgz, .zip files:
+
 - Basic extraction
 - Strip path components
 - Idempotency with markers
@@ -240,6 +248,7 @@ Extract .tar, .tar.gz, .tgz, .zip files:
 
 ### service.yml - Service Management
 Manage systemd (Linux) and launchd (macOS) services:
+
 - Start/stop/restart services
 - Enable/disable on boot
 - Create service unit files
@@ -275,6 +284,7 @@ Manage systemd (Linux) and launchd (macOS) services:
 
 ### assert.yml - Assertions
 Verify system state (never changes, fails fast):
+
 - Command assertions (exit codes)
 - File assertions (exists, content, permissions)
 - HTTP assertions (status, response body)
@@ -302,6 +312,7 @@ Verify system state (never changes, fails fast):
 
 ### include.yml - Include Tasks
 Load and execute tasks from external files:
+
 - Basic includes
 - Conditional includes
 - Include with tags
@@ -326,6 +337,7 @@ Load and execute tasks from external files:
 
 ### preset.yml - Presets
 Use reusable, parameterized workflows:
+
 - Basic preset invocation
 - Ollama preset (install/configure LLMs)
 - Parameters and variables
@@ -349,6 +361,7 @@ Use reusable, parameterized workflows:
 
 ### vars.yml - Variables
 Define and manage variables:
+
 - Simple variables
 - Different types (string, number, boolean, list, dict)
 - Nested structures
@@ -417,6 +430,7 @@ Common tags used across examples:
 ## Documentation
 
 For complete action documentation, see:
+
 - [Actions Reference](../../docs/guide/config/actions.md)
 - [Control Flow](../../docs/guide/config/control-flow.md)
 - [Variables](../../docs/guide/config/variables.md)
@@ -455,6 +469,7 @@ examples/actions/
 ## Contributing
 
 When adding new examples:
+
 1. Follow the existing format
 2. Include clear descriptions
 3. Add appropriate tags
@@ -464,6 +479,7 @@ When adding new examples:
 ## Next Steps
 
 After exploring these examples:
+
 1. Check out the [numbered examples](../) (01-12) for complete workflows
 2. See [scenarios](../scenarios/) for real-world setups
 3. Read the [official documentation](../../docs/)

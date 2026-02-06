@@ -44,6 +44,7 @@ Use `|` for multiple commands:
 ### Global Variables
 
 Mooncake automatically provides system information:
+
 - `{{os}}` - Operating system (linux, darwin, windows)
 - `{{arch}}` - Architecture (amd64, arm64, etc.)
 

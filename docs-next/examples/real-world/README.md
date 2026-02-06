@@ -9,6 +9,7 @@ Complete, practical examples showing how to combine Mooncake features for real-w
 **[dotfiles-manager/](dotfiles-manager/)** - Complete dotfiles deployment system
 
 Demonstrates:
+
 - Managing configuration files across machines
 - Template-based dynamic configs
 - OS-specific configurations
@@ -16,6 +17,7 @@ Demonstrates:
 - Tag-based selective deployment
 
 Perfect for:
+
 - Setting up new development machines
 - Keeping dotfiles in sync across systems
 - Team configuration standardization

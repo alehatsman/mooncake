@@ -89,17 +89,20 @@ Override variables for specific templates:
 
 ### config.yml.j2
 Application configuration with:
+
 - Conditional debug settings
 - Loops over features list
 - Variable substitution
 
 ### nginx.conf.j2
 Web server config with:
+
 - Conditional SSL configuration
 - Dynamic port and paths
 
 ### script.sh.j2
 Executable shell script with:
+
 - Shebang line
 - Variable expansion
 - Command loops

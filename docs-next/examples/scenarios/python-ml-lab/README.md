@@ -5,6 +5,7 @@ Set up a complete Python machine learning environment on Ubuntu with popular ML 
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing Python 3 and pip
 - Creating a Python virtual environment
 - Installing ML packages (numpy, pandas, matplotlib, scikit-learn, jupyter)
@@ -45,11 +46,13 @@ You can customize these variables:
 ## What Gets Installed
 
 ### System Packages
+
 - python3
 - python3-pip
 - python3-venv
 
 ### Python ML Packages
+
 - numpy - Numerical computing
 - pandas - Data analysis
 - matplotlib - Plotting and visualization
@@ -98,6 +101,7 @@ jupyter notebook notebooks/
 ## Sample Script
 
 The included `hello_ml.py` demonstrates:
+
 1. NumPy - Creating and manipulating arrays
 2. Pandas - Creating and analyzing DataFrames
 3. Scikit-learn - Training a simple classification model
@@ -114,6 +118,7 @@ sudo apt-get remove --purge python3-pip python3-venv
 ## Learning Points
 
 This example teaches:
+
 - Installing system packages with apt
 - Creating Python virtual environments
 - Installing Python packages with pip
@@ -125,6 +130,7 @@ This example teaches:
 ## Next Steps
 
 After setup, try:
+
 - Creating Jupyter notebooks in `~/ml-workspace/notebooks/`
 - Installing additional packages: `pip install tensorflow pytorch`
 - Following scikit-learn tutorials

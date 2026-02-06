@@ -5,6 +5,7 @@ A simple "hello world" example that sets up an nginx web server on Ubuntu.
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing nginx via apt
 - Creating site configurations using templates
 - Deploying static content
@@ -80,6 +81,7 @@ sudo rm -f /etc/nginx/sites-available/mysite /etc/nginx/sites-enabled/mysite
 ## Learning Points
 
 This example teaches:
+
 - Installing packages with shell actions
 - Using templates for configuration files
 - File management (directories, copies, symlinks)

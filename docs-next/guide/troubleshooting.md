@@ -50,6 +50,7 @@ Error: invalid configuration: unknown field 'shel' in step 1
 ```
 
 **Solution**: Check spelling of action names and fields. Common typos:
+
 - `shel` → `shell`
 - `comand` → `command`
 - `templete` → `template`
@@ -64,6 +65,7 @@ mooncake plan --config config.yml  # Validates without running
 **Problem**: Invalid YAML syntax.
 
 **Solution**: Check YAML formatting:
+
 - Proper indentation (use spaces, not tabs)
 - Quoted strings containing special characters
 - Proper list syntax
@@ -108,6 +110,7 @@ Error: failed to expand template: variable 'my_var' is not defined
 ```
 
 **Solution**:
+
 1. Define the variable before using it:
 ```yaml
 - vars:
@@ -180,6 +183,7 @@ mooncake run --config config.yml
 **Problem**: Shell command doesn't exist on the system.
 
 **Solution**:
+
 1. Check if command is installed:
 ```yaml
 - name: Check if docker exists
@@ -245,6 +249,7 @@ mooncake run --config config.yml
 **Problem**: Trying to operate on a file that doesn't exist, or parent directory doesn't exist.
 
 **Solution**:
+
 1. Create parent directories first:
 ```yaml
 - name: Create parent directory
@@ -273,6 +278,7 @@ mooncake run --config config.yml
 **Problem**: Downloaded file checksum doesn't match expected value.
 
 **Solution**:
+
 1. Verify the checksum value is correct
 2. Re-download the file (might be corrupted)
 3. Check if upstream changed the file
@@ -302,6 +308,7 @@ shasum -a 256 file.tar.gz  # macOS
 **Problem**: Using a variable that hasn't been defined.
 
 **Solution**:
+
 1. Define variable before use:
 ```yaml
 - vars:
@@ -358,6 +365,7 @@ shasum -a 256 file.tar.gz  # macOS
 **Problem**: macOS security restrictions prevent file operations.
 
 **Solution**:
+
 1. Grant Full Disk Access to Terminal:
    - System Settings → Privacy & Security → Full Disk Access
    - Add Terminal.app or iTerm.app
@@ -369,6 +377,7 @@ shasum -a 256 file.tar.gz  # macOS
 **Problem**: Trying to manage a service that doesn't exist.
 
 **Solution**:
+
 1. Verify service name:
 ```bash
 systemctl list-units --type=service | grep myservice
@@ -426,6 +435,7 @@ systemctl list-units --type=service | grep myservice
 **Problem**: Trying to use a preset that doesn't exist.
 
 **Solution**:
+
 1. List available presets:
 ```bash
 mooncake presets list
@@ -471,6 +481,7 @@ Use correct parameter names and types:
 **Problem**: Preset step failed.
 
 **Solution**:
+
 1. Run with debug logging:
 ```bash
 mooncake run --config config.yml --log-level debug
@@ -493,6 +504,7 @@ cat ~/.mooncake/presets/docker/preset.yml
 **Problem**: Configuration takes a long time to run.
 
 **Solution**:
+
 1. Use dry-run to identify slow steps:
 ```bash
 mooncake run --config config.yml --dry-run

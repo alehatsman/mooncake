@@ -12,6 +12,7 @@ All duplicate content has been removed.
 ## v0.3 - Current
 
 ### Breaking Changes
+
 - **Ollama action removed** - Replaced with `preset: ollama`
   - Old syntax: `ollama: {state: present, ...}`
   - New syntax: `preset: {name: ollama, with: {state: present, ...}}`
@@ -19,6 +20,7 @@ All duplicate content has been removed.
   - Benefit: 81% code reduction, user-extensible workflows
 
 ### Preset System
+
 - **Preset action** - Reusable, parameterized workflows
   - Package complex workflows as YAML files
   - Type-safe parameters with validation (string, bool, array, object)
@@ -40,6 +42,7 @@ All duplicate content has been removed.
   - Platform-aware logic using system facts
 
 ### New Actions
+
 - **Print action** - Simple output to console
   - Display messages during execution
   - Variable interpolation support
@@ -89,6 +92,7 @@ All duplicate content has been removed.
   - Safety checks (prevent accidental root deletion)
 
 ### Planning & Execution
+
 - **Deterministic plan compiler**
   - Expand all loops and includes into linear plan
   - Origin tracking (file:line:col) for every step
@@ -109,6 +113,7 @@ All duplicate content has been removed.
   - JSON output format for CI/CD (`--output-format json`)
 
 ### System Facts
+
 - **Comprehensive system facts collection**
   - CPU: model, cores, instruction set flags (AVX, AVX2, SSE4_2, FMA, AES)
   - Memory: total/free, swap total/free
@@ -121,6 +126,7 @@ All duplicate content has been removed.
   - `mooncake facts` command with text/JSON output
 
 ### Execution Control & Flow
+
 - **Timeout support** - Prevent long-running commands
   - Per-step timeout configuration
   - Standard exit code (124) on timeout
@@ -135,6 +141,7 @@ All duplicate content has been removed.
   - `failed_when` - Define custom failure conditions
 
 ### Template & Expression Language
+
 - **Expression language (expr-lang)** - Powerful expression evaluation
   - Used in `when`, `changed_when`, `failed_when`, `with_items`
   - Rich operators and functions
@@ -144,6 +151,7 @@ All duplicate content has been removed.
   - All facts available as template variables
 
 ### Security & Privilege Escalation
+
 - **Improved sudo handling**
   - Interactive password prompt (`-K`, `--ask-become-pass`) - recommended
   - File-based password (`--sudo-pass-file`) with 0600 permission check
@@ -151,6 +159,7 @@ All duplicate content has been removed.
   - Better error messages for privilege escalation failures
 
 ### User Interface & Output
+
 - **Animated TUI** with progress tracking
   - Real-time step status updates
   - Spinner animations
@@ -166,6 +175,7 @@ All duplicate content has been removed.
   - Performance metrics in summary
 
 ### Documentation & Architecture
+
 - **Architecture Decision Records (ADRs)** - Documented key design decisions
   - ADR-001: Handler-Based Action Architecture
   - ADR-002: Preset Expansion System
@@ -186,6 +196,7 @@ All duplicate content has been removed.
   - Positioned as "The Standard Runtime for AI System Configuration"
 
 ### Developer Experience
+
 - **Handler-based action architecture** - Modular action system
   - Each action self-contained in one file (100-1000 lines)
   - Registry pattern for automatic action discovery
@@ -221,6 +232,7 @@ All duplicate content has been removed.
 ## v0.2
 
 ### Features
+
 - **Loop iteration**
   - `with_items` - Iterate over lists/arrays
   - `with_filetree` - Recursively iterate over directory contents
@@ -238,6 +250,7 @@ All duplicate content has been removed.
 ## v0.1 - Initial Release
 
 ### Features
+
 - **Shell command execution** - Run shell commands
 - **File and directory operations** - Basic file/directory creation and management
 - **Template rendering** - Pongo2 template engine with variable substitution
@@ -4806,6 +4819,7 @@ Complete Go package documentation for Mooncake.
 Action handler registry and interfaces. All actions (shell, file, template, etc.) are registered here.
 
 **Key Interfaces:**
+
 - `Handler` - Base interface for all actions
 - `Context` - Execution context passed to handlers
 - `Result` - Action execution results
@@ -4814,6 +4828,7 @@ Action handler registry and interfaces. All actions (shell, file, template, etc.
 Configuration structures and validation. Defines the YAML schema for plans and steps.
 
 **Key Types:**
+
 - `Plan` - Top-level configuration
 - `Step` - Individual execution steps
 - Action structs (Shell, File, Template, etc.)
@@ -4822,6 +4837,7 @@ Configuration structures and validation. Defines the YAML schema for plans and s
 Execution engine that runs plans and steps. Handles dry-run mode, variable expansion, and result tracking.
 
 **Key Types:**
+
 - `Executor` - Main execution engine
 - `ExecutionContext` - Runtime context
 - Custom error types (RenderError, CommandError, etc.)
@@ -4830,6 +4846,7 @@ Execution engine that runs plans and steps. Handles dry-run mode, variable expan
 Event system for execution lifecycle. All events emitted during runs are defined here.
 
 **Key Types:**
+
 - `Event` - Base event structure
 - `EventType` - Event type constants
 - Event data types (StepStartedData, FileOperationData, etc.)
@@ -4840,6 +4857,7 @@ Event system for execution lifecycle. All events emitted during runs are defined
 System information collection. Auto-detects OS, hardware, network, and software facts.
 
 **Key Types:**
+
 - `Facts` - Complete system information
 - Platform-specific collectors (Linux, macOS, Windows)
 
@@ -4847,6 +4865,7 @@ System information collection. Auto-detects OS, hardware, network, and software 
 Preset system for reusable workflows. Loads, validates, and expands preset definitions.
 
 **Key Functions:**
+
 - `LoadPreset()` - Load preset from file
 - `ValidateParameters()` - Validate preset parameters
 - `ExpandSteps()` - Expand preset into steps
@@ -4855,6 +4874,7 @@ Preset system for reusable workflows. Loads, validates, and expands preset defin
 Logging infrastructure with TUI and text output modes.
 
 **Key Types:**
+
 - `Logger` - Base logger interface
 - `TUILogger` - Terminal UI logger
 - `TextLogger` - Plain text logger
@@ -4865,6 +4885,7 @@ Logging infrastructure with TUI and text output modes.
 CLI command implementations (run, plan, facts, etc.)
 
 **Commands:**
+
 - `run` - Execute a plan
 - `plan` - Generate execution plan
 - `facts` - Display system facts
@@ -6139,6 +6160,7 @@ The fundamental issue: **configuration expansion mixed with execution**, making 
 We adopted a **two-phase architecture** separating configuration expansion (planning) from execution:
 
 **Benefits:**
+
 - **Deterministic**: Same config always produces the same plan
 - **Inspectable**: Use `mooncake plan` to see what will execute
 - **Traceable**: Every step tracks its origin with include chain
@@ -6146,6 +6168,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 
 ### Phase 1: Planning (Compile-Time)
 **Planner** expands configuration into a deterministic execution plan
+
 - Resolves includes recursively
 - Expands loops (with_items, with_filetree)
 - Processes compile-time variables (vars, include_vars)
@@ -6158,6 +6181,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 
 ### Phase 2: Execution (Runtime)
 **Executor** runs the pre-compiled plan step by step
+
 - Evaluates runtime conditions (when, unless, creates)
 - Executes actions through handlers
 - Manages variables and results
@@ -6171,6 +6195,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 #### 1. Compile-Time vs Runtime Directives
 
 **Compile-Time** (processed by planner):
+
 - `include`: File inclusion
 - `with_items`: Loop expansion
 - `with_filetree`: Directory tree iteration
@@ -6178,6 +6203,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 - `include_vars`: Variable file loading (when condition evaluable at plan time)
 
 **Runtime** (processed by executor):
+
 - `when`: Conditional execution
 - `unless`: Idempotency check (shell/command only)
 - `creates`: Idempotency check (shell/command only)
@@ -6200,6 +6226,7 @@ All relative paths resolved **at plan time** based on the file containing them:
 ```
 
 **Rules**:
+
 1. Relative paths joined with `CurrentDir` (directory of containing file)
 2. Resolution happens during planning, before execution
 3. Absolute paths used as-is
@@ -6211,6 +6238,7 @@ All relative paths resolved **at plan time** based on the file containing them:
 Variables split into two categories:
 
 **Plan-Time Variables** (available during expansion):
+
 - Global vars from config (`vars:` at root level)
 - CLI-provided vars (`--vars-file`)
 - System facts (OS, architecture, etc.)
@@ -6223,6 +6251,7 @@ Variables split into two categories:
 - Vars/include_vars with runtime-dependent when conditions
 
 **Why the split?**
+
 - Plan-time: Needed for template expansion during planning
 - Runtime-only: Not known until execution, stored in plan for later use
 
@@ -6913,6 +6942,7 @@ vars:
 ## Compliance
 
 This ADR complies with:
+
 - Go best practices for package separation
 - Event-driven architecture patterns
 - Immutable data structures (plan)
@@ -6946,11 +6976,13 @@ This ADR complies with:
 Ansible uses a similar two-phase model (parse → execute), but with key differences:
 
 ### Ansible's Approach
+
 - **Templates at Runtime**: Ansible renders templates during execution, not planning
 - **Dynamic Includes**: `include_tasks` expanded at runtime
 - **Late Binding**: Variable resolution happens as late as possible
 
 ### Mooncake's Approach
+
 - **Templates at Plan Time**: Most templates rendered during planning
 - **Static Includes**: All includes expanded during planning
 - **Early Binding**: Variable resolution happens as early as possible
@@ -6987,6 +7019,7 @@ The original mooncake executor implemented actions as large switch statements an
 5. **Limited Extensibility**: No clean way to add actions without modifying core executor code
 
 The codebase had:
+
 - ~20,000 lines of action implementation code in executor package
 - 12 `*_step.go` files and 5 `*_step_test.go` files
 - Manual dispatcher with 40+ line switch statement
@@ -6997,6 +7030,7 @@ The codebase had:
 We adopted a **handler-based architecture** with the following key components:
 
 **Benefits:**
+
 - **Modular**: Each action is self-contained in one file
 - **Extensible**: Adding new actions requires only 1 file + registration
 - **Testable**: Actions can be tested in isolation
@@ -7254,6 +7288,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 ## Compliance
 
 This ADR complies with:
+
 - Go package design principles
 - SOLID principles (especially Single Responsibility and Open/Closed)
 - Clean Architecture patterns
@@ -7312,6 +7347,7 @@ As mooncake matured, users frequently requested support for common deployment pa
 5. **Tight Coupling**: Tool-specific logic mixed with mooncake core
 
 The Ollama action exemplified these issues:
+
 - 672 lines in `ollama_step.go` + 646 lines of tests
 - Platform detection logic (apt/dnf/yum/brew)
 - Service configuration (systemd/launchd)
@@ -7325,6 +7361,7 @@ Most of this logic could be expressed in YAML using existing mooncake actions (s
 We adopted a **preset system** that allows packaging reusable workflows as YAML files. Presets expand into constituent steps at execution time with parameter injection.
 
 **Benefits:**
+
 - **Extensible**: Users can create presets without Go knowledge
 - **Maintainable**: Update workflows in YAML, no code releases needed
 - **Smaller Binary**: Tool-specific code moved out of core
@@ -7333,6 +7370,7 @@ We adopted a **preset system** that allows packaging reusable workflows as YAML 
 ### 1. Preset Structure
 
 Presets are YAML files defining:
+
 - **Name**: Unique identifier
 - **Description**: Human-readable summary
 - **Version**: Semantic version
@@ -7366,6 +7404,7 @@ preset:
 ### 2. Key Architectural Decisions
 
 #### Flat Presets Only (No Nesting)
+
 - Presets CANNOT invoke other presets
 - Prevents circular dependencies
 - Simpler mental model and execution flow
@@ -7379,6 +7418,7 @@ preset:
 ```
 
 #### Parameters Namespace
+
 - Parameters accessible via `parameters.name` in templates
 - Clear separation from variables and facts
 - Prevents naming collisions
@@ -7389,6 +7429,7 @@ preset:
 ```
 
 #### Register at Preset Level
+
 - Preset returns aggregate result (changed = any step changed)
 - Users get `preset_result.changed`, `preset_result.stdout`
 - Individual step results not exposed (encapsulation)
@@ -7403,12 +7444,14 @@ preset:
 ```
 
 #### Discovery Paths (Priority Order)
+
 1. `./presets/` - Playbook-local presets
 2. `~/.mooncake/presets/` - User presets
 3. `/usr/local/share/mooncake/presets/` - Local installation
 4. `/usr/share/mooncake/presets/` - System installation
 
 #### Two File Formats
+
 - **Flat**: `<name>.yml` (e.g., `presets/ollama.yml`)
 - **Directory**: `<name>/preset.yml` (e.g., `presets/ollama/preset.yml`)
 - Directory format supports bundling templates/files with preset
@@ -7428,6 +7471,7 @@ preset:
 ### 4. Integration with Planner
 
 Presets integrate with the planner's expansion system:
+
 - Preset steps may contain `include` directives → expanded by planner
 - Preset steps may contain `with_items` loops → expanded by planner
 - Preset steps may use relative paths → resolved from preset base directory
@@ -7684,6 +7728,7 @@ steps:
 ### Ollama Migration Success
 
 The Ollama action was successfully migrated to a preset:
+
 - **Before**: 1,400 lines Go (action + tests)
 - **After**: 250 lines YAML
 - **Functionality**: Identical (all features preserved)
@@ -7711,6 +7756,7 @@ This validates that presets can handle complex, multi-platform workflows.
 ## Compliance
 
 This ADR complies with:
+
 - YAML specification for preset format
 - JSON Schema for parameter validation
 - Mooncake code style guidelines
@@ -7742,6 +7788,7 @@ This ADR complies with:
 ## Appendix: Migration Statistics
 
 ### Ollama Action Removal
+
 - **Files Deleted**: 2 files (1,318 lines)
   - `internal/executor/ollama_step.go` (672 lines)
   - `internal/executor/ollama_step_test.go` (646 lines)
@@ -7752,6 +7799,7 @@ This ADR complies with:
 - **User Migration**: Update `ollama:` to `preset: {name: ollama, with: {...}}`
 
 ### Preset System Implementation
+
 - **Core Files**: 4 files (715 lines)
   - `internal/presets/loader.go` (120 lines)
   - `internal/presets/validator.go` (180 lines)
@@ -7765,6 +7813,7 @@ This ADR complies with:
 - **Examples**: 30+ examples in `examples/ollama/`
 
 ### Overall Impact
+
 - **Code**: -1,068 lines (action removal) + 715 lines (preset system) = -353 net lines
 - **Extensibility**: Users can now create presets without Go knowledge
 - **Maintenance**: Preset updates = YAML edits (no releases needed)
@@ -8317,6 +8366,7 @@ git checkout -b feature/your-feature-name
 ```
 
 Branch naming:
+
 - `feature/description` - New features
 - `fix/description` - Bug fixes
 - `docs/description` - Documentation
@@ -8335,12 +8385,14 @@ Add support for with_dict loop iteration
 ```
 
 **Follow Go conventions:**
+
 - Run `go fmt ./...`
 - Run `go vet ./...`
 - Add tests for new code
 - Update documentation
 
 **Keep commits focused:**
+
 - One logical change per commit
 - Separate refactoring from features
 - Separate tests from implementation
@@ -8371,6 +8423,7 @@ func TestWithDict(t *testing.T) {
 ```
 
 **Test coverage:**
+
 - Aim for 80%+ coverage on new code
 - Test happy path and error cases
 - Test edge cases
@@ -8449,6 +8502,7 @@ list iteration is supported.
 Follow [Effective Go](https://golang.org/doc/effective_go.html) and [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments).
 
 **Key points:**
+
 - Use `gofmt` for formatting
 - Keep functions small and focused
 - Write clear, descriptive names
@@ -8483,6 +8537,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 ### Configuration Style
 
 When adding examples:
+
 - Use clear, descriptive names
 - Add comments explaining non-obvious choices
 - Keep examples focused on one feature
@@ -8510,6 +8565,7 @@ go test ./... -race
 ### Integration Tests
 
 Add integration tests in `internal/executor/executor_test.go` for:
+
 - End-to-end workflows
 - Interaction between features
 - Real file system operations
@@ -8534,6 +8590,7 @@ done
 ### README Updates
 
 When updating README.md:
+
 - Maintain existing structure
 - Use clear, concise language
 - Include code examples
@@ -8543,6 +8600,7 @@ When updating README.md:
 ### Example Documentation
 
 Each example should have:
+
 - README.md with clear explanation
 - "What You'll Learn" section
 - "Quick Start" commands
@@ -8619,6 +8677,7 @@ and `item.value` in each iteration.
 5. **Final approval** - Merge when approved
 
 **Review criteria:**
+
 - Code quality and style
 - Test coverage
 - Documentation completeness
@@ -8642,6 +8701,7 @@ and `item.value` in each iteration.
 ## Recognition
 
 Contributors are recognized in:
+
 - Git commit history
 - Release notes
 - CONTRIBUTORS.md (if we create it)
@@ -8660,6 +8720,7 @@ This directory contains detailed design proposals for new Mooncake features.
 ## Purpose
 
 Proposals help:
+
 - Think through design before implementation
 - Get feedback from community
 - Document decision-making process
@@ -8668,12 +8729,14 @@ Proposals help:
 ## When to Write a Proposal
 
 Write a proposal for:
+
 - **New major features** - Significant additions to Mooncake
 - **Breaking changes** - Changes that affect existing configurations
 - **Complex features** - Features requiring architectural decisions
 - **Controversial features** - Features that may have multiple approaches
 
 **Don't need a proposal for:**
+
 - Bug fixes
 - Documentation updates
 - Small improvements
@@ -8925,6 +8988,7 @@ Mooncake uses [GoReleaser](https://goreleaser.com/) for automated releases.
 ## What Gets Built
 
 GoReleaser automatically builds for:
+
 - **Linux**: amd64, arm64, arm, 386
 - **macOS**: amd64 (Intel), arm64 (Apple Silicon)
 - **Windows**: amd64, arm, 386
@@ -8932,6 +8996,7 @@ GoReleaser automatically builds for:
 ## What Gets Published
 
 Each release includes:
+
 - ✓ Compiled binaries for all platforms
 - ✓ Archived releases (`.tar.gz` for Linux/macOS, `.zip` for Windows)
 - ✓ Checksums file for verification
@@ -8941,6 +9006,7 @@ Each release includes:
 ## Versioning
 
 Use semantic versioning:
+
 - `v1.0.0` - Major release
 - `v1.1.0` - Minor release (new features)
 - `v1.0.1` - Patch release (bug fixes)
@@ -8963,6 +9029,7 @@ goreleaser release --snapshot --clean
 ## Commit Message Format
 
 For better changelogs, use conventional commits:
+
 - `feat: add new feature` → Features section
 - `fix: resolve bug` → Bug fixes section
 - `docs: update readme` → Excluded from changelog
@@ -9011,6 +9078,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
 ## 0) Foundations (must ship first)
 
 ### 0.1 Config model + schema
+
 - [x] Define canonical internal structs:
   - [x] `RunConfig` (root) —  IMPLEMENTED: supports both old ([]Step) and new (version/vars/steps) formats with backward compatibility
   - [x] `Step` (union: exactly one action key) — exists but uses optional pointers, not explicit union type
@@ -9037,6 +9105,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
   - [x] exit codes: `0 ok`, `2 validation error`, `3 runtime error` —  IMPLEMENTED: proper exit codes in validateCommand()
 
 ### 0.2 Deterministic plan compiler
+
 - [x] Plan IR types:
   - [x] `Plan` (ordered steps) —  IMPLEMENTED: /internal/plan/plan.go with Version, GeneratedAt, RootFile, Steps, InitialVars, Tags
   - [x] `PlanStep` fields:
@@ -9077,6 +9146,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
   - [x] Code cleanup —  COMPLETED: removed ~170 lines of dead code (executeLoopStep, handleInclude, HandleWithItems, HandleWithFileTree) as loops/includes now handled at plan-time
 
 ### 0.3 Execution semantics (idempotency + check mode) 
+
 - [x] Core step result model:
   - [x] statuses: `ok`, `changed`, `skipped`, `failed` —  IMPLEMENTED: Status() method returns string status; uses boolean fields (Failed, Changed, Skipped) with computed status
   - [x] timings: start/end/duration —  IMPLEMENTED: StartTime, EndTime, Duration fields tracked per-step; accessible as result.duration_ms in registered results
@@ -9103,6 +9173,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
   - [x] retry on failure only unless configured —  IMPLEMENTED: retries only on command failure (non-zero exit code); logs retry attempts
 
 ### 0.4 Sudo / privilege escalation 
+
 - [x] Input methods:
   - [x] `--ask-become-pass` / `-K` (prompt no-echo) —  IMPLEMENTED: InteractivePasswordProvider in security/password.go uses golang.org/x/term.ReadPassword
   - [x] `--sudo-pass-file` (0600) —  IMPLEMENTED: FilePasswordProvider validates 0600 permissions and file ownership
@@ -9130,6 +9201,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
 ## 1) Core Engine UX / Observability 
 
 ### 1.1 Event stream + presentation  COMPLETED (2026-02-04)
+
 - [x] JSON event schema:
   - [x] `run.started`, `plan.loaded`, `run.completed` —  IMPLEMENTED: Full run lifecycle events
   - [x] `step.started`, `step.completed`, `step.failed`, `step.skipped` —  IMPLEMENTED: Complete step lifecycle
@@ -9166,6 +9238,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
 - [x] All tests passing (100%)
 
 ### 1.2 Run artifacts  COMPLETED (2026-02-04)
+
 - [x] Artifact writer implementation —  IMPLEMENTED: internal/artifacts/writer.go
 - [x] Directory structure: `.mooncake/runs/<YYYYMMDD-HHMMSS-hash>/`
 - [x] Write:
@@ -9192,6 +9265,7 @@ To publish to Homebrew, uncomment the `brews` section in `.goreleaser.yml` and c
 Define `file:` as a structured union.
 
 #### 2.1.1 Ensure directory 
+
 - [x] `file: { state: directory, path, mode?, owner?, group? }`
 - [x] Idempotent:
   - [x] create if missing
@@ -9201,11 +9275,13 @@ Define `file:` as a structured union.
   - [x] `recurse: true` for mode/owner/group on tree (explicit)
 
 #### 2.1.2 Ensure file (touch) 
+
 - [x] `file: { state: touch, path, mode?, owner?, group? }`
 - [x] Create empty if missing
 - [x] Update metadata only if differs
 
 #### 2.1.3 Remove path 
+
 - [x] `file: { state: absent, path, force?: bool }`
 - [x] Safety:
   - [x] refuse empty path
@@ -9214,6 +9290,7 @@ Define `file:` as a structured union.
 - [x] Idempotent: ok if already absent
 
 #### 2.1.4 Symlink 
+
 - [x] `file: { state: link, src, dest, force?: bool }`
 - [x] Behavior:
   - [x] create symlink if missing
@@ -9225,13 +9302,16 @@ Define `file:` as a structured union.
   - [x] define behavior (requires admin or developer mode); if unsupported → explicit error
 
 #### 2.1.5 Hardlink 
+
 - [x] `file: { state: hardlink, src, dest, force?: bool }`
 
 #### 2.1.6 Permissions-only / ownership-only operations 
+
 - [x] `file: { state: perms, path, mode?, owner?, group?, recurse? }`
 
 #### 2.1.7 Copy (separate `copy` action) 
 Implemented as separate `copy` action:
+
 - [x] `copy: { src, dest, mode?, owner?, group?, force?, backup?, checksum? }`
 - [x] Preserve:
   - [ ] optionally preserve times — not yet implemented
@@ -9239,6 +9319,7 @@ Implemented as separate `copy` action:
 - [x] Large files: stream copy, atomic write temp + rename
 
 #### 2.1.8 Sync (separate `sync` action) — PLANNED
+
 - [ ] `sync: { src, dest, delete?: bool, exclude?: [], checksum?: bool }`
 - [ ] Implementation:
   - [ ] prefer native `rsync` if present else Go copy-tree
@@ -9247,6 +9328,7 @@ Implemented as separate `copy` action:
 **Status**: Phase 2 of 6-week file operations plan
 
 ### 2.2 `template` action — PARTIALLY COMPLETE
+
 - [x] `template: { src, dest, mode?, owner?, group?, backup? }` — basic implementation exists
 - [ ] Features:
   - [x] atomic write: render → temp file → diff → rename — implemented
@@ -9255,6 +9337,7 @@ Implemented as separate `copy` action:
 - [x] Template validation pre-run (Phase 0) — implemented in 0.1
 
 ### 2.3 `unarchive` action  COMPLETED (2026-02-05)
+
 - [x] `unarchive: { src, dest, strip_components?, creates?, mode? }`
 - [x] Supported:
   - [x] `.tar`, `.tar.gz`, `.tgz`, `.zip`
@@ -9281,6 +9364,7 @@ Implemented as separate `copy` action:
 **Status**: Phase 3 of 6-week file operations plan  COMPLETE
 
 ### 2.4 `download` action  COMPLETED (2026-02-05)
+
 - [x] `download: { url, dest, checksum?, mode?, timeout?, retries?, headers?, force?, backup? }`
 - [x] Implemented:
   - [x] HTTP/HTTPS downloads with atomic writes (temp → verify → rename)
@@ -9314,6 +9398,7 @@ Implemented as separate `copy` action:
 ## 3) Process Actions
 
 ### 3.1 `shell` action (structured)  COMPLETED (2026-02-05)
+
 - [x] `shell: { cmd, interpreter?: "bash"|"sh"|"pwsh"|"cmd", stdin?, capture?: bool }` —  IMPLEMENTED: ShellAction struct with all fields
 - [x] Prefer `exec.Command` without shell when `argv` provided:
   - [x] allow `command: { argv: ["git","clone",...], stdin?, capture?: bool }` as safer alternative —  IMPLEMENTED: CommandAction with direct exec
@@ -9343,6 +9428,7 @@ Implemented as separate `copy` action:
 ## 4) Service Management (`systemd` / launchd / Windows)  COMPLETED (2026-02-05)
 
 ### 4.1 `systemd` action (Linux) 
+
 - [x] `service: { name, state?: started|stopped|restarted|reloaded, enabled?: bool, daemon_reload?: bool }` —  IMPLEMENTED: ServiceAction with full lifecycle control
 - [x] Unit file management:
   - [x] `service: { unit: { dest: "/etc/systemd/system/<name>.service", src_template?: ..., content?: ... } }` —  IMPLEMENTED: ServiceUnit struct with template rendering
@@ -9378,6 +9464,7 @@ Implemented as separate `copy` action:
   - [x] All tests passing with proper platform skipping
 
 ### 4.2 `launchd` action (macOS) 
+
 - [x] `service: { name, state?: started|stopped|restarted|reloaded, enabled?: bool }` —  IMPLEMENTED: unified service interface
 - [x] Plist file management:
   - [x] `service: { unit: { dest?, content?, src_template?, mode? } }` —  IMPLEMENTED: XML plist creation with template rendering
@@ -9415,6 +9502,7 @@ Implemented as separate `copy` action:
   - [x] All tests passing on macOS
 
 ### 4.3 Windows service action (future)
+
 - [ ] `service: { name, state, start_mode }` — PLACEHOLDER: not yet implemented
 - [ ] PowerShell integration (`Set-Service`, `Start-Service`)
 - [ ] Service configuration management
@@ -9435,6 +9523,7 @@ Implemented as separate `copy` action:
 ## 5) Assertions / Verification (first-class)
 
 ### 5.1 `assert` action (union)
+
 - [ ] `assert: { command: "...", rc?: 0, stdout_contains?: "...", stdout_regex?: "...", timeout_s? }`
 - [ ] `assert: { file: { path, exists?: bool, mode?: "0644", owner?: "...", group?: "...", sha256?: "..." } }`
 - [ ] `assert: { http: { url, method?: GET|POST, status?: 200, jsonpath?: "...", equals?: any, timeout_s? } }`
@@ -9447,6 +9536,7 @@ Implemented as separate `copy` action:
 ## 6) Facts (structured, immutable)  COMPLETED (2026-02-05)
 
 ### 6.1 Facts collection 
+
 - [x] `facts` run once per execution (cached) —  IMPLEMENTED: internal/facts/cache.go uses sync.Once for per-process caching
 - [x] OS:
   - [x] `os.name`, `os.version`, `kernel`, `arch` —  IMPLEMENTED: OS, Arch, Hostname, Username, UserHome, Distribution, DistributionVersion, DistributionMajor, KernelVersion
@@ -9465,6 +9555,7 @@ Implemented as separate `copy` action:
 - [x] Package manager detection —  IMPLEMENTED: PackageManager field (apt, dnf, yum, pacman, zypper, apk, brew, port)
 
 ### 6.2 CLI 
+
 - [x] `mooncake facts --format json|text` —  IMPLEMENTED: cmd/mooncake.go:207 with JSON and text output formats
 - [x] `--facts-json <path>` emit during run —  IMPLEMENTED: cmd/mooncake.go:512 flag writes facts during run command
 
@@ -9490,6 +9581,7 @@ Implemented as separate `copy` action:
 ## 7) ML Adoption Modules (after foundations)
 
 ### 7.1 `ollama` action/module  COMPLETED (2026-02-05)
+
 - [x] `ollama: { state: present|absent, service?: bool, method?: auto|script|package, host?, models_dir?, pull?: [], force?: bool, env?: {} }` —  IMPLEMENTED: OllamaAction with all fields
 - [x] Install:
   - [x] Linux/macOS installer strategy —  IMPLEMENTED: Auto-detection of package managers (apt, dnf, yum, pacman, zypper, apk, brew), official script fallback
@@ -9524,11 +9616,13 @@ Implemented as separate `copy` action:
 **Status**: Complete Ollama action implementation with installation, service management, and model pulling
 
 ### 7.2 Container runtime
+
 - [ ] `docker: { state: present, version_pin? }`
 - [ ] `nvidia_container_toolkit: { state: present }`
 - [ ] Optional: `apptainer: { state: present }`
 
 ### 7.3 Python env
+
 - [ ] `uv: { state: present, version_pin?, cache_dir? }`
 - [ ] `micromamba: { state: present, root_prefix?, envs_dir? }`
 - [ ] `python_env: { backend: uv|micromamba, name, spec: pyproject|requirements|env_yml }`
@@ -9538,6 +9632,7 @@ Implemented as separate `copy` action:
 ## 8) Safety rails (needed before “yolo” ideas)
 
 ### 8.1 Dangerous ops gating
+
 - [ ] Global allow/deny lists for:
   - [ ] `shell` commands (pattern match)
   - [ ] file deletes outside workspace
@@ -9549,6 +9644,7 @@ Implemented as separate `copy` action:
 ---
 
 ## 9) Detailed CLI checklist
+
 - [x] `mooncake run --config ... --vars ... --tags ... --dry-run`
 - [x] `mooncake plan --config ... --format json|yaml`
 - [x] `mooncake validate --config ...`
@@ -9558,6 +9654,7 @@ Implemented as separate `copy` action:
 ---
 
 ## 10) Cross-platform policy (explicit scope)
+
 - [ ] Define per-action availability matrix:
   - [ ] Linux/macOS/Windows support per action
 - [ ] For unsupported:
@@ -9615,6 +9712,7 @@ Use `|` for multiple commands:
 ### Global Variables
 
 Mooncake automatically provides system information:
+
 - `{{os}}` - Operating system (linux, darwin, windows)
 - `{{arch}}` - Architecture (amd64, arm64, etc.)
 
@@ -9690,25 +9788,30 @@ Use them in commands and paths:
 Mooncake automatically collects system information:
 
 **Basic:**
+
 - `os` - Operating system (linux, darwin, windows)
 - `arch` - Architecture (amd64, arm64)
 - `hostname` - System hostname
 - `user_home` - User's home directory
 
 **Hardware:**
+
 - `cpu_cores` - Number of CPU cores
 - `memory_total_mb` - Total RAM in megabytes
 
 **Distribution:**
+
 - `distribution` - Distribution name (ubuntu, debian, macos, etc.)
 - `distribution_version` - Full version (e.g., "22.04")
 - `distribution_major` - Major version number
 
 **Software:**
+
 - `package_manager` - Detected package manager (apt, yum, brew, etc.)
 - `python_version` - Installed Python version
 
 **Network:**
+
 - `ip_addresses` - Array of IP addresses
 - `ip_addresses_string` - Comma-separated IP addresses
 
@@ -9805,6 +9908,7 @@ mooncake run --config config.yml
 ### File Permissions
 
 Use octal notation in quotes:
+
 - `"0644"` - rw-r--r-- (readable by all, writable by owner)
 - `"0755"` - rwxr-xr-x (executable by all, writable by owner)
 - `"0600"` - rw------- (only owner can read/write)
@@ -9915,11 +10019,13 @@ Use `when` to conditionally execute steps:
 ### Tags vs Conditionals
 
 **Conditionals (`when`):**
+
 - Evaluated at runtime
 - Based on system facts or variables
 - Step-level decision making
 
 **Tags:**
+
 - User-controlled filtering
 - Specified via CLI `--tags` flag
 - Workflow-level decision making
@@ -10038,17 +10144,20 @@ Override variables for specific templates:
 
 ### config.yml.j2
 Application configuration with:
+
 - Conditional debug settings
 - Loops over features list
 - Variable substitution
 
 ### nginx.conf.j2
 Web server config with:
+
 - Conditional SSL configuration
 - Dynamic port and paths
 
 ### script.sh.j2
 Executable shell script with:
+
 - Shebang line
 - Variable expansion
 - Command loops
@@ -10123,6 +10232,7 @@ Iterate over lists of items:
 ```
 
 **What it does:**
+
 - Defines lists in variables
 - Installs multiple packages
 - Creates directories for multiple users
@@ -10138,6 +10248,7 @@ Iterate over files in a directory:
 ```
 
 **What it does:**
+
 - Iterates over files in `./files/` directory
 - Copies dotfiles to backup location
 - Filters directories vs files
@@ -10159,6 +10270,7 @@ Iterate over files in a directory:
 ```
 
 This creates:
+
 - `/home/alice`
 - `/home/bob`
 - `/home/charlie`
@@ -10173,6 +10285,7 @@ This creates:
 ```
 
 **Available properties:**
+
 - `item.src` - Full source path
 - `item.name` - File name
 - `item.is_dir` - Boolean, true if directory
@@ -10196,6 +10309,7 @@ Both `with_items` and `with_filetree` provide additional loop variables:
 ```
 
 **Available loop variables:**
+
 - `{{ item }}` - Current item (for `with_items`) or file object (for `with_filetree`)
 - `{{ index }}` - Zero-based iteration index (0, 1, 2, ...)
 - `{{ first }}` - Boolean, true for first iteration
@@ -10234,12 +10348,14 @@ Skip directories:
 ## Real-World Use Cases
 
 **with_items:**
+
 - Installing multiple packages
 - Creating multiple users/groups
 - Setting up multiple services
 - Deploying to multiple servers
 
 **with_filetree:**
+
 - Managing dotfiles
 - Deploying configuration directories
 - Backing up files
@@ -10315,6 +10431,7 @@ mooncake run --config config.yml
 After registering a result, you can access:
 
 **For shell commands:**
+
 - `register_name.stdout` - Standard output
 - `register_name.stderr` - Standard error
 - `register_name.rc` - Return/exit code (0 = success)
@@ -10322,11 +10439,13 @@ After registering a result, you can access:
 - `register_name.changed` - Boolean, always true for shell
 
 **For file operations:**
+
 - `register_name.rc` - 0 for success, 1 for failure
 - `register_name.failed` - Boolean, true if operation failed
 - `register_name.changed` - Boolean, true if file created/modified
 
 **For template operations:**
+
 - `register_name.rc` - 0 for success, 1 for failure
 - `register_name.failed` - Boolean, true if rendering failed
 - `register_name.changed` - Boolean, true if output file changed
@@ -10458,6 +10577,7 @@ mooncake run --config config.yml --tags dev,test
 ## What It Does
 
 Demonstrates different tagged workflows:
+
 - Development setup
 - Production deployment
 - Testing
@@ -10479,13 +10599,16 @@ Demonstrates different tagged workflows:
 ### Tag Filtering Behavior
 
 **No tags specified:**
+
 - All steps run (including untagged steps)
 
 **Tags specified (`--tags dev`):**
+
 - Only steps with matching tags run
 - Untagged steps are skipped
 
 **Multiple tags (`--tags dev,prod`):**
+
 - Steps run if they have ANY of the specified tags
 - OR logic: matches `dev` OR `prod`
 
@@ -10524,6 +10647,7 @@ Steps can have multiple tags:
 ```
 
 This runs with:
+
 - `--tags test` ✓
 - `--tags prod` ✓
 - `--tags security` ✓
@@ -10571,6 +10695,7 @@ mooncake run --config config.yml --tags staging,deploy
 ```
 
 Both must match:
+
 1. Condition must be true (`os == "linux"`)
 2. Tag must match (if `--tags` specified)
 
@@ -10668,6 +10793,7 @@ Some systems may prompt automatically (if configured)
 ### Which Operations Need Sudo?
 
 **Typically require sudo:**
+
 - Package management (`apt`, `yum`, `dnf`)
 - System file operations (`/etc`, `/opt`, `/usr/local`)
 - Service management (`systemctl`)
@@ -10676,6 +10802,7 @@ Some systems may prompt automatically (if configured)
 - Network configuration
 
 **Don't require sudo:**
+
 - User-space operations
 - Home directory files
 - `/tmp` directory
@@ -10785,12 +10912,15 @@ ls -la /opt/myapp/
 ## Troubleshooting
 
 **"sudo: no tty present"**
+
 - Make sure to provide `--sudo-pass` flag
 
 **Permission denied without sudo**
+
 - Add `become: true` to the step
 
 **Command not found**
+
 - Check if command exists: `which <command>`
 - Some commands need full paths with sudo
 
@@ -11721,6 +11851,7 @@ This directory contains extensive examples for every Mooncake action, demonstrat
 ## Overview
 
 Each file focuses on a single action type with 20-50+ examples covering:
+
 - Basic usage
 - Advanced features
 - Real-world scenarios
@@ -11803,6 +11934,7 @@ mooncake run --config file.yml --tags cleanup
 
 ### shell.yml - Shell Commands
 Execute commands with full shell capabilities:
+
 - Basic commands and multi-line scripts
 - Output capture with `register`
 - Environment variables
@@ -11829,6 +11961,7 @@ Execute commands with full shell capabilities:
 
 ### print.yml - Print Messages
 Simple message output without shell:
+
 - Basic messages
 - Variable interpolation
 - Multi-line output
@@ -11849,6 +11982,7 @@ Simple message output without shell:
 
 ### file.yml - File Management
 Create and manage files, directories, and links:
+
 - Create files with content
 - Create directories (nested)
 - Set permissions (0644, 0755, 0600, etc.)
@@ -11873,6 +12007,7 @@ Create and manage files, directories, and links:
 
 ### copy.yml - Copy Files
 Copy files with integrity verification:
+
 - Simple file copy
 - Copy with permissions
 - Backup before overwrite
@@ -11892,6 +12027,7 @@ Copy files with integrity verification:
 
 ### template.yml - Template Rendering
 Render Jinja2 templates with variables:
+
 - Basic template rendering
 - Variables and system facts
 - Conditionals and loops
@@ -11914,6 +12050,7 @@ Render Jinja2 templates with variables:
 
 ### download.yml - Download Files
 Download from URLs with retry support:
+
 - Simple downloads
 - Checksum verification (SHA256/MD5)
 - Timeouts and retries
@@ -11936,6 +12073,7 @@ Download from URLs with retry support:
 
 ### unarchive.yml - Extract Archives
 Extract .tar, .tar.gz, .tgz, .zip files:
+
 - Basic extraction
 - Strip path components
 - Idempotency with markers
@@ -11956,6 +12094,7 @@ Extract .tar, .tar.gz, .tgz, .zip files:
 
 ### service.yml - Service Management
 Manage systemd (Linux) and launchd (macOS) services:
+
 - Start/stop/restart services
 - Enable/disable on boot
 - Create service unit files
@@ -11991,6 +12130,7 @@ Manage systemd (Linux) and launchd (macOS) services:
 
 ### assert.yml - Assertions
 Verify system state (never changes, fails fast):
+
 - Command assertions (exit codes)
 - File assertions (exists, content, permissions)
 - HTTP assertions (status, response body)
@@ -12018,6 +12158,7 @@ Verify system state (never changes, fails fast):
 
 ### include.yml - Include Tasks
 Load and execute tasks from external files:
+
 - Basic includes
 - Conditional includes
 - Include with tags
@@ -12042,6 +12183,7 @@ Load and execute tasks from external files:
 
 ### preset.yml - Presets
 Use reusable, parameterized workflows:
+
 - Basic preset invocation
 - Ollama preset (install/configure LLMs)
 - Parameters and variables
@@ -12065,6 +12207,7 @@ Use reusable, parameterized workflows:
 
 ### vars.yml - Variables
 Define and manage variables:
+
 - Simple variables
 - Different types (string, number, boolean, list, dict)
 - Nested structures
@@ -12133,6 +12276,7 @@ Common tags used across examples:
 ## Documentation
 
 For complete action documentation, see:
+
 - [Actions Reference](../../docs/guide/config/actions.md)
 - [Control Flow](../../docs/guide/config/control-flow.md)
 - [Variables](../../docs/guide/config/variables.md)
@@ -12171,6 +12315,7 @@ examples/actions/
 ## Contributing
 
 When adding new examples:
+
 1. Follow the existing format
 2. Include clear descriptions
 3. Add appropriate tags
@@ -12180,6 +12325,7 @@ When adding new examples:
 ## Next Steps
 
 After exploring these examples:
+
 1. Check out the [numbered examples](../) (01-12) for complete workflows
 2. See [scenarios](../scenarios/) for real-world setups
 3. Read the [official documentation](../../docs/)
@@ -12401,11 +12547,13 @@ Use `when` to conditionally execute steps:
 ### Tags vs Conditionals
 
 **Conditionals (`when`):**
+
 - Evaluated at runtime
 - Based on system facts or variables
 - Step-level decision making
 
 **Tags:**
+
 - User-controlled filtering
 - Specified via CLI `--tags` flag
 - Workflow-level decision making
@@ -12507,6 +12655,7 @@ These features are essential for production deployments:
 ## Note on become_user
 
 The `become_user` feature (running as different users) is not demonstrated in this example as it requires:
+
 - Root privileges
 - Sudo password
 - Specific users to exist on the system
@@ -12594,6 +12743,7 @@ mooncake run --config config.yml
 ### File Permissions
 
 Use octal notation in quotes:
+
 - `"0644"` - rw-r--r-- (readable by all, writable by owner)
 - `"0755"` - rwxr-xr-x (executable by all, writable by owner)
 - `"0600"` - rw------- (only owner can read/write)
@@ -12672,6 +12822,7 @@ Use `|` for multiple commands:
 ### Global Variables
 
 Mooncake automatically provides system information:
+
 - `{{os}}` - Operating system (linux, darwin, windows)
 - `{{arch}}` - Architecture (amd64, arm64, etc.)
 
@@ -12858,6 +13009,7 @@ You can combine `creates`, `unless`, `when`, and `changed_when` for sophisticate
 ```
 
 This step:
+
 - Skips if `/usr/bin/mypackage` already exists
 - Only marks as changed if the package was actually installed
 - Only fails if there's a real error (not just "package not found")
@@ -12873,6 +13025,7 @@ This step:
 ```
 
 This step only runs if:
+
 - The OS family is Debian (via `when`)
 - The package is not already installed (via `unless`)
 - The compiler doesn't exist (via `creates`)
@@ -13222,27 +13375,32 @@ mooncake run --config myconfig.yml --raw --output-format json | \
 ## Event Types
 
 ### Run Lifecycle
+
 - `run.started` - Execution begins
 - `plan.loaded` - Plan has been built
 - `run.completed` - Execution finished
 
 ### Step Lifecycle
+
 - `step.started` - Step begins execution
 - `step.completed` - Step completed successfully
 - `step.failed` - Step failed with error
 - `step.skipped` - Step was skipped
 
 ### Output Streaming
+
 - `step.stdout` - Standard output line from shell step
 - `step.stderr` - Standard error line from shell step
 
 ### File Operations
+
 - `file.created` - File was created
 - `file.updated` - File was updated
 - `directory.created` - Directory was created
 - `template.rendered` - Template was rendered
 
 ### Variables
+
 - `variables.set` - Variables were set inline
 - `variables.loaded` - Variables were loaded from file
 
@@ -13461,6 +13619,7 @@ Iterate over lists of items:
 ```
 
 **What it does:**
+
 - Defines lists in variables
 - Installs multiple packages
 - Creates directories for multiple users
@@ -13476,6 +13635,7 @@ Iterate over files in a directory:
 ```
 
 **What it does:**
+
 - Iterates over files in `./files/` directory
 - Copies dotfiles to backup location
 - Filters directories vs files
@@ -13497,6 +13657,7 @@ Iterate over files in a directory:
 ```
 
 This creates:
+
 - `/home/alice`
 - `/home/bob`
 - `/home/charlie`
@@ -13511,6 +13672,7 @@ This creates:
 ```
 
 **Available properties:**
+
 - `item.src` - Full source path
 - `item.name` - File name
 - `item.is_dir` - Boolean, true if directory
@@ -13528,12 +13690,14 @@ Skip directories:
 ## Real-World Use Cases
 
 **with_items:**
+
 - Installing multiple packages
 - Creating multiple users/groups
 - Setting up multiple services
 - Deploying to multiple servers
 
 **with_filetree:**
+
 - Managing dotfiles
 - Deploying configuration directories
 - Backing up files
@@ -13626,6 +13790,7 @@ This guide demonstrates how to use Mooncake to manage macOS services using launc
 ### User Agents
 
 User agents run in the user's context (no sudo required):
+
 - **Path**: `~/Library/LaunchAgents/`
 - **Domain**: `gui/<uid>`
 - **Permissions**: Current user
@@ -13645,6 +13810,7 @@ User agents run in the user's context (no sudo required):
 ### System Daemons
 
 System daemons run as root (require sudo):
+
 - **Path**: `/Library/LaunchDaemons/`
 - **Domain**: `system`
 - **Permissions**: root (requires `become: true`)
@@ -13672,6 +13838,7 @@ System daemons run as root (require sudo):
 See: [`macos-nodejs-app.yml`](./macos-nodejs-app.yml)
 
 Complete example showing:
+
 - Directory setup
 - Dependency installation
 - Service configuration
@@ -13689,6 +13856,7 @@ mooncake run examples/macos-services/macos-nodejs-app.yml
 See: [`macos-service-management.yml`](./macos-service-management.yml)
 
 Examples of:
+
 - Starting/stopping services
 - Restarting services
 - Updating configuration
@@ -13705,6 +13873,7 @@ mooncake run examples/macos-services/macos-service-management.yml
 See: [`macos-launchd-service.yml`](./macos-launchd-service.yml)
 
 Demonstrates:
+
 - User agents
 - System daemons
 - Scheduled tasks
@@ -13923,15 +14092,18 @@ sudo launchctl bootstrap system /Library/LaunchDaemons/com.example.daemon.plist
 ### Common Issues
 
 **Issue**: Service not starting
+
 - Check plist syntax: `plutil -lint ~/Library/LaunchAgents/com.example.myapp.plist`
 - Check logs: `tail -f /path/to/error.log`
 - Verify program path exists
 
 **Issue**: Permission denied
+
 - User agents: Don't use `become: true`
 - System daemons: Must use `become: true`
 
 **Issue**: Service keeps restarting
+
 - Check exit code: `launchctl print gui/$(id -u)/com.example.myapp`
 - Review logs for errors
 - Add `ThrottleInterval` to prevent rapid restarts
@@ -13947,6 +14119,7 @@ mooncake run --dry-run examples/macos-services/macos-launchd-service.yml
 ```
 
 Output shows:
+
 - What plist files would be created/updated
 - What services would be started/stopped
 - What operations would be performed
@@ -13997,6 +14170,7 @@ steps:
 ## Testing
 
 All launchd functionality is tested:
+
 - ✅ Plist creation (inline and template)
 - ✅ Service state management
 - ✅ Load/unload operations
@@ -14281,6 +14455,7 @@ mooncake run -c examples/ollama/ollama-quick-start.yml --ask-become-pass
 
 ### `ollama-example.yml` (Comprehensive)
 Complete example demonstrating all Ollama preset capabilities:
+
 - Installation variations (basic, with service, via specific method)
 - Model management (single, multiple, force re-pull)
 - Service configuration (custom host, models directory, environment variables)
@@ -14299,6 +14474,7 @@ mooncake run -c examples/ollama/ollama-example.yml --ask-become-pass
 
 ### `ollama-quick-start.yml` (Beginner-Friendly)
 Fast introduction to Ollama preset with minimal configuration:
+
 - Quick installation
 - Single model download
 - Simple test queries
@@ -14388,6 +14564,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ## Documentation
 
 For complete documentation, see:
+
 - [Preset Reference](../../docs/guide/presets.md) - Full preset documentation
 - [Configuration Reference](../../docs/guide/config/reference.md) - Property tables
 - [Core Concepts](../../docs/guide/core-concepts.md) - Overview
@@ -14410,6 +14587,7 @@ Complete, practical examples showing how to combine Mooncake features for real-w
 **[dotfiles-manager/](dotfiles-manager/)** - Complete dotfiles deployment system
 
 Demonstrates:
+
 - Managing configuration files across machines
 - Template-based dynamic configs
 - OS-specific configurations
@@ -14417,6 +14595,7 @@ Demonstrates:
 - Tag-based selective deployment
 
 Perfect for:
+
 - Setting up new development machines
 - Keeping dotfiles in sync across systems
 - Team configuration standardization
@@ -14591,6 +14770,7 @@ mooncake run --config setup.yml --tags backup
 ## See Also
 
 This example combines concepts from:
+
 - [06-loops](../../06-loops/) - File iteration
 - [05-templates](../../05-templates/) - Config rendering
 - [08-tags](../../08-tags/) - Selective deployment
@@ -14733,6 +14913,7 @@ mooncake run --config setup.yml --tags backup
 ## See Also
 
 This example combines concepts from:
+
 - [06-loops](06-loops.md) - File iteration
 - [05-templates](05-templates.md) - Config rendering
 - [08-tags](08-tags.md) - Selective deployment
@@ -14787,6 +14968,7 @@ mooncake run --config config.yml
 After registering a result, you can access:
 
 **For shell commands:**
+
 - `register_name.stdout` - Standard output
 - `register_name.stderr` - Standard error
 - `register_name.rc` - Return/exit code (0 = success)
@@ -14794,11 +14976,13 @@ After registering a result, you can access:
 - `register_name.changed` - Boolean, always true for shell
 
 **For file operations:**
+
 - `register_name.rc` - 0 for success, 1 for failure
 - `register_name.failed` - Boolean, true if operation failed
 - `register_name.changed` - Boolean, true if file created/modified
 
 **For template operations:**
+
 - `register_name.rc` - 0 for success, 1 for failure
 - `register_name.failed` - Boolean, true if rendering failed
 - `register_name.changed` - Boolean, true if output file changed
@@ -14902,6 +15086,7 @@ Install Docker and Docker Compose on Ubuntu, then deploy a simple multi-containe
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing Docker Engine from official Docker repository
 - Installing Docker Compose plugin
 - Building a custom Flask application image
@@ -14948,16 +15133,19 @@ You can customize these variables:
 ## What Gets Deployed
 
 ### Docker Components
+
 - Docker Engine (latest stable)
 - Docker Compose plugin
 - containerd runtime
 - Docker Buildx plugin
 
 ### Container Stack
+
 - **Flask App Container** - Python web application
 - **Nginx Container** - Reverse proxy and load balancer
 
 ### Network
+
 - Custom bridge network for container communication
 - Port mappings for external access
 
@@ -15163,6 +15351,7 @@ sudo rm -rf /var/lib/docker
 ## Learning Points
 
 This example teaches:
+
 - Installing Docker from official repositories
 - Building custom Docker images with Dockerfile
 - Multi-container orchestration with Docker Compose
@@ -15203,6 +15392,7 @@ For production deployments, also consider:
 ## Next Steps
 
 After deployment, try:
+
 - Adding a PostgreSQL database service
 - Implementing Redis for caching
 - Adding more API endpoints
@@ -15223,6 +15413,7 @@ A simple "hello world" example that sets up an nginx web server on Ubuntu.
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing nginx via apt
 - Creating site configurations using templates
 - Deploying static content
@@ -15298,6 +15489,7 @@ sudo rm -f /etc/nginx/sites-available/mysite /etc/nginx/sites-enabled/mysite
 ## Learning Points
 
 This example teaches:
+
 - Installing packages with shell actions
 - Using templates for configuration files
 - File management (directories, copies, symlinks)
@@ -15317,6 +15509,7 @@ Deploy a simple Node.js Express application with PM2 process manager and nginx r
 ## What This Does
 
 This scenario demonstrates a complete web application deployment stack:
+
 - Installing Node.js and npm from NodeSource
 - Creating an Express.js web application
 - Managing the app with PM2 process manager
@@ -15362,12 +15555,14 @@ You can customize these variables:
 ## What Gets Deployed
 
 ### System Components
+
 - Node.js LTS (from NodeSource)
 - npm (Node Package Manager)
 - PM2 (Process Manager)
 - nginx (Reverse Proxy)
 
 ### Application Stack
+
 - Express.js web framework
 - PM2 process management with auto-restart
 - Nginx reverse proxy with proper headers
@@ -15484,6 +15679,7 @@ sudo apt-get remove --purge nodejs npm
 ## Learning Points
 
 This example teaches:
+
 - Installing Node.js from NodeSource repository
 - Creating Express.js applications
 - Using PM2 for process management
@@ -15496,6 +15692,7 @@ This example teaches:
 ## Production Considerations
 
 For production use, also consider:
+
 - SSL/TLS certificates with Let's Encrypt
 - Environment variable management
 - Database connections
@@ -15508,6 +15705,7 @@ For production use, also consider:
 ## Next Steps
 
 After deployment, try:
+
 - Modify the app to add new routes
 - Scale with PM2: `pm2 scale myapp 4`
 - Add SSL with certbot
@@ -15526,6 +15724,7 @@ Install and configure PostgreSQL on Ubuntu with a sample database schema.
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing PostgreSQL database server
 - Starting and enabling the PostgreSQL service
 - Creating a database and user
@@ -15571,20 +15770,25 @@ You can customize these variables:
 **Database:** `myapp_db`
 
 **Tables:**
+
 - `users` - User accounts with username, email, full_name
 - `posts` - User posts with title and content
 
 **Views:**
+
 - `active_users` - View of active users only
 
 **Functions:**
+
 - `get_user_post_count()` - Count posts for a user
 
 **Sample Data:**
+
 - 4 users (Alice, Bob, Charlie, Diana)
 - 4 posts
 
 ### Indexes
+
 - Username index
 - Email index
 - User ID foreign key index
@@ -15749,6 +15953,7 @@ sudo rm -rf /etc/postgresql/
 ## Learning Points
 
 This example teaches:
+
 - Installing PostgreSQL from Ubuntu repositories
 - Starting and managing PostgreSQL service
 - Creating databases and users programmatically
@@ -15774,6 +15979,7 @@ This example teaches:
 ## Next Steps
 
 After setup, try:
+
 - Adding more tables and relationships
 - Creating triggers and stored procedures
 - Setting up replication
@@ -15794,6 +16000,7 @@ Set up a complete Python machine learning environment on Ubuntu with popular ML 
 ## What This Does
 
 This scenario demonstrates:
+
 - Installing Python 3 and pip
 - Creating a Python virtual environment
 - Installing ML packages (numpy, pandas, matplotlib, scikit-learn, jupyter)
@@ -15834,11 +16041,13 @@ You can customize these variables:
 ## What Gets Installed
 
 ### System Packages
+
 - python3
 - python3-pip
 - python3-venv
 
 ### Python ML Packages
+
 - numpy - Numerical computing
 - pandas - Data analysis
 - matplotlib - Plotting and visualization
@@ -15887,6 +16096,7 @@ jupyter notebook notebooks/
 ## Sample Script
 
 The included `hello_ml.py` demonstrates:
+
 1. NumPy - Creating and manipulating arrays
 2. Pandas - Creating and analyzing DataFrames
 3. Scikit-learn - Training a simple classification model
@@ -15903,6 +16113,7 @@ sudo apt-get remove --purge python3-pip python3-venv
 ## Learning Points
 
 This example teaches:
+
 - Installing system packages with apt
 - Creating Python virtual environments
 - Installing Python packages with pip
@@ -15914,6 +16125,7 @@ This example teaches:
 ## Next Steps
 
 After setup, try:
+
 - Creating Jupyter notebooks in `~/ml-workspace/notebooks/`
 - Installing additional packages: `pip install tensorflow pytorch`
 - Following scikit-learn tutorials
@@ -16003,6 +16215,7 @@ mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
 ⚠️ **WARNING:** Password visible in shell history and process list. Requires explicit `--insecure-sudo-pass` flag.
 
 **Security Features:**
+
 - Passwords are automatically redacted from all log output
 - Only one password method can be used at a time
 - File permissions are strictly validated
@@ -16010,6 +16223,7 @@ mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
 ### Which Operations Need Sudo?
 
 **Typically require sudo:**
+
 - Package management (`apt`, `yum`, `dnf`)
 - System file operations (`/etc`, `/opt`, `/usr/local`)
 - Service management (`systemctl`)
@@ -16018,6 +16232,7 @@ mooncake run --config config.yml --sudo-pass mypassword --insecure-sudo-pass
 - Network configuration
 
 **Don't require sudo:**
+
 - User-space operations
 - Home directory files
 - `/tmp` directory
@@ -16134,28 +16349,35 @@ mooncake run --config config.yml -K --log-level debug | grep -i password
 ## Troubleshooting
 
 **"step requires sudo but no password provided"**
+
 - Provide password using `--ask-become-pass`, `--sudo-pass-file`, or `SUDO_ASKPASS`
 
 **"--sudo-pass requires --insecure-sudo-pass flag"**
+
 - CLI password flag requires explicit security acknowledgment
 - Use `--ask-become-pass` instead (more secure)
 
 **"password file must have 0600 permissions"**
+
 - Fix permissions: `chmod 0600 /path/to/password/file`
 - Verify ownership: `ls -l /path/to/password/file`
 
 **"only one password method can be specified"**
+
 - Remove conflicting password flags
 - Use only one of: `--ask-become-pass`, `--sudo-pass-file`, or `--sudo-pass`
 
 **"become is not supported on windows"**
+
 - Privilege escalation only works on Linux and macOS
 - Use platform-specific conditionals with `when`
 
 **Permission denied without sudo**
+
 - Add `become: true` to the step
 
 **Command not found**
+
 - Check if command exists: `which <command>`
 - Some commands need full paths with sudo
 
@@ -16201,6 +16423,7 @@ mooncake run --config config.yml --tags dev,test
 ## What It Does
 
 Demonstrates different tagged workflows:
+
 - Development setup
 - Production deployment
 - Testing
@@ -16222,13 +16445,16 @@ Demonstrates different tagged workflows:
 ### Tag Filtering Behavior
 
 **No tags specified:**
+
 - All steps run (including untagged steps)
 
 **Tags specified (`--tags dev`):**
+
 - Only steps with matching tags run
 - Untagged steps are skipped
 
 **Multiple tags (`--tags dev,prod`):**
+
 - Steps run if they have ANY of the specified tags
 - OR logic: matches `dev` OR `prod`
 
@@ -16267,6 +16493,7 @@ Steps can have multiple tags:
 ```
 
 This runs with:
+
 - `--tags test` ✓
 - `--tags prod` ✓
 - `--tags security` ✓
@@ -16314,6 +16541,7 @@ mooncake run --config config.yml --tags staging,deploy
 ```
 
 Both must match:
+
 1. Condition must be true (`os == "linux"`)
 2. Tag must match (if `--tags` specified)
 
@@ -16436,17 +16664,20 @@ Override variables for specific templates:
 
 ### config.yml.j2
 Application configuration with:
+
 - Conditional debug settings
 - Loops over features list
 - Variable substitution
 
 ### nginx.conf.j2
 Web server config with:
+
 - Conditional SSL configuration
 - Dynamic port and paths
 
 ### script.sh.j2
 Executable shell script with:
+
 - Shebang line
 - Variable expansion
 - Command loops
@@ -16525,25 +16756,30 @@ Use them in commands and paths:
 Mooncake automatically collects system information:
 
 **Basic:**
+
 - `os` - Operating system (linux, darwin, windows)
 - `arch` - Architecture (amd64, arm64)
 - `hostname` - System hostname
 - `user_home` - User's home directory
 
 **Hardware:**
+
 - `cpu_cores` - Number of CPU cores
 - `memory_total_mb` - Total RAM in megabytes
 
 **Distribution:**
+
 - `distribution` - Distribution name (ubuntu, debian, macos, etc.)
 - `distribution_version` - Full version (e.g., "22.04")
 - `distribution_major` - Major version number
 
 **Software:**
+
 - `package_manager` - Detected package manager (apt, yum, brew, etc.)
 - `python_version` - Installed Python version
 
 **Network:**
+
 - `ip_addresses` - Array of IP addresses
 - `ip_addresses_string` - Comma-separated IP addresses
 
@@ -16855,21 +17091,25 @@ mooncake facts [--format text|json]
 System information collected and available as template variables:
 
 **System:**
+
 - OS, distribution, kernel version, architecture, hostname
 
 **Hardware:**
+
 - CPU model, cores, flags (AVX, SSE, etc.)
 - Memory total/free, swap
 - GPUs (vendor, model, memory, driver, CUDA version)
 - Disks (device, mount point, size, usage)
 
 **Network:**
+
 - Network interfaces (name, MAC, MTU, addresses)
 - Default gateway
 - DNS servers
 - IP addresses
 
 **Software:**
+
 - Package manager (apt, brew, etc.)
 - Python version
 - Docker, Git, Go versions
@@ -17663,6 +17903,7 @@ Download files from remote URLs with checksum verification and retry support.
 Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
 
 **Idempotency:** Downloads are skipped when:
+
 - Destination file exists with matching checksum (when `checksum` is provided)
 - Destination file exists and `force: false` (without checksum - not recommended)
 
@@ -17762,6 +18003,7 @@ checksum: "5d41402abc4b2a76b9719d911017c592"
 ```
 
 **How it works:**
+
 1. If destination exists, calculate its checksum
 2. If checksums match → skip download (idempotent)
 3. If checksums differ → download new version
@@ -17811,6 +18053,7 @@ Manage system packages (install, remove, update) with automatic package manager 
 Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
 
 **Supported Package Managers:**
+
 - **Linux:** apt, dnf, yum, pacman, zypper, apk
 - **macOS:** brew, port
 - **Windows:** choco, scoop
@@ -18196,6 +18439,7 @@ See detailed examples with real-world use cases:
 Verify system state, command results, file properties, or HTTP responses. Assertions **never report `changed: true`** and **fail fast** if verification doesn't pass.
 
 **Use cases:**
+
 - Verify prerequisites before deployment
 - Check system configuration meets requirements
 - Validate API responses
@@ -18537,6 +18781,7 @@ Manage [Ollama](https://ollama.com) installation, service configuration, and mod
 **Platforms:** Linux (systemd), macOS (launchd/Homebrew)
 
 **Use cases:**
+
 - Install Ollama via package manager or official script
 - Configure Ollama as a system service
 - Pull and manage LLM models
@@ -18716,12 +18961,14 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
 ### Platform-Specific Behavior
 
 **Linux (systemd):**
+
 - Installation methods: apt/dnf/yum/pacman/zypper/apk (package), script (official installer)
 - Service: systemd unit at `/etc/systemd/system/ollama.service`
 - Configuration: Drop-in at `/etc/systemd/system/ollama.service.d/10-mooncake.conf`
 - Models: `~/.ollama/models` or custom `models_dir`
 
 **macOS (launchd):**
+
 - Installation methods: Homebrew (package), official script
 - Service: plist at `~/Library/LaunchAgents/` (user) or `/Library/LaunchDaemons/` (system, requires `become`)
 - Models: `~/.ollama/models` or custom `models_dir`
@@ -18818,6 +19065,7 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
 ### Idempotency and Changed Detection
 
 The `ollama` action is idempotent:
+
 - Installation: Reports `changed: false` if Ollama already installed
 - Service: Reports `changed: false` if service already running with correct configuration
 - Models: Reports `changed: false` if models already pulled (unless `force: true`)
@@ -19318,6 +19566,7 @@ Presets return aggregate results:
 ```
 
 **Result fields:**
+
 - `changed`: `true` if any step in preset changed
 - `failed`: `true` if preset execution failed
 - `rc`: Exit code (0 = success)
@@ -19366,6 +19615,7 @@ Built-in presets:
 ### Creating Custom Presets
 
 Place preset files in:
+
 1. `./presets/` (playbook directory)
 2. `~/.mooncake/presets/` (user directory)
 3. `/usr/share/mooncake/presets/` (system directory)
@@ -19938,13 +20188,16 @@ mooncake run --config config.yml
 ### Tag Behavior
 
 **No `--tags` flag:**
+
 - All steps run (tagged and untagged)
 
 **With `--tags dev`:**
+
 - Only steps with `dev` tag run
 - Untagged steps are skipped
 
 **With `--tags dev,prod`:**
+
 - Steps run if they have ANY matching tag (OR logic)
 - Step with `[dev]` runs
 - Step with `[prod]` runs
@@ -20002,6 +20255,7 @@ Avoid repetition by iterating over lists or files.
 ```
 
 **Available properties:**
+
 - `item.src` - Full source path
 - `item.name` - File name
 - `item.is_dir` - Boolean (true for directories)
@@ -20071,6 +20325,7 @@ Capture command output for use in later steps.
 ### Available Fields
 
 **For shell commands:**
+
 - `.stdout` - Standard output
 - `.stderr` - Standard error
 - `.rc` - Return code (0 = success)
@@ -20078,6 +20333,7 @@ Capture command output for use in later steps.
 - `.changed` - Boolean
 
 **For file/template:**
+
 - `.rc` - 0 for success, 1 for failure
 - `.failed` - Boolean
 - `.changed` - Boolean (true if file modified)
@@ -20111,6 +20367,7 @@ All control flow features work together:
 ```
 
 This step:
+
 - ✓ Iterates over packages
 - ✓ Only runs on macOS
 - ✓ Only runs with `--tags dev` or `--tags tools`
@@ -20330,6 +20587,7 @@ mooncake facts
 ```
 
 Output shows:
+
 - Operating system details (OS, distribution, kernel version)
 - CPU (cores, model, flags)
 - Memory (total, free, swap)
@@ -20592,6 +20850,7 @@ Mooncake uses a two-phase architecture for configuration execution:
    - Logs progress and status
 
 **Benefits:**
+
 - **Deterministic** - Same config always produces the same plan
 - **Inspectable** - Use `mooncake plan` to see what will execute
 - **Traceable** - Every step tracks its origin with include chain
@@ -20614,6 +20873,7 @@ Steps are executed sequentially:
 ## Actions
 
 Available actions:
+
 - **shell** / **command** - Execute shell commands or direct commands
 - **file** - Create files, directories, links, and manage permissions
 - **copy** - Copy files with checksum verification
@@ -20641,6 +20901,7 @@ Use `{{variable}}` syntax for dynamic values:
 ## System Facts
 
 Automatically available variables:
+
 - `os` - Operating system (linux, darwin, windows)
 - `arch` - Architecture (amd64, arm64)
 - `hostname` - System hostname
@@ -20678,6 +20939,7 @@ The name comes from the show "Final Space" where mooncakes are a beloved treat. 
 ### Is Mooncake production-ready?
 
 Yes! Mooncake is actively used for:
+
 - Personal dotfiles management
 - Development environment setup
 - System provisioning
@@ -20986,6 +21248,7 @@ mooncake run --config config.yml --raw --output-format json
 Not yet. Mooncake currently executes on localhost only. Remote execution is planned for a future release.
 
 For now, you can:
+
 1. Copy config to remote host and run locally
 2. Use SSH wrapper scripts
 3. Wait for remote execution support (coming soon!)
@@ -21297,6 +21560,7 @@ Contributions are welcome!
 ### What's the roadmap?
 
 See the [Roadmap](development/roadmap.md) for planned features:
+
 - Remote host execution
 - Parallel step execution
 - Enhanced service management
@@ -21692,6 +21956,7 @@ steps:
 ```
 
 Available package manager facts:
+
 - `apt_available` (Debian/Ubuntu)
 - `dnf_available` (Fedora/RHEL 8+)
 - `yum_available` (RHEL/CentOS 7)
@@ -22150,6 +22415,7 @@ sudo cp my-preset.yml /usr/share/mooncake/presets/
 ### Sharing
 
 Share presets via:
+
 - Git repositories
 - Package managers
 - Direct file distribution
@@ -22182,6 +22448,7 @@ Presets are reusable, parameterized collections of steps that can be invoked as 
 ## What is a Preset?
 
 A preset is essentially a YAML file that defines:
+
 - **Parameters**: Configurable inputs with types, defaults, and validation
 - **Steps**: A sequence of mooncake steps to execute
 - **Metadata**: Name, description, and version information
@@ -22191,6 +22458,7 @@ Think of presets as functions or modules - they take parameters and execute a pr
 ## Why Use Presets?
 
 **Benefits:**
+
 - **Reusability**: Write once, use everywhere
 - **Maintainability**: Update logic in one place
 - **Discoverability**: Share presets as files, no code changes needed
@@ -22368,6 +22636,7 @@ presets/
 ```
 
 When both exist, the directory format takes precedence:
+
 - `presets/ollama/preset.yml` is loaded before `presets/ollama.yml`
 
 ### Example Directory Structure
@@ -22410,6 +22679,7 @@ Presets support result registration at the preset level:
 ```
 
 **Preset results contain:**
+
 - `changed`: `true` if any step changed
 - `stdout`: Summary message
 - `rc`: Always 0 (success) or error
@@ -22499,6 +22769,7 @@ Output:
 ```
 
 In dry-run mode, presets:
+
 - Show parameter count
 - Don't execute steps (but may expand them for display)
 - Return `changed: true` (pessimistic assumption)
@@ -23152,6 +23423,7 @@ mooncake presets uninstall docker
 ```
 
 ### Operators
+
 - `==` Equal
 - `!=` Not equal
 - `>` Greater than
@@ -23459,6 +23731,7 @@ Error: invalid configuration: unknown field 'shel' in step 1
 ```
 
 **Solution**: Check spelling of action names and fields. Common typos:
+
 - `shel` → `shell`
 - `comand` → `command`
 - `templete` → `template`
@@ -23473,6 +23746,7 @@ mooncake plan --config config.yml  # Validates without running
 **Problem**: Invalid YAML syntax.
 
 **Solution**: Check YAML formatting:
+
 - Proper indentation (use spaces, not tabs)
 - Quoted strings containing special characters
 - Proper list syntax
@@ -23517,6 +23791,7 @@ Error: failed to expand template: variable 'my_var' is not defined
 ```
 
 **Solution**:
+
 1. Define the variable before using it:
 ```yaml
 - vars:
@@ -23589,6 +23864,7 @@ mooncake run --config config.yml
 **Problem**: Shell command doesn't exist on the system.
 
 **Solution**:
+
 1. Check if command is installed:
 ```yaml
 - name: Check if docker exists
@@ -23654,6 +23930,7 @@ mooncake run --config config.yml
 **Problem**: Trying to operate on a file that doesn't exist, or parent directory doesn't exist.
 
 **Solution**:
+
 1. Create parent directories first:
 ```yaml
 - name: Create parent directory
@@ -23682,6 +23959,7 @@ mooncake run --config config.yml
 **Problem**: Downloaded file checksum doesn't match expected value.
 
 **Solution**:
+
 1. Verify the checksum value is correct
 2. Re-download the file (might be corrupted)
 3. Check if upstream changed the file
@@ -23711,6 +23989,7 @@ shasum -a 256 file.tar.gz  # macOS
 **Problem**: Using a variable that hasn't been defined.
 
 **Solution**:
+
 1. Define variable before use:
 ```yaml
 - vars:
@@ -23767,6 +24046,7 @@ shasum -a 256 file.tar.gz  # macOS
 **Problem**: macOS security restrictions prevent file operations.
 
 **Solution**:
+
 1. Grant Full Disk Access to Terminal:
    - System Settings → Privacy & Security → Full Disk Access
    - Add Terminal.app or iTerm.app
@@ -23778,6 +24058,7 @@ shasum -a 256 file.tar.gz  # macOS
 **Problem**: Trying to manage a service that doesn't exist.
 
 **Solution**:
+
 1. Verify service name:
 ```bash
 systemctl list-units --type=service | grep myservice
@@ -23835,6 +24116,7 @@ systemctl list-units --type=service | grep myservice
 **Problem**: Trying to use a preset that doesn't exist.
 
 **Solution**:
+
 1. List available presets:
 ```bash
 mooncake presets list
@@ -23880,6 +24162,7 @@ Use correct parameter names and types:
 **Problem**: Preset step failed.
 
 **Solution**:
+
 1. Run with debug logging:
 ```bash
 mooncake run --config config.yml --log-level debug
@@ -23902,6 +24185,7 @@ cat ~/.mooncake/presets/docker/preset.yml
 **Problem**: Configuration takes a long time to run.
 
 **Solution**:
+
 1. Use dry-run to identify slow steps:
 ```bash
 mooncake run --config config.yml --dry-run
@@ -27236,26 +27520,31 @@ This guide defines the gold standard for creating Mooncake presets. Following th
 ### Core Values
 
 **1. Simplicity First**
+
 - Presets should make complex operations simple, not simple operations complex
 - Minimize required parameters, maximize sensible defaults
 - A basic installation should be ONE command: `preset: tool-name`
 
 **2. Copy-Paste Ready**
+
 - Every example must work without modification
 - No placeholders without clear substitution instructions
 - Provide complete, working configurations
 
 **3. Production Grade**
+
 - Assume presets run on real infrastructure
 - Include error handling, validation, and safety checks
 - Document security implications and best practices
 
 **4. AI-Agent Friendly**
+
 - Structure documentation for both human and LLM consumption
 - Include "Agent Use" sections describing automation use cases
 - Provide machine-readable success criteria
 
 **5. Discoverability**
+
 - Users should understand what a preset does in 10 seconds
 - Quick Start section must come first
 - Common operations clearly documented
@@ -27293,6 +27582,7 @@ presets/
 ```
 
 **When to use directory format:**
+
 - Tool requires service configuration (systemd/launchd)
 - Multiple installation methods (package manager, script, source)
 - Platform-specific logic (Linux vs macOS vs Windows)
@@ -27300,6 +27590,7 @@ presets/
 - More than 50 lines of preset logic
 
 **When to use flat format:**
+
 - Simple package installation (single command)
 - No service configuration
 - Minimal platform differences
@@ -27338,6 +27629,7 @@ steps:
 ```
 
 **Naming Conventions:**
+
 - **Preset name**: Use tool's official name (lowercase, hyphens for multi-word)
   - ✅ `kubectl`, `helm`, `modern-unix`
   - ❌ `kube-ctl`, `Helm`, `modern_unix`
@@ -27422,6 +27714,7 @@ How AI agents can leverage this tool:
 ### Section Guidelines
 
 #### 1. Quick Start (REQUIRED)
+
 - **First code block users see**
 - **Must work without modification**
 - **Shows simplest possible usage**
@@ -27434,6 +27727,7 @@ How AI agents can leverage this tool:
 ```
 
 #### 2. Features (REQUIRED)
+
 - **Bullet list of key capabilities**
 - **Focus on value, not implementation**
 - **3-8 items maximum**
@@ -27447,6 +27741,7 @@ How AI agents can leverage this tool:
 ```
 
 #### 3. Basic Usage (REQUIRED)
+
 - **Real commands users will run**
 - **Common operations first**
 - **Include expected output when helpful**
@@ -27466,6 +27761,7 @@ kubectl create deployment nginx --image=nginx
 ```
 
 #### 4. Advanced Configuration (REQUIRED)
+
 - **Show all parameter options**
 - **Real working examples, not just parameter lists**
 - **Group related parameters**
@@ -27485,6 +27781,7 @@ kubectl create deployment nginx --image=nginx
 ```
 
 #### 5. Real-World Examples (HIGHLY RECOMMENDED)
+
 - **Show tool in realistic scenarios**
 - **Complete workflows, not isolated commands**
 - **Include context (why you'd do this)**
@@ -27509,6 +27806,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 6. Agent Use (REQUIRED)
+
 - **How AI agents can use this tool**
 - **Automation-friendly use cases**
 - **Decision criteria for agents**
@@ -27523,6 +27821,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 7. Configuration (RECOMMENDED)
+
 - **File locations (absolute paths)**
 - **Default ports/addresses**
 - **Directory permissions**
@@ -27537,6 +27836,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 8. Platform Support (REQUIRED)
+
 - **Clear matrix of what works where**
 - **Use ✅ ❌ symbols for clarity**
 - **Note installation methods**
@@ -27549,6 +27849,7 @@ curl https://api.example.com/data | jq '.users[].email'
 ```
 
 #### 9. Troubleshooting (RECOMMENDED)
+
 - **Common issues and solutions**
 - **How to check logs**
 - **Debug mode instructions**
@@ -27568,6 +27869,7 @@ Most operations require `become: true` (sudo).
 ```
 
 #### 10. Resources (REQUIRED)
+
 - **Official documentation link**
 - **Search suggestions (for AI agents)**
 - **Community resources**
@@ -27582,6 +27884,7 @@ Most operations require `become: true` (sudo).
 ### Writing Style
 
 **DO:**
+
 - ✅ Use active voice ("Install Docker" not "Docker installation")
 - ✅ Write concise descriptions (one sentence per bullet)
 - ✅ Include concrete examples, not abstract descriptions
@@ -27589,6 +27892,7 @@ Most operations require `become: true` (sudo).
 - ✅ Add context to code blocks (what it does, when to use)
 
 **DON'T:**
+
 - ❌ Write marketing copy ("the best tool", "amazing")
 - ❌ Use vague placeholders (`<your-value>` without guidance)
 - ❌ Assume prior knowledge (explain domain-specific terms)
@@ -27598,6 +27902,7 @@ Most operations require `become: true` (sudo).
 ### Code Block Standards
 
 **Always include:**
+
 - Language identifier (yaml, bash, python, etc.)
 - Context comment (what this does, when to use)
 - Complete working example
@@ -27606,6 +27911,7 @@ Most operations require `become: true` (sudo).
 ## Example
 ```yaml
 # Production deployment with custom settings
+
 - preset: myapp
   with:
     environment: production
@@ -27646,6 +27952,7 @@ parameters:
 ### Parameter Naming Conventions
 
 **Standard names** (use these for consistency):
+
 - `state`: Installation state (present/absent)
 - `version`: Specific version to install
 - `service`: Enable as system service (bool)
@@ -27658,6 +27965,7 @@ parameters:
 - `config_file`: Configuration file path
 
 **Naming rules:**
+
 - Use snake_case (not camelCase)
 - Be specific: `database_url` not `url`
 - Avoid abbreviations: `configuration` not `cfg`
@@ -27757,6 +28065,7 @@ parameters:
 ### Required vs Optional
 
 **Make required ONLY when:**
+
 - No sensible default exists
 - Value is user-specific (API keys, hostnames)
 - Incorrect guess would be dangerous
@@ -27819,24 +28128,28 @@ parameters:
 ### Task File Guidelines
 
 **install.yml:**
+
 - Platform detection
 - Multiple installation methods with fallback
 - Idempotency (check if already installed)
 - Exit early if already present
 
 **configure.yml:**
+
 - Create configuration files
 - Set up service files (systemd/launchd)
 - Apply configuration changes
 - Restart services if needed
 
 **verify.yml** (optional):
+
 - Health checks
 - Connectivity tests
 - Version verification
 - Configuration validation
 
 **uninstall.yml:**
+
 - Stop services
 - Remove binaries
 - Clean up configuration (optional)
@@ -27940,6 +28253,7 @@ parameters:
 ### Available Facts
 
 **Package managers:**
+
 - `apt_available` (Debian, Ubuntu)
 - `dnf_available` (Fedora, RHEL 8+)
 - `yum_available` (CentOS, RHEL 7)
@@ -27950,11 +28264,13 @@ parameters:
 - `port_available` (macOS)
 
 **Operating systems:**
+
 - `os` ("linux", "darwin", "windows")
 - `arch` ("amd64", "arm64")
 - `hostname`
 
 **System info:**
+
 - `cpu_cores`
 - `memory_total_mb`
 - `distribution` (Linux only: "ubuntu", "fedora", etc.)
@@ -28023,6 +28339,7 @@ parameters:
 ### Installation Method Hierarchy
 
 **Preferred order:**
+
 1. Package manager (most reliable, gets updates)
 2. Official installation script (maintained by tool vendor)
 3. Binary download (with checksum verification)
@@ -28237,6 +28554,7 @@ mooncake run -c test.yml --dry-run
 ### Multi-Platform Testing
 
 **Test matrix:**
+
 - [ ] Ubuntu 22.04 (apt)
 - [ ] Fedora 39 (dnf)
 - [ ] macOS 14 (Homebrew)
@@ -28475,6 +28793,7 @@ commands here
 ### Use Case 2
 ```yaml
 # Mooncake example
+
 - preset: tool-name
   with:
     specific: configuration
@@ -28516,11 +28835,13 @@ Solution and explanation.
 ### Before Submitting Preset
 
 **Structure:**
+
 - [ ] Directory structure follows conventions
 - [ ] All files in correct locations
 - [ ] No unnecessary files included
 
 **preset.yml:**
+
 - [ ] Name matches directory/filename
 - [ ] Description is clear and concise (one line)
 - [ ] Version follows semver (1.0.0)
@@ -28531,6 +28852,7 @@ Solution and explanation.
 - [ ] Conditionals use system facts (not hardcoded OS checks)
 
 **README.md:**
+
 - [ ] Quick Start section comes first
 - [ ] Quick Start example works without modification
 - [ ] Features section lists 3-8 key capabilities
@@ -28544,6 +28866,7 @@ Solution and explanation.
 - [ ] Resources include official docs and search terms
 
 **Code Quality:**
+
 - [ ] All steps have descriptive names
 - [ ] No hardcoded values (use parameters)
 - [ ] Idempotency: runs safely multiple times
@@ -28553,6 +28876,7 @@ Solution and explanation.
 - [ ] Task files use action-oriented names
 
 **Testing:**
+
 - [ ] Tested with `--dry-run`
 - [ ] Tested on at least one Linux distro
 - [ ] Tested on macOS (if claiming support)
@@ -28561,6 +28885,7 @@ Solution and explanation.
 - [ ] All examples in README tested
 
 **Documentation:**
+
 - [ ] No typos or grammatical errors
 - [ ] Code blocks have language identifiers
 - [ ] All examples are complete and working
@@ -28572,6 +28897,7 @@ Solution and explanation.
 ## Version History
 
 **1.0.0** (2026-02-06)
+
 - Initial comprehensive style guide
 - Consolidated patterns from 16 production presets
 - Added templates and checklists
@@ -28584,12 +28910,14 @@ Solution and explanation.
 This guide is a living document. When you create a great preset that establishes a new pattern, update this guide with that pattern.
 
 **To propose changes:**
+
 1. Create example preset demonstrating the pattern
 2. Document the pattern with rationale
 3. Update relevant sections of this guide
 4. Submit for review
 
 **Principles for guide updates:**
+
 - Patterns must be proven in production presets
 - Keep the guide concise - quality over quantity
 - Examples must be complete and tested
@@ -28609,6 +28937,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 ### For Getting Started
 
 **[Quick Reference](quick-reference.md)** - Start here for common commands
+
 - One-line commands for daily use
 - Quick examples and usage patterns
 - Troubleshooting quick fixes
@@ -28617,6 +28946,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 ### For Understanding the System
 
 **[Testing Guide](guide.md)** - Complete testing guide
+
 - Overview of the testing setup
 - Detailed instructions for local and CI testing
 - Test structure and organization
@@ -28625,6 +28955,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 - Best practices
 
 **[Architecture](architecture.md)** - System architecture and design
+
 - Visual diagrams of the testing infrastructure
 - How components work together
 - Data flow and execution paths
@@ -28634,6 +28965,7 @@ Complete testing documentation for the Mooncake multi-platform testing infrastru
 ### For Implementation Details
 
 **[Implementation Summary](implementation-summary.md)** - What was built
+
 - Complete list of files created and modified
 - Phase-by-phase implementation breakdown
 - Success criteria checklist
@@ -29198,6 +29530,7 @@ testing/
 ### Smoke Tests
 
 Fast validation tests that verify basic functionality:
+
 - Binary execution and version check
 - Simple file operations
 - Basic shell commands
@@ -29209,6 +29542,7 @@ Fast validation tests that verify basic functionality:
 ### Integration Tests
 
 Comprehensive tests that validate full features:
+
 - Complete file management operations
 - Loop iteration
 - Conditional execution
@@ -29400,6 +29734,7 @@ go build -v -o out/mooncake ./cmd
 ### Coverage Reports
 
 Code coverage is automatically calculated and uploaded to Codecov:
+
 - Only runs on Ubuntu (to avoid duplicate reports)
 - View at: https://codecov.io/gh/alehatsman/mooncake
 
@@ -29546,12 +29881,14 @@ Successfully implemented comprehensive multi-platform testing infrastructure for
 ### Phase 4: Test Fixtures and Scenarios 
 
 **Smoke Tests** (4 tests):
+
 - `001-version-check.yml` - Verify mooncake installation and version
 - `002-simple-file.yml` - Basic file operations (create, verify, delete)
 - `003-simple-shell.yml` - Shell command execution and output capture
 - `004-simple-vars.yml` - Variable substitution and usage
 
 **Integration Tests** (4 tests):
+
 - `010-file-operations.yml` - Complete file management workflow
 - `020-loops.yml` - Loop iteration with file creation
 - `030-conditionals.yml` - Conditional execution tests
@@ -29654,23 +29991,27 @@ make test-integration
 ## Key Features
 
 ### Fast Iteration
+
 - `make test-quick` completes in ~2 minutes
 - Cached Docker layers speed up subsequent builds
 - Parallel CI execution maximizes throughput
 
 ### Comprehensive Coverage
+
 - 5 Linux distributions tested
 - macOS Intel and Apple Silicon covered
 - Windows Server testing in CI
 - Both unit and integration tests
 
 ### Developer-Friendly
+
 - Single command testing (`make test-all-platforms`)
 - Clear error messages and logs
 - Test results saved locally
 - Comprehensive documentation
 
 ### CI/CD Integration
+
 - Parallel job execution
 - Matrix testing for platforms and distros
 - Coverage reporting
@@ -29714,6 +30055,7 @@ grep -A 20 "## Testing" README.md
 ## Expected Test Times
 
 ### Local
+
 - `make test`: ~10 seconds (Go unit tests)
 - `make test-quick`: ~2 minutes (smoke on Ubuntu)
 - `make test-smoke`: ~10 minutes (smoke on all distros)
@@ -29721,6 +30063,7 @@ grep -A 20 "## Testing" README.md
 - `make test-all-platforms`: ~15 minutes (native + Docker)
 
 ### CI
+
 - Unit tests: ~2-3 minutes per platform (4 platforms in parallel)
 - Docker tests: ~5-7 minutes total (5 distros in parallel)
 - Integration tests: ~3-5 minutes per platform (3 platforms in parallel)
@@ -29729,18 +30072,21 @@ grep -A 20 "## Testing" README.md
 ## Next Steps
 
 ### Immediate (Required for First Run)
+
 1.  Build mooncake binary: `go build -v -o out/mooncake ./cmd`
 2.  Run first smoke test: `make test-quick`
 3.  Verify CI workflow: Push to GitHub and check Actions
 4.  Review test results: Check `testing/results/` for logs
 
 ### Short-term Improvements
+
 1. Add more integration tests as features are developed
 2. Monitor CI for flaky tests and fix or remove them
 3. Add platform-specific tests where needed
 4. Update documentation based on team feedback
 
 ### Long-term Enhancements
+
 1. ARM64 Linux testing support
 2. Performance benchmarking across platforms
 3. Test result dashboard/reporting
@@ -29942,6 +30288,7 @@ make test-all-platforms      # Full local suite
 
 ### After Pushing
 Check GitHub Actions:
+
 - https://github.com/alehatsman/mooncake/actions
 
 ### Adding New Test

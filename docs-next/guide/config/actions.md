@@ -638,6 +638,7 @@ Download files from remote URLs with checksum verification and retry support.
 Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
 
 **Idempotency:** Downloads are skipped when:
+
 - Destination file exists with matching checksum (when `checksum` is provided)
 - Destination file exists and `force: false` (without checksum - not recommended)
 
@@ -737,6 +738,7 @@ checksum: "5d41402abc4b2a76b9719d911017c592"
 ```
 
 **How it works:**
+
 1. If destination exists, calculate its checksum
 2. If checksums match → skip download (idempotent)
 3. If checksums differ → download new version
@@ -786,6 +788,7 @@ Manage system packages (install, remove, update) with automatic package manager 
 Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `register`, `with_items`, `with_filetree`
 
 **Supported Package Managers:**
+
 - **Linux:** apt, dnf, yum, pacman, zypper, apk
 - **macOS:** brew, port
 - **Windows:** choco, scoop
@@ -1171,6 +1174,7 @@ See detailed examples with real-world use cases:
 Verify system state, command results, file properties, or HTTP responses. Assertions **never report `changed: true`** and **fail fast** if verification doesn't pass.
 
 **Use cases:**
+
 - Verify prerequisites before deployment
 - Check system configuration meets requirements
 - Validate API responses
@@ -1512,6 +1516,7 @@ Manage [Ollama](https://ollama.com) installation, service configuration, and mod
 **Platforms:** Linux (systemd), macOS (launchd/Homebrew)
 
 **Use cases:**
+
 - Install Ollama via package manager or official script
 - Configure Ollama as a system service
 - Pull and manage LLM models
@@ -1691,12 +1696,14 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
 ### Platform-Specific Behavior
 
 **Linux (systemd):**
+
 - Installation methods: apt/dnf/yum/pacman/zypper/apk (package), script (official installer)
 - Service: systemd unit at `/etc/systemd/system/ollama.service`
 - Configuration: Drop-in at `/etc/systemd/system/ollama.service.d/10-mooncake.conf`
 - Models: `~/.ollama/models` or custom `models_dir`
 
 **macOS (launchd):**
+
 - Installation methods: Homebrew (package), official script
 - Service: plist at `~/Library/LaunchAgents/` (user) or `/Library/LaunchDaemons/` (system, requires `become`)
 - Models: `~/.ollama/models` or custom `models_dir`
@@ -1793,6 +1800,7 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
 ### Idempotency and Changed Detection
 
 The `ollama` action is idempotent:
+
 - Installation: Reports `changed: false` if Ollama already installed
 - Service: Reports `changed: false` if service already running with correct configuration
 - Models: Reports `changed: false` if models already pulled (unless `force: true`)
@@ -2293,6 +2301,7 @@ Presets return aggregate results:
 ```
 
 **Result fields:**
+
 - `changed`: `true` if any step in preset changed
 - `failed`: `true` if preset execution failed
 - `rc`: Exit code (0 = success)
@@ -2341,6 +2350,7 @@ Built-in presets:
 ### Creating Custom Presets
 
 Place preset files in:
+
 1. `./presets/` (playbook directory)
 2. `~/.mooncake/presets/` (user directory)
 3. `/usr/share/mooncake/presets/` (system directory)

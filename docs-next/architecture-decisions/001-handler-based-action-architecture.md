@@ -16,6 +16,7 @@ The original mooncake executor implemented actions as large switch statements an
 5. **Limited Extensibility**: No clean way to add actions without modifying core executor code
 
 The codebase had:
+
 - ~20,000 lines of action implementation code in executor package
 - 12 `*_step.go` files and 5 `*_step_test.go` files
 - Manual dispatcher with 40+ line switch statement
@@ -26,6 +27,7 @@ The codebase had:
 We adopted a **handler-based architecture** with the following key components:
 
 **Benefits:**
+
 - **Modular**: Each action is self-contained in one file
 - **Extensible**: Adding new actions requires only 1 file + registration
 - **Testable**: Actions can be tested in isolation
@@ -283,6 +285,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 ## Compliance
 
 This ADR complies with:
+
 - Go package design principles
 - SOLID principles (especially Single Responsibility and Open/Closed)
 - Clean Architecture patterns

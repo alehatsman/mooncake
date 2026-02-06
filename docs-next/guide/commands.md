@@ -199,21 +199,25 @@ mooncake facts [--format text|json]
 System information collected and available as template variables:
 
 **System:**
+
 - OS, distribution, kernel version, architecture, hostname
 
 **Hardware:**
+
 - CPU model, cores, flags (AVX, SSE, etc.)
 - Memory total/free, swap
 - GPUs (vendor, model, memory, driver, CUDA version)
 - Disks (device, mount point, size, usage)
 
 **Network:**
+
 - Network interfaces (name, MAC, MTU, addresses)
 - Default gateway
 - DNS servers
 - IP addresses
 
 **Software:**
+
 - Package manager (apt, brew, etc.)
 - Python version
 - Docker, Git, Go versions

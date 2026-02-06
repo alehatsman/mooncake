@@ -16,6 +16,7 @@ As mooncake matured, users frequently requested support for common deployment pa
 5. **Tight Coupling**: Tool-specific logic mixed with mooncake core
 
 The Ollama action exemplified these issues:
+
 - 672 lines in `ollama_step.go` + 646 lines of tests
 - Platform detection logic (apt/dnf/yum/brew)
 - Service configuration (systemd/launchd)
@@ -29,6 +30,7 @@ Most of this logic could be expressed in YAML using existing mooncake actions (s
 We adopted a **preset system** that allows packaging reusable workflows as YAML files. Presets expand into constituent steps at execution time with parameter injection.
 
 **Benefits:**
+
 - **Extensible**: Users can create presets without Go knowledge
 - **Maintainable**: Update workflows in YAML, no code releases needed
 - **Smaller Binary**: Tool-specific code moved out of core
@@ -37,6 +39,7 @@ We adopted a **preset system** that allows packaging reusable workflows as YAML 
 ### 1. Preset Structure
 
 Presets are YAML files defining:
+
 - **Name**: Unique identifier
 - **Description**: Human-readable summary
 - **Version**: Semantic version
@@ -70,6 +73,7 @@ preset:
 ### 2. Key Architectural Decisions
 
 #### Flat Presets Only (No Nesting)
+
 - Presets CANNOT invoke other presets
 - Prevents circular dependencies
 - Simpler mental model and execution flow
@@ -83,6 +87,7 @@ preset:
 ```
 
 #### Parameters Namespace
+
 - Parameters accessible via `parameters.name` in templates
 - Clear separation from variables and facts
 - Prevents naming collisions
@@ -93,6 +98,7 @@ preset:
 ```
 
 #### Register at Preset Level
+
 - Preset returns aggregate result (changed = any step changed)
 - Users get `preset_result.changed`, `preset_result.stdout`
 - Individual step results not exposed (encapsulation)
@@ -107,12 +113,14 @@ preset:
 ```
 
 #### Discovery Paths (Priority Order)
+
 1. `./presets/` - Playbook-local presets
 2. `~/.mooncake/presets/` - User presets
 3. `/usr/local/share/mooncake/presets/` - Local installation
 4. `/usr/share/mooncake/presets/` - System installation
 
 #### Two File Formats
+
 - **Flat**: `<name>.yml` (e.g., `presets/ollama.yml`)
 - **Directory**: `<name>/preset.yml` (e.g., `presets/ollama/preset.yml`)
 - Directory format supports bundling templates/files with preset
@@ -132,6 +140,7 @@ preset:
 ### 4. Integration with Planner
 
 Presets integrate with the planner's expansion system:
+
 - Preset steps may contain `include` directives → expanded by planner
 - Preset steps may contain `with_items` loops → expanded by planner
 - Preset steps may use relative paths → resolved from preset base directory
@@ -388,6 +397,7 @@ steps:
 ### Ollama Migration Success
 
 The Ollama action was successfully migrated to a preset:
+
 - **Before**: 1,400 lines Go (action + tests)
 - **After**: 250 lines YAML
 - **Functionality**: Identical (all features preserved)
@@ -415,6 +425,7 @@ This validates that presets can handle complex, multi-platform workflows.
 ## Compliance
 
 This ADR complies with:
+
 - YAML specification for preset format
 - JSON Schema for parameter validation
 - Mooncake code style guidelines
@@ -446,6 +457,7 @@ This ADR complies with:
 ## Appendix: Migration Statistics
 
 ### Ollama Action Removal
+
 - **Files Deleted**: 2 files (1,318 lines)
   - `internal/executor/ollama_step.go` (672 lines)
   - `internal/executor/ollama_step_test.go` (646 lines)
@@ -456,6 +468,7 @@ This ADR complies with:
 - **User Migration**: Update `ollama:` to `preset: {name: ollama, with: {...}}`
 
 ### Preset System Implementation
+
 - **Core Files**: 4 files (715 lines)
   - `internal/presets/loader.go` (120 lines)
   - `internal/presets/validator.go` (180 lines)
@@ -469,6 +482,7 @@ This ADR complies with:
 - **Examples**: 30+ examples in `examples/ollama/`
 
 ### Overall Impact
+
 - **Code**: -1,068 lines (action removal) + 715 lines (preset system) = -353 net lines
 - **Extensibility**: Users can now create presets without Go knowledge
 - **Maintenance**: Preset updates = YAML edits (no releases needed)

@@ -43,25 +43,30 @@ Use them in commands and paths:
 Mooncake automatically collects system information:
 
 **Basic:**
+
 - `os` - Operating system (linux, darwin, windows)
 - `arch` - Architecture (amd64, arm64)
 - `hostname` - System hostname
 - `user_home` - User's home directory
 
 **Hardware:**
+
 - `cpu_cores` - Number of CPU cores
 - `memory_total_mb` - Total RAM in megabytes
 
 **Distribution:**
+
 - `distribution` - Distribution name (ubuntu, debian, macos, etc.)
 - `distribution_version` - Full version (e.g., "22.04")
 - `distribution_major` - Major version number
 
 **Software:**
+
 - `package_manager` - Detected package manager (apt, yum, brew, etc.)
 - `python_version` - Installed Python version
 
 **Network:**
+
 - `ip_addresses` - Array of IP addresses
 - `ip_addresses_string` - Comma-separated IP addresses
 

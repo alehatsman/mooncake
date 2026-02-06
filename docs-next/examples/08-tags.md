@@ -33,6 +33,7 @@ mooncake run --config config.yml --tags dev,test
 ## What It Does
 
 Demonstrates different tagged workflows:
+
 - Development setup
 - Production deployment
 - Testing
@@ -54,13 +55,16 @@ Demonstrates different tagged workflows:
 ### Tag Filtering Behavior
 
 **No tags specified:**
+
 - All steps run (including untagged steps)
 
 **Tags specified (`--tags dev`):**
+
 - Only steps with matching tags run
 - Untagged steps are skipped
 
 **Multiple tags (`--tags dev,prod`):**
+
 - Steps run if they have ANY of the specified tags
 - OR logic: matches `dev` OR `prod`
 
@@ -99,6 +103,7 @@ Steps can have multiple tags:
 ```
 
 This runs with:
+
 - `--tags test` ✓
 - `--tags prod` ✓
 - `--tags security` ✓
@@ -146,6 +151,7 @@ mooncake run --config config.yml --tags staging,deploy
 ```
 
 Both must match:
+
 1. Condition must be true (`os == "linux"`)
 2. Tag must match (if `--tags` specified)
 

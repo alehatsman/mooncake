@@ -35,6 +35,7 @@ The fundamental issue: **configuration expansion mixed with execution**, making 
 We adopted a **two-phase architecture** separating configuration expansion (planning) from execution:
 
 **Benefits:**
+
 - **Deterministic**: Same config always produces the same plan
 - **Inspectable**: Use `mooncake plan` to see what will execute
 - **Traceable**: Every step tracks its origin with include chain
@@ -42,6 +43,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 
 ### Phase 1: Planning (Compile-Time)
 **Planner** expands configuration into a deterministic execution plan
+
 - Resolves includes recursively
 - Expands loops (with_items, with_filetree)
 - Processes compile-time variables (vars, include_vars)
@@ -54,6 +56,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 
 ### Phase 2: Execution (Runtime)
 **Executor** runs the pre-compiled plan step by step
+
 - Evaluates runtime conditions (when, unless, creates)
 - Executes actions through handlers
 - Manages variables and results
@@ -67,6 +70,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 #### 1. Compile-Time vs Runtime Directives
 
 **Compile-Time** (processed by planner):
+
 - `include`: File inclusion
 - `with_items`: Loop expansion
 - `with_filetree`: Directory tree iteration
@@ -74,6 +78,7 @@ We adopted a **two-phase architecture** separating configuration expansion (plan
 - `include_vars`: Variable file loading (when condition evaluable at plan time)
 
 **Runtime** (processed by executor):
+
 - `when`: Conditional execution
 - `unless`: Idempotency check (shell/command only)
 - `creates`: Idempotency check (shell/command only)
@@ -96,6 +101,7 @@ All relative paths resolved **at plan time** based on the file containing them:
 ```
 
 **Rules**:
+
 1. Relative paths joined with `CurrentDir` (directory of containing file)
 2. Resolution happens during planning, before execution
 3. Absolute paths used as-is
@@ -107,6 +113,7 @@ All relative paths resolved **at plan time** based on the file containing them:
 Variables split into two categories:
 
 **Plan-Time Variables** (available during expansion):
+
 - Global vars from config (`vars:` at root level)
 - CLI-provided vars (`--vars-file`)
 - System facts (OS, architecture, etc.)
@@ -119,6 +126,7 @@ Variables split into two categories:
 - Vars/include_vars with runtime-dependent when conditions
 
 **Why the split?**
+
 - Plan-time: Needed for template expansion during planning
 - Runtime-only: Not known until execution, stored in plan for later use
 
@@ -809,6 +817,7 @@ vars:
 ## Compliance
 
 This ADR complies with:
+
 - Go best practices for package separation
 - Event-driven architecture patterns
 - Immutable data structures (plan)
@@ -842,11 +851,13 @@ This ADR complies with:
 Ansible uses a similar two-phase model (parse → execute), but with key differences:
 
 ### Ansible's Approach
+
 - **Templates at Runtime**: Ansible renders templates during execution, not planning
 - **Dynamic Includes**: `include_tasks` expanded at runtime
 - **Late Binding**: Variable resolution happens as late as possible
 
 ### Mooncake's Approach
+
 - **Templates at Plan Time**: Most templates rendered during planning
 - **Static Includes**: All includes expanded during planning
 - **Early Binding**: Variable resolution happens as early as possible

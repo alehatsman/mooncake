@@ -60,6 +60,7 @@ This guide demonstrates how to use Mooncake to manage macOS services using launc
 ### User Agents
 
 User agents run in the user's context (no sudo required):
+
 - **Path**: `~/Library/LaunchAgents/`
 - **Domain**: `gui/<uid>`
 - **Permissions**: Current user
@@ -79,6 +80,7 @@ User agents run in the user's context (no sudo required):
 ### System Daemons
 
 System daemons run as root (require sudo):
+
 - **Path**: `/Library/LaunchDaemons/`
 - **Domain**: `system`
 - **Permissions**: root (requires `become: true`)
@@ -106,6 +108,7 @@ System daemons run as root (require sudo):
 See: [`macos-nodejs-app.yml`](./macos-nodejs-app.yml)
 
 Complete example showing:
+
 - Directory setup
 - Dependency installation
 - Service configuration
@@ -123,6 +126,7 @@ mooncake run examples/macos-services/macos-nodejs-app.yml
 See: [`macos-service-management.yml`](./macos-service-management.yml)
 
 Examples of:
+
 - Starting/stopping services
 - Restarting services
 - Updating configuration
@@ -139,6 +143,7 @@ mooncake run examples/macos-services/macos-service-management.yml
 See: [`macos-launchd-service.yml`](./macos-launchd-service.yml)
 
 Demonstrates:
+
 - User agents
 - System daemons
 - Scheduled tasks
@@ -357,15 +362,18 @@ sudo launchctl bootstrap system /Library/LaunchDaemons/com.example.daemon.plist
 ### Common Issues
 
 **Issue**: Service not starting
+
 - Check plist syntax: `plutil -lint ~/Library/LaunchAgents/com.example.myapp.plist`
 - Check logs: `tail -f /path/to/error.log`
 - Verify program path exists
 
 **Issue**: Permission denied
+
 - User agents: Don't use `become: true`
 - System daemons: Must use `become: true`
 
 **Issue**: Service keeps restarting
+
 - Check exit code: `launchctl print gui/$(id -u)/com.example.myapp`
 - Review logs for errors
 - Add `ThrottleInterval` to prevent rapid restarts
@@ -381,6 +389,7 @@ mooncake run --dry-run examples/macos-services/macos-launchd-service.yml
 ```
 
 Output shows:
+
 - What plist files would be created/updated
 - What services would be started/stopped
 - What operations would be performed
@@ -431,6 +440,7 @@ steps:
 ## Testing
 
 All launchd functionality is tested:
+
 - ✅ Plist creation (inline and template)
 - ✅ Service state management
 - ✅ Load/unload operations

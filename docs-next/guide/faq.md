@@ -19,6 +19,7 @@ The name comes from the show "Final Space" where mooncakes are a beloved treat. 
 ### Is Mooncake production-ready?
 
 Yes! Mooncake is actively used for:
+
 - Personal dotfiles management
 - Development environment setup
 - System provisioning
@@ -327,6 +328,7 @@ mooncake run --config config.yml --raw --output-format json
 Not yet. Mooncake currently executes on localhost only. Remote execution is planned for a future release.
 
 For now, you can:
+
 1. Copy config to remote host and run locally
 2. Use SSH wrapper scripts
 3. Wait for remote execution support (coming soon!)
@@ -638,6 +640,7 @@ Contributions are welcome!
 ### What's the roadmap?
 
 See the [Roadmap](development/roadmap.md) for planned features:
+
 - Remote host execution
 - Parallel step execution
 - Enhanced service management

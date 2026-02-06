@@ -155,6 +155,7 @@ You can combine `creates`, `unless`, `when`, and `changed_when` for sophisticate
 ```
 
 This step:
+
 - Skips if `/usr/bin/mypackage` already exists
 - Only marks as changed if the package was actually installed
 - Only fails if there's a real error (not just "package not found")
@@ -170,6 +171,7 @@ This step:
 ```
 
 This step only runs if:
+
 - The OS family is Debian (via `when`)
 - The package is not already installed (via `unless`)
 - The compiler doesn't exist (via `creates`)

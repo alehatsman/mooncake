@@ -20,6 +20,7 @@ Mooncake uses a two-phase architecture for configuration execution:
    - Logs progress and status
 
 **Benefits:**
+
 - **Deterministic** - Same config always produces the same plan
 - **Inspectable** - Use `mooncake plan` to see what will execute
 - **Traceable** - Every step tracks its origin with include chain
@@ -42,6 +43,7 @@ Steps are executed sequentially:
 ## Actions
 
 Available actions:
+
 - **shell** / **command** - Execute shell commands or direct commands
 - **file** - Create files, directories, links, and manage permissions
 - **copy** - Copy files with checksum verification
@@ -69,6 +71,7 @@ Use `{{variable}}` syntax for dynamic values:
 ## System Facts
 
 Automatically available variables:
+
 - `os` - Operating system (linux, darwin, windows)
 - `arch` - Architecture (amd64, arm64)
 - `hostname` - System hostname

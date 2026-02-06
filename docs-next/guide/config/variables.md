@@ -200,6 +200,7 @@ mooncake facts
 ```
 
 Output shows:
+
 - Operating system details (OS, distribution, kernel version)
 - CPU (cores, model, flags)
 - Memory (total, free, swap)

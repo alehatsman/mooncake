@@ -373,6 +373,7 @@ steps:
 ```
 
 Available package manager facts:
+
 - `apt_available` (Debian/Ubuntu)
 - `dnf_available` (Fedora/RHEL 8+)
 - `yum_available` (RHEL/CentOS 7)
@@ -831,6 +832,7 @@ sudo cp my-preset.yml /usr/share/mooncake/presets/
 ### Sharing
 
 Share presets via:
+
 - Git repositories
 - Package managers
 - Direct file distribution
