@@ -3,9 +3,11 @@
   register: activemq_check
   failed_when: false
 
-- name: Install activemq (macOS)
-  shell: brew install activemq
-  when: os == "darwin" and activemq_check.rc != 0
+- name: Install activemq
+  package:
+    name: activemq
+    state: present
+  when: activemq_check.rc != 0
 
 - name: Verify installation
   shell: activemq --version 2>&1 || activemq -v 2>&1 || echo "installed"

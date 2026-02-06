@@ -3,9 +3,11 @@
   register: bun_check
   failed_when: false
 
-- name: Install bun (macOS)
-  shell: brew install bun
-  when: os == "darwin" and bun_check.rc != 0
+- name: Install bun
+  package:
+    name: bun
+    state: present
+  when: bun_check.rc != 0
 
 - name: Verify installation
   shell: bun --version 2>&1 || bun -v 2>&1 || echo "installed"

@@ -1,15 +1,17 @@
 - name: Check if bw is installed
   shell: command -v bw
-  register: bitwarden-cli_check
+  register: bitwarden_cli_check
   failed_when: false
 
-- name: Install bw (macOS)
-  shell: brew install bw
-  when: os == "darwin" and bitwarden-cli_check.rc != 0
+- name: Install bitwarden-cli
+  package:
+    name: bitwarden-cli
+    state: present
+  when: bitwarden_cli_check.rc != 0
 
 - name: Verify installation
   shell: bw --version 2>&1 || bw -v 2>&1 || echo "installed"
-  register: bitwarden-cli_version
+  register: bitwarden_cli_version
 
 - name: Display version
-  print: "bw installed"
+  print: "bitwarden-cli installed"

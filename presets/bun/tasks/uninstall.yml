@@ -1,6 +1,7 @@
-- name: Uninstall bun (macOS)
-  shell: brew uninstall bun
-  when: os == "darwin"
+- name: Uninstall bun
+  package:
+    name: bun
+    state: absent
   failed_when: false
 
 - name: Display confirmation

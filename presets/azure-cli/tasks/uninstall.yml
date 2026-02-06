@@ -1,7 +1,8 @@
-- name: Uninstall az (macOS)
-  shell: brew uninstall az
-  when: os == "darwin"
+- name: Uninstall Azure CLI
+  package:
+    name: azure-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "az uninstalled"
+  print: "Azure CLI uninstalled"

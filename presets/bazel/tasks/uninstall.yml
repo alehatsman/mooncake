@@ -1,6 +1,7 @@
-- name: Uninstall bazel (macOS)
-  shell: brew uninstall bazel
-  when: os == "darwin"
+- name: Uninstall bazel
+  package:
+    name: bazel
+    state: absent
   failed_when: false
 
 - name: Display confirmation

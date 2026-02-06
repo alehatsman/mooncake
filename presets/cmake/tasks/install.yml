@@ -3,9 +3,11 @@
   register: cmake_check
   failed_when: false
 
-- name: Install cmake (macOS)
-  shell: brew install cmake
-  when: os == "darwin" and cmake_check.rc != 0
+- name: Install cmake
+  package:
+    name: cmake
+    state: present
+  when: cmake_check.rc != 0
 
 - name: Verify installation
   shell: cmake --version 2>&1 || cmake -v 2>&1 || echo "installed"

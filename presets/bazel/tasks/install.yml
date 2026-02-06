@@ -3,9 +3,11 @@
   register: bazel_check
   failed_when: false
 
-- name: Install bazel (macOS)
-  shell: brew install bazel
-  when: os == "darwin" and bazel_check.rc != 0
+- name: Install bazel
+  package:
+    name: bazel
+    state: present
+  when: bazel_check.rc != 0
 
 - name: Verify installation
   shell: bazel --version 2>&1 || bazel -v 2>&1 || echo "installed"

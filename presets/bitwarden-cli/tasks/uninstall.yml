@@ -1,7 +1,8 @@
-- name: Uninstall bw (macOS)
-  shell: brew uninstall bw
-  when: os == "darwin"
+- name: Uninstall bitwarden-cli
+  package:
+    name: bitwarden-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "bw uninstalled"
+  print: "bitwarden-cli uninstalled"

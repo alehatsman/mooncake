@@ -3,9 +3,11 @@
   register: ffmpeg_check
   failed_when: false
 
-- name: Install ffmpeg (macOS)
-  shell: brew install ffmpeg
-  when: os == "darwin" and ffmpeg_check.rc != 0
+- name: Install ffmpeg
+  package:
+    name: ffmpeg
+    state: present
+  when: ffmpeg_check.rc != 0
 
 - name: Verify installation
   shell: ffmpeg --version 2>&1 || ffmpeg -v 2>&1 || echo "installed"

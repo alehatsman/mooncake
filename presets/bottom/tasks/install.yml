@@ -3,13 +3,15 @@
   register: bottom_check
   failed_when: false
 
-- name: Install btm (macOS)
-  shell: brew install btm
-  when: os == "darwin" and bottom_check.rc != 0
+- name: Install bottom
+  package:
+    name: bottom
+    state: present
+  when: bottom_check.rc != 0
 
 - name: Verify installation
   shell: btm --version 2>&1 || btm -v 2>&1 || echo "installed"
   register: bottom_version
 
 - name: Display version
-  print: "btm installed"
+  print: "bottom installed"

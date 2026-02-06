@@ -3,9 +3,11 @@
   register: aerospike_check
   failed_when: false
 
-- name: Install aerospike (macOS)
-  shell: brew install aerospike
-  when: os == "darwin" and aerospike_check.rc != 0
+- name: Install aerospike
+  package:
+    name: aerospike
+    state: present
+  when: aerospike_check.rc != 0
 
 - name: Verify installation
   shell: aerospike --version 2>&1 || aerospike -v 2>&1 || echo "installed"

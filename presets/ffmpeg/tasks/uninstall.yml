@@ -1,6 +1,7 @@
-- name: Uninstall ffmpeg (macOS)
-  shell: brew uninstall ffmpeg
-  when: os == "darwin"
+- name: Uninstall ffmpeg
+  package:
+    name: ffmpeg
+    state: absent
   failed_when: false
 
 - name: Display confirmation

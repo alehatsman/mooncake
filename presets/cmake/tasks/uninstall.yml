@@ -1,6 +1,7 @@
-- name: Uninstall cmake (macOS)
-  shell: brew uninstall cmake
-  when: os == "darwin"
+- name: Uninstall cmake
+  package:
+    name: cmake
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,15 +1,17 @@
 - name: Check if az is installed
   shell: command -v az
-  register: azure-cli_check
+  register: az_check
   failed_when: false
 
-- name: Install az (macOS)
-  shell: brew install az
-  when: os == "darwin" and azure-cli_check.rc != 0
+- name: Install Azure CLI
+  package:
+    name: azure-cli
+    state: present
+  when: az_check.rc != 0
 
 - name: Verify installation
-  shell: az --version 2>&1 || az -v 2>&1 || echo "installed"
-  register: azure-cli_version
+  shell: az --version 2>&1 || az version 2>&1 || echo "installed"
+  register: az_version
 
 - name: Display version
-  print: "az installed"
+  print: "Azure CLI installed"

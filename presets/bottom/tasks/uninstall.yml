@@ -1,7 +1,8 @@
-- name: Uninstall btm (macOS)
-  shell: brew uninstall btm
-  when: os == "darwin"
+- name: Uninstall bottom
+  package:
+    name: bottom
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "btm uninstalled"
+  print: "bottom uninstalled"
