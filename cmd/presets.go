@@ -48,6 +48,25 @@ Use subcommands for non-interactive operations.`,
 				ArgsUsage: "<preset-name>",
 				Action:    installPresetAction,
 			},
+			{
+				Name:      "status",
+				Usage:     "Show status of preset(s)",
+				ArgsUsage: "[preset-name]",
+				Action:    presetStatusAction,
+				Description: `Show detailed status of preset(s) including location and version.
+
+If no preset name is provided, shows status of all presets.`,
+			},
+			{
+				Name:      "uninstall",
+				Usage:     "Execute preset's uninstall logic",
+				ArgsUsage: "<preset-name>",
+				Action:    uninstallPresetAction,
+				Description: `Uninstalls a preset by executing it with state: absent.
+
+This runs the preset's uninstall steps (e.g., stops services, removes packages).
+It does not delete the preset files from disk.`,
+			},
 		},
 		Action: interactiveSelectorAction,
 	}
@@ -322,6 +341,161 @@ func executePresetInstall(name string) error {
 	fmt.Printf("\n%s installed\n", preset.Name)
 
 	return nil
+}
+
+// presetStatusAction shows status of preset(s)
+func presetStatusAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		// Show status of all presets
+		allPresets, err := presets.DiscoverAllPresets()
+		if err != nil {
+			return fmt.Errorf("failed to discover presets: %w", err)
+		}
+
+		if len(allPresets) == 0 {
+			fmt.Println("No presets found.")
+			return nil
+		}
+
+		fmt.Printf("Found %d preset(s):\n\n", len(allPresets))
+		for _, p := range allPresets {
+			sourceLabel := getSourceLabel(p.Source)
+			fmt.Printf("%-20s  v%-10s  %s  %s\n", p.Name, p.Version, sourceLabel, p.Description)
+		}
+		return nil
+	}
+
+	// Show status of specific preset
+	name := c.Args().First()
+
+	// Discover all presets to find all instances
+	allPresets, err := presets.DiscoverAllPresets()
+	if err != nil {
+		return fmt.Errorf("failed to discover presets: %w", err)
+	}
+
+	// Find all instances of this preset
+	var instances []presets.PresetInfo
+	for _, p := range allPresets {
+		if p.Name == name {
+			instances = append(instances, p)
+		}
+	}
+
+	if len(instances) == 0 {
+		return fmt.Errorf("preset '%s' not found", name)
+	}
+
+	// Show detailed status
+	fmt.Printf("Preset: %s\n\n", name)
+
+	if len(instances) == 1 {
+		p := instances[0]
+		fmt.Printf("Version:     %s\n", p.Version)
+		fmt.Printf("Description: %s\n", p.Description)
+		fmt.Printf("Location:    %s (%s)\n", p.Path, getSourceLabel(p.Source))
+	} else {
+		fmt.Printf("Multiple versions found:\n\n")
+		for i, p := range instances {
+			priority := ""
+			if i == 0 {
+				priority = " (active)"
+			}
+			fmt.Printf("%d. %s%s\n", i+1, getSourceLabel(p.Source), priority)
+			fmt.Printf("   Version: %s\n", p.Version)
+			fmt.Printf("   Path:    %s\n", p.Path)
+			fmt.Println()
+		}
+		fmt.Println("Note: The first preset found is used when multiple versions exist.")
+	}
+
+	return nil
+}
+
+// uninstallPresetAction executes the preset's uninstall logic
+func uninstallPresetAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return fmt.Errorf("preset name required\n\nUsage: mooncake presets uninstall <preset-name>")
+	}
+
+	name := c.Args().First()
+
+	// Load the preset to validate it exists
+	preset, err := presets.LoadPreset(name)
+	if err != nil {
+		return fmt.Errorf("failed to load preset '%s': %w", name, err)
+	}
+
+	fmt.Printf("Uninstalling %s...\n", preset.Name)
+
+	// Create temporary config file with preset invocation (state: absent)
+	tmpConfig := struct {
+		Steps []map[string]interface{} `yaml:"steps"`
+	}{
+		Steps: []map[string]interface{}{
+			{
+				"preset": map[string]interface{}{
+					"name": name,
+					"with": map[string]interface{}{
+						"state": "absent",
+					},
+				},
+			},
+		},
+	}
+
+	// Write to temporary file
+	tmpFile, err := os.CreateTemp("", "mooncake-preset-uninstall-*.yml")
+	if err != nil {
+		return fmt.Errorf("failed to create temp config: %w", err)
+	}
+	defer func() {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
+	}()
+
+	encoder := yaml.NewEncoder(tmpFile)
+	if err := encoder.Encode(tmpConfig); err != nil {
+		return fmt.Errorf("failed to write temp config: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp config: %w", err)
+	}
+
+	// Setup event publisher and logger
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+
+	level := logger.InfoLevel
+	subscriber := logger.NewConsoleSubscriber(level, "text")
+	publisher.Subscribe(subscriber)
+
+	internalLog := logger.NewLogger(level)
+
+	// Execute preset with state: absent
+	if err := executor.Start(executor.StartConfig{
+		ConfigFilePath: tmpFile.Name(),
+	}, internalLog, publisher); err != nil {
+		return fmt.Errorf("preset uninstall failed: %w", err)
+	}
+
+	fmt.Printf("\n%s uninstalled\n", preset.Name)
+
+	return nil
+}
+
+// getSourceLabel returns a formatted label for preset source
+func getSourceLabel(source string) string {
+	switch source {
+	case "local":
+		return "[local]  "
+	case "user":
+		return "[user]   "
+	case "system":
+		return "[system] "
+	default:
+		return "[unknown]"
+	}
 }
 
 // truncate truncates a string to maxLen, adding "..." if truncated
