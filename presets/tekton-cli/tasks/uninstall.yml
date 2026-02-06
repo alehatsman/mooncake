@@ -1,7 +1,8 @@
-- name: Uninstall tkn (macOS)
-  shell: brew uninstall tkn
-  when: os == "darwin"
+- name: Uninstall tekton-cli
+  package:
+    name: tekton-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "tkn uninstalled"
+  print: "tekton-cli uninstalled"

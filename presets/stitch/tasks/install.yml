@@ -3,9 +3,11 @@
   register: stitch_check
   failed_when: false
 
-- name: Install stitch (macOS)
-  shell: brew install stitch
-  when: os == "darwin" and stitch_check.rc != 0
+- name: Install stitch
+  package:
+    name: stitch
+    state: present
+  when: stitch_check.rc != 0
 
 - name: Verify installation
   shell: stitch --version 2>&1 || stitch -v 2>&1 || echo "installed"

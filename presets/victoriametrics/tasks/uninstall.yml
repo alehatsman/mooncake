@@ -1,7 +1,8 @@
-- name: Uninstall victoria-metrics (macOS)
-  shell: brew uninstall victoria-metrics
-  when: os == "darwin"
+- name: Uninstall victoriametrics
+  package:
+    name: victoriametrics
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "victoria-metrics uninstalled"
+  print: "victoriametrics uninstalled"

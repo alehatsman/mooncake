@@ -1,6 +1,7 @@
-- name: Uninstall tyk (macOS)
-  shell: brew uninstall tyk
-  when: os == "darwin"
+- name: Uninstall tyk
+  package:
+    name: tyk
+    state: absent
   failed_when: false
 
 - name: Display confirmation

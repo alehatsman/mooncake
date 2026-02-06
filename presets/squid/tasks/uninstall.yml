@@ -1,6 +1,7 @@
-- name: Uninstall squid (macOS)
-  shell: brew uninstall squid
-  when: os == "darwin"
+- name: Uninstall squid
+  package:
+    name: squid
+    state: absent
   failed_when: false
 
 - name: Display confirmation

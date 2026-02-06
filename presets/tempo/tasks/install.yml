@@ -3,9 +3,11 @@
   register: tempo_check
   failed_when: false
 
-- name: Install tempo (macOS)
-  shell: brew install tempo
-  when: os == "darwin" and tempo_check.rc != 0
+- name: Install tempo
+  package:
+    name: tempo
+    state: present
+  when: tempo_check.rc != 0
 
 - name: Verify installation
   shell: tempo --version 2>&1 || tempo -v 2>&1 || echo "installed"

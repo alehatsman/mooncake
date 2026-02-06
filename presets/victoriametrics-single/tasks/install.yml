@@ -1,15 +1,17 @@
 - name: Check if victoria-metrics-prod is installed
   shell: command -v victoria-metrics-prod
-  register: victoriametrics-single_check
+  register: victoriametrics_single_check
   failed_when: false
 
-- name: Install victoria-metrics-prod (macOS)
-  shell: brew install victoria-metrics-prod
-  when: os == "darwin" and victoriametrics-single_check.rc != 0
+- name: Install victoriametrics-single
+  package:
+    name: victoriametrics-single
+    state: present
+  when: victoriametrics_single_check.rc != 0
 
 - name: Verify installation
   shell: victoria-metrics-prod --version 2>&1 || victoria-metrics-prod -v 2>&1 || echo "installed"
-  register: victoriametrics-single_version
+  register: victoriametrics_single_version
 
 - name: Display version
-  print: "victoria-metrics-prod installed"
+  print: "victoriametrics-single installed"

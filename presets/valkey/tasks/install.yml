@@ -3,9 +3,11 @@
   register: valkey_check
   failed_when: false
 
-- name: Install valkey (macOS)
-  shell: brew install valkey
-  when: os == "darwin" and valkey_check.rc != 0
+- name: Install valkey
+  package:
+    name: valkey
+    state: present
+  when: valkey_check.rc != 0
 
 - name: Verify installation
   shell: valkey --version 2>&1 || valkey -v 2>&1 || echo "installed"

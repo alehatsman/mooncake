@@ -1,6 +1,7 @@
-- name: Uninstall tmate (macOS)
-  shell: brew uninstall tmate
-  when: os == "darwin"
+- name: Uninstall tmate
+  package:
+    name: tmate
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: usql_check
   failed_when: false
 
-- name: Install usql (macOS)
-  shell: brew install usql
-  when: os == "darwin" and usql_check.rc != 0
+- name: Install usql
+  package:
+    name: usql
+    state: present
+  when: usql_check.rc != 0
 
 - name: Verify installation
   shell: usql --version 2>&1 || usql -v 2>&1 || echo "installed"

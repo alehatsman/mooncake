@@ -3,9 +3,11 @@
   register: tmuxinator_check
   failed_when: false
 
-- name: Install tmuxinator (macOS)
-  shell: brew install tmuxinator
-  when: os == "darwin" and tmuxinator_check.rc != 0
+- name: Install tmuxinator
+  package:
+    name: tmuxinator
+    state: present
+  when: tmuxinator_check.rc != 0
 
 - name: Verify installation
   shell: tmuxinator --version 2>&1 || tmuxinator -v 2>&1 || echo "installed"

@@ -1,7 +1,8 @@
-- name: Uninstall code (macOS)
-  shell: brew uninstall code
-  when: os == "darwin"
+- name: Uninstall vscode
+  package:
+    name: vscode
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "code uninstalled"
+  print: "vscode uninstalled"

@@ -3,9 +3,11 @@
   register: tmate_check
   failed_when: false
 
-- name: Install tmate (macOS)
-  shell: brew install tmate
-  when: os == "darwin" and tmate_check.rc != 0
+- name: Install tmate
+  package:
+    name: tmate
+    state: present
+  when: tmate_check.rc != 0
 
 - name: Verify installation
   shell: tmate --version 2>&1 || tmate -v 2>&1 || echo "installed"

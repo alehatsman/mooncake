@@ -3,9 +3,11 @@
   register: stack_check
   failed_when: false
 
-- name: Install stack (macOS)
-  shell: brew install stack
-  when: os == "darwin" and stack_check.rc != 0
+- name: Install stack
+  package:
+    name: stack
+    state: present
+  when: stack_check.rc != 0
 
 - name: Verify installation
   shell: stack --version 2>&1 || stack -v 2>&1 || echo "installed"

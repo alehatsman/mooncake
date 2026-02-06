@@ -1,6 +1,7 @@
-- name: Uninstall uptrace (macOS)
-  shell: brew uninstall uptrace
-  when: os == "darwin"
+- name: Uninstall uptrace
+  package:
+    name: uptrace
+    state: absent
   failed_when: false
 
 - name: Display confirmation

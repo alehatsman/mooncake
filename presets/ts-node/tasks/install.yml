@@ -1,15 +1,17 @@
 - name: Check if ts-node is installed
   shell: command -v ts-node
-  register: ts-node_check
+  register: ts_node_check
   failed_when: false
 
-- name: Install ts-node (macOS)
-  shell: brew install ts-node
-  when: os == "darwin" and ts-node_check.rc != 0
+- name: Install ts-node
+  package:
+    name: ts-node
+    state: present
+  when: ts_node_check.rc != 0
 
 - name: Verify installation
   shell: ts-node --version 2>&1 || ts-node -v 2>&1 || echo "installed"
-  register: ts-node_version
+  register: ts_node_version
 
 - name: Display version
   print: "ts-node installed"

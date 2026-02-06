@@ -3,9 +3,11 @@
   register: thanos_check
   failed_when: false
 
-- name: Install thanos (macOS)
-  shell: brew install thanos
-  when: os == "darwin" and thanos_check.rc != 0
+- name: Install thanos
+  package:
+    name: thanos
+    state: present
+  when: thanos_check.rc != 0
 
 - name: Verify installation
   shell: thanos --version 2>&1 || thanos -v 2>&1 || echo "installed"

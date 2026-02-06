@@ -3,9 +3,11 @@
   register: volta_check
   failed_when: false
 
-- name: Install volta (macOS)
-  shell: brew install volta
-  when: os == "darwin" and volta_check.rc != 0
+- name: Install volta
+  package:
+    name: volta
+    state: present
+  when: volta_check.rc != 0
 
 - name: Verify installation
   shell: volta --version 2>&1 || volta -v 2>&1 || echo "installed"

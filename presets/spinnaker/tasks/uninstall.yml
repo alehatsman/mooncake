@@ -1,7 +1,8 @@
-- name: Uninstall spin (macOS)
-  shell: brew uninstall spin
-  when: os == "darwin"
+- name: Uninstall spinnaker
+  package:
+    name: spinnaker
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "spin uninstalled"
+  print: "spinnaker uninstalled"

@@ -1,6 +1,7 @@
-- name: Uninstall typesense (macOS)
-  shell: brew uninstall typesense
-  when: os == "darwin"
+- name: Uninstall typesense
+  package:
+    name: typesense
+    state: absent
   failed_when: false
 
 - name: Display confirmation

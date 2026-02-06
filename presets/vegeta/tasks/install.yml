@@ -3,9 +3,11 @@
   register: vegeta_check
   failed_when: false
 
-- name: Install vegeta (macOS)
-  shell: brew install vegeta
-  when: os == "darwin" and vegeta_check.rc != 0
+- name: Install vegeta
+  package:
+    name: vegeta
+    state: present
+  when: vegeta_check.rc != 0
 
 - name: Verify installation
   shell: vegeta --version 2>&1 || vegeta -v 2>&1 || echo "installed"

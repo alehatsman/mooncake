@@ -3,9 +3,11 @@
   register: tsx_check
   failed_when: false
 
-- name: Install tsx (macOS)
-  shell: brew install tsx
-  when: os == "darwin" and tsx_check.rc != 0
+- name: Install tsx
+  package:
+    name: tsx
+    state: present
+  when: tsx_check.rc != 0
 
 - name: Verify installation
   shell: tsx --version 2>&1 || tsx -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall timescaledb (macOS)
-  shell: brew uninstall timescaledb
-  when: os == "darwin"
+- name: Uninstall timescaledb
+  package:
+    name: timescaledb
+    state: absent
   failed_when: false
 
 - name: Display confirmation

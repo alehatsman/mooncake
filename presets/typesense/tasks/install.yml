@@ -3,9 +3,11 @@
   register: typesense_check
   failed_when: false
 
-- name: Install typesense (macOS)
-  shell: brew install typesense
-  when: os == "darwin" and typesense_check.rc != 0
+- name: Install typesense
+  package:
+    name: typesense
+    state: present
+  when: typesense_check.rc != 0
 
 - name: Verify installation
   shell: typesense --version 2>&1 || typesense -v 2>&1 || echo "installed"

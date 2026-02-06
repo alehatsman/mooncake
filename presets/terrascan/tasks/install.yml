@@ -3,9 +3,11 @@
   register: terrascan_check
   failed_when: false
 
-- name: Install terrascan (macOS)
-  shell: brew install terrascan
-  when: os == "darwin" and terrascan_check.rc != 0
+- name: Install terrascan
+  package:
+    name: terrascan
+    state: present
+  when: terrascan_check.rc != 0
 
 - name: Verify installation
   shell: terrascan --version 2>&1 || terrascan -v 2>&1 || echo "installed"

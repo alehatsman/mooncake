@@ -1,6 +1,7 @@
-- name: Uninstall tide (macOS)
-  shell: brew uninstall tide
-  when: os == "darwin"
+- name: Uninstall tide
+  package:
+    name: tide
+    state: absent
   failed_when: false
 
 - name: Display confirmation

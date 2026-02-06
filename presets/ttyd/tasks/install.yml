@@ -3,9 +3,11 @@
   register: ttyd_check
   failed_when: false
 
-- name: Install ttyd (macOS)
-  shell: brew install ttyd
-  when: os == "darwin" and ttyd_check.rc != 0
+- name: Install ttyd
+  package:
+    name: ttyd
+    state: present
+  when: ttyd_check.rc != 0
 
 - name: Verify installation
   shell: ttyd --version 2>&1 || ttyd -v 2>&1 || echo "installed"

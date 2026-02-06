@@ -3,9 +3,11 @@
   register: uptrace_check
   failed_when: false
 
-- name: Install uptrace (macOS)
-  shell: brew install uptrace
-  when: os == "darwin" and uptrace_check.rc != 0
+- name: Install uptrace
+  package:
+    name: uptrace
+    state: present
+  when: uptrace_check.rc != 0
 
 - name: Verify installation
   shell: uptrace --version 2>&1 || uptrace -v 2>&1 || echo "installed"

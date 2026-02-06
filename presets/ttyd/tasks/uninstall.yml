@@ -1,6 +1,7 @@
-- name: Uninstall ttyd (macOS)
-  shell: brew uninstall ttyd
-  when: os == "darwin"
+- name: Uninstall ttyd
+  package:
+    name: ttyd
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall volta (macOS)
-  shell: brew uninstall volta
-  when: os == "darwin"
+- name: Uninstall volta
+  package:
+    name: volta
+    state: absent
   failed_when: false
 
 - name: Display confirmation

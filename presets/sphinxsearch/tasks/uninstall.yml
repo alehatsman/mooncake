@@ -1,7 +1,8 @@
-- name: Uninstall searchd (macOS)
-  shell: brew uninstall searchd
-  when: os == "darwin"
+- name: Uninstall sphinxsearch
+  package:
+    name: sphinxsearch
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "searchd uninstalled"
+  print: "sphinxsearch uninstalled"

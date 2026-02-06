@@ -1,6 +1,7 @@
-- name: Uninstall tmuxinator (macOS)
-  shell: brew uninstall tmuxinator
-  when: os == "darwin"
+- name: Uninstall tmuxinator
+  package:
+    name: tmuxinator
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall usql (macOS)
-  shell: brew uninstall usql
-  when: os == "darwin"
+- name: Uninstall usql
+  package:
+    name: usql
+    state: absent
   failed_when: false
 
 - name: Display confirmation

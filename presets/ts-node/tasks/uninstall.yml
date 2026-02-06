@@ -1,6 +1,7 @@
-- name: Uninstall ts-node (macOS)
-  shell: brew uninstall ts-node
-  when: os == "darwin"
+- name: Uninstall ts-node
+  package:
+    name: ts-node
+    state: absent
   failed_when: false
 
 - name: Display confirmation

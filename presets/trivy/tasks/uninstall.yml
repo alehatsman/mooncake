@@ -1,6 +1,7 @@
-- name: Uninstall trivy (macOS)
-  shell: brew uninstall trivy
-  when: os == "darwin"
+- name: Uninstall trivy
+  package:
+    name: trivy
+    state: absent
   failed_when: false
 
 - name: Display confirmation

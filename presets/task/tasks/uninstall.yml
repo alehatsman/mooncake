@@ -1,6 +1,7 @@
-- name: Uninstall task (macOS)
-  shell: brew uninstall task
-  when: os == "darwin"
+- name: Uninstall task
+  package:
+    name: task
+    state: absent
   failed_when: false
 
 - name: Display confirmation

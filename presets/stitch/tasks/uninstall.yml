@@ -1,6 +1,7 @@
-- name: Uninstall stitch (macOS)
-  shell: brew uninstall stitch
-  when: os == "darwin"
+- name: Uninstall stitch
+  package:
+    name: stitch
+    state: absent
   failed_when: false
 
 - name: Display confirmation

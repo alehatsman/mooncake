@@ -3,9 +3,11 @@
   register: terragrunt_check
   failed_when: false
 
-- name: Install terragrunt (macOS)
-  shell: brew install terragrunt
-  when: os == "darwin" and terragrunt_check.rc != 0
+- name: Install terragrunt
+  package:
+    name: terragrunt
+    state: present
+  when: terragrunt_check.rc != 0
 
 - name: Verify installation
   shell: terragrunt --version 2>&1 || terragrunt -v 2>&1 || echo "installed"

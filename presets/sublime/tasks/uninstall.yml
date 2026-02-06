@@ -1,7 +1,8 @@
-- name: Uninstall subl (macOS)
-  shell: brew uninstall subl
-  when: os == "darwin"
+- name: Uninstall sublime
+  package:
+    name: sublime
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "subl uninstalled"
+  print: "sublime uninstalled"

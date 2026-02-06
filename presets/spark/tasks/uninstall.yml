@@ -1,6 +1,7 @@
-- name: Uninstall spark (macOS)
-  shell: brew uninstall spark
-  when: os == "darwin"
+- name: Uninstall spark
+  package:
+    name: spark
+    state: absent
   failed_when: false
 
 - name: Display confirmation

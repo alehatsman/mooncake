@@ -3,9 +3,11 @@
   register: task_check
   failed_when: false
 
-- name: Install task (macOS)
-  shell: brew install task
-  when: os == "darwin" and task_check.rc != 0
+- name: Install task
+  package:
+    name: task
+    state: present
+  when: task_check.rc != 0
 
 - name: Verify installation
   shell: task --version 2>&1 || task -v 2>&1 || echo "installed"

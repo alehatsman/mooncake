@@ -1,6 +1,7 @@
-- name: Uninstall systat (macOS)
-  shell: brew uninstall systat
-  when: os == "darwin"
+- name: Uninstall systat
+  package:
+    name: systat
+    state: absent
   failed_when: false
 
 - name: Display confirmation

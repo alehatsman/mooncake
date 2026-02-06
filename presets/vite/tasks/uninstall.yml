@@ -1,6 +1,7 @@
-- name: Uninstall vite (macOS)
-  shell: brew uninstall vite
-  when: os == "darwin"
+- name: Uninstall vite
+  package:
+    name: vite
+    state: absent
   failed_when: false
 
 - name: Display confirmation

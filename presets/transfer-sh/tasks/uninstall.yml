@@ -1,7 +1,8 @@
-- name: Uninstall transfer (macOS)
-  shell: brew uninstall transfer
-  when: os == "darwin"
+- name: Uninstall transfer-sh
+  package:
+    name: transfer-sh
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "transfer uninstalled"
+  print: "transfer-sh uninstalled"

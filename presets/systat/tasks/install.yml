@@ -3,9 +3,11 @@
   register: systat_check
   failed_when: false
 
-- name: Install systat (macOS)
-  shell: brew install systat
-  when: os == "darwin" and systat_check.rc != 0
+- name: Install systat
+  package:
+    name: systat
+    state: present
+  when: systat_check.rc != 0
 
 - name: Verify installation
   shell: systat --version 2>&1 || systat -v 2>&1 || echo "installed"

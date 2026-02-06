@@ -1,6 +1,7 @@
-- name: Uninstall tflint (macOS)
-  shell: brew uninstall tflint
-  when: os == "darwin"
+- name: Uninstall tflint
+  package:
+    name: tflint
+    state: absent
   failed_when: false
 
 - name: Display confirmation

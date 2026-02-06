@@ -1,6 +1,7 @@
-- name: Uninstall tempo (macOS)
-  shell: brew uninstall tempo
-  when: os == "darwin"
+- name: Uninstall tempo
+  package:
+    name: tempo
+    state: absent
   failed_when: false
 
 - name: Display confirmation

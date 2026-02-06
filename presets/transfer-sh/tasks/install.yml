@@ -1,15 +1,17 @@
 - name: Check if transfer is installed
   shell: command -v transfer
-  register: transfer-sh_check
+  register: transfer_sh_check
   failed_when: false
 
-- name: Install transfer (macOS)
-  shell: brew install transfer
-  when: os == "darwin" and transfer-sh_check.rc != 0
+- name: Install transfer-sh
+  package:
+    name: transfer-sh
+    state: present
+  when: transfer_sh_check.rc != 0
 
 - name: Verify installation
   shell: transfer --version 2>&1 || transfer -v 2>&1 || echo "installed"
-  register: transfer-sh_version
+  register: transfer_sh_version
 
 - name: Display version
-  print: "transfer installed"
+  print: "transfer-sh installed"

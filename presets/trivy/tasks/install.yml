@@ -3,9 +3,11 @@
   register: trivy_check
   failed_when: false
 
-- name: Install trivy (macOS)
-  shell: brew install trivy
-  when: os == "darwin" and trivy_check.rc != 0
+- name: Install trivy
+  package:
+    name: trivy
+    state: present
+  when: trivy_check.rc != 0
 
 - name: Verify installation
   shell: trivy --version 2>&1 || trivy -v 2>&1 || echo "installed"

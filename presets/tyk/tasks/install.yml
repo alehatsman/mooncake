@@ -3,9 +3,11 @@
   register: tyk_check
   failed_when: false
 
-- name: Install tyk (macOS)
-  shell: brew install tyk
-  when: os == "darwin" and tyk_check.rc != 0
+- name: Install tyk
+  package:
+    name: tyk
+    state: present
+  when: tyk_check.rc != 0
 
 - name: Verify installation
   shell: tyk --version 2>&1 || tyk -v 2>&1 || echo "installed"

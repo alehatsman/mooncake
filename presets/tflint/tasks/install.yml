@@ -3,9 +3,11 @@
   register: tflint_check
   failed_when: false
 
-- name: Install tflint (macOS)
-  shell: brew install tflint
-  when: os == "darwin" and tflint_check.rc != 0
+- name: Install tflint
+  package:
+    name: tflint
+    state: present
+  when: tflint_check.rc != 0
 
 - name: Verify installation
   shell: tflint --version 2>&1 || tflint -v 2>&1 || echo "installed"

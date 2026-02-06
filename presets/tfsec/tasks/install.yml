@@ -3,9 +3,11 @@
   register: tfsec_check
   failed_when: false
 
-- name: Install tfsec (macOS)
-  shell: brew install tfsec
-  when: os == "darwin" and tfsec_check.rc != 0
+- name: Install tfsec
+  package:
+    name: tfsec
+    state: present
+  when: tfsec_check.rc != 0
 
 - name: Verify installation
   shell: tfsec --version 2>&1 || tfsec -v 2>&1 || echo "installed"

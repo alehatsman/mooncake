@@ -3,9 +3,11 @@
   register: uv_check
   failed_when: false
 
-- name: Install uv (macOS)
-  shell: brew install uv
-  when: os == "darwin" and uv_check.rc != 0
+- name: Install uv
+  package:
+    name: uv
+    state: present
+  when: uv_check.rc != 0
 
 - name: Verify installation
   shell: uv --version 2>&1 || uv -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: temporal_check
   failed_when: false
 
-- name: Install temporal (macOS)
-  shell: brew install temporal
-  when: os == "darwin" and temporal_check.rc != 0
+- name: Install temporal
+  package:
+    name: temporal
+    state: present
+  when: temporal_check.rc != 0
 
 - name: Verify installation
   shell: temporal --version 2>&1 || temporal -v 2>&1 || echo "installed"

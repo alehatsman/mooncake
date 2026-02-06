@@ -1,6 +1,7 @@
-- name: Uninstall temporal (macOS)
-  shell: brew uninstall temporal
-  when: os == "darwin"
+- name: Uninstall temporal
+  package:
+    name: temporal
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall terragrunt (macOS)
-  shell: brew uninstall terragrunt
-  when: os == "darwin"
+- name: Uninstall terragrunt
+  package:
+    name: terragrunt
+    state: absent
   failed_when: false
 
 - name: Display confirmation

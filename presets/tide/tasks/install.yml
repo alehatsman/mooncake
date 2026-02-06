@@ -3,9 +3,11 @@
   register: tide_check
   failed_when: false
 
-- name: Install tide (macOS)
-  shell: brew install tide
-  when: os == "darwin" and tide_check.rc != 0
+- name: Install tide
+  package:
+    name: tide
+    state: present
+  when: tide_check.rc != 0
 
 - name: Verify installation
   shell: tide --version 2>&1 || tide -v 2>&1 || echo "installed"

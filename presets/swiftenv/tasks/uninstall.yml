@@ -1,6 +1,7 @@
-- name: Uninstall swiftenv (macOS)
-  shell: brew uninstall swiftenv
-  when: os == "darwin"
+- name: Uninstall swiftenv
+  package:
+    name: swiftenv
+    state: absent
   failed_when: false
 
 - name: Display confirmation

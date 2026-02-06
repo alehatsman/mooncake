@@ -3,13 +3,15 @@
   register: sublime_check
   failed_when: false
 
-- name: Install subl (macOS)
-  shell: brew install subl
-  when: os == "darwin" and sublime_check.rc != 0
+- name: Install sublime
+  package:
+    name: sublime
+    state: present
+  when: sublime_check.rc != 0
 
 - name: Verify installation
   shell: subl --version 2>&1 || subl -v 2>&1 || echo "installed"
   register: sublime_version
 
 - name: Display version
-  print: "subl installed"
+  print: "sublime installed"

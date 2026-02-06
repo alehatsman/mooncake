@@ -3,9 +3,11 @@
   register: timescaledb_check
   failed_when: false
 
-- name: Install timescaledb (macOS)
-  shell: brew install timescaledb
-  when: os == "darwin" and timescaledb_check.rc != 0
+- name: Install timescaledb
+  package:
+    name: timescaledb
+    state: present
+  when: timescaledb_check.rc != 0
 
 - name: Verify installation
   shell: timescaledb --version 2>&1 || timescaledb -v 2>&1 || echo "installed"
