@@ -7,9 +7,29 @@
   shell: brew install age
   when: os == "darwin" and age_check.rc != 0
 
+- name: Install age with Homebrew (Linux)
+  shell: brew install age
+  when: os == "linux" and brew_available and age_check.rc != 0
+
+- name: Install age (Debian/Ubuntu)
+  shell: sudo apt-get update && sudo apt-get install -y age
+  when: os == "linux" and apt_available and age_check.rc != 0
+
+- name: Install age (Fedora)
+  shell: sudo dnf install -y age
+  when: os == "linux" and dnf_available and age_check.rc != 0
+
+- name: Download and install age binary (Linux fallback)
+  shell: |
+    VERSION=$(curl -s https://api.github.com/repos/FiloSottile/age/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
+    curl -sL "https://github.com/FiloSottile/age/releases/download/${VERSION}/age-${VERSION}-linux-amd64.tar.gz" | tar xz
+    sudo mv age/age age/age-keygen /usr/local/bin/
+    rm -rf age
+  when: os == "linux" and not brew_available and not apt_available and not dnf_available and age_check.rc != 0
+
 - name: Verify installation
-  shell: age --version 2>&1 || age -v 2>&1 || echo "installed"
+  shell: age --version 2>&1 || echo "installed"
   register: age_version
 
 - name: Display version
-  print: "age installed"
+  print: "age installed: {{ age_version.stdout }}"

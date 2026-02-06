@@ -8,7 +8,7 @@ Legend:
 - [T] Tested and works
 - [✓] All verified
 
-## Presets (4/396 complete)
+## Presets (10/396 complete)
 
 - [✓] **1password-cli**
   - [✓] Install (Linux/macOS)
@@ -40,17 +40,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **age**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **age**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **air**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **air**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **airbyte**
   - [ ] Install (Linux/macOS)
@@ -148,17 +150,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **asciinema**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **asciinema**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **asdf**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **asdf**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **astro**
   - [ ] Install (Linux/macOS)
@@ -172,11 +176,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **atuin**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **atuin**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **autojump**
   - [ ] Install (Linux/macOS)
@@ -436,11 +441,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **ctop**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **ctop**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **curlie**
   - [ ] Install (Linux/macOS)

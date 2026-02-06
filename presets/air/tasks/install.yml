@@ -7,9 +7,17 @@
   shell: brew install air
   when: os == "darwin" and air_check.rc != 0
 
+- name: Install air with Homebrew (Linux)
+  shell: brew install air
+  when: os == "linux" and brew_available and air_check.rc != 0
+
+- name: Install air with go install (Linux)
+  shell: go install github.com/cosmtrek/air@latest
+  when: os == "linux" and not brew_available and air_check.rc != 0
+
 - name: Verify installation
   shell: air --version 2>&1 || air -v 2>&1 || echo "installed"
   register: air_version
 
 - name: Display version
-  print: "air installed"
+  print: "air installed: {{ air_version.stdout }}"
