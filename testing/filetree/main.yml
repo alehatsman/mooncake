@@ -1,7 +1,0 @@
----
-- name: Render templates
-  template:
-    src: "{{ item.Src }}"
-    dest: "./testresult/{{ item.Path }}"
-  with_filetree: "./templates"
-  when: item.State == 'file'

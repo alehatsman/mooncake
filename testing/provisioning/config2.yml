@@ -1,4 +1,0 @@
----
-- name: Print something in shell
-  shell: |
-    echo "Hello from file 2"
