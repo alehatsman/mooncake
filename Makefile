@@ -117,7 +117,7 @@ ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
 .PHONY: docs-gen
 docs-gen: ## Generate preset documentation
 	@echo "Generating preset documentation..."
-	@pipenv run python3 scripts/generate-preset-docs.py
+	@python3 scripts/generate-preset-docs.py
 	@echo "✓ Preset docs generated"
 
 .PHONY: docs-serve
