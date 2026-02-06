@@ -3,9 +3,11 @@
   register: bookkeeper_check
   failed_when: false
 
-- name: Install bookkeeper (macOS)
-  shell: brew install bookkeeper
-  when: os == "darwin" and bookkeeper_check.rc != 0
+- name: Install bookkeeper
+  package:
+    name: bookkeeper
+    state: present
+  when: bookkeeper_check.rc != 0
 
 - name: Verify installation
   shell: bookkeeper --version 2>&1 || bookkeeper -v 2>&1 || echo "installed"

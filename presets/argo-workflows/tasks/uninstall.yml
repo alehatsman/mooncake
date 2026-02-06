@@ -1,7 +1,8 @@
-- name: Uninstall argo (macOS)
-  shell: brew uninstall argo
-  when: os == "darwin"
+- name: Uninstall argo-workflows
+  package:
+    name: argo-workflows
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "argo uninstalled"
+  print: "argo-workflows uninstalled"

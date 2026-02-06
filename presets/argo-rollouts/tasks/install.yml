@@ -1,15 +1,17 @@
 - name: Check if kubectl-argo-rollouts is installed
   shell: command -v kubectl-argo-rollouts
-  register: argo-rollouts_check
+  register: argo_rollouts_check
   failed_when: false
 
-- name: Install kubectl-argo-rollouts (macOS)
-  shell: brew install kubectl-argo-rollouts
-  when: os == "darwin" and argo-rollouts_check.rc != 0
+- name: Install argo-rollouts
+  package:
+    name: argo-rollouts
+    state: present
+  when: argo_rollouts_check.rc != 0
 
 - name: Verify installation
   shell: kubectl-argo-rollouts --version 2>&1 || kubectl-argo-rollouts -v 2>&1 || echo "installed"
-  register: argo-rollouts_version
+  register: argo_rollouts_version
 
 - name: Display version
-  print: "kubectl-argo-rollouts installed"
+  print: "argo-rollouts installed"

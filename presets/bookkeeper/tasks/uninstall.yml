@@ -1,6 +1,7 @@
-- name: Uninstall bookkeeper (macOS)
-  shell: brew uninstall bookkeeper
-  when: os == "darwin"
+- name: Uninstall bookkeeper
+  package:
+    name: bookkeeper
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall buildkite-agent (macOS)
-  shell: brew uninstall buildkite-agent
-  when: os == "darwin"
+- name: Uninstall buildkite-agent
+  package:
+    name: buildkite-agent
+    state: absent
   failed_when: false
 
 - name: Display confirmation

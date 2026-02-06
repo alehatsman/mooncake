@@ -1,15 +1,17 @@
 - name: Check if argo-events is installed
   shell: command -v argo-events
-  register: argo-events_check
+  register: argo_events_check
   failed_when: false
 
-- name: Install argo-events (macOS)
-  shell: brew install argo-events
-  when: os == "darwin" and argo-events_check.rc != 0
+- name: Install argo-events
+  package:
+    name: argo-events
+    state: present
+  when: argo_events_check.rc != 0
 
 - name: Verify installation
   shell: argo-events --version 2>&1 || argo-events -v 2>&1 || echo "installed"
-  register: argo-events_version
+  register: argo_events_version
 
 - name: Display version
   print: "argo-events installed"

@@ -3,9 +3,11 @@
   register: apisix_check
   failed_when: false
 
-- name: Install apisix (macOS)
-  shell: brew install apisix
-  when: os == "darwin" and apisix_check.rc != 0
+- name: Install apisix
+  package:
+    name: apisix
+    state: present
+  when: apisix_check.rc != 0
 
 - name: Verify installation
   shell: apisix --version 2>&1 || apisix -v 2>&1 || echo "installed"

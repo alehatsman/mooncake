@@ -1,6 +1,7 @@
-- name: Uninstall aqua (macOS)
-  shell: brew uninstall aqua
-  when: os == "darwin"
+- name: Uninstall aqua
+  package:
+    name: aqua
+    state: absent
   failed_when: false
 
 - name: Display confirmation

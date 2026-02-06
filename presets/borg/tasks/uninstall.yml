@@ -1,6 +1,7 @@
-- name: Uninstall borg (macOS)
-  shell: brew uninstall borg
-  when: os == "darwin"
+- name: Uninstall borg
+  package:
+    name: borg
+    state: absent
   failed_when: false
 
 - name: Display confirmation

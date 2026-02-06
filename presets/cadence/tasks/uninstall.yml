@@ -1,6 +1,7 @@
-- name: Uninstall cadence (macOS)
-  shell: brew uninstall cadence
-  when: os == "darwin"
+- name: Uninstall cadence
+  package:
+    name: cadence
+    state: absent
   failed_when: false
 
 - name: Display confirmation

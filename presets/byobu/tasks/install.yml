@@ -3,9 +3,11 @@
   register: byobu_check
   failed_when: false
 
-- name: Install byobu (macOS)
-  shell: brew install byobu
-  when: os == "darwin" and byobu_check.rc != 0
+- name: Install byobu
+  package:
+    name: byobu
+    state: present
+  when: byobu_check.rc != 0
 
 - name: Verify installation
   shell: byobu --version 2>&1 || byobu -v 2>&1 || echo "installed"

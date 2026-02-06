@@ -1,7 +1,8 @@
-- name: Uninstall anchore-cli (macOS)
-  shell: brew uninstall anchore-cli
-  when: os == "darwin"
+- name: Uninstall anchore
+  package:
+    name: anchore
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "anchore-cli uninstalled"
+  print: "anchore uninstalled"

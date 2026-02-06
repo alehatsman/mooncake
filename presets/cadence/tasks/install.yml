@@ -3,9 +3,11 @@
   register: cadence_check
   failed_when: false
 
-- name: Install cadence (macOS)
-  shell: brew install cadence
-  when: os == "darwin" and cadence_check.rc != 0
+- name: Install cadence
+  package:
+    name: cadence
+    state: present
+  when: cadence_check.rc != 0
 
 - name: Verify installation
   shell: cadence --version 2>&1 || cadence -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: ambassador_check
   failed_when: false
 
-- name: Install ambassador (macOS)
-  shell: brew install ambassador
-  when: os == "darwin" and ambassador_check.rc != 0
+- name: Install ambassador
+  package:
+    name: ambassador
+    state: present
+  when: ambassador_check.rc != 0
 
 - name: Verify installation
   shell: ambassador --version 2>&1 || ambassador -v 2>&1 || echo "installed"

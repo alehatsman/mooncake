@@ -3,9 +3,11 @@
   register: aqua_check
   failed_when: false
 
-- name: Install aqua (macOS)
-  shell: brew install aqua
-  when: os == "darwin" and aqua_check.rc != 0
+- name: Install aqua
+  package:
+    name: aqua
+    state: present
+  when: aqua_check.rc != 0
 
 - name: Verify installation
   shell: aqua --version 2>&1 || aqua -v 2>&1 || echo "installed"

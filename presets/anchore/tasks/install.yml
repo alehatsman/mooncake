@@ -3,13 +3,15 @@
   register: anchore_check
   failed_when: false
 
-- name: Install anchore-cli (macOS)
-  shell: brew install anchore-cli
-  when: os == "darwin" and anchore_check.rc != 0
+- name: Install anchore
+  package:
+    name: anchore
+    state: present
+  when: anchore_check.rc != 0
 
 - name: Verify installation
   shell: anchore-cli --version 2>&1 || anchore-cli -v 2>&1 || echo "installed"
   register: anchore_version
 
 - name: Display version
-  print: "anchore-cli installed"
+  print: "anchore installed"

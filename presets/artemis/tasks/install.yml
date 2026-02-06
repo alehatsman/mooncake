@@ -3,9 +3,11 @@
   register: artemis_check
   failed_when: false
 
-- name: Install artemis (macOS)
-  shell: brew install artemis
-  when: os == "darwin" and artemis_check.rc != 0
+- name: Install artemis
+  package:
+    name: artemis
+    state: present
+  when: artemis_check.rc != 0
 
 - name: Verify installation
   shell: artemis --version 2>&1 || artemis -v 2>&1 || echo "installed"

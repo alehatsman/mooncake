@@ -1,6 +1,7 @@
-- name: Uninstall apisix (macOS)
-  shell: brew uninstall apisix
-  when: os == "darwin"
+- name: Uninstall apisix
+  package:
+    name: apisix
+    state: absent
   failed_when: false
 
 - name: Display confirmation

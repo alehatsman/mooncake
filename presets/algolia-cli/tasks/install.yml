@@ -1,15 +1,17 @@
 - name: Check if algolia is installed
   shell: command -v algolia
-  register: algolia-cli_check
+  register: algolia_cli_check
   failed_when: false
 
-- name: Install algolia (macOS)
-  shell: brew install algolia
-  when: os == "darwin" and algolia-cli_check.rc != 0
+- name: Install algolia-cli
+  package:
+    name: algolia-cli
+    state: present
+  when: algolia_cli_check.rc != 0
 
 - name: Verify installation
   shell: algolia --version 2>&1 || algolia -v 2>&1 || echo "installed"
-  register: algolia-cli_version
+  register: algolia_cli_version
 
 - name: Display version
-  print: "algolia installed"
+  print: "algolia-cli installed"

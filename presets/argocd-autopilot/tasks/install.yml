@@ -1,15 +1,17 @@
 - name: Check if argocd-autopilot is installed
   shell: command -v argocd-autopilot
-  register: argocd-autopilot_check
+  register: argocd_autopilot_check
   failed_when: false
 
-- name: Install argocd-autopilot (macOS)
-  shell: brew install argocd-autopilot
-  when: os == "darwin" and argocd-autopilot_check.rc != 0
+- name: Install argocd-autopilot
+  package:
+    name: argocd-autopilot
+    state: present
+  when: argocd_autopilot_check.rc != 0
 
 - name: Verify installation
   shell: argocd-autopilot --version 2>&1 || argocd-autopilot -v 2>&1 || echo "installed"
-  register: argocd-autopilot_version
+  register: argocd_autopilot_version
 
 - name: Display version
   print: "argocd-autopilot installed"

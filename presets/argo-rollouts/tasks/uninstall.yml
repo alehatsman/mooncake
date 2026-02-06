@@ -1,7 +1,8 @@
-- name: Uninstall kubectl-argo-rollouts (macOS)
-  shell: brew uninstall kubectl-argo-rollouts
-  when: os == "darwin"
+- name: Uninstall argo-rollouts
+  package:
+    name: argo-rollouts
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "kubectl-argo-rollouts uninstalled"
+  print: "argo-rollouts uninstalled"

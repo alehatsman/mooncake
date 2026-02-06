@@ -1,6 +1,7 @@
-- name: Uninstall byobu (macOS)
-  shell: brew uninstall byobu
-  when: os == "darwin"
+- name: Uninstall byobu
+  package:
+    name: byobu
+    state: absent
   failed_when: false
 
 - name: Display confirmation

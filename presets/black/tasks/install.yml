@@ -3,9 +3,11 @@
   register: black_check
   failed_when: false
 
-- name: Install black (macOS)
-  shell: brew install black
-  when: os == "darwin" and black_check.rc != 0
+- name: Install black
+  package:
+    name: black
+    state: present
+  when: black_check.rc != 0
 
 - name: Verify installation
   shell: black --version 2>&1 || black -v 2>&1 || echo "installed"

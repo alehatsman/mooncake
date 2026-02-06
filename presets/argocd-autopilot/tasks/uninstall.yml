@@ -1,6 +1,7 @@
-- name: Uninstall argocd-autopilot (macOS)
-  shell: brew uninstall argocd-autopilot
-  when: os == "darwin"
+- name: Uninstall argocd-autopilot
+  package:
+    name: argocd-autopilot
+    state: absent
   failed_when: false
 
 - name: Display confirmation

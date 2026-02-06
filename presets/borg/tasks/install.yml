@@ -3,9 +3,11 @@
   register: borg_check
   failed_when: false
 
-- name: Install borg (macOS)
-  shell: brew install borg
-  when: os == "darwin" and borg_check.rc != 0
+- name: Install borg
+  package:
+    name: borg
+    state: present
+  when: borg_check.rc != 0
 
 - name: Verify installation
   shell: borg --version 2>&1 || borg -v 2>&1 || echo "installed"

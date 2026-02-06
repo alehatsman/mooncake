@@ -1,6 +1,7 @@
-- name: Uninstall argo-events (macOS)
-  shell: brew uninstall argo-events
-  when: os == "darwin"
+- name: Uninstall argo-events
+  package:
+    name: argo-events
+    state: absent
   failed_when: false
 
 - name: Display confirmation

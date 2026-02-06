@@ -3,9 +3,11 @@
   register: beam_check
   failed_when: false
 
-- name: Install beam (macOS)
-  shell: brew install beam
-  when: os == "darwin" and beam_check.rc != 0
+- name: Install beam
+  package:
+    name: beam
+    state: present
+  when: beam_check.rc != 0
 
 - name: Verify installation
   shell: beam --version 2>&1 || beam -v 2>&1 || echo "installed"

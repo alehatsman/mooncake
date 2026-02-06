@@ -3,9 +3,11 @@
   register: cabal_check
   failed_when: false
 
-- name: Install cabal (macOS)
-  shell: brew install cabal
-  when: os == "darwin" and cabal_check.rc != 0
+- name: Install cabal
+  package:
+    name: cabal
+    state: present
+  when: cabal_check.rc != 0
 
 - name: Verify installation
   shell: cabal --version 2>&1 || cabal -v 2>&1 || echo "installed"

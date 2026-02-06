@@ -1,6 +1,7 @@
-- name: Uninstall black (macOS)
-  shell: brew uninstall black
-  when: os == "darwin"
+- name: Uninstall black
+  package:
+    name: black
+    state: absent
   failed_when: false
 
 - name: Display confirmation
