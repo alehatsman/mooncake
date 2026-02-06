@@ -1,6 +1,7 @@
-- name: Uninstall ytop (macOS)
-  shell: brew uninstall ytop
-  when: os == "darwin"
+- name: Uninstall ytop
+  package:
+    name: ytop
+    state: absent
   failed_when: false
 
 - name: Display confirmation

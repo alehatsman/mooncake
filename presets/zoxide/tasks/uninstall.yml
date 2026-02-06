@@ -1,6 +1,7 @@
-- name: Uninstall zoxide (macOS)
-  shell: brew uninstall zoxide
-  when: os == "darwin"
+- name: Uninstall zoxide
+  package:
+    name: zoxide
+    state: absent
   failed_when: false
 
 - name: Display confirmation

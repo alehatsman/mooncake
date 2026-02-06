@@ -1,6 +1,7 @@
-- name: Uninstall zenith (macOS)
-  shell: brew uninstall zenith
-  when: os == "darwin"
+- name: Uninstall zenith
+  package:
+    name: zenith
+    state: absent
   failed_when: false
 
 - name: Display confirmation

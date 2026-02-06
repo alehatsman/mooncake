@@ -1,6 +1,7 @@
-- name: Uninstall zinc (macOS)
-  shell: brew uninstall zinc
-  when: os == "darwin"
+- name: Uninstall zinc
+  package:
+    name: zinc
+    state: absent
   failed_when: false
 
 - name: Display confirmation

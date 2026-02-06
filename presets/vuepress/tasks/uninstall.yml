@@ -1,6 +1,7 @@
-- name: Uninstall vuepress (macOS)
-  shell: brew uninstall vuepress
-  when: os == "darwin"
+- name: Uninstall vuepress
+  package:
+    name: vuepress
+    state: absent
   failed_when: false
 
 - name: Display confirmation

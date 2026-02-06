@@ -1,15 +1,17 @@
 - name: Check if woodpecker-cli is installed
   shell: command -v woodpecker-cli
-  register: woodpecker-cli_check
+  register: woodpecker_cli_check
   failed_when: false
 
-- name: Install woodpecker-cli (macOS)
-  shell: brew install woodpecker-cli
-  when: os == "darwin" and woodpecker-cli_check.rc != 0
+- name: Install woodpecker-cli
+  package:
+    name: woodpecker-cli
+    state: present
+  when: woodpecker_cli_check.rc != 0
 
 - name: Verify installation
   shell: woodpecker-cli --version 2>&1 || woodpecker-cli -v 2>&1 || echo "installed"
-  register: woodpecker-cli_version
+  register: woodpecker_cli_version
 
 - name: Display version
   print: "woodpecker-cli installed"

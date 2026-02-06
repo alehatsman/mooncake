@@ -1,6 +1,7 @@
-- name: Uninstall z (macOS)
-  shell: brew uninstall z
-  when: os == "darwin"
+- name: Uninstall z
+  package:
+    name: z
+    state: absent
   failed_when: false
 
 - name: Display confirmation

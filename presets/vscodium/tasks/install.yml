@@ -3,13 +3,15 @@
   register: vscodium_check
   failed_when: false
 
-- name: Install codium (macOS)
-  shell: brew install codium
-  when: os == "darwin" and vscodium_check.rc != 0
+- name: Install vscodium
+  package:
+    name: vscodium
+    state: present
+  when: vscodium_check.rc != 0
 
 - name: Verify installation
   shell: codium --version 2>&1 || codium -v 2>&1 || echo "installed"
   register: vscodium_version
 
 - name: Display version
-  print: "codium installed"
+  print: "vscodium installed"

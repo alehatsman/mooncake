@@ -3,9 +3,11 @@
   register: werf_check
   failed_when: false
 
-- name: Install werf (macOS)
-  shell: brew install werf
-  when: os == "darwin" and werf_check.rc != 0
+- name: Install werf
+  package:
+    name: werf
+    state: present
+  when: werf_check.rc != 0
 
 - name: Verify installation
   shell: werf --version 2>&1 || werf -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: zed_check
   failed_when: false
 
-- name: Install zed (macOS)
-  shell: brew install zed
-  when: os == "darwin" and zed_check.rc != 0
+- name: Install zed
+  package:
+    name: zed
+    state: present
+  when: zed_check.rc != 0
 
 - name: Verify installation
   shell: zed --version 2>&1 || zed -v 2>&1 || echo "installed"

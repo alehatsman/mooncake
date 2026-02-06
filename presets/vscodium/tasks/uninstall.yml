@@ -1,7 +1,8 @@
-- name: Uninstall codium (macOS)
-  shell: brew uninstall codium
-  when: os == "darwin"
+- name: Uninstall vscodium
+  package:
+    name: vscodium
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "codium uninstalled"
+  print: "vscodium uninstalled"

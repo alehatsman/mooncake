@@ -1,6 +1,7 @@
-- name: Uninstall wrk (macOS)
-  shell: brew uninstall wrk
-  when: os == "darwin"
+- name: Uninstall wrk
+  package:
+    name: wrk
+    state: absent
   failed_when: false
 
 - name: Display confirmation

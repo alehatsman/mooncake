@@ -3,9 +3,11 @@
   register: vuepress_check
   failed_when: false
 
-- name: Install vuepress (macOS)
-  shell: brew install vuepress
-  when: os == "darwin" and vuepress_check.rc != 0
+- name: Install vuepress
+  package:
+    name: vuepress
+    state: present
+  when: vuepress_check.rc != 0
 
 - name: Verify installation
   shell: vuepress --version 2>&1 || vuepress -v 2>&1 || echo "installed"

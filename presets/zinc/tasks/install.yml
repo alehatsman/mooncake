@@ -3,9 +3,11 @@
   register: zinc_check
   failed_when: false
 
-- name: Install zinc (macOS)
-  shell: brew install zinc
-  when: os == "darwin" and zinc_check.rc != 0
+- name: Install zinc
+  package:
+    name: zinc
+    state: present
+  when: zinc_check.rc != 0
 
 - name: Verify installation
   shell: zinc --version 2>&1 || zinc -v 2>&1 || echo "installed"

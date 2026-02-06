@@ -3,9 +3,11 @@
   register: yq_check
   failed_when: false
 
-- name: Install yq (macOS)
-  shell: brew install yq
-  when: os == "darwin" and yq_check.rc != 0
+- name: Install yq
+  package:
+    name: yq
+    state: present
+  when: yq_check.rc != 0
 
 - name: Verify installation
   shell: yq --version 2>&1 || yq -v 2>&1 || echo "installed"

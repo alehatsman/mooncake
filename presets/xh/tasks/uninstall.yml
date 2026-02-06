@@ -1,6 +1,7 @@
-- name: Uninstall xh (macOS)
-  shell: brew uninstall xh
-  when: os == "darwin"
+- name: Uninstall xh
+  package:
+    name: xh
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: zookeeper_check
   failed_when: false
 
-- name: Install zookeeper (macOS)
-  shell: brew install zookeeper
-  when: os == "darwin" and zookeeper_check.rc != 0
+- name: Install zookeeper
+  package:
+    name: zookeeper
+    state: present
+  when: zookeeper_check.rc != 0
 
 - name: Verify installation
   shell: zookeeper --version 2>&1 || zookeeper -v 2>&1 || echo "installed"

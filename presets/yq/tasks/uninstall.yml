@@ -1,6 +1,7 @@
-- name: Uninstall yq (macOS)
-  shell: brew uninstall yq
-  when: os == "darwin"
+- name: Uninstall yq
+  package:
+    name: yq
+    state: absent
   failed_when: false
 
 - name: Display confirmation

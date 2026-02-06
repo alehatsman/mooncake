@@ -1,6 +1,7 @@
-- name: Uninstall yamllint (macOS)
-  shell: brew uninstall yamllint
-  when: os == "darwin"
+- name: Uninstall yamllint
+  package:
+    name: yamllint
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall zookeeper (macOS)
-  shell: brew uninstall zookeeper
-  when: os == "darwin"
+- name: Uninstall zookeeper
+  package:
+    name: zookeeper
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: wrk_check
   failed_when: false
 
-- name: Install wrk (macOS)
-  shell: brew install wrk
-  when: os == "darwin" and wrk_check.rc != 0
+- name: Install wrk
+  package:
+    name: wrk
+    state: present
+  when: wrk_check.rc != 0
 
 - name: Verify installation
   shell: wrk --version 2>&1 || wrk -v 2>&1 || echo "installed"

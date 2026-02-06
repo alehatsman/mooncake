@@ -3,9 +3,11 @@
   register: watchexec_check
   failed_when: false
 
-- name: Install watchexec (macOS)
-  shell: brew install watchexec
-  when: os == "darwin" and watchexec_check.rc != 0
+- name: Install watchexec
+  package:
+    name: watchexec
+    state: present
+  when: watchexec_check.rc != 0
 
 - name: Verify installation
   shell: watchexec --version 2>&1 || watchexec -v 2>&1 || echo "installed"

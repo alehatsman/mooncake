@@ -3,9 +3,11 @@
   register: zenith_check
   failed_when: false
 
-- name: Install zenith (macOS)
-  shell: brew install zenith
-  when: os == "darwin" and zenith_check.rc != 0
+- name: Install zenith
+  package:
+    name: zenith
+    state: present
+  when: zenith_check.rc != 0
 
 - name: Verify installation
   shell: zenith --version 2>&1 || zenith -v 2>&1 || echo "installed"

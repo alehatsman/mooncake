@@ -3,9 +3,11 @@
   register: xsv_check
   failed_when: false
 
-- name: Install xsv (macOS)
-  shell: brew install xsv
-  when: os == "darwin" and xsv_check.rc != 0
+- name: Install xsv
+  package:
+    name: xsv
+    state: present
+  when: xsv_check.rc != 0
 
 - name: Verify installation
   shell: xsv --version 2>&1 || xsv -v 2>&1 || echo "installed"

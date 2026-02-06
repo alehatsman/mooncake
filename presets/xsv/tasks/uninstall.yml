@@ -1,6 +1,7 @@
-- name: Uninstall xsv (macOS)
-  shell: brew uninstall xsv
-  when: os == "darwin"
+- name: Uninstall xsv
+  package:
+    name: xsv
+    state: absent
   failed_when: false
 
 - name: Display confirmation

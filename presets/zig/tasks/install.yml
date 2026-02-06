@@ -3,9 +3,11 @@
   register: zig_check
   failed_when: false
 
-- name: Install zig (macOS)
-  shell: brew install zig
-  when: os == "darwin" and zig_check.rc != 0
+- name: Install zig
+  package:
+    name: zig
+    state: present
+  when: zig_check.rc != 0
 
 - name: Verify installation
   shell: zig --version 2>&1 || zig -v 2>&1 || echo "installed"

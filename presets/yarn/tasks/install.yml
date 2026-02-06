@@ -3,9 +3,11 @@
   register: yarn_check
   failed_when: false
 
-- name: Install yarn (macOS)
-  shell: brew install yarn
-  when: os == "darwin" and yarn_check.rc != 0
+- name: Install yarn
+  package:
+    name: yarn
+    state: present
+  when: yarn_check.rc != 0
 
 - name: Verify installation
   shell: yarn --version 2>&1 || yarn -v 2>&1 || echo "installed"

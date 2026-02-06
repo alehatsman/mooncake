@@ -1,6 +1,7 @@
-- name: Uninstall wezterm (macOS)
-  shell: brew uninstall wezterm
-  when: os == "darwin"
+- name: Uninstall wezterm
+  package:
+    name: wezterm
+    state: absent
   failed_when: false
 
 - name: Display confirmation

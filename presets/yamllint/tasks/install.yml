@@ -3,9 +3,11 @@
   register: yamllint_check
   failed_when: false
 
-- name: Install yamllint (macOS)
-  shell: brew install yamllint
-  when: os == "darwin" and yamllint_check.rc != 0
+- name: Install yamllint
+  package:
+    name: yamllint
+    state: present
+  when: yamllint_check.rc != 0
 
 - name: Verify installation
   shell: yamllint --version 2>&1 || yamllint -v 2>&1 || echo "installed"

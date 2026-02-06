@@ -3,9 +3,11 @@
   register: wezterm_check
   failed_when: false
 
-- name: Install wezterm (macOS)
-  shell: brew install wezterm
-  when: os == "darwin" and wezterm_check.rc != 0
+- name: Install wezterm
+  package:
+    name: wezterm
+    state: present
+  when: wezterm_check.rc != 0
 
 - name: Verify installation
   shell: wezterm --version 2>&1 || wezterm -v 2>&1 || echo "installed"

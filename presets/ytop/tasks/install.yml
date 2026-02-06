@@ -3,9 +3,11 @@
   register: ytop_check
   failed_when: false
 
-- name: Install ytop (macOS)
-  shell: brew install ytop
-  when: os == "darwin" and ytop_check.rc != 0
+- name: Install ytop
+  package:
+    name: ytop
+    state: present
+  when: ytop_check.rc != 0
 
 - name: Verify installation
   shell: ytop --version 2>&1 || ytop -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall zed (macOS)
-  shell: brew uninstall zed
-  when: os == "darwin"
+- name: Uninstall zed
+  package:
+    name: zed
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,7 +1,8 @@
-- name: Uninstall vultr (macOS)
-  shell: brew uninstall vultr
-  when: os == "darwin"
+- name: Uninstall vultr-cli
+  package:
+    name: vultr-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "vultr uninstalled"
+  print: "vultr-cli uninstalled"

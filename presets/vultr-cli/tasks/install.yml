@@ -1,15 +1,17 @@
 - name: Check if vultr is installed
   shell: command -v vultr
-  register: vultr-cli_check
+  register: vultr_cli_check
   failed_when: false
 
-- name: Install vultr (macOS)
-  shell: brew install vultr
-  when: os == "darwin" and vultr-cli_check.rc != 0
+- name: Install vultr-cli
+  package:
+    name: vultr-cli
+    state: present
+  when: vultr_cli_check.rc != 0
 
 - name: Verify installation
   shell: vultr --version 2>&1 || vultr -v 2>&1 || echo "installed"
-  register: vultr-cli_version
+  register: vultr_cli_version
 
 - name: Display version
-  print: "vultr installed"
+  print: "vultr-cli installed"

@@ -3,9 +3,11 @@
   register: xh_check
   failed_when: false
 
-- name: Install xh (macOS)
-  shell: brew install xh
-  when: os == "darwin" and xh_check.rc != 0
+- name: Install xh
+  package:
+    name: xh
+    state: present
+  when: xh_check.rc != 0
 
 - name: Verify installation
   shell: xh --version 2>&1 || xh -v 2>&1 || echo "installed"
