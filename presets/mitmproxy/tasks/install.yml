@@ -3,15 +3,21 @@
   register: mitmproxy_check
   failed_when: false
 
-- name: Install mitmproxy
+- name: Install mitmproxy (macOS)
   package:
     name: mitmproxy
     state: present
-  when: mitmproxy_check.rc != 0
+  when: os == "darwin" and mitmproxy_check.rc != 0
 
-- name: Verify installation
-  shell: mitmproxy --version 2>&1 || mitmproxy -v 2>&1 || echo "installed"
-  register: mitmproxy_version
+- name: Install mitmproxy (Linux)
+  shell: pip3 install --user mitmproxy
+  when: os == "linux" and mitmproxy_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mitmproxy
+      exit_code: 0
 
 - name: Display version
   print: "mitmproxy installed"

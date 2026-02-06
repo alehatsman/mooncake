@@ -3,15 +3,21 @@
   register: mypy_check
   failed_when: false
 
-- name: Install mypy
+- name: Install mypy (macOS)
   package:
     name: mypy
     state: present
-  when: mypy_check.rc != 0
+  when: os == "darwin" and mypy_check.rc != 0
 
-- name: Verify installation
-  shell: mypy --version 2>&1 || mypy -v 2>&1 || echo "installed"
-  register: mypy_version
+- name: Install mypy (Linux)
+  shell: pip3 install --user mypy
+  when: os == "linux" and mypy_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mypy
+      exit_code: 0
 
 - name: Display version
   print: "mypy installed"

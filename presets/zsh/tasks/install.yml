@@ -33,7 +33,13 @@
   when: os == "linux" and package_manager == "pacman" and zsh_check.rc != 0
 
 # Verify Zsh installation
-- name: Verify Zsh installation
+- name: Verify Zsh installation with assert
+  assert:
+    command:
+      cmd: command -v zsh
+      exit_code: 0
+
+- name: Get Zsh version
   shell: zsh --version
   register: zsh_version
 

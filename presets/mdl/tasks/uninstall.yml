@@ -1,8 +1,20 @@
-- name: Uninstall mdl
+- name: Uninstall mdl (macOS)
   package:
     name: mdl
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall mdl (Linux)
+  shell: gem uninstall -x mdl
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v mdl
+      exit_code: 1
 
 - name: Display confirmation
   print: "mdl uninstalled"

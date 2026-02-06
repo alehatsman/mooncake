@@ -3,15 +3,21 @@
   register: mise_check
   failed_when: false
 
-- name: Install mise
+- name: Install mise (macOS)
   package:
     name: mise
     state: present
-  when: mise_check.rc != 0
+  when: os == "darwin" and mise_check.rc != 0
 
-- name: Verify installation
-  shell: mise --version 2>&1 || mise -v 2>&1 || echo "installed"
-  register: mise_version
+- name: Install mise (Linux)
+  shell: curl https://mise.run | sh
+  when: os == "linux" and mise_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mise
+      exit_code: 0
 
 - name: Display version
   print: "mise installed"

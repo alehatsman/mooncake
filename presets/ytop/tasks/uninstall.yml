@@ -1,8 +1,20 @@
-- name: Uninstall ytop
+- name: Uninstall ytop (macOS)
   package:
     name: ytop
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall ytop (Linux)
+  shell: cargo uninstall ytop
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ytop
+      exit_code: 1
 
 - name: Display confirmation
   print: "ytop uninstalled"

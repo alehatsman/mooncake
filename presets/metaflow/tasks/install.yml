@@ -3,15 +3,21 @@
   register: metaflow_check
   failed_when: false
 
-- name: Install metaflow
+- name: Install metaflow (macOS)
   package:
     name: metaflow
     state: present
-  when: metaflow_check.rc != 0
+  when: os == "darwin" and metaflow_check.rc != 0
 
-- name: Verify installation
-  shell: metaflow --version 2>&1 || metaflow -v 2>&1 || echo "installed"
-  register: metaflow_version
+- name: Install metaflow (Linux)
+  shell: pip3 install --user metaflow
+  when: os == "linux" and metaflow_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v metaflow
+      exit_code: 0
 
 - name: Display version
   print: "metaflow installed"

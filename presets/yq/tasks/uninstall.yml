@@ -1,8 +1,20 @@
-- name: Uninstall yq
+- name: Uninstall yq (macOS)
   package:
     name: yq
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall yq (Linux)
+  shell: rm -f ~/go/bin/yq
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v yq
+      exit_code: 1
 
 - name: Display confirmation
   print: "yq uninstalled"

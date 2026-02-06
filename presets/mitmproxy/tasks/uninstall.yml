@@ -1,8 +1,20 @@
-- name: Uninstall mitmproxy
+- name: Uninstall mitmproxy (macOS)
   package:
     name: mitmproxy
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall mitmproxy (Linux)
+  shell: pip3 uninstall -y mitmproxy
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v mitmproxy
+      exit_code: 1
 
 - name: Display confirmation
   print: "mitmproxy uninstalled"

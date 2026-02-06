@@ -3,15 +3,24 @@
   register: mtr_check
   failed_when: false
 
-- name: Install mtr
+- name: Install mtr (macOS)
   package:
     name: mtr
     state: present
-  when: mtr_check.rc != 0
+  when: os == "darwin" and mtr_check.rc != 0
 
-- name: Verify installation
-  shell: mtr --version 2>&1 || mtr -v 2>&1 || echo "installed"
-  register: mtr_version
+- name: Install mtr (Linux)
+  package:
+    name: mtr
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and mtr_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mtr
+      exit_code: 0
 
 - name: Display version
   print: "mtr installed"

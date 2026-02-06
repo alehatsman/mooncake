@@ -3,15 +3,21 @@
   register: zoxide_check
   failed_when: false
 
-- name: Install zoxide
+- name: Install zoxide (macOS)
   package:
     name: zoxide
     state: present
-  when: zoxide_check.rc != 0
+  when: os == "darwin" and zoxide_check.rc != 0
 
-- name: Verify installation
-  shell: zoxide --version 2>&1 || zoxide -v 2>&1 || echo "installed"
-  register: zoxide_version
+- name: Install zoxide (Linux)
+  shell: cargo install zoxide
+  when: os == "linux" and zoxide_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v zoxide
+      exit_code: 0
 
 - name: Display version
   print: "zoxide installed"

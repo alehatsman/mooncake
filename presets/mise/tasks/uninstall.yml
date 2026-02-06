@@ -1,8 +1,20 @@
-- name: Uninstall mise
+- name: Uninstall mise (macOS)
   package:
     name: mise
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall mise (Linux)
+  shell: rm -rf ~/.local/share/mise ~/.local/bin/mise ~/.config/mise
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v mise
+      exit_code: 1
 
 - name: Display confirmation
   print: "mise uninstalled"

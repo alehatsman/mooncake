@@ -3,15 +3,21 @@
   register: yamllint_check
   failed_when: false
 
-- name: Install yamllint
+- name: Install yamllint (macOS)
   package:
     name: yamllint
     state: present
-  when: yamllint_check.rc != 0
+  when: os == "darwin" and yamllint_check.rc != 0
 
-- name: Verify installation
-  shell: yamllint --version 2>&1 || yamllint -v 2>&1 || echo "installed"
-  register: yamllint_version
+- name: Install yamllint (Linux)
+  shell: pip3 install --user yamllint
+  when: os == "linux" and yamllint_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v yamllint
+      exit_code: 0
 
 - name: Display version
   print: "yamllint installed"

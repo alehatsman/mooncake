@@ -1,8 +1,20 @@
-- name: Uninstall zinc
+- name: Uninstall zinc (macOS)
   package:
     name: zinc
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall zinc (Linux)
+  shell: cargo uninstall zinc
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v zinc
+      exit_code: 1
 
 - name: Display confirmation
   print: "zinc uninstalled"

@@ -3,15 +3,21 @@
   register: mkdocs_check
   failed_when: false
 
-- name: Install mkdocs
+- name: Install mkdocs (macOS)
   package:
     name: mkdocs
     state: present
-  when: mkdocs_check.rc != 0
+  when: os == "darwin" and mkdocs_check.rc != 0
 
-- name: Verify installation
-  shell: mkdocs --version 2>&1 || echo "installed"
-  register: mkdocs_version
+- name: Install mkdocs (Linux)
+  shell: pip3 install --user mkdocs
+  when: os == "linux" and mkdocs_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mkdocs
+      exit_code: 0
 
 - name: Display version
-  print: "mkdocs installed: {{ mkdocs_version.stdout }}"
+  print: "mkdocs installed"

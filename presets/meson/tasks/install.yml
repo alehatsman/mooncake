@@ -3,15 +3,21 @@
   register: meson_check
   failed_when: false
 
-- name: Install meson
+- name: Install meson (macOS)
   package:
     name: meson
     state: present
-  when: meson_check.rc != 0
+  when: os == "darwin" and meson_check.rc != 0
 
-- name: Verify installation
-  shell: meson --version 2>&1 || meson -v 2>&1 || echo "installed"
-  register: meson_version
+- name: Install meson (Linux)
+  shell: pip3 install --user meson
+  when: os == "linux" and meson_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v meson
+      exit_code: 0
 
 - name: Display version
   print: "meson installed"

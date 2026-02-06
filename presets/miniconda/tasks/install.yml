@@ -58,7 +58,13 @@
   failed_when: false
 
 # Verify installation
-- name: Verify conda installation
+- name: Verify conda installation with assert
+  assert:
+    file:
+      path: "{{ parameters.install_path }}/bin/conda"
+      exists: true
+
+- name: Get conda version
   shell: "{{ parameters.install_path }}/bin/conda --version"
   register: conda_version
   failed_when: false

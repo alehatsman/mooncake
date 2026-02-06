@@ -1,8 +1,20 @@
-- name: Uninstall markdownlint
+- name: Uninstall markdownlint (macOS)
   package:
-    name: markdownlint
+    name: markdownlint-cli
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall markdownlint (Linux)
+  shell: npm uninstall -g markdownlint-cli
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v markdownlint
+      exit_code: 1
 
 - name: Display confirmation
   print: "markdownlint uninstalled"

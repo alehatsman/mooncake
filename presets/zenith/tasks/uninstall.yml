@@ -1,8 +1,20 @@
-- name: Uninstall zenith
+- name: Uninstall zenith (macOS)
   package:
     name: zenith
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall zenith (Linux)
+  shell: cargo uninstall zenith
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v zenith
+      exit_code: 1
 
 - name: Display confirmation
   print: "zenith uninstalled"

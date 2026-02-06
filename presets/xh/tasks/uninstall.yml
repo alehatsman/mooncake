@@ -1,8 +1,20 @@
-- name: Uninstall xh
+- name: Uninstall xh (macOS)
   package:
     name: xh
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall xh (Linux)
+  shell: cargo uninstall xh
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v xh
+      exit_code: 1
 
 - name: Display confirmation
   print: "xh uninstalled"

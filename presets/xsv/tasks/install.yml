@@ -3,15 +3,21 @@
   register: xsv_check
   failed_when: false
 
-- name: Install xsv
+- name: Install xsv (macOS)
   package:
     name: xsv
     state: present
-  when: xsv_check.rc != 0
+  when: os == "darwin" and xsv_check.rc != 0
 
-- name: Verify installation
-  shell: xsv --version 2>&1 || xsv -v 2>&1 || echo "installed"
-  register: xsv_version
+- name: Install xsv (Linux)
+  shell: cargo install xsv
+  when: os == "linux" and xsv_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v xsv
+      exit_code: 0
 
 - name: Display version
   print: "xsv installed"

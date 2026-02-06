@@ -30,6 +30,13 @@
   with_items: parameters.tools
   when: package_manager == "brew" and parameters.state == "absent"
 
+- name: Verify installation
+  assert:
+    command:
+      cmd: command -v bat
+      exit_code: 0
+  when: parameters.state == "present"
+
 - name: Print installation complete message
   print: |
     Modern Unix tools installed! Try these commands:

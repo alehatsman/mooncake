@@ -3,15 +3,21 @@
   register: zinc_check
   failed_when: false
 
-- name: Install zinc
+- name: Install zinc (macOS)
   package:
     name: zinc
     state: present
-  when: zinc_check.rc != 0
+  when: os == "darwin" and zinc_check.rc != 0
 
-- name: Verify installation
-  shell: zinc --version 2>&1 || zinc -v 2>&1 || echo "installed"
-  register: zinc_version
+- name: Install zinc (Linux)
+  shell: cargo install zinc
+  when: os == "linux" and zinc_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v zinc
+      exit_code: 0
 
 - name: Display version
   print: "zinc installed"

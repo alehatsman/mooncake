@@ -1,8 +1,23 @@
-- name: Uninstall mtr
+- name: Uninstall mtr (macOS)
   package:
     name: mtr
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall mtr (Linux)
+  package:
+    name: mtr
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v mtr
+      exit_code: 1
 
 - name: Display confirmation
   print: "mtr uninstalled"

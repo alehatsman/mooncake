@@ -3,15 +3,24 @@
   register: masscan_check
   failed_when: false
 
-- name: Install masscan
+- name: Install masscan (macOS)
   package:
     name: masscan
     state: present
-  when: masscan_check.rc != 0
+  when: os == "darwin" and masscan_check.rc != 0
 
-- name: Verify installation
-  shell: masscan --version 2>&1 || masscan -v 2>&1 || echo "installed"
-  register: masscan_version
+- name: Install masscan (Linux)
+  package:
+    name: masscan
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and masscan_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v masscan
+      exit_code: 0
 
 - name: Display version
   print: "masscan installed"

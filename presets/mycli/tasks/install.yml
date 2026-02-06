@@ -3,15 +3,21 @@
   register: mycli_check
   failed_when: false
 
-- name: Install mycli
+- name: Install mycli (macOS)
   package:
     name: mycli
     state: present
-  when: mycli_check.rc != 0
+  when: os == "darwin" and mycli_check.rc != 0
 
-- name: Verify installation
-  shell: mycli --version 2>&1 || mycli -v 2>&1 || echo "installed"
-  register: mycli_version
+- name: Install mycli (Linux)
+  shell: pip3 install --user mycli
+  when: os == "linux" and mycli_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mycli
+      exit_code: 0
 
 - name: Display version
   print: "mycli installed"

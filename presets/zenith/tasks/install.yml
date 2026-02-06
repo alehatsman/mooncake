@@ -3,15 +3,21 @@
   register: zenith_check
   failed_when: false
 
-- name: Install zenith
+- name: Install zenith (macOS)
   package:
     name: zenith
     state: present
-  when: zenith_check.rc != 0
+  when: os == "darwin" and zenith_check.rc != 0
 
-- name: Verify installation
-  shell: zenith --version 2>&1 || zenith -v 2>&1 || echo "installed"
-  register: zenith_version
+- name: Install zenith (Linux)
+  shell: cargo install zenith
+  when: os == "linux" and zenith_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v zenith
+      exit_code: 0
 
 - name: Display version
   print: "zenith installed"

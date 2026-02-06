@@ -1,17 +1,33 @@
 - name: Check if z is installed
-  shell: command -v z
+  shell: test -f ~/.z.sh || test -f /usr/local/etc/profile.d/z.sh
   register: z_check
   failed_when: false
 
-- name: Install z
+- name: Install z (macOS)
   package:
     name: z
     state: present
-  when: z_check.rc != 0
+  when: os == "darwin" and z_check.rc != 0
 
-- name: Verify installation
-  shell: z --version 2>&1 || z -v 2>&1 || echo "installed"
-  register: z_version
+- name: Install z (Linux)
+  shell: |
+    curl -fsSL https://raw.githubusercontent.com/rupa/z/master/z.sh -o ~/.z.sh
+    chmod +x ~/.z.sh
+  when: os == "linux" and z_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    file:
+      path: ~/.z.sh
+      exists: true
+  when: os == "linux"
+
+- name: Verify installation with assert
+  assert:
+    file:
+      path: /usr/local/etc/profile.d/z.sh
+      exists: true
+  when: os == "darwin"
 
 - name: Display version
   print: "z installed"

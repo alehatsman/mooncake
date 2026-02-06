@@ -3,15 +3,28 @@
   register: mkcert_check
   failed_when: false
 
-- name: Install mkcert
+- name: Install mkcert (macOS)
   package:
     name: mkcert
     state: present
-  when: mkcert_check.rc != 0
+  when: os == "darwin" and mkcert_check.rc != 0
 
-- name: Verify installation
-  shell: mkcert --version 2>&1 || mkcert -v 2>&1 || echo "installed"
-  register: mkcert_version
+- name: Install mkcert (Linux)
+  package:
+    name: libnss3-tools
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and mkcert_check.rc != 0
+
+- name: Install mkcert binary (Linux)
+  shell: go install filippo.io/mkcert@latest
+  when: os == "linux" and mkcert_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mkcert
+      exit_code: 0
 
 - name: Display version
   print: "mkcert installed"

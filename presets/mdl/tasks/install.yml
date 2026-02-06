@@ -3,15 +3,21 @@
   register: mdl_check
   failed_when: false
 
-- name: Install mdl
+- name: Install mdl (macOS)
   package:
     name: mdl
     state: present
-  when: mdl_check.rc != 0
+  when: os == "darwin" and mdl_check.rc != 0
 
-- name: Verify installation
-  shell: mdl --version 2>&1 || mdl -v 2>&1 || echo "installed"
-  register: mdl_version
+- name: Install mdl (Linux)
+  shell: gem install mdl
+  when: os == "linux" and mdl_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mdl
+      exit_code: 0
 
 - name: Display version
   print: "mdl installed"

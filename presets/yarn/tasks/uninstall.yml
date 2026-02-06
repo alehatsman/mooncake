@@ -1,8 +1,20 @@
-- name: Uninstall yarn
+- name: Uninstall yarn (macOS)
   package:
     name: yarn
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall yarn (Linux)
+  shell: npm uninstall -g yarn
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v yarn
+      exit_code: 1
 
 - name: Display confirmation
   print: "yarn uninstalled"

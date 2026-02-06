@@ -3,15 +3,21 @@
   register: yarn_check
   failed_when: false
 
-- name: Install yarn
+- name: Install yarn (macOS)
   package:
     name: yarn
     state: present
-  when: yarn_check.rc != 0
+  when: os == "darwin" and yarn_check.rc != 0
 
-- name: Verify installation
-  shell: yarn --version 2>&1 || yarn -v 2>&1 || echo "installed"
-  register: yarn_version
+- name: Install yarn (Linux)
+  shell: npm install -g yarn
+  when: os == "linux" and yarn_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v yarn
+      exit_code: 0
 
 - name: Display version
   print: "yarn installed"

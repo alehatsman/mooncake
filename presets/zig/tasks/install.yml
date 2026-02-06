@@ -3,15 +3,24 @@
   register: zig_check
   failed_when: false
 
-- name: Install zig
+- name: Install zig (macOS)
   package:
     name: zig
     state: present
-  when: zig_check.rc != 0
+  when: os == "darwin" and zig_check.rc != 0
 
-- name: Verify installation
-  shell: zig --version 2>&1 || zig -v 2>&1 || echo "installed"
-  register: zig_version
+- name: Install zig (Linux)
+  package:
+    name: zig
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and zig_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v zig
+      exit_code: 0
 
 - name: Display version
   print: "zig installed"

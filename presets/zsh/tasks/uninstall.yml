@@ -30,5 +30,11 @@
   become: true
   when: os == "linux" and package_manager in ["dnf", "yum"]
 
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v zsh
+      exit_code: 1
+
 - name: Display uninstall confirmation
   print: "Zsh uninstalled. Shell reset to bash."

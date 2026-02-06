@@ -3,15 +3,21 @@
   register: magic_wormhole_check
   failed_when: false
 
-- name: Install magic-wormhole
+- name: Install magic-wormhole (macOS)
   package:
     name: magic-wormhole
     state: present
-  when: magic_wormhole_check.rc != 0
+  when: os == "darwin" and magic_wormhole_check.rc != 0
 
-- name: Verify installation
-  shell: wormhole --version 2>&1 || wormhole -v 2>&1 || echo "installed"
-  register: magic_wormhole_version
+- name: Install magic-wormhole (Linux)
+  shell: pip3 install --user magic-wormhole
+  when: os == "linux" and magic_wormhole_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v wormhole
+      exit_code: 0
 
 - name: Display version
   print: "magic-wormhole installed"

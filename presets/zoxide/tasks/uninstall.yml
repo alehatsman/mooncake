@@ -1,8 +1,20 @@
-- name: Uninstall zoxide
+- name: Uninstall zoxide (macOS)
   package:
     name: zoxide
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall zoxide (Linux)
+  shell: cargo uninstall zoxide
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v zoxide
+      exit_code: 1
 
 - name: Display confirmation
   print: "zoxide uninstalled"

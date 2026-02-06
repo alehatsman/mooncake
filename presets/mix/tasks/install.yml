@@ -3,15 +3,24 @@
   register: mix_check
   failed_when: false
 
-- name: Install mix
+- name: Install elixir (macOS)
   package:
-    name: mix
+    name: elixir
     state: present
-  when: mix_check.rc != 0
+  when: os == "darwin" and mix_check.rc != 0
 
-- name: Verify installation
-  shell: mix --version 2>&1 || mix -v 2>&1 || echo "installed"
-  register: mix_version
+- name: Install elixir (Linux)
+  package:
+    name: elixir
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and mix_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mix
+      exit_code: 0
 
 - name: Display version
   print: "mix installed"

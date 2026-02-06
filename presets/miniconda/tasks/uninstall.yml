@@ -26,6 +26,12 @@
     state: absent
   failed_when: false
 
+- name: Verify uninstallation with assert
+  assert:
+    file:
+      path: "{{ parameters.install_path }}/bin/conda"
+      exists: false
+
 - name: Display uninstall complete
   print: |
     OK Miniconda uninstalled

@@ -3,15 +3,21 @@
   register: ytop_check
   failed_when: false
 
-- name: Install ytop
+- name: Install ytop (macOS)
   package:
     name: ytop
     state: present
-  when: ytop_check.rc != 0
+  when: os == "darwin" and ytop_check.rc != 0
 
-- name: Verify installation
-  shell: ytop --version 2>&1 || ytop -v 2>&1 || echo "installed"
-  register: ytop_version
+- name: Install ytop (Linux)
+  shell: cargo install ytop
+  when: os == "linux" and ytop_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ytop
+      exit_code: 0
 
 - name: Display version
   print: "ytop installed"

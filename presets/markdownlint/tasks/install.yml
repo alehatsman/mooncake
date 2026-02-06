@@ -3,15 +3,21 @@
   register: markdownlint_check
   failed_when: false
 
-- name: Install markdownlint
+- name: Install markdownlint (macOS)
   package:
-    name: markdownlint
+    name: markdownlint-cli
     state: present
-  when: markdownlint_check.rc != 0
+  when: os == "darwin" and markdownlint_check.rc != 0
 
-- name: Verify installation
-  shell: markdownlint --version 2>&1 || markdownlint -v 2>&1 || echo "installed"
-  register: markdownlint_version
+- name: Install markdownlint (Linux)
+  shell: npm install -g markdownlint-cli
+  when: os == "linux" and markdownlint_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v markdownlint
+      exit_code: 0
 
 - name: Display version
   print: "markdownlint installed"

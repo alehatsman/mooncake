@@ -1,8 +1,21 @@
-- name: Uninstall z
+- name: Uninstall z (macOS)
   package:
     name: z
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall z (Linux)
+  shell: rm -f ~/.z.sh ~/.z
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    file:
+      path: ~/.z.sh
+      exists: false
+  when: os == "linux"
 
 - name: Display confirmation
   print: "z uninstalled"

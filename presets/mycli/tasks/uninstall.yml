@@ -1,8 +1,20 @@
-- name: Uninstall mycli
+- name: Uninstall mycli (macOS)
   package:
     name: mycli
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall mycli (Linux)
+  shell: pip3 uninstall -y mycli
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v mycli
+      exit_code: 1
 
 - name: Display confirmation
   print: "mycli uninstalled"

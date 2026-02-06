@@ -3,15 +3,21 @@
   register: xh_check
   failed_when: false
 
-- name: Install xh
+- name: Install xh (macOS)
   package:
     name: xh
     state: present
-  when: xh_check.rc != 0
+  when: os == "darwin" and xh_check.rc != 0
 
-- name: Verify installation
-  shell: xh --version 2>&1 || xh -v 2>&1 || echo "installed"
-  register: xh_version
+- name: Install xh (Linux)
+  shell: cargo install xh
+  when: os == "linux" and xh_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v xh
+      exit_code: 0
 
 - name: Display version
   print: "xh installed"
