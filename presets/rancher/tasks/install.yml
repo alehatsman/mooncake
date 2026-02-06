@@ -3,9 +3,11 @@
   register: rancher_check
   failed_when: false
 
-- name: Install rancher (macOS)
-  shell: brew install rancher
-  when: os == "darwin" and rancher_check.rc != 0
+- name: Install rancher
+  package:
+    name: rancher
+    state: present
+  when: rancher_check.rc != 0
 
 - name: Verify installation
   shell: rancher --version 2>&1 || rancher -v 2>&1 || echo "installed"

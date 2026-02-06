@@ -1,6 +1,7 @@
-- name: Uninstall pulumi (macOS)
-  shell: brew uninstall pulumi
-  when: os == "darwin"
+- name: Uninstall pulumi
+  package:
+    name: pulumi
+    state: absent
   failed_when: false
 
 - name: Display confirmation

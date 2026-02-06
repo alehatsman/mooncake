@@ -1,6 +1,7 @@
-- name: Uninstall prefect (macOS)
-  shell: brew uninstall prefect
-  when: os == "darwin"
+- name: Uninstall prefect
+  package:
+    name: prefect
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: pyroscope_check
   failed_when: false
 
-- name: Install pyroscope (macOS)
-  shell: brew install pyroscope
-  when: os == "darwin" and pyroscope_check.rc != 0
+- name: Install pyroscope
+  package:
+    name: pyroscope
+    state: present
+  when: pyroscope_check.rc != 0
 
 - name: Verify installation
   shell: pyroscope --version 2>&1 || pyroscope -v 2>&1 || echo "installed"

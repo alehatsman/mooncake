@@ -3,9 +3,11 @@
   register: sops_check
   failed_when: false
 
-- name: Install sops (macOS)
-  shell: brew install sops
-  when: os == "darwin" and sops_check.rc != 0
+- name: Install sops
+  package:
+    name: sops
+    state: present
+  when: sops_check.rc != 0
 
 - name: Verify installation
   shell: sops --version 2>&1 || sops -v 2>&1 || echo "installed"

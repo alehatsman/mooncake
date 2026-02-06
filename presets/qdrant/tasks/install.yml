@@ -3,9 +3,11 @@
   register: qdrant_check
   failed_when: false
 
-- name: Install qdrant (macOS)
-  shell: brew install qdrant
-  when: os == "darwin" and qdrant_check.rc != 0
+- name: Install qdrant
+  package:
+    name: qdrant
+    state: present
+  when: qdrant_check.rc != 0
 
 - name: Verify installation
   shell: qdrant --version 2>&1 || qdrant -v 2>&1 || echo "installed"

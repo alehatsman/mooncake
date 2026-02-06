@@ -1,7 +1,8 @@
-- name: Uninstall prometheus (macOS)
-  shell: brew uninstall prometheus
-  when: os == "darwin"
+- name: Uninstall prometheus-server
+  package:
+    name: prometheus-server
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "prometheus uninstalled"
+  print: "prometheus-server uninstalled"

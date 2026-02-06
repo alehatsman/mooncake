@@ -1,6 +1,7 @@
-- name: Uninstall pyroscope (macOS)
-  shell: brew uninstall pyroscope
-  when: os == "darwin"
+- name: Uninstall pyroscope
+  package:
+    name: pyroscope
+    state: absent
   failed_when: false
 
 - name: Display confirmation

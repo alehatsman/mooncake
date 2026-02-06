@@ -3,13 +3,15 @@
   register: powershell_check
   failed_when: false
 
-- name: Install pwsh (macOS)
-  shell: brew install pwsh
-  when: os == "darwin" and powershell_check.rc != 0
+- name: Install powershell
+  package:
+    name: powershell
+    state: present
+  when: powershell_check.rc != 0
 
 - name: Verify installation
   shell: pwsh --version 2>&1 || pwsh -v 2>&1 || echo "installed"
   register: powershell_version
 
 - name: Display version
-  print: "pwsh installed"
+  print: "powershell installed"

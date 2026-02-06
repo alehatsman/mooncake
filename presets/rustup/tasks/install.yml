@@ -3,9 +3,11 @@
   register: rustup_check
   failed_when: false
 
-- name: Install rustup (macOS)
-  shell: brew install rustup
-  when: os == "darwin" and rustup_check.rc != 0
+- name: Install rustup
+  package:
+    name: rustup
+    state: present
+  when: rustup_check.rc != 0
 
 - name: Verify installation
   shell: rustup --version 2>&1 || rustup -v 2>&1 || echo "installed"

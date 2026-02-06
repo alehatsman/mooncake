@@ -3,9 +3,11 @@
   register: ruff_check
   failed_when: false
 
-- name: Install ruff (macOS)
-  shell: brew install ruff
-  when: os == "darwin" and ruff_check.rc != 0
+- name: Install ruff
+  package:
+    name: ruff
+    state: present
+  when: ruff_check.rc != 0
 
 - name: Verify installation
   shell: ruff --version 2>&1 || ruff -v 2>&1 || echo "installed"

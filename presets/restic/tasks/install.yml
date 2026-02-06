@@ -3,9 +3,11 @@
   register: restic_check
   failed_when: false
 
-- name: Install restic (macOS)
-  shell: brew install restic
-  when: os == "darwin" and restic_check.rc != 0
+- name: Install restic
+  package:
+    name: restic
+    state: present
+  when: restic_check.rc != 0
 
 - name: Verify installation
   shell: restic --version 2>&1 || restic -v 2>&1 || echo "installed"

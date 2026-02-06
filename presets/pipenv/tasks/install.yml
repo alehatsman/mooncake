@@ -3,9 +3,11 @@
   register: pipenv_check
   failed_when: false
 
-- name: Install pipenv (macOS)
-  shell: brew install pipenv
-  when: os == "darwin" and pipenv_check.rc != 0
+- name: Install pipenv
+  package:
+    name: pipenv
+    state: present
+  when: pipenv_check.rc != 0
 
 - name: Verify installation
   shell: pipenv --version 2>&1 || pipenv -v 2>&1 || echo "installed"

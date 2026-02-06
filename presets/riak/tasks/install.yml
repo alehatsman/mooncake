@@ -3,9 +3,11 @@
   register: riak_check
   failed_when: false
 
-- name: Install riak (macOS)
-  shell: brew install riak
-  when: os == "darwin" and riak_check.rc != 0
+- name: Install riak
+  package:
+    name: riak
+    state: present
+  when: riak_check.rc != 0
 
 - name: Verify installation
   shell: riak --version 2>&1 || riak -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall ruff (macOS)
-  shell: brew uninstall ruff
-  when: os == "darwin"
+- name: Uninstall ruff
+  package:
+    name: ruff
+    state: absent
   failed_when: false
 
 - name: Display confirmation

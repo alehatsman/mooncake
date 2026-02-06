@@ -1,6 +1,7 @@
-- name: Uninstall sccache (macOS)
-  shell: brew uninstall sccache
-  when: os == "darwin"
+- name: Uninstall sccache
+  package:
+    name: sccache
+    state: absent
   failed_when: false
 
 - name: Display confirmation

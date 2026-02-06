@@ -3,9 +3,11 @@
   register: signoz_check
   failed_when: false
 
-- name: Install signoz (macOS)
-  shell: brew install signoz
-  when: os == "darwin" and signoz_check.rc != 0
+- name: Install signoz
+  package:
+    name: signoz
+    state: present
+  when: signoz_check.rc != 0
 
 - name: Verify installation
   shell: signoz --version 2>&1 || signoz -v 2>&1 || echo "installed"

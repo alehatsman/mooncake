@@ -3,9 +3,11 @@
   register: socat_check
   failed_when: false
 
-- name: Install socat (macOS)
-  shell: brew install socat
-  when: os == "darwin" and socat_check.rc != 0
+- name: Install socat
+  package:
+    name: socat
+    state: present
+  when: socat_check.rc != 0
 
 - name: Verify installation
   shell: socat --version 2>&1 || socat -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall pipenv (macOS)
-  shell: brew uninstall pipenv
-  when: os == "darwin"
+- name: Uninstall pipenv
+  package:
+    name: pipenv
+    state: absent
   failed_when: false
 
 - name: Display confirmation

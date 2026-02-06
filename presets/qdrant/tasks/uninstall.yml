@@ -1,6 +1,7 @@
-- name: Uninstall qdrant (macOS)
-  shell: brew uninstall qdrant
-  when: os == "darwin"
+- name: Uninstall qdrant
+  package:
+    name: qdrant
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: quickwit_check
   failed_when: false
 
-- name: Install quickwit (macOS)
-  shell: brew install quickwit
-  when: os == "darwin" and quickwit_check.rc != 0
+- name: Install quickwit
+  package:
+    name: quickwit
+    state: present
+  when: quickwit_check.rc != 0
 
 - name: Verify installation
   shell: quickwit --version 2>&1 || quickwit -v 2>&1 || echo "installed"

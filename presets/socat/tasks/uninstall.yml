@@ -1,6 +1,7 @@
-- name: Uninstall socat (macOS)
-  shell: brew uninstall socat
-  when: os == "darwin"
+- name: Uninstall socat
+  package:
+    name: socat
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall pnpm (macOS)
-  shell: brew uninstall pnpm
-  when: os == "darwin"
+- name: Uninstall pnpm
+  package:
+    name: pnpm
+    state: absent
   failed_when: false
 
 - name: Display confirmation

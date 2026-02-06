@@ -3,9 +3,11 @@
   register: sbt_check
   failed_when: false
 
-- name: Install sbt (macOS)
-  shell: brew install sbt
-  when: os == "darwin" and sbt_check.rc != 0
+- name: Install sbt
+  package:
+    name: sbt
+    state: present
+  when: sbt_check.rc != 0
 
 - name: Verify installation
   shell: sbt --version 2>&1 || sbt -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall scp (macOS)
-  shell: brew uninstall scp
-  when: os == "darwin"
+- name: Uninstall scp
+  package:
+    name: scp
+    state: absent
   failed_when: false
 
 - name: Display confirmation

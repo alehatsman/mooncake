@@ -1,15 +1,17 @@
 - name: Check if prometheus is installed
   shell: command -v prometheus
-  register: prometheus-server_check
+  register: prometheus_server_check
   failed_when: false
 
-- name: Install prometheus (macOS)
-  shell: brew install prometheus
-  when: os == "darwin" and prometheus-server_check.rc != 0
+- name: Install prometheus-server
+  package:
+    name: prometheus-server
+    state: present
+  when: prometheus_server_check.rc != 0
 
 - name: Verify installation
   shell: prometheus --version 2>&1 || prometheus -v 2>&1 || echo "installed"
-  register: prometheus-server_version
+  register: prometheus_server_version
 
 - name: Display version
-  print: "prometheus installed"
+  print: "prometheus-server installed"

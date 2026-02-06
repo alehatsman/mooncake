@@ -3,13 +3,15 @@
   register: proxychains_check
   failed_when: false
 
-- name: Install proxychains-ng (macOS)
-  shell: brew install proxychains-ng
-  when: os == "darwin" and proxychains_check.rc != 0
+- name: Install proxychains
+  package:
+    name: proxychains
+    state: present
+  when: proxychains_check.rc != 0
 
 - name: Verify installation
   shell: proxychains-ng --version 2>&1 || proxychains-ng -v 2>&1 || echo "installed"
   register: proxychains_version
 
 - name: Display version
-  print: "proxychains-ng installed"
+  print: "proxychains installed"

@@ -1,7 +1,8 @@
-- name: Uninstall sdk (macOS)
-  shell: brew uninstall sdk
-  when: os == "darwin"
+- name: Uninstall sdkman
+  package:
+    name: sdkman
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "sdk uninstalled"
+  print: "sdkman uninstalled"

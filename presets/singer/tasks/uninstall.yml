@@ -1,6 +1,7 @@
-- name: Uninstall singer (macOS)
-  shell: brew uninstall singer
-  when: os == "darwin"
+- name: Uninstall singer
+  package:
+    name: singer
+    state: absent
   failed_when: false
 
 - name: Display confirmation

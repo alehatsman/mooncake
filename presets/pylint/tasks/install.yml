@@ -3,9 +3,11 @@
   register: pylint_check
   failed_when: false
 
-- name: Install pylint (macOS)
-  shell: brew install pylint
-  when: os == "darwin" and pylint_check.rc != 0
+- name: Install pylint
+  package:
+    name: pylint
+    state: present
+  when: pylint_check.rc != 0
 
 - name: Verify installation
   shell: pylint --version 2>&1 || pylint -v 2>&1 || echo "installed"

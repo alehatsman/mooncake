@@ -3,9 +3,11 @@
   register: snyk_check
   failed_when: false
 
-- name: Install snyk (macOS)
-  shell: brew install snyk
-  when: os == "darwin" and snyk_check.rc != 0
+- name: Install snyk
+  package:
+    name: snyk
+    state: present
+  when: snyk_check.rc != 0
 
 - name: Verify installation
   shell: snyk --version 2>&1 || snyk -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: sftp_check
   failed_when: false
 
-- name: Install sftp (macOS)
-  shell: brew install sftp
-  when: os == "darwin" and sftp_check.rc != 0
+- name: Install sftp
+  package:
+    name: sftp
+    state: present
+  when: sftp_check.rc != 0
 
 - name: Verify installation
   shell: sftp --version 2>&1 || sftp -v 2>&1 || echo "installed"

@@ -1,15 +1,17 @@
 - name: Check if scw is installed
   shell: command -v scw
-  register: scaleway-cli_check
+  register: scaleway_cli_check
   failed_when: false
 
-- name: Install scw (macOS)
-  shell: brew install scw
-  when: os == "darwin" and scaleway-cli_check.rc != 0
+- name: Install scaleway-cli
+  package:
+    name: scaleway-cli
+    state: present
+  when: scaleway_cli_check.rc != 0
 
 - name: Verify installation
   shell: scw --version 2>&1 || scw -v 2>&1 || echo "installed"
-  register: scaleway-cli_version
+  register: scaleway_cli_version
 
 - name: Display version
-  print: "scw installed"
+  print: "scaleway-cli installed"

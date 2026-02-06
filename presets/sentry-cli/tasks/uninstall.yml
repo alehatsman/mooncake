@@ -1,6 +1,7 @@
-- name: Uninstall sentry-cli (macOS)
-  shell: brew uninstall sentry-cli
-  when: os == "darwin"
+- name: Uninstall sentry-cli
+  package:
+    name: sentry-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation

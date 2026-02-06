@@ -1,6 +1,7 @@
-- name: Uninstall rvm (macOS)
-  shell: brew uninstall rvm
-  when: os == "darwin"
+- name: Uninstall rvm
+  package:
+    name: rvm
+    state: absent
   failed_when: false
 
 - name: Display confirmation

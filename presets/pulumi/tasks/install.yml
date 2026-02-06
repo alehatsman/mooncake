@@ -3,9 +3,11 @@
   register: pulumi_check
   failed_when: false
 
-- name: Install pulumi (macOS)
-  shell: brew install pulumi
-  when: os == "darwin" and pulumi_check.rc != 0
+- name: Install pulumi
+  package:
+    name: pulumi
+    state: present
+  when: pulumi_check.rc != 0
 
 - name: Verify installation
   shell: pulumi --version 2>&1 || pulumi -v 2>&1 || echo "installed"

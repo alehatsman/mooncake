@@ -1,6 +1,7 @@
-- name: Uninstall signoz (macOS)
-  shell: brew uninstall signoz
-  when: os == "darwin"
+- name: Uninstall signoz
+  package:
+    name: signoz
+    state: absent
   failed_when: false
 
 - name: Display confirmation

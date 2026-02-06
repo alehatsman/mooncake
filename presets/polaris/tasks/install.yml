@@ -3,9 +3,11 @@
   register: polaris_check
   failed_when: false
 
-- name: Install polaris (macOS)
-  shell: brew install polaris
-  when: os == "darwin" and polaris_check.rc != 0
+- name: Install polaris
+  package:
+    name: polaris
+    state: present
+  when: polaris_check.rc != 0
 
 - name: Verify installation
   shell: polaris --version 2>&1 || polaris -v 2>&1 || echo "installed"

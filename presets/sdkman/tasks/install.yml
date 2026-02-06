@@ -3,13 +3,15 @@
   register: sdkman_check
   failed_when: false
 
-- name: Install sdk (macOS)
-  shell: brew install sdk
-  when: os == "darwin" and sdkman_check.rc != 0
+- name: Install sdkman
+  package:
+    name: sdkman
+    state: present
+  when: sdkman_check.rc != 0
 
 - name: Verify installation
   shell: sdk --version 2>&1 || sdk -v 2>&1 || echo "installed"
   register: sdkman_version
 
 - name: Display version
-  print: "sdk installed"
+  print: "sdkman installed"

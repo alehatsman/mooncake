@@ -1,7 +1,8 @@
-- name: Uninstall scylla (macOS)
-  shell: brew uninstall scylla
-  when: os == "darwin"
+- name: Uninstall scylladb
+  package:
+    name: scylladb
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "scylla uninstalled"
+  print: "scylladb uninstalled"

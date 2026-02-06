@@ -3,9 +3,11 @@
   register: rclone_check
   failed_when: false
 
-- name: Install rclone (macOS)
-  shell: brew install rclone
-  when: os == "darwin" and rclone_check.rc != 0
+- name: Install rclone
+  package:
+    name: rclone
+    state: present
+  when: rclone_check.rc != 0
 
 - name: Verify installation
   shell: rclone --version 2>&1 || rclone -v 2>&1 || echo "installed"

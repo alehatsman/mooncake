@@ -3,9 +3,11 @@
   register: pnpm_check
   failed_when: false
 
-- name: Install pnpm (macOS)
-  shell: brew install pnpm
-  when: os == "darwin" and pnpm_check.rc != 0
+- name: Install pnpm
+  package:
+    name: pnpm
+    state: present
+  when: pnpm_check.rc != 0
 
 - name: Verify installation
   shell: pnpm --version 2>&1 || pnpm -v 2>&1 || echo "installed"

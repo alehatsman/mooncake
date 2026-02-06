@@ -1,7 +1,8 @@
-- name: Uninstall scw (macOS)
-  shell: brew uninstall scw
-  when: os == "darwin"
+- name: Uninstall scaleway-cli
+  package:
+    name: scaleway-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "scw uninstalled"
+  print: "scaleway-cli uninstalled"

@@ -1,6 +1,7 @@
-- name: Uninstall polaris (macOS)
-  shell: brew uninstall polaris
-  when: os == "darwin"
+- name: Uninstall polaris
+  package:
+    name: polaris
+    state: absent
   failed_when: false
 
 - name: Display confirmation

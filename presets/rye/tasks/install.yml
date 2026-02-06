@@ -3,9 +3,11 @@
   register: rye_check
   failed_when: false
 
-- name: Install rye (macOS)
-  shell: brew install rye
-  when: os == "darwin" and rye_check.rc != 0
+- name: Install rye
+  package:
+    name: rye
+    state: present
+  when: rye_check.rc != 0
 
 - name: Verify installation
   shell: rye --version 2>&1 || rye -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: prefect_check
   failed_when: false
 
-- name: Install prefect (macOS)
-  shell: brew install prefect
-  when: os == "darwin" and prefect_check.rc != 0
+- name: Install prefect
+  package:
+    name: prefect
+    state: present
+  when: prefect_check.rc != 0
 
 - name: Verify installation
   shell: prefect --version 2>&1 || prefect -v 2>&1 || echo "installed"

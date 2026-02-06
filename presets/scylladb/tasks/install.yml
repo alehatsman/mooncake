@@ -3,13 +3,15 @@
   register: scylladb_check
   failed_when: false
 
-- name: Install scylla (macOS)
-  shell: brew install scylla
-  when: os == "darwin" and scylladb_check.rc != 0
+- name: Install scylladb
+  package:
+    name: scylladb
+    state: present
+  when: scylladb_check.rc != 0
 
 - name: Verify installation
   shell: scylla --version 2>&1 || scylla -v 2>&1 || echo "installed"
   register: scylladb_version
 
 - name: Display version
-  print: "scylla installed"
+  print: "scylladb installed"

@@ -3,9 +3,11 @@
   register: rtx_check
   failed_when: false
 
-- name: Install rtx (macOS)
-  shell: brew install rtx
-  when: os == "darwin" and rtx_check.rc != 0
+- name: Install rtx
+  package:
+    name: rtx
+    state: present
+  when: rtx_check.rc != 0
 
 - name: Verify installation
   shell: rtx --version 2>&1 || rtx -v 2>&1 || echo "installed"

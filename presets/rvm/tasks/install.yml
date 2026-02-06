@@ -3,9 +3,11 @@
   register: rvm_check
   failed_when: false
 
-- name: Install rvm (macOS)
-  shell: brew install rvm
-  when: os == "darwin" and rvm_check.rc != 0
+- name: Install rvm
+  package:
+    name: rvm
+    state: present
+  when: rvm_check.rc != 0
 
 - name: Verify installation
   shell: rvm --version 2>&1 || rvm -v 2>&1 || echo "installed"

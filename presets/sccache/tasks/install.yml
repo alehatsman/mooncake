@@ -3,9 +3,11 @@
   register: sccache_check
   failed_when: false
 
-- name: Install sccache (macOS)
-  shell: brew install sccache
-  when: os == "darwin" and sccache_check.rc != 0
+- name: Install sccache
+  package:
+    name: sccache
+    state: present
+  when: sccache_check.rc != 0
 
 - name: Verify installation
   shell: sccache --version 2>&1 || sccache -v 2>&1 || echo "installed"

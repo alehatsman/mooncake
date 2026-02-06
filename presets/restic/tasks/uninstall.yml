@@ -1,6 +1,7 @@
-- name: Uninstall restic (macOS)
-  shell: brew uninstall restic
-  when: os == "darwin"
+- name: Uninstall restic
+  package:
+    name: restic
+    state: absent
   failed_when: false
 
 - name: Display confirmation

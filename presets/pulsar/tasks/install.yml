@@ -3,9 +3,11 @@
   register: pulsar_check
   failed_when: false
 
-- name: Install pulsar (macOS)
-  shell: brew install pulsar
-  when: os == "darwin" and pulsar_check.rc != 0
+- name: Install pulsar
+  package:
+    name: pulsar
+    state: present
+  when: pulsar_check.rc != 0
 
 - name: Verify installation
   shell: pulsar --version 2>&1 || pulsar -v 2>&1 || echo "installed"

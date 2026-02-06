@@ -3,9 +3,11 @@
   register: rsync_check
   failed_when: false
 
-- name: Install rsync (macOS)
-  shell: brew install rsync
-  when: os == "darwin" and rsync_check.rc != 0
+- name: Install rsync
+  package:
+    name: rsync
+    state: present
+  when: rsync_check.rc != 0
 
 - name: Verify installation
   shell: rsync --version 2>&1 || rsync -v 2>&1 || echo "installed"

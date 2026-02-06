@@ -3,9 +3,11 @@
   register: poetry_check
   failed_when: false
 
-- name: Install poetry (macOS)
-  shell: brew install poetry
-  when: os == "darwin" and poetry_check.rc != 0
+- name: Install poetry
+  package:
+    name: poetry
+    state: present
+  when: poetry_check.rc != 0
 
 - name: Verify installation
   shell: poetry --version 2>&1 || poetry -v 2>&1 || echo "installed"

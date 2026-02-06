@@ -1,6 +1,7 @@
-- name: Uninstall quickwit (macOS)
-  shell: brew uninstall quickwit
-  when: os == "darwin"
+- name: Uninstall quickwit
+  package:
+    name: quickwit
+    state: absent
   failed_when: false
 
 - name: Display confirmation

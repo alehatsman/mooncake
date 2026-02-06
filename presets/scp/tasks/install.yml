@@ -3,9 +3,11 @@
   register: scp_check
   failed_when: false
 
-- name: Install scp (macOS)
-  shell: brew install scp
-  when: os == "darwin" and scp_check.rc != 0
+- name: Install scp
+  package:
+    name: scp
+    state: present
+  when: scp_check.rc != 0
 
 - name: Verify installation
   shell: scp --version 2>&1 || scp -v 2>&1 || echo "installed"

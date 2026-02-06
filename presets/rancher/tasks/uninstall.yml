@@ -1,6 +1,7 @@
-- name: Uninstall rancher (macOS)
-  shell: brew uninstall rancher
-  when: os == "darwin"
+- name: Uninstall rancher
+  package:
+    name: rancher
+    state: absent
   failed_when: false
 
 - name: Display confirmation

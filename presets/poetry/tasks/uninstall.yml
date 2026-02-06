@@ -1,6 +1,7 @@
-- name: Uninstall poetry (macOS)
-  shell: brew uninstall poetry
-  when: os == "darwin"
+- name: Uninstall poetry
+  package:
+    name: poetry
+    state: absent
   failed_when: false
 
 - name: Display confirmation

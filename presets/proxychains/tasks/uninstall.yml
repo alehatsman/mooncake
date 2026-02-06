@@ -1,7 +1,8 @@
-- name: Uninstall proxychains-ng (macOS)
-  shell: brew uninstall proxychains-ng
-  when: os == "darwin"
+- name: Uninstall proxychains
+  package:
+    name: proxychains
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "proxychains-ng uninstalled"
+  print: "proxychains uninstalled"
