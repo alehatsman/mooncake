@@ -12,38 +12,19 @@ from pathlib import Path
 import sys
 
 
-def generate_preset_card(preset, preset_name):
-    """Generate a markdown card for a single preset."""
+def generate_preset_row(preset, preset_name):
+    """Generate a markdown table row for a single preset."""
 
-    # Build parameters info
-    params_info = ""
-    if preset.get('parameters'):
-        param_count = len(preset['parameters'])
-        params_info = f"<strong>Parameters:</strong> {param_count}"
+    # Escape pipe characters in description if any
+    description = preset['description'].replace('|', '\\|')
 
-    # Build card using pure HTML
-    card = f"""
-<div class="grid-card">
+    # Create source link
+    source_link = f"[{preset_name}](https://github.com/alehatsman/mooncake/tree/master/presets/{preset_name})"
 
-<h3>{preset['name']}</h3>
+    # Create install command
+    install_cmd = f"`mooncake presets install {preset_name}`"
 
-<p class="card-meta">
-<span class="badge">v{preset['version']}</span> {params_info}
-</p>
-
-<p>{preset['description']}</p>
-
-<pre><code class="language-bash">mooncake presets install {preset_name}</code></pre>
-
-<p class="card-actions">
-<a href="../guide/presets.md">Documentation</a>
-<span>•</span>
-<a href="../../presets/{preset_name}/">Source</a>
-</p>
-
-</div>
-"""
-    return card
+    return f"| {source_link} | {description} | {install_cmd} |\n"
 
 
 def scan_presets(presets_dir="presets"):
@@ -111,16 +92,14 @@ def generate_preset_docs(output_file="docs/presets/available.md"):
 
 Browse our collection of ready-to-use presets for common development tools and infrastructure.
 
-<div class="preset-grid">
+| Preset | Description | Install Command |
+|--------|-------------|-----------------|
 """
 
-    # Generate cards
+    # Generate table rows
     for preset in presets:
-        card = generate_preset_card(preset['data'], preset['name'])
-        content += card
-
-    # Close grid
-    content += "\n</div>\n"
+        row = generate_preset_row(preset['data'], preset['name'])
+        content += row
 
     # Add footer
     content += f"""

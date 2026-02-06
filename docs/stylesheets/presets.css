@@ -11,11 +11,20 @@
     background: var(--md-code-bg-color);
     border: 1px solid var(--md-default-fg-color--lightest);
     border-radius: 0.5rem;
-    padding: 1.5rem;
+    padding: 1.25rem;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     height: 100%;
+    gap: 0.5rem;
+}
+
+.grid-card h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.grid-card p {
+    margin: 0.5rem 0;
 }
 
 .grid-card:hover {
@@ -55,7 +64,7 @@
 }
 
 .grid-card pre code {
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-weight: 500;
 }
 
