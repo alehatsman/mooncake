@@ -1,0 +1,60 @@
+name: nginx
+description: Install and configure Nginx web server
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Nginx should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Nginx service after installation
+
+  port:
+    type: string
+    required: false
+    default: "80"
+    description: Default HTTP port
+
+  ssl_port:
+    type: string
+    required: false
+    default: "443"
+    description: Default HTTPS port
+
+  server_name:
+    type: string
+    required: false
+    default: "_"
+    description: Server name (default is catch-all)
+
+  root_dir:
+    type: string
+    required: false
+    default: "/var/www/html"
+    description: Document root directory
+
+  enable_ssl:
+    type: bool
+    required: false
+    default: false
+    description: Enable SSL configuration
+
+steps:
+  - name: Install Nginx
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Nginx
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Nginx
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

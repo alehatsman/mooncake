@@ -1,0 +1,15 @@
+# Reverse proxy with automatic HTTPS
+{{ domain | default('example.com') }} {
+    reverse_proxy {{ backend | default('localhost:3000') }}
+
+    log {
+        output file /var/log/caddy/{{ domain | default('proxy') }}.log
+    }
+
+    # Optional: Custom headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+    }
+}

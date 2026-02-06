@@ -1,0 +1,8 @@
+# Variable values
+# Copy this to terraform.tfvars and customize
+
+region       = "{{ region | default('us-east-1') }}"
+environment  = "{{ environment | default('dev') }}"
+project_name = "{{ project_name | default('myproject') }}"
+
+# Add your variable values here

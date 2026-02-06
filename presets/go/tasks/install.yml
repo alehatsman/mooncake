@@ -1,0 +1,43 @@
+# Go Installation Tasks
+
+- name: Check if Go is already installed
+  shell: command -v go
+  register: go_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Go via Homebrew (macOS)
+  package:
+    name: go
+    state: present
+  when: os == "darwin" and go_check.rc != 0
+
+# Linux - via package manager
+- name: Install Go (Debian/Ubuntu)
+  package:
+    name: golang-go
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and go_check.rc != 0
+
+- name: Install Go (Fedora/RHEL)
+  package:
+    name: golang
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "dnf" and go_check.rc != 0
+
+- name: Install Go (Arch)
+  package:
+    name: go
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "pacman" and go_check.rc != 0
+
+# Verify installation
+- name: Verify Go installation
+  shell: go version
+  register: go_version
+
+- name: Display Go version
+  print: "Go installed: {{ go_version.stdout }}"

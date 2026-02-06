@@ -1,0 +1,71 @@
+# Caddy Installation Tasks
+
+- name: Check if Caddy is already installed
+  shell: command -v caddy
+  register: caddy_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Caddy via Homebrew (macOS)
+  package:
+    name: caddy
+    state: present
+  when: os == "darwin" and caddy_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Install prerequisites (Debian/Ubuntu)
+  package:
+    names:
+      - debian-keyring
+      - debian-archive-keyring
+      - apt-transport-https
+      - curl
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and caddy_check.rc != 0
+
+- name: Add Caddy GPG key (Debian/Ubuntu)
+  shell: curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  become: true
+  when: os == "linux" and package_manager == "apt" and caddy_check.rc != 0
+
+- name: Add Caddy repository (Debian/Ubuntu)
+  shell: |
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  become: true
+  when: os == "linux" and package_manager == "apt" and caddy_check.rc != 0
+
+- name: Update apt cache (Debian/Ubuntu)
+  shell: apt-get update
+  become: true
+  when: os == "linux" and package_manager == "apt" and caddy_check.rc != 0
+
+- name: Install Caddy (Debian/Ubuntu)
+  package:
+    name: caddy
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and caddy_check.rc != 0
+
+# Linux - Fedora/RHEL
+- name: Add Caddy repository (Fedora/RHEL)
+  shell: |
+    dnf install 'dnf-command(copr)' -y
+    dnf copr enable @caddy/caddy -y
+  become: true
+  when: os == "linux" and package_manager == "dnf" and caddy_check.rc != 0
+
+- name: Install Caddy (Fedora/RHEL)
+  package:
+    name: caddy
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "dnf" and caddy_check.rc != 0
+
+# Verify installation
+- name: Verify Caddy installation
+  shell: caddy version
+  register: caddy_version
+
+- name: Display Caddy version
+  print: "Caddy installed: {{ caddy_version.stdout }}"

@@ -1,0 +1,45 @@
+# Nginx Installation Tasks
+
+- name: Check if Nginx is already installed
+  shell: command -v nginx
+  register: nginx_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Nginx via Homebrew (macOS)
+  package:
+    name: nginx
+    state: present
+  when: os == "darwin" and nginx_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Install Nginx (Debian/Ubuntu)
+  package:
+    name: nginx
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and nginx_check.rc != 0
+
+# Linux - RHEL/Fedora/CentOS
+- name: Install Nginx (RHEL/Fedora/CentOS)
+  package:
+    name: nginx
+    state: present
+  become: true
+  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum") and nginx_check.rc != 0
+
+# Linux - Arch
+- name: Install Nginx (Arch)
+  package:
+    name: nginx
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "pacman" and nginx_check.rc != 0
+
+# Verify installation
+- name: Verify Nginx installation
+  shell: nginx -v
+  register: nginx_version
+
+- name: Display Nginx version
+  print: "Nginx installed: {{ nginx_version.stderr }}"

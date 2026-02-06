@@ -1,0 +1,28 @@
+server {
+    listen {{ port | default('80') }};
+    listen [::]:{{ port | default('80') }};
+    server_name {{ server_name | default('example.com') }};
+
+    root {{ root_dir | default('/var/www/html') }};
+    index index.html index.htm index.php;
+
+    # Logging
+    access_log /var/log/nginx/{{ server_name | default('site') }}_access.log;
+    error_log /var/log/nginx/{{ server_name | default('site') }}_error.log;
+
+    # Static files
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # PHP support (uncomment if needed)
+    # location ~ \.php$ {
+    #     include snippets/fastcgi-php.conf;
+    #     fastcgi_pass unix:/var/run/php/php-fpm.sock;
+    # }
+
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+    }
+}

@@ -1,0 +1,61 @@
+# MinIO Uninstallation Tasks
+
+- name: Stop MinIO service (Linux)
+  service:
+    name: minio
+    state: stopped
+  become: true
+  failed_when: false
+  when: os == "linux"
+
+- name: Disable MinIO service (Linux)
+  service:
+    name: minio
+    enabled: false
+  become: true
+  failed_when: false
+  when: os == "linux"
+
+- name: Remove MinIO systemd service (Linux)
+  file:
+    path: /etc/systemd/system/minio.service
+    state: absent
+  become: true
+  when: os == "linux"
+
+- name: Reload systemd daemon (Linux)
+  shell: systemctl daemon-reload
+  become: true
+  when: os == "linux"
+
+- name: Stop MinIO server (macOS)
+  shell: pkill -f "minio server"
+  failed_when: false
+  when: os == "darwin"
+
+# macOS Uninstallation
+- name: Uninstall MinIO via Homebrew (macOS)
+  package:
+    name: minio/stable/minio
+    state: absent
+  when: os == "darwin"
+
+# Linux Uninstallation
+- name: Remove MinIO binaries (Linux)
+  file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - /usr/local/bin/minio
+    - /usr/local/bin/mc
+  when: os == "linux"
+
+- name: Clean up log file
+  file:
+    path: /tmp/minio.log
+    state: absent
+  failed_when: false
+
+- name: Display uninstall confirmation
+  print: "MinIO has been uninstalled (data in {{ parameters.data_dir }} remains)"

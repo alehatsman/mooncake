@@ -1,0 +1,35 @@
+# AWS CLI Configuration Tasks
+
+- name: Ensure AWS config directory exists
+  file:
+    path: ~/.aws
+    state: directory
+    mode: "0700"
+
+- name: Configure AWS credentials
+  shell: |
+    cat > ~/.aws/credentials <<EOF
+    [default]
+    aws_access_key_id = {{ parameters.access_key_id }}
+    aws_secret_access_key = {{ parameters.secret_access_key }}
+    EOF
+    chmod 600 ~/.aws/credentials
+  when: parameters.access_key_id != "" and parameters.secret_access_key != ""
+
+- name: Configure AWS region
+  shell: |
+    cat > ~/.aws/config <<EOF
+    [default]
+    region = {{ parameters.region }}
+    output = json
+    EOF
+    chmod 600 ~/.aws/config
+
+- name: Verify AWS configuration
+  shell: aws sts get-caller-identity
+  register: aws_identity
+  failed_when: false
+
+- name: Display AWS identity
+  print: "AWS Identity: {{ aws_identity.stdout }}"
+  when: aws_identity.rc == 0

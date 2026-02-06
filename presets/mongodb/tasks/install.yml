@@ -1,0 +1,76 @@
+# MongoDB Installation Tasks
+
+- name: Check if MongoDB is already installed
+  shell: command -v mongod
+  register: mongodb_check
+  failed_when: false
+
+# macOS Installation
+- name: Install MongoDB via Homebrew (macOS)
+  shell: |
+    brew tap mongodb/brew
+    brew install mongodb-community
+  when: os == "darwin" and mongodb_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Install prerequisites (Debian/Ubuntu)
+  package:
+    names:
+      - gnupg
+      - curl
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and mongodb_check.rc != 0
+
+- name: Add MongoDB GPG key (Debian/Ubuntu)
+  shell: |
+    curl -fsSL https://www.mongodb.org/static/pgp/server-{{ parameters.version }}.asc | gpg -o /usr/share/keyrings/mongodb-server-{{ parameters.version }}.gpg --dearmor
+  become: true
+  when: os == "linux" and package_manager == "apt" and mongodb_check.rc != 0
+
+- name: Add MongoDB repository (Debian/Ubuntu)
+  shell: |
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-{{ parameters.version }}.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/{{ parameters.version }} multiverse" | tee /etc/apt/sources.list.d/mongodb-org-{{ parameters.version }}.list
+  become: true
+  when: os == "linux" and package_manager == "apt" and mongodb_check.rc != 0
+
+- name: Update apt cache (Debian/Ubuntu)
+  shell: apt-get update
+  become: true
+  when: os == "linux" and package_manager == "apt" and mongodb_check.rc != 0
+
+- name: Install MongoDB (Debian/Ubuntu)
+  package:
+    name: mongodb-org
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and mongodb_check.rc != 0
+
+# Linux - RHEL/Fedora
+- name: Create MongoDB repo file (RHEL/Fedora)
+  shell: |
+    cat > /etc/yum.repos.d/mongodb-org-{{ parameters.version }}.repo <<EOF
+    [mongodb-org-{{ parameters.version }}]
+    name=MongoDB Repository
+    baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/{{ parameters.version }}/x86_64/
+    gpgcheck=1
+    enabled=1
+    gpgkey=https://www.mongodb.org/static/pgp/server-{{ parameters.version }}.asc
+    EOF
+  become: true
+  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum") and mongodb_check.rc != 0
+
+- name: Install MongoDB (RHEL/Fedora)
+  package:
+    name: mongodb-org
+    state: present
+  become: true
+  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum") and mongodb_check.rc != 0
+
+# Verify installation
+- name: Verify MongoDB installation
+  shell: mongod --version | head -n 1
+  register: mongodb_version
+
+- name: Display MongoDB version
+  print: "MongoDB installed: {{ mongodb_version.stdout }}"

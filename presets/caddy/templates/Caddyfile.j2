@@ -1,0 +1,10 @@
+# Basic Caddyfile
+{{ domain | default('localhost') }} {
+    root * {{ root_dir | default('/var/www/html') }}
+    file_server
+    encode gzip
+
+    log {
+        output file /var/log/caddy/access.log
+    }
+}

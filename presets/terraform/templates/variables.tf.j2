@@ -1,0 +1,31 @@
+# Input variables
+
+variable "region" {
+  description = "{{ provider | default('Cloud') }} region"
+  type        = string
+  default     = "{{ region | default('us-east-1') }}"
+}
+
+variable "environment" {
+  description = "Environment name (dev, staging, prod)"
+  type        = string
+  default     = "{{ environment | default('dev') }}"
+}
+
+variable "project_name" {
+  description = "Project name for resource naming"
+  type        = string
+  default     = "{{ project_name | default('myproject') }}"
+}
+
+variable "tags" {
+  description = "Common tags for all resources"
+  type        = map(string)
+  default = {
+    Environment = "{{ environment | default('dev') }}"
+    ManagedBy   = "Terraform"
+    Project     = "{{ project_name | default('myproject') }}"
+  }
+}
+
+# Add your variables here

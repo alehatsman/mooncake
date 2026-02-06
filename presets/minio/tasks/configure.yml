@@ -1,0 +1,74 @@
+# MinIO Configuration Tasks
+
+- name: Ensure data directory exists
+  file:
+    path: "{{ parameters.data_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Create MinIO systemd service (Linux)
+  shell: |
+    cat > /etc/systemd/system/minio.service <<EOF
+    [Unit]
+    Description=MinIO
+    Documentation=https://docs.min.io
+    Wants=network-online.target
+    After=network-online.target
+
+    [Service]
+    Type=notify
+    WorkingDirectory=/usr/local
+    User=root
+    Group=root
+    Environment="MINIO_ROOT_USER={{ parameters.root_user }}"
+    Environment="MINIO_ROOT_PASSWORD={{ parameters.root_password }}"
+    ExecStart=/usr/local/bin/minio server {{ parameters.data_dir }} --console-address ":{{ parameters.console_port }}" --address ":{{ parameters.api_port }}"
+    Restart=always
+    LimitNOFILE=65536
+    TasksMax=infinity
+    TimeoutStopSec=infinity
+    SendSIGKILL=no
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+  become: true
+  when: os == "linux"
+
+- name: Reload systemd daemon (Linux)
+  shell: systemctl daemon-reload
+  become: true
+  when: os == "linux"
+
+- name: Start MinIO service (Linux)
+  service:
+    name: minio
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start MinIO server (macOS)
+  shell: |
+    export MINIO_ROOT_USER={{ parameters.root_user }}
+    export MINIO_ROOT_PASSWORD={{ parameters.root_password }}
+    minio server {{ parameters.data_dir }} --console-address ":{{ parameters.console_port }}" --address ":{{ parameters.api_port }}" > /tmp/minio.log 2>&1 &
+  when: os == "darwin" and parameters.start_service
+
+- name: Wait for MinIO to be ready
+  shell: curl -s http://localhost:{{ parameters.api_port }}/minio/health/live
+  register: minio_ready
+  until: minio_ready.rc == 0
+  retries: 10
+  delay: 2
+  failed_when: false
+
+- name: Display MinIO information
+  print: |
+    MinIO Server is running:
+    - API endpoint: http://localhost:{{ parameters.api_port }}
+    - Console UI: http://localhost:{{ parameters.console_port }}
+    - Root User: {{ parameters.root_user }}
+    - Root Password: {{ parameters.root_password }}
+  when: minio_ready.rc == 0

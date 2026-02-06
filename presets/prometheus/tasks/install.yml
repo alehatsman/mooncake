@@ -1,0 +1,62 @@
+# Prometheus Installation Tasks
+
+- name: Check if Prometheus is already installed
+  shell: command -v prometheus
+  register: prometheus_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Prometheus via Homebrew (macOS)
+  package:
+    name: prometheus
+    state: present
+  when: os == "darwin" and prometheus_check.rc != 0
+
+# Linux - via package manager
+- name: Install Prometheus (Debian/Ubuntu)
+  package:
+    name: prometheus
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and prometheus_check.rc != 0
+
+- name: Install Prometheus (Fedora/RHEL)
+  package:
+    name: prometheus
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "dnf" and prometheus_check.rc != 0
+
+# Arch requires download
+- name: Get latest Prometheus version (Arch)
+  shell: curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | grep tag_name | cut -d '"' -f 4
+  register: prometheus_version_tag
+  when: os == "linux" and package_manager == "pacman" and prometheus_check.rc != 0
+
+- name: Download Prometheus (Arch)
+  download:
+    url: "https://github.com/prometheus/prometheus/releases/download/{{ prometheus_version_tag.stdout }}/prometheus-{{ prometheus_version_tag.stdout | regex_replace('^v', '') }}.linux-amd64.tar.gz"
+    dest: /tmp/prometheus.tar.gz
+  when: os == "linux" and package_manager == "pacman" and prometheus_check.rc != 0
+
+- name: Extract Prometheus (Arch)
+  unarchive:
+    src: /tmp/prometheus.tar.gz
+    dest: /tmp
+  when: os == "linux" and package_manager == "pacman" and prometheus_check.rc != 0
+
+- name: Install Prometheus binaries (Arch)
+  shell: |
+    cd /tmp/prometheus-*linux-amd64
+    cp prometheus promtool /usr/local/bin/
+    chmod +x /usr/local/bin/prometheus /usr/local/bin/promtool
+  become: true
+  when: os == "linux" and package_manager == "pacman" and prometheus_check.rc != 0
+
+# Verify installation
+- name: Verify Prometheus installation
+  shell: prometheus --version 2>&1 | head -n 1
+  register: prometheus_version
+
+- name: Display Prometheus version
+  print: "Prometheus installed: {{ prometheus_version.stdout }}"

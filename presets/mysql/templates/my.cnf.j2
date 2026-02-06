@@ -1,0 +1,75 @@
+# MySQL configuration
+
+[client]
+port = {{ port | default('3306') }}
+socket = /var/run/mysqld/mysqld.sock
+
+[mysqld]
+# Basic Settings
+user = mysql
+pid-file = /var/run/mysqld/mysqld.pid
+socket = /var/run/mysqld/mysqld.sock
+port = {{ port | default('3306') }}
+basedir = /usr
+datadir = /var/lib/mysql
+tmpdir = /tmp
+lc-messages-dir = /usr/share/mysql
+
+# Network
+bind-address = {{ bind_address | default('127.0.0.1') }}
+max_connections = {{ max_connections | default('151') }}
+max_connect_errors = 100
+
+# Storage Engine
+default-storage-engine = InnoDB
+
+# Character Set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Logging
+log_error = /var/log/mysql/error.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2
+
+# Binary Logging (for replication)
+# server-id = 1
+# log_bin = /var/log/mysql/mysql-bin.log
+# expire_logs_days = 10
+# max_binlog_size = 100M
+
+# InnoDB Settings
+innodb_buffer_pool_size = {{ innodb_buffer_pool_size | default('128M') }}
+innodb_log_file_size = 50M
+innodb_file_per_table = 1
+innodb_flush_log_at_trx_commit = 1
+innodb_flush_method = O_DIRECT
+
+# Query Cache (deprecated in MySQL 8.0)
+# query_cache_type = 1
+# query_cache_size = 16M
+# query_cache_limit = 1M
+
+# Temp Tables
+tmp_table_size = 32M
+max_heap_table_size = 32M
+
+# Thread Settings
+thread_cache_size = 8
+thread_stack = 256K
+
+# MyISAM Settings
+key_buffer_size = 16M
+myisam_sort_buffer_size = 8M
+
+[mysqldump]
+quick
+quote-names
+max_allowed_packet = 16M
+
+[mysql]
+# no-auto-rehash
+
+[isamchk]
+key_buffer_size = 16M

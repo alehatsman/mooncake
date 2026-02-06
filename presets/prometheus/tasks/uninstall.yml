@@ -1,0 +1,49 @@
+# Prometheus Uninstallation Tasks
+
+- name: Stop Prometheus service (Linux)
+  service:
+    name: prometheus
+    state: stopped
+  become: true
+  failed_when: false
+  when: os == "linux"
+
+- name: Stop Prometheus service (macOS)
+  shell: brew services stop prometheus
+  failed_when: false
+  when: os == "darwin"
+
+# macOS Uninstallation
+- name: Uninstall Prometheus via Homebrew (macOS)
+  package:
+    name: prometheus
+    state: absent
+  when: os == "darwin"
+
+# Linux Uninstallation
+- name: Uninstall Prometheus (Debian/Ubuntu)
+  package:
+    name: prometheus
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall Prometheus (Fedora/RHEL)
+  package:
+    name: prometheus
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+
+- name: Remove Prometheus binaries (Arch)
+  file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - /usr/local/bin/prometheus
+    - /usr/local/bin/promtool
+  when: os == "linux" and package_manager == "pacman"
+
+- name: Display uninstall confirmation
+  print: "Prometheus has been uninstalled (data in {{ parameters.data_dir }} may remain)"

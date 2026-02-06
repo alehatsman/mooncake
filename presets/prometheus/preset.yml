@@ -1,0 +1,48 @@
+name: prometheus
+description: Install and configure Prometheus monitoring system
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Prometheus should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Prometheus service after installation
+
+  port:
+    type: string
+    required: false
+    default: "9090"
+    description: Prometheus web UI port
+
+  data_dir:
+    type: string
+    required: false
+    default: "/var/lib/prometheus"
+    description: Data storage directory
+
+  retention:
+    type: string
+    required: false
+    default: "15d"
+    description: Data retention period (e.g., "15d", "30d")
+
+steps:
+  - name: Install Prometheus
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Prometheus
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Prometheus
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,49 @@
+# Prometheus Configuration Tasks
+
+- name: Ensure data directory exists
+  file:
+    path: "{{ parameters.data_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+  when: os == "linux"
+
+- name: Create basic prometheus.yml config
+  shell: |
+    cat > /etc/prometheus/prometheus.yml <<EOF
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:{{ parameters.port }}']
+    EOF
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Start Prometheus service (Linux)
+  service:
+    name: prometheus
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Prometheus service (macOS)
+  shell: brew services start prometheus
+  when: os == "darwin" and parameters.start_service
+
+- name: Wait for Prometheus to be ready
+  shell: curl -s http://localhost:{{ parameters.port }}/-/ready
+  register: prometheus_ready
+  until: prometheus_ready.rc == 0
+  retries: 10
+  delay: 2
+  failed_when: false
+
+- name: Display Prometheus status
+  print: "Prometheus is running at http://localhost:{{ parameters.port }}"
+  when: prometheus_ready.rc == 0

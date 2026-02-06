@@ -1,0 +1,52 @@
+# MySQL Configuration Tasks
+
+- name: Initialize MySQL data directory (Arch)
+  shell: mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
+  become: true
+  when: os == "linux" and package_manager == "pacman"
+  failed_when: false
+
+- name: Start MySQL service (Linux)
+  service:
+    name: mysql
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start MySQL service (macOS)
+  shell: brew services start mysql
+  when: os == "darwin" and parameters.start_service
+
+- name: Wait for MySQL to be ready
+  shell: mysql -u root -e "SELECT 1" 2>/dev/null
+  register: mysql_ready
+  until: mysql_ready.rc == 0
+  retries: 10
+  delay: 2
+  failed_when: false
+
+- name: Create database if specified
+  shell: mysql -u root -e "CREATE DATABASE IF NOT EXISTS {{ parameters.create_database }}"
+  when: parameters.create_database != ""
+  failed_when: false
+
+- name: Create user if specified
+  shell: |
+    mysql -u root -e "CREATE USER IF NOT EXISTS '{{ parameters.create_user }}'@'localhost' IDENTIFIED BY '{{ parameters.user_password }}'"
+  when: parameters.create_user != "" and parameters.user_password != ""
+  failed_when: false
+
+- name: Grant privileges to user
+  shell: |
+    mysql -u root -e "GRANT ALL PRIVILEGES ON {{ parameters.create_database }}.* TO '{{ parameters.create_user }}'@'localhost'"
+    mysql -u root -e "FLUSH PRIVILEGES"
+  when: parameters.create_user != "" and parameters.create_database != ""
+  failed_when: false
+
+- name: Verify MySQL is running
+  shell: mysql -u root -e "SELECT VERSION()"
+  register: mysql_status
+
+- name: Display MySQL status
+  print: "MySQL version: {{ mysql_status.stdout }}"

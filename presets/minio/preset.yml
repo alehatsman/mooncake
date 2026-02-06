@@ -1,0 +1,60 @@
+name: minio
+description: Install and configure MinIO S3-compatible object storage
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether MinIO should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start MinIO service after installation
+
+  data_dir:
+    type: string
+    required: false
+    default: "/var/lib/minio"
+    description: Data storage directory
+
+  console_port:
+    type: string
+    required: false
+    default: "9001"
+    description: MinIO console web UI port
+
+  api_port:
+    type: string
+    required: false
+    default: "9000"
+    description: MinIO S3 API port
+
+  root_user:
+    type: string
+    required: false
+    default: "minioadmin"
+    description: Root username
+
+  root_password:
+    type: string
+    required: false
+    default: "minioadmin"
+    description: Root password (must be at least 8 characters)
+
+steps:
+  - name: Install MinIO
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure MinIO
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall MinIO
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,36 @@
+# Vault Configuration Tasks
+
+- name: Start Vault in dev mode
+  shell: vault server -dev -dev-listen-address="{{ parameters.address }}:{{ parameters.port }}" > /tmp/vault-dev.log 2>&1 &
+  when: parameters.mode == "dev" and parameters.start_service
+  environment:
+    VAULT_ADDR: "http://{{ parameters.address }}:{{ parameters.port }}"
+
+- name: Wait for Vault to be ready (dev mode)
+  shell: vault status
+  register: vault_status
+  until: vault_status.rc == 0 or vault_status.rc == 2
+  retries: 10
+  delay: 2
+  failed_when: false
+  when: parameters.mode == "dev"
+  environment:
+    VAULT_ADDR: "http://{{ parameters.address }}:{{ parameters.port }}"
+
+- name: Get dev root token
+  shell: grep 'Root Token:' /tmp/vault-dev.log | awk '{print $NF}'
+  register: vault_root_token
+  when: parameters.mode == "dev"
+  failed_when: false
+
+- name: Display Vault dev mode information
+  print: |
+    Vault is running in DEV mode at http://{{ parameters.address }}:{{ parameters.port }}
+    Root token: {{ vault_root_token.stdout }}
+    Set VAULT_ADDR=http://{{ parameters.address }}:{{ parameters.port }}
+    Set VAULT_TOKEN={{ vault_root_token.stdout }}
+  when: parameters.mode == "dev" and vault_root_token.rc == 0
+
+- name: Display server mode note
+  print: "Vault installed. For server mode, configure /etc/vault.d/vault.hcl and start with systemctl"
+  when: parameters.mode == "server"

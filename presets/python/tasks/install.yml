@@ -85,9 +85,9 @@
 # Add pyenv init to shell profiles
 - name: Add pyenv to shell profile
   shell: |
-    for profile in "~/.bashrc" "~/.zshrc" "~/.profile"; do
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
       if [ -f "$profile" ] && ! grep -q '.pyenv_init' "$profile"; then
-        echo '[ -f "~/.pyenv_init" ] && source "~/.pyenv_init"' >> "$profile"
+        echo '[ -f "$HOME/.pyenv_init" ] && source "$HOME/.pyenv_init"' >> "$profile"
       fi
     done
   when: pyenv_installed.failed
@@ -95,7 +95,7 @@
 # Install Python version
 - name: Install Python {{ parameters.version }}
   shell: |
-    export PYENV_ROOT="~/.pyenv"
+    export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv install -s {{ parameters.version }}
@@ -104,7 +104,7 @@
 # Set global version
 - name: Set Python {{ parameters.version }} as global version
   shell: |
-    export PYENV_ROOT="~/.pyenv"
+    export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv global {{ parameters.version }}
@@ -113,7 +113,7 @@
 # Install additional versions
 - name: Install additional Python version {{ item }}
   shell: |
-    export PYENV_ROOT="~/.pyenv"
+    export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv install -s {{ item }}
@@ -123,23 +123,23 @@
 # Install pyenv-virtualenv plugin
 - name: Install pyenv-virtualenv plugin
   shell: |
-    if [ ! -d "~/.pyenv/plugins/pyenv-virtualenv" ]; then
+    if [ ! -d "$HOME/.pyenv/plugins/pyenv-virtualenv" ]; then
       git clone https://github.com/pyenv/pyenv-virtualenv.git \
-        "~/.pyenv/plugins/pyenv-virtualenv"
+        "$HOME/.pyenv/plugins/pyenv-virtualenv"
     fi
   when: parameters.install_virtualenv
 
 - name: Add pyenv-virtualenv to pyenv init file
   shell: |
-    if ! grep -q 'pyenv virtualenv-init' "~/.pyenv_init"; then
-      echo 'eval "$(pyenv virtualenv-init -)"' >> "~/.pyenv_init"
+    if ! grep -q 'pyenv virtualenv-init' "$HOME/.pyenv_init"; then
+      echo 'eval "$(pyenv virtualenv-init -)"' >> "$HOME/.pyenv_init"
     fi
   when: parameters.install_virtualenv and pyenv_installed.failed
 
 # Verify installation
 - name: Verify Python installation
   shell: |
-    export PYENV_ROOT="~/.pyenv"
+    export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     python --version
@@ -147,7 +147,7 @@
 
 - name: List installed Python versions
   shell: |
-    export PYENV_ROOT="~/.pyenv"
+    export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv versions

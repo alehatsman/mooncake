@@ -1,0 +1,49 @@
+# Prometheus configuration
+global:
+  scrape_interval: {{ scrape_interval | default('15s') }}
+  evaluation_interval: {{ evaluation_interval | default('15s') }}
+  external_labels:
+    cluster: {{ cluster_name | default('production') }}
+    environment: {{ environment | default('prod') }}
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "alerts/*.yml"
+  # - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:{{ port | default('9090') }}']
+
+  # Node Exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets:
+        - 'localhost:9100'
+        labels:
+          instance: 'server1'
+
+  # Example: Application metrics
+  # - job_name: 'myapp'
+  #   static_configs:
+  #     - targets: ['localhost:8080']
+  #   metrics_path: '/metrics'
+
+  # Example: Service discovery (Kubernetes)
+  # - job_name: 'kubernetes-pods'
+  #   kubernetes_sd_configs:
+  #     - role: pod
+  #   relabel_configs:
+  #     - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+  #       action: keep
+  #       regex: true

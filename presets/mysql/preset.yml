@@ -1,0 +1,56 @@
+name: mysql
+description: Install and configure MySQL database server
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether MySQL should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start MySQL service after installation
+
+  root_password:
+    type: string
+    required: false
+    description: Root password (if not set, use default installation)
+
+  create_database:
+    type: string
+    required: false
+    description: Database name to create
+
+  create_user:
+    type: string
+    required: false
+    description: Username to create
+
+  user_password:
+    type: string
+    required: false
+    description: Password for created user
+
+  port:
+    type: string
+    required: false
+    default: "3306"
+    description: MySQL port
+
+steps:
+  - name: Install MySQL
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure MySQL
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall MySQL
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

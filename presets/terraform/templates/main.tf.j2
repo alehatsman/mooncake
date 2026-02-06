@@ -1,0 +1,63 @@
+# Main Terraform configuration
+
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    {% if provider == 'aws' %}
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    {% elif provider == 'google' %}
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+    {% elif provider == 'azurerm' %}
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+    {% else %}
+    # Add your provider here
+    {% endif %}
+  }
+
+  {% if backend == 's3' %}
+  backend "s3" {
+    bucket = "{{ state_bucket }}"
+    key    = "{{ state_key | default('terraform.tfstate') }}"
+    region = "{{ region | default('us-east-1') }}"
+  }
+  {% elif backend == 'gcs' %}
+  backend "gcs" {
+    bucket = "{{ state_bucket }}"
+    prefix = "{{ state_prefix | default('terraform/state') }}"
+  }
+  {% elif backend == 'azurerm' %}
+  backend "azurerm" {
+    resource_group_name  = "{{ resource_group }}"
+    storage_account_name = "{{ storage_account }}"
+    container_name       = "tfstate"
+    key                  = "{{ state_key | default('terraform.tfstate') }}"
+  }
+  {% endif %}
+}
+
+{% if provider == 'aws' %}
+provider "aws" {
+  region = var.region
+}
+{% elif provider == 'google' %}
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+{% elif provider == 'azurerm' %}
+provider "azurerm" {
+  features {}
+}
+{% endif %}
+
+# Add your resources here

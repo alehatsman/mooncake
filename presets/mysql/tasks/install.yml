@@ -1,0 +1,45 @@
+# MySQL Installation Tasks
+
+- name: Check if MySQL is already installed
+  shell: command -v mysql
+  register: mysql_check
+  failed_when: false
+
+# macOS Installation
+- name: Install MySQL via Homebrew (macOS)
+  package:
+    name: mysql
+    state: present
+  when: os == "darwin" and mysql_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Install MySQL (Debian/Ubuntu)
+  package:
+    name: mysql-server
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and mysql_check.rc != 0
+
+# Linux - RHEL/Fedora/CentOS
+- name: Install MySQL (RHEL/Fedora/CentOS)
+  package:
+    name: mysql-server
+    state: present
+  become: true
+  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum") and mysql_check.rc != 0
+
+# Linux - Arch
+- name: Install MySQL (Arch)
+  package:
+    name: mysql
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "pacman" and mysql_check.rc != 0
+
+# Verify installation
+- name: Verify MySQL installation
+  shell: mysql --version
+  register: mysql_version
+
+- name: Display MySQL version
+  print: "MySQL installed: {{ mysql_version.stdout }}"

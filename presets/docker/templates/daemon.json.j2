@@ -1,0 +1,24 @@
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "{{ log_max_size | default('10m') }}",
+    "max-file": "{{ log_max_file | default('3') }}"
+  },
+  "storage-driver": "{{ storage_driver | default('overlay2') }}",
+  "default-address-pools": [
+    {
+      "base": "172.17.0.0/16",
+      "size": 24
+    }
+  ],
+  "dns": {{ dns_servers | default(['8.8.8.8', '8.8.4.4']) | tojson }},
+  "insecure-registries": [],
+  "registry-mirrors": [],
+  "max-concurrent-downloads": 3,
+  "max-concurrent-uploads": 5,
+  "live-restore": true,
+  "userland-proxy": false,
+  "experimental": false,
+  "metrics-addr": "{{ metrics_addr | default('') }}",
+  "debug": {{ debug | default(false) | lower }}
+}

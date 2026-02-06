@@ -1,0 +1,54 @@
+name: caddy
+description: Install and configure Caddy web server with automatic HTTPS
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Caddy should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Caddy service after installation
+
+  domain:
+    type: string
+    required: false
+    default: "localhost"
+    description: Domain name for the site
+
+  port:
+    type: string
+    required: false
+    default: "80"
+    description: HTTP port (443 for HTTPS with valid domain)
+
+  root_dir:
+    type: string
+    required: false
+    default: "/var/www/html"
+    description: Document root directory
+
+  auto_https:
+    type: bool
+    required: false
+    default: false
+    description: Enable automatic HTTPS (requires valid domain)
+
+steps:
+  - name: Install Caddy
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Caddy
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Caddy
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

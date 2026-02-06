@@ -1,0 +1,38 @@
+# Nginx Configuration Tasks
+
+- name: Ensure document root exists
+  file:
+    path: "{{ parameters.root_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+  when: os == "linux"
+
+- name: Create basic index.html
+  file:
+    path: "{{ parameters.root_dir }}/index.html"
+    state: touch
+    mode: "0644"
+  become: true
+  when: os == "linux" and parameters.root_dir != "/var/www/html"
+
+- name: Start Nginx service (Linux systemd)
+  service:
+    name: nginx
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Nginx service (macOS)
+  shell: brew services start nginx
+  when: os == "darwin" and parameters.start_service
+
+- name: Verify Nginx is running
+  shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:{{ parameters.port }}
+  register: nginx_status
+  failed_when: false
+
+- name: Display Nginx status
+  print: "Nginx HTTP status: {{ nginx_status.stdout }}"
+  when: nginx_status.rc == 0

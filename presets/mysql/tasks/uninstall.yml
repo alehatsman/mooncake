@@ -1,0 +1,46 @@
+# MySQL Uninstallation Tasks
+
+- name: Stop MySQL service (Linux)
+  service:
+    name: mysql
+    state: stopped
+  become: true
+  failed_when: false
+  when: os == "linux"
+
+- name: Stop MySQL service (macOS)
+  shell: brew services stop mysql
+  failed_when: false
+  when: os == "darwin"
+
+# macOS Uninstallation
+- name: Uninstall MySQL via Homebrew (macOS)
+  package:
+    name: mysql
+    state: absent
+  when: os == "darwin"
+
+# Linux Uninstallation
+- name: Uninstall MySQL (Debian/Ubuntu)
+  package:
+    name: mysql-server
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall MySQL (RHEL/Fedora/CentOS)
+  package:
+    name: mysql-server
+    state: absent
+  become: true
+  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum")
+
+- name: Uninstall MySQL (Arch)
+  package:
+    name: mysql
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "pacman"
+
+- name: Display uninstall confirmation
+  print: "MySQL has been uninstalled (data directory may remain)"

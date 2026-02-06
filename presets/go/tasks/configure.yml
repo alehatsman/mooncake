@@ -1,0 +1,20 @@
+# Go Configuration Tasks
+
+- name: Ensure GOPATH directory exists
+  file:
+    path: "{{ parameters.gopath }}"
+    state: directory
+    mode: "0755"
+
+- name: Create GOPATH subdirectories
+  shell: |
+    mkdir -p {{ parameters.gopath }}/src
+    mkdir -p {{ parameters.gopath }}/bin
+    mkdir -p {{ parameters.gopath }}/pkg
+
+- name: Display Go environment
+  shell: go env GOPATH GOROOT
+  register: go_env
+
+- name: Display Go paths
+  print: "Go environment: {{ go_env.stdout }}"

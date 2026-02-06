@@ -1,0 +1,46 @@
+# Nginx Uninstallation Tasks
+
+- name: Stop Nginx service (Linux)
+  service:
+    name: nginx
+    state: stopped
+  become: true
+  failed_when: false
+  when: os == "linux"
+
+- name: Stop Nginx service (macOS)
+  shell: brew services stop nginx
+  failed_when: false
+  when: os == "darwin"
+
+# macOS Uninstallation
+- name: Uninstall Nginx via Homebrew (macOS)
+  package:
+    name: nginx
+    state: absent
+  when: os == "darwin"
+
+# Linux Uninstallation
+- name: Uninstall Nginx (Debian/Ubuntu)
+  package:
+    name: nginx
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall Nginx (RHEL/Fedora/CentOS)
+  package:
+    name: nginx
+    state: absent
+  become: true
+  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum")
+
+- name: Uninstall Nginx (Arch)
+  package:
+    name: nginx
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "pacman"
+
+- name: Display uninstall confirmation
+  print: "Nginx has been uninstalled"

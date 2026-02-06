@@ -1,0 +1,58 @@
+# Caddy Configuration Tasks
+
+- name: Ensure document root exists
+  file:
+    path: "{{ parameters.root_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Create basic index.html
+  shell: echo "<h1>Welcome to Caddy!</h1>" > {{ parameters.root_dir }}/index.html
+  become: true
+
+- name: Create Caddyfile
+  shell: |
+    cat > /etc/caddy/Caddyfile <<EOF
+    {% if parameters.auto_https %}
+    {{ parameters.domain }} {
+        root * {{ parameters.root_dir }}
+        file_server
+    }
+    {% else %}
+    :{{ parameters.port }} {
+        root * {{ parameters.root_dir }}
+        file_server
+    }
+    {% endif %}
+    EOF
+  become: true
+  when: os == "linux"
+
+- name: Reload Caddy configuration
+  service:
+    name: caddy
+    state: reloaded
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Caddy service (Linux)
+  service:
+    name: caddy
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Caddy service (macOS)
+  shell: brew services start caddy
+  when: os == "darwin" and parameters.start_service
+
+- name: Verify Caddy is running
+  shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:{{ parameters.port }}
+  register: caddy_status
+  failed_when: false
+
+- name: Display Caddy status
+  print: "Caddy HTTP status: {{ caddy_status.stdout }}"
+  when: caddy_status.rc == 0

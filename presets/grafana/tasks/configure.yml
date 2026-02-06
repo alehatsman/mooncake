@@ -1,0 +1,29 @@
+# Grafana Configuration Tasks
+
+- name: Start Grafana service (Linux)
+  service:
+    name: grafana-server
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Grafana service (macOS)
+  shell: brew services start grafana
+  when: os == "darwin" and parameters.start_service
+
+- name: Wait for Grafana to be ready
+  shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:{{ parameters.port }}/api/health
+  register: grafana_ready
+  until: grafana_ready.stdout == "200"
+  retries: 20
+  delay: 3
+  failed_when: false
+
+- name: Display Grafana status
+  print: "Grafana is running at http://localhost:{{ parameters.port }} (admin/{{ parameters.admin_password }})"
+  when: grafana_ready.stdout == "200"
+
+- name: Display login instructions
+  print: "Please change the default admin password after first login!"
+  when: parameters.admin_password == "admin"

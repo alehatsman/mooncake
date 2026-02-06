@@ -1,0 +1,33 @@
+# Go Uninstallation Tasks
+
+# macOS Uninstallation
+- name: Uninstall Go via Homebrew (macOS)
+  package:
+    name: go
+    state: absent
+  when: os == "darwin"
+
+# Linux Uninstallation
+- name: Uninstall Go (Debian/Ubuntu)
+  package:
+    name: golang-go
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall Go (Fedora/RHEL)
+  package:
+    name: golang
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+
+- name: Uninstall Go (Arch)
+  package:
+    name: go
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "pacman"
+
+- name: Display uninstall confirmation
+  print: "Go has been uninstalled (GOPATH {{ parameters.gopath }} remains)"

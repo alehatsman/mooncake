@@ -1,0 +1,49 @@
+name: vault
+description: Install and configure HashiCorp Vault secrets management
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Vault should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Vault service after installation
+
+  mode:
+    type: string
+    required: false
+    default: dev
+    enum: [dev, server]
+    description: Run mode (dev for testing, server for production)
+
+  port:
+    type: string
+    required: false
+    default: "8200"
+    description: Vault server port
+
+  address:
+    type: string
+    required: false
+    default: "127.0.0.1"
+    description: Vault server bind address
+
+steps:
+  - name: Install Vault
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Vault
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Vault
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

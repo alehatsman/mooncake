@@ -1,0 +1,31 @@
+# Grafana datasource configuration
+apiVersion: 1
+
+datasources:
+  # Prometheus datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: {{ prometheus_url | default('http://localhost:9090') }}
+    isDefault: true
+    editable: true
+
+  # Example: PostgreSQL datasource
+  # - name: PostgreSQL
+  #   type: postgres
+  #   url: {{ postgres_host | default('localhost:5432') }}
+  #   database: {{ postgres_db | default('mydb') }}
+  #   user: {{ postgres_user | default('grafana') }}
+  #   secureJsonData:
+  #     password: {{ postgres_password | default('password') }}
+  #   jsonData:
+  #     sslmode: disable
+
+  # Example: MySQL datasource
+  # - name: MySQL
+  #   type: mysql
+  #   url: {{ mysql_host | default('localhost:3306') }}
+  #   database: {{ mysql_db | default('mydb') }}
+  #   user: {{ mysql_user | default('grafana') }}
+  #   secureJsonData:
+  #     password: {{ mysql_password | default('password') }}

@@ -1,0 +1,53 @@
+name: awscli
+description: Install AWS Command Line Interface (AWS CLI)
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether AWS CLI should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "2"
+    enum: ["1", "2"]
+    description: AWS CLI version (1 or 2)
+
+  configure:
+    type: bool
+    required: false
+    default: false
+    description: Run aws configure (requires manual input)
+
+  access_key_id:
+    type: string
+    required: false
+    description: AWS Access Key ID (if configuring)
+
+  secret_access_key:
+    type: string
+    required: false
+    description: AWS Secret Access Key (if configuring)
+
+  region:
+    type: string
+    required: false
+    default: "us-east-1"
+    description: Default AWS region
+
+steps:
+  - name: Install AWS CLI
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure AWS CLI
+    include: tasks/configure.yml
+    when: parameters.state == "present" and parameters.configure
+
+  - name: Uninstall AWS CLI
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

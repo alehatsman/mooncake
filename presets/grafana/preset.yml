@@ -1,0 +1,42 @@
+name: grafana
+description: Install and configure Grafana visualization and analytics platform
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Grafana should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Grafana service after installation
+
+  port:
+    type: string
+    required: false
+    default: "3000"
+    description: Grafana web UI port
+
+  admin_password:
+    type: string
+    required: false
+    default: "admin"
+    description: Admin user password (change after first login)
+
+steps:
+  - name: Install Grafana
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Grafana
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Grafana
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

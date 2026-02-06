@@ -1,0 +1,44 @@
+# Vault Uninstallation Tasks
+
+- name: Stop Vault dev server
+  shell: pkill -f "vault server"
+  failed_when: false
+
+- name: Stop Vault service (Linux)
+  service:
+    name: vault
+    state: stopped
+  become: true
+  failed_when: false
+  when: os == "linux"
+
+# macOS Uninstallation
+- name: Uninstall Vault via Homebrew (macOS)
+  package:
+    name: hashicorp/tap/vault
+    state: absent
+  when: os == "darwin"
+
+# Linux Uninstallation
+- name: Uninstall Vault (Debian/Ubuntu)
+  package:
+    name: vault
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall Vault (RHEL/Fedora)
+  package:
+    name: vault
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+
+- name: Clean up dev log
+  file:
+    path: /tmp/vault-dev.log
+    state: absent
+  failed_when: false
+
+- name: Display uninstall confirmation
+  print: "Vault has been uninstalled (configuration in /etc/vault.d may remain)"

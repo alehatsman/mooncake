@@ -1,0 +1,36 @@
+name: go
+description: Install Go programming language
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Go should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "latest"
+    description: Go version to install (e.g., "1.22", "latest")
+
+  gopath:
+    type: string
+    required: false
+    default: "$HOME/go"
+    description: GOPATH directory
+
+steps:
+  - name: Install Go
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Go
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Go
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"
