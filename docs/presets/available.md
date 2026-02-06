@@ -4,773 +4,743 @@ Browse our collection of ready-to-use presets for common development tools and i
 
 <div class="preset-grid">
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### awscli
+<h3>awscli</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install AWS Command Line Interface (AWS CLI)
+<p>Install AWS Command Line Interface (AWS CLI)</p>
 
-```bash
-mooncake presets install awscli
-```
+<pre><code class="language-bash">mooncake presets install awscli</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/awscli/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/awscli/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### caddy
+<h3>caddy</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install and configure Caddy web server with automatic HTTPS
+<p>Install and configure Caddy web server with automatic HTTPS</p>
 
-```bash
-mooncake presets install caddy
-```
+<pre><code class="language-bash">mooncake presets install caddy</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/caddy/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/caddy/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### docker
+<h3>docker</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install and configure Docker container runtime
+<p>Install and configure Docker container runtime</p>
 
-```bash
-mooncake presets install docker
-```
+<pre><code class="language-bash">mooncake presets install docker</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/docker/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/docker/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### elasticsearch
+<h3>elasticsearch</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 9
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 9
+</p>
 
-Install and configure Elasticsearch search and analytics engine
+<p>Install and configure Elasticsearch search and analytics engine</p>
 
-```bash
-mooncake presets install elasticsearch
-```
+<pre><code class="language-bash">mooncake presets install elasticsearch</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/elasticsearch/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/elasticsearch/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### go
+<h3>go</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 3
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 3
+</p>
 
-Install Go programming language
+<p>Install Go programming language</p>
 
-```bash
-mooncake presets install go
-```
+<pre><code class="language-bash">mooncake presets install go</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/go/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/go/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### grafana
+<h3>grafana</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 4
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 4
+</p>
 
-Install and configure Grafana visualization and analytics platform
+<p>Install and configure Grafana visualization and analytics platform</p>
 
-```bash
-mooncake presets install grafana
-```
+<pre><code class="language-bash">mooncake presets install grafana</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/grafana/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/grafana/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### java
+<h3>httpie</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 3
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 1
+</p>
 
-Install OpenJDK Java Development Kit
+<p>Install HTTPie - modern, user-friendly HTTP client for APIs</p>
 
-```bash
-mooncake presets install java
-```
+<pre><code class="language-bash">mooncake presets install httpie</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/java/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/httpie/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### jupyter
+<h3>java</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 8
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 3
+</p>
 
-Install Jupyter Lab/Notebook for interactive data science and ML
+<p>Install OpenJDK Java Development Kit</p>
 
-```bash
-mooncake presets install jupyter
-```
+<pre><code class="language-bash">mooncake presets install java</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/jupyter/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/java/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### k8s-tools
+<h3>jupyter</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 8
+</p>
 
-Install Kubernetes command-line tools (kubectl, k9s, helm)
+<p>Install Jupyter Lab/Notebook for interactive data science and ML</p>
 
-```bash
-mooncake presets install k8s-tools
-```
+<pre><code class="language-bash">mooncake presets install jupyter</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/k8s-tools/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/jupyter/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### kafka
+<h3>k8s-tools</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install and configure Apache Kafka distributed streaming platform
+<p>Install Kubernetes command-line tools (kubectl, k9s, helm)</p>
 
-```bash
-mooncake presets install kafka
-```
+<pre><code class="language-bash">mooncake presets install k8s-tools</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/kafka/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/k8s-tools/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### miniconda
+<h3>kafka</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 4
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install Miniconda - minimal conda installer for Python environments
+<p>Install and configure Apache Kafka distributed streaming platform</p>
 
-```bash
-mooncake presets install miniconda
-```
+<pre><code class="language-bash">mooncake presets install kafka</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/miniconda/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/kafka/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### minio
+<h3>memcached</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 7
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install and configure MinIO S3-compatible object storage
+<p>Install Memcached high-performance distributed memory caching system</p>
 
-```bash
-mooncake presets install minio
-```
+<pre><code class="language-bash">mooncake presets install memcached</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/minio/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/memcached/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### mkdocs
+<h3>miniconda</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 4
+</p>
 
-Install MkDocs static site generator for project documentation
+<p>Install Miniconda - minimal conda installer for Python environments</p>
 
-```bash
-mooncake presets install mkdocs
-```
+<pre><code class="language-bash">mooncake presets install miniconda</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/mkdocs/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/miniconda/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### modern-unix
+<h3>minio</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 2
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 7
+</p>
 
-Install modern replacements for classic Unix tools
+<p>Install and configure MinIO S3-compatible object storage</p>
 
-```bash
-mooncake presets install modern-unix
-```
+<pre><code class="language-bash">mooncake presets install minio</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/modern-unix/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/minio/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### mongodb
+<h3>mkdocs</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install and configure MongoDB NoSQL database
+<p>Install MkDocs static site generator for project documentation</p>
 
-```bash
-mooncake presets install mongodb
-```
+<pre><code class="language-bash">mooncake presets install mkdocs</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/mongodb/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/mkdocs/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### mysql
+<h3>modern-unix</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 7
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 2
+</p>
 
-Install and configure MySQL database server
+<p>Install modern replacements for classic Unix tools</p>
 
-```bash
-mooncake presets install mysql
-```
+<pre><code class="language-bash">mooncake presets install modern-unix</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/mysql/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/modern-unix/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### neovim
+<h3>mongodb</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install Neovim text editor with plugin manager
+<p>Install and configure MongoDB NoSQL database</p>
 
-```bash
-mooncake presets install neovim
-```
+<pre><code class="language-bash">mooncake presets install mongodb</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/neovim/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/mongodb/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### nginx
+<h3>mysql</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 7
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 7
+</p>
 
-Install and configure Nginx web server
+<p>Install and configure MySQL database server</p>
 
-```bash
-mooncake presets install nginx
-```
+<pre><code class="language-bash">mooncake presets install mysql</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/nginx/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/mysql/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### nodejs
+<h3>neovim</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install Node.js via nvm (Node Version Manager)
+<p>Install Neovim text editor with plugin manager</p>
 
-```bash
-mooncake presets install nodejs
-```
+<pre><code class="language-bash">mooncake presets install neovim</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/nodejs/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/neovim/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### ollama
+<h3>nginx</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 7
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 7
+</p>
 
-Install and manage Ollama LLM runtime
+<p>Install and configure Nginx web server</p>
 
-```bash
-mooncake presets install ollama
-```
+<pre><code class="language-bash">mooncake presets install nginx</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/ollama/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/nginx/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### php
+<h3>nodejs</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 4
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install PHP programming language with Composer
+<p>Install Node.js via nvm (Node Version Manager)</p>
 
-```bash
-mooncake presets install php
-```
+<pre><code class="language-bash">mooncake presets install nodejs</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/php/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/nodejs/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### postgres
+<h3>ollama</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 7
+</p>
 
-Install and configure PostgreSQL database
+<p>Install and manage Ollama LLM runtime</p>
 
-```bash
-mooncake presets install postgres
-```
+<pre><code class="language-bash">mooncake presets install ollama</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/postgres/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/ollama/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### prometheus
+<h3>php</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 4
+</p>
 
-Install and configure Prometheus monitoring system
+<p>Install PHP programming language with Composer</p>
 
-```bash
-mooncake presets install prometheus
-```
+<pre><code class="language-bash">mooncake presets install php</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/prometheus/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/php/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### python
+<h3>postgres</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install Python via pyenv (Python version manager)
+<p>Install and configure PostgreSQL database</p>
 
-```bash
-mooncake presets install python
-```
+<pre><code class="language-bash">mooncake presets install postgres</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/python/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/postgres/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### pytorch
+<h3>prometheus</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install PyTorch deep learning framework with CPU/GPU support
+<p>Install and configure Prometheus monitoring system</p>
 
-```bash
-mooncake presets install pytorch
-```
+<pre><code class="language-bash">mooncake presets install prometheus</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/pytorch/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/prometheus/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### rabbitmq
+<h3>python</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 7
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install and configure RabbitMQ message broker
+<p>Install Python via pyenv (Python version manager)</p>
 
-```bash
-mooncake presets install rabbitmq
-```
+<pre><code class="language-bash">mooncake presets install python</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/rabbitmq/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/python/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### redis
+<h3>pytorch</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install and configure Redis in-memory data store
+<p>Install PyTorch deep learning framework with CPU/GPU support</p>
 
-```bash
-mooncake presets install redis
-```
+<pre><code class="language-bash">mooncake presets install pytorch</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/redis/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/pytorch/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### ruby
+<h3>rabbitmq</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 7
+</p>
 
-Install Ruby via rbenv (Ruby version manager)
+<p>Install and configure RabbitMQ message broker</p>
 
-```bash
-mooncake presets install ruby
-```
+<pre><code class="language-bash">mooncake presets install rabbitmq</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/ruby/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/rabbitmq/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### rust
+<h3>redis</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install Rust via rustup (Rust toolchain installer)
+<p>Install and configure Redis in-memory data store</p>
 
-```bash
-mooncake presets install rust
-```
+<pre><code class="language-bash">mooncake presets install redis</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/rust/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/redis/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### tensorflow
+<h3>ruby</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 4
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install TensorFlow machine learning framework with CPU/GPU support
+<p>Install Ruby via rbenv (Ruby version manager)</p>
 
-```bash
-mooncake presets install tensorflow
-```
+<pre><code class="language-bash">mooncake presets install ruby</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/tensorflow/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/ruby/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### terraform
+<h3>rust</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-Install Terraform infrastructure as code tool
+<p>Install Rust via rustup (Rust toolchain installer)</p>
 
-```bash
-mooncake presets install terraform
-```
+<pre><code class="language-bash">mooncake presets install rust</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/terraform/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/rust/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### tmux
+<h3>tensorflow</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 4
+</p>
 
-Install and configure Tmux terminal multiplexer
+<p>Install TensorFlow machine learning framework with CPU/GPU support</p>
 
-```bash
-mooncake presets install tmux
-```
+<pre><code class="language-bash">mooncake presets install tensorflow</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/tmux/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/tensorflow/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### traefik
+<h3>terraform</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 6
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install Traefik modern reverse proxy and load balancer
+<p>Install Terraform infrastructure as code tool</p>
 
-```bash
-mooncake presets install traefik
-```
+<pre><code class="language-bash">mooncake presets install terraform</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/traefik/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/terraform/">Source</a>
+</p>
 
 </div>
 
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### vault
+<h3>tmux</h3>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
-</div>
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
 
-Install and configure HashiCorp Vault secrets management
+<p>Install and configure Tmux terminal multiplexer</p>
 
-```bash
-mooncake presets install vault
-```
+<pre><code class="language-bash">mooncake presets install tmux</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/vault/){ .md-button }
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/tmux/">Source</a>
+</p>
 
 </div>
+
+<div class="grid-card">
+
+<h3>traefik</h3>
+
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 6
+</p>
 
-<div class="grid-card" markdown>
+<p>Install Traefik modern reverse proxy and load balancer</p>
 
-### zsh
+<pre><code class="language-bash">mooncake presets install traefik</code></pre>
 
-<div class="card-meta">
-<span class="badge">v1.0.0</span>
-**Parameters:** 5
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/traefik/">Source</a>
+</p>
+
 </div>
+
+<div class="grid-card">
+
+<h3>vault</h3>
+
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
+
+<p>Install and configure HashiCorp Vault secrets management</p>
 
-Install Zsh shell with Oh My Zsh framework
+<pre><code class="language-bash">mooncake presets install vault</code></pre>
 
-```bash
-mooncake presets install zsh
-```
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/vault/">Source</a>
+</p>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){ .md-button .md-button--primary }
-[View Source](../../presets/zsh/){ .md-button }
 </div>
+
+<div class="grid-card">
+
+<h3>zsh</h3>
+
+<p class="card-meta">
+<span class="badge">v1.0.0</span> <strong>Parameters:</strong> 5
+</p>
+
+<p>Install Zsh shell with Oh My Zsh framework</p>
+
+<pre><code class="language-bash">mooncake presets install zsh</code></pre>
+
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/zsh/">Source</a>
+</p>
 
 </div>
 
@@ -796,4 +766,4 @@ For more information, see the [Preset Guide](../guide/presets.md).
 
 ---
 
-*Found 35 presets*
+*Found 37 presets*

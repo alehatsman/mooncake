@@ -50,18 +50,30 @@
     font-weight: 600;
 }
 
+.grid-card pre {
+    margin: 1rem 0;
+}
+
+.grid-card pre code {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
 .card-actions {
     margin-top: auto;
     padding-top: 1rem;
     display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.875rem;
 }
 
-.card-actions .md-button {
-    flex: 1;
-    min-width: fit-content;
-    text-align: center;
+.card-actions a {
+    color: var(--md-typeset-a-color);
+    text-decoration: none;
+}
+
+.card-actions a:hover {
+    text-decoration: underline;
 }
 
 /* Dark mode adjustments */

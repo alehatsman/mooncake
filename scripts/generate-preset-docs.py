@@ -19,29 +19,27 @@ def generate_preset_card(preset, preset_name):
     params_info = ""
     if preset.get('parameters'):
         param_count = len(preset['parameters'])
-        params_info = f"**Parameters:** {param_count}"
+        params_info = f"<strong>Parameters:</strong> {param_count}"
 
-    # Build card
+    # Build card using pure HTML
     card = f"""
-<div class="grid-card" markdown>
+<div class="grid-card">
 
-### {preset['name']}
+<h3>{preset['name']}</h3>
 
-<div class="card-meta">
-<span class="badge">v{preset['version']}</span>
-{params_info}
-</div>
+<p class="card-meta">
+<span class="badge">v{preset['version']}</span> {params_info}
+</p>
 
-{preset['description']}
+<p>{preset['description']}</p>
 
-```bash
-mooncake presets install {preset_name}
-```
+<pre><code class="language-bash">mooncake presets install {preset_name}</code></pre>
 
-<div class="card-actions">
-[Documentation](../guide/presets.md){{ .md-button .md-button--primary }}
-[View Source](../../presets/{preset_name}/){{ .md-button }}
-</div>
+<p class="card-actions">
+<a href="../guide/presets.md">Documentation</a>
+<span>•</span>
+<a href="../../presets/{preset_name}/">Source</a>
+</p>
 
 </div>
 """
