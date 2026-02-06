@@ -1,6 +1,7 @@
-- name: Uninstall httpstat (macOS)
-  shell: brew uninstall httpstat
-  when: os == "darwin"
+- name: Uninstall httpstat
+  package:
+    name: httpstat
+    state: absent
   failed_when: false
 
 - name: Display confirmation

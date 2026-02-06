@@ -3,13 +3,15 @@
   register: syft_check
   failed_when: false
 
-- name: Install syft (macOS)
-  shell: brew install syft
-  when: os == "darwin" and syft_check.rc != 0
+- name: Install syft
+  package:
+    name: syft
+    state: present
+  when: syft_check.rc != 0
 
 - name: Verify installation
-  shell: syft --version 2>&1 || syft -v 2>&1 || echo "installed"
+  shell: syft --version 2>&1 || echo "installed"
   register: syft_version
 
 - name: Display version
-  print: "syft installed"
+  print: "syft installed: {{ syft_version.stdout }}"

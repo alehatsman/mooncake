@@ -3,13 +3,15 @@
   register: skopeo_check
   failed_when: false
 
-- name: Install skopeo (macOS)
-  shell: brew install skopeo
-  when: os == "darwin" and skopeo_check.rc != 0
+- name: Install skopeo
+  package:
+    name: skopeo
+    state: present
+  when: skopeo_check.rc != 0
 
 - name: Verify installation
-  shell: skopeo --version 2>&1 || skopeo -v 2>&1 || echo "installed"
+  shell: skopeo --version 2>&1 || echo "installed"
   register: skopeo_version
 
 - name: Display version
-  print: "skopeo installed"
+  print: "skopeo installed: {{ skopeo_version.stdout }}"

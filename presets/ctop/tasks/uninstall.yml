@@ -1,6 +1,7 @@
-- name: Uninstall ctop (macOS)
-  shell: brew uninstall ctop
-  when: os == "darwin"
+- name: Uninstall ctop
+  package:
+    name: ctop
+    state: absent
   failed_when: false
 
 - name: Display confirmation

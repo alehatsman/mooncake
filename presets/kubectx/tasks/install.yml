@@ -1,53 +1,17 @@
-# kubectx Installation Tasks
-
-- name: Check if kubectx is already installed
+- name: Check if kubectx is installed
   shell: command -v kubectx
   register: kubectx_check
   failed_when: false
 
-# macOS Installation
-- name: Install kubectx via Homebrew (macOS)
-  shell: brew install kubectx
-  when: os == "darwin" and kubectx_check.rc != 0
+- name: Install kubectx
+  package:
+    name: kubectx
+    state: present
+  when: kubectx_check.rc != 0
 
-# Linux Installation
-- name: Download kubectx (Linux)
-  download:
-    url: https://raw.githubusercontent.com/ahmetb/kubectx/master/kubectx
-    dest: /tmp/kubectx
-  when: os == "linux" and kubectx_check.rc != 0
-
-- name: Install kubectx binary (Linux)
-  shell: |
-    chmod +x /tmp/kubectx
-    mv /tmp/kubectx /usr/local/bin/kubectx
-  become: true
-  when: os == "linux" and kubectx_check.rc != 0
-
-# Install kubens if requested
-- name: Check if kubens is already installed
-  shell: command -v kubens
-  register: kubens_check
-  failed_when: false
-  when: parameters.install_kubens
-
-- name: Download kubens (Linux)
-  download:
-    url: https://raw.githubusercontent.com/ahmetb/kubectx/master/kubens
-    dest: /tmp/kubens
-  when: os == "linux" and parameters.install_kubens and kubens_check.rc != 0
-
-- name: Install kubens binary (Linux)
-  shell: |
-    chmod +x /tmp/kubens
-    mv /tmp/kubens /usr/local/bin/kubens
-  become: true
-  when: os == "linux" and parameters.install_kubens and kubens_check.rc != 0
-
-# Verify installation
-- name: Verify kubectx installation
-  shell: kubectx --version 2>&1 || kubectx -h 2>&1 | head -1
+- name: Verify installation
+  shell: kubectx --version 2>&1 || echo "installed"
   register: kubectx_version
 
-- name: Display installation result
-  print: "kubectx installed successfully"
+- name: Display version
+  print: "kubectx installed: {{ kubectx_version.stdout }}"

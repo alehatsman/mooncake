@@ -1,20 +1,8 @@
-# lazygit Uninstallation Tasks
-
-- name: Uninstall lazygit (macOS)
-  shell: brew uninstall lazygit
-  when: os == "darwin"
+- name: Uninstall lazygit
+  package:
+    name: lazygit
+    state: absent
   failed_when: false
 
-- name: Remove lazygit binary (Linux)
-  file:
-    path: /usr/local/bin/lazygit
-    state: absent
-  become: true
-  when: os == "linux"
-
-- name: Display uninstall confirmation
-  print: |
-    lazygit uninstalled.
-
-    Note: Configuration preserved at ~/.config/lazygit/
-    To remove config: rm -rf ~/.config/lazygit
+- name: Display confirmation
+  print: "lazygit uninstalled"

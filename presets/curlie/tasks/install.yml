@@ -3,13 +3,15 @@
   register: curlie_check
   failed_when: false
 
-- name: Install curlie (macOS)
-  shell: brew install curlie
-  when: os == "darwin" and curlie_check.rc != 0
+- name: Install curlie
+  package:
+    name: curlie
+    state: present
+  when: curlie_check.rc != 0
 
 - name: Verify installation
-  shell: curlie --version 2>&1 || curlie -v 2>&1 || echo "installed"
+  shell: curlie --version 2>&1 || echo "installed"
   register: curlie_version
 
 - name: Display version
-  print: "curlie installed"
+  print: "curlie installed: {{ curlie_version.stdout }}"

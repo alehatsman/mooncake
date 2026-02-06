@@ -1,6 +1,7 @@
-- name: Uninstall fx (macOS)
-  shell: brew uninstall fx
-  when: os == "darwin"
+- name: Uninstall fx
+  package:
+    name: fx
+    state: absent
   failed_when: false
 
 - name: Display confirmation

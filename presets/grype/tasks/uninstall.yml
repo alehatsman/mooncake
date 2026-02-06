@@ -1,6 +1,7 @@
-- name: Uninstall grype (macOS)
-  shell: brew uninstall grype
-  when: os == "darwin"
+- name: Uninstall grype
+  package:
+    name: grype
+    state: absent
   failed_when: false
 
 - name: Display confirmation

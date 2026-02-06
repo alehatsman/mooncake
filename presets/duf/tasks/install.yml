@@ -3,13 +3,15 @@
   register: duf_check
   failed_when: false
 
-- name: Install duf (macOS)
-  shell: brew install duf
-  when: os == "darwin" and duf_check.rc != 0
+- name: Install duf
+  package:
+    name: duf
+    state: present
+  when: duf_check.rc != 0
 
 - name: Verify installation
-  shell: duf --version 2>&1 || duf -v 2>&1 || echo "installed"
+  shell: duf --version 2>&1 || echo "installed"
   register: duf_version
 
 - name: Display version
-  print: "duf installed"
+  print: "duf installed: {{ duf_version.stdout }}"

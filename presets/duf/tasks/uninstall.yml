@@ -1,6 +1,7 @@
-- name: Uninstall duf (macOS)
-  shell: brew uninstall duf
-  when: os == "darwin"
+- name: Uninstall duf
+  package:
+    name: duf
+    state: absent
   failed_when: false
 
 - name: Display confirmation

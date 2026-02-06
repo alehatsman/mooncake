@@ -3,13 +3,15 @@
   register: fx_check
   failed_when: false
 
-- name: Install fx (macOS)
-  shell: brew install fx
-  when: os == "darwin" and fx_check.rc != 0
+- name: Install fx
+  package:
+    name: fx
+    state: present
+  when: fx_check.rc != 0
 
 - name: Verify installation
-  shell: fx --version 2>&1 || fx -v 2>&1 || echo "installed"
+  shell: fx --version 2>&1 || echo "installed"
   register: fx_version
 
 - name: Display version
-  print: "fx installed"
+  print: "fx installed: {{ fx_version.stdout }}"

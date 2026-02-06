@@ -1,6 +1,7 @@
-- name: Uninstall jless (macOS)
-  shell: brew uninstall jless
-  when: os == "darwin"
+- name: Uninstall jless
+  package:
+    name: jless
+    state: absent
   failed_when: false
 
 - name: Display confirmation

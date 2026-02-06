@@ -1,20 +1,8 @@
-# lazydocker Uninstallation Tasks
-
-- name: Uninstall lazydocker (macOS)
-  shell: brew uninstall lazydocker
-  when: os == "darwin"
+- name: Uninstall lazydocker
+  package:
+    name: lazydocker
+    state: absent
   failed_when: false
 
-- name: Remove lazydocker binary (Linux)
-  file:
-    path: /usr/local/bin/lazydocker
-    state: absent
-  become: true
-  when: os == "linux"
-
-- name: Display uninstall confirmation
-  print: |
-    lazydocker uninstalled.
-
-    Note: Configuration preserved at ~/.config/lazydocker/
-    To remove config: rm -rf ~/.config/lazydocker
+- name: Display confirmation
+  print: "lazydocker uninstalled"

@@ -1,6 +1,7 @@
-- name: Uninstall screen (macOS)
-  shell: brew uninstall screen
-  when: os == "darwin"
+- name: Uninstall screen
+  package:
+    name: screen
+    state: absent
   failed_when: false
 
 - name: Display confirmation

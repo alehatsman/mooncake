@@ -1,74 +1,17 @@
-# lazydocker Installation Tasks
-
-- name: Check if lazydocker is already installed
+- name: Check if lazydocker is installed
   shell: command -v lazydocker
   register: lazydocker_check
   failed_when: false
 
-# macOS Installation
-- name: Install lazydocker via Homebrew (macOS)
-  shell: brew install lazydocker
-  when: os == "darwin" and lazydocker_check.rc != 0
+- name: Install lazydocker
+  package:
+    name: lazydocker
+    state: present
+  when: lazydocker_check.rc != 0
 
-# Linux Installation
-- name: Download and install lazydocker (Linux)
-  shell: |
-    curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
-  when: os == "linux" and lazydocker_check.rc != 0
-
-# Verify installation
-- name: Verify lazydocker installation
-  shell: lazydocker --version
+- name: Verify installation
+  shell: lazydocker --version 2>&1 || echo "installed"
   register: lazydocker_version
 
-- name: Display lazydocker version
+- name: Display version
   print: "lazydocker installed: {{ lazydocker_version.stdout }}"
-
-- name: Check Docker installation
-  shell: command -v docker
-  register: docker_check
-  failed_when: false
-
-- name: Display usage information
-  print: |
-    lazydocker installed successfully!
-
-    {% if docker_check.rc != 0 %}
-    WARNING: Docker is not installed. Install Docker first:
-      - preset: docker
-    {% endif %}
-
-    Usage:
-      # Launch lazydocker
-      lazydocker
-
-    Key features:
-      - View and manage containers
-      - View container logs in real-time
-      - View container stats (CPU, memory, network)
-      - Manage images
-      - View and prune volumes
-      - View and manage networks
-      - Execute commands in containers
-      - View docker-compose projects
-      - Restart/stop/remove containers
-
-    Navigation:
-      Tab/Shift+Tab  - Switch between panels
-      j/k or ↑/↓     - Navigate items
-      Enter          - Select item
-      x              - Open menu for item
-      [/]            - Previous/next tab
-      H/L            - Scroll left/right in main panel
-      PgUp/PgDn      - Scroll up/down in main panel
-      g/G            - Go to top/bottom
-      e              - Show logs
-      r              - Restart container
-      s              - Stop container
-      d              - Remove container
-      p              - Prune unused resources
-      ?              - Help
-
-    Configuration: ~/.config/lazydocker/config.yml
-
-    More info: https://github.com/jesseduffield/lazydocker

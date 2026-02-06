@@ -3,13 +3,15 @@
   register: grype_check
   failed_when: false
 
-- name: Install grype (macOS)
-  shell: brew install grype
-  when: os == "darwin" and grype_check.rc != 0
+- name: Install grype
+  package:
+    name: grype
+    state: present
+  when: grype_check.rc != 0
 
 - name: Verify installation
-  shell: grype --version 2>&1 || grype -v 2>&1 || echo "installed"
+  shell: grype --version 2>&1 || echo "installed"
   register: grype_version
 
 - name: Display version
-  print: "grype installed"
+  print: "grype installed: {{ grype_version.stdout }}"

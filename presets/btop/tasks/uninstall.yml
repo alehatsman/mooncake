@@ -1,6 +1,7 @@
-- name: Uninstall btop (macOS)
-  shell: brew uninstall btop
-  when: os == "darwin"
+- name: Uninstall btop
+  package:
+    name: btop
+    state: absent
   failed_when: false
 
 - name: Display confirmation

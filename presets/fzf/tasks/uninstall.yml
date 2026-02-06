@@ -1,25 +1,8 @@
-# fzf Uninstallation Tasks
-
-- name: Uninstall fzf (macOS)
-  shell: brew uninstall fzf
-  when: os == "darwin"
+- name: Uninstall fzf
+  package:
+    name: fzf
+    state: absent
   failed_when: false
 
-- name: Uninstall fzf (Linux package)
-  shell: |
-    if command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get remove -y fzf
-    elif command -v dnf >/dev/null 2>&1; then
-      sudo dnf remove -y fzf
-    fi
-  when: os == "linux"
-  failed_when: false
-
-- name: Remove fzf git installation
-  shell: |
-    rm -rf ~/.fzf
-    sudo rm -f /usr/local/bin/fzf
-  failed_when: false
-
-- name: Display uninstall confirmation
-  print: "fzf uninstalled."
+- name: Display confirmation
+  print: "fzf uninstalled"

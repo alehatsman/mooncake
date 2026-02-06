@@ -3,13 +3,15 @@
   register: btop_check
   failed_when: false
 
-- name: Install btop (macOS)
-  shell: brew install btop
-  when: os == "darwin" and btop_check.rc != 0
+- name: Install btop
+  package:
+    name: btop
+    state: present
+  when: btop_check.rc != 0
 
 - name: Verify installation
-  shell: btop --version 2>&1 || btop -v 2>&1 || echo "installed"
+  shell: btop --version 2>&1 || echo "installed"
   register: btop_version
 
 - name: Display version
-  print: "btop installed"
+  print: "btop installed: {{ btop_version.stdout }}"

@@ -1,6 +1,7 @@
-- name: Uninstall cosign (macOS)
-  shell: brew uninstall cosign
-  when: os == "darwin"
+- name: Uninstall cosign
+  package:
+    name: cosign
+    state: absent
   failed_when: false
 
 - name: Display confirmation

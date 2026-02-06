@@ -3,13 +3,15 @@
   register: crane_check
   failed_when: false
 
-- name: Install crane (macOS)
-  shell: brew install crane
-  when: os == "darwin" and crane_check.rc != 0
+- name: Install crane
+  package:
+    name: crane
+    state: present
+  when: crane_check.rc != 0
 
 - name: Verify installation
-  shell: crane --version 2>&1 || crane -v 2>&1 || echo "installed"
+  shell: crane --version 2>&1 || echo "installed"
   register: crane_version
 
 - name: Display version
-  print: "crane installed"
+  print: "crane installed: {{ crane_version.stdout }}"

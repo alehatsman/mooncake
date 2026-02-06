@@ -3,13 +3,15 @@
   register: cosign_check
   failed_when: false
 
-- name: Install cosign (macOS)
-  shell: brew install cosign
-  when: os == "darwin" and cosign_check.rc != 0
+- name: Install cosign
+  package:
+    name: cosign
+    state: present
+  when: cosign_check.rc != 0
 
 - name: Verify installation
-  shell: cosign --version 2>&1 || cosign -v 2>&1 || echo "installed"
+  shell: cosign --version 2>&1 || echo "installed"
   register: cosign_version
 
 - name: Display version
-  print: "cosign installed"
+  print: "cosign installed: {{ cosign_version.stdout }}"

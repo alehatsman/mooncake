@@ -1,14 +1,8 @@
-# MkDocs Uninstallation Tasks
-
-- name: Uninstall MkDocs and plugins
-  shell: |
-    pip3 uninstall -y mkdocs
-    pip3 uninstall -y mkdocs-material
-    pip3 uninstall -y mkdocs-minify-plugin
-    pip3 uninstall -y mkdocs-git-revision-date-localized-plugin
-    pip3 uninstall -y mkdocs-awesome-pages-plugin
-    pip3 uninstall -y mkdocs-redirects
+- name: Uninstall mkdocs
+  package:
+    name: mkdocs
+    state: absent
   failed_when: false
 
-- name: Display uninstall confirmation
-  print: "MkDocs uninstalled. Project files preserved."
+- name: Display confirmation
+  print: "mkdocs uninstalled"

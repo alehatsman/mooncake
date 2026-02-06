@@ -1,30 +1,8 @@
-# delta Uninstallation Tasks
-
-- name: Remove delta git configuration
-  shell: |
-    git config --global --unset core.pager
-    git config --global --unset interactive.diffFilter
-    git config --global --unset-all delta.navigate
-    git config --global --unset-all delta.light
-    git config --global --unset-all delta.line-numbers
-    git config --global --unset-all delta.side-by-side
-    git config --global --unset-all delta.syntax-theme
+- name: Uninstall delta
+  package:
+    name: delta
+    state: absent
   failed_when: false
 
-- name: Uninstall delta (macOS)
-  shell: brew uninstall git-delta
-  when: os == "darwin"
-  failed_when: false
-
-- name: Uninstall delta (Linux package)
-  shell: |
-    if command -v apt-get >/dev/null 2>&1; then
-      sudo dpkg -r git-delta
-    elif command -v dnf >/dev/null 2>&1; then
-      sudo dnf remove -y git-delta
-    fi
-  when: os == "linux"
-  failed_when: false
-
-- name: Display uninstall confirmation
-  print: "delta uninstalled and git configuration removed."
+- name: Display confirmation
+  print: "delta uninstalled"

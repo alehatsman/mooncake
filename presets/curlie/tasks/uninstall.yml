@@ -1,6 +1,7 @@
-- name: Uninstall curlie (macOS)
-  shell: brew uninstall curlie
-  when: os == "darwin"
+- name: Uninstall curlie
+  package:
+    name: curlie
+    state: absent
   failed_when: false
 
 - name: Display confirmation

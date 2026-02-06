@@ -3,13 +3,15 @@
   register: dive_check
   failed_when: false
 
-- name: Install dive (macOS)
-  shell: brew install dive
-  when: os == "darwin" and dive_check.rc != 0
+- name: Install dive
+  package:
+    name: dive
+    state: present
+  when: dive_check.rc != 0
 
 - name: Verify installation
-  shell: dive --version 2>&1 || dive -v 2>&1 || echo "installed"
+  shell: dive --version 2>&1 || echo "installed"
   register: dive_version
 
 - name: Display version
-  print: "dive installed"
+  print: "dive installed: {{ dive_version.stdout }}"

@@ -1,7 +1,8 @@
-- name: Uninstall mlr (macOS)
-  shell: brew uninstall miller
-  when: os == "darwin"
+- name: Uninstall miller
+  package:
+    name: miller
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "mlr uninstalled"
+  print: "miller uninstalled"

@@ -3,13 +3,15 @@
   register: jless_check
   failed_when: false
 
-- name: Install jless (macOS)
-  shell: brew install jless
-  when: os == "darwin" and jless_check.rc != 0
+- name: Install jless
+  package:
+    name: jless
+    state: present
+  when: jless_check.rc != 0
 
 - name: Verify installation
-  shell: jless --version 2>&1 || jless -v 2>&1 || echo "installed"
+  shell: jless --version 2>&1 || echo "installed"
   register: jless_version
 
 - name: Display version
-  print: "jless installed"
+  print: "jless installed: {{ jless_version.stdout }}"
