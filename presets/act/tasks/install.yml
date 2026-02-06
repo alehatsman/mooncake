@@ -7,9 +7,18 @@
   shell: brew install act
   when: os == "darwin" and act_check.rc != 0
 
+- name: Install act with Homebrew (Linux)
+  shell: brew install act
+  when: os == "linux" and brew_available and act_check.rc != 0
+
+- name: Download and install act binary (Debian/Ubuntu)
+  shell: |
+    curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+  when: os == "linux" and not brew_available and act_check.rc != 0
+
 - name: Verify installation
-  shell: act --version 2>&1 || act -v 2>&1 || echo "installed"
+  shell: act --version 2>&1 || echo "installed"
   register: act_version
 
 - name: Display version
-  print: "act installed"
+  print: "act installed: {{ act_version.stdout }}"
