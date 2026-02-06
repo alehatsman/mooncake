@@ -36,6 +36,10 @@ func (e *ExprEvaluator) Evaluate(expression string, variables map[string]interfa
 	// Compile and evaluate the expression with custom functions
 	program, err := expr.Compile(expression,
 		expr.Env(variables),
+		// Allow undefined variables - they will evaluate to nil
+		// This is important for when conditions that reference variables
+		// from steps that haven't run yet or were skipped
+		expr.AllowUndefinedVariables(),
 		// Add string functions (note: "contains" is reserved as an operator in expr)
 		// So we use "has" as a shorter alternative
 		expr.Function("has", func(params ...interface{}) (interface{}, error) {
