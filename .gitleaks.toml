@@ -1,0 +1,38 @@
+# Gitleaks configuration for Mooncake
+# Documentation: https://github.com/gitleaks/gitleaks
+
+title = "Mooncake Gitleaks Config"
+
+# Exclude preset documentation and examples
+[allowlist]
+  description = "Allowlist for documentation and examples"
+
+  # Exclude all README files in presets (they contain example commands with dummy credentials)
+  paths = [
+    '''presets/.*/README\.md''',
+    '''presets/.*/templates/.*''',
+    '''examples/.*''',
+    '''docs/.*''',
+  ]
+
+  # Exclude common example/dummy values
+  regexes = [
+    '''(password|token|key|secret).*=.*(example|dummy|test|sample|placeholder|your-|<)''',
+    '''password=(secret|password123|newpassword|MySecurePass123)''',
+    '''\$\{?[A-Z_]+\}?''',  # Environment variable references like $PASSWORD or ${DB_PASSWORD}
+  ]
+
+  # Exclude obvious placeholder patterns
+  stopwords = [
+    'example',
+    'sample',
+    'test',
+    'dummy',
+    'placeholder',
+    'your-password',
+    'your-token',
+    'your-key',
+    '<password>',
+    '<token>',
+    '<key>',
+  ]
