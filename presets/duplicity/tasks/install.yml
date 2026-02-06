@@ -3,9 +3,11 @@
   register: duplicity_check
   failed_when: false
 
-- name: Install duplicity (macOS)
-  shell: brew install duplicity
-  when: os == "darwin" and duplicity_check.rc != 0
+- name: Install duplicity
+  package:
+    name: duplicity
+    state: present
+  when: duplicity_check.rc != 0
 
 - name: Verify installation
   shell: duplicity --version 2>&1 || duplicity -v 2>&1 || echo "installed"

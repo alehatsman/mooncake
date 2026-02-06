@@ -1,6 +1,7 @@
-- name: Uninstall dgraph (macOS)
-  shell: brew uninstall dgraph
-  when: os == "darwin"
+- name: Uninstall dgraph
+  package:
+    name: dgraph
+    state: absent
   failed_when: false
 
 - name: Display confirmation

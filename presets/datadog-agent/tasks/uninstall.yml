@@ -1,6 +1,7 @@
-- name: Uninstall datadog-agent (macOS)
-  shell: brew uninstall datadog-agent
-  when: os == "darwin"
+- name: Uninstall datadog-agent
+  package:
+    name: datadog-agent
+    state: absent
   failed_when: false
 
 - name: Display confirmation

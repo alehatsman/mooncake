@@ -3,9 +3,11 @@
   register: dragonfly_check
   failed_when: false
 
-- name: Install dragonfly (macOS)
-  shell: brew install dragonfly
-  when: os == "darwin" and dragonfly_check.rc != 0
+- name: Install dragonfly
+  package:
+    name: dragonfly
+    state: present
+  when: dragonfly_check.rc != 0
 
 - name: Verify installation
   shell: dragonfly --version 2>&1 || dragonfly -v 2>&1 || echo "installed"

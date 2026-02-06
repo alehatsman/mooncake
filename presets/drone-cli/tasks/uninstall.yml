@@ -1,7 +1,8 @@
-- name: Uninstall drone (macOS)
-  shell: brew uninstall drone
-  when: os == "darwin"
+- name: Uninstall drone-cli
+  package:
+    name: drone-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "drone uninstalled"
+  print: "drone-cli uninstalled"

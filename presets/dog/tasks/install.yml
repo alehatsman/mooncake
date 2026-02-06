@@ -3,9 +3,11 @@
   register: dog_check
   failed_when: false
 
-- name: Install dog (macOS)
-  shell: brew install dog
-  when: os == "darwin" and dog_check.rc != 0
+- name: Install dog
+  package:
+    name: dog
+    state: present
+  when: dog_check.rc != 0
 
 - name: Verify installation
   shell: dog --version 2>&1 || dog -v 2>&1 || echo "installed"

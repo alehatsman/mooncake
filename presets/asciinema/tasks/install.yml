@@ -3,9 +3,11 @@
   register: asciinema_check
   failed_when: false
 
-- name: Install asciinema (macOS)
-  shell: brew install asciinema
-  when: os == "darwin" and asciinema_check.rc != 0
+- name: Install asciinema
+  package:
+    name: asciinema
+    state: present
+  when: asciinema_check.rc != 0
 
 - name: Verify installation
   shell: asciinema --version 2>&1 || asciinema -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: elvish_check
   failed_when: false
 
-- name: Install elvish (macOS)
-  shell: brew install elvish
-  when: os == "darwin" and elvish_check.rc != 0
+- name: Install elvish
+  package:
+    name: elvish
+    state: present
+  when: elvish_check.rc != 0
 
 - name: Verify installation
   shell: elvish --version 2>&1 || elvish -v 2>&1 || echo "installed"

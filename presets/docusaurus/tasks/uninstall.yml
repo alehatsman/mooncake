@@ -1,6 +1,7 @@
-- name: Uninstall docusaurus (macOS)
-  shell: brew uninstall docusaurus
-  when: os == "darwin"
+- name: Uninstall docusaurus
+  package:
+    name: docusaurus
+    state: absent
   failed_when: false
 
 - name: Display confirmation

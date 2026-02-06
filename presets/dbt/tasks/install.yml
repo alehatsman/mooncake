@@ -3,9 +3,11 @@
   register: dbt_check
   failed_when: false
 
-- name: Install dbt (macOS)
-  shell: brew install dbt
-  when: os == "darwin" and dbt_check.rc != 0
+- name: Install dbt
+  package:
+    name: dbt
+    state: present
+  when: dbt_check.rc != 0
 
 - name: Verify installation
   shell: dbt --version 2>&1 || dbt -v 2>&1 || echo "installed"

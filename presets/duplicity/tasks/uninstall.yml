@@ -1,6 +1,7 @@
-- name: Uninstall duplicity (macOS)
-  shell: brew uninstall duplicity
-  when: os == "darwin"
+- name: Uninstall duplicity
+  package:
+    name: duplicity
+    state: absent
   failed_when: false
 
 - name: Display confirmation

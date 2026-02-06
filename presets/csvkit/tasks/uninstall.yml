@@ -1,7 +1,8 @@
-- name: Uninstall csvcut (macOS)
-  shell: brew uninstall csvcut
-  when: os == "darwin"
+- name: Uninstall csvkit
+  package:
+    name: csvkit
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "csvcut uninstalled"
+  print: "csvkit uninstalled"

@@ -1,6 +1,7 @@
-- name: Uninstall dragonfly (macOS)
-  shell: brew uninstall dragonfly
-  when: os == "darwin"
+- name: Uninstall dragonfly
+  package:
+    name: dragonfly
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall dbt (macOS)
-  shell: brew uninstall dbt
-  when: os == "darwin"
+- name: Uninstall dbt
+  package:
+    name: dbt
+    state: absent
   failed_when: false
 
 - name: Display confirmation

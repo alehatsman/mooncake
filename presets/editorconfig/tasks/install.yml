@@ -3,9 +3,11 @@
   register: editorconfig_check
   failed_when: false
 
-- name: Install editorconfig (macOS)
-  shell: brew install editorconfig
-  when: os == "darwin" and editorconfig_check.rc != 0
+- name: Install editorconfig
+  package:
+    name: editorconfig
+    state: present
+  when: editorconfig_check.rc != 0
 
 - name: Verify installation
   shell: editorconfig --version 2>&1 || editorconfig -v 2>&1 || echo "installed"

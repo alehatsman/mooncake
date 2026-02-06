@@ -1,15 +1,17 @@
 - name: Check if drone is installed
   shell: command -v drone
-  register: drone-cli_check
+  register: drone_cli_check
   failed_when: false
 
-- name: Install drone (macOS)
-  shell: brew install drone
-  when: os == "darwin" and drone-cli_check.rc != 0
+- name: Install drone-cli
+  package:
+    name: drone-cli
+    state: present
+  when: drone_cli_check.rc != 0
 
 - name: Verify installation
   shell: drone --version 2>&1 || drone -v 2>&1 || echo "installed"
-  register: drone-cli_version
+  register: drone_cli_version
 
 - name: Display version
-  print: "drone installed"
+  print: "drone-cli installed"

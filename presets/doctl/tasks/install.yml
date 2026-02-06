@@ -3,9 +3,11 @@
   register: doctl_check
   failed_when: false
 
-- name: Install doctl (macOS)
-  shell: brew install doctl
-  when: os == "darwin" and doctl_check.rc != 0
+- name: Install doctl
+  package:
+    name: doctl
+    state: present
+  when: doctl_check.rc != 0
 
 - name: Verify installation
   shell: doctl --version 2>&1 || doctl -v 2>&1 || echo "installed"

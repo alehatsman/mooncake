@@ -3,9 +3,11 @@
   register: dagster_check
   failed_when: false
 
-- name: Install dagster (macOS)
-  shell: brew install dagster
-  when: os == "darwin" and dagster_check.rc != 0
+- name: Install dagster
+  package:
+    name: dagster
+    state: present
+  when: dagster_check.rc != 0
 
 - name: Verify installation
   shell: dagster --version 2>&1 || dagster -v 2>&1 || echo "installed"

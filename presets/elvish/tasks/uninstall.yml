@@ -1,6 +1,7 @@
-- name: Uninstall elvish (macOS)
-  shell: brew uninstall elvish
-  when: os == "darwin"
+- name: Uninstall elvish
+  package:
+    name: elvish
+    state: absent
   failed_when: false
 
 - name: Display confirmation

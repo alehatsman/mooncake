@@ -1,6 +1,7 @@
-- name: Uninstall dagster (macOS)
-  shell: brew uninstall dagster
-  when: os == "darwin"
+- name: Uninstall dagster
+  package:
+    name: dagster
+    state: absent
   failed_when: false
 
 - name: Display confirmation

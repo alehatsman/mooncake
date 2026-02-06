@@ -1,7 +1,8 @@
-- name: Uninstall elastic-apm-server (macOS)
-  shell: brew uninstall elastic-apm-server
-  when: os == "darwin"
+- name: Uninstall elastic-apm
+  package:
+    name: elastic-apm
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "elastic-apm-server uninstalled"
+  print: "elastic-apm uninstalled"

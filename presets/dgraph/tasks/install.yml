@@ -3,9 +3,11 @@
   register: dgraph_check
   failed_when: false
 
-- name: Install dgraph (macOS)
-  shell: brew install dgraph
-  when: os == "darwin" and dgraph_check.rc != 0
+- name: Install dgraph
+  package:
+    name: dgraph
+    state: present
+  when: dgraph_check.rc != 0
 
 - name: Verify installation
   shell: dgraph --version 2>&1 || dgraph -v 2>&1 || echo "installed"

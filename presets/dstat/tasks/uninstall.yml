@@ -1,6 +1,7 @@
-- name: Uninstall dstat (macOS)
-  shell: brew uninstall dstat
-  when: os == "darwin"
+- name: Uninstall dstat
+  package:
+    name: dstat
+    state: absent
   failed_when: false
 
 - name: Display confirmation

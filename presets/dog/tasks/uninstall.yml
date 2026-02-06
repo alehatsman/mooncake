@@ -1,6 +1,7 @@
-- name: Uninstall dog (macOS)
-  shell: brew uninstall dog
-  when: os == "darwin"
+- name: Uninstall dog
+  package:
+    name: dog
+    state: absent
   failed_when: false
 
 - name: Display confirmation

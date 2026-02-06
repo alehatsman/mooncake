@@ -3,9 +3,11 @@
   register: eleventy_check
   failed_when: false
 
-- name: Install eleventy (macOS)
-  shell: brew install eleventy
-  when: os == "darwin" and eleventy_check.rc != 0
+- name: Install eleventy
+  package:
+    name: eleventy
+    state: present
+  when: eleventy_check.rc != 0
 
 - name: Verify installation
   shell: eleventy --version 2>&1 || eleventy -v 2>&1 || echo "installed"

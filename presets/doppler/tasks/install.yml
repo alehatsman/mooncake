@@ -3,9 +3,11 @@
   register: doppler_check
   failed_when: false
 
-- name: Install doppler (macOS)
-  shell: brew install doppler
-  when: os == "darwin" and doppler_check.rc != 0
+- name: Install doppler
+  package:
+    name: doppler
+    state: present
+  when: doppler_check.rc != 0
 
 - name: Verify installation
   shell: doppler --version 2>&1 || doppler -v 2>&1 || echo "installed"

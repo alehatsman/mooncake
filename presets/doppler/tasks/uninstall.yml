@@ -1,6 +1,7 @@
-- name: Uninstall doppler (macOS)
-  shell: brew uninstall doppler
-  when: os == "darwin"
+- name: Uninstall doppler
+  package:
+    name: doppler
+    state: absent
   failed_when: false
 
 - name: Display confirmation
