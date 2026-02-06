@@ -1,6 +1,6 @@
 - name: Uninstall algolia-cli
   package:
-    name: algolia-cli
+    name: algolia
     state: absent
   failed_when: false
 

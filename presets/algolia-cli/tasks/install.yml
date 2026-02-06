@@ -5,7 +5,7 @@
 
 - name: Install algolia-cli
   package:
-    name: algolia-cli
+    name: algolia
     state: present
   when: algolia_cli_check.rc != 0
 
