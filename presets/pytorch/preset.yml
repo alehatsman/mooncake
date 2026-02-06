@@ -1,0 +1,50 @@
+name: pytorch
+description: Install PyTorch deep learning framework with CPU/GPU support
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether PyTorch should be installed or removed
+
+  install_method:
+    type: string
+    required: false
+    default: conda
+    enum: [pip, conda]
+    description: Installation method (conda recommended for isolated environments)
+
+  gpu_support:
+    type: string
+    required: false
+    default: auto
+    enum: [auto, cpu, cuda, mps]
+    description: GPU support (auto-detect, cpu-only, CUDA, or Apple MPS)
+
+  install_torchvision:
+    type: bool
+    required: false
+    default: true
+    description: Install torchvision (image processing)
+
+  install_torchaudio:
+    type: bool
+    required: false
+    default: false
+    description: Install torchaudio (audio processing)
+
+steps:
+  - name: Install PyTorch
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure PyTorch
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall PyTorch
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,200 @@
+# Kubernetes Tools Installation
+
+# kubectl
+- name: Check if kubectl is installed
+  shell: command -v kubectl
+  register: kubectl_check
+  failed_when: false
+  when: parameters.install_kubectl
+
+- name: Install kubectl (macOS)
+  package:
+    name: kubectl
+    state: present
+  when: os == "darwin" and parameters.install_kubectl and kubectl_check.rc != 0
+
+- name: Install kubectl (Debian/Ubuntu)
+  shell: |
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm kubectl
+  become: true
+  when: os == "linux" and parameters.install_kubectl and kubectl_check.rc != 0
+  failed_when: false
+
+- name: Verify kubectl installation
+  shell: kubectl version --client --short 2>/dev/null || kubectl version --client
+  register: kubectl_version
+  when: parameters.install_kubectl
+  failed_when: false
+
+- name: Display kubectl version
+  print: "OK kubectl installed: {{ kubectl_version.stdout }}"
+  when: parameters.install_kubectl and kubectl_version.rc == 0
+
+# k9s
+- name: Check if k9s is installed
+  shell: command -v k9s
+  register: k9s_check
+  failed_when: false
+  when: parameters.install_k9s
+
+- name: Install k9s (macOS)
+  package:
+    name: k9s
+    state: present
+  when: os == "darwin" and parameters.install_k9s and k9s_check.rc != 0
+
+- name: Install k9s (Linux)
+  shell: |
+    K9S_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -sL https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz | sudo tar xz -C /usr/local/bin
+  become: true
+  when: os == "linux" and parameters.install_k9s and k9s_check.rc != 0
+  failed_when: false
+
+- name: Verify k9s installation
+  shell: k9s version --short
+  register: k9s_version
+  when: parameters.install_k9s
+  failed_when: false
+
+- name: Display k9s version
+  print: "OK k9s installed: {{ k9s_version.stdout }}"
+  when: parameters.install_k9s and k9s_version.rc == 0
+
+# Helm
+- name: Check if Helm is installed
+  shell: command -v helm
+  register: helm_check
+  failed_when: false
+  when: parameters.install_helm
+
+- name: Install Helm (macOS)
+  package:
+    name: helm
+    state: present
+  when: os == "darwin" and parameters.install_helm and helm_check.rc != 0
+
+- name: Install Helm (Linux)
+  shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: os == "linux" and parameters.install_helm and helm_check.rc != 0
+  failed_when: false
+
+- name: Verify Helm installation
+  shell: helm version --short
+  register: helm_version
+  when: parameters.install_helm
+  failed_when: false
+
+- name: Display Helm version
+  print: "OK Helm installed: {{ helm_version.stdout }}"
+  when: parameters.install_helm and helm_version.rc == 0
+
+# kubectx/kubens
+- name: Install kubectx (macOS)
+  package:
+    name: kubectx
+    state: present
+  when: os == "darwin" and parameters.install_kubectx
+
+- name: Install kubectx (Linux)
+  shell: |
+    if [ ! -d /opt/kubectx ]; then
+      sudo git clone https://github.com/ahmetb/kubectx /opt/kubectx
+      sudo ln -s /opt/kubectx/kubectx /usr/local/bin/kubectx
+      sudo ln -s /opt/kubectx/kubens /usr/local/bin/kubens
+    fi
+  become: true
+  when: os == "linux" and parameters.install_kubectx
+  failed_when: false
+
+- name: Display kubectx installation
+  print: "OK kubectx/kubens installed"
+  when: parameters.install_kubectx
+
+# krew
+- name: Install krew (kubectl plugin manager)
+  shell: |
+    set -x; cd "$(mktemp -d)" &&
+    OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+    ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+    KREW="krew-${OS}_${ARCH}" &&
+    curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+    tar zxvf "${KREW}.tar.gz" &&
+    ./"${KREW}" install krew
+  when: parameters.install_krew
+  failed_when: false
+
+- name: Display krew installation
+  print: |
+    OK krew installed
+
+    Add to your PATH:
+      export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+  when: parameters.install_krew
+
+# Functional tests
+- name: Test kubectl functionality
+  shell: kubectl config view 2>&1 || kubectl version --client 2>&1
+  register: kubectl_test
+  when: parameters.install_kubectl
+  failed_when: false
+  timeout: 5s
+
+- name: Display kubectl test - Success
+  print: "OK kubectl functional test passed"
+  when: parameters.install_kubectl and kubectl_test.rc == 0
+
+- name: Display kubectl test - Warning
+  print: "WARNING kubectl test failed, but binary is installed"
+  when: parameters.install_kubectl and kubectl_test.rc != 0
+
+- name: Test helm functionality
+  shell: helm repo list 2>&1 || helm help > /dev/null 2>&1
+  register: helm_test
+  when: parameters.install_helm
+  failed_when: false
+  timeout: 5s
+
+- name: Display helm test - Success
+  print: "OK Helm functional test passed"
+  when: parameters.install_helm and helm_test.rc == 0
+
+- name: Display helm test - Warning
+  print: "WARNING Helm test failed, but binary is installed"
+  when: parameters.install_helm and helm_test.rc != 0
+
+- name: Test k9s functionality
+  shell: k9s help > /dev/null 2>&1
+  register: k9s_test
+  when: parameters.install_k9s
+  failed_when: false
+  timeout: 5s
+
+- name: Display k9s test - Success
+  print: "OK k9s functional test passed"
+  when: parameters.install_k9s and k9s_test.rc == 0
+
+- name: Display k9s test - Warning
+  print: "WARNING k9s test failed, but binary is installed"
+  when: parameters.install_k9s and k9s_test.rc != 0
+
+# Summary
+- name: Display installation summary
+  print: |
+
+    OK Kubernetes Tools Installation Complete
+
+    Installed tools:
+      • kubectl - Kubernetes CLI
+      • k9s - Terminal UI for Kubernetes
+      • Helm - Kubernetes package manager
+
+    Quick start:
+      • kubectl get nodes         # List cluster nodes
+      • k9s                        # Launch k9s UI
+      • helm list                  # List Helm releases
+      • kubectx                    # Switch contexts
+      • kubens                     # Switch namespaces

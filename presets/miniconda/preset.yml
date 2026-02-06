@@ -1,0 +1,42 @@
+name: miniconda
+description: Install Miniconda - minimal conda installer for Python environments
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Miniconda should be installed or removed
+
+  install_path:
+    type: string
+    required: false
+    default: ~/miniconda3
+    description: Installation directory for Miniconda
+
+  init_shell:
+    type: bool
+    required: false
+    default: true
+    description: Initialize conda in shell (bash/zsh)
+
+  create_base_env:
+    type: bool
+    required: false
+    default: false
+    description: Stay in base environment (not recommended for isolation)
+
+steps:
+  - name: Install Miniconda
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Miniconda
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Miniconda
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

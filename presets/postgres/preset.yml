@@ -1,0 +1,52 @@
+name: postgres
+description: Install and configure PostgreSQL database
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether PostgreSQL should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "16"
+    description: PostgreSQL version to install (e.g., "14", "15", "16")
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start PostgreSQL service after installation
+
+  create_user:
+    type: string
+    required: false
+    description: Create a PostgreSQL user (username)
+
+  create_database:
+    type: string
+    required: false
+    description: Create a PostgreSQL database (database name)
+
+  port:
+    type: string
+    required: false
+    default: "5432"
+    description: PostgreSQL port
+
+steps:
+  - name: Install PostgreSQL
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure PostgreSQL
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall PostgreSQL
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

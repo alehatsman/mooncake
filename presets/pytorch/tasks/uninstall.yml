@@ -1,0 +1,14 @@
+# PyTorch Uninstallation Tasks
+
+- name: Uninstall PyTorch (pip)
+  shell: pip3 uninstall -y torch torchvision torchaudio
+  when: parameters.install_method == "pip"
+  failed_when: false
+
+- name: Uninstall PyTorch (conda)
+  shell: conda remove -y pytorch torchvision torchaudio
+  when: parameters.install_method == "conda"
+  failed_when: false
+
+- name: Display uninstall complete
+  print: "OK PyTorch uninstalled"

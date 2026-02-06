@@ -1,0 +1,51 @@
+# Terraform Uninstallation Tasks
+
+- name: Uninstall Terraform (macOS)
+  package:
+    name: terraform
+    state: absent
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall Terraform (Debian/Ubuntu)
+  package:
+    name: terraform
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Uninstall Terraform (RHEL/Fedora)
+  package:
+    name: terraform
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+  failed_when: false
+
+- name: Remove Terraform plugins directory
+  file:
+    path: ~/.terraform.d
+    state: absent
+  failed_when: false
+
+- name: Uninstall TFLint (macOS)
+  package:
+    name: tflint
+    state: absent
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall tfsec (macOS)
+  package:
+    name: tfsec
+    state: absent
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall terraform-docs (macOS)
+  package:
+    name: terraform-docs
+    state: absent
+  when: os == "darwin"
+  failed_when: false

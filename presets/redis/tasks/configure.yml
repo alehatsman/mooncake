@@ -1,0 +1,56 @@
+# Redis Configuration Tasks
+
+# Configure Redis settings
+- name: Update Redis configuration (Linux)
+  shell: |
+    sed -i 's/^bind .*/bind {{ parameters.bind_address }}/' /etc/redis/redis.conf
+    sed -i 's/^# maxmemory .*/maxmemory {{ parameters.max_memory }}/' /etc/redis/redis.conf
+    sed -i 's/^port .*/port {{ parameters.port }}/' /etc/redis/redis.conf
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+# Start Redis service
+- name: Start Redis service (Linux)
+  service:
+    name: redis-server
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Redis service (macOS)
+  shell: brew services start redis
+  when: os == "darwin" and parameters.start_service
+  failed_when: false
+
+# Test Redis connection
+- name: Test Redis connection
+  shell: redis-cli -h {{ parameters.bind_address }} -p {{ parameters.port }} ping
+  register: redis_test
+  failed_when: false
+  timeout: 10s
+
+- name: Display connection info - Success
+  print: |
+    OK Redis is running
+
+    Connection details:
+      Host: {{ parameters.bind_address }}
+      Port: {{ parameters.port }}
+      Max Memory: {{ parameters.max_memory }}
+
+    Test: redis-cli -h {{ parameters.bind_address }} -p {{ parameters.port }} ping
+    Response: {{ redis_test.stdout }}
+  when: redis_test.rc == 0
+
+- name: Display connection info - Failed
+  print: |
+    WARNING Redis service started but connection test failed
+
+    Connection details:
+      Host: {{ parameters.bind_address }}
+      Port: {{ parameters.port }}
+
+    Try: redis-cli -h {{ parameters.bind_address }} -p {{ parameters.port }} ping
+  when: redis_test.rc != 0

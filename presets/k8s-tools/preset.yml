@@ -1,0 +1,50 @@
+name: k8s-tools
+description: Install Kubernetes command-line tools (kubectl, k9s, helm)
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Kubernetes tools should be installed or removed
+
+  install_kubectl:
+    type: bool
+    required: false
+    default: true
+    description: Install kubectl (Kubernetes CLI)
+
+  install_k9s:
+    type: bool
+    required: false
+    default: true
+    description: Install k9s (terminal UI for Kubernetes)
+
+  install_helm:
+    type: bool
+    required: false
+    default: true
+    description: Install Helm (Kubernetes package manager)
+
+  install_kubectx:
+    type: bool
+    required: false
+    default: false
+    description: Install kubectx/kubens (context switching tools)
+
+  install_krew:
+    type: bool
+    required: false
+    default: false
+    description: Install krew (kubectl plugin manager)
+
+steps:
+  - name: Install Kubernetes tools
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Kubernetes tools
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

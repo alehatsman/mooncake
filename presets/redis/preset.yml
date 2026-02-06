@@ -1,0 +1,48 @@
+name: redis
+description: Install and configure Redis in-memory data store
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Redis should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Redis service after installation
+
+  port:
+    type: string
+    required: false
+    default: "6379"
+    description: Redis port
+
+  bind_address:
+    type: string
+    required: false
+    default: "127.0.0.1"
+    description: Bind address (127.0.0.1 for local only, 0.0.0.0 for all)
+
+  max_memory:
+    type: string
+    required: false
+    default: "256mb"
+    description: Maximum memory (e.g., "256mb", "1gb")
+
+steps:
+  - name: Install Redis
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Redis
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Redis
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

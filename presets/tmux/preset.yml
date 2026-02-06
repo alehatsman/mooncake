@@ -26,7 +26,7 @@ parameters:
     type: string
     required: false
     default: "C-a"
-    description: Tmux prefix key (default: C-a instead of C-b)
+    description: "Tmux prefix key (default: C-a instead of C-b)"
 
   mouse_mode:
     type: bool

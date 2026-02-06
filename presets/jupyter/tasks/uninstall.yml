@@ -1,0 +1,30 @@
+# Jupyter Uninstallation Tasks
+
+- name: Uninstall Jupyter Lab (pip)
+  shell: pip3 uninstall -y jupyterlab
+  when: parameters.install_method == "pip"
+  failed_when: false
+
+- name: Uninstall Jupyter Notebook (pip)
+  shell: pip3 uninstall -y notebook
+  when: parameters.install_method == "pip"
+  failed_when: false
+
+- name: Uninstall Jupyter Lab (conda)
+  shell: conda remove -y jupyterlab
+  when: parameters.install_method == "conda"
+  failed_when: false
+
+- name: Uninstall Jupyter Notebook (conda)
+  shell: conda remove -y notebook
+  when: parameters.install_method == "conda"
+  failed_when: false
+
+- name: Remove Jupyter configuration
+  file:
+    path: ~/.jupyter
+    state: absent
+  failed_when: false
+
+- name: Display uninstall complete
+  print: "OK Jupyter uninstalled"

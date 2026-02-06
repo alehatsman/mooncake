@@ -1,0 +1,103 @@
+# PyTorch Installation Tasks
+
+# Check Python
+- name: Check if Python is installed
+  shell: python3 --version
+  register: python_check
+  failed_when: false
+
+- name: Display Python version
+  print: "Python installed: {{ python_check.stdout }}"
+  when: python_check.rc == 0
+
+# Detect GPU support
+- name: Check for NVIDIA GPU (CUDA)
+  shell: nvidia-smi 2>&1
+  register: cuda_check
+  when: parameters.gpu_support == "auto" or parameters.gpu_support == "cuda"
+  failed_when: false
+
+- name: Check for Apple Silicon (MPS)
+  shell: sysctl -n machdep.cpu.brand_string 2>&1 | grep -i "Apple"
+  register: mps_check
+  when: parameters.gpu_support == "auto" or parameters.gpu_support == "mps"
+  failed_when: false
+
+# Determine installation command based on GPU support
+- name: Set GPU variant - CUDA detected
+  vars:
+    action: set_vars
+    vars:
+      pytorch_variant: cuda
+  when: parameters.gpu_support == "cuda" or (parameters.gpu_support == "auto" and cuda_check.rc == 0)
+
+- name: Set GPU variant - MPS (Apple Silicon)
+  vars:
+    action: set_vars
+    vars:
+      pytorch_variant: mps
+  when: parameters.gpu_support == "mps" or (parameters.gpu_support == "auto" and mps_check.rc == 0 and os == "darwin")
+
+- name: Set GPU variant - CPU only
+  vars:
+    action: set_vars
+    vars:
+      pytorch_variant: cpu
+  when: parameters.gpu_support == "cpu" or (parameters.gpu_support == "auto" and cuda_check.rc != 0 and mps_check.rc != 0)
+
+# Install PyTorch with pip
+- name: Install PyTorch (CPU) via pip
+  shell: pip3 install torch torchvision torchaudio
+  when: parameters.install_method == "pip" and pytorch_variant == "cpu" and python_check.rc == 0
+  failed_when: false
+  timeout: 300s
+
+- name: Install PyTorch (CUDA) via pip
+  shell: pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+  when: parameters.install_method == "pip" and pytorch_variant == "cuda" and python_check.rc == 0
+  failed_when: false
+  timeout: 300s
+
+- name: Install PyTorch (MPS/Apple Silicon) via pip
+  shell: pip3 install torch torchvision torchaudio
+  when: parameters.install_method == "pip" and pytorch_variant == "mps" and python_check.rc == 0
+  failed_when: false
+  timeout: 300s
+
+# Install PyTorch with conda
+- name: Install PyTorch via conda
+  shell: conda install -y pytorch torchvision torchaudio pytorch-cuda -c pytorch -c nvidia
+  when: parameters.install_method == "conda" and pytorch_variant == "cuda"
+  failed_when: false
+  timeout: 300s
+
+- name: Install PyTorch (CPU/MPS) via conda
+  shell: conda install -y pytorch torchvision torchaudio cpuonly -c pytorch
+  when: parameters.install_method == "conda" and (pytorch_variant == "cpu" or pytorch_variant == "mps")
+  failed_when: false
+  timeout: 300s
+
+# Verify installation
+- name: Verify PyTorch installation
+  shell: python3 -c "import torch; print(f'PyTorch {torch.__version__}')"
+  register: pytorch_version
+  failed_when: false
+
+- name: Display PyTorch version
+  print: "PyTorch installed: {{ pytorch_version.stdout }}"
+  when: pytorch_version.rc == 0
+
+# Test PyTorch functionality
+- name: Test PyTorch tensor creation
+  shell: python3 -c "import torch; x = torch.randn(3, 3); print('Tensor created:', x.shape)"
+  register: pytorch_test
+  failed_when: false
+  timeout: 10s
+
+- name: Display PyTorch test - Success
+  print: "OK PyTorch functional test passed (tensor operations working)"
+  when: pytorch_test.rc == 0
+
+- name: Display PyTorch test - Warning
+  print: "WARNING PyTorch test failed, but installation attempted"
+  when: pytorch_test.rc != 0

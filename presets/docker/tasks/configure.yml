@@ -1,0 +1,49 @@
+# Docker Configuration Tasks
+
+# Linux service management
+- name: Start Docker service (Linux)
+  service:
+    name: docker
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+# Add user to docker group (Linux)
+- name: Get current username
+  shell: whoami
+  register: current_user
+  when: os == "linux" and parameters.add_user_to_group
+
+- name: Add user to docker group (Linux)
+  shell: usermod -aG docker {{ current_user.stdout }}
+  become: true
+  when: os == "linux" and parameters.add_user_to_group
+  failed_when: false
+
+- name: Notify about group change
+  print: |
+    WARNING️  User added to docker group. You may need to log out and back in for this to take effect.
+    Or run: newgrp docker
+  when: os == "linux" and parameters.add_user_to_group
+
+# macOS - Docker Desktop
+- name: Start Docker Desktop (macOS)
+  shell: open -a Docker
+  when: os == "darwin" and parameters.start_service
+  failed_when: false
+
+# Verify Docker is running
+- name: Test Docker installation
+  shell: docker run --rm hello-world
+  register: docker_test
+  failed_when: false
+  timeout: 30s
+
+- name: Display test result - Success
+  print: "OK Docker test passed: hello-world container ran successfully"
+  when: docker_test.rc == 0
+
+- name: Display test result - Warning
+  print: "WARNING Docker test failed. You may need to start Docker Desktop manually."
+  when: docker_test.rc != 0

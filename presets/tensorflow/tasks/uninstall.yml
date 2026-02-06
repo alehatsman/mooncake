@@ -1,0 +1,14 @@
+# TensorFlow Uninstallation Tasks
+
+- name: Uninstall TensorFlow (pip)
+  shell: pip3 uninstall -y tensorflow keras
+  when: parameters.install_method == "pip"
+  failed_when: false
+
+- name: Uninstall TensorFlow (conda)
+  shell: conda remove -y tensorflow keras
+  when: parameters.install_method == "conda"
+  failed_when: false
+
+- name: Display uninstall complete
+  print: "OK TensorFlow uninstalled"

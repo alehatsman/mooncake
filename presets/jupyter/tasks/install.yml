@@ -1,0 +1,111 @@
+# Jupyter Installation Tasks
+
+# Check Python installation
+- name: Check if Python is installed
+  shell: python3 --version
+  register: python_check
+  failed_when: false
+
+- name: Display Python version
+  print: "Python installed: {{ python_check.stdout }}"
+  when: python_check.rc == 0
+
+- name: Warning - Python not found
+  print: "WARNING Python 3 not found. Please install Python 3 first."
+  when: python_check.rc != 0
+
+# Check pip
+- name: Check if pip is installed
+  shell: pip3 --version
+  register: pip_check
+  failed_when: false
+  when: parameters.install_method == "pip"
+
+# Create conda environment
+- name: Check if conda environment exists
+  shell: conda env list | grep "^{{ parameters.conda_env }} "
+  register: conda_env_check
+  when: parameters.install_method == "conda"
+  failed_when: false
+
+- name: Create conda environment
+  shell: conda create -y -n {{ parameters.conda_env }} python={{ parameters.python_version }}
+  when: parameters.install_method == "conda" and conda_env_check.rc != 0
+  failed_when: false
+  timeout: 180s
+
+# Install Jupyter Lab
+- name: Install Jupyter Lab via pip
+  shell: pip3 install jupyterlab
+  when: parameters.install_method == "pip" and parameters.install_lab != false and python_check.rc == 0
+  failed_when: false
+  timeout: 120s
+
+- name: Install Jupyter Lab via conda
+  shell: conda install -y -n {{ parameters.conda_env }} jupyterlab -c conda-forge
+  when: parameters.install_method == "conda" and parameters.install_lab != false
+  failed_when: false
+  timeout: 120s
+
+# Install Jupyter Notebook (classic)
+- name: Install Jupyter Notebook via pip
+  shell: pip3 install notebook
+  when: parameters.install_method == "pip" and parameters.install_notebook != false and python_check.rc == 0
+  failed_when: false
+  timeout: 120s
+
+- name: Install Jupyter Notebook via conda
+  shell: conda install -y -n {{ parameters.conda_env }} notebook -c conda-forge
+  when: parameters.install_method == "conda" and parameters.install_notebook != false
+  failed_when: false
+  timeout: 120s
+
+# Verify installation
+- name: Verify Jupyter Lab installation (pip)
+  shell: jupyter lab --version 2>&1
+  register: jupyter_lab_version
+  when: parameters.install_lab != false and parameters.install_method == "pip"
+  failed_when: false
+
+- name: Verify Jupyter Lab installation (conda)
+  shell: conda run -n {{ parameters.conda_env }} jupyter lab --version 2>&1
+  register: jupyter_lab_version
+  when: parameters.install_lab != false and parameters.install_method == "conda"
+  failed_when: false
+
+- name: Display Jupyter Lab version
+  print: "Jupyter Lab installed: {{ jupyter_lab_version.stdout }}"
+  when: parameters.install_lab != false and jupyter_lab_version.rc == 0
+
+- name: Verify Jupyter Notebook installation
+  shell: jupyter notebook --version 2>&1
+  register: jupyter_notebook_version
+  when: parameters.install_notebook != false
+  failed_when: false
+
+- name: Display Jupyter Notebook version
+  print: "Jupyter Notebook installed: v7.x"
+  when: parameters.install_notebook != false
+
+# Test Jupyter functionality
+- name: Test Jupyter functionality (pip)
+  shell: jupyter --version 2>&1
+  register: jupyter_test
+  when: parameters.install_method == "pip"
+  failed_when: false
+  timeout: 5s
+
+- name: Test Jupyter functionality (conda)
+  shell: conda run -n {{ parameters.conda_env }} jupyter --version 2>&1
+  register: jupyter_test
+  when: parameters.install_method == "conda"
+  failed_when: false
+  timeout: 5s
+
+- name: Display Jupyter test - Success
+  print: "OK Jupyter functional test passed"
+  when: jupyter_test.rc == 0
+
+- name: Display Jupyter test - Warning
+  print: "WARNING Jupyter test failed, but installation attempted"
+  when: jupyter_test.rc != 0

@@ -1,0 +1,36 @@
+# Redis Installation Tasks
+
+- name: Check if Redis is already installed
+  shell: command -v redis-server
+  register: redis_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Redis via Homebrew (macOS)
+  package:
+    name: redis
+    state: present
+  when: os == "darwin" and redis_check.rc != 0
+
+# Linux Installation
+- name: Install Redis (Debian/Ubuntu)
+  package:
+    name: redis-server
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and redis_check.rc != 0
+
+- name: Install Redis (RHEL/Fedora)
+  package:
+    name: redis
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "dnf" and redis_check.rc != 0
+
+# Verify installation
+- name: Verify Redis installation
+  shell: redis-server --version
+  register: redis_version
+
+- name: Display Redis version
+  print: "Redis installed: {{ redis_version.stdout }}"

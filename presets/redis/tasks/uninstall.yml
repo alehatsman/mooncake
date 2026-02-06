@@ -1,0 +1,54 @@
+# Redis Uninstallation Tasks
+
+- name: Stop Redis service (Linux)
+  service:
+    name: redis-server
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Stop Redis service (macOS)
+  shell: brew services stop redis
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall Redis (macOS)
+  package:
+    name: redis
+    state: absent
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall Redis (Debian/Ubuntu)
+  package:
+    name: redis-server
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Uninstall Redis (RHEL/Fedora)
+  package:
+    name: redis
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+  failed_when: false
+
+- name: Remove Redis data directory
+  file:
+    path: /var/lib/redis
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Remove Redis configuration
+  file:
+    path: /etc/redis
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false

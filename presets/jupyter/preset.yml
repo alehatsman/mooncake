@@ -1,0 +1,67 @@
+name: jupyter
+description: Install Jupyter Lab/Notebook for interactive data science and ML
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Jupyter should be installed or removed
+
+  install_method:
+    type: string
+    required: false
+    default: conda
+    enum: [pip, conda]
+    description: Installation method (conda recommended for isolated environments)
+
+  conda_env:
+    type: string
+    required: false
+    default: jupyter
+    description: Conda environment name (only used if install_method is conda)
+
+  python_version:
+    type: string
+    required: false
+    default: "3.11"
+    description: Python version for conda environment
+
+  install_lab:
+    type: bool
+    required: false
+    default: true
+    description: Install Jupyter Lab (modern interface)
+
+  install_notebook:
+    type: bool
+    required: false
+    default: false
+    description: Install classic Jupyter Notebook
+
+  install_extensions:
+    type: bool
+    required: false
+    default: true
+    description: Install common Jupyter Lab extensions
+
+  port:
+    type: string
+    required: false
+    default: "8888"
+    description: Default port for Jupyter server
+
+steps:
+  - name: Install Jupyter
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Jupyter
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Jupyter
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,83 @@
+# Miniconda Installation Tasks
+
+# Check if conda already exists
+- name: Check if conda is already installed
+  shell: command -v conda || test -f {{ parameters.install_path }}/bin/conda
+  register: conda_check
+  failed_when: false
+
+- name: Display conda already installed
+  print: "Conda already installed at: {{ conda_check.stdout }}"
+  when: conda_check.rc == 0
+
+# Download Miniconda installer (macOS)
+- name: Download Miniconda installer (macOS Intel)
+  download:
+    url: https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+    dest: /tmp/miniconda-installer.sh
+    mode: "0755"
+  when: os == "darwin" and arch == "x86_64" and conda_check.rc != 0
+
+- name: Download Miniconda installer (macOS Apple Silicon)
+  download:
+    url: https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
+    dest: /tmp/miniconda-installer.sh
+    mode: "0755"
+  when: os == "darwin" and arch == "arm64" and conda_check.rc != 0
+
+# Download Miniconda installer (Linux)
+- name: Download Miniconda installer (Linux)
+  download:
+    url: https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    dest: /tmp/miniconda-installer.sh
+    mode: "0755"
+  when: os == "linux" and conda_check.rc != 0
+
+# Install Miniconda
+- name: Install Miniconda
+  shell: bash /tmp/miniconda-installer.sh -b -p {{ parameters.install_path }}
+  when: conda_check.rc != 0
+  timeout: 300s
+
+# Clean up installer
+- name: Remove installer
+  file:
+    path: /tmp/miniconda-installer.sh
+    state: absent
+  when: conda_check.rc != 0
+
+# Initialize conda for shell
+- name: Initialize conda for bash
+  shell: "{{ parameters.install_path }}/bin/conda init bash"
+  when: parameters.init_shell != false and conda_check.rc != 0
+  failed_when: false
+
+- name: Initialize conda for zsh
+  shell: "{{ parameters.install_path }}/bin/conda init zsh"
+  when: parameters.init_shell != false and conda_check.rc != 0
+  failed_when: false
+
+# Verify installation
+- name: Verify conda installation
+  shell: "{{ parameters.install_path }}/bin/conda --version"
+  register: conda_version
+  failed_when: false
+
+- name: Display conda version
+  print: "Miniconda installed: {{ conda_version.stdout }}"
+  when: conda_version.rc == 0
+
+# Test conda functionality
+- name: Test conda functionality
+  shell: "{{ parameters.install_path }}/bin/conda info 2>&1 | head -5"
+  register: conda_test
+  failed_when: false
+  timeout: 10s
+
+- name: Display conda test - Success
+  print: "OK Conda functional test passed"
+  when: conda_test.rc == 0
+
+- name: Display conda test - Warning
+  print: "WARNING Conda test failed, but installation attempted"
+  when: conda_test.rc != 0

@@ -1,0 +1,60 @@
+# Docker Uninstallation Tasks
+
+- name: Stop Docker service (Linux)
+  service:
+    name: docker
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Uninstall Docker (macOS)
+  package:
+    name: docker
+    state: absent
+  become: true
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall Docker Engine (Debian/Ubuntu)
+  package:
+    names:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Uninstall Docker (RHEL/Fedora)
+  package:
+    names:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+  failed_when: false
+
+- name: Remove Docker data directory
+  file:
+    path: /var/lib/docker
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Remove Docker configuration
+  file:
+    path: /etc/docker
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false

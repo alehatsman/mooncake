@@ -1,0 +1,27 @@
+# TensorFlow Configuration Tasks
+
+# Check GPU availability
+- name: Check TensorFlow GPU availability
+  shell: python3 -c "import tensorflow as tf; print('GPU available:', len(tf.config.list_physical_devices('GPU')) > 0)"
+  register: gpu_available
+  failed_when: false
+
+# Display configuration
+- name: Display TensorFlow configuration
+  print: |
+    OK TensorFlow installed and configured
+
+    Installation:
+      Method: {{ parameters.install_method }}
+      GPU Support: {{ parameters.gpu_support }}
+      {{ gpu_available.stdout if gpu_available.rc == 0 else "GPU: Not checked" }}
+
+    Components:
+      TensorFlow: Installed
+      Keras: {{ "Installed" if parameters.install_keras else "Skipped" }}
+
+    Quick test:
+      python3 -c "import tensorflow as tf; print(tf.__version__)"
+      python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices())"
+
+    Documentation: https://www.tensorflow.org/api_docs

@@ -1,0 +1,86 @@
+# PostgreSQL Configuration Tasks
+
+# Start PostgreSQL service
+- name: Start PostgreSQL service (Linux)
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start PostgreSQL service (macOS)
+  shell: brew services start postgresql@{{ parameters.version }}
+  when: os == "darwin" and parameters.start_service
+  failed_when: false
+
+# Wait for PostgreSQL to be ready
+- name: Wait for PostgreSQL to be ready
+  shell: pg_isready -h localhost -p {{ parameters.port }}
+  register: pg_ready
+  retries: 5
+  retry_delay: 2s
+  failed_when: false
+
+# Create user if specified
+- name: Create PostgreSQL user
+  shell: |
+    sudo -u postgres psql -c "CREATE USER {{ parameters.create_user }} WITH PASSWORD '{{ parameters.create_user }}';"
+  become: true
+  when: parameters.create_user != "" and os == "linux"
+  failed_when: false
+
+- name: Create PostgreSQL user (macOS)
+  shell: |
+    createuser {{ parameters.create_user }}
+  when: parameters.create_user != "" and os == "darwin"
+  failed_when: false
+
+# Create database if specified
+- name: Create PostgreSQL database with custom owner (Linux)
+  shell: |
+    sudo -u postgres createdb -O {{ parameters.create_user }} {{ parameters.create_database }}
+  become: true
+  when: parameters.create_database != "" and parameters.create_user != "" and os == "linux"
+  failed_when: false
+
+- name: Create PostgreSQL database with default owner (Linux)
+  shell: |
+    sudo -u postgres createdb {{ parameters.create_database }}
+  become: true
+  when: parameters.create_database != "" and parameters.create_user == "" and os == "linux"
+  failed_when: false
+
+- name: Create PostgreSQL database (macOS)
+  shell: |
+    createdb {{ parameters.create_database }}
+  when: parameters.create_database != "" and os == "darwin"
+  failed_when: false
+
+# Display connection info - with custom user/db
+- name: Display connection information (custom setup)
+  print: |
+    OK PostgreSQL is running
+
+    Connection details:
+      Host: localhost
+      Port: {{ parameters.port }}
+      User: {{ parameters.create_user }}
+      Database: {{ parameters.create_database }}
+
+    Connect: psql -h localhost -p {{ parameters.port }} -U {{ parameters.create_user }} {{ parameters.create_database }}
+  when: pg_ready.rc == 0 and parameters.create_user != "" and parameters.create_database != ""
+
+# Display connection info - default
+- name: Display connection information (default)
+  print: |
+    OK PostgreSQL is running
+
+    Connection details:
+      Host: localhost
+      Port: {{ parameters.port }}
+      User: postgres (default)
+      Database: postgres (default)
+
+    Connect: psql -h localhost -p {{ parameters.port }}
+  when: pg_ready.rc == 0 and (parameters.create_user == "" or parameters.create_database == "")

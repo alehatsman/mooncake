@@ -1,0 +1,48 @@
+name: neovim
+description: Install Neovim text editor with plugin manager
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Neovim should be installed or removed
+
+  install_packer:
+    type: bool
+    required: false
+    default: true
+    description: Install Packer.nvim plugin manager
+
+  install_lazy:
+    type: bool
+    required: false
+    default: false
+    description: Install lazy.nvim plugin manager (alternative to Packer)
+
+  install_lsp:
+    type: bool
+    required: false
+    default: true
+    description: Install LSP-related dependencies (Node.js, tree-sitter-cli)
+
+  create_basic_config:
+    type: bool
+    required: false
+    default: false
+    description: Create a basic init.lua configuration
+
+steps:
+  - name: Install Neovim
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Neovim
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Neovim
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

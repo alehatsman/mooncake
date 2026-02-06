@@ -1,0 +1,48 @@
+name: docker
+description: Install and configure Docker container runtime
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Docker should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Docker service after installation
+
+  add_user_to_group:
+    type: bool
+    required: false
+    default: true
+    description: Add current user to docker group (Linux only)
+
+  install_compose:
+    type: bool
+    required: false
+    default: true
+    description: Install Docker Compose plugin
+
+  install_buildx:
+    type: bool
+    required: false
+    default: true
+    description: Install Docker Buildx plugin
+
+steps:
+  - name: Install Docker
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Docker
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Docker
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

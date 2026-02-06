@@ -1,0 +1,82 @@
+# TensorFlow Installation Tasks
+
+# Check Python
+- name: Check if Python is installed
+  shell: python3 --version
+  register: python_check
+  failed_when: false
+
+- name: Display Python version
+  print: "Python installed: {{ python_check.stdout }}"
+  when: python_check.rc == 0
+
+# Detect GPU support
+- name: Check for NVIDIA GPU (CUDA)
+  shell: nvidia-smi 2>&1
+  register: cuda_check
+  when: parameters.gpu_support == "auto" or parameters.gpu_support == "gpu"
+  failed_when: false
+
+- name: Detect GPU variant
+  vars:
+    action: set_vars
+    vars:
+      tf_variant: "{{ 'gpu' if (parameters.gpu_support == 'gpu' or (parameters.gpu_support == 'auto' and cuda_check.rc == 0)) else 'cpu' }}"
+
+# Install TensorFlow with pip
+- name: Install TensorFlow (CPU) via pip
+  shell: pip3 install tensorflow
+  when: parameters.install_method == "pip" and tf_variant == "cpu" and python_check.rc == 0
+  failed_when: false
+  timeout: 300s
+
+- name: Install TensorFlow (GPU) via pip
+  shell: pip3 install tensorflow[and-cuda]
+  when: parameters.install_method == "pip" and tf_variant == "gpu" and python_check.rc == 0
+  failed_when: false
+  timeout: 300s
+
+# Install TensorFlow with conda
+- name: Install TensorFlow via conda
+  shell: conda install -y tensorflow
+  when: parameters.install_method == "conda"
+  failed_when: false
+  timeout: 300s
+
+# Install Keras
+- name: Install Keras via pip
+  shell: pip3 install keras
+  when: parameters.install_method == "pip" and parameters.install_keras != false and python_check.rc == 0
+  failed_when: false
+  timeout: 60s
+
+- name: Install Keras via conda
+  shell: conda install -y keras
+  when: parameters.install_method == "conda" and parameters.install_keras != false
+  failed_when: false
+  timeout: 60s
+
+# Verify installation
+- name: Verify TensorFlow installation
+  shell: python3 -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}')"
+  register: tf_version
+  failed_when: false
+
+- name: Display TensorFlow version
+  print: "TensorFlow installed: {{ tf_version.stdout }}"
+  when: tf_version.rc == 0
+
+# Test TensorFlow functionality
+- name: Test TensorFlow tensor creation
+  shell: python3 -c "import tensorflow as tf; x = tf.constant([[1, 2], [3, 4]]); print('Tensor created:', x.shape)"
+  register: tf_test
+  failed_when: false
+  timeout: 10s
+
+- name: Display TensorFlow test - Success
+  print: "OK TensorFlow functional test passed (tensor operations working)"
+  when: tf_test.rc == 0
+
+- name: Display TensorFlow test - Warning
+  print: "WARNING TensorFlow test failed, but installation attempted"
+  when: tf_test.rc != 0

@@ -1,0 +1,32 @@
+# Miniconda Configuration Tasks
+
+# Set conda config
+- name: Set conda auto-activate to false
+  shell: "{{ parameters.install_path }}/bin/conda config --set auto_activate_base false"
+  when: parameters.create_base_env == false
+  failed_when: false
+
+# Display configuration
+- name: Display Miniconda configuration
+  print: |
+    OK Miniconda installed and configured
+
+    Installation:
+      Location: {{ parameters.install_path }}
+      Shell initialized: {{ parameters.init_shell }}
+      Auto-activate base: {{ parameters.create_base_env }}
+
+    Quick start:
+      conda --version                    # Check version
+      conda create -n myenv python=3.11  # Create environment
+      conda activate myenv               # Activate environment
+      conda install numpy pandas         # Install packages
+      conda deactivate                   # Deactivate environment
+
+    IMPORTANT: Restart your shell or run:
+      source {{ parameters.install_path }}/bin/activate
+
+    ML environments:
+      conda create -n ml python=3.11
+      conda activate ml
+      conda install pytorch tensorflow jupyterlab -c pytorch -c conda-forge

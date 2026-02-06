@@ -1,0 +1,52 @@
+# PostgreSQL Uninstallation Tasks
+
+- name: Stop PostgreSQL service (Linux)
+  service:
+    name: postgresql
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Stop PostgreSQL service (macOS)
+  shell: brew services stop postgresql@{{ parameters.version }}
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall PostgreSQL (macOS)
+  package:
+    name: "postgresql@{{ parameters.version }}"
+    state: absent
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall PostgreSQL (Debian/Ubuntu)
+  package:
+    names:
+      - postgresql-{{ parameters.version }}
+      - postgresql-contrib-{{ parameters.version }}
+      - postgresql-client-{{ parameters.version }}
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Uninstall PostgreSQL (RHEL/Fedora)
+  package:
+    names:
+      - postgresql{{ parameters.version }}
+      - postgresql{{ parameters.version }}-server
+      - postgresql{{ parameters.version }}-contrib
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "dnf"
+  failed_when: false
+
+- name: Remove PostgreSQL data directory
+  file:
+    path: /var/lib/postgresql
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false

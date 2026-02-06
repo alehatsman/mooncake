@@ -1,0 +1,33 @@
+# Miniconda Uninstallation Tasks
+
+- name: Remove Miniconda directory
+  file:
+    path: "{{ parameters.install_path }}"
+    state: absent
+  failed_when: false
+
+- name: Remove conda initialization from .bashrc
+  shell: |
+    if [ -f ~/.bashrc ]; then
+      sed -i.bak '/>>> conda initialize >>>/,/<<< conda initialize <<</d' ~/.bashrc
+    fi
+  failed_when: false
+
+- name: Remove conda initialization from .zshrc
+  shell: |
+    if [ -f ~/.zshrc ]; then
+      sed -i.bak '/>>> conda initialize >>>/,/<<< conda initialize <<</d' ~/.zshrc
+    fi
+  failed_when: false
+
+- name: Remove conda config
+  file:
+    path: ~/.condarc
+    state: absent
+  failed_when: false
+
+- name: Display uninstall complete
+  print: |
+    OK Miniconda uninstalled
+
+    Note: Restart your shell to complete removal

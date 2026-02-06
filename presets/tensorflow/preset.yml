@@ -1,0 +1,44 @@
+name: tensorflow
+description: Install TensorFlow machine learning framework with CPU/GPU support
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether TensorFlow should be installed or removed
+
+  install_method:
+    type: string
+    required: false
+    default: conda
+    enum: [pip, conda]
+    description: Installation method (conda recommended for isolated environments)
+
+  gpu_support:
+    type: string
+    required: false
+    default: auto
+    enum: [auto, cpu, gpu]
+    description: GPU support (auto-detect, cpu-only, or GPU)
+
+  install_keras:
+    type: bool
+    required: false
+    default: true
+    description: Install Keras (high-level API)
+
+steps:
+  - name: Install TensorFlow
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure TensorFlow
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall TensorFlow
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

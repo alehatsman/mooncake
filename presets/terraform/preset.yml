@@ -1,0 +1,48 @@
+name: terraform
+description: Install Terraform infrastructure as code tool
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Terraform should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: Terraform version to install (e.g., "1.6.0", "latest")
+
+  install_tflint:
+    type: bool
+    required: false
+    default: false
+    description: Install TFLint (Terraform linter)
+
+  install_tfsec:
+    type: bool
+    required: false
+    default: false
+    description: Install tfsec (Terraform security scanner)
+
+  install_terraform_docs:
+    type: bool
+    required: false
+    default: false
+    description: Install terraform-docs (documentation generator)
+
+steps:
+  - name: Install Terraform
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Install additional tools
+    include: tasks/tools.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Terraform
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

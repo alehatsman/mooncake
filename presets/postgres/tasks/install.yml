@@ -1,0 +1,50 @@
+# PostgreSQL Installation Tasks
+
+- name: Check if PostgreSQL is already installed
+  shell: command -v psql
+  register: postgres_check
+  failed_when: false
+
+# macOS Installation
+- name: Install PostgreSQL via Homebrew (macOS)
+  package:
+    name: "postgresql@{{ parameters.version }}"
+    state: present
+  when: os == "darwin" and postgres_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Install PostgreSQL (Debian/Ubuntu)
+  package:
+    names:
+      - postgresql-{{ parameters.version }}
+      - postgresql-contrib-{{ parameters.version }}
+      - postgresql-client-{{ parameters.version }}
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and postgres_check.rc != 0
+
+# Linux - RHEL/Fedora
+- name: Install PostgreSQL (RHEL/Fedora)
+  package:
+    names:
+      - postgresql{{ parameters.version }}
+      - postgresql{{ parameters.version }}-server
+      - postgresql{{ parameters.version }}-contrib
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "dnf" and postgres_check.rc != 0
+
+# Initialize database (RHEL/Fedora)
+- name: Initialize PostgreSQL database (RHEL/Fedora)
+  shell: postgresql-setup --initdb
+  become: true
+  when: os == "linux" and package_manager == "dnf" and postgres_check.rc != 0
+  failed_when: false
+
+# Verify installation
+- name: Verify PostgreSQL installation
+  shell: psql --version
+  register: postgres_version
+
+- name: Display PostgreSQL version
+  print: "PostgreSQL installed: {{ postgres_version.stdout }}"

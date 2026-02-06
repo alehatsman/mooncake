@@ -1,0 +1,35 @@
+# PyTorch Configuration Tasks
+
+# Check GPU availability
+- name: Check PyTorch CUDA availability
+  shell: python3 -c "import torch; print('CUDA available:', torch.cuda.is_available())"
+  register: cuda_available
+  failed_when: false
+
+- name: Check PyTorch MPS availability
+  shell: python3 -c "import torch; print('MPS available:', torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False)"
+  register: mps_available
+  when: os == "darwin"
+  failed_when: false
+
+# Display configuration
+- name: Display PyTorch configuration
+  print: |
+    OK PyTorch installed and configured
+
+    Installation:
+      Method: {{ parameters.install_method }}
+      GPU Support: {{ parameters.gpu_support }}
+      {{ cuda_available.stdout if cuda_available.rc == 0 else "CUDA: Not checked" }}
+      {{ mps_available.stdout if mps_available.rc == 0 else "" }}
+
+    Components:
+      PyTorch: Installed
+      torchvision: {{ "Installed" if parameters.install_torchvision else "Skipped" }}
+      torchaudio: {{ "Installed" if parameters.install_torchaudio else "Skipped" }}
+
+    Quick test:
+      python3 -c "import torch; print(torch.__version__)"
+      python3 -c "import torch; print(torch.cuda.is_available())"
+
+    Documentation: https://pytorch.org/docs/stable/

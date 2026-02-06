@@ -1,0 +1,62 @@
+# Jupyter Configuration Tasks
+
+# Generate Jupyter config if needed
+- name: Generate Jupyter config
+  shell: |
+    if [ ! -f ~/.jupyter/jupyter_lab_config.py ]; then
+      jupyter lab --generate-config
+    fi
+  when: parameters.install_lab != false
+  failed_when: false
+
+# Install common extensions
+- name: Install Jupyter Lab extensions
+  shell: |
+    pip3 install jupyterlab-git jupyterlab-lsp python-lsp-server
+  when: parameters.install_method == "pip" and parameters.install_extensions != false
+  failed_when: false
+  timeout: 60s
+
+- name: Install Jupyter Lab extensions (conda)
+  shell: |
+    conda install -y jupyterlab-git
+  when: parameters.install_method == "conda" and parameters.install_extensions != false
+  failed_when: false
+  timeout: 60s
+
+# Display usage information (pip)
+- name: Display Jupyter usage information (pip)
+  print: |
+    OK Jupyter installed and configured
+
+    Installation:
+      Method: {{ parameters.install_method }}
+      Jupyter Lab: Installed
+
+    Quick start:
+      jupyter lab                    # Start Jupyter Lab
+      jupyter lab --port {{ parameters.port }}   # Custom port
+
+    Access at: http://localhost:{{ parameters.port }}
+  when: parameters.install_method == "pip"
+
+# Display usage information (conda)
+- name: Display Jupyter usage information (conda)
+  print: |
+    OK Jupyter installed and configured
+
+    Installation:
+      Method: {{ parameters.install_method }}
+      Conda environment: {{ parameters.conda_env }}
+      Python version: {{ parameters.python_version }}
+      Jupyter Lab: Installed
+
+    Quick start:
+      conda activate {{ parameters.conda_env }}       # Activate environment
+      jupyter lab                            # Start Jupyter Lab
+      jupyter lab --port {{ parameters.port }}       # Custom port
+
+    Access at: http://localhost:{{ parameters.port }}
+
+    Note: Always activate the conda environment before using Jupyter
+  when: parameters.install_method == "conda"
