@@ -1,15 +1,45 @@
 - name: Check if op is installed
   shell: command -v op
-  register: 1password-cli_check
+  register: op_check
   failed_when: false
 
 - name: Install op (macOS)
-  shell: brew install op
-  when: os == "darwin" and 1password-cli_check.rc != 0
+  shell: brew install 1password-cli
+  when: os == "darwin" and op_check.rc != 0
+
+- name: Add 1Password APT repository key (Debian/Ubuntu)
+  shell: |
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+    sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+  when: os == "linux" and apt_available and op_check.rc != 0
+
+- name: Add 1Password APT repository (Debian/Ubuntu)
+  shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+    sudo tee /etc/apt/sources.list.d/1password.list
+  when: os == "linux" and apt_available and op_check.rc != 0
+
+- name: Install op (Debian/Ubuntu)
+  shell: sudo apt-get update && sudo apt-get install -y 1password-cli
+  when: os == "linux" and apt_available and op_check.rc != 0
+
+- name: Add 1Password YUM repository (RHEL/Fedora)
+  shell: |
+    sudo rpm --import https://downloads.1password.com/linux/keys/1password.asc && \
+    sudo sh -c 'echo -e "[1password]\nname=1Password Stable Channel\nbaseurl=https://downloads.1password.com/linux/rpm/stable/\$basearch\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=https://downloads.1password.com/linux/keys/1password.asc" > /etc/yum.repos.d/1password.repo'
+  when: os == "linux" and (dnf_available or yum_available) and op_check.rc != 0
+
+- name: Install op with DNF (Fedora)
+  shell: sudo dnf install -y 1password-cli
+  when: os == "linux" and dnf_available and op_check.rc != 0
+
+- name: Install op with YUM (RHEL/CentOS)
+  shell: sudo yum install -y 1password-cli
+  when: os == "linux" and yum_available and not dnf_available and op_check.rc != 0
 
 - name: Verify installation
   shell: op --version 2>&1 || op -v 2>&1 || echo "installed"
-  register: 1password-cli_version
+  register: op_version
 
 - name: Display version
-  print: "op installed"
+  print: "op installed: {{ op_version.stdout }}"
