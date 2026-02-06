@@ -3,15 +3,24 @@
   register: shellcheck_check
   failed_when: false
 
-- name: Install shellcheck
+- name: Install shellcheck (macOS)
   package:
     name: shellcheck
     state: present
-  when: shellcheck_check.rc != 0
+  when: os == "darwin" and shellcheck_check.rc != 0
 
-- name: Verify installation
-  shell: shellcheck --version 2>&1 || echo "installed"
-  register: shellcheck_version
+- name: Install shellcheck (Linux)
+  package:
+    name: shellcheck
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and shellcheck_check.rc != 0
 
-- name: Display version
-  print: "shellcheck installed: {{ shellcheck_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v shellcheck
+      exit_code: 0
+
+- name: Display confirmation
+  print: "shellcheck installed"

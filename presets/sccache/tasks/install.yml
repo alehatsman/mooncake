@@ -3,15 +3,21 @@
   register: sccache_check
   failed_when: false
 
-- name: Install sccache
+- name: Install sccache (macOS)
   package:
     name: sccache
     state: present
-  when: sccache_check.rc != 0
+  when: os == "darwin" and sccache_check.rc != 0
 
-- name: Verify installation
-  shell: sccache --version 2>&1 || sccache -v 2>&1 || echo "installed"
-  register: sccache_version
+- name: Install sccache (Linux)
+  shell: cargo install sccache
+  when: os == "linux" and sccache_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v sccache
+      exit_code: 0
+
+- name: Display confirmation
   print: "sccache installed"

@@ -3,15 +3,21 @@
   register: snyk_check
   failed_when: false
 
-- name: Install snyk
+- name: Install snyk (macOS)
   package:
     name: snyk
     state: present
-  when: snyk_check.rc != 0
+  when: os == "darwin" and snyk_check.rc != 0
 
-- name: Verify installation
-  shell: snyk --version 2>&1 || snyk -v 2>&1 || echo "installed"
-  register: snyk_version
+- name: Install snyk (Linux)
+  shell: npm install -g snyk
+  when: os == "linux" and snyk_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v snyk
+      exit_code: 0
+
+- name: Display confirmation
   print: "snyk installed"

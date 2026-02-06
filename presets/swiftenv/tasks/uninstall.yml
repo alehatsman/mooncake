@@ -1,8 +1,20 @@
-- name: Uninstall swiftenv
+- name: Uninstall swiftenv (macOS)
   package:
     name: swiftenv
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall swiftenv (Linux)
+  shell: rm -rf ~/.swiftenv
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v swiftenv
+      exit_code: 1
 
 - name: Display confirmation
   print: "swiftenv uninstalled"

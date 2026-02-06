@@ -1,8 +1,20 @@
-- name: Uninstall sccache
+- name: Uninstall sccache (macOS)
   package:
     name: sccache
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall sccache (Linux)
+  shell: cargo uninstall sccache
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v sccache
+      exit_code: 1
 
 - name: Display confirmation
   print: "sccache uninstalled"

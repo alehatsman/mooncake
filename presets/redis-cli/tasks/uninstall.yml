@@ -1,8 +1,23 @@
-- name: Uninstall redis-cli
+- name: Uninstall redis-cli (macOS)
   package:
-    name: redis-cli
+    name: redis
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall redis-cli (Linux)
+  package:
+    name: redis-tools
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v redis-cli
+      exit_code: 1
 
 - name: Display confirmation
   print: "redis-cli uninstalled"

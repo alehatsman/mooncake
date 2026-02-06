@@ -3,15 +3,24 @@
   register: rancher_check
   failed_when: false
 
-- name: Install rancher
+- name: Install rancher (macOS)
   package:
-    name: rancher
+    name: rancher-cli
     state: present
-  when: rancher_check.rc != 0
+  when: os == "darwin" and rancher_check.rc != 0
 
-- name: Verify installation
-  shell: rancher --version 2>&1 || rancher -v 2>&1 || echo "installed"
-  register: rancher_version
+- name: Install rancher (Linux)
+  shell: |
+    curl -sL https://github.com/rancher/cli/releases/latest/download/rancher-linux-amd64-v2.8.5.tar.gz | tar xz
+    sudo mv rancher-v2.8.5/rancher /usr/local/bin/
+    rm -rf rancher-v2.8.5
+  when: os == "linux" and rancher_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rancher
+      exit_code: 0
+
+- name: Display confirmation
   print: "rancher installed"

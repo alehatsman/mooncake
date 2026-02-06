@@ -1,8 +1,23 @@
-- name: Uninstall sbt
+- name: Uninstall sbt (macOS)
   package:
     name: sbt
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall sbt (Linux)
+  package:
+    name: sbt
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v sbt
+      exit_code: 1
 
 - name: Display confirmation
   print: "sbt uninstalled"

@@ -1,8 +1,23 @@
-- name: Uninstall socat
+- name: Uninstall socat (macOS)
   package:
     name: socat
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall socat (Linux)
+  package:
+    name: socat
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v socat
+      exit_code: 1
 
 - name: Display confirmation
   print: "socat uninstalled"

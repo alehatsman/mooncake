@@ -3,15 +3,21 @@
   register: swiftenv_check
   failed_when: false
 
-- name: Install swiftenv
+- name: Install swiftenv (macOS)
   package:
     name: swiftenv
     state: present
-  when: swiftenv_check.rc != 0
+  when: os == "darwin" and swiftenv_check.rc != 0
 
-- name: Verify installation
-  shell: swiftenv --version 2>&1 || swiftenv -v 2>&1 || echo "installed"
-  register: swiftenv_version
+- name: Install swiftenv (Linux)
+  shell: git clone https://github.com/kylef/swiftenv.git ~/.swiftenv
+  when: os == "linux" and swiftenv_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v swiftenv
+      exit_code: 0
+
+- name: Display confirmation
   print: "swiftenv installed"

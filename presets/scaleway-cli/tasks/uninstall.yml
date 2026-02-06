@@ -1,8 +1,20 @@
-- name: Uninstall scaleway-cli
+- name: Uninstall scaleway-cli (macOS)
   package:
-    name: scaleway-cli
+    name: scw
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall scaleway-cli (Linux)
+  shell: sudo rm -f /usr/local/bin/scw
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v scw
+      exit_code: 1
 
 - name: Display confirmation
   print: "scaleway-cli uninstalled"

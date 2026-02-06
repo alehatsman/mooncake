@@ -1,8 +1,23 @@
-- name: Uninstall skopeo
+- name: Uninstall skopeo (macOS)
   package:
     name: skopeo
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall skopeo (Linux)
+  package:
+    name: skopeo
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v skopeo
+      exit_code: 1
 
 - name: Display confirmation
   print: "skopeo uninstalled"

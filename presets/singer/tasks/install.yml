@@ -1,17 +1,21 @@
 - name: Check if singer is installed
-  shell: command -v singer
+  shell: pip3 show singer-python
   register: singer_check
   failed_when: false
 
-- name: Install singer
-  package:
-    name: singer
-    state: present
-  when: singer_check.rc != 0
+- name: Install singer (macOS)
+  shell: pip3 install --user singer-python
+  when: os == "darwin" and singer_check.rc != 0
 
-- name: Verify installation
-  shell: singer --version 2>&1 || singer -v 2>&1 || echo "installed"
-  register: singer_version
+- name: Install singer (Linux)
+  shell: pip3 install --user singer-python
+  when: os == "linux" and singer_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: pip3 show singer-python
+      exit_code: 0
+
+- name: Display confirmation
   print: "singer installed"

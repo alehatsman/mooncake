@@ -3,15 +3,21 @@
   register: sentry_cli_check
   failed_when: false
 
-- name: Install sentry-cli
+- name: Install sentry-cli (macOS)
   package:
     name: sentry-cli
     state: present
-  when: sentry_cli_check.rc != 0
+  when: os == "darwin" and sentry_cli_check.rc != 0
 
-- name: Verify installation
-  shell: sentry-cli --version 2>&1 || sentry-cli -v 2>&1 || echo "installed"
-  register: sentry_cli_version
+- name: Install sentry-cli (Linux)
+  shell: npm install -g @sentry/cli
+  when: os == "linux" and sentry_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v sentry-cli
+      exit_code: 0
+
+- name: Display confirmation
   print: "sentry-cli installed"

@@ -3,15 +3,24 @@
   register: sbt_check
   failed_when: false
 
-- name: Install sbt
+- name: Install sbt (macOS)
   package:
     name: sbt
     state: present
-  when: sbt_check.rc != 0
+  when: os == "darwin" and sbt_check.rc != 0
 
-- name: Verify installation
-  shell: sbt --version 2>&1 || sbt -v 2>&1 || echo "installed"
-  register: sbt_version
+- name: Install sbt (Linux)
+  package:
+    name: sbt
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and sbt_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v sbt
+      exit_code: 0
+
+- name: Display confirmation
   print: "sbt installed"

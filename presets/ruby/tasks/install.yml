@@ -120,6 +120,12 @@
     rbenv versions
   register: rbenv_versions
 
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ruby
+      exit_code: 0
+
 - name: Print installation summary
   print: |
     Ruby installed successfully via rbenv!

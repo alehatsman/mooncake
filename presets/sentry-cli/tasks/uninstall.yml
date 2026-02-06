@@ -1,8 +1,20 @@
-- name: Uninstall sentry-cli
+- name: Uninstall sentry-cli (macOS)
   package:
     name: sentry-cli
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall sentry-cli (Linux)
+  shell: npm uninstall -g @sentry/cli
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v sentry-cli
+      exit_code: 1
 
 - name: Display confirmation
   print: "sentry-cli uninstalled"

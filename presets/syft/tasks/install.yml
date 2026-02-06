@@ -3,15 +3,22 @@
   register: syft_check
   failed_when: false
 
-- name: Install syft
+- name: Install syft (macOS)
   package:
     name: syft
     state: present
-  when: syft_check.rc != 0
+  when: os == "darwin" and syft_check.rc != 0
 
-- name: Verify installation
-  shell: syft --version 2>&1 || echo "installed"
-  register: syft_version
+- name: Install syft (Linux)
+  shell: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+  become: true
+  when: os == "linux" and syft_check.rc != 0
 
-- name: Display version
-  print: "syft installed: {{ syft_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v syft
+      exit_code: 0
+
+- name: Display confirmation
+  print: "syft installed"

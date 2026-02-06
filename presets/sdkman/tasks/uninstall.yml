@@ -1,8 +1,18 @@
-- name: Uninstall sdkman
-  package:
-    name: sdkman
-    state: absent
+- name: Uninstall sdkman (macOS)
+  shell: rm -rf ~/.sdkman
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall sdkman (Linux)
+  shell: rm -rf ~/.sdkman
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v sdk
+      exit_code: 1
 
 - name: Display confirmation
   print: "sdkman uninstalled"

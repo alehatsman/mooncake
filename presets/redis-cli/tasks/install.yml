@@ -3,15 +3,24 @@
   register: redis_cli_check
   failed_when: false
 
-- name: Install redis-cli
+- name: Install redis-cli (macOS)
   package:
-    name: redis-cli
+    name: redis
     state: present
-  when: redis_cli_check.rc != 0
+  when: os == "darwin" and redis_cli_check.rc != 0
 
-- name: Verify installation
-  shell: redis-cli --version 2>&1 || redis-cli -v 2>&1 || echo "installed"
-  register: redis_cli_version
+- name: Install redis-cli (Linux)
+  package:
+    name: redis-tools
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and redis_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v redis-cli
+      exit_code: 0
+
+- name: Display confirmation
   print: "redis-cli installed"

@@ -1,8 +1,20 @@
-- name: Uninstall ruff
+- name: Uninstall ruff (macOS)
   package:
     name: ruff
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall ruff (Linux)
+  shell: pip3 uninstall -y ruff
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ruff
+      exit_code: 1
 
 - name: Display confirmation
   print: "ruff uninstalled"

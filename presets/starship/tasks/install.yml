@@ -20,6 +20,12 @@
   shell: starship --version
   register: starship_version
 
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v starship
+      exit_code: 0
+
 - name: Display Starship version
   print: "Starship installed: {{ starship_version.stdout }}"
 

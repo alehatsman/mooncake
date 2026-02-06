@@ -33,6 +33,12 @@
   become: true
   when: os == "linux"
 
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v starship
+      exit_code: 1
+
 - name: Display uninstall confirmation
   print: |
     Starship uninstalled.

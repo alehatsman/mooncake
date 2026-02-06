@@ -1,8 +1,20 @@
-- name: Uninstall rye
+- name: Uninstall rye (macOS)
   package:
     name: rye
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall rye (Linux)
+  shell: rye self uninstall -y
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v rye
+      exit_code: 1
 
 - name: Display confirmation
   print: "rye uninstalled"

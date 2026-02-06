@@ -91,6 +91,12 @@
     rustup component list --installed
   register: components_installed
 
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rustc
+      exit_code: 0
+
 - name: Print installation summary
   print: |
     Rust installed successfully!

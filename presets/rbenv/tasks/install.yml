@@ -3,15 +3,24 @@
   register: rbenv_check
   failed_when: false
 
-- name: Install rbenv
+- name: Install rbenv (macOS)
   package:
     name: rbenv
     state: present
-  when: rbenv_check.rc != 0
+  when: os == "darwin" and rbenv_check.rc != 0
 
-- name: Verify installation
-  shell: rbenv --version 2>&1 || rbenv -v 2>&1 || echo "installed"
-  register: rbenv_version
+- name: Install rbenv (Linux)
+  package:
+    name: rbenv
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and rbenv_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rbenv
+      exit_code: 0
+
+- name: Display confirmation
   print: "rbenv installed"

@@ -3,15 +3,21 @@
   register: rye_check
   failed_when: false
 
-- name: Install rye
+- name: Install rye (macOS)
   package:
     name: rye
     state: present
-  when: rye_check.rc != 0
+  when: os == "darwin" and rye_check.rc != 0
 
-- name: Verify installation
-  shell: rye --version 2>&1 || rye -v 2>&1 || echo "installed"
-  register: rye_version
+- name: Install rye (Linux)
+  shell: curl -sSf https://rye.astral.sh/get | bash
+  when: os == "linux" and rye_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rye
+      exit_code: 0
+
+- name: Display confirmation
   print: "rye installed"

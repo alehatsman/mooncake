@@ -1,8 +1,20 @@
-- name: Uninstall syft
+- name: Uninstall syft (macOS)
   package:
     name: syft
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall syft (Linux)
+  shell: sudo rm -f /usr/local/bin/syft
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v syft
+      exit_code: 1
 
 - name: Display confirmation
   print: "syft uninstalled"

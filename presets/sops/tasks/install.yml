@@ -3,15 +3,24 @@
   register: sops_check
   failed_when: false
 
-- name: Install sops
+- name: Install sops (macOS)
   package:
     name: sops
     state: present
-  when: sops_check.rc != 0
+  when: os == "darwin" and sops_check.rc != 0
 
-- name: Verify installation
-  shell: sops --version 2>&1 || sops -v 2>&1 || echo "installed"
-  register: sops_version
+- name: Install sops (Linux)
+  package:
+    name: sops
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and sops_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v sops
+      exit_code: 0
+
+- name: Display confirmation
   print: "sops installed"

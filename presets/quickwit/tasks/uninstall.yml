@@ -1,8 +1,23 @@
-- name: Uninstall quickwit
+- name: Uninstall quickwit (macOS)
   package:
     name: quickwit
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall quickwit (Linux)
+  package:
+    name: quickwit
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v quickwit
+      exit_code: 1
 
 - name: Display confirmation
   print: "quickwit uninstalled"

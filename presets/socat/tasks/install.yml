@@ -3,15 +3,24 @@
   register: socat_check
   failed_when: false
 
-- name: Install socat
+- name: Install socat (macOS)
   package:
     name: socat
     state: present
-  when: socat_check.rc != 0
+  when: os == "darwin" and socat_check.rc != 0
 
-- name: Verify installation
-  shell: socat --version 2>&1 || socat -v 2>&1 || echo "installed"
-  register: socat_version
+- name: Install socat (Linux)
+  package:
+    name: socat
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and socat_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v socat
+      exit_code: 0
+
+- name: Display confirmation
   print: "socat installed"

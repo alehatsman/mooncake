@@ -3,15 +3,21 @@
   register: ruff_check
   failed_when: false
 
-- name: Install ruff
+- name: Install ruff (macOS)
   package:
     name: ruff
     state: present
-  when: ruff_check.rc != 0
+  when: os == "darwin" and ruff_check.rc != 0
 
-- name: Verify installation
-  shell: ruff --version 2>&1 || ruff -v 2>&1 || echo "installed"
-  register: ruff_version
+- name: Install ruff (Linux)
+  shell: pip3 install --user ruff
+  when: os == "linux" and ruff_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ruff
+      exit_code: 0
+
+- name: Display confirmation
   print: "ruff installed"

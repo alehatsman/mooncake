@@ -1,8 +1,23 @@
-- name: Uninstall rtx
+- name: Uninstall rtx (macOS)
   package:
     name: rtx
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall rtx (Linux)
+  package:
+    name: rtx
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v rtx
+      exit_code: 1
 
 - name: Display confirmation
   print: "rtx uninstalled"

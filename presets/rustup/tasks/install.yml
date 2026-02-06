@@ -3,15 +3,21 @@
   register: rustup_check
   failed_when: false
 
-- name: Install rustup
+- name: Install rustup (macOS)
   package:
     name: rustup
     state: present
-  when: rustup_check.rc != 0
+  when: os == "darwin" and rustup_check.rc != 0
 
-- name: Verify installation
-  shell: rustup --version 2>&1 || rustup -v 2>&1 || echo "installed"
-  register: rustup_version
+- name: Install rustup (Linux)
+  shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  when: os == "linux" and rustup_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rustup
+      exit_code: 0
+
+- name: Display confirmation
   print: "rustup installed"

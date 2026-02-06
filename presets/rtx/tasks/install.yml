@@ -3,15 +3,24 @@
   register: rtx_check
   failed_when: false
 
-- name: Install rtx
+- name: Install rtx (macOS)
   package:
     name: rtx
     state: present
-  when: rtx_check.rc != 0
+  when: os == "darwin" and rtx_check.rc != 0
 
-- name: Verify installation
-  shell: rtx --version 2>&1 || rtx -v 2>&1 || echo "installed"
-  register: rtx_version
+- name: Install rtx (Linux)
+  package:
+    name: rtx
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and rtx_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rtx
+      exit_code: 0
+
+- name: Display confirmation
   print: "rtx installed"

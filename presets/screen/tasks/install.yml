@@ -3,15 +3,24 @@
   register: screen_check
   failed_when: false
 
-- name: Install screen
+- name: Install screen (macOS)
   package:
     name: screen
     state: present
-  when: screen_check.rc != 0
+  when: os == "darwin" and screen_check.rc != 0
 
-- name: Verify installation
-  shell: screen --version 2>&1 || echo "installed"
-  register: screen_version
+- name: Install screen (Linux)
+  package:
+    name: screen
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and screen_check.rc != 0
 
-- name: Display version
-  print: "screen installed: {{ screen_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v screen
+      exit_code: 0
+
+- name: Display confirmation
+  print: "screen installed"

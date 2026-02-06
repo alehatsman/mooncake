@@ -3,15 +3,21 @@
   register: scaleway_cli_check
   failed_when: false
 
-- name: Install scaleway-cli
+- name: Install scaleway-cli (macOS)
   package:
-    name: scaleway-cli
+    name: scw
     state: present
-  when: scaleway_cli_check.rc != 0
+  when: os == "darwin" and scaleway_cli_check.rc != 0
 
-- name: Verify installation
-  shell: scw --version 2>&1 || scw -v 2>&1 || echo "installed"
-  register: scaleway_cli_version
+- name: Install scaleway-cli (Linux)
+  shell: curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+  when: os == "linux" and scaleway_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v scw
+      exit_code: 0
+
+- name: Display confirmation
   print: "scaleway-cli installed"

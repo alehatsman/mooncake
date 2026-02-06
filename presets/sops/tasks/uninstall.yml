@@ -1,8 +1,23 @@
-- name: Uninstall sops
+- name: Uninstall sops (macOS)
   package:
     name: sops
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall sops (Linux)
+  package:
+    name: sops
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v sops
+      exit_code: 1
 
 - name: Display confirmation
   print: "sops uninstalled"

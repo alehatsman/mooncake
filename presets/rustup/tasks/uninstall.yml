@@ -1,8 +1,20 @@
-- name: Uninstall rustup
+- name: Uninstall rustup (macOS)
   package:
     name: rustup
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall rustup (Linux)
+  shell: rustup self uninstall -y
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v rustup
+      exit_code: 1
 
 - name: Display confirmation
   print: "rustup uninstalled"

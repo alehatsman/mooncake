@@ -3,15 +3,21 @@
   register: shfmt_check
   failed_when: false
 
-- name: Install shfmt
+- name: Install shfmt (macOS)
   package:
     name: shfmt
     state: present
-  when: shfmt_check.rc != 0
+  when: os == "darwin" and shfmt_check.rc != 0
 
-- name: Verify installation
-  shell: shfmt --version 2>&1 || echo "installed"
-  register: shfmt_version
+- name: Install shfmt (Linux)
+  shell: go install mvdan.cc/sh/v3/cmd/shfmt@latest
+  when: os == "linux" and shfmt_check.rc != 0
 
-- name: Display version
-  print: "shfmt installed: {{ shfmt_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v shfmt
+      exit_code: 0
+
+- name: Display confirmation
+  print: "shfmt installed"

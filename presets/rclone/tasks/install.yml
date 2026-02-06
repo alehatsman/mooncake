@@ -3,15 +3,24 @@
   register: rclone_check
   failed_when: false
 
-- name: Install rclone
+- name: Install rclone (macOS)
   package:
     name: rclone
     state: present
-  when: rclone_check.rc != 0
+  when: os == "darwin" and rclone_check.rc != 0
 
-- name: Verify installation
-  shell: rclone --version 2>&1 || rclone -v 2>&1 || echo "installed"
-  register: rclone_version
+- name: Install rclone (Linux)
+  package:
+    name: rclone
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and rclone_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rclone
+      exit_code: 0
+
+- name: Display confirmation
   print: "rclone installed"

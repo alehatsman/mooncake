@@ -1,8 +1,18 @@
-- name: Uninstall rvm
-  package:
-    name: rvm
-    state: absent
+- name: Uninstall rvm (macOS)
+  shell: rvm implode --force
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall rvm (Linux)
+  shell: rvm implode --force
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v rvm
+      exit_code: 1
 
 - name: Display confirmation
   print: "rvm uninstalled"

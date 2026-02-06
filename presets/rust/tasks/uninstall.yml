@@ -29,6 +29,12 @@
       fi
     done
 
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v rustc
+      exit_code: 1
+
 - name: Print uninstallation complete
   print: |
     Rust and rustup have been uninstalled.

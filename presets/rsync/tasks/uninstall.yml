@@ -1,8 +1,23 @@
-- name: Uninstall rsync
+- name: Uninstall rsync (macOS)
   package:
     name: rsync
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall rsync (Linux)
+  package:
+    name: rsync
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v rsync
+      exit_code: 1
 
 - name: Display confirmation
   print: "rsync uninstalled"

@@ -3,15 +3,19 @@
   register: sdkman_check
   failed_when: false
 
-- name: Install sdkman
-  package:
-    name: sdkman
-    state: present
-  when: sdkman_check.rc != 0
+- name: Install sdkman (macOS)
+  shell: curl -s "https://get.sdkman.io" | bash
+  when: os == "darwin" and sdkman_check.rc != 0
 
-- name: Verify installation
-  shell: sdk --version 2>&1 || sdk -v 2>&1 || echo "installed"
-  register: sdkman_version
+- name: Install sdkman (Linux)
+  shell: curl -s "https://get.sdkman.io" | bash
+  when: os == "linux" and sdkman_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v sdk
+      exit_code: 0
+
+- name: Display confirmation
   print: "sdkman installed"

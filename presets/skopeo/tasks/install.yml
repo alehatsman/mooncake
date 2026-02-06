@@ -3,15 +3,24 @@
   register: skopeo_check
   failed_when: false
 
-- name: Install skopeo
+- name: Install skopeo (macOS)
   package:
     name: skopeo
     state: present
-  when: skopeo_check.rc != 0
+  when: os == "darwin" and skopeo_check.rc != 0
 
-- name: Verify installation
-  shell: skopeo --version 2>&1 || echo "installed"
-  register: skopeo_version
+- name: Install skopeo (Linux)
+  package:
+    name: skopeo
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and skopeo_check.rc != 0
 
-- name: Display version
-  print: "skopeo installed: {{ skopeo_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v skopeo
+      exit_code: 0
+
+- name: Display confirmation
+  print: "skopeo installed"

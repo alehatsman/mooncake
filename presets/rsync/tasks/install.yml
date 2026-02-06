@@ -3,15 +3,24 @@
   register: rsync_check
   failed_when: false
 
-- name: Install rsync
+- name: Install rsync (macOS)
   package:
     name: rsync
     state: present
-  when: rsync_check.rc != 0
+  when: os == "darwin" and rsync_check.rc != 0
 
-- name: Verify installation
-  shell: rsync --version 2>&1 || rsync -v 2>&1 || echo "installed"
-  register: rsync_version
+- name: Install rsync (Linux)
+  package:
+    name: rsync
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and rsync_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v rsync
+      exit_code: 0
+
+- name: Display confirmation
   print: "rsync installed"
