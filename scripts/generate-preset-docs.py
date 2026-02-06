@@ -87,23 +87,10 @@ def generate_preset_docs(output_file="docs/presets/available.md"):
     # Sort by name
     presets.sort(key=lambda p: p['name'])
 
-    # Generate header
+    # Generate header with usage instructions at top
     content = """# Available Presets
 
 Browse our collection of ready-to-use presets for common development tools and infrastructure.
-
-| Preset | Description | Install Command |
-|--------|-------------|-----------------|
-"""
-
-    # Generate table rows
-    for preset in presets:
-        row = generate_preset_row(preset['data'], preset['name'])
-        content += row
-
-    # Add footer
-    content += f"""
----
 
 ## Using Presets
 
@@ -121,6 +108,21 @@ mooncake presets install -K <preset-name>
 
 For more information, see the [Preset Guide](../guide/presets.md).
 
+---
+
+## All Presets
+
+| Preset | Description | Install Command |
+|--------|-------------|-----------------|
+"""
+
+    # Generate table rows
+    for preset in presets:
+        row = generate_preset_row(preset['data'], preset['name'])
+        content += row
+
+    # Add footer
+    content += f"""
 ---
 
 *Found {len(presets)} presets*
