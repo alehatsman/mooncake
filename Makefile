@@ -29,7 +29,7 @@ install: build ## Build and install mooncake to /usr/local/bin
 .PHONY: clean
 clean: ## Remove build artifacts
 	@rm -rf out/
-	@rm -f coverage.out
+	@rm -rf testing-output/
 	@echo "✓ Cleaned"
 
 # ==============================================================================
@@ -49,9 +49,10 @@ test-race: ## Run tests with race detector
 .PHONY: test-cover
 test-cover: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
-	@go test -coverprofile=coverage.out -covermode=atomic ./...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "✓ Coverage report: coverage.html"
+	@mkdir -p testing-output
+	@go test -coverprofile=testing-output/coverage.out -covermode=atomic ./...
+	@go tool cover -html=testing-output/coverage.out -o testing-output/coverage.html
+	@echo "✓ Coverage report: testing-output/coverage.html"
 
 # ==============================================================================
 # Docker Testing (Linux environment)
@@ -116,3 +117,33 @@ ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
 .PHONY: release
 release: ## Create a new release (runs release script)
 	@bash ./scripts/release.sh
+
+# ==============================================================================
+# Preset Testing
+# ==============================================================================
+
+.PHONY: test-presets
+test-presets: ## Test all presets in Docker Ubuntu
+	@echo "Testing all presets in Docker Ubuntu..."
+	@./scripts/test-presets-docker.sh
+
+.PHONY: test-presets-advanced
+test-presets-advanced: ## Test all presets with advanced configuration
+	@echo "Running advanced preset tests..."
+	@./scripts/test-presets-advanced.sh
+
+.PHONY: test-presets-quick
+test-presets-quick: ## Quick preset tests (skip slow presets)
+	@echo "Running quick preset tests..."
+	@./scripts/test-presets-advanced.sh --quick
+
+.PHONY: test-preset
+test-preset: ## Test specific preset locally (usage: make test-preset PRESET=docker)
+	@if [ -z "$(PRESET)" ]; then \
+		echo "Error: PRESET variable is required"; \
+		echo "Usage: make test-preset PRESET=docker"; \
+		echo "       make test-preset PRESET=postgres PARAMS='version=14'"; \
+		exit 1; \
+	fi
+	@echo "Testing preset: $(PRESET)"
+	@./scripts/test-preset-local.sh $(PRESET) $(PARAMS)
