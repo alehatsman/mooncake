@@ -8,7 +8,7 @@ Legend:
 - [T] Tested and works
 - [✓] All verified
 
-## Presets (10/396 complete)
+## Presets (20/396 complete)
 
 - [✓] **1password-cli**
   - [✓] Install (Linux/macOS)
@@ -472,11 +472,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **delta**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **delta**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **deno**
   - [ ] Install (Linux/macOS)
@@ -694,11 +695,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **fzf**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **fzf**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **garnet**
   - [ ] Install (Linux/macOS)
@@ -718,11 +720,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **gh**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **gh**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **gitkube**
   - [ ] Install (Linux/macOS)
@@ -892,11 +895,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **httpie**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **httpie**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **httpstat**
   - [ ] Install (Linux/macOS)
@@ -1006,11 +1010,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **jq**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **jq**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **jupyter**
   - [ ] Install (Linux/macOS)
@@ -1114,11 +1119,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **kubectx**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **kubectx**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **kubeflow**
   - [ ] Install (Linux/macOS)
@@ -1150,17 +1156,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **lazydocker**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **lazydocker**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **lazygit**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **lazygit**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **leiningen**
   - [ ] Install (Linux/macOS)
@@ -1438,11 +1446,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **neovim**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **neovim**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **newrelic-cli**
   - [ ] Install (Linux/macOS)
@@ -2032,11 +2041,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **terraform**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **terraform**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **terragrunt**
   - [ ] Install (Linux/macOS)
