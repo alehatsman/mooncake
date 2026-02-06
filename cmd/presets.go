@@ -23,6 +23,26 @@ func presetsCommand() *cli.Command {
 
 Without arguments, opens an interactive selector (requires fzf).
 Use subcommands for non-interactive operations.`,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "ask-become-pass",
+				Aliases: []string{"K"},
+				Usage:   "Prompt for sudo password interactively (for interactive mode)",
+			},
+			&cli.StringFlag{
+				Name:    "sudo-pass",
+				Aliases: []string{"s"},
+				Usage:   "Sudo password (requires --insecure-sudo-pass)",
+			},
+			&cli.StringFlag{
+				Name:  "sudo-pass-file",
+				Usage: "Read sudo password from file (must have 0600 permissions)",
+			},
+			&cli.BoolFlag{
+				Name:  "insecure-sudo-pass",
+				Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
+			},
+		},
 		Subcommands: []*cli.Command{
 			{
 				Name:   "list",
@@ -47,6 +67,26 @@ Use subcommands for non-interactive operations.`,
 				Usage:     "Install a preset",
 				ArgsUsage: "<preset-name>",
 				Action:    installPresetAction,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "ask-become-pass",
+						Aliases: []string{"K"},
+						Usage:   "Prompt for sudo password interactively (recommended)",
+					},
+					&cli.StringFlag{
+						Name:    "sudo-pass",
+						Aliases: []string{"s"},
+						Usage:   "Sudo password (requires --insecure-sudo-pass)",
+					},
+					&cli.StringFlag{
+						Name:  "sudo-pass-file",
+						Usage: "Read sudo password from file (must have 0600 permissions)",
+					},
+					&cli.BoolFlag{
+						Name:  "insecure-sudo-pass",
+						Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
+					},
+				},
 			},
 			{
 				Name:      "status",
@@ -60,12 +100,35 @@ If no preset name is provided, shows status of all presets.`,
 			{
 				Name:      "uninstall",
 				Usage:     "Execute preset's uninstall logic",
-				ArgsUsage: "<preset-name>",
+				ArgsUsage: "[preset-name]",
 				Action:    uninstallPresetAction,
 				Description: `Uninstalls a preset by executing it with state: absent.
 
+Without arguments, opens an interactive selector (requires fzf).
+With a preset name, uninstalls that specific preset.
+
 This runs the preset's uninstall steps (e.g., stops services, removes packages).
 It does not delete the preset files from disk.`,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "ask-become-pass",
+						Aliases: []string{"K"},
+						Usage:   "Prompt for sudo password interactively (recommended)",
+					},
+					&cli.StringFlag{
+						Name:    "sudo-pass",
+						Aliases: []string{"s"},
+						Usage:   "Sudo password (requires --insecure-sudo-pass)",
+					},
+					&cli.StringFlag{
+						Name:  "sudo-pass-file",
+						Usage: "Read sudo password from file (must have 0600 permissions)",
+					},
+					&cli.BoolFlag{
+						Name:  "insecure-sudo-pass",
+						Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
+					},
+				},
 			},
 		},
 		Action: interactiveSelectorAction,
@@ -73,7 +136,7 @@ It does not delete the preset files from disk.`,
 }
 
 // interactiveSelectorAction runs the interactive preset selector
-func interactiveSelectorAction(_ *cli.Context) error {
+func interactiveSelectorAction(c *cli.Context) error {
 	// Discover all presets
 	allPresets, err := presets.DiscoverAllPresets()
 	if err != nil {
@@ -103,7 +166,7 @@ func interactiveSelectorAction(_ *cli.Context) error {
 			fmt.Println("\nInstalling fzf...")
 			// Check if fzf preset exists
 			if _, loadErr := presets.LoadPreset("fzf"); loadErr == nil {
-				return executePresetInstall("fzf")
+				return executePresetInstall(c, "fzf")
 			}
 			// Fallback to manual instructions
 			fmt.Println("\nfzf preset not found. Install manually:")
@@ -131,7 +194,7 @@ func interactiveSelectorAction(_ *cli.Context) error {
 	}
 
 	// Install the selected preset
-	return executePresetInstall(selectedName)
+	return executePresetInstall(c, selectedName)
 }
 
 // hasFzf checks if fzf is available in PATH
@@ -276,11 +339,31 @@ func installPresetAction(c *cli.Context) error {
 	}
 
 	name := c.Args().First()
-	return executePresetInstall(name)
+	return executePresetInstall(c, name)
 }
 
 // executePresetInstall executes a preset by name
-func executePresetInstall(name string) error {
+func executePresetInstall(c *cli.Context, name string) error {
+	// Validate password input methods (mutual exclusion)
+	passwordMethods := 0
+	if c.String("sudo-pass") != "" {
+		passwordMethods++
+	}
+	if c.Bool("ask-become-pass") {
+		passwordMethods++
+	}
+	if c.String("sudo-pass-file") != "" {
+		passwordMethods++
+	}
+
+	if passwordMethods > 1 {
+		return fmt.Errorf("only one password method can be specified (--sudo-pass, --ask-become-pass, --sudo-pass-file)")
+	}
+
+	// Security warning for --sudo-pass
+	if c.String("sudo-pass") != "" && !c.Bool("insecure-sudo-pass") {
+		return fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
+	}
 	// Load the preset to validate it exists
 	preset, err := presets.LoadPreset(name)
 	if err != nil {
@@ -333,7 +416,11 @@ func executePresetInstall(name string) error {
 
 	// Execute preset
 	if err := executor.Start(executor.StartConfig{
-		ConfigFilePath: tmpFile.Name(),
+		ConfigFilePath:   tmpFile.Name(),
+		SudoPass:         c.String("sudo-pass"),
+		SudoPassFile:     c.String("sudo-pass-file"),
+		AskBecomePass:    c.Bool("ask-become-pass"),
+		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
 	}, internalLog, publisher); err != nil {
 		return fmt.Errorf("preset installation failed: %w", err)
 	}
@@ -414,11 +501,68 @@ func presetStatusAction(c *cli.Context) error {
 
 // uninstallPresetAction executes the preset's uninstall logic
 func uninstallPresetAction(c *cli.Context) error {
+	var name string
+
+	// If no preset name provided, use interactive selector
 	if c.NArg() == 0 {
-		return fmt.Errorf("preset name required\n\nUsage: mooncake presets uninstall <preset-name>")
+		// Discover all presets
+		allPresets, err := presets.DiscoverAllPresets()
+		if err != nil {
+			return fmt.Errorf("failed to discover presets: %w", err)
+		}
+
+		if len(allPresets) == 0 {
+			fmt.Println("No presets found.")
+			return nil
+		}
+
+		// Check for fzf
+		if !hasFzf() {
+			fmt.Println("fzf is not installed or no preset name provided.")
+			fmt.Println("\nAvailable presets:")
+			for _, p := range allPresets {
+				fmt.Printf("  %s - %s\n", p.Name, p.Description)
+			}
+			fmt.Println("\nUsage: mooncake presets uninstall <preset-name>")
+			fmt.Println("Or install fzf for interactive selection.")
+			return nil
+		}
+
+		// Use fzf to select preset
+		selectedName, err := selectWithFzf(allPresets)
+		if err != nil {
+			return err
+		}
+
+		if selectedName == "" {
+			return nil // User cancelled
+		}
+
+		name = selectedName
+	} else {
+		name = c.Args().First()
 	}
 
-	name := c.Args().First()
+	// Validate password input methods (mutual exclusion)
+	passwordMethods := 0
+	if c.String("sudo-pass") != "" {
+		passwordMethods++
+	}
+	if c.Bool("ask-become-pass") {
+		passwordMethods++
+	}
+	if c.String("sudo-pass-file") != "" {
+		passwordMethods++
+	}
+
+	if passwordMethods > 1 {
+		return fmt.Errorf("only one password method can be specified (--sudo-pass, --ask-become-pass, --sudo-pass-file)")
+	}
+
+	// Security warning for --sudo-pass
+	if c.String("sudo-pass") != "" && !c.Bool("insecure-sudo-pass") {
+		return fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
+	}
 
 	// Load the preset to validate it exists
 	preset, err := presets.LoadPreset(name)
@@ -474,7 +618,11 @@ func uninstallPresetAction(c *cli.Context) error {
 
 	// Execute preset with state: absent
 	if err := executor.Start(executor.StartConfig{
-		ConfigFilePath: tmpFile.Name(),
+		ConfigFilePath:   tmpFile.Name(),
+		SudoPass:         c.String("sudo-pass"),
+		SudoPassFile:     c.String("sudo-pass-file"),
+		AskBecomePass:    c.Bool("ask-become-pass"),
+		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
 	}, internalLog, publisher); err != nil {
 		return fmt.Errorf("preset uninstall failed: %w", err)
 	}

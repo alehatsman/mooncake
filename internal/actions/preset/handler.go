@@ -70,7 +70,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // displayPresetHelp reads and displays the preset's README file if it exists.
 // This provides compact, actionable help after successful installation.
-func displayPresetHelp(ec *executor.ExecutionContext, presetName, baseDir string) {
+func displayPresetHelp(ec *executor.ExecutionContext, _, baseDir string) {
 	if baseDir == "" {
 		return
 	}
