@@ -8,7 +8,7 @@ Legend:
 - [T] Tested and works
 - [✓] All verified
 
-## Presets (40/396 complete)
+## Presets (50/396 complete)
 
 - [✓] **1password-cli**
   - [✓] Install (Linux/macOS)
@@ -1316,11 +1316,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **miller**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **miller**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **milvus**
   - [ ] Install (Linux/macOS)
@@ -1370,11 +1371,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **mkdocs**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **mkdocs**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **mlflow**
   - [ ] Install (Linux/macOS)
@@ -1521,11 +1523,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **nodejs**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **nodejs**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **nsc**
   - [ ] Install (Linux/macOS)
@@ -1539,11 +1542,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **nvm**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **nvm**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **oci-cli**
   - [ ] Install (Linux/macOS)
@@ -1773,11 +1777,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **rbenv**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **rbenv**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **rclone**
   - [ ] Install (Linux/macOS)
@@ -1881,11 +1886,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **screen**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **screen**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **scylladb**
   - [ ] Install (Linux/macOS)
@@ -1911,17 +1917,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **shellcheck**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **shellcheck**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **shfmt**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **shfmt**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **signoz**
   - [ ] Install (Linux/macOS)
@@ -1935,11 +1943,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **skopeo**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **skopeo**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **snyk**
   - [ ] Install (Linux/macOS)
@@ -2019,11 +2028,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **syft**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **syft**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **systat**
   - [ ] Install (Linux/macOS)
