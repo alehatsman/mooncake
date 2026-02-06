@@ -1,26 +1,7 @@
-- name: Uninstall age (macOS)
-  shell: brew uninstall age
-  when: os == "darwin"
-  failed_when: false
-
-- name: Uninstall age with Homebrew (Linux)
-  shell: brew uninstall age
-  when: os == "linux" and brew_available
-  failed_when: false
-
-- name: Uninstall age (Debian/Ubuntu)
-  shell: sudo apt-get remove -y age
-  when: os == "linux" and apt_available
-  failed_when: false
-
-- name: Uninstall age (Fedora)
-  shell: sudo dnf remove -y age
-  when: os == "linux" and dnf_available
-  failed_when: false
-
-- name: Remove age binaries (Linux)
-  shell: sudo rm -f /usr/local/bin/age /usr/local/bin/age-keygen
-  when: os == "linux" and not brew_available
+- name: Uninstall age
+  package:
+    name: age
+    state: absent
   failed_when: false
 
 - name: Display confirmation

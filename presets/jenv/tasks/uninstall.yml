@@ -1,6 +1,7 @@
-- name: Uninstall jenv (macOS)
-  shell: brew uninstall jenv
-  when: os == "darwin"
+- name: Uninstall jenv
+  package:
+    name: jenv
+    state: absent
   failed_when: false
 
 - name: Display confirmation

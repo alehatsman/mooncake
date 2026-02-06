@@ -1,16 +1,7 @@
-- name: Uninstall air (macOS)
-  shell: brew uninstall air
-  when: os == "darwin"
-  failed_when: false
-
-- name: Uninstall air with Homebrew (Linux)
-  shell: brew uninstall air
-  when: os == "linux" and brew_available
-  failed_when: false
-
-- name: Remove air binary (Linux)
-  shell: rm -f ~/go/bin/air
-  when: os == "linux" and not brew_available
+- name: Uninstall air
+  package:
+    name: air
+    state: absent
   failed_when: false
 
 - name: Display confirmation

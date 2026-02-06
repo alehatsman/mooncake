@@ -1,6 +1,7 @@
-- name: Uninstall argocd (macOS)
-  shell: brew uninstall argocd
-  when: os == "darwin"
+- name: Uninstall argocd
+  package:
+    name: argocd
+    state: absent
   failed_when: false
 
 - name: Display confirmation

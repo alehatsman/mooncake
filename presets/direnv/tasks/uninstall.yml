@@ -1,6 +1,7 @@
-- name: Uninstall direnv (macOS)
-  shell: brew uninstall direnv
-  when: os == "darwin"
+- name: Uninstall direnv
+  package:
+    name: direnv
+    state: absent
   failed_when: false
 
 - name: Display confirmation

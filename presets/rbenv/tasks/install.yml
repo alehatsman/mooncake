@@ -3,9 +3,11 @@
   register: rbenv_check
   failed_when: false
 
-- name: Install rbenv (macOS)
-  shell: brew install rbenv
-  when: os == "darwin" and rbenv_check.rc != 0
+- name: Install rbenv
+  package:
+    name: rbenv
+    state: present
+  when: rbenv_check.rc != 0
 
 - name: Verify installation
   shell: rbenv --version 2>&1 || rbenv -v 2>&1 || echo "installed"

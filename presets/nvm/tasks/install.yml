@@ -3,9 +3,11 @@
   register: nvm_check
   failed_when: false
 
-- name: Install nvm (macOS)
-  shell: brew install nvm
-  when: os == "darwin" and nvm_check.rc != 0
+- name: Install nvm
+  package:
+    name: nvm
+    state: present
+  when: nvm_check.rc != 0
 
 - name: Verify installation
   shell: nvm --version 2>&1 || nvm -v 2>&1 || echo "installed"

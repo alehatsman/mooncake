@@ -1,6 +1,7 @@
-- name: Uninstall asdf (macOS)
-  shell: brew uninstall asdf
-  when: os == "darwin"
+- name: Uninstall asdf
+  package:
+    name: asdf
+    state: absent
   failed_when: false
 
 - name: Display confirmation

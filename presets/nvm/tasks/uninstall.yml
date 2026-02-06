@@ -1,6 +1,7 @@
-- name: Uninstall nvm (macOS)
-  shell: brew uninstall nvm
-  when: os == "darwin"
+- name: Uninstall nvm
+  package:
+    name: nvm
+    state: absent
   failed_when: false
 
 - name: Display confirmation

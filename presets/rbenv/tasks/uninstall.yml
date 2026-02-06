@@ -1,6 +1,7 @@
-- name: Uninstall rbenv (macOS)
-  shell: brew uninstall rbenv
-  when: os == "darwin"
+- name: Uninstall rbenv
+  package:
+    name: rbenv
+    state: absent
   failed_when: false
 
 - name: Display confirmation

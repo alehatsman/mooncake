@@ -3,9 +3,11 @@
   register: autojump_check
   failed_when: false
 
-- name: Install autojump (macOS)
-  shell: brew install autojump
-  when: os == "darwin" and autojump_check.rc != 0
+- name: Install autojump
+  package:
+    name: autojump
+    state: present
+  when: autojump_check.rc != 0
 
 - name: Verify installation
   shell: autojump --version 2>&1 || autojump -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall asciinema (macOS)
-  shell: brew uninstall asciinema
-  when: os == "darwin"
+- name: Uninstall asciinema
+  package:
+    name: asciinema
+    state: absent
   failed_when: false
 
 - name: Display confirmation

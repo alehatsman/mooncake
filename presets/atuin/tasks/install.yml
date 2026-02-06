@@ -3,9 +3,11 @@
   register: atuin_check
   failed_when: false
 
-- name: Install atuin (macOS)
-  shell: brew install atuin
-  when: os == "darwin" and atuin_check.rc != 0
+- name: Install atuin
+  package:
+    name: atuin
+    state: present
+  when: atuin_check.rc != 0
 
 - name: Verify installation
   shell: atuin --version 2>&1 || atuin -v 2>&1 || echo "installed"
