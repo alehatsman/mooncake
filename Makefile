@@ -111,6 +111,26 @@ ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
 	@echo "✓ All CI checks passed!"
 
 # ==============================================================================
+# Documentation
+# ==============================================================================
+
+.PHONY: docs-gen
+docs-gen: ## Generate preset documentation
+	@echo "Generating preset documentation..."
+	@python3 scripts/generate-preset-docs.py
+	@echo "✓ Preset docs generated"
+
+.PHONY: docs-serve
+docs-serve: docs-gen ## Build and serve documentation locally
+	@echo "Serving documentation at http://127.0.0.1:8000"
+	@mkdocs serve
+
+.PHONY: docs-build
+docs-build: docs-gen ## Build documentation for deployment
+	@echo "Building documentation..."
+	@mkdocs build
+
+# ==============================================================================
 # Release
 # ==============================================================================
 

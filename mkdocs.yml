@@ -83,6 +83,7 @@ nav:
   - Presets:
     - Using Presets: guide/presets.md
     - Authoring Presets: guide/preset-authoring.md
+    - Available Presets: presets/available.md
   - Complete Reference: guide/config/reference.md
   - API Reference:
     - Overview: api/index.md
@@ -102,6 +103,7 @@ nav:
 # Extra CSS/JS
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/presets.css
 
 # Footer
 extra:
