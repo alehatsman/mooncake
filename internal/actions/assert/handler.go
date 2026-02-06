@@ -33,10 +33,13 @@ func init() {
 // Metadata returns the action metadata.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "assert",
-		Description:    "Verify conditions without changing system state",
-		Category:       actions.CategorySystem,
-		SupportsDryRun: true,
+		Name:               "assert",
+		Description:        "Verify conditions without changing system state",
+		Category:           actions.CategorySystem,
+		SupportsDryRun:     true,
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Verification only
+		ImplementsCheck:    false,      // N/A - verification action
 	}
 }
 

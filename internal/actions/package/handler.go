@@ -53,13 +53,16 @@ func init() {
 // Metadata returns metadata about the package action.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "package",
-		Description:    "Manage system packages (install/remove/update)",
-		Category:       actions.CategorySystem,
-		SupportsDryRun: true,
-		SupportsBecome: true,
-		EmitsEvents:    []string{string(events.EventPackageManaged)},
-		Version:        "1.0.0",
+		Name:               "package",
+		Description:        "Manage system packages (install/remove/update)",
+		Category:           actions.CategorySystem,
+		SupportsDryRun:     true,
+		SupportsBecome:     true,
+		EmitsEvents:        []string{string(events.EventPackageManaged)},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{"linux", "darwin", "windows", "freebsd"}, // Multiple package managers supported
+		RequiresSudo:       true,                                               // Typically requires elevated privileges
+		ImplementsCheck:    true,                                               // Checks if package is installed before installing
 	}
 }
 

@@ -37,13 +37,16 @@ func init() {
 // Metadata returns metadata about the copy action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "copy",
-		Description:    "Copy files with checksum verification and atomic writes",
-		Category:       actions.CategoryFile,
-		SupportsDryRun: true,
-		SupportsBecome: true,
-		EmitsEvents:    []string{string(events.EventFileCopied)},
-		Version:        "1.0.0",
+		Name:               "copy",
+		Description:        "Copy files with checksum verification and atomic writes",
+		Category:           actions.CategoryFile,
+		SupportsDryRun:     true,
+		SupportsBecome:     true,
+		EmitsEvents:        []string{string(events.EventFileCopied)},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on dest path/ownership
+		ImplementsCheck:    true,       // Uses checksums for idempotency
 	}
 }
 

@@ -42,13 +42,16 @@ func init() {
 // Metadata returns metadata about the download action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "download",
-		Description:    "Download files from URLs with checksum verification",
-		Category:       actions.CategoryNetwork,
-		SupportsDryRun: true,
-		SupportsBecome: true,
-		EmitsEvents:    []string{string(events.EventFileDownloaded)},
-		Version:        "1.0.0",
+		Name:               "download",
+		Description:        "Download files from URLs with checksum verification",
+		Category:           actions.CategoryNetwork,
+		SupportsDryRun:     true,
+		SupportsBecome:     true,
+		EmitsEvents:        []string{string(events.EventFileDownloaded)},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on dest path
+		ImplementsCheck:    true,       // Checks if file exists and validates checksum
 	}
 }
 

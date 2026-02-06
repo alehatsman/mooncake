@@ -59,7 +59,10 @@ func (Handler) Metadata() actions.ActionMetadata {
 			string(events.EventLinkCreated),
 			string(events.EventPermissionsChanged),
 		},
-		Version: "1.0.0",
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on path/ownership operation
+		ImplementsCheck:    true,       // Checks existence, permissions, ownership before changes
 	}
 }
 

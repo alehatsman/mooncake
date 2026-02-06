@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -227,6 +229,76 @@ func factsCommand(c *cli.Context) error {
 		return nil
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// actionsListCommand lists all registered actions with their platform support.
+func actionsListCommand(c *cli.Context) error {
+	format := c.String("format")
+
+	// Validate format
+	if format != outputFormatText && format != outputFormatJSON {
+		return fmt.Errorf("invalid format: %s (use 'text' or 'json')", format)
+	}
+
+	// Get all registered actions
+	actionsList := actions.List()
+
+	// Sort by name for consistent output
+	sort.Slice(actionsList, func(i, j int) bool {
+		return actionsList[i].Name < actionsList[j].Name
+	})
+
+	// Output based on format
+	switch format {
+	case outputFormatJSON:
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(actionsList)
+	case outputFormatText:
+		displayActionsTable(actionsList)
+		return nil
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// displayActionsTable displays actions in a formatted table.
+func displayActionsTable(actionsList []actions.ActionMetadata) {
+	// Print header
+	fmt.Printf("%-15s %-10s %-25s %-8s %-8s\n",
+		"ACTION", "CATEGORY", "PLATFORMS", "SUDO", "CHECK")
+	fmt.Println(strings.Repeat("-", 80))
+
+	// Print each action
+	for _, meta := range actionsList {
+		// Format platforms
+		platforms := "all"
+		if len(meta.SupportedPlatforms) > 0 {
+			platforms = strings.Join(meta.SupportedPlatforms, ",")
+			if len(platforms) > 23 {
+				platforms = platforms[:20] + "..."
+			}
+		}
+
+		// Format sudo requirement
+		sudo := "no"
+		if meta.RequiresSudo {
+			sudo = "yes"
+		}
+
+		// Format check implementation
+		check := "no"
+		if meta.ImplementsCheck {
+			check = "yes"
+		}
+
+		fmt.Printf("%-15s %-10s %-25s %-8s %-8s\n",
+			meta.Name,
+			meta.Category,
+			platforms,
+			sudo,
+			check)
 	}
 }
 
@@ -568,6 +640,25 @@ func createApp() *cli.App {
 					},
 				},
 				Action: factsCommand,
+			},
+			{
+				Name:  "actions",
+				Usage: "Manage and inspect actions",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "list",
+						Usage: "List all available actions with platform support",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "format",
+								Aliases: []string{"f"},
+								Value:   "text",
+								Usage:   "Output format: text or json",
+							},
+						},
+						Action: actionsListCommand,
+					},
+				},
 			},
 			{
 				Name:  "validate",

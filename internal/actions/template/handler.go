@@ -35,13 +35,16 @@ func init() {
 // Metadata returns metadata about the template action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "template",
-		Description:    "Render template files and write to destination",
-		Category:       actions.CategoryFile,
-		SupportsDryRun: true,
-		SupportsBecome: true,
-		EmitsEvents:    []string{string(events.EventTemplateRender)},
-		Version:        "1.0.0",
+		Name:               "template",
+		Description:        "Render template files and write to destination",
+		Category:           actions.CategoryFile,
+		SupportsDryRun:     true,
+		SupportsBecome:     true,
+		EmitsEvents:        []string{string(events.EventTemplateRender)},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on dest path
+		ImplementsCheck:    true,       // Checks if content differs before writing
 	}
 }
 

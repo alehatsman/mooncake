@@ -74,13 +74,16 @@ func init() {
 // Metadata returns metadata about the unarchive action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "unarchive",
-		Description:    "Extract archive files (tar, tar.gz, zip) with path traversal protection",
-		Category:       actions.CategoryFile,
-		SupportsDryRun: true,
-		SupportsBecome: false,
-		EmitsEvents:    []string{string(events.EventArchiveExtracted)},
-		Version:        "1.0.0",
+		Name:               "unarchive",
+		Description:        "Extract archive files (tar, tar.gz, zip) with path traversal protection",
+		Category:           actions.CategoryFile,
+		SupportsDryRun:     true,
+		SupportsBecome:     false,
+		EmitsEvents:        []string{string(events.EventArchiveExtracted)},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on dest path
+		ImplementsCheck:    true,       // Checks creates marker for idempotency
 	}
 }
 

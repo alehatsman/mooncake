@@ -81,6 +81,19 @@ type ActionMetadata struct {
 
 	// Version is the action implementation version (semantic versioning)
 	Version string
+
+	// SupportedPlatforms lists the operating systems this action supports.
+	// Valid values: "linux", "darwin", "windows", "freebsd", "openbsd", "netbsd", "dragonfly", "solaris", "aix"
+	// Empty list means all platforms are supported
+	SupportedPlatforms []string
+
+	// RequiresSudo indicates whether this action typically requires elevated privileges.
+	// This is informational - actual privilege requirements may vary based on the operation.
+	RequiresSudo bool
+
+	// ImplementsCheck indicates whether this action implements idempotency checks.
+	// Actions with idempotency checks verify current state before making changes.
+	ImplementsCheck bool
 }
 
 // Handler defines the interface that all action handlers must implement.

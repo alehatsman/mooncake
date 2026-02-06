@@ -25,13 +25,16 @@ func init() {
 // Metadata returns metadata about the vars action.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "vars",
-		Description:    "Set variables for use in subsequent steps",
-		Category:       actions.CategoryData,
-		SupportsDryRun: true,
-		SupportsBecome: false,
-		EmitsEvents:    []string{string(events.EventVarsSet)},
-		Version:        "1.0.0",
+		Name:               "vars",
+		Description:        "Set variables for use in subsequent steps",
+		Category:           actions.CategoryData,
+		SupportsDryRun:     true,
+		SupportsBecome:     false,
+		EmitsEvents:        []string{string(events.EventVarsSet)},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,
+		ImplementsCheck:    false,
 	}
 }
 

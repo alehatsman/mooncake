@@ -31,13 +31,16 @@ func init() {
 // Metadata returns metadata about the command action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "command",
-		Description:    "Execute commands directly without shell interpolation",
-		Category:       actions.CategoryCommand,
-		SupportsDryRun: true,
-		SupportsBecome: true,
-		EmitsEvents:    []string{},
-		Version:        "1.0.0",
+		Name:               "command",
+		Description:        "Execute commands directly without shell interpolation",
+		Category:           actions.CategoryCommand,
+		SupportsDryRun:     true,
+		SupportsBecome:     true,
+		EmitsEvents:        []string{},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on command
+		ImplementsCheck:    false,
 	}
 }
 

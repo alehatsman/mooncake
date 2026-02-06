@@ -38,10 +38,13 @@ func init() {
 // Metadata returns the action metadata.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "service",
-		Description:    "Manage services across platforms (systemd, launchd, Windows)",
-		Category:       actions.CategorySystem,
-		SupportsDryRun: true,
+		Name:               "service",
+		Description:        "Manage services across platforms (systemd, launchd, Windows)",
+		Category:           actions.CategorySystem,
+		SupportsDryRun:     true,
+		SupportedPlatforms: []string{"linux", "darwin", "windows"}, // Platform-specific implementations
+		RequiresSudo:       true,                                    // Typically requires elevated privileges
+		ImplementsCheck:    true,                                    // Checks service state before changes
 	}
 }
 

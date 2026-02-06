@@ -49,7 +49,10 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 			string(events.EventStepStdout),
 			string(events.EventStepStderr),
 		},
-		Version: "1.0.0",
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on command
+		ImplementsCheck:    false,
 	}
 }
 

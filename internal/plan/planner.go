@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -26,6 +28,40 @@ func resolvePath(path, baseDir string) (string, error) {
 		absPath = filepath.Join(baseDir, path)
 	}
 	return filepath.Abs(absPath)
+}
+
+// validatePlatformSupport checks if the action is supported on the current platform.
+// Returns an error if the action is not supported.
+func validatePlatformSupport(actionType string) error {
+	// Get handler from registry
+	handler, ok := actions.Get(actionType)
+	if !ok {
+		// Action not in registry - might be legacy action, skip validation
+		return nil
+	}
+
+	metadata := handler.Metadata()
+
+	// Empty SupportedPlatforms means all platforms are supported
+	if len(metadata.SupportedPlatforms) == 0 {
+		return nil
+	}
+
+	// Check if current platform is in the supported list
+	currentOS := runtime.GOOS
+	for _, supportedOS := range metadata.SupportedPlatforms {
+		if supportedOS == currentOS {
+			return nil
+		}
+	}
+
+	// Platform not supported
+	return fmt.Errorf(
+		"action '%s' is not supported on platform '%s' (supported platforms: %v)",
+		actionType,
+		currentOS,
+		metadata.SupportedPlatforms,
+	)
 }
 
 // Planner builds deterministic execution plans from config files
@@ -580,6 +616,11 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 	step.Origin = &origin
 	step.Skipped = skipped
 	step.LoopContext = loopCtx
+
+	// Validate platform support
+	if err := validatePlatformSupport(step.ActionType); err != nil {
+		return config.Step{}, fmt.Errorf("platform validation failed for step %q: %w", step.Name, err)
+	}
 
 	return step, nil
 }

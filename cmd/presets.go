@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/presets"
+	"github.com/alehatsman/mooncake/internal/registry"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -44,6 +47,30 @@ Use subcommands for non-interactive operations.`,
 			},
 		},
 		Subcommands: []*cli.Command{
+			{
+				Name:      "add",
+				Usage:     "Add a preset from URL, git repository, or local path",
+				ArgsUsage: "<source>",
+				Action:    addPresetAction,
+				Description: `Add a preset from an external source to the local registry.
+
+Sources can be:
+  - URL:  https://example.com/presets/foo.yml
+  - Git:  https://github.com/user/repo.git (coming in v2)
+  - Path: /path/to/preset.yml or /path/to/preset/
+
+The preset is cached in ~/.mooncake/cache/presets/ and installed to ~/.mooncake/presets/.
+
+Examples:
+  mooncake presets add https://raw.githubusercontent.com/user/repo/main/presets/foo.yml
+  mooncake presets add ./local-presets/custom.yml`,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "name",
+						Usage: "Override preset name (extracted from file by default)",
+					},
+				},
+			},
 			{
 				Name:   "list",
 				Usage:  "List all available presets",
@@ -628,6 +655,139 @@ func uninstallPresetAction(c *cli.Context) error {
 	}
 
 	fmt.Printf("\n%s uninstalled\n", preset.Name)
+
+	return nil
+}
+
+// addPresetAction adds a preset from an external source to the registry
+func addPresetAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return fmt.Errorf("source required\n\nUsage: mooncake presets add <source>")
+	}
+
+	source := c.Args().First()
+	overrideName := c.String("name")
+
+	// Get cache directory
+	cacheDir, err := registry.DefaultCacheDir()
+	if err != nil {
+		return fmt.Errorf("failed to get cache directory: %w", err)
+	}
+
+	// Get user presets directory
+	userDir, err := registry.UserPresetsDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user presets directory: %w", err)
+	}
+
+	// Load manifest
+	manifest, err := registry.LoadManifest(cacheDir)
+	if err != nil {
+		return fmt.Errorf("failed to load manifest: %w", err)
+	}
+
+	// Detect source type
+	sourceType := registry.DetectSourceType(source)
+	fmt.Printf("Detected source type: %s\n", sourceType)
+
+	if sourceType == registry.SourceTypeGit {
+		return fmt.Errorf("git sources not yet supported (coming in registry v2)")
+	}
+
+	// Generate temporary hash for fetching (will be replaced with actual hash)
+	tmpHash := fmt.Sprintf("tmp-%d", os.Getpid())
+
+	// Fetch source
+	fmt.Printf("Fetching preset from %s...\n", source)
+	cachedDir, err := registry.FetchSource(source, sourceType, cacheDir, tmpHash)
+	if err != nil {
+		return fmt.Errorf("failed to fetch source: %w", err)
+	}
+
+	// Find the preset file to determine name and calculate hash
+	var presetFile string
+	var presetName string
+
+	// Check for flat format: *.yml
+	entries, err := os.ReadDir(cachedDir)
+	if err != nil {
+		return fmt.Errorf("failed to read cached directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && (strings.HasSuffix(entry.Name(), ".yml") || strings.HasSuffix(entry.Name(), ".yaml")) {
+			presetFile = filepath.Join(cachedDir, entry.Name())
+			presetName = strings.TrimSuffix(strings.TrimSuffix(entry.Name(), ".yml"), ".yaml")
+			break
+		}
+	}
+
+	// If not found, check for directory format: */preset.yml
+	if presetFile == "" {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				candidatePath := filepath.Join(cachedDir, entry.Name(), "preset.yml")
+				if _, statErr := os.Stat(candidatePath); statErr == nil {
+					presetFile = candidatePath
+					presetName = entry.Name()
+					break
+				}
+			}
+		}
+	}
+
+	if presetFile == "" {
+		_ = os.RemoveAll(cachedDir) // Clean up
+		return fmt.Errorf("no preset file found in source (expected *.yml or */preset.yml)")
+	}
+
+	// Override name if provided
+	if overrideName != "" {
+		presetName = overrideName
+	}
+
+	fmt.Printf("Found preset: %s\n", presetName)
+
+	// Calculate SHA256 of preset file
+	sha256hash, err := registry.CalculateSHA256(presetFile)
+	if err != nil {
+		_ = os.RemoveAll(cachedDir) // Clean up
+		return fmt.Errorf("failed to calculate SHA256: %w", err)
+	}
+
+	// Rename cache directory to use actual hash
+	finalCacheDir := filepath.Join(cacheDir, sha256hash)
+	if err := os.Rename(cachedDir, finalCacheDir); err != nil {
+		_ = os.RemoveAll(cachedDir) // Clean up
+		return fmt.Errorf("failed to move to final cache location: %w", err)
+	}
+
+	// Add to manifest
+	entry := registry.ManifestEntry{
+		Name:        presetName,
+		Source:      source,
+		Type:        string(sourceType),
+		SHA256:      sha256hash,
+		InstalledAt: time.Now(),
+	}
+	manifest.Add(entry)
+
+	if err := manifest.Save(); err != nil {
+		return fmt.Errorf("failed to save manifest: %w", err)
+	}
+
+	// Install to user directory
+	fmt.Printf("Installing to %s...\n", userDir)
+	if err := registry.InstallToUserDir(presetName, cacheDir, userDir); err != nil {
+		return fmt.Errorf("failed to install preset: %w", err)
+	}
+
+	fmt.Printf("\n✓ Preset '%s' added successfully\n", presetName)
+	fmt.Printf("  Source:  %s\n", source)
+	fmt.Printf("  SHA256:  %s\n", sha256hash[:16]+"...")
+	fmt.Printf("  Cached:  %s\n", finalCacheDir)
+	fmt.Printf("\nUse in your mooncake.yml:\n")
+	fmt.Printf("  - preset: %s\n", presetName)
 
 	return nil
 }
