@@ -3,13 +3,15 @@
   register: helmfile_check
   failed_when: false
 
-- name: Install helmfile (macOS)
-  shell: brew install helmfile
-  when: os == "darwin" and helmfile_check.rc != 0
+- name: Install helmfile
+  package:
+    name: helmfile
+    state: present
+  when: helmfile_check.rc != 0
 
 - name: Verify installation
-  shell: helmfile --version 2>&1 || helmfile -v 2>&1 || echo "installed"
+  shell: helmfile --version 2>&1 || echo "installed"
   register: helmfile_version
 
 - name: Display version
-  print: "helmfile installed"
+  print: "helmfile installed: {{ helmfile_version.stdout }}"

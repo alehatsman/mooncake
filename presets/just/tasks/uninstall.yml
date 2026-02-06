@@ -1,6 +1,7 @@
-- name: Uninstall just (macOS)
-  shell: brew uninstall just
-  when: os == "darwin"
+- name: Uninstall just
+  package:
+    name: just
+    state: absent
   failed_when: false
 
 - name: Display confirmation

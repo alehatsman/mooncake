@@ -3,13 +3,15 @@
   register: shfmt_check
   failed_when: false
 
-- name: Install shfmt (macOS)
-  shell: brew install shfmt
-  when: os == "darwin" and shfmt_check.rc != 0
+- name: Install shfmt
+  package:
+    name: shfmt
+    state: present
+  when: shfmt_check.rc != 0
 
 - name: Verify installation
-  shell: shfmt --version 2>&1 || shfmt -v 2>&1 || echo "installed"
+  shell: shfmt --version 2>&1 || echo "installed"
   register: shfmt_version
 
 - name: Display version
-  print: "shfmt installed"
+  print: "shfmt installed: {{ shfmt_version.stdout }}"

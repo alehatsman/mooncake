@@ -1,42 +1,8 @@
-# Neovim Uninstallation Tasks
-
-- name: Uninstall Neovim (macOS)
+- name: Uninstall neovim
   package:
     name: neovim
     state: absent
-  when: os == "darwin"
   failed_when: false
 
-- name: Uninstall Neovim (Debian/Ubuntu)
-  package:
-    name: neovim
-    state: absent
-  become: true
-  when: os == "linux" and package_manager == "apt"
-  failed_when: false
-
-- name: Uninstall Neovim (RHEL/Fedora)
-  package:
-    name: neovim
-    state: absent
-  become: true
-  when: os == "linux" and package_manager == "dnf"
-  failed_when: false
-
-- name: Remove Neovim configuration
-  file:
-    path: ~/.config/nvim
-    state: absent
-  failed_when: false
-
-- name: Remove Neovim data directory
-  file:
-    path: ~/.local/share/nvim
-    state: absent
-  failed_when: false
-
-- name: Remove Neovim state directory
-  file:
-    path: ~/.local/state/nvim
-    state: absent
-  failed_when: false
+- name: Display confirmation
+  print: "neovim uninstalled"

@@ -1,16 +1,7 @@
-- name: Uninstall act (macOS)
-  shell: brew uninstall act
-  when: os == "darwin"
-  failed_when: false
-
-- name: Uninstall act with Homebrew (Linux)
-  shell: brew uninstall act
-  when: os == "linux" and brew_available
-  failed_when: false
-
-- name: Remove act binary (Linux)
-  shell: sudo rm -f /usr/local/bin/act
-  when: os == "linux" and not brew_available
+- name: Uninstall act
+  package:
+    name: act
+    state: absent
   failed_when: false
 
 - name: Display confirmation

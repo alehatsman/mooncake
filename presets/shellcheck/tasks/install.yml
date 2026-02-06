@@ -3,13 +3,15 @@
   register: shellcheck_check
   failed_when: false
 
-- name: Install shellcheck (macOS)
-  shell: brew install shellcheck
-  when: os == "darwin" and shellcheck_check.rc != 0
+- name: Install shellcheck
+  package:
+    name: shellcheck
+    state: present
+  when: shellcheck_check.rc != 0
 
 - name: Verify installation
-  shell: shellcheck --version 2>&1 || shellcheck -v 2>&1 || echo "installed"
+  shell: shellcheck --version 2>&1 || echo "installed"
   register: shellcheck_version
 
 - name: Display version
-  print: "shellcheck installed"
+  print: "shellcheck installed: {{ shellcheck_version.stdout }}"

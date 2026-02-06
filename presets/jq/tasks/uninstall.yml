@@ -1,21 +1,8 @@
-# jq Uninstallation Tasks
-
-- name: Uninstall jq (macOS)
-  shell: brew uninstall jq
-  when: os == "darwin"
+- name: Uninstall jq
+  package:
+    name: jq
+    state: absent
   failed_when: false
 
-- name: Uninstall jq (Linux)
-  shell: |
-    if command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get remove -y jq
-    elif command -v dnf >/dev/null 2>&1; then
-      sudo dnf remove -y jq
-    elif command -v pacman >/dev/null 2>&1; then
-      sudo pacman -R --noconfirm jq
-    fi
-  when: os == "linux"
-  failed_when: false
-
-- name: Display uninstall confirmation
-  print: "jq uninstalled."
+- name: Display confirmation
+  print: "jq uninstalled"

@@ -1,6 +1,7 @@
-- name: Uninstall shellcheck (macOS)
-  shell: brew uninstall shellcheck
-  when: os == "darwin"
+- name: Uninstall shellcheck
+  package:
+    name: shellcheck
+    state: absent
   failed_when: false
 
 - name: Display confirmation

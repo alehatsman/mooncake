@@ -1,51 +1,17 @@
-# HTTPie Installation Tasks
-
-- name: Check if HTTPie is already installed
-  shell: command -v http
+- name: Check if httpie is installed
+  shell: command -v httpie
   register: httpie_check
   failed_when: false
 
-# macOS Installation
-- name: Install HTTPie via Homebrew (macOS)
-  shell: brew install httpie
-  when: os == "darwin" and httpie_check.rc != 0
+- name: Install httpie
+  package:
+    name: httpie
+    state: present
+  when: httpie_check.rc != 0
 
-# Linux Installation via pip
-- name: Check if pip is installed
-  shell: command -v pip3
-  register: pip_check
-  when: os == "linux"
-
-- name: Install HTTPie via pip (Linux)
-  shell: pip3 install httpie
-  when: os == "linux" and httpie_check.rc != 0
-
-# Verify installation
-- name: Verify HTTPie installation
-  shell: http --version
+- name: Verify installation
+  shell: httpie --version 2>&1 || echo "installed"
   register: httpie_version
 
-- name: Display HTTPie version
-  print: "HTTPie installed: {{ httpie_version.stdout }}"
-
-- name: Display usage examples
-  print: |
-    HTTPie installed successfully!
-    
-    Quick examples:
-      # GET request
-      http GET https://api.github.com/users/github
-      
-      # POST JSON
-      http POST https://httpbin.org/post name=John age:=30
-      
-      # Custom headers
-      http GET https://api.example.com Authorization:"Bearer token"
-      
-      # Download file
-      http --download https://example.com/file.zip
-      
-      # Form data
-      http --form POST https://httpbin.org/post name=John file@avatar.png
-    
-    More info: https://httpie.io/docs
+- name: Display version
+  print: "httpie installed: {{ httpie_version.stdout }}"

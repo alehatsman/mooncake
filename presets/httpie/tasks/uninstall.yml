@@ -1,13 +1,8 @@
-# HTTPie Uninstallation Tasks
-
-- name: Uninstall HTTPie (macOS)
-  shell: brew uninstall httpie
-  when: os == "darwin"
-
-- name: Uninstall HTTPie (Linux)
-  shell: pip3 uninstall -y httpie
-  when: os == "linux"
+- name: Uninstall httpie
+  package:
+    name: httpie
+    state: absent
   failed_when: false
 
-- name: Display uninstall confirmation
-  print: "HTTPie uninstalled."
+- name: Display confirmation
+  print: "httpie uninstalled"

@@ -3,19 +3,11 @@
   register: actionlint_check
   failed_when: false
 
-- name: Install actionlint (macOS)
-  shell: brew install actionlint
-  when: os == "darwin" and actionlint_check.rc != 0
-
-- name: Install actionlint with Homebrew (Linux)
-  shell: brew install actionlint
-  when: os == "linux" and brew_available and actionlint_check.rc != 0
-
-- name: Download and install actionlint binary (Linux)
-  shell: |
-    bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-    sudo mv ./actionlint /usr/local/bin/
-  when: os == "linux" and not brew_available and actionlint_check.rc != 0
+- name: Install actionlint
+  package:
+    name: actionlint
+    state: present
+  when: actionlint_check.rc != 0
 
 - name: Verify installation
   shell: actionlint --version 2>&1 || echo "installed"

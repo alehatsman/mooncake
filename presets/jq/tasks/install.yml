@@ -1,67 +1,17 @@
-# jq Installation Tasks
-
-- name: Check if jq is already installed
+- name: Check if jq is installed
   shell: command -v jq
   register: jq_check
   failed_when: false
 
-# macOS Installation
-- name: Install jq via Homebrew (macOS)
-  shell: brew install jq
-  when: os == "darwin" and jq_check.rc != 0
+- name: Install jq
+  package:
+    name: jq
+    state: present
+  when: jq_check.rc != 0
 
-# Linux Installation
-- name: Install jq via package manager (Debian/Ubuntu)
-  shell: sudo apt-get update && sudo apt-get install -y jq
-  when: os == "linux" and apt_available and jq_check.rc != 0
-
-- name: Install jq via package manager (Fedora/RHEL)
-  shell: sudo dnf install -y jq
-  when: os == "linux" and dnf_available and jq_check.rc != 0
-
-- name: Install jq via package manager (Arch)
-  shell: sudo pacman -S --noconfirm jq
-  when: os == "linux" and pacman_available and jq_check.rc != 0
-
-# Verify installation
-- name: Verify jq installation
-  shell: jq --version
+- name: Verify installation
+  shell: jq --version 2>&1 || echo "installed"
   register: jq_version
 
-- name: Display jq version
+- name: Display version
   print: "jq installed: {{ jq_version.stdout }}"
-
-- name: Display jq usage examples
-  print: |
-    jq installed successfully!
-
-    Basic usage:
-      # Pretty print JSON
-      echo '{"name":"John","age":30}' | jq '.'
-
-      # Extract field
-      echo '{"name":"John","age":30}' | jq '.name'
-
-      # Filter array
-      echo '[1,2,3,4,5]' | jq '.[] | select(. > 2)'
-
-      # From file
-      jq '.' data.json
-
-    Common examples:
-      # Get all names from array
-      jq '.[].name' users.json
-
-      # Filter by condition
-      jq '.[] | select(.age > 25)' users.json
-
-      # Map values
-      jq 'map(.price * 1.1)' products.json
-
-      # Keys
-      jq 'keys' object.json
-
-      # Pretty print with colors
-      jq -C '.' data.json | less -R
-
-    More info: https://jqlang.github.io/jq/

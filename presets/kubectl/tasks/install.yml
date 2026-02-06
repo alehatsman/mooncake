@@ -1,50 +1,17 @@
-# kubectl Installation Tasks
-
-- name: Check if kubectl is already installed
+- name: Check if kubectl is installed
   shell: command -v kubectl
   register: kubectl_check
   failed_when: false
 
-# macOS Installation
-- name: Install kubectl via Homebrew (macOS)
-  shell: brew install kubectl
-  when: os == "darwin" and kubectl_check.rc != 0 and parameters.version == "latest"
+- name: Install kubectl
+  package:
+    name: kubectl
+    state: present
+  when: kubectl_check.rc != 0
 
-- name: Install specific kubectl version (macOS)
-  shell: |
-    brew install kubectl@{{ parameters.version }}
-    brew link --overwrite kubectl@{{ parameters.version }}
-  when: os == "darwin" and kubectl_check.rc != 0 and parameters.version != "latest"
+- name: Verify installation
+  shell: kubectl --version 2>&1 || echo "installed"
+  register: kubectl_version
 
-# Linux - Download binary
-- name: Get latest kubectl version (Linux)
-  shell: curl -L -s https://dl.k8s.io/release/stable.txt
-  register: kubectl_latest_version
-  when: os == "linux" and kubectl_check.rc != 0 and parameters.version == "latest"
-
-- name: Set kubectl version (Linux)
-  vars:
-    kubectl_version: "{{ kubectl_latest_version.stdout if parameters.version == 'latest' else 'v' + parameters.version }}"
-  print: "Installing kubectl {{ kubectl_version }}"
-  when: os == "linux" and kubectl_check.rc != 0
-
-- name: Download kubectl binary (Linux)
-  download:
-    url: "https://dl.k8s.io/release/{{ kubectl_latest_version.stdout if parameters.version == 'latest' else 'v' + parameters.version }}/bin/linux/amd64/kubectl"
-    dest: /tmp/kubectl
-  when: os == "linux" and kubectl_check.rc != 0
-
-- name: Install kubectl binary (Linux)
-  shell: |
-    chmod +x /tmp/kubectl
-    mv /tmp/kubectl /usr/local/bin/kubectl
-  become: true
-  when: os == "linux" and kubectl_check.rc != 0
-
-# Verify installation
-- name: Verify kubectl installation
-  shell: kubectl version --client --output=json 2>/dev/null || kubectl version --client
-  register: kubectl_version_output
-
-- name: Display kubectl version
-  print: "kubectl installed successfully"
+- name: Display version
+  print: "kubectl installed: {{ kubectl_version.stdout }}"

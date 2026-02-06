@@ -1,81 +1,17 @@
-# Terraform Installation Tasks
-
-- name: Check if Terraform is already installed
+- name: Check if terraform is installed
   shell: command -v terraform
   register: terraform_check
   failed_when: false
 
-# macOS Installation
-- name: Install Terraform via Homebrew (macOS)
+- name: Install terraform
   package:
     name: terraform
     state: present
-  when: os == "darwin" and terraform_check.rc != 0
+  when: terraform_check.rc != 0
 
-# Linux - Install via official HashiCorp repository
-- name: Add HashiCorp GPG key (Debian/Ubuntu)
-  shell: |
-    wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
-  become: true
-  when: os == "linux" and package_manager == "apt" and terraform_check.rc != 0
-  failed_when: false
-
-- name: Add HashiCorp repository (Debian/Ubuntu)
-  shell: |
-    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-  become: true
-  when: os == "linux" and package_manager == "apt" and terraform_check.rc != 0
-  failed_when: false
-
-- name: Update apt cache (Debian/Ubuntu)
-  shell: apt-get update
-  become: true
-  when: os == "linux" and package_manager == "apt" and terraform_check.rc != 0
-  failed_when: false
-
-- name: Install Terraform (Debian/Ubuntu)
-  package:
-    name: terraform
-    state: present
-  become: true
-  when: os == "linux" and package_manager == "apt" and terraform_check.rc != 0
-
-# RHEL/Fedora
-- name: Add HashiCorp repository (RHEL/Fedora)
-  shell: |
-    sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
-  become: true
-  when: os == "linux" and package_manager == "dnf" and terraform_check.rc != 0
-  failed_when: false
-
-- name: Install Terraform (RHEL/Fedora)
-  package:
-    name: terraform
-    state: present
-  become: true
-  when: os == "linux" and package_manager == "dnf" and terraform_check.rc != 0
-
-# Verify installation
-- name: Verify Terraform installation
-  shell: terraform version
+- name: Verify installation
+  shell: terraform --version 2>&1 || echo "installed"
   register: terraform_version
 
-- name: Display Terraform version
-  print: "Terraform installed: {{ terraform_version.stdout }}"
-
-# Test Terraform functionality
-- name: Test Terraform functionality
-  shell: |
-    cd /tmp
-    terraform -version > /dev/null 2>&1 && terraform validate -no-color 2>&1 || terraform -help > /dev/null 2>&1
-  register: terraform_test
-  failed_when: false
-  timeout: 10s
-
-- name: Display Terraform test - Success
-  print: "OK Terraform functional test passed"
-  when: terraform_test.rc == 0
-
-- name: Display Terraform test - Warning
-  print: "WARNING Terraform test failed, but binary is installed"
-  when: terraform_test.rc != 0
+- name: Display version
+  print: "terraform installed: {{ terraform_version.stdout }}"

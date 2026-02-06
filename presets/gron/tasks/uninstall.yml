@@ -1,6 +1,7 @@
-- name: Uninstall gron (macOS)
-  shell: brew uninstall gron
-  when: os == "darwin"
+- name: Uninstall gron
+  package:
+    name: gron
+    state: absent
   failed_when: false
 
 - name: Display confirmation

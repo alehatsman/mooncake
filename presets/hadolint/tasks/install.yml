@@ -3,13 +3,15 @@
   register: hadolint_check
   failed_when: false
 
-- name: Install hadolint (macOS)
-  shell: brew install hadolint
-  when: os == "darwin" and hadolint_check.rc != 0
+- name: Install hadolint
+  package:
+    name: hadolint
+    state: present
+  when: hadolint_check.rc != 0
 
 - name: Verify installation
-  shell: hadolint --version 2>&1 || hadolint -v 2>&1 || echo "installed"
+  shell: hadolint --version 2>&1 || echo "installed"
   register: hadolint_version
 
 - name: Display version
-  print: "hadolint installed"
+  print: "hadolint installed: {{ hadolint_version.stdout }}"

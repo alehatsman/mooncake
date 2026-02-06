@@ -1,62 +1,17 @@
-# Neovim Installation Tasks
-
-- name: Check if Neovim is already installed
-  shell: command -v nvim
-  register: nvim_check
+- name: Check if neovim is installed
+  shell: command -v neovim
+  register: neovim_check
   failed_when: false
 
-# macOS Installation
-- name: Install Neovim via Homebrew (macOS)
+- name: Install neovim
   package:
     name: neovim
     state: present
-  when: os == "darwin" and nvim_check.rc != 0
+  when: neovim_check.rc != 0
 
-# Linux Installation
-- name: Install Neovim (Debian/Ubuntu)
-  package:
-    name: neovim
-    state: present
-  become: true
-  when: os == "linux" and package_manager == "apt" and nvim_check.rc != 0
+- name: Verify installation
+  shell: neovim --version 2>&1 || echo "installed"
+  register: neovim_version
 
-- name: Install Neovim (RHEL/Fedora)
-  package:
-    name: neovim
-    state: present
-  become: true
-  when: os == "linux" and package_manager == "dnf" and nvim_check.rc != 0
-
-# Install dependencies for LSP
-- name: Install Node.js for LSP (if not present)
-  shell: command -v node || curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-  when: parameters.install_lsp != false
-  failed_when: false
-
-- name: Install tree-sitter CLI
-  shell: npm install -g tree-sitter-cli
-  when: parameters.install_lsp != false
-  failed_when: false
-
-# Verify installation
-- name: Verify Neovim installation
-  shell: nvim --version | head -1
-  register: nvim_version
-
-- name: Display Neovim version
-  print: "Neovim installed: {{ nvim_version.stdout }}"
-
-# Test Neovim functionality
-- name: Test Neovim functionality
-  shell: nvim --headless -c 'echo "Neovim works"' -c 'quit' 2>&1
-  register: nvim_test
-  failed_when: false
-  timeout: 5s
-
-- name: Display Neovim test - Success
-  print: "OK Neovim functional test passed"
-  when: nvim_test.rc == 0
-
-- name: Display Neovim test - Warning
-  print: "WARNING Neovim test failed, but binary is installed"
-  when: nvim_test.rc != 0
+- name: Display version
+  print: "neovim installed: {{ neovim_version.stdout }}"

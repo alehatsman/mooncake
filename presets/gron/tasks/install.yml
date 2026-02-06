@@ -3,13 +3,15 @@
   register: gron_check
   failed_when: false
 
-- name: Install gron (macOS)
-  shell: brew install gron
-  when: os == "darwin" and gron_check.rc != 0
+- name: Install gron
+  package:
+    name: gron
+    state: present
+  when: gron_check.rc != 0
 
 - name: Verify installation
-  shell: gron --version 2>&1 || gron -v 2>&1 || echo "installed"
+  shell: gron --version 2>&1 || echo "installed"
   register: gron_version
 
 - name: Display version
-  print: "gron installed"
+  print: "gron installed: {{ gron_version.stdout }}"
