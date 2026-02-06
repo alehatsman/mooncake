@@ -3,5 +3,15 @@
   when: os == "darwin"
   failed_when: false
 
+- name: Uninstall actionlint with Homebrew (Linux)
+  shell: brew uninstall actionlint
+  when: os == "linux" and brew_available
+  failed_when: false
+
+- name: Remove actionlint binary (Linux)
+  shell: sudo rm -f /usr/local/bin/actionlint
+  when: os == "linux" and not brew_available
+  failed_when: false
+
 - name: Display confirmation
   print: "actionlint uninstalled"

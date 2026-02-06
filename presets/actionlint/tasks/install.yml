@@ -7,9 +7,19 @@
   shell: brew install actionlint
   when: os == "darwin" and actionlint_check.rc != 0
 
+- name: Install actionlint with Homebrew (Linux)
+  shell: brew install actionlint
+  when: os == "linux" and brew_available and actionlint_check.rc != 0
+
+- name: Download and install actionlint binary (Linux)
+  shell: |
+    bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+    sudo mv ./actionlint /usr/local/bin/
+  when: os == "linux" and not brew_available and actionlint_check.rc != 0
+
 - name: Verify installation
-  shell: actionlint --version 2>&1 || actionlint -v 2>&1 || echo "installed"
+  shell: actionlint --version 2>&1 || echo "installed"
   register: actionlint_version
 
 - name: Display version
-  print: "actionlint installed"
+  print: "actionlint installed: {{ actionlint_version.stdout }}"

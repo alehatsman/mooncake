@@ -8,7 +8,7 @@ Legend:
 - [T] Tested and works
 - [✓] All verified
 
-## Presets (3/396 complete)
+## Presets (4/396 complete)
 
 - [✓] **1password-cli**
   - [✓] Install (Linux/macOS)
@@ -22,11 +22,11 @@ Legend:
   - [✓] README docs
   - [✓] Tested working
 
-- [ ] **actionlint**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **actionlint**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
 - [ ] **activemq**
   - [ ] Install (Linux/macOS)
