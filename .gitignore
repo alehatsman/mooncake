@@ -1,59 +1,64 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# Binaries
+mooncake
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
 
-# Test binary, built with `go test -c`
+# Test binaries
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Coverage files
 *.out
+coverage.txt
+coverage.html
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Testing output directory
+testing-output/
+
+# Build output
+out/
+dist/
+build/
+
+# Documentation site (generated)
+site/
 
 # Go workspace file
 go.work
-out/
-mooncake
+go.work.sum
 
-# IDE
-.idea/
+# IDE and editor files
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
-
-# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+
+# Claude temporary files
+.claude/
+.claude_temp/
 
 # Temporary files
 *.tmp
-*.bak
 *.log
-*.cover
+tmp/
+temp/
 
-# Testing
-testing/results/
+# Environment files
+.env
+.env.local
+.env.*.local
 
-# MkDocs
-site/
-.cache/
+# Debug files
+debug
+__debug_bin
 
-# Python / pipenv
-__pycache__/
-*.py[cod]
+# Vendor directory (if not using modules)
+vendor/
 
-.claude_temp/
+testing-output/
 .claude/
+.claude_temp/
+site/

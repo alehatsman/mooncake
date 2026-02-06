@@ -1,9 +1,0 @@
-- name: Test preset system with ollama
-  preset: ollama
-  with:
-    state: present
-    service: false
-    pull: []
-
-- name: Show result
-  shell: echo "Preset test completed"
