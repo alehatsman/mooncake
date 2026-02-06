@@ -1,0 +1,46 @@
+# kubectx Uninstallation Tasks
+
+- name: Check if kubectx is installed
+  shell: command -v kubectx
+  register: kubectx_check
+  failed_when: false
+
+# macOS Uninstallation
+- name: Uninstall kubectx via Homebrew (macOS)
+  shell: brew uninstall kubectx
+  when: os == "darwin" and kubectx_check.rc == 0
+  failed_when: false
+
+# Linux Uninstallation
+- name: Remove kubectx binary (Linux)
+  file:
+    path: /usr/local/bin/kubectx
+    state: absent
+  become: true
+  when: os == "linux" and kubectx_check.rc == 0
+
+- name: Check if kubens is installed
+  shell: command -v kubens
+  register: kubens_check
+  failed_when: false
+
+- name: Remove kubens binary (Linux)
+  file:
+    path: /usr/local/bin/kubens
+    state: absent
+  become: true
+  when: os == "linux" and kubens_check.rc == 0
+
+# Verify removal
+- name: Verify kubectx removal
+  shell: command -v kubectx
+  register: kubectx_verify
+  failed_when: false
+
+- name: Display uninstall result - Success
+  print: "kubectx uninstalled successfully"
+  when: kubectx_verify.rc != 0
+
+- name: Display uninstall result - Warning
+  print: "WARNING: kubectx may still be present in system PATH"
+  when: kubectx_verify.rc == 0

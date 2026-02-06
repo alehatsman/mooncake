@@ -1,0 +1,55 @@
+# Helm Configuration Tasks
+
+# Add repositories
+- name: Add Helm repositories
+  shell: |
+    {% for repo in parameters.add_repos %}
+    REPO_NAME=$(echo "{{ repo }}" | cut -d= -f1)
+    REPO_URL=$(echo "{{ repo }}" | cut -d= -f2)
+    helm repo add "$REPO_NAME" "$REPO_URL" || true
+    {% endfor %}
+    helm repo update
+  when: parameters.add_repos | length > 0
+
+# Install plugins
+- name: Install Helm plugins
+  shell: |
+    {% for plugin in parameters.install_plugins %}
+    helm plugin install https://github.com/{{ plugin }} || helm plugin update {{ plugin }} || true
+    {% endfor %}
+  when: parameters.install_plugins | length > 0
+
+# Configure shell completion
+- name: Configure bash completion
+  shell: |
+    if ! grep -q 'helm completion bash' ~/.bashrc 2>/dev/null; then
+      echo 'source <(helm completion bash)' >> ~/.bashrc
+    fi
+  when: parameters.configure_completion
+  failed_when: false
+
+- name: Configure zsh completion
+  shell: |
+    if ! grep -q 'helm completion zsh' ~/.zshrc 2>/dev/null; then
+      echo 'source <(helm completion zsh)' >> ~/.zshrc
+    fi
+  when: parameters.configure_completion
+  failed_when: false
+
+- name: Display configuration summary
+  print: |
+    Helm configured successfully!
+    
+    {% if parameters.add_repos | length > 0 %}
+    Repositories added: {{ parameters.add_repos | length }}
+    {% endif %}
+    {% if parameters.install_plugins | length > 0 %}
+    Plugins installed: {{ parameters.install_plugins | length }}
+    {% endif %}
+    
+    Usage:
+      helm search repo <keyword>
+      helm install <name> <chart>
+      helm list
+      helm upgrade <release> <chart>
+      helm uninstall <release>

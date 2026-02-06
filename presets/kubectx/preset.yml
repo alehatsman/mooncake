@@ -1,0 +1,36 @@
+name: kubectx
+description: Fast way to switch between Kubernetes contexts
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether kubectx should be installed or removed
+
+  install_kubens:
+    type: bool
+    required: false
+    default: true
+    description: Also install kubens (namespace switcher)
+
+  configure_aliases:
+    type: bool
+    required: false
+    default: true
+    description: Configure shell aliases (ctx, ns)
+
+steps:
+  - name: Install kubectx
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure kubectx
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall kubectx
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

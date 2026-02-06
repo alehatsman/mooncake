@@ -1,0 +1,123 @@
+# kubectl Configuration Tasks
+
+# Create kubeconfig directory
+- name: Create ~/.kube directory
+  file:
+    path: "{{ lookup_env('HOME') }}/.kube"
+    state: directory
+    mode: "0700"
+  when: parameters.setup_kubeconfig
+
+- name: Check if kubeconfig exists
+  shell: test -f {{ lookup_env('HOME') }}/.kube/config
+  register: kubeconfig_check
+  failed_when: false
+  when: parameters.setup_kubeconfig
+
+- name: Create minimal kubeconfig
+  file:
+    path: "{{ lookup_env('HOME') }}/.kube/config"
+    content: |
+      apiVersion: v1
+      kind: Config
+      clusters: []
+      contexts: []
+      current-context: ""
+      preferences: {}
+      users: []
+    mode: "0600"
+  when: parameters.setup_kubeconfig and kubeconfig_check.rc != 0
+
+# Shell completion
+- name: Configure bash completion
+  shell: |
+    if ! grep -q 'kubectl completion bash' ~/.bashrc 2>/dev/null; then
+      echo 'source <(kubectl completion bash)' >> ~/.bashrc
+      echo 'alias k=kubectl' >> ~/.bashrc
+      echo 'complete -o default -F __start_kubectl k' >> ~/.bashrc
+    fi
+  when: parameters.configure_completion
+  failed_when: false
+
+- name: Configure zsh completion
+  shell: |
+    if ! grep -q 'kubectl completion zsh' ~/.zshrc 2>/dev/null; then
+      echo 'source <(kubectl completion zsh)' >> ~/.zshrc
+      echo 'alias k=kubectl' >> ~/.zshrc
+      echo 'complete -o default -F __start_kubectl k' >> ~/.zshrc
+    fi
+  when: parameters.configure_completion
+  failed_when: false
+
+# Install krew
+- name: Check if krew is installed
+  shell: kubectl krew version
+  register: krew_check
+  failed_when: false
+  when: parameters.install_krew
+
+- name: Download krew installer
+  shell: |
+    set -x; cd "$(mktemp -d)" &&
+    OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+    ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+    KREW="krew-${OS}_${ARCH}" &&
+    curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+    tar zxvf "${KREW}.tar.gz" &&
+    ./"${KREW}" install krew
+  when: parameters.install_krew and krew_check.rc != 0
+
+- name: Add krew to PATH (bash)
+  shell: |
+    if ! grep -q '.krew/bin' ~/.bashrc 2>/dev/null; then
+      echo 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >> ~/.bashrc
+    fi
+  when: parameters.install_krew and krew_check.rc != 0
+  failed_when: false
+
+- name: Add krew to PATH (zsh)
+  shell: |
+    if ! grep -q '.krew/bin' ~/.zshrc 2>/dev/null; then
+      echo 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >> ~/.zshrc
+    fi
+  when: parameters.install_krew and krew_check.rc != 0
+  failed_when: false
+
+# Install krew plugins
+- name: Install krew plugins
+  shell: |
+    {% for plugin in parameters.krew_plugins %}
+    kubectl krew install {{ plugin }} || true
+    {% endfor %}
+  when: parameters.install_krew and parameters.krew_plugins | length > 0
+
+- name: Display configuration summary
+  print: |
+    kubectl configured successfully!
+
+    {% if parameters.setup_kubeconfig %}
+    Kubeconfig: ~/.kube/config
+    {% endif %}
+    {% if parameters.configure_completion %}
+    Shell completion: enabled (restart shell or source rc file)
+    Alias: k=kubectl
+    {% endif %}
+    {% if parameters.install_krew %}
+    Krew plugin manager: installed
+    {% if parameters.krew_plugins | length > 0 %}
+    Plugins installed: {{ parameters.krew_plugins | length }}
+    {% endif %}
+    {% endif %}
+
+    Quick start:
+      kubectl version --client
+      kubectl cluster-info
+      kubectl get nodes
+      kubectl get pods -A
+
+    {% if parameters.install_krew %}
+    Krew usage:
+      kubectl krew search
+      kubectl krew install <plugin>
+      kubectl krew list
+    {% endif %}

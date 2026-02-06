@@ -1,16 +1,48 @@
 name: helm
-description: Kubernetes package manager
+description: Kubernetes package manager - deploy and manage applications
 version: "1.0.0"
+
 parameters:
   state:
     type: string
     required: false
     default: present
     enum: [present, absent]
+    description: Whether to install or uninstall Helm
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: Helm version to install (e.g., "3.13.0", "latest")
+
+  add_repos:
+    type: array
+    required: false
+    default: []
+    description: Helm repositories to add (e.g., ["stable=https://charts.helm.sh/stable"])
+
+  install_plugins:
+    type: array
+    required: false
+    default: []
+    description: Helm plugins to install (e.g., ["diff", "secrets", "git"])
+
+  configure_completion:
+    type: bool
+    required: false
+    default: true
+    description: Configure shell completion for Helm
+
 steps:
-  - name: Install helm
+  - name: Install Helm
     include: tasks/install.yml
     when: parameters.state == "present"
-  - name: Uninstall helm
+
+  - name: Configure Helm
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Helm
     include: tasks/uninstall.yml
     when: parameters.state == "absent"

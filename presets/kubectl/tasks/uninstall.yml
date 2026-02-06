@@ -1,0 +1,46 @@
+# kubectl Uninstallation Tasks
+
+- name: Check if kubectl is installed
+  shell: command -v kubectl
+  register: kubectl_check
+  failed_when: false
+
+# macOS Uninstallation
+- name: Uninstall kubectl via Homebrew (macOS)
+  shell: brew uninstall kubectl
+  when: os == "darwin" and kubectl_check.rc == 0
+  failed_when: false
+
+# Linux Uninstallation
+- name: Remove kubectl binary (Linux)
+  file:
+    path: /usr/local/bin/kubectl
+    state: absent
+  become: true
+  when: os == "linux" and kubectl_check.rc == 0
+
+# Remove krew
+- name: Check if krew is installed
+  shell: kubectl krew version
+  register: krew_check
+  failed_when: false
+
+- name: Remove krew directory
+  file:
+    path: "{{ lookup_env('HOME') }}/.krew"
+    state: absent
+  when: krew_check.rc == 0
+
+# Verify removal
+- name: Verify kubectl removal
+  shell: command -v kubectl
+  register: kubectl_verify
+  failed_when: false
+
+- name: Display uninstall result - Success
+  print: "kubectl uninstalled successfully"
+  when: kubectl_verify.rc != 0
+
+- name: Display uninstall result - Warning
+  print: "WARNING kubectl may still be present in system PATH"
+  when: kubectl_verify.rc == 0

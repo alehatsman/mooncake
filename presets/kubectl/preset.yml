@@ -1,0 +1,54 @@
+name: kubectl
+description: Install and configure Kubernetes command-line tool
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether kubectl should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: kubectl version to install (e.g., "1.29.0", "latest")
+
+  configure_completion:
+    type: bool
+    required: false
+    default: true
+    description: Configure shell completion for kubectl
+
+  install_krew:
+    type: bool
+    required: false
+    default: false
+    description: Install krew plugin manager
+
+  krew_plugins:
+    type: array
+    required: false
+    default: []
+    description: Krew plugins to install (e.g., ["ctx", "ns", "view-secret"])
+
+  setup_kubeconfig:
+    type: bool
+    required: false
+    default: true
+    description: Create ~/.kube directory and set up basic kubeconfig
+
+steps:
+  - name: Install kubectl
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure kubectl
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall kubectl
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

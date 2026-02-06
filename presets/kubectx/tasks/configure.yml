@@ -1,0 +1,48 @@
+# kubectx Configuration Tasks
+
+# Configure shell aliases
+- name: Configure bash aliases
+  shell: |
+    if ! grep -q 'alias ctx=' ~/.bashrc 2>/dev/null; then
+      echo 'alias ctx=kubectx' >> ~/.bashrc
+    fi
+    if ! grep -q 'alias ns=' ~/.bashrc 2>/dev/null && command -v kubens >/dev/null 2>&1; then
+      echo 'alias ns=kubens' >> ~/.bashrc
+    fi
+  when: parameters.configure_aliases
+  failed_when: false
+
+- name: Configure zsh aliases
+  shell: |
+    if ! grep -q 'alias ctx=' ~/.zshrc 2>/dev/null; then
+      echo 'alias ctx=kubectx' >> ~/.zshrc
+    fi
+    if ! grep -q 'alias ns=' ~/.zshrc 2>/dev/null && command -v kubens >/dev/null 2>&1; then
+      echo 'alias ns=kubens' >> ~/.zshrc
+    fi
+  when: parameters.configure_aliases
+  failed_when: false
+
+- name: Display configuration summary
+  print: |
+    kubectx configured successfully!
+
+    {% if parameters.configure_aliases %}
+    Shell aliases configured (restart shell or source rc file):
+      ctx  -> kubectx (switch contexts)
+    {% if parameters.install_kubens %}
+      ns   -> kubens (switch namespaces)
+    {% endif %}
+    {% endif %}
+
+    Usage:
+      kubectx                    # List all contexts
+      kubectx <context>          # Switch to context
+      kubectx -                  # Switch to previous context
+      kubectx -c                 # Show current context
+    {% if parameters.install_kubens %}
+
+      kubens                     # List all namespaces
+      kubens <namespace>         # Switch to namespace
+      kubens -                   # Switch to previous namespace
+    {% endif %}
