@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -83,14 +85,10 @@ func LoadPreset(name string) (*config.PresetDefinition, error) {
 	}
 
 	// Parse YAML
-	var wrapper struct {
-		Preset config.PresetDefinition `yaml:"preset"`
-	}
-	if err := yaml.Unmarshal(data, &wrapper); err != nil {
+	var preset config.PresetDefinition
+	if err := yaml.Unmarshal(data, &preset); err != nil {
 		return nil, fmt.Errorf("failed to parse preset file '%s': %w", presetPath, err)
 	}
-
-	preset := &wrapper.Preset
 
 	// Validate preset structure
 	if preset.Name == "" {
@@ -115,5 +113,99 @@ func LoadPreset(name string) (*config.PresetDefinition, error) {
 	// Store the base directory in the preset for relative path resolution
 	preset.BaseDir = baseDir
 
-	return preset, nil
+	return &preset, nil
+}
+
+// PresetInfo contains summary information about a discovered preset.
+type PresetInfo struct {
+	Name        string
+	Description string
+	Version     string
+	Path        string
+	Source      string // "local", "user", "system"
+}
+
+// DiscoverAllPresets finds all available presets in the search paths.
+// Returns a sorted list of PresetInfo structs.
+func DiscoverAllPresets() ([]PresetInfo, error) {
+	seen := make(map[string]bool)
+	var presets []PresetInfo
+
+	searchPaths := PresetSearchPaths()
+	for i, searchPath := range searchPaths {
+		// Determine source type
+		source := "system"
+		if i == 0 {
+			source = "local"
+		} else if strings.Contains(searchPath, ".mooncake") {
+			source = "user"
+		}
+
+		// Check if directory exists
+		if _, err := os.Stat(searchPath); os.IsNotExist(err) {
+			continue
+		}
+
+		// Look for flat format: *.yml files
+		matches, err := filepath.Glob(filepath.Join(searchPath, "*.yml"))
+		if err == nil {
+			for _, match := range matches {
+				name := strings.TrimSuffix(filepath.Base(match), ".yml")
+				if seen[name] {
+					continue // Skip duplicates (higher priority already found)
+				}
+
+				// Try to load preset to get metadata
+				if preset, loadErr := LoadPreset(name); loadErr == nil {
+					presets = append(presets, PresetInfo{
+						Name:        preset.Name,
+						Description: preset.Description,
+						Version:     preset.Version,
+						Path:        match,
+						Source:      source,
+					})
+					seen[name] = true
+				}
+			}
+		}
+
+		// Look for directory format: */preset.yml
+		entries, err := os.ReadDir(searchPath)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+
+			name := entry.Name()
+			if seen[name] {
+				continue
+			}
+
+			presetFile := filepath.Join(searchPath, name, "preset.yml")
+			if _, err := os.Stat(presetFile); err == nil {
+				// Try to load preset to get metadata
+				if preset, loadErr := LoadPreset(name); loadErr == nil {
+					presets = append(presets, PresetInfo{
+						Name:        preset.Name,
+						Description: preset.Description,
+						Version:     preset.Version,
+						Path:        presetFile,
+						Source:      source,
+					})
+					seen[name] = true
+				}
+			}
+		}
+	}
+
+	// Sort by name
+	sort.Slice(presets, func(i, j int) bool {
+		return presets[i].Name < presets[j].Name
+	})
+
+	return presets, nil
 }

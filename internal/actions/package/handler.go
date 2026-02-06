@@ -258,28 +258,36 @@ func (h *Handler) buildPackageList(pkg *config.Package) []string {
 }
 
 // updateCache updates the package manager cache.
-//nolint:unparam // Returns error for future implementation
 func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string) error {
-	var cmd []string
+	var cmdArgs []string
 	switch manager {
 	case pmApt:
-		cmd = []string{"apt-get", "update"}
+		cmdArgs = []string{"apt-get", "update"}
 	case pmDnf, pmYum:
-		cmd = []string{manager, "makecache"}
+		cmdArgs = []string{manager, "makecache"}
 	case pmPacman:
-		cmd = []string{pmPacman, "-Sy"}
+		cmdArgs = []string{pmPacman, "-Sy"}
 	case pmApk:
-		cmd = []string{pmApk, "update"}
+		cmdArgs = []string{pmApk, "update"}
 	case pmBrew:
-		cmd = []string{pmBrew, "update"}
+		cmdArgs = []string{pmBrew, "update"}
 	default:
 		// Other package managers don't need cache updates or do it automatically
 		return nil
 	}
 
-	ec.Logger.Debugf("  Updating package cache: %s", strings.Join(cmd, " "))
-	// Execute the update command (implementation similar to shell action)
-	// For now, just log it
+	ec.Logger.Debugf("  Updating package cache: %s", strings.Join(cmdArgs, " "))
+
+	// Execute the update command
+	// #nosec G204 - Package manager commands are validated
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		return fmt.Errorf("failed to update package cache: %w", err)
+	}
+
 	return nil
 }
 
@@ -300,12 +308,20 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 		}
 
 		// Build install command
-		cmd := h.buildInstallCommand(manager, pkg, upgrade, extra)
+		cmdArgs := h.buildInstallCommand(manager, pkg, upgrade, extra)
 		ec.Logger.Infof("  Installing package: %s", pkg)
-		ec.Logger.Debugf("    Command: %s", strings.Join(cmd, " "))
+		ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
-		// TODO: Execute command using shell action logic
-		// For now, mark as changed
+		// Execute the install command
+		// #nosec G204 - Package manager commands are validated
+		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		output, execErr := cmd.CombinedOutput()
+
+		if execErr != nil {
+			ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+			return nil, fmt.Errorf("failed to install package %q: %w", pkg, execErr)
+		}
+
 		result.SetChanged(true)
 	}
 
@@ -329,12 +345,20 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 		}
 
 		// Build remove command
-		cmd := h.buildRemoveCommand(manager, pkg, extra)
+		cmdArgs := h.buildRemoveCommand(manager, pkg, extra)
 		ec.Logger.Infof("  Removing package: %s", pkg)
-		ec.Logger.Debugf("    Command: %s", strings.Join(cmd, " "))
+		ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
-		// TODO: Execute command using shell action logic
-		// For now, mark as changed
+		// Execute the remove command
+		// #nosec G204 - Package manager commands are validated
+		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		output, execErr := cmd.CombinedOutput()
+
+		if execErr != nil {
+			ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+			return nil, fmt.Errorf("failed to remove package %q: %w", pkg, execErr)
+		}
+
 		result.SetChanged(true)
 	}
 
@@ -345,19 +369,26 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, pkg *config.Package) (actions.Result, error) {
 	result := executor.NewResult()
 
-	cmd := h.buildUpgradeCommand(manager, pkg.Extra)
+	cmdArgs := h.buildUpgradeCommand(manager, pkg.Extra)
 	ec.Logger.Infof("  Upgrading all packages")
-	ec.Logger.Debugf("    Command: %s", strings.Join(cmd, " "))
+	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
-	// TODO: Execute command using shell action logic
-	// For now, mark as changed
+	// Execute the upgrade command
+	// #nosec G204 - Package manager commands are validated
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	output, execErr := cmd.CombinedOutput()
+
+	if execErr != nil {
+		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf("failed to upgrade packages: %w", execErr)
+	}
+
 	result.SetChanged(true)
 
 	return result, nil
 }
 
 // isPackageInstalled checks if a package is installed.
-//nolint:unparam // Returns bool for future implementation
 func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg string) (bool, error) {
 	// Build check command based on package manager
 	var checkCmd []string
@@ -387,9 +418,12 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 
 	ec.Logger.Debugf("    Checking if installed: %s", strings.Join(checkCmd, " "))
 
-	// TODO: Execute command and check exit code
-	// For now, return false (not installed) to trigger installation
-	return false, nil
+	// Execute the check command
+	cmd := exec.Command(checkCmd[0], checkCmd[1:]...) // #nosec G204 -- checkCmd built from validated package managers
+	err := cmd.Run()
+
+	// If command succeeds (exit code 0), package is installed
+	return err == nil, nil
 }
 
 // buildInstallCommand builds the install command for a package manager.

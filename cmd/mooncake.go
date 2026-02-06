@@ -426,6 +426,7 @@ func createApp() *cli.App {
 		EnableBashCompletion: true,
 
 		Commands: []*cli.Command{
+			presetsCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",

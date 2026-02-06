@@ -835,24 +835,35 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 }
 
 // evaluateItemsExpression evaluates a with_items expression
-// This is a simplified implementation - a full implementation would use the expression evaluator
+// Supports both direct variable references (items) and dot notation (parameters.items)
 func (p *Planner) evaluateItemsExpression(expr string, vars map[string]interface{}) ([]interface{}, error) {
-	// Check if it's a direct variable reference
+	// First, try direct variable lookup for simple cases (e.g., "items")
 	if val, ok := vars[expr]; ok {
-		// Convert to slice
-		switch v := val.(type) {
-		case []interface{}:
-			return v, nil
-		case []string:
-			items := make([]interface{}, len(v))
-			for i, s := range v {
-				items[i] = s
-			}
-			return items, nil
-		default:
-			return nil, fmt.Errorf("with_items variable %q is not a list", expr)
-		}
+		return convertToSlice(val, expr)
 	}
 
-	return nil, fmt.Errorf("with_items expression %q not found in variables", expr)
+	// If not found directly, use expression evaluator to support dot notation (e.g., "parameters.items")
+	evaluator := expression.NewExprEvaluator()
+	result, err := evaluator.Evaluate(expr, vars)
+	if err != nil {
+		return nil, fmt.Errorf("with_items expression %q evaluation failed: %w", expr, err)
+	}
+
+	return convertToSlice(result, expr)
+}
+
+// convertToSlice converts a value to []interface{} slice
+func convertToSlice(val interface{}, expr string) ([]interface{}, error) {
+	switch v := val.(type) {
+	case []interface{}:
+		return v, nil
+	case []string:
+		items := make([]interface{}, len(v))
+		for i, s := range v {
+			items[i] = s
+		}
+		return items, nil
+	default:
+		return nil, fmt.Errorf("with_items expression %q is not a list (got %T)", expr, val)
+	}
 }
