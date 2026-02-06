@@ -4,5 +4,11 @@
     state: absent
   failed_when: false
 
+- name: Assert lite-xl is removed
+  assert:
+    command:
+      cmd: command -v lite-xl
+      exit_code: 1
+
 - name: Display confirmation
   print: "lite-xl uninstalled"

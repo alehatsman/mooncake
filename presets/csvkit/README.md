@@ -7,6 +7,39 @@ Suite of command-line tools for converting to and working with CSV. SQL queries 
 - preset: csvkit
 ```
 
+## Features
+- **Format Conversion**: Convert Excel, JSON, SQL to CSV and vice versa
+- **SQL Queries**: Run SQL queries directly on CSV files without database
+- **Statistics**: Generate descriptive statistics on CSV columns
+- **Column Operations**: Cut, join, sort, and stack CSV files
+- **Data Cleaning**: Filter, grep, and transform CSV data
+- **Python-Based**: Cross-platform with easy installation
+- **Pipe-Friendly**: Unix-style command chaining
+
+## Basic Usage
+```bash
+# Convert Excel to CSV
+in2csv data.xlsx > data.csv
+
+# SQL query on CSV
+csvsql --query "SELECT * FROM data WHERE age > 25" data.csv
+
+# Get statistics
+csvstat data.csv
+
+# Select columns
+csvcut -c name,email,age data.csv
+
+# Filter rows
+csvgrep -c status -m "active" data.csv
+
+# Join files
+csvjoin -c id users.csv orders.csv
+
+# Sort by column
+csvsort -c age data.csv
+```
+
 ## Core Tools
 ```bash
 # in2csv - Convert various formats to CSV
@@ -306,6 +339,16 @@ csvsql --query "
 - Good error messages
 - Integrates with pandas workflows
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Automated CSV validation
 - Data format conversion
@@ -314,6 +357,18 @@ csvsql --query "
 - Database loading automation
 - Data quality checks
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install csvkit
+  preset: csvkit
+
+- name: Use csvkit in automation
+  shell: |
+    # Custom configuration here
+    echo "csvkit configured"
+```
 ## Uninstall
 ```yaml
 - preset: csvkit

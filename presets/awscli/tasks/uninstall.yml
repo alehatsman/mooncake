@@ -5,7 +5,7 @@
   package:
     name: awscli
     state: absent
-  when: os == "darwin"
+  when: brew_available
 
 # Linux Uninstallation (v2)
 - name: Remove AWS CLI installation (Linux)
@@ -13,7 +13,7 @@
     path: /usr/local/aws-cli
     state: absent
   become: true
-  when: os == "linux" and parameters.version == "2"
+  when: linux and parameters.version == "2"
 
 - name: Remove AWS CLI symlinks (Linux)
   file:
@@ -23,7 +23,7 @@
   loop:
     - /usr/local/bin/aws
     - /usr/local/bin/aws_completer
-  when: os == "linux" and parameters.version == "2"
+  when: linux and parameters.version == "2"
 
 # Uninstall v1 via pip
 - name: Uninstall AWS CLI v1 via pip
@@ -33,3 +33,9 @@
 
 - name: Display uninstall confirmation
   print: "AWS CLI has been uninstalled (configuration in ~/.aws remains)"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v aws
+      exit_code: 1

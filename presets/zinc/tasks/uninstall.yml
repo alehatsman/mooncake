@@ -1,13 +1,13 @@
-- name: Uninstall zinc (macOS)
+- name: Uninstall zinc via Homebrew
   package:
     name: zinc
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall zinc (Linux)
+- name: Uninstall zinc via cargo
   shell: cargo uninstall zinc
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

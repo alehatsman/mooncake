@@ -1,8 +1,20 @@
-- name: Uninstall dbt
-  package:
-    name: dbt
-    state: absent
+- name: Uninstall dbt-core package
+  shell: pip3 uninstall -y dbt-core
   failed_when: false
+
+- name: Remove dbt binary
+  shell: |
+    DBT_PATH=$(command -v dbt 2>/dev/null)
+    if [ -n "$DBT_PATH" ]; then
+      rm -f "$DBT_PATH"
+    fi
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v dbt
+      exit_code: 1
 
 - name: Display confirmation
   print: "dbt uninstalled"

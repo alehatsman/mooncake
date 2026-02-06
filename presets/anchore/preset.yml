@@ -1,5 +1,5 @@
 name: anchore
-description: Security scanning tool
+description: Container image security and compliance scanning with vulnerability detection
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

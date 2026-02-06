@@ -1,5 +1,5 @@
 name: lapce
-description: Text editor / IDE
+description: Lightning-fast GPU-accelerated code editor with built-in LSP
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

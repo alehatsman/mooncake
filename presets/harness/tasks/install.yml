@@ -3,15 +3,24 @@
   register: harness_check
   failed_when: false
 
-- name: Install harness
+- name: Install harness (macOS)
   package:
     name: harness
     state: present
-  when: harness_check.rc != 0
+  when: brew_available and harness_check.rc != 0
 
-- name: Verify installation
-  shell: harness --version 2>&1 || harness -v 2>&1 || echo "installed"
-  register: harness_version
+- name: Install harness (Linux)
+  shell: |
+    curl -sL https://github.com/harness/harness-cli/releases/latest/download/harness-linux-arm64 -o /tmp/harness
+    sudo mv /tmp/harness /usr/local/bin/harness
+    sudo chmod +x /usr/local/bin/harness
+  when: linux and harness_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v harness
+      exit_code: 0
+
+- name: Display confirmation
   print: "harness installed"

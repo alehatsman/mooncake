@@ -3,15 +3,27 @@
   register: neo4j_check
   failed_when: false
 
-- name: Install neo4j
-  package:
-    name: neo4j
-    state: present
-  when: neo4j_check.rc != 0
+- name: Install neo4j via apt
+  shell: apt-get install -y neo4j
+  when: apt_available and neo4j_check.rc != 0
+  become: true
 
-- name: Verify installation
-  shell: neo4j --version 2>&1 || neo4j -v 2>&1 || echo "installed"
-  register: neo4j_version
+- name: Install neo4j via dnf
+  shell: dnf install -y neo4j
+  when: dnf_available and neo4j_check.rc != 0
+  become: true
 
-- name: Display version
-  print: "neo4j installed"
+- name: Install neo4j via yum
+  shell: yum install -y neo4j
+  when: yum_available and neo4j_check.rc != 0
+  become: true
+
+- name: Install neo4j via Homebrew
+  shell: brew install neo4j
+  when: brew_available and neo4j_check.rc != 0
+
+- name: Verify neo4j is installed
+  assert:
+    command:
+      cmd: command -v neo4j
+      exit_code: 0

@@ -1,8 +1,20 @@
-- name: Uninstall kube-hunter
+- name: Uninstall kube-hunter (macOS)
   package:
     name: kube-hunter
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kube-hunter (Linux)
+  shell: pip3 uninstall -y kube-hunter
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kube-hunter
+      exit_code: 1
 
 - name: Display confirmation
   print: "kube-hunter uninstalled"

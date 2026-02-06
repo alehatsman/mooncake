@@ -3,15 +3,45 @@
   register: deno_check
   failed_when: false
 
-- name: Install deno
-  package:
-    name: deno
-    state: present
-  when: deno_check.rc != 0
+- name: Install deno via apt
+  shell: apt-get install -y deno
+  when: deno_check.rc != 0 and apt_available
+  become: true
 
-- name: Verify installation
-  shell: deno --version 2>&1 || deno -v 2>&1 || echo "installed"
-  register: deno_version
+- name: Install deno via dnf
+  shell: dnf install -y deno
+  when: deno_check.rc != 0 and dnf_available
+  become: true
 
-- name: Display version
+- name: Install deno via yum
+  shell: yum install -y deno
+  when: deno_check.rc != 0 and yum_available
+  become: true
+
+- name: Install deno via pacman
+  shell: pacman -S --noconfirm deno
+  when: deno_check.rc != 0 and pacman_available
+  become: true
+
+- name: Install deno via zypper
+  shell: zypper install -y deno
+  when: deno_check.rc != 0 and zypper_available
+  become: true
+
+- name: Install deno via apk
+  shell: apk add --no-cache deno
+  when: deno_check.rc != 0 and apk_available
+  become: true
+
+- name: Install deno via Homebrew
+  shell: brew install deno
+  when: deno_check.rc != 0 and brew_available
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v deno
+      exit_code: 0
+
+- name: Display confirmation
   print: "deno installed"

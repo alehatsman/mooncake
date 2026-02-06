@@ -1,8 +1,24 @@
-- name: Uninstall grafana-agent
+- name: Uninstall grafana-agent (macOS)
   package:
     name: grafana-agent
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall grafana-agent (Linux)
+  shell: |
+    GRAFANA_AGENT_PATH=$(command -v grafana-agent 2>/dev/null)
+    if [ -n "$GRAFANA_AGENT_PATH" ]; then
+      sudo rm -f "$GRAFANA_AGENT_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v grafana-agent
+      exit_code: 1
 
 - name: Display confirmation
   print: "grafana-agent uninstalled"

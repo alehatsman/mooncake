@@ -2,12 +2,12 @@
   package:
     name: tmuxinator
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall tmuxinator (Linux)
   shell: gem uninstall -x tmuxinator
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

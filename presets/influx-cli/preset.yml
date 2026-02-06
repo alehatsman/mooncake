@@ -1,0 +1,20 @@
+name: influx-cli
+description: InfluxDB command-line client for interacting with InfluxDB servers
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether influx CLI should be installed or removed
+
+steps:
+  - name: Install influx CLI
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall influx CLI
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

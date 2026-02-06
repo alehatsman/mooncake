@@ -3,15 +3,21 @@
   register: litecli_check
   failed_when: false
 
-- name: Install litecli
+- name: Install litecli (macOS)
   package:
     name: litecli
     state: present
-  when: litecli_check.rc != 0
+  when: brew_available and litecli_check.rc != 0
 
-- name: Verify installation
-  shell: litecli --version 2>&1 || litecli -v 2>&1 || echo "installed"
-  register: litecli_version
+- name: Install litecli (Linux)
+  shell: pip3 install --user litecli
+  when: linux and litecli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v litecli
+      exit_code: 0
+
+- name: Display confirmation
   print: "litecli installed"

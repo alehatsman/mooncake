@@ -1,5 +1,5 @@
 name: tmate
-description: Utility tool
+description: Instant terminal sharing for remote pair programming
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

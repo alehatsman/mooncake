@@ -3,14 +3,25 @@
   register: act_check
   failed_when: false
 
-- name: Install act
+- name: Install act via Homebrew
   package:
     name: act
     state: present
-  when: act_check.rc != 0
+  when: brew_available and act_check.rc != 0
 
-- name: Verify installation
-  shell: act --version 2>&1 || echo "installed"
+- name: Install act via install script
+  shell: |
+    curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and act_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: act --version
+      exit_code: 0
+
+- name: Display version
+  shell: act --version
   register: act_version
 
 - name: Display version

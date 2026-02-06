@@ -1,8 +1,12 @@
-- name: Uninstall docusaurus
-  package:
-    name: docusaurus
-    state: absent
+- name: Uninstall docusaurus via npm
+  shell: npm uninstall -g @docusaurus/init
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v docusaurus
+      exit_code: 1
 
 - name: Display confirmation
   print: "docusaurus uninstalled"

@@ -3,15 +3,24 @@
   register: prometheus_server_check
   failed_when: false
 
-- name: Install prometheus-server
+- name: Install prometheus-server via Homebrew
   package:
-    name: prometheus-server
+    name: prometheus
     state: present
-  when: prometheus_server_check.rc != 0
+  when: brew_available and prometheus_server_check.rc != 0
 
-- name: Verify installation
-  shell: prometheus --version 2>&1 || prometheus -v 2>&1 || echo "installed"
-  register: prometheus_server_version
+- name: Install prometheus-server via apt
+  package:
+    name: prometheus
+    state: present
+  become: true
+  when: apt_available and prometheus_server_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v prometheus
+      exit_code: 0
+
+- name: Display confirmation
   print: "prometheus-server installed"

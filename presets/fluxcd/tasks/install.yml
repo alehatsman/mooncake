@@ -3,15 +3,24 @@
   register: fluxcd_check
   failed_when: false
 
-- name: Install fluxcd
+- name: Install fluxcd via Homebrew
   package:
-    name: fluxcd
+    name: fluxctl
     state: present
-  when: fluxcd_check.rc != 0
+  when: brew_available and fluxcd_check.rc != 0
 
-- name: Verify installation
-  shell: fluxctl --version 2>&1 || fluxctl -v 2>&1 || echo "installed"
-  register: fluxcd_version
+- name: Install fluxcd via curl script
+  shell: |
+    curl -LO https://github.com/fluxcd/flux/releases/latest/download/fluxctl_linux_amd64
+    chmod +x fluxctl_linux_amd64
+    sudo mv fluxctl_linux_amd64 /usr/local/bin/fluxctl
+  when: linux and fluxcd_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v fluxctl
+      exit_code: 0
+
+- name: Display confirmation
   print: "fluxcd installed"

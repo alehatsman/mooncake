@@ -7,6 +7,12 @@ Deploy and manage applications on Kubernetes using Helm charts.
 - preset: helm
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Advanced Configuration
 ```yaml
 - preset: helm
@@ -22,6 +28,11 @@ Deploy and manage applications on Kubernetes using Helm charts.
       - aslafy-z/helm-git                  # Git-based charts
 ```
 
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove helm |
 ## Basic Usage
 ```bash
 # Repository management
@@ -148,3 +159,8 @@ helm install myapp ./chart --atomic --timeout 5m
 - Official docs: https://helm.sh/docs/
 - Chart repository: https://artifacthub.io/
 - Search: "helm chart tutorial", "helm best practices"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

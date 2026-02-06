@@ -1,5 +1,5 @@
 name: mongosh
-description: MongoDB Shell
+description: Modern MongoDB Shell with REPL, autocomplete, and syntax highlighting
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Install or remove mongosh
 steps:
   - name: Install mongosh
     include: tasks/install.yml

@@ -6,7 +6,7 @@
     state: directory
     mode: "0755"
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Create basic prometheus.yml config
   shell: |
@@ -21,7 +21,7 @@
           - targets: ['localhost:{{ parameters.port }}']
     EOF
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Start Prometheus service (Linux)
@@ -30,11 +30,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start Prometheus service (macOS)
   shell: brew services start prometheus
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
 
 - name: Wait for Prometheus to be ready
   shell: curl -s http://localhost:{{ parameters.port }}/-/ready

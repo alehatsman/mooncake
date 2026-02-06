@@ -1,67 +1,72 @@
-# MkDocs Preset
+# MkDocs - Fast Static Site Generator for Documentation
 
-Install MkDocs - a fast, simple static site generator for building project documentation.
+Build beautiful project documentation with Markdown, live preview, automatic site generation, and deployment to GitHub Pages.
 
 ## Quick Start
 
 ```yaml
 - preset: mkdocs
-  with:
-    install_material: true
-    install_plugins: true
 ```
+
+## Features
+
+- **Markdown-based**: Write documentation in plain Markdown with automatic HTML generation
+- **Live preview**: Built-in development server with hot reload during editing
+- **Material theme**: Modern, responsive Material Design theme (optional)
+- **Search**: Full-text search functionality across entire documentation
+- **Plugins**: Extensible plugin system (git-revision-date, minify, PDF export, etc.)
+- **GitHub Pages deployment**: One-command deployment to GitHub Pages
+- **Responsive design**: Mobile-friendly documentation site
+- **SEO friendly**: Proper meta tags, sitemaps, and structured data support
 
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `state` | string | `present` | `present` or `absent` |
-| `install_material` | bool | `true` | Install Material theme |
-| `install_plugins` | bool | `true` | Install popular plugins |
-| `create_project` | bool | `false` | Create new project |
-| `project_dir` | string | `~/mkdocs-project` | Project directory |
-| `site_name` | string | `My Documentation` | Site name |
+| state | string | present | Install (`present`) or remove (`absent`) |
+| install_material | bool | true | Install Material Design theme |
+| install_plugins | bool | true | Install popular plugins (search, minify, git-revision-date) |
+| create_project | bool | false | Create new documentation project |
+| project_dir | string | ~/mkdocs-project | Directory for new project |
+| site_name | string | My Documentation | Site name for new project |
 
-## Usage
-
-### Basic Installation
-```yaml
-- preset: mkdocs
-```
-
-### With Material Theme
-```yaml
-- preset: mkdocs
-  with:
-    install_material: true
-```
-
-### Create New Project
-```yaml
-- preset: mkdocs
-  with:
-    create_project: true
-    project_dir: "~/my-docs"
-    site_name: "My Project Documentation"
-```
-
-## Common Commands
+## Basic Usage
 
 ```bash
-# Create new project
+# Create new documentation project
 mkdocs new my-project
 cd my-project
 
-# Start development server
+# Edit configuration and documentation
+nano mkdocs.yml
+nano docs/index.md
+
+# Start development server with live reload
 mkdocs serve
 # Opens at http://127.0.0.1:8000
 
-# Build static site
+# Build static site (creates site/ directory)
 mkdocs build
-# Output in site/ directory
 
 # Deploy to GitHub Pages
 mkdocs gh-deploy
+
+# View help
+mkdocs --help
+mkdocs serve --help
+```
+
+## Advanced Configuration
+
+```yaml
+# Full installation with all components
+- preset: mkdocs
+  with:
+    install_material: true     # Modern Material theme
+    install_plugins: true       # Plugins: search, minify, git-revision-date
+    create_project: true        # Create new project
+    project_dir: "~/my-docs"    # Project location
+    site_name: "My Docs"        # Site title
 ```
 
 ## Project Structure
@@ -76,7 +81,9 @@ my-project/
 └── site/           # Built site (generated)
 ```
 
-## Configuration (mkdocs.yml)
+## Configuration
+
+### mkdocs.yml Settings
 
 ### Basic Config
 ```yaml
@@ -216,36 +223,136 @@ site
 - **pdf-export** - Generate PDF
 - **blog** - Blog functionality
 
-## Tips
+## Real-World Examples
 
-1. **Live reload**: MkDocs auto-reloads on changes during `mkdocs serve`
-2. **Search**: Material theme includes powerful search
-3. **Versioning**: Use mike plugin for version management
-4. **API docs**: Use mkdocstrings for Python API docs
-5. **Internationalization**: Use i18n plugin for translations
-
-## Example Workflow
+### Technical Documentation Site
 
 ```bash
-# 1. Install MkDocs with Material
-pip install mkdocs mkdocs-material
+# Create and setup documentation
+mkdocs new api-docs
+cd api-docs
 
-# 2. Create project
-mkdocs new my-docs
-cd my-docs
+# Configure mkdocs.yml with Material theme
+cat > mkdocs.yml << 'EOF'
+site_name: API Documentation
+site_url: https://docs.example.com
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Getting Started: guide/setup.md
+  - API Reference: api/overview.md
+  - Examples: examples/basic.md
+EOF
 
-# 3. Edit configuration
-nano mkdocs.yml
+# Create documentation structure
+mkdir -p docs/guide docs/api docs/examples
+echo "# API Docs" > docs/index.md
 
-# 4. Write documentation
-nano docs/index.md
-
-# 5. Preview locally
+# Start local development
 mkdocs serve
+```
 
-# 6. Build and deploy
+### Team Documentation with GitHub Pages
+
+```yaml
+# Deploy team documentation from Mooncake
+- preset: mkdocs
+  with:
+    create_project: true
+    project_dir: ~/team-docs
+    site_name: "Team Handbook"
+
+- name: Initialize git and deploy
+  shell: |
+    cd ~/team-docs
+    git init
+    git add .
+    git commit -m "Initial documentation"
+    mkdocs gh-deploy
+  when: os == "linux"
+```
+
+### Documentation with Custom Theme
+
+```yaml
+# Install MkDocs and configure with ReadTheDocs theme
+- preset: mkdocs
+  with:
+    install_plugins: true
+
+- name: Configure ReadTheDocs theme
+  file:
+    path: ~/my-docs/mkdocs.yml
+    content: |
+      site_name: My Project
+      theme: readthedocs
+      plugins:
+        - search
+        - minify
+```
+
+## Agent Use
+
+- Automated documentation site generation from project repositories
+- Continuous documentation deployment to GitHub Pages in CI/CD pipelines
+- Building multi-version documentation with version switching
+- Extracting and formatting code documentation (Python, JavaScript, etc.)
+- Creating team handbooks and process documentation
+- API reference generation from OpenAPI/Swagger specifications
+
+## Platform Support
+
+- ✅ Linux (Python 3.6+, pip3)
+- ✅ macOS (Homebrew, Python 3.6+)
+- ❌ Windows (not yet supported)
+
+## Troubleshooting
+
+### Module not found errors
+
+Ensure all dependencies are installed:
+
+```bash
+# Reinstall MkDocs and plugins
+pip3 install mkdocs mkdocs-material mkdocs-minify
+```
+
+### Theme not available
+
+```bash
+# Check installed themes
+pip3 list | grep mkdocs
+
+# Install specific theme
+pip3 install mkdocs-material
+```
+
+### Port 8000 already in use
+
+```bash
+# Use different port
+mkdocs serve -a localhost:8001
+
+# Or find and kill process using port
+lsof -ti:8000 | xargs kill -9
+```
+
+### Build fails with encoding errors
+
+```bash
+# Ensure UTF-8 encoding
+export LANG=en_US.UTF-8
 mkdocs build
-mkdocs gh-deploy
+```
+
+### Live reload not working
+
+Increase file watcher limit:
+
+```bash
+echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
 ```
 
 ## Uninstall
@@ -256,4 +363,12 @@ mkdocs gh-deploy
     state: absent
 ```
 
-**Note:** Project files are preserved after uninstall.
+This removes MkDocs and dependencies. Project files and documentation are preserved.
+
+## Resources
+
+- Official docs: https://www.mkdocs.org/
+- Material theme: https://squidfunk.github.io/mkdocs-material/
+- GitHub: https://github.com/mkdocs/mkdocs
+- Plugins: https://www.mkdocs.org/user-guide/configuration/#plugins
+- Search: "mkdocs getting started", "mkdocs material theme", "mkdocs deployment"

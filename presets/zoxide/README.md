@@ -2,6 +2,16 @@
 
 Faster way to navigate directories. Remembers frequently used directories, jump with partial names, smarter than autojump.
 
+## Features
+- **Frecency algorithm**: Combines frequency and recency
+- **Fast**: Written in Rust, minimal overhead
+- **Interactive mode**: fzf integration for ambiguous matches
+- **Learning**: Automatically learns from cd commands
+- **Cross-platform**: Linux, macOS, Windows, BSD
+- **Shell agnostic**: bash, zsh, fish, PowerShell
+- **Fuzzy matching**: Partial name matching
+- **Safe**: Never changes files, only navigation
+
 ## Quick Start
 ```yaml
 - preset: zoxide
@@ -335,6 +345,62 @@ rm ~/.local/share/zoxide/db.zo
 - Shell-agnostic (bash, zsh, fish, PowerShell)
 - Minimal overhead (< 5ms)
 - Learns from your habits
+
+## Advanced Configuration
+
+### Custom Scoring
+```bash
+# ~/.zshrc or ~/.bashrc
+export _ZO_MAXAGE=10000  # Entries older than this get removed
+export _ZO_EXCLUDE_DIRS="$HOME/tmp:$HOME/.cache:*/node_modules"
+```
+
+### Integration Functions
+```bash
+# Quick project opener
+function zcode() {
+  z "$1" && code .
+}
+
+# Jump and git status
+function zg() {
+  z "$1" && git status
+}
+
+# Jump to parent of match
+function zp() {
+  local target=$(zoxide query "$1" | xargs dirname)
+  cd "$target"
+}
+
+# Bookmark system
+alias proj='z ~/projects'
+alias dots='z ~/.config'
+alias work='z ~/work'
+```
+
+### Performance Optimization
+```bash
+# Disable echo for faster navigation
+export _ZO_ECHO=0
+
+# Resolve symlinks for consistency
+export _ZO_RESOLVE_SYMLINKS=1
+
+# Custom data directory
+export _ZO_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zoxide"
+```
+
+## Platform Support
+- ✅ Linux (all distributions)
+- ✅ macOS (Homebrew, MacPorts)
+- ✅ Windows (Scoop, Chocolatey, Cargo)
+- ✅ BSD systems (packages)
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove zoxide |
 
 ## Agent Use
 - Automated directory navigation

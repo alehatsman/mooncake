@@ -1,5 +1,5 @@
 name: miniconda
-description: Install Miniconda - minimal conda installer for Python environments
+description: Minimal Conda installer for managing Python environments and dependencies with built-in package management
 version: 1.0.0
 
 parameters:
@@ -20,7 +20,7 @@ parameters:
     type: bool
     required: false
     default: true
-    description: Initialize conda in shell (bash/zsh)
+    description: Initialize conda in shell (bash/zsh) for automatic activation
 
   create_base_env:
     type: bool

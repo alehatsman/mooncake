@@ -3,15 +3,24 @@
   register: imagemagick_check
   failed_when: false
 
-- name: Install imagemagick
+- name: Install imagemagick (macOS)
   package:
     name: imagemagick
     state: present
-  when: imagemagick_check.rc != 0
+  when: brew_available and imagemagick_check.rc != 0
 
-- name: Verify installation
-  shell: convert --version 2>&1 || convert -v 2>&1 || echo "installed"
-  register: imagemagick_version
+- name: Install imagemagick (Linux)
+  package:
+    name: imagemagick
+    state: present
+  become: true
+  when: apt_available and imagemagick_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v convert
+      exit_code: 0
+
+- name: Display confirmation
   print: "imagemagick installed"

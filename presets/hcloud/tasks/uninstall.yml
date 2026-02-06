@@ -1,8 +1,24 @@
-- name: Uninstall hcloud
+- name: Uninstall hcloud (macOS)
   package:
     name: hcloud
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall hcloud (Linux)
+  shell: |
+    HCLOUD_PATH=$(command -v hcloud 2>/dev/null)
+    if [ -n "$HCLOUD_PATH" ]; then
+      sudo rm -f "$HCLOUD_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v hcloud
+      exit_code: 1
 
 - name: Display confirmation
   print: "hcloud uninstalled"

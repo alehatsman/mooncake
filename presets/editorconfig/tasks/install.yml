@@ -9,9 +9,11 @@
     state: present
   when: editorconfig_check.rc != 0
 
-- name: Verify installation
-  shell: editorconfig --version 2>&1 || editorconfig -v 2>&1 || echo "installed"
-  register: editorconfig_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v editorconfig
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "editorconfig installed"

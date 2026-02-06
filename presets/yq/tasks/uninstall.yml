@@ -1,13 +1,13 @@
-- name: Uninstall yq (macOS)
+- name: Uninstall yq via Homebrew
   package:
     name: yq
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall yq (Linux)
+- name: Uninstall yq binary from go install
   shell: rm -f ~/go/bin/yq
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

@@ -1,5 +1,5 @@
 name: gopass
-description: Secrets management
+description: Team password manager with Git synchronization and GPG encryption
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

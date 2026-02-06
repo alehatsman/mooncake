@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "dive installed: {{ dive_version.stdout }}"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v dive
+      exit_code: 0

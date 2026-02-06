@@ -3,15 +3,21 @@
   register: linkerd_check
   failed_when: false
 
-- name: Install linkerd
+- name: Install linkerd (macOS)
   package:
     name: linkerd
     state: present
-  when: linkerd_check.rc != 0
+  when: brew_available and linkerd_check.rc != 0
 
-- name: Verify installation
-  shell: linkerd --version 2>&1 || linkerd -v 2>&1 || echo "installed"
-  register: linkerd_version
+- name: Install linkerd (Linux)
+  shell: curl -fsL https://run.linkerd.io/install | sh
+  when: linux and linkerd_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v linkerd
+      exit_code: 0
+
+- name: Display confirmation
   print: "linkerd installed"

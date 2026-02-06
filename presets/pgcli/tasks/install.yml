@@ -3,15 +3,21 @@
   register: pgcli_check
   failed_when: false
 
-- name: Install pgcli
+- name: Install  via Homebrew
   package:
     name: pgcli
     state: present
-  when: pgcli_check.rc != 0
+  when: brew_available and pgcli_check.rc != 0
 
-- name: Verify installation
-  shell: pgcli --version 2>&1 || pgcli -v 2>&1 || echo "installed"
-  register: pgcli_version
+- name: Install pgcli via apt
+  shell: pip3 install --user pgcli
+  when: linux and pgcli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pgcli
+      exit_code: 0
+
+- name: Display confirmation
   print: "pgcli installed"

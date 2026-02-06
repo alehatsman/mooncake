@@ -3,15 +3,26 @@
   register: powershell_check
   failed_when: false
 
-- name: Install powershell
+- name: Install powershell via Homebrew
   package:
     name: powershell
     state: present
-  when: powershell_check.rc != 0
+  when: brew_available and powershell_check.rc != 0
 
-- name: Verify installation
-  shell: pwsh --version 2>&1 || pwsh -v 2>&1 || echo "installed"
-  register: powershell_version
+- name: Install powershell via Microsoft repository
+  shell: |
+    wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+    sudo dpkg -i packages-microsoft-prod.deb
+    rm packages-microsoft-prod.deb
+    sudo apt-get update
+    sudo apt-get install -y powershell
+  when: apt_available and powershell_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pwsh
+      exit_code: 0
+
+- name: Display confirmation
   print: "powershell installed"

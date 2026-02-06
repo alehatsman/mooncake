@@ -1,13 +1,13 @@
-- name: Uninstall mypy (macOS)
+- name: Uninstall mypy via Homebrew
   package:
     name: mypy
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall mypy (Linux)
+- name: Uninstall mypy via pip3
   shell: pip3 uninstall -y mypy
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

@@ -3,15 +3,24 @@
   register: byobu_check
   failed_when: false
 
-- name: Install byobu
+- name: Install byobu via Homebrew
   package:
     name: byobu
     state: present
-  when: byobu_check.rc != 0
+  when: brew_available and byobu_check.rc != 0
 
-- name: Verify installation
-  shell: byobu --version 2>&1 || byobu -v 2>&1 || echo "installed"
-  register: byobu_version
+- name: Install byobu via apt
+  package:
+    name: byobu
+    state: present
+  become: true
+  when: apt_available and byobu_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v byobu
+      exit_code: 0
+
+- name: Display confirmation
   print: "byobu installed"

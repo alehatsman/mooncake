@@ -3,15 +3,15 @@
   register: cdk_check
   failed_when: false
 
-- name: Install cdk
-  package:
-    name: cdk
-    state: present
+- name: Install cdk via npm
+  shell: npm install -g aws-cdk
   when: cdk_check.rc != 0
 
-- name: Verify installation
-  shell: cdk --version 2>&1 || cdk -v 2>&1 || echo "installed"
-  register: cdk_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cdk
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "cdk installed"

@@ -1,8 +1,23 @@
-- name: Uninstall qdrant
+- name: Uninstall qdrant (macOS)
   package:
     name: qdrant
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall qdrant (Linux)
+  package:
+    name: qdrant
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v qdrant
+      exit_code: 1
 
 - name: Display confirmation
   print: "qdrant uninstalled"

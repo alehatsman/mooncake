@@ -1,8 +1,24 @@
-- name: Uninstall kubectx
+- name: Uninstall kubectx (macOS)
   package:
     name: kubectx
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kubectx (Linux)
+  shell: |
+    KUBECTX_PATH=$(command -v kubectx 2>/dev/null)
+    if [ -n "$KUBECTX_PATH" ]; then
+      sudo rm -f "$KUBECTX_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kubectx
+      exit_code: 1
 
 - name: Display confirmation
   print: "kubectx uninstalled"

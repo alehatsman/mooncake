@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "mimir uninstalled"
+
+- name: Assert tool is removed
+  assert:
+    command:
+      cmd: command -v mimir
+      exit_code: 1

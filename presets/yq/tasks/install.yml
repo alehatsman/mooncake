@@ -3,15 +3,15 @@
   register: yq_check
   failed_when: false
 
-- name: Install yq (macOS)
+- name: Install yq via Homebrew
   package:
     name: yq
     state: present
-  when: os == "darwin" and yq_check.rc != 0
+  when: brew_available and yq_check.rc != 0
 
-- name: Install yq (Linux)
+- name: Install yq via go install
   shell: go install github.com/mikefarah/yq/v4@latest
-  when: os == "linux" and yq_check.rc != 0
+  when: not brew_available and yq_check.rc != 0
 
 - name: Verify installation with assert
   assert:

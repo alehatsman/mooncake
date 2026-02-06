@@ -1,8 +1,24 @@
-- name: Uninstall mcfly
+- name: Uninstall mcfly (macOS)
   package:
     name: mcfly
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall mcfly (Linux)
+  shell: |
+    MCFLY_PATH=$(command -v mcfly 2>/dev/null)
+    if [ -n "$MCFLY_PATH" ]; then
+      rm -f "$MCFLY_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v mcfly
+      exit_code: 1
 
 - name: Display confirmation
   print: "mcfly uninstalled"

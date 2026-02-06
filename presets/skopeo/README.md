@@ -2,6 +2,15 @@
 
 Inspect, copy, delete, and sign container images without Docker daemon. Advanced registry operations.
 
+## Features
+- **Daemon-free**: No Docker daemon required
+- **Multi-format**: Docker, OCI, archives, directories
+- **Registry operations**: Copy, inspect, delete, sync
+- **Multi-architecture**: Full support for multi-arch images
+- **Signing**: Built-in image signing and verification
+- **Fast**: Optimized for registry operations
+- **Sync**: Advanced multi-image synchronization
+
 ## Quick Start
 ```yaml
 - preset: skopeo
@@ -265,6 +274,65 @@ skopeo --command-timeout=5m copy docker://large-image docker://dest
 - Advanced sync capabilities
 - Works in minimal environments
 - Good for CI/CD pipelines
+
+## Advanced Configuration
+
+### Authentication Configuration
+```yaml
+# ~/.docker/config.json
+{
+  "auths": {
+    "registry.io": {
+      "auth": "base64encodedcredentials"
+    }
+  }
+}
+```
+
+### Registry Mirror Setup
+```bash
+# Mirror images nightly
+#!/bin/bash
+IMAGES=(
+  "nginx:latest"
+  "redis:alpine"
+  "postgres:15"
+)
+
+for img in "${IMAGES[@]}"; do
+  skopeo copy \
+    --dest-creds user:pass \
+    docker://docker.io/$img \
+    docker://mirror.local/$img
+done
+```
+
+### CI/CD Integration Script
+```bash
+# Promote image through environments
+skopeo copy \
+  docker://registry.io/app:dev-$CI_COMMIT_SHA \
+  docker://registry.io/app:staging-$CI_COMMIT_SHA
+
+# Wait for approval
+# ...
+
+skopeo copy \
+  docker://registry.io/app:staging-$CI_COMMIT_SHA \
+  docker://registry.io/app:production-$CI_COMMIT_SHA
+```
+
+## Platform Support
+- ✅ Linux (all distributions)
+- ✅ macOS (Homebrew, binary)
+- ✅ Windows (WSL, binary)
+- ✅ BSD systems
+- ✅ Docker container
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove skopeo |
 
 ## Agent Use
 - Registry synchronization

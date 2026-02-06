@@ -6,7 +6,7 @@
     state: directory
     mode: "0755"
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Start MongoDB service (Linux)
   service:
@@ -14,11 +14,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start MongoDB service (macOS)
   shell: brew services start mongodb-community
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
 
 - name: Wait for MongoDB to be ready
   shell: mongosh --eval "db.adminCommand('ping')" --quiet

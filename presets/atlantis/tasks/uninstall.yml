@@ -1,8 +1,20 @@
-- name: Uninstall atlantis
+- name: Uninstall atlantis (macOS)
   package:
     name: atlantis
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall atlantis binary (Linux)
+  shell: sudo rm -f /usr/local/bin/atlantis
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v atlantis
+      exit_code: 1
 
 - name: Display confirmation
   print: "atlantis uninstalled"

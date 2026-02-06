@@ -1,5 +1,5 @@
 name: shfmt
-description: Utility tool
+description: Shell script formatter supporting bash, sh, and mksh
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

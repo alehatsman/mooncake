@@ -10,7 +10,7 @@
   package:
     name: minio/stable/minio
     state: present
-  when: os == "darwin" and minio_check.rc != 0
+  when: brew_available and minio_check.rc != 0
 
 # Linux - Download binary
 - name: Download MinIO server (Linux)
@@ -19,7 +19,7 @@
     dest: /usr/local/bin/minio
     mode: "0755"
   become: true
-  when: os == "linux" and minio_check.rc != 0
+  when: linux and minio_check.rc != 0
 
 - name: Download MinIO client (mc)
   download:
@@ -27,12 +27,14 @@
     dest: /usr/local/bin/mc
     mode: "0755"
   become: true
-  when: os == "linux" and minio_check.rc != 0
+  when: linux and minio_check.rc != 0
 
 # Verify installation
-- name: Verify MinIO installation
-  shell: minio --version
-  register: minio_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v minio
+      exit_code: 0
 
-- name: Display MinIO version
-  print: "MinIO installed: {{ minio_version.stdout }}"
+- name: Display confirmation
+  print: "MinIO installed"

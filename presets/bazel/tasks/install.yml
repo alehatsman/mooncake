@@ -3,15 +3,24 @@
   register: bazel_check
   failed_when: false
 
-- name: Install bazel
+- name: Install bazel via Homebrew
   package:
     name: bazel
     state: present
-  when: bazel_check.rc != 0
+  when: brew_available and bazel_check.rc != 0
 
-- name: Verify installation
-  shell: bazel --version 2>&1 || bazel -v 2>&1 || echo "installed"
-  register: bazel_version
+- name: Install bazel via apt
+  package:
+    name: bazel
+    state: present
+  become: true
+  when: apt_available and bazel_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v bazel
+      exit_code: 0
+
+- name: Display confirmation
   print: "bazel installed"

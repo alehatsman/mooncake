@@ -3,15 +3,21 @@
   register: k3sup_check
   failed_when: false
 
-- name: Install k3sup
+- name: Install k3sup (macOS)
   package:
     name: k3sup
     state: present
-  when: k3sup_check.rc != 0
+  when: brew_available and k3sup_check.rc != 0
 
-- name: Verify installation
-  shell: k3sup --version 2>&1 || k3sup -v 2>&1 || echo "installed"
-  register: k3sup_version
+- name: Install k3sup (Linux)
+  shell: curl -sLS https://get.k3sup.dev | sh
+  when: linux and k3sup_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v k3sup
+      exit_code: 0
+
+- name: Display confirmation
   print: "k3sup installed"

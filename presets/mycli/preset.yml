@@ -1,16 +1,20 @@
 name: mycli
-description: MySQL CLI with autocomplete
-version: "1.0.0"
+description: MySQL client with auto-completion and syntax highlighting
+version: 1.0.0
+
 parameters:
   state:
     type: string
     required: false
     default: present
     enum: [present, absent]
+    description: Whether mycli should be installed or removed
+
 steps:
   - name: Install mycli
     include: tasks/install.yml
     when: parameters.state == "present"
+
   - name: Uninstall mycli
     include: tasks/uninstall.yml
     when: parameters.state == "absent"

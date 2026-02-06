@@ -1,5 +1,5 @@
 name: yq
-description: YAML/XML/JSON processor - jq for YAML
+description: Portable command-line YAML, JSON, XML, and properties processor with jq-like syntax
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Whether yq should be installed or removed
 steps:
   - name: Install yq
     include: tasks/install.yml

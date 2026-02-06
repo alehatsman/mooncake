@@ -1,8 +1,24 @@
-- name: Uninstall actionlint
+- name: Uninstall actionlint (macOS)
   package:
     name: actionlint
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall actionlint (Linux)
+  shell: |
+    ACTIONLINT_PATH=$(which actionlint 2>/dev/null)
+    if [ -n "$ACTIONLINT_PATH" ]; then
+      sudo rm -f "$ACTIONLINT_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v actionlint
+      exit_code: 1
 
 - name: Display confirmation
   print: "actionlint uninstalled"

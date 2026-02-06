@@ -1,13 +1,13 @@
-- name: Uninstall magic-wormhole (macOS)
+- name: Uninstall magic-wormhole via Homebrew
   package:
     name: magic-wormhole
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall magic-wormhole (Linux)
+- name: Uninstall magic-wormhole via pip3
   shell: pip3 uninstall -y magic-wormhole
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

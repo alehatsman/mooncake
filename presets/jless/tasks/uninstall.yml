@@ -1,8 +1,24 @@
-- name: Uninstall jless
+- name: Uninstall jless (macOS)
   package:
     name: jless
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall jless (Linux)
+  shell: |
+    JLESS_PATH=$(command -v jless 2>/dev/null)
+    if [ -n "$JLESS_PATH" ]; then
+      sudo rm -f "$JLESS_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v jless
+      exit_code: 1
 
 - name: Display confirmation
   print: "jless uninstalled"

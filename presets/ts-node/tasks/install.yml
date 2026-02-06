@@ -7,11 +7,11 @@
   package:
     name: ts-node
     state: present
-  when: os == "darwin" and ts_node_check.rc != 0
+  when: brew_available and ts_node_check.rc != 0
 
 - name: Install ts-node (Linux)
   shell: npm install -g ts-node
-  when: os == "linux" and ts_node_check.rc != 0
+  when: linux and ts_node_check.rc != 0
 
 - name: Verify installation with assert
   assert:

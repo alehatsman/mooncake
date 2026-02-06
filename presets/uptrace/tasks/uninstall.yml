@@ -3,7 +3,7 @@
     path: /usr/local/bin/uptrace
     state: absent
   become: true
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall uptrace (Linux)
@@ -11,7 +11,7 @@
     path: /usr/local/bin/uptrace
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

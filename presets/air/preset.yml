@@ -1,5 +1,5 @@
 name: air
-description: Rust/Go tool
+description: Live reload utility for Go applications with hot reloading during development
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

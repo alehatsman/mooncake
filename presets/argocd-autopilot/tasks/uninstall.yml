@@ -1,8 +1,24 @@
-- name: Uninstall argocd-autopilot
+- name: Uninstall argocd-autopilot (macOS)
   package:
     name: argocd-autopilot
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall argocd-autopilot (Linux)
+  shell: |
+    AUTOPILOT_PATH=$(command -v argocd-autopilot 2>/dev/null)
+    if [ -n "$AUTOPILOT_PATH" ]; then
+      sudo rm -f "$AUTOPILOT_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v argocd-autopilot
+      exit_code: 1
 
 - name: Display confirmation
   print: "argocd-autopilot uninstalled"

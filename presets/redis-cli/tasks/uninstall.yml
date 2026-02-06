@@ -2,7 +2,7 @@
   package:
     name: redis
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall redis-cli (Linux)
@@ -10,7 +10,7 @@
     name: redis-tools
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
   failed_when: false
 
 - name: Verify uninstallation with assert

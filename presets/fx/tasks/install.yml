@@ -9,9 +9,11 @@
     state: present
   when: fx_check.rc != 0
 
-- name: Verify installation
-  shell: fx --version 2>&1 || echo "installed"
-  register: fx_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v fx
+      exit_code: 0
 
-- name: Display version
-  print: "fx installed: {{ fx_version.stdout }}"
+- name: Display confirmation
+  print: "fx installed"

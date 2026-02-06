@@ -7,6 +7,12 @@ Visualize curl timing statistics. See DNS, TCP, TLS, server, and transfer timing
 - preset: httpstat
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Simple GET
@@ -22,6 +28,18 @@ httpstat -L https://bit.ly/shortlink
 httpstat https://api.example.com -H "Authorization: Bearer token"
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: httpstat
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove httpstat |
 ## HTTP Methods
 ```bash
 # GET (default)
@@ -289,3 +307,8 @@ export HTTPSTAT_CURL_BIN=/usr/local/bin/curl
 ## Resources
 - GitHub: https://github.com/reorx/httpstat
 - Search: "httpstat examples", "http timing visualization"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

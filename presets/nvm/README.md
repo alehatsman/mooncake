@@ -2,6 +2,17 @@
 
 Manage multiple Node.js versions. Install, switch, and use different Node versions per project.
 
+## Features
+
+- **Multiple Node versions** - Install and switch Node 12-21+
+- **Per-project versions** - Automatic switching via .nvmrc
+- **Zero sudo** - User-level installation
+- **Shell integration** - Bash, Zsh, Fish support
+- **Global packages** - Auto-install packages on new Node versions
+- **LTS support** - Install latest LTS with --lts
+- **Alias system** - Named shortcuts for versions
+- **Package migration** - Copy packages between versions
+
 ## Quick Start
 ```yaml
 - preset: nvm
@@ -301,6 +312,64 @@ rm -rf ~/.nvm/.cache
 rm -rf ~/.nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 ```
+
+## Advanced Configuration
+
+### Lazy Loading (Speed Optimization)
+```bash
+# Add to .zshrc for faster shell startup
+nvm() {
+  unset -f nvm
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  nvm "$@"
+}
+```
+
+### Custom Install Location
+```bash
+export NVM_DIR="$HOME/.config/nvm"
+```
+
+### Default Packages
+```bash
+# Auto-install these on every new Node version
+cat > ~/.nvm-default-packages <<EOF
+typescript
+ts-node
+yarn
+pnpm
+nodemon
+EOF
+```
+
+### Build from Source
+```bash
+# Install with custom flags
+NVM_NODEJS_ORG_MIRROR=https://nodejs.org/dist nvm install 20
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `state` | string | `present` | `present` or `absent` |
+| `version` | string | `node` | Node version (20, 18, --lts, node) |
+| `set_default` | bool | `true` | Set as default version |
+| `additional_versions` | array | `[]` | Other versions to install |
+| `global_packages` | array | `[]` | Packages to install globally |
+
+## Platform Support
+
+- ✅ **Linux** - All distributions (bash/zsh/fish)
+- ✅ **macOS** - Intel and Apple Silicon
+- ⚠️ **Windows** - WSL only (use nvm-windows for native)
+- ✅ **FreeBSD** - Community supported
+
+**Requirements:**
+- curl or wget
+- git (for nvm installation)
+- C++ compiler (for native modules)
 
 ## Comparison
 | Feature | nvm | n | volta | fnm |

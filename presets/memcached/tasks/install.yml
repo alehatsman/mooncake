@@ -3,15 +3,27 @@
   register: memcached_check
   failed_when: false
 
-- name: Install memcached
-  package:
-    name: memcached
-    state: present
-  when: memcached_check.rc != 0
+- name: Install memcached via apt
+  shell: apt-get install -y memcached
+  when: apt_available and memcached_check.rc != 0
+  become: true
 
-- name: Verify installation
-  shell: memcached --version 2>&1 || echo "installed"
-  register: memcached_version
+- name: Install memcached via dnf
+  shell: dnf install -y memcached
+  when: dnf_available and memcached_check.rc != 0
+  become: true
 
-- name: Display version
-  print: "memcached installed: {{ memcached_version.stdout }}"
+- name: Install memcached via yum
+  shell: yum install -y memcached
+  when: yum_available and memcached_check.rc != 0
+  become: true
+
+- name: Install memcached via Homebrew
+  shell: brew install memcached
+  when: brew_available and memcached_check.rc != 0
+
+- name: Verify memcached is installed
+  assert:
+    command:
+      cmd: command -v memcached
+      exit_code: 0

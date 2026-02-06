@@ -3,15 +3,21 @@
   register: zed_check
   failed_when: false
 
-- name: Install zed
+- name: Install zed (macOS)
   package:
     name: zed
     state: present
-  when: zed_check.rc != 0
+  when: brew_available and zed_check.rc != 0
 
-- name: Verify installation
-  shell: zed --version 2>&1 || zed -v 2>&1 || echo "installed"
-  register: zed_version
+- name: Install zed (Linux)
+  shell: curl -fsSL https://zed.dev/install.sh | sh
+  when: linux and zed_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v zed
+      exit_code: 0
+
+- name: Display confirmation
   print: "zed installed"

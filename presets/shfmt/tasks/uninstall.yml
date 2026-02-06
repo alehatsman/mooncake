@@ -2,12 +2,12 @@
   package:
     name: shfmt
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall shfmt (Linux)
   shell: rm -f $(go env GOPATH)/bin/shfmt
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

@@ -1,8 +1,24 @@
-- name: Uninstall istio
+- name: Uninstall istio (macOS)
   package:
     name: istio
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall istio (Linux)
+  shell: |
+    ISTIOCTL_PATH=$(command -v istioctl 2>/dev/null)
+    if [ -n "$ISTIOCTL_PATH" ]; then
+      sudo rm -f "$ISTIOCTL_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v istioctl
+      exit_code: 1
 
 - name: Display confirmation
   print: "istio uninstalled"

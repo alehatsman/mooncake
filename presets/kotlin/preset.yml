@@ -1,5 +1,5 @@
 name: kotlin
-description: Java/JVM tool
+description: Modern statically-typed JVM language with concise syntax
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

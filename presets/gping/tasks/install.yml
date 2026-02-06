@@ -3,15 +3,24 @@
   register: gping_check
   failed_when: false
 
-- name: Install gping
+- name: Install gping (macOS)
   package:
     name: gping
     state: present
-  when: gping_check.rc != 0
+  when: brew_available and gping_check.rc != 0
 
-- name: Verify installation
-  shell: gping --version 2>&1 || gping -v 2>&1 || echo "installed"
-  register: gping_version
+- name: Install gping (Linux)
+  shell: |
+    curl -sL https://github.com/orf/gping/releases/latest/download/gping-aarch64-unknown-linux-musl.tar.gz | tar xz
+    sudo mv gping /usr/local/bin/
+    sudo chmod +x /usr/local/bin/gping
+  when: linux and gping_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gping
+      exit_code: 0
+
+- name: Display confirmation
   print: "gping installed"

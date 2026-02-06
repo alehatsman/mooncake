@@ -3,15 +3,24 @@
   register: groovy_check
   failed_when: false
 
-- name: Install groovy
+- name: Install groovy (macOS)
   package:
     name: groovy
     state: present
-  when: groovy_check.rc != 0
+  when: brew_available and groovy_check.rc != 0
 
-- name: Verify installation
-  shell: groovy --version 2>&1 || groovy -v 2>&1 || echo "installed"
-  register: groovy_version
+- name: Install groovy (Linux)
+  package:
+    name: groovy
+    state: present
+  become: true
+  when: apt_available and groovy_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v groovy
+      exit_code: 0
+
+- name: Display confirmation
   print: "groovy installed"

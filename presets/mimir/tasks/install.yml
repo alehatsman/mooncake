@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "mimir installed"
+
+- name: Verify installation
+  assert:
+    command:
+      cmd: command -v mimir
+      exit_code: 0

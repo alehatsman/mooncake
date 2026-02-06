@@ -7,6 +7,15 @@ Sync, search, and backup shell history with context. SQLite-based history with f
 - preset: atuin
 ```
 
+## Features
+- **Sync across machines**: Encrypted cloud sync of shell history
+- **Better search**: Full-text search with context (directory, exit code, duration)
+- **Privacy focused**: End-to-end encrypted, self-hostable
+- **Statistics**: Analyze command usage patterns
+- **Cross-shell**: Works with bash, zsh, fish
+- **Import existing**: Import from bash, zsh, fish history
+- **Filter by context**: Search by directory, command exit status, or time
+
 ## Basic Usage
 ```bash
 # Search history (interactive)
@@ -343,15 +352,121 @@ cp ~/.local/share/atuin/history.db ~/backup/
 - **Use Tab** to edit before executing
 - **Self-host** for complete privacy
 
+## Platform Support
+- ✅ Linux (apt,Homebrew)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### Sync History Across Machines
+```bash
+# On first machine
+atuin register -u myuser -e user@example.com -p mypassword
+atuin login -u myuser -p mypassword
+atuin sync
+
+# On second machine (laptop, remote server, etc.)
+atuin login -u myuser -p mypassword
+atuin sync
+
+# Now all machines share command history
+# Commands typed on desktop appear on laptop
+```
+
+### Team Command Library
+```bash
+#!/bin/bash
+# Self-hosted server setup for team
+
+# Deploy atuin-server
+docker run -d \
+  --name atuin-server \
+  -p 8888:8888 \
+  -v atuin-data:/data \
+  -e ATUIN_HOST=0.0.0.0 \
+  -e ATUIN_PORT=8888 \
+  -e ATUIN_OPEN_REGISTRATION=false \
+  ghcr.io/atuinsh/atuin:latest server
+
+# Configure team clients
+echo 'export ATUIN_SYNC_ADDRESS="https://atuin.company.com"' >> ~/.bashrc
+
+# Team members can now share command snippets
+atuin search docker  # Find all docker commands used by team
+atuin search kubectl # Find kubectl patterns
+```
+
+### Command Pattern Analysis
+```bash
+#!/bin/bash
+# analyze-commands.sh - Find most used commands
+
+echo "Top 10 most used commands:"
+atuin history list --format "{command}" | \
+  awk '{print $1}' | \
+  sort | uniq -c | sort -rn | head -10
+
+echo ""
+echo "Most common git operations:"
+atuin search --cmd-only git | \
+  awk '{print $2}' | \
+  sort | uniq -c | sort -rn | head -10
+
+echo ""
+echo "Kubernetes command patterns:"
+atuin search kubectl | grep -o 'kubectl [a-z]*' | \
+  sort | uniq -c | sort -rn
+```
+
+### Audit Trail for Security
+```bash
+#!/bin/bash
+# audit-production-access.sh - Track production server commands
+
+# On production servers, enable atuin
+cat > /etc/profile.d/atuin.sh <<'EOF'
+# Log all commands to central atuin server
+export ATUIN_SYNC_ADDRESS="https://audit.company.com"
+eval "$(atuin init bash)"
+
+# Sync every command immediately
+atuin sync
+EOF
+
+# Query audit trail
+atuin search --host production-web-01 --after "2024-01-01"
+atuin search --host production-db-01 "drop table"  # Dangerous commands
+atuin search --user admin --after "2024-02-01"     # Admin activity
+```
+
 ## Agent Use
-- Command history analysis
-- Workflow optimization
-- Team command sharing (self-hosted)
-- Audit logging
-- Command pattern discovery
-- Productivity metrics
+- Sync command history across development environments
+- Build team command libraries for common operations
+- Analyze command patterns for workflow optimization
+- Audit trail for security and compliance
+- Discover and share efficient command combinations
+- Generate productivity metrics and insights
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install atuin
+  preset: atuin
+
+- name: Use atuin in automation
+  shell: |
+    # Custom configuration here
+    echo "atuin configured"
+```
+
 ```yaml
 - preset: atuin
   with:

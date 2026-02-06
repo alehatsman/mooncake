@@ -3,15 +3,24 @@
   register: ncdu_check
   failed_when: false
 
-- name: Install ncdu
+- name: Install ncdu via Homebrew
   package:
     name: ncdu
     state: present
-  when: ncdu_check.rc != 0
+  when: brew_available and ncdu_check.rc != 0
 
-- name: Verify installation
-  shell: ncdu --version 2>&1 || ncdu -v 2>&1 || echo "installed"
-  register: ncdu_version
+- name: Install ncdu via apt
+  package:
+    name: ncdu
+    state: present
+  become: true
+  when: apt_available and ncdu_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ncdu
+      exit_code: 0
+
+- name: Display confirmation
   print: "ncdu installed"

@@ -3,15 +3,22 @@
   register: helm_check
   failed_when: false
 
-- name: Install helm
+- name: Install helm (macOS)
   package:
     name: helm
     state: present
-  when: helm_check.rc != 0
+  when: brew_available and helm_check.rc != 0
 
-- name: Verify installation
-  shell: helm --version 2>&1 || helm -v 2>&1 || echo "installed"
-  register: helm_version
+- name: Install helm (Linux)
+  shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: linux and helm_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v helm
+      exit_code: 0
+
+- name: Display confirmation
   print: "helm installed"

@@ -3,15 +3,24 @@
   register: kusk_check
   failed_when: false
 
-- name: Install kusk
+- name: Install kusk (macOS)
   package:
     name: kusk
     state: present
-  when: kusk_check.rc != 0
+  when: brew_available and kusk_check.rc != 0
 
-- name: Verify installation
-  shell: kusk --version 2>&1 || kusk -v 2>&1 || echo "installed"
-  register: kusk_version
+- name: Install kusk (Linux)
+  shell: |
+    curl -sL https://github.com/kubeshop/kusk-gateway/releases/latest/download/kusk_linux_arm64.tar.gz | tar xz
+    sudo mv kusk /usr/local/bin/
+    sudo chmod +x /usr/local/bin/kusk
+  when: linux and kusk_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kusk
+      exit_code: 0
+
+- name: Display confirmation
   print: "kusk installed"

@@ -3,15 +3,21 @@
   register: pulumi_check
   failed_when: false
 
-- name: Install pulumi
+- name: Install pulumi via Homebrew
   package:
     name: pulumi
     state: present
-  when: pulumi_check.rc != 0
+  when: brew_available and pulumi_check.rc != 0
 
-- name: Verify installation
-  shell: pulumi --version 2>&1 || pulumi -v 2>&1 || echo "installed"
-  register: pulumi_version
+- name: Install pulumi via install script
+  shell: curl -fsSL https://get.pulumi.com | sh
+  when: linux and pulumi_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pulumi
+      exit_code: 0
+
+- name: Display confirmation
   print: "pulumi installed"

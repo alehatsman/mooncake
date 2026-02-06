@@ -12,14 +12,16 @@
     name: ollama
     state: present
   become: true
-  when: >
-    ollama_check.rc != 0 and
-    parameters.method == "package"
+  when: (ollama_check.rc != 0) and (parameters.method == "package")
 
 # Official Script Installation
 - name: Install Ollama via official script
   shell: curl -fsSL https://ollama.com/install.sh | sh
   become: true
-  when: >
-    ollama_check.rc != 0 and
-    (parameters.method == "auto" or parameters.method == "script")
+  when: (ollama_check.rc != 0) and ((parameters.method == "auto") or (parameters.method == "script"))
+
+- name: Verify installation
+  assert:
+    command:
+      cmd: command -v ollama
+      exit_code: 0

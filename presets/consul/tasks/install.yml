@@ -8,7 +8,7 @@
 # macOS Installation
 - name: Install Consul via Homebrew (macOS)
   shell: brew install consul
-  when: os == "darwin" and consul_check.rc != 0
+  when: brew_available and consul_check.rc != 0
 
 # Linux Installation
 - name: Download and install Consul (Linux)
@@ -23,10 +23,16 @@
     sudo mv /tmp/consul /usr/local/bin/
     sudo chmod +x /usr/local/bin/consul
     rm /tmp/consul.zip
-  when: os == "linux" and consul_check.rc != 0
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and consul_check.rc != 0
 
 # Verify installation
-- name: Verify Consul installation
+- name: Verify Consul installation with assert
+  assert:
+    command:
+      cmd: consul version
+      exit_code: 0
+
+- name: Get Consul version
   shell: consul version
   register: consul_version
 
@@ -132,7 +138,7 @@
       WantedBy=multi-user.target
     mode: "0644"
   become: true
-  when: os == "linux" and parameters.mode != "dev"
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and parameters.mode != "dev"
 
 # Create consul user (Linux)
 - name: Create consul user
@@ -141,12 +147,12 @@
       sudo useradd --system --home /etc/consul.d --shell /bin/false consul
       sudo chown -R consul:consul /etc/consul.d {{ parameters.data_dir }}
     fi
-  when: os == "linux" and parameters.mode != "dev"
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and parameters.mode != "dev"
 
 # Reload systemd
 - name: Reload systemd daemon
   shell: sudo systemctl daemon-reload
-  when: os == "linux" and parameters.mode != "dev"
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and parameters.mode != "dev"
 
 # Start service
 - name: Start Consul service
@@ -155,7 +161,7 @@
     state: started
     enabled: true
   become: true
-  when: parameters.start_service and parameters.mode != "dev" and os == "linux"
+  when: parameters.start_service and parameters.mode != "dev" and (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available)
 
 # Dev mode instructions
 - name: Display dev mode instructions

@@ -3,15 +3,23 @@
   register: gloo_check
   failed_when: false
 
-- name: Install gloo
+- name: Install gloo (macOS)
   package:
     name: gloo
     state: present
-  when: gloo_check.rc != 0
+  when: brew_available and gloo_check.rc != 0
 
-- name: Verify installation
-  shell: glooctl --version 2>&1 || glooctl -v 2>&1 || echo "installed"
-  register: gloo_version
+- name: Install gloo (Linux)
+  shell: |
+    curl -sL https://run.solo.io/gloo/install | sh
+    sudo mv $HOME/.gloo/bin/glooctl /usr/local/bin/
+  when: linux and gloo_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v glooctl
+      exit_code: 0
+
+- name: Display confirmation
   print: "gloo installed"

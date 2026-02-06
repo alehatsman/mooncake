@@ -3,15 +3,15 @@
   register: zoxide_check
   failed_when: false
 
-- name: Install zoxide (macOS)
+- name: Install zoxide via Homebrew
   package:
     name: zoxide
     state: present
-  when: os == "darwin" and zoxide_check.rc != 0
+  when: brew_available and zoxide_check.rc != 0
 
-- name: Install zoxide (Linux)
+- name: Install zoxide via cargo
   shell: cargo install zoxide
-  when: os == "linux" and zoxide_check.rc != 0
+  when: not brew_available and zoxide_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -1,5 +1,5 @@
 name: garnet
-description: Cache / storage system
+description: Install Microsoft Garnet - high-performance Redis-compatible cache server
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

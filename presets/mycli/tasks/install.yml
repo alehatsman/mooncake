@@ -3,15 +3,15 @@
   register: mycli_check
   failed_when: false
 
-- name: Install mycli (macOS)
+- name: Install mycli via Homebrew
   package:
     name: mycli
     state: present
-  when: os == "darwin" and mycli_check.rc != 0
+  when: brew_available and mycli_check.rc != 0
 
-- name: Install mycli (Linux)
+- name: Install mycli via pip3
   shell: pip3 install --user mycli
-  when: os == "linux" and mycli_check.rc != 0
+  when: not brew_available and mycli_check.rc != 0
 
 - name: Verify installation with assert
   assert:

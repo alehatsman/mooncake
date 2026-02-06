@@ -3,15 +3,24 @@
   register: influxdb3_check
   failed_when: false
 
-- name: Install influxdb3
+- name: Install influxdb3 (macOS)
   package:
     name: influxdb3
     state: present
-  when: influxdb3_check.rc != 0
+  when: brew_available and influxdb3_check.rc != 0
 
-- name: Verify installation
-  shell: influxdb3 --version 2>&1 || influxdb3 -v 2>&1 || echo "installed"
-  register: influxdb3_version
+- name: Install influxdb3 (Linux)
+  shell: |
+    curl -sL https://github.com/InfluxCommunity/influxdb3-python-cli/releases/latest/download/influxdb3-linux-arm64 -o /tmp/influxdb3
+    sudo mv /tmp/influxdb3 /usr/local/bin/influxdb3
+    sudo chmod +x /usr/local/bin/influxdb3
+  when: linux and influxdb3_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v influxdb3
+      exit_code: 0
+
+- name: Display confirmation
   print: "influxdb3 installed"

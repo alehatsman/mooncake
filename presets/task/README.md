@@ -7,6 +7,36 @@ Task runner and build tool. Define tasks in YAML with dependencies, variables, a
 - preset: task
 ```
 
+## Features
+- **YAML configuration**: Easy-to-read Taskfile.yml instead of cryptic Makefile syntax
+- **Smart caching**: Incremental builds with sources/generates tracking
+- **Cross-platform**: Works seamlessly on Linux, macOS, Windows
+- **Parallel execution**: Run dependent tasks concurrently
+- **Variable support**: Global and task-local variables with shell expansion
+- **Task includes**: Organize large projects with multiple Taskfiles
+- **Watch mode**: Auto-rebuild on file changes
+
+## Advanced Configuration
+```yaml
+# Install task (default)
+- preset: task
+
+# Uninstall task
+- preset: task
+  with:
+    state: absent
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove (present/absent) |
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ✅ Windows (scoop, choco)
+
 ## Basic Usage
 ```bash
 # List available tasks

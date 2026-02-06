@@ -37,12 +37,9 @@ parameters:
 steps:
   - name: Install Redis
     include: tasks/install.yml
-    when: parameters.state == "present"
 
   - name: Configure Redis
     include: tasks/configure.yml
-    when: parameters.state == "present"
 
   - name: Uninstall Redis
     include: tasks/uninstall.yml
-    when: parameters.state == "absent"

@@ -7,14 +7,21 @@
   package:
     name: rbenv
     state: present
-  when: os == "darwin" and rbenv_check.rc != 0
+  when: brew_available
 
-- name: Install rbenv (Linux)
+- name: Install rbenv (Debian/Ubuntu)
   package:
     name: rbenv
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and rbenv_check.rc != 0
+  when: apt_available
+
+- name: Install rbenv (RHEL/Fedora)
+  package:
+    name: rbenv
+    state: present
+  become: true
+  when: (dnf_available | default(false)) or (yum_available | default(false))
 
 - name: Verify installation with assert
   assert:

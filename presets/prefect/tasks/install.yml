@@ -3,15 +3,19 @@
   register: prefect_check
   failed_when: false
 
-- name: Install prefect
-  package:
-    name: prefect
-    state: present
+- name: Install prefect via pip3
+  shell: pip3 install --user prefect
   when: prefect_check.rc != 0
 
-- name: Verify installation
-  shell: prefect --version 2>&1 || prefect -v 2>&1 || echo "installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v prefect
+      exit_code: 0
+
+- name: Get prefect version
+  shell: prefect version
   register: prefect_version
 
 - name: Display version
-  print: "prefect installed"
+  print: "prefect installed: {{ prefect_version.stdout }}"

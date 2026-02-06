@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "crane uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v crane
+      exit_code: 1

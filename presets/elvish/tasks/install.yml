@@ -9,9 +9,11 @@
     state: present
   when: elvish_check.rc != 0
 
-- name: Verify installation
-  shell: elvish --version 2>&1 || elvish -v 2>&1 || echo "installed"
-  register: elvish_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v elvish
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "elvish installed"

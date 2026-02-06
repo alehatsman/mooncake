@@ -1,8 +1,23 @@
-- name: Uninstall gh
+- name: Uninstall gh (macOS)
   package:
     name: gh
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gh (Linux)
+  package:
+    name: gh
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gh
+      exit_code: 1
 
 - name: Display confirmation
   print: "gh uninstalled"

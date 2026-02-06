@@ -1,13 +1,13 @@
-- name: Uninstall mdl (macOS)
+- name: Uninstall mdl via Homebrew
   package:
     name: mdl
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall mdl (Linux)
+- name: Uninstall mdl via gem
   shell: gem uninstall -x mdl
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

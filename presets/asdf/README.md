@@ -7,6 +7,15 @@ Manage multiple runtime versions with a single tool. Replace nvm, rbenv, pyenv, 
 - preset: asdf
 ```
 
+## Features
+- **Multi-language**: Support for 500+ tools via plugins (Node, Python, Ruby, Go, Java, etc.)
+- **Per-project versions**: `.tool-versions` file for project-specific versions
+- **Single tool**: Replace nvm, rbenv, pyenv, goenv with one tool
+- **Automatic switching**: Changes versions when entering project directories
+- **Global + local**: Set global defaults and per-project overrides
+- **Shell integration**: Works with bash, zsh, fish
+- **Extensible**: Plugin system for adding new tools
+
 ## Basic Usage
 ```bash
 # Add plugin
@@ -333,15 +342,144 @@ asdf install & asdf install python &
 - 200+ plugins available
 - Fast switching
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### Multi-Project Version Management
+```bash
+#!/bin/bash
+# setup-workspace.sh - Setup development environment
+
+# Project A: Node 18, Python 3.11
+cd ~/projects/api
+cat > .tool-versions <<EOF
+nodejs 18.17.0
+python 3.11.4
+terraform 1.5.0
+EOF
+asdf install
+
+# Project B: Node 20, Python 3.12
+cd ~/projects/frontend
+cat > .tool-versions <<EOF
+nodejs 20.5.0
+python 3.12.0
+yarn 1.22.19
+EOF
+asdf install
+
+# Automatic switching when cd-ing between projects
+cd ~/projects/api
+node --version  # v18.17.0
+cd ~/projects/frontend
+node --version  # v20.5.0
+```
+
+### CI/CD Pipeline Setup
+```yaml
+# .github/workflows/test.yml
+- name: Install asdf
+  preset: asdf
+
+- name: Install project tools
+  run: |
+    asdf plugin add nodejs
+    asdf plugin add python
+    asdf install  # Reads .tool-versions
+
+- name: Verify versions
+  run: |
+    node --version
+    python --version
+    asdf current
+```
+
+### Team Environment Consistency
+```bash
+# bootstrap-dev-env.sh - One-command setup for new team members
+#!/bin/bash
+
+echo "Setting up development environment..."
+
+# Install asdf via Mooncake
+cat > setup.yml <<EOF
+- name: Install asdf
+  preset: asdf
+  become: false
+EOF
+
+mooncake run -c setup.yml
+
+# Install plugins from .tool-versions
+asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
+asdf plugin add python
+asdf plugin add golang https://github.com/asdf-community/asdf-golang.git
+asdf plugin add terraform
+
+# Install all versions
+asdf install
+
+echo "Development environment ready!"
+echo "Current versions:"
+asdf current
+```
+
+### Docker Development Image
+```dockerfile
+# Dockerfile.dev
+FROM ubuntu:22.04
+
+# Install asdf
+RUN apt-get update && apt-get install -y curl git
+RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.13.1
+
+# Copy project tool versions
+COPY .tool-versions /app/.tool-versions
+WORKDIR /app
+
+# Install tools
+RUN . ~/.asdf/asdf.sh && \
+    asdf plugin add nodejs && \
+    asdf plugin add python && \
+    asdf install
+
+# Set up PATH
+ENV PATH="/root/.asdf/shims:/root/.asdf/bin:${PATH}"
+
+CMD ["bash"]
+```
+
 ## Agent Use
-- Automated environment setup
-- CI/CD version management
-- Multi-language project support
-- Team environment consistency
-- Development container setup
-- Version enforcement
+- Automated development environment provisioning
+- CI/CD version management with project-specific tools
+- Team onboarding automation with consistent tool versions
+- Multi-language project support in containers
+- Version enforcement for compliance and reproducibility
+- Legacy project maintenance with isolated tool versions
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install asdf
+  preset: asdf
+
+- name: Use asdf in automation
+  shell: |
+    # Custom configuration here
+    echo "asdf configured"
+```
+
 ```yaml
 - preset: asdf
   with:

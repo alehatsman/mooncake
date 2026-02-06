@@ -1,8 +1,29 @@
-- name: Uninstall meilisearch
-  package:
-    name: meilisearch
-    state: absent
+- name: Uninstall meilisearch via apt
+  shell: apt-get remove -y meilisearch
+  when: apt_available
+  become: true
   failed_when: false
 
-- name: Display confirmation
-  print: "meilisearch uninstalled"
+- name: Uninstall meilisearch via dnf
+  shell: dnf remove -y meilisearch
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Uninstall meilisearch via yum
+  shell: yum remove -y meilisearch
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Uninstall meilisearch via Homebrew
+  shell: brew uninstall meilisearch
+  when: brew_available
+  failed_when: false
+
+- name: Verify meilisearch is not installed
+  assert:
+    command:
+      cmd: command -v meilisearch
+      exit_code: 1
+  failed_when: false

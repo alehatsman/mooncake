@@ -7,11 +7,11 @@
   package:
     name: watchexec
     state: present
-  when: os == "darwin" and watchexec_check.rc != 0
+  when: brew_available and watchexec_check.rc != 0
 
 - name: Install watchexec (Linux)
   shell: cargo install watchexec-cli
-  when: os == "linux" and watchexec_check.rc != 0
+  when: linux and watchexec_check.rc != 0
 
 - name: Verify installation with assert
   assert:

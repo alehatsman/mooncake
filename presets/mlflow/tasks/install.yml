@@ -3,15 +3,16 @@
   register: mlflow_check
   failed_when: false
 
-- name: Install mlflow
-  package:
-    name: mlflow
-    state: present
-  when: mlflow_check.rc != 0
+- name: Install mlflow via pip3 on Linux
+  shell: pip3 install mlflow
+  when: (apt_available or dnf_available or yum_available) and mlflow_check.rc != 0
 
-- name: Verify installation
-  shell: mlflow --version 2>&1 || mlflow -v 2>&1 || echo "installed"
-  register: mlflow_version
+- name: Install mlflow via pip3 on macOS
+  shell: pip3 install mlflow
+  when: brew_available and mlflow_check.rc != 0
 
-- name: Display version
-  print: "mlflow installed"
+- name: Verify mlflow is installed
+  assert:
+    command:
+      cmd: command -v mlflow
+      exit_code: 0

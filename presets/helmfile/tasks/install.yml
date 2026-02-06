@@ -3,15 +3,24 @@
   register: helmfile_check
   failed_when: false
 
-- name: Install helmfile
+- name: Install helmfile (macOS)
   package:
     name: helmfile
     state: present
-  when: helmfile_check.rc != 0
+  when: brew_available and helmfile_check.rc != 0
 
-- name: Verify installation
-  shell: helmfile --version 2>&1 || echo "installed"
-  register: helmfile_version
+- name: Install helmfile (Linux)
+  shell: |
+    curl -sL https://github.com/helmfile/helmfile/releases/latest/download/helmfile_linux_arm64 -o /tmp/helmfile
+    sudo mv /tmp/helmfile /usr/local/bin/helmfile
+    sudo chmod +x /usr/local/bin/helmfile
+  when: linux and helmfile_check.rc != 0
 
-- name: Display version
-  print: "helmfile installed: {{ helmfile_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v helmfile
+      exit_code: 0
+
+- name: Display confirmation
+  print: "helmfile installed"

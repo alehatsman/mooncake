@@ -1,8 +1,23 @@
-- name: Uninstall iperf3
+- name: Uninstall iperf3 (macOS)
   package:
     name: iperf3
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall iperf3 (Linux)
+  package:
+    name: iperf3
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v iperf3
+      exit_code: 1
 
 - name: Display confirmation
   print: "iperf3 uninstalled"

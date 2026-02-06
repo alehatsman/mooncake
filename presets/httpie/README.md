@@ -18,7 +18,7 @@ Install HTTPie - a modern, user-friendly command-line HTTP client designed for t
 - ✅ Forms and file uploads
 - ✅ HTTPS, proxies, authentication
 
-## Usage
+## Basic Usage
 
 ### GET Requests
 
@@ -156,6 +156,18 @@ http --multipart POST https://httpbin.org/post \
 echo '{"name":"John"}' | http POST https://httpbin.org/post
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: httpie
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove httpie |
 ## vs curl
 
 HTTPie vs curl examples:
@@ -255,6 +267,12 @@ pip install httpie-oauth
 http --auth-type=jwt --auth="token" https://api.example.com
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
 ## Uninstall
 
 ```yaml
@@ -262,3 +280,11 @@ http --auth-type=jwt --auth="token" https://api.example.com
   with:
     state: absent
 ```
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
+
+## Resources
+- Search: "httpie documentation", "httpie tutorial"

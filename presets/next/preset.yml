@@ -1,5 +1,5 @@
 name: next
-description: Static site generator
+description: React framework with server-side rendering and static generation
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

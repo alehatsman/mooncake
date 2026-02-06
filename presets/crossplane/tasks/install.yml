@@ -3,15 +3,23 @@
   register: crossplane_check
   failed_when: false
 
-- name: Install crossplane
+- name: Install crossplane via Homebrew
   package:
-    name: crossplane
+    name: crossplane-cli
     state: present
-  when: crossplane_check.rc != 0
+  when: brew_available and crossplane_check.rc != 0
 
-- name: Verify installation
-  shell: crossplane --version 2>&1 || crossplane -v 2>&1 || echo "installed"
-  register: crossplane_version
+- name: Install crossplane via curl script
+  shell: |
+    curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh
+    sudo mv crossplane /usr/local/bin/
+  when: linux and crossplane_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v crossplane
+      exit_code: 0
+
+- name: Display confirmation
   print: "crossplane installed"

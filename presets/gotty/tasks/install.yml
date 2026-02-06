@@ -3,15 +3,24 @@
   register: gotty_check
   failed_when: false
 
-- name: Install gotty
+- name: Install gotty (macOS)
   package:
     name: gotty
     state: present
-  when: gotty_check.rc != 0
+  when: brew_available and gotty_check.rc != 0
 
-- name: Verify installation
-  shell: gotty --version 2>&1 || gotty -v 2>&1 || echo "installed"
-  register: gotty_version
+- name: Install gotty (Linux)
+  shell: |
+    curl -sL https://github.com/sorenisanerd/gotty/releases/latest/download/gotty_linux_arm64.tar.gz | tar xz
+    sudo mv gotty /usr/local/bin/
+    sudo chmod +x /usr/local/bin/gotty
+  when: linux and gotty_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gotty
+      exit_code: 0
+
+- name: Display confirmation
   print: "gotty installed"

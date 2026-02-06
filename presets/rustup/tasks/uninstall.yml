@@ -2,12 +2,12 @@
   package:
     name: rustup
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall rustup (Linux)
   shell: rustup self uninstall -y
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

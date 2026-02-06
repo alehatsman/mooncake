@@ -3,15 +3,28 @@
   register: bandwhich_check
   failed_when: false
 
-- name: Install bandwhich
+- name: Install bandwhich via Homebrew
   package:
     name: bandwhich
     state: present
-  when: bandwhich_check.rc != 0
+  when: brew_available and bandwhich_check.rc != 0
 
-- name: Verify installation
-  shell: bandwhich --version 2>&1 || bandwhich -v 2>&1 || echo "installed"
-  register: bandwhich_version
+- name: Install bandwhich via apt
+  package:
+    name: bandwhich
+    state: present
+  become: true
+  when: apt_available and bandwhich_check.rc != 0
 
-- name: Display version
+- name: Install bandwhich via cargo
+  shell: cargo install bandwhich
+  when: not brew_available and not apt_available and bandwhich_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v bandwhich
+      exit_code: 0
+
+- name: Display confirmation
   print: "bandwhich installed"

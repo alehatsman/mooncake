@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "clair uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v clair
+      exit_code: 1

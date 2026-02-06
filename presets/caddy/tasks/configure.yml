@@ -27,14 +27,14 @@
     {% endif %}
     EOF
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Reload Caddy configuration
   service:
     name: caddy
     state: reloaded
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start Caddy service (Linux)
   service:
@@ -42,11 +42,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start Caddy service (macOS)
   shell: brew services start caddy
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
 
 - name: Verify Caddy is running
   shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:{{ parameters.port }}

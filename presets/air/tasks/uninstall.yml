@@ -1,8 +1,24 @@
-- name: Uninstall air
+- name: Uninstall air (macOS)
   package:
     name: air
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall air (Linux)
+  shell: |
+    AIR_PATH=$(which air 2>/dev/null)
+    if [ -n "$AIR_PATH" ]; then
+      sudo rm -f "$AIR_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v air
+      exit_code: 1
 
 - name: Display confirmation
   print: "air uninstalled"

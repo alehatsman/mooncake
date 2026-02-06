@@ -1,374 +1,221 @@
-# miller - Name-Indexed Data Processor
+# Miller - Structured Data Processing with Named Fields
 
-Like awk, sed, cut, join, and sort for CSV, TSV, JSON, and more. Stream processing with named fields.
+Miller (mlr) is a command-line tool for processing CSV, JSON, TSV, and other structured data formats using named fields and a domain-specific language. Like awk, sed, and cut combined for modern data workflows.
 
 ## Quick Start
+
 ```yaml
 - preset: miller
 ```
 
+## Features
+
+- **Format Conversion**: Seamlessly convert between CSV, JSON, TSV, NIDX, and custom delimited formats
+- **Data Transformation**: Add computed fields, rename columns, and reshape data with inline expressions
+- **Streaming Processing**: Process large files with constant memory usage
+- **Named Field Operations**: Work with column names instead of positional indices (easier than awk)
+- **Statistical Functions**: Built-in aggregation, grouping, and statistical operations (mean, median, percentiles)
+- **Cross-Platform**: Available on Linux, macOS, and Windows via package managers
+
 ## Basic Usage
+
 ```bash
-# View CSV
+# View CSV file
 mlr --csv cat data.csv
-
-# Pretty print
-mlr --c2p cat data.csv  # CSV to pretty table
-
-# CSV to JSON
-mlr --c2j cat data.csv
-
-# JSON to CSV
-mlr --j2c cat data.json
-```
-
-## Format Conversions
-```bash
-# CSV to JSON
-mlr --c2j cat data.csv > data.json
-
-# JSON to CSV
-mlr --j2c cat data.json > data.csv
-
-# TSV to CSV
-mlr --t2c cat data.tsv > data.csv
 
 # Pretty print (aligned columns)
 mlr --c2p cat data.csv
 
-# NIDX (numeric index)
-mlr --n2c cat data.txt > data.csv
+# Convert CSV to JSON
+mlr --c2j cat data.csv
 
-# Multiple formats
-mlr --icsv --ojson cat input.csv > output.json
+# Convert JSON to CSV
+mlr --j2c cat data.json
 ```
 
-## Selecting Fields
-```bash
-# Select columns
-mlr --csv cut -f name,email data.csv
+## Advanced Configuration
 
-# Reorder columns
-mlr --csv cut -o -f email,name,age data.csv
-
-# Exclude columns
-mlr --csv cut -x -f password,secret data.csv
-
-# Regex selection
-mlr --csv cut -r -f '^user_' data.csv
+```yaml
+# Install with version control (optional)
+- preset: miller
+  with:
+    state: present
 ```
 
-## Filtering Rows
+Miller has no additional parameters beyond state. Configuration happens through command-line flags at runtime.
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install (present) or remove (absent) miller |
+
+## Platform Support
+
+- ✅ Linux (apt, dnf, pacman, yum)
+- ✅ macOS (Homebrew)
+- ✅ Windows (via package managers or official binary)
+
+## Real-World Examples
+
+### ETL Data Pipeline - CSV to JSON Conversion
+
+Process raw CSV export from database and convert to JSON for API:
+
 ```bash
-# Filter condition
-mlr --csv filter '$age > 25' data.csv
-
-# Multiple conditions
-mlr --csv filter '$age > 25 && $status == "active"' data.csv
-
-# Regex match
-mlr --csv filter '$email =~ "@gmail\.com$"' data.csv
-
-# Null check
-mlr --csv filter '$phone != null' data.csv
-
-# Numeric comparison
-mlr --csv filter '$salary >= 50000' data.csv
-```
-
-## Transformation
-```bash
-# Add computed field
-mlr --csv put '$total = $price * $quantity' data.csv
-
-# Modify field
-mlr --csv put '$name = toupper($name)' data.csv
-
-# Conditional field
+# Transform employee data: validate, enrich, convert
 mlr --csv put '
-  $category = ($age < 18) ? "minor" : "adult"
-' data.csv
-
-# Multiple operations
-mlr --csv put '
-  $full_name = $first . " " . $last;
-  $age_group = floor($age / 10) * 10
-' data.csv
+  $full_name = $first_name . " " . $last_name;
+  $start_year = substr($hire_date, 0, 4);
+  $is_manager = ($title =~ "Manager" || $title =~ "Lead") ? true : false
+' employees.csv | \
+mlr --csv filter '$email != null && $salary > 0' | \
+mlr --c2j > employees.json
 ```
 
-## Aggregation
+### Log Analysis - Filter and Aggregate
+
+Process application JSON logs to identify issues:
+
 ```bash
-# Count rows
-mlr --csv count data.csv
-
-# Group by
-mlr --csv stats1 -a count -f status -g department data.csv
-
-# Sum
-mlr --csv stats1 -a sum -f amount -g category data.csv
-
-# Multiple statistics
-mlr --csv stats1 -a mean,median,stddev -f salary -g department data.csv
-
-# Count unique
-mlr --csv stats1 -a distinct_count -f email data.csv
+# Count errors by type and find top 5
+mlr --json stats1 -a count -g error_type logs.json | \
+mlr --json sort -nr count | \
+mlr --json head -n 5
 ```
 
-## Sorting
+### Data Quality Validation
+
+Validate structured data before processing:
+
 ```bash
-# Sort by field
-mlr --csv sort -f age data.csv
-
-# Reverse sort
-mlr --csv sort -r age data.csv
-
-# Multiple fields
-mlr --csv sort -f department,salary data.csv
-
-# Numeric sort
-mlr --csv sort -n amount data.csv
+# Check for required fields, remove invalid rows
+mlr --csv filter '
+  $id != null &&
+  is_numeric($age) && $age >= 0 && $age <= 150 &&
+  $email =~ "@.*\." &&
+  $status == "active"
+' raw_data.csv | \
+mlr --csv stats1 -a count data_validated.csv
 ```
 
-## Joining
+### CI/CD Integration - Validate Configuration Changes
+
 ```bash
-# Join two files
-mlr --csv join -j id -f users.csv departments.csv
-
-# Left join
-mlr --csv join -j id -l -f users.csv departments.csv
-
-# Different join keys
-mlr --csv join -l user_id -r id -f users.csv orders.csv
-
-# Multiple keys
-mlr --csv join -j user_id,product_id -f file1.csv file2.csv
-```
-
-## Reshaping
-```bash
-# Rename fields
-mlr --csv rename old_name,new_name data.csv
-
-# Reorder all fields alphabetically
-mlr --csv reorder -f data.csv
-
-# Transpose
-mlr --csv transpose data.csv
-
-# Flatten nested JSON
-mlr --json flatten data.json
-```
-
-## String Operations
-```bash
-# Uppercase
-mlr --csv put '$name = toupper($name)' data.csv
-
-# Lowercase
-mlr --csv put '$email = tolower($email)' data.csv
-
-# Substring
-mlr --csv put '$initials = substr($name, 0, 1)' data.csv
-
-# Replace
-mlr --csv put '$phone = gsub($phone, "-", "")' data.csv
-
-# Split
-mlr --csv put '
-  @parts = splita($name, " ");
-  $first = @parts[1];
-  $last = @parts[2]
-' data.csv
-```
-
-## Date/Time Operations
-```bash
-# Parse timestamp
-mlr --csv put '$date = strftime($timestamp, "%Y-%m-%d")' data.csv
-
-# Current time
-mlr --csv put '$processed_at = systime()' data.csv
-
-# Date arithmetic
-mlr --csv put '$days_old = (systime() - $created_at) / 86400' data.csv
-
-# Format date
-mlr --csv put '$formatted = strftime($ts, "%Y-%m-%d %H:%M:%S")' data.csv
-```
-
-## Statistical Functions
-```bash
-# Mean
-mlr --csv stats1 -a mean -f salary data.csv
-
-# Median
-mlr --csv stats1 -a median -f age data.csv
-
-# Percentiles
-mlr --csv stats1 -a p25,p50,p75,p90 -f response_time data.csv
-
-# Min/max
-mlr --csv stats1 -a min,max -f price data.csv
-
-# Standard deviation
-mlr --csv stats1 -a stddev -f score data.csv
-```
-
-## Grouping and Aggregation
-```bash
-# Count by group
-mlr --csv stats1 -a count -g status data.csv
-
-# Sum by group
-mlr --csv stats1 -a sum -f amount -g category data.csv
-
-# Multiple aggregations
-mlr --csv stats1 -a count,sum,mean -f amount -g category data.csv
-
-# Nested grouping
-mlr --csv stats1 -a mean -f salary -g department,level data.csv
-```
-
-## CI/CD Integration
-```bash
-# Validate CSV structure
-mlr --csv cat data.csv > /dev/null || {
-  echo "Invalid CSV"
+# Validate CSV structure and required columns
+mlr --csv cat config.csv > /dev/null || {
+  echo "ERROR: Invalid CSV structure"
   exit 1
 }
 
-# Check for required fields
-if ! mlr --csv head -n 1 data.csv | grep -q 'required_field'; then
-  echo "Missing required field"
-  exit 1
-fi
+# Ensure all required fields present
+FIELDS=$(mlr --csv head -n 1 config.csv | tr ',' '\n')
+for field in "server" "port" "enabled"; do
+  if ! echo "$FIELDS" | grep -q "^$field$"; then
+    echo "ERROR: Missing required field: $field"
+    exit 1
+  fi
+done
 
-# Transform and validate
-mlr --csv put '$total = $price * $quantity' data.csv | \
-  mlr --csv filter '$total > 0' > output.csv
-
-# Generate report
-mlr --csv stats1 -a count,sum,mean -f amount -g status data.csv > report.csv
+echo "✓ Configuration validated"
 ```
 
-## Log Processing
+### Aggregation - Sales Report Generation
+
 ```bash
-# Parse logs
+# Generate sales summary by region and product
+mlr --csv stats1 -a count,sum,mean -f amount -g region,product sales.csv | \
+mlr --csv sort -nr count > sales_report.csv
+
+# Show top products by revenue
+mlr --csv put '$revenue = $amount * $quantity' sales.csv | \
+mlr --csv stats1 -a sum -f revenue -g product | \
+mlr --csv sort -nr revenue_sum | \
+mlr --csv head -n 10
+```
+
+### Stream Processing - Real-Time Log Transformation
+
+```bash
+# Monitor logs and convert to structured CSV
 tail -f app.log | \
-  mlr --ijson --ocsv cat
-
-# Filter errors
-mlr --json filter '$level == "ERROR"' logs.json
-
-# Count by error type
-mlr --json stats1 -a count -g error_type errors.json
-
-# Time-based filtering
-mlr --json filter '$timestamp > 1640000000' logs.json
+mlr --ijson --ocsv put '
+  $severity = toupper($level);
+  $timestamp = strftime($ts, "%Y-%m-%d %H:%M:%S")
+' | tee processed_logs.csv
 ```
 
-## Data Cleaning
+### Data Cleaning - Handle Missing Values
+
 ```bash
-# Remove duplicates
-mlr --csv uniq -a data.csv
-
-# Fill nulls
-mlr --csv put 'if ($age == null) { $age = 0 }' data.csv
-
-# Trim whitespace
-mlr --csv put '$name = strip($name)' data.csv
-
-# Validate email format
-mlr --csv filter '$email =~ "@.*\."' data.csv
-
-# Remove invalid rows
-mlr --csv filter '
-  is_numeric($age) && $age >= 0 && $age <= 150
-' data.csv
-```
-
-## Advanced Examples
-```bash
-# Top N by value
-mlr --csv sort -nr amount data.csv | mlr --csv head -n 10
-
-# Pivot table
-mlr --csv reshape -s category,amount data.csv
-
-# Running total
+# Remove duplicates, fill nulls, trim whitespace
 mlr --csv put '
-  @running_total += $amount;
-  $cumulative = @running_total
-' data.csv
-
-# Window functions (previous/next row)
-mlr --csv step -a delta -f amount data.csv
-
-# Deduplicate keeping first
-mlr --csv uniq -g email data.csv
-
-# Complex transformation
-mlr --csv put '
-  $profit = $revenue - $cost;
-  $margin = ($profit / $revenue) * 100;
-  $category = ($margin > 20) ? "high" : "low"
-' data.csv | mlr --csv filter '$profit > 0'
+  if ($age == null) { $age = 0 };
+  $name = strip($name);
+  $email = tolower($email)
+' raw.csv | \
+mlr --csv uniq -g email > cleaned.csv
 ```
-
-## Format Options
-```bash
-# CSV options
-mlr --csv --rs lf --fs comma data.csv
-
-# Custom delimiter
-mlr --fs '|' --rs lf cat data.psv
-
-# No header
-mlr --csv --implicit-csv-header cat data.csv
-
-# JSON arrays
-mlr --json --jvstack cat data.json
-
-# Pretty JSON
-mlr --ijson --ojson --jvstack --no-jvstack cat data.json
-```
-
-## Comparison
-| Feature | miller | awk | csvkit | xsv |
-|---------|--------|-----|--------|-----|
-| Named fields | Yes | No | Yes | Yes |
-| Multiple formats | Yes | No | Limited | No |
-| Streaming | Yes | Yes | No | Yes |
-| Speed | Fast | Fastest | Slow | Fastest |
-| Syntax | DSL | AWK | CLI | CLI |
-
-## Best Practices
-- **Use --c2p** for quick data inspection
-- **Chain operations** with pipes for complex workflows
-- **Use stats1** for quick aggregations
-- **Filter early** to reduce data size
-- **Use put for transformations**, filter for selection
-- **Test with head** before processing large files
-- **Use --j2c** for JSON → CSV conversions
-
-## Tips
-- Handles CSV, TSV, JSON, NIDX seamlessly
-- Named-field operations easier than awk
-- Streaming (low memory for large files)
-- Built-in stats functions
-- Great for log analysis
-- No external dependencies
-- Cross-platform
 
 ## Agent Use
-- Log file analysis (JSON logs)
-- Data format conversion
-- ETL preprocessing
-- Real-time stream processing
-- Data validation pipelines
-- Report generation
+
+AI agents can leverage Miller for:
+
+- **Log Analysis Pipelines**: Parse JSON logs, filter errors, aggregate by type/severity, and generate alerts
+- **Data Format Transformation**: Convert between CSV/JSON/TSV in ETL workflows without external dependencies
+- **Validation Automation**: Check data quality (required fields, type validation, format constraints) in deployment pipelines
+- **Report Generation**: Group, aggregate, and transform data into formatted reports for monitoring systems
+- **Real-Time Stream Processing**: Monitor file streams, transform structured data, and pipeline to downstream systems
+- **Configuration Validation**: Verify CSV/JSON configs have required fields and valid values before deployment
+
+## Troubleshooting
+
+### "mlr: command not found"
+
+Miller is not installed. Run the preset with `state: present` to install.
+
+### Performance Issues with Large Files
+
+Miller streams by default (constant memory), but some operations buffer. For large files:
+
+```bash
+# Use head to test on sample first
+mlr --csv head -n 1000 huge_file.csv | mlr --csv filter '$condition'
+
+# Use tee to save intermediate results
+mlr --csv filter '$condition1' data.csv | \
+tee intermediate.csv | \
+mlr --csv stats1 -a sum -f amount -g category
+```
+
+### Escaping Special Characters in DSL
+
+Miller expressions use DSL (Domain-Specific Language). Escape backslashes and quotes:
+
+```bash
+# Regex with backslash - needs double backslash in shell
+mlr --csv filter '$email =~ "@example\\.com$"' data.csv
+
+# Single quotes within expression - use double quotes for outer shell
+mlr --csv put "$field = 'value'" data.csv
+```
+
+### JSON Parsing Errors
+
+Ensure JSON is valid before processing:
+
+```bash
+# Validate JSON first
+jq empty logs.json || {
+  echo "ERROR: Invalid JSON"
+  exit 1
+}
+
+mlr --json cat logs.json
+```
 
 ## Uninstall
+
 ```yaml
 - preset: miller
   with:
@@ -376,6 +223,8 @@ mlr --ijson --ojson --jvstack --no-jvstack cat data.json
 ```
 
 ## Resources
-- GitHub: https://github.com/johnkerl/miller
-- Docs: https://miller.readthedocs.io/
-- Search: "miller mlr examples", "miller csv"
+
+- **Official Documentation**: https://miller.readthedocs.io/
+- **GitHub Repository**: https://github.com/johnkerl/miller
+- **Interactive Tutorial**: https://miller.readthedocs.io/en/latest/getting-started.html
+- **Search Terms**: "miller mlr tutorial", "miller CSV processing", "miller data transformation", "mlr DSL examples"

@@ -1,8 +1,22 @@
-- name: Uninstall aqua
+- name: Uninstall aqua (macOS)
   package:
     name: aqua
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall aqua (Linux)
+  shell: |
+    sudo rm -f /usr/local/bin/aqua
+    rm -rf ~/.local/share/aquaproj-aqua
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v aqua
+      exit_code: 1
 
 - name: Display confirmation
   print: "aqua uninstalled"

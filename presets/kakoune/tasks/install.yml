@@ -3,15 +3,24 @@
   register: kakoune_check
   failed_when: false
 
-- name: Install kakoune
+- name: Install kakoune (macOS)
   package:
     name: kakoune
     state: present
-  when: kakoune_check.rc != 0
+  when: brew_available and kakoune_check.rc != 0
 
-- name: Verify installation
-  shell: kak --version 2>&1 || kak -v 2>&1 || echo "installed"
-  register: kakoune_version
+- name: Install kakoune (Linux)
+  package:
+    name: kakoune
+    state: present
+  become: true
+  when: apt_available and kakoune_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kak
+      exit_code: 0
+
+- name: Display confirmation
   print: "kakoune installed"

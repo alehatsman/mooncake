@@ -3,15 +3,24 @@
   register: make_check
   failed_when: false
 
-- name: Install make
+- name: Install make (macOS)
   package:
     name: make
     state: present
-  when: make_check.rc != 0
+  when: brew_available and make_check.rc != 0
 
-- name: Verify installation
-  shell: make --version 2>&1 || make -v 2>&1 || echo "installed"
-  register: make_version
+- name: Install make (Linux)
+  package:
+    name: build-essential
+    state: present
+  become: true
+  when: apt_available and make_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v make
+      exit_code: 0
+
+- name: Display confirmation
   print: "make installed"

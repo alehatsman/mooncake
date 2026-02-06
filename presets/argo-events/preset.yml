@@ -1,5 +1,5 @@
 name: argo-events
-description: Workflow orchestration
+description: Event-driven workflow automation for Kubernetes with 20+ event sources
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

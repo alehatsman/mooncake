@@ -10,6 +10,19 @@ Install OpenJDK Java Development Kit with automatic JAVA_HOME configuration.
     version: "21"
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+## Advanced Configuration
+```yaml
+- preset: java
+  with:
+    state: present
+```
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -18,7 +31,12 @@ Install OpenJDK Java Development Kit with automatic JAVA_HOME configuration.
 | `version` | string | `21` | Java version (11, 17, 21) |
 | `set_java_home` | bool | `true` | Set JAVA_HOME env variable |
 
-## Usage
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
+## Basic Usage
 
 ### Latest LTS (Java 21)
 ```yaml
@@ -132,6 +150,12 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 sudo update-alternatives --config java
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
 ## Uninstall
 
 ```yaml
@@ -139,3 +163,6 @@ sudo update-alternatives --config java
   with:
     state: absent
 ```
+
+## Resources
+- Search: "java documentation", "java tutorial"

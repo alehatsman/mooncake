@@ -5,11 +5,11 @@
 
 - name: Install sdkman (macOS)
   shell: curl -s "https://get.sdkman.io" | bash
-  when: os == "darwin" and sdkman_check.rc != 0
+  when: brew_available and sdkman_check.rc != 0
 
 - name: Install sdkman (Linux)
   shell: curl -s "https://get.sdkman.io" | bash
-  when: os == "linux" and sdkman_check.rc != 0
+  when: linux and sdkman_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -1,17 +1,24 @@
 - name: Check if asdf is installed
-  shell: command -v asdf
+  shell: test -d ~/.asdf && echo "installed" || echo "not installed"
   register: asdf_check
   failed_when: false
 
-- name: Install asdf
+- name: Install asdf via Homebrew
   package:
     name: asdf
     state: present
-  when: asdf_check.rc != 0
+  when: brew_available and asdf_check.stdout == "not installed"
 
-- name: Verify installation
-  shell: asdf --version 2>&1 || asdf -v 2>&1 || echo "installed"
-  register: asdf_version
+- name: Install asdf via git clone
+  shell: |
+    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and asdf_check.stdout == "not installed"
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    file:
+      path: ~/.asdf
+      exists: true
+
+- name: Display confirmation
   print: "asdf installed"

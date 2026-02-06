@@ -3,15 +3,21 @@
   register: ignite_check
   failed_when: false
 
-- name: Install ignite
+- name: Install ignite (macOS)
   package:
     name: ignite
     state: present
-  when: ignite_check.rc != 0
+  when: brew_available and ignite_check.rc != 0
 
-- name: Verify installation
-  shell: ignite --version 2>&1 || ignite -v 2>&1 || echo "installed"
-  register: ignite_version
+- name: Install ignite (Linux)
+  shell: npm install -g ignite-cli
+  when: linux and ignite_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ignite
+      exit_code: 0
+
+- name: Display confirmation
   print: "ignite installed"

@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "buildkite-agent installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v buildkite-agent
+      exit_code: 0

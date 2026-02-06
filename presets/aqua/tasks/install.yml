@@ -3,15 +3,26 @@
   register: aqua_check
   failed_when: false
 
-- name: Install aqua
+- name: Install aqua via Homebrew
   package:
     name: aqua
     state: present
-  when: aqua_check.rc != 0
+  when: brew_available and aqua_check.rc != 0
 
-- name: Verify installation
-  shell: aqua --version 2>&1 || aqua -v 2>&1 || echo "installed"
-  register: aqua_version
+- name: Install aqua via apt
+  shell: |
+    curl -sSfL -O https://raw.githubusercontent.com/aquaproj/aqua-installer/v4.0.2/aqua-installer
+    chmod +x aqua-installer
+    ./aqua-installer
+    sudo ln -sf ~/.local/share/aquaproj-aqua/bin/aqua /usr/local/bin/aqua
+    rm -f aqua-installer
+  when: linux and aqua_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v aqua
+      exit_code: 0
+
+- name: Display confirmation
   print: "aqua installed"

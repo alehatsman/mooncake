@@ -1,8 +1,20 @@
-- name: Uninstall csvkit
+- name: Uninstall csvkit via Homebrew
   package:
     name: csvkit
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall csvkit via pip3
+  shell: pip3 uninstall -y csvkit
+  when: not brew_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v csvcut
+      exit_code: 1
 
 - name: Display confirmation
   print: "csvkit uninstalled"

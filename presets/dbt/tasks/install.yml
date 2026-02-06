@@ -3,15 +3,19 @@
   register: dbt_check
   failed_when: false
 
-- name: Install dbt
-  package:
-    name: dbt
-    state: present
+- name: Install prerequisites (Linux)
+  shell: sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip
+  when: apt_available and dbt_check.rc != 0
+
+- name: Install dbt-core
+  shell: pip3 install dbt-core
   when: dbt_check.rc != 0
 
-- name: Verify installation
-  shell: dbt --version 2>&1 || dbt -v 2>&1 || echo "installed"
-  register: dbt_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v dbt
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "dbt installed"

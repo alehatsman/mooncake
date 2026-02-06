@@ -3,15 +3,22 @@
   register: ibmcloud_cli_check
   failed_when: false
 
-- name: Install ibmcloud-cli
+- name: Install ibmcloud-cli (macOS)
   package:
     name: ibmcloud-cli
     state: present
-  when: ibmcloud_cli_check.rc != 0
+  when: brew_available and ibmcloud_cli_check.rc != 0
 
-- name: Verify installation
-  shell: ibmcloud --version 2>&1 || ibmcloud -v 2>&1 || echo "installed"
-  register: ibmcloud_cli_version
+- name: Install ibmcloud-cli (Linux)
+  shell: |
+    curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+  when: linux and ibmcloud_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ibmcloud
+      exit_code: 0
+
+- name: Display confirmation
   print: "ibmcloud-cli installed"

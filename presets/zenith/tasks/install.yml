@@ -3,15 +3,15 @@
   register: zenith_check
   failed_when: false
 
-- name: Install zenith (macOS)
+- name: Install zenith via Homebrew
   package:
     name: zenith
     state: present
-  when: os == "darwin" and zenith_check.rc != 0
+  when: brew_available and zenith_check.rc != 0
 
-- name: Install zenith (Linux)
+- name: Install zenith via cargo
   shell: cargo install zenith
-  when: os == "linux" and zenith_check.rc != 0
+  when: not brew_available and zenith_check.rc != 0
 
 - name: Verify installation with assert
   assert:

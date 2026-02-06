@@ -6,31 +6,37 @@
     state: stopped
     enabled: false
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Stop RabbitMQ service (macOS)
   shell: brew services stop rabbitmq
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall RabbitMQ (macOS)
   shell: brew uninstall rabbitmq
-  when: os == "darwin"
+  when: brew_available
 
 - name: Uninstall RabbitMQ (Debian/Ubuntu)
   package:
     name: rabbitmq-server
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Uninstall RabbitMQ (RHEL/Fedora)
   package:
     name: rabbitmq-server
     state: absent
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: dnf_available or yum_available
 
 - name: Display uninstall confirmation
   print: "RabbitMQ uninstalled. Data directory preserved."
+
+- name: Assert tool is removed
+  assert:
+    command:
+      cmd: command -v rabbitmq-server
+      exit_code: 1

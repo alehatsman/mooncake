@@ -1,5 +1,5 @@
 name: fnm
-description: Node.js / JavaScript tool
+description: Install fnm (Fast Node Manager) - fast and simple Node.js version manager
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

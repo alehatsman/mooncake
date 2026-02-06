@@ -1,5 +1,5 @@
 name: actionlint
-description: Utility tool
+description: Static linter for GitHub Actions workflow files with syntax and security checks
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

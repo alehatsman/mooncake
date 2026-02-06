@@ -3,15 +3,24 @@
   register: pulsar_check
   failed_when: false
 
-- name: Install pulsar
+- name: Install pulsar via Homebrew
   package:
     name: pulsar
     state: present
-  when: pulsar_check.rc != 0
+  when: brew_available and pulsar_check.rc != 0
 
-- name: Verify installation
-  shell: pulsar --version 2>&1 || pulsar -v 2>&1 || echo "installed"
-  register: pulsar_version
+- name: Install pulsar via apt
+  package:
+    name: pulsar
+    state: present
+  become: true
+  when: apt_available and pulsar_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pulsar
+      exit_code: 0
+
+- name: Display confirmation
   print: "pulsar installed"

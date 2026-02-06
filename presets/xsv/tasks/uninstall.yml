@@ -1,13 +1,13 @@
-- name: Uninstall xsv (macOS)
+- name: Uninstall xsv via Homebrew
   package:
     name: xsv
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall xsv (Linux)
+- name: Uninstall xsv via cargo
   shell: cargo uninstall xsv
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

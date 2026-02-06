@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "chamber installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v chamber
+      exit_code: 0

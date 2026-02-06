@@ -2,6 +2,16 @@
 
 HTTP load testing tool with constant request rate. Measure latency, throughput, and success rates under load.
 
+## Features
+- **Constant rate**: Precise request rate control
+- **Rich metrics**: Latencies, throughput, success rates
+- **Multiple targets**: Load test multiple endpoints
+- **Flexible output**: Text, JSON, histogram, binary
+- **Visualization**: Generate HTML plots
+- **Custom headers**: Authentication, custom headers
+- **HTTP/2**: Support for HTTP/2 protocol
+- **Keep-alive**: Connection reuse control
+
 ## Quick Start
 ```yaml
 - preset: vegeta
@@ -256,6 +266,54 @@ ulimit -n 10000
 # High latencies
 # Check network, server load, database
 ```
+
+## Advanced Configuration
+
+### Target File Templates
+```bash
+# targets.txt with variables
+GET http://{{HOST}}/users/{{USER_ID}}
+Authorization: Bearer {{TOKEN}}
+
+POST http://{{HOST}}/orders
+Content-Type: application/json
+{"item": "{{ITEM}}"}
+```
+
+### Automated Load Testing
+```bash
+#!/bin/bash
+# load-test.sh
+RATES=(10 50 100 200)
+for rate in "${RATES[@]}"; do
+  echo "Testing at $rate req/s..."
+  echo "GET http://api.example.com/health" | \
+    vegeta attack -rate=$rate -duration=30s | \
+    vegeta report -type=json > "results-${rate}.json"
+done
+```
+
+### CI/CD Integration
+```yaml
+# .gitlab-ci.yml
+load-test:
+  script:
+    - echo "GET $API_URL" | vegeta attack -rate=100 -duration=1m | tee results.bin
+    - vegeta report -type=json < results.bin > report.json
+    - jq '.success < 0.99' report.json && exit 1 || exit 0
+```
+
+## Platform Support
+- ✅ Linux (all distributions)
+- ✅ macOS (Homebrew, binary)
+- ✅ Windows (binary, Scoop)
+- ✅ BSD systems
+- ✅ Docker container
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove vegeta |
 
 ## Agent Use
 - Performance regression testing

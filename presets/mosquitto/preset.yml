@@ -1,7 +1,17 @@
 name: mosquitto
-description: Message queue / streaming
+description: Lightweight MQTT message broker for IoT and edge computing
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove mosquitto
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install mosquitto
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall mosquitto
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

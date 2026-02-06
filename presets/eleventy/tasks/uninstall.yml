@@ -1,8 +1,12 @@
-- name: Uninstall eleventy
-  package:
-    name: eleventy
-    state: absent
+- name: Uninstall eleventy via npm
+  shell: npm uninstall -g @11ty/eleventy
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v eleventy
+      exit_code: 1
 
 - name: Display confirmation
   print: "eleventy uninstalled"

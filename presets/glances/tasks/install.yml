@@ -3,15 +3,21 @@
   register: glances_check
   failed_when: false
 
-- name: Install glances
+- name: Install glances (macOS)
   package:
     name: glances
     state: present
-  when: glances_check.rc != 0
+  when: brew_available and glances_check.rc != 0
 
-- name: Verify installation
-  shell: glances --version 2>&1 || glances -v 2>&1 || echo "installed"
-  register: glances_version
+- name: Install glances (Linux)
+  shell: pip3 install --user glances
+  when: linux and glances_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v glances
+      exit_code: 0
+
+- name: Display confirmation
   print: "glances installed"

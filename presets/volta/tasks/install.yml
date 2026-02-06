@@ -7,11 +7,11 @@
   package:
     name: volta
     state: present
-  when: os == "darwin" and volta_check.rc != 0
+  when: brew_available and volta_check.rc != 0
 
 - name: Install volta (Linux)
   shell: curl https://get.volta.sh | bash
-  when: os == "linux" and volta_check.rc != 0
+  when: linux and volta_check.rc != 0
 
 - name: Verify installation with assert
   assert:

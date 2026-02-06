@@ -1,5 +1,5 @@
 name: nushell
-description: Modern shell with structured data
+description: Modern shell with structured data pipelines and type system
 version: "1.0.0"
 parameters:
   state:

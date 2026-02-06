@@ -3,15 +3,24 @@
   register: gitlab_runner_check
   failed_when: false
 
-- name: Install gitlab-runner
+- name: Install gitlab-runner (macOS)
   package:
     name: gitlab-runner
     state: present
-  when: gitlab_runner_check.rc != 0
+  when: brew_available and gitlab_runner_check.rc != 0
 
-- name: Verify installation
-  shell: gitlab-runner --version 2>&1 || gitlab-runner -v 2>&1 || echo "installed"
-  register: gitlab_runner_version
+- name: Install gitlab-runner (Linux)
+  shell: |
+    curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_arm64.deb"
+    sudo dpkg -i gitlab-runner_arm64.deb
+    rm gitlab-runner_arm64.deb
+  when: apt_available and gitlab_runner_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gitlab-runner
+      exit_code: 0
+
+- name: Display confirmation
   print: "gitlab-runner installed"

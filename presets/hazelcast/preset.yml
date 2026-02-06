@@ -1,5 +1,5 @@
 name: hazelcast
-description: Cache / storage system
+description: Distributed in-memory data grid for fast caching and computing
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

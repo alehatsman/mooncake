@@ -1,5 +1,5 @@
 name: helix
-description: Text editor / IDE
+description: Post-modern modal text editor with built-in LSP and tree-sitter
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

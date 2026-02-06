@@ -7,7 +7,7 @@
   package:
     name: vultr-cli
     state: present
-  when: os == "darwin" and vultr_cli_check.rc != 0
+  when: brew_available and vultr_cli_check.rc != 0
 
 - name: Install vultr-cli (Linux)
   shell: |
@@ -16,7 +16,7 @@
     tar -xzf /tmp/vultr-cli.tar.gz -C /tmp
     sudo mv /tmp/vultr-cli /usr/local/bin/vultr
     rm /tmp/vultr-cli.tar.gz
-  when: os == "linux" and vultr_cli_check.rc != 0
+  when: linux and vultr_cli_check.rc != 0
 
 - name: Verify installation with assert
   assert:

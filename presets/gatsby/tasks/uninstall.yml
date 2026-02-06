@@ -1,8 +1,20 @@
-- name: Uninstall gatsby
+- name: Uninstall gatsby-cli (macOS)
   package:
-    name: gatsby
+    name: gatsby-cli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gatsby-cli (Linux)
+  shell: npm uninstall -g gatsby-cli
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gatsby
+      exit_code: 1
 
 - name: Display confirmation
   print: "gatsby uninstalled"

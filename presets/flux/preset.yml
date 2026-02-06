@@ -1,5 +1,5 @@
 name: flux
-description: CI/CD tool
+description: Install Flux v1 (deprecated) - GitOps CD toolkit for Kubernetes (use fluxcd for v2)
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

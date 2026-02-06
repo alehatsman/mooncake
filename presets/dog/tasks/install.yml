@@ -3,15 +3,29 @@
   register: dog_check
   failed_when: false
 
-- name: Install dog
-  package:
-    name: dog
-    state: present
-  when: dog_check.rc != 0
+- name: Install dog (macOS)
+  shell: |
+    curl -sL https://github.com/ogham/dog/releases/download/v0.1.0/dog-v0.1.0-aarch64-apple-darwin.zip -o /tmp/dog.zip
+    unzip -q /tmp/dog.zip -d /tmp/
+    sudo mv /tmp/bin/dog /usr/local/bin/
+    sudo chmod +x /usr/local/bin/dog
+    rm -rf /tmp/dog.zip /tmp/bin
+  when: brew_available and dog_check.rc != 0
 
-- name: Verify installation
-  shell: dog --version 2>&1 || dog -v 2>&1 || echo "installed"
-  register: dog_version
+- name: Install dog (Linux)
+  shell: |
+    curl -sL https://github.com/ogham/dog/releases/download/v0.1.0/dog-v0.1.0-aarch64-unknown-linux-gnu.zip -o /tmp/dog.zip
+    unzip -q /tmp/dog.zip -d /tmp/
+    sudo mv /tmp/bin/dog /usr/local/bin/
+    sudo chmod +x /usr/local/bin/dog
+    rm -rf /tmp/dog.zip /tmp/bin
+  when: linux and dog_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v dog
+      exit_code: 0
+
+- name: Display confirmation
   print: "dog installed"

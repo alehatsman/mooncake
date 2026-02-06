@@ -1,8 +1,23 @@
-- name: Uninstall imagemagick
+- name: Uninstall imagemagick (macOS)
   package:
     name: imagemagick
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall imagemagick (Linux)
+  package:
+    name: imagemagick
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v convert
+      exit_code: 1
 
 - name: Display confirmation
   print: "imagemagick uninstalled"

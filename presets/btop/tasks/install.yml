@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "btop installed: {{ btop_version.stdout }}"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v btop
+      exit_code: 0

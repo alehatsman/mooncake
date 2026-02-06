@@ -7,12 +7,13 @@
   package:
     name: tfsec
     state: present
-  when: os == "darwin" and tfsec_check.rc != 0
+  when: brew_available and tfsec_check.rc != 0
 
 - name: Install tfsec (Linux)
   shell: |
     curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
   when: os == "linux" and tfsec_check.rc != 0
+  become: true
 
 - name: Verify installation with assert
   assert:

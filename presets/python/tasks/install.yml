@@ -23,7 +23,7 @@
       - liblzma-dev
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Install Python build dependencies via {{ package_manager }}
   package:
@@ -42,7 +42,7 @@
       - xz-devel
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: dnf_available or yum_available
 
 - name: Install Python build dependencies via {{ package_manager }}
   package:
@@ -137,6 +137,12 @@
   when: parameters.install_virtualenv and pyenv_installed.failed
 
 # Verify installation
+- name: Verify pyenv installation with assert
+  assert:
+    file:
+      path: "~/.pyenv/bin/pyenv"
+      exists: true
+
 - name: Verify Python installation
   shell: |
     export PYENV_ROOT="$HOME/.pyenv"

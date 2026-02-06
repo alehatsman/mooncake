@@ -1,8 +1,29 @@
-- name: Uninstall neo4j
-  package:
-    name: neo4j
-    state: absent
+- name: Uninstall neo4j via apt
+  shell: apt-get remove -y neo4j
+  when: apt_available
+  become: true
   failed_when: false
 
-- name: Display confirmation
-  print: "neo4j uninstalled"
+- name: Uninstall neo4j via dnf
+  shell: dnf remove -y neo4j
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Uninstall neo4j via yum
+  shell: yum remove -y neo4j
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Uninstall neo4j via Homebrew
+  shell: brew uninstall neo4j
+  when: brew_available
+  failed_when: false
+
+- name: Verify neo4j is not installed
+  assert:
+    command:
+      cmd: command -v neo4j
+      exit_code: 1
+  failed_when: false

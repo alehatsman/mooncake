@@ -10,7 +10,7 @@
     tar -xzf /tmp/uptrace.tar.gz -C /tmp
     sudo mv /tmp/uptrace /usr/local/bin/
     rm /tmp/uptrace.tar.gz
-  when: os == "darwin" and uptrace_check.rc != 0
+  when: brew_available and uptrace_check.rc != 0
 
 - name: Install uptrace (Linux)
   shell: |
@@ -19,7 +19,7 @@
     tar -xzf /tmp/uptrace.tar.gz -C /tmp
     sudo mv /tmp/uptrace /usr/local/bin/
     rm /tmp/uptrace.tar.gz
-  when: os == "linux" and uptrace_check.rc != 0
+  when: linux and uptrace_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -3,15 +3,24 @@
   register: actionlint_check
   failed_when: false
 
-- name: Install actionlint
+- name: Install actionlint via Homebrew
   package:
     name: actionlint
     state: present
-  when: actionlint_check.rc != 0
+  when: brew_available and actionlint_check.rc != 0
 
-- name: Verify installation
-  shell: actionlint --version 2>&1 || echo "installed"
-  register: actionlint_version
+- name: Install actionlint via install script
+  shell: |
+    bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+    sudo mv actionlint /usr/local/bin/
+    sudo chmod +x /usr/local/bin/actionlint
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and actionlint_check.rc != 0
 
-- name: Display version
-  print: "actionlint installed: {{ actionlint_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v actionlint
+      exit_code: 0
+
+- name: Display confirmation
+  print: "actionlint installed"

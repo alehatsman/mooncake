@@ -1,8 +1,25 @@
-- name: Uninstall ibmcloud-cli
+- name: Uninstall ibmcloud-cli (macOS)
   package:
     name: ibmcloud-cli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall ibmcloud-cli (Linux)
+  shell: |
+    IBMCLOUD_PATH=$(command -v ibmcloud 2>/dev/null)
+    if [ -n "$IBMCLOUD_PATH" ]; then
+      sudo rm -rf /usr/local/ibmcloud
+      sudo rm -f /usr/local/bin/ibmcloud
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ibmcloud
+      exit_code: 1
 
 - name: Display confirmation
   print: "ibmcloud-cli uninstalled"

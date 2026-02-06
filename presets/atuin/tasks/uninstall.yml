@@ -1,8 +1,28 @@
-- name: Uninstall atuin
+- name: Uninstall atuin via Homebrew
   package:
     name: atuin
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall atuin via apt
+  package:
+    name: atuin
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Uninstall atuin via cargo
+  shell: cargo uninstall atuin
+  when: not brew_available and not apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v atuin
+      exit_code: 1
 
 - name: Display confirmation
   print: "atuin uninstalled"

@@ -1,4 +1,4 @@
-name: sentry-cli  
+name: sentry-cli
 description: Sentry command-line client
 version: "1.0.0"
 parameters:

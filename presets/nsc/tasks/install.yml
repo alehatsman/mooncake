@@ -3,15 +3,21 @@
   register: nsc_check
   failed_when: false
 
-- name: Install nsc
+- name: Install nsc via Homebrew
   package:
     name: nsc
     state: present
-  when: nsc_check.rc != 0
+  when: brew_available and nsc_check.rc != 0
 
-- name: Verify installation
-  shell: nsc --version 2>&1 || nsc -v 2>&1 || echo "installed"
-  register: nsc_version
+- name: Install nsc via go install
+  shell: go install github.com/nats-io/nsc/v2@latest
+  when: linux and nsc_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nsc
+      exit_code: 0
+
+- name: Display confirmation
   print: "nsc installed"

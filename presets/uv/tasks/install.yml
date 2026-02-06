@@ -7,11 +7,11 @@
   package:
     name: uv
     state: present
-  when: os == "darwin" and uv_check.rc != 0
+  when: brew_available and uv_check.rc != 0
 
 - name: Install uv (Linux)
   shell: curl -LsSf https://astral.sh/uv/install.sh | sh
-  when: os == "linux" and uv_check.rc != 0
+  when: linux and uv_check.rc != 0
 
 - name: Verify installation with assert
   assert:

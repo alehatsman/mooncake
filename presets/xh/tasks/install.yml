@@ -3,15 +3,15 @@
   register: xh_check
   failed_when: false
 
-- name: Install xh (macOS)
+- name: Install xh via Homebrew
   package:
     name: xh
     state: present
-  when: os == "darwin" and xh_check.rc != 0
+  when: brew_available and xh_check.rc != 0
 
-- name: Install xh (Linux)
+- name: Install xh via cargo
   shell: cargo install xh
-  when: os == "linux" and xh_check.rc != 0
+  when: not brew_available and xh_check.rc != 0
 
 - name: Verify installation with assert
   assert:

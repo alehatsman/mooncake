@@ -1,5 +1,5 @@
 name: argo-workflows
-description: CI/CD tool
+description: Kubernetes-native workflow engine for orchestrating parallel jobs and pipelines
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

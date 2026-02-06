@@ -1,5 +1,5 @@
 name: xsv
-description: Fast CSV command-line toolkit written in Rust
+description: Fast CSV command-line toolkit in Rust for indexing, slicing, analyzing, splitting and joining CSV files
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Whether xsv should be installed or removed
 steps:
   - name: Install xsv
     include: tasks/install.yml

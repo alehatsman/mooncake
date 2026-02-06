@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "chamber uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v chamber
+      exit_code: 1

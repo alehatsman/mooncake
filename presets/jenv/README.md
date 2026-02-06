@@ -7,6 +7,12 @@ Manage multiple Java versions. Switch JDK per project without changing JAVA_HOME
 - preset: jenv
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Add Java installation
@@ -25,6 +31,18 @@ jenv shell 21.0       # Current shell
 jenv version
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: jenv
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove jenv |
 ## Shell Integration
 ```bash
 # Bash (~/.bashrc)
@@ -393,3 +411,8 @@ jenv shell --unset
 - GitHub: https://github.com/jenv/jenv
 - Docs: https://www.jenv.be/
 - Search: "jenv add java", "jenv local"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

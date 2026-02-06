@@ -3,31 +3,31 @@
   register: z_check
   failed_when: false
 
-- name: Install z (macOS)
+- name: Install z via Homebrew
   package:
     name: z
     state: present
-  when: os == "darwin" and z_check.rc != 0
+  when: brew_available and z_check.rc != 0
 
-- name: Install z (Linux)
+- name: Install z via curl
   shell: |
     curl -fsSL https://raw.githubusercontent.com/rupa/z/master/z.sh -o ~/.z.sh
     chmod +x ~/.z.sh
-  when: os == "linux" and z_check.rc != 0
+  when: not brew_available and z_check.rc != 0
 
 - name: Verify installation with assert
   assert:
     file:
       path: ~/.z.sh
       exists: true
-  when: os == "linux"
+  when: not brew_available
 
 - name: Verify installation with assert
   assert:
     file:
       path: /usr/local/etc/profile.d/z.sh
       exists: true
-  when: os == "darwin"
+  when: brew_available
 
 - name: Display version
   print: "z installed"

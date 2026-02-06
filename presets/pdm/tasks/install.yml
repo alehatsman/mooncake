@@ -3,15 +3,29 @@
   register: pdm_check
   failed_when: false
 
-- name: Install pdm
+- name: Install pdm via Homebrew
   package:
     name: pdm
     state: present
-  when: pdm_check.rc != 0
+  when: (parameters.state == "present") and (os == "darwin") and (pdm_check.rc != 0)
 
-- name: Verify installation
-  shell: pdm --version 2>&1 || pdm -v 2>&1 || echo "installed"
-  register: pdm_version
+- name: Install python3-pip (Linux)
+  package:
+    name: python3-pip
+    state: present
+  become: true
+  when: (parameters.state == "present") and (os == "linux") and (pdm_check.rc != 0)
+  failed_when: false
 
-- name: Display version
+- name: Install pdm via pip3
+  shell: pip3 install --user pdm
+  when: (parameters.state == "present") and (os == "linux") and (pdm_check.rc != 0)
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pdm
+      exit_code: 0
+
+- name: Display confirmation
   print: "pdm installed"

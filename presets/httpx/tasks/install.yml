@@ -3,15 +3,26 @@
   register: httpx_check
   failed_when: false
 
-- name: Install httpx
+- name: Install httpx (macOS)
   package:
     name: httpx
     state: present
-  when: httpx_check.rc != 0
+  when: brew_available and httpx_check.rc != 0
 
-- name: Verify installation
-  shell: httpx --version 2>&1 || httpx -v 2>&1 || echo "installed"
-  register: httpx_version
+- name: Install httpx (Linux)
+  shell: |
+    curl -sL https://github.com/projectdiscovery/httpx/releases/latest/download/httpx_linux_arm64.zip -o /tmp/httpx.zip
+    unzip -o /tmp/httpx.zip -d /tmp
+    sudo mv /tmp/httpx /usr/local/bin/httpx
+    sudo chmod +x /usr/local/bin/httpx
+    rm /tmp/httpx.zip
+  when: linux and httpx_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v httpx
+      exit_code: 0
+
+- name: Display confirmation
   print: "httpx installed"

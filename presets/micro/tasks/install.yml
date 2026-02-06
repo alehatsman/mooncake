@@ -3,15 +3,23 @@
   register: micro_check
   failed_when: false
 
-- name: Install micro
+- name: Install micro (macOS)
   package:
     name: micro
     state: present
-  when: micro_check.rc != 0
+  when: brew_available and micro_check.rc != 0
 
-- name: Verify installation
-  shell: micro --version 2>&1 || micro -v 2>&1 || echo "installed"
-  register: micro_version
+- name: Install micro (Linux)
+  shell: |
+    curl https://getmic.ro | bash
+    sudo mv micro /usr/local/bin/
+  when: linux and micro_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v micro
+      exit_code: 0
+
+- name: Display confirmation
   print: "micro installed"

@@ -1,11 +1,11 @@
 - name: Uninstall sdkman (macOS)
   shell: rm -rf ~/.sdkman
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall sdkman (Linux)
   shell: rm -rf ~/.sdkman
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

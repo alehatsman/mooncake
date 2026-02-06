@@ -8,12 +8,12 @@
 # macOS Installation
 - name: Install Starship via Homebrew (macOS)
   shell: brew install starship
-  when: os == "darwin" and starship_check.rc != 0
+  when: brew_available and starship_check.rc != 0
 
 # Linux Installation
 - name: Install Starship via script (Linux)
   shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
-  when: os == "linux" and starship_check.rc != 0
+  when: linux and starship_check.rc != 0
 
 # Verify installation
 - name: Verify Starship installation

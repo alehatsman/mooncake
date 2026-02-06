@@ -8,7 +8,7 @@
 # macOS Installation
 - name: Install Tmux via Homebrew (macOS)
   shell: brew install tmux
-  when: os == "darwin" and tmux_check.rc != 0
+  when: brew_available and tmux_check.rc != 0
 
 # Linux Installation
 - name: Install Tmux (Debian/Ubuntu)
@@ -16,21 +16,21 @@
     name: tmux
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and tmux_check.rc != 0
+  when: apt_available and tmux_check.rc != 0
 
 - name: Install Tmux (RHEL/Fedora)
   package:
     name: tmux
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"] and tmux_check.rc != 0
+  when: dnf_available or yum_available and tmux_check.rc != 0
 
 - name: Install Tmux (Arch)
   package:
     name: tmux
     state: present
   become: true
-  when: os == "linux" and package_manager == "pacman" and tmux_check.rc != 0
+  when: pacman_available and tmux_check.rc != 0
 
 # Verify installation
 - name: Verify installation with assert

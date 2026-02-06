@@ -3,15 +3,24 @@
   register: istio_check
   failed_when: false
 
-- name: Install istio
+- name: Install istio (macOS)
   package:
     name: istio
     state: present
-  when: istio_check.rc != 0
+  when: brew_available and istio_check.rc != 0
 
-- name: Verify installation
-  shell: istioctl --version 2>&1 || istioctl -v 2>&1 || echo "installed"
-  register: istio_version
+- name: Install istio (Linux)
+  shell: |
+    curl -L https://istio.io/downloadIstio | sh -
+    sudo mv istio-*/bin/istioctl /usr/local/bin/
+    rm -rf istio-*
+  when: linux and istio_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v istioctl
+      exit_code: 0
+
+- name: Display confirmation
   print: "istio installed"

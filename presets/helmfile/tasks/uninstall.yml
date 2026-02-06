@@ -1,8 +1,24 @@
-- name: Uninstall helmfile
+- name: Uninstall helmfile (macOS)
   package:
     name: helmfile
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall helmfile (Linux)
+  shell: |
+    HELMFILE_PATH=$(command -v helmfile 2>/dev/null)
+    if [ -n "$HELMFILE_PATH" ]; then
+      sudo rm -f "$HELMFILE_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v helmfile
+      exit_code: 1
 
 - name: Display confirmation
   print: "helmfile uninstalled"

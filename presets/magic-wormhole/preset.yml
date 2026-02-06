@@ -1,5 +1,5 @@
 name: magic-wormhole
-description: File transfer / backup tool
+description: Secure peer-to-peer file transfer tool
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

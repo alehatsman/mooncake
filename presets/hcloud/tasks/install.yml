@@ -3,15 +3,24 @@
   register: hcloud_check
   failed_when: false
 
-- name: Install hcloud
+- name: Install hcloud (macOS)
   package:
     name: hcloud
     state: present
-  when: hcloud_check.rc != 0
+  when: brew_available and hcloud_check.rc != 0
 
-- name: Verify installation
-  shell: hcloud --version 2>&1 || hcloud -v 2>&1 || echo "installed"
-  register: hcloud_version
+- name: Install hcloud (Linux)
+  shell: |
+    curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-arm64.tar.gz | tar xz
+    sudo mv hcloud /usr/local/bin/hcloud
+    sudo chmod +x /usr/local/bin/hcloud
+  when: linux and hcloud_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v hcloud
+      exit_code: 0
+
+- name: Display confirmation
   print: "hcloud installed"

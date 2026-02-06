@@ -3,15 +3,24 @@
   register: ant_check
   failed_when: false
 
-- name: Install ant
+- name: Install ant via Homebrew
   package:
     name: ant
     state: present
-  when: ant_check.rc != 0
+  when: brew_available and ant_check.rc != 0
 
-- name: Verify installation
-  shell: ant --version 2>&1 || ant -v 2>&1 || echo "installed"
-  register: ant_version
+- name: Install ant (Linux)
+  package:
+    name: ant
+    state: present
+  become: true
+  when: apt_available and ant_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ant
+      exit_code: 0
+
+- name: Display confirmation
   print: "ant installed"

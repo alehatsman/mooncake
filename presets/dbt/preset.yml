@@ -1,5 +1,5 @@
 name: dbt
-description: Data processing / ETL
+description: Install dbt (Data Build Tool) for SQL-based data transformations and analytics engineering
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

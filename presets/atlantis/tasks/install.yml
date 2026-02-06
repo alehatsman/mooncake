@@ -3,15 +3,25 @@
   register: atlantis_check
   failed_when: false
 
-- name: Install atlantis
+- name: Install atlantis via Homebrew
   package:
     name: atlantis
     state: present
-  when: atlantis_check.rc != 0
+  when: brew_available and atlantis_check.rc != 0
 
-- name: Verify installation
-  shell: atlantis --version 2>&1 || atlantis -v 2>&1 || echo "installed"
-  register: atlantis_version
+- name: Install atlantis via curl script
+  shell: |
+    curl -LOs https://github.com/runatlantis/atlantis/releases/latest/download/atlantis_linux_amd64.tar.gz
+    tar -xzf atlantis_linux_amd64.tar.gz
+    sudo mv atlantis /usr/local/bin/
+    rm atlantis_linux_amd64.tar.gz
+  when: linux and atlantis_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v atlantis
+      exit_code: 0
+
+- name: Display confirmation
   print: "atlantis installed"

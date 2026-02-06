@@ -1,7 +1,20 @@
 name: pinecone
-description: Graph / vector database
+description: Pinecone CLI for vector database
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Pinecone CLI should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install Pinecone CLI
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Pinecone CLI
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

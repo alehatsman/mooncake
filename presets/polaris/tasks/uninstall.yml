@@ -1,8 +1,22 @@
-- name: Uninstall polaris
+- name: Uninstall polaris (macOS)
   package:
     name: polaris
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall polaris (Linux)
+  file:
+    path: /usr/local/bin/polaris
+    state: absent
+  when: linux
+  become: true
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v polaris
+      exit_code: 1
 
 - name: Display confirmation
   print: "polaris uninstalled"

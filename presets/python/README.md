@@ -13,6 +13,42 @@ Install Python via pyenv (Python version manager) with support for multiple vers
 - ✅ Configures shell profiles automatically
 - ✅ Cross-platform (Linux, macOS)
 
+## Quick Start
+
+```yaml
+- preset: python
+```
+
+Installs Python 3.12.1 via pyenv with build dependencies.
+
+## Basic Usage
+
+After installation:
+```bash
+# Verify installation
+python --version
+pip --version
+
+# Install packages
+pip install requests pandas numpy
+
+# Run Python
+python
+>>> import sys
+>>> print(sys.version)
+>>> exit()
+
+# Run script
+echo 'print("Hello, Python!")' > hello.py
+python hello.py
+
+# Check installed versions
+pyenv versions
+
+# Show current version
+pyenv version
+```
+
 ## Usage
 
 ### Install latest Python 3.12
@@ -211,9 +247,146 @@ pip install -r requirements.txt
 - Upgrade pip: `pip install --upgrade pip`
 - Check Python version: `python --version`
 
+## Advanced Configuration
+
+### Performance Optimizations
+```bash
+# Use optimized Python build
+PYTHON_CONFIGURE_OPTS="--enable-optimizations --with-lto" \
+PYTHON_CFLAGS="-march=native -O3" \
+pyenv install 3.12.1
+```
+
+### Custom Build Options
+```bash
+# With specific features
+PYTHON_CONFIGURE_OPTS="--enable-shared --with-computed-gotos" \
+pyenv install 3.12.1
+
+# macOS with Homebrew OpenSSL
+CFLAGS="-I$(brew --prefix openssl)/include" \
+LDFLAGS="-L$(brew --prefix openssl)/lib" \
+pyenv install 3.12.1
+```
+
+### Shell Optimization (Lazy Loading)
+```bash
+# Add to .zshrc for faster startup
+pyenv() {
+  unset -f pyenv
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init -)"
+  pyenv "$@"
+}
+```
+
+### Global Python Tools
+```bash
+# Install tools once for all projects
+pyenv global 3.12.1
+pip install black isort pylint mypy pytest
+```
+
+### Project Isolation
+```bash
+# Each project has isolated environment
+cd project-a
+pyenv local 3.11.7
+pyenv virtualenv 3.11.7 project-a-env
+pyenv activate project-a-env
+
+cd ../project-b
+pyenv local 3.12.1
+pyenv virtualenv 3.12.1 project-b-env
+pyenv activate project-b-env
+```
+
+## Agent Use
+
+Python + pyenv is essential for AI agent development:
+
+### Agent Environment Setup
+```yaml
+# Install Python with common ML/AI packages
+- preset: python
+  with:
+    version: "3.11.7"
+    install_virtualenv: true
+
+- name: Install AI libraries
+  shell: |
+    eval "$(pyenv init -)"
+    pip install openai anthropic langchain transformers
+```
+
+### Multi-Version Testing
+```yaml
+# Test agent code on Python 3.9-3.12
+- preset: python
+  with:
+    version: "3.12.1"
+    additional_versions: ["3.11.7", "3.10.13", "3.9.18"]
+```
+
+### Isolated Agent Environments
+```python
+# Create isolated env for each agent
+import subprocess
+
+def setup_agent_env(agent_name, python_version):
+    subprocess.run([
+        "pyenv", "virtualenv", python_version, f"agent-{agent_name}"
+    ])
+    subprocess.run([
+        "pyenv", "activate", f"agent-{agent_name}"
+    ])
+```
+
+### Data Science Pipeline
+```bash
+# Setup for ML agents
+pyenv virtualenv 3.11.7 ml-agent
+pyenv activate ml-agent
+pip install numpy pandas scikit-learn torch transformers
+pip install jupyter notebook ipython
+```
+
+### Reproducible Environments
+```bash
+# Lock dependencies for agent deployment
+pip freeze > requirements.txt
+
+# Recreate exact environment
+pyenv virtualenv 3.11.7 agent-prod
+pyenv activate agent-prod
+pip install -r requirements.txt
+```
+
+Benefits for agents:
+- **Isolation** - Each agent has own environment
+- **Reproducibility** - Lock exact Python + package versions
+- **Multi-version** - Test agents on different Python versions
+- **Local control** - No system Python conflicts
+- **Fast switching** - Change Python version per directory
+
 ## Learn More
 
 - [pyenv GitHub](https://github.com/pyenv/pyenv)
 - [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
 - [Python Documentation](https://docs.python.org/)
 - [Real Python - pyenv Tutorial](https://realpython.com/intro-to-pyenv/)
+
+## Resources
+
+- **Python.org**: https://www.python.org
+- **PyPI (Package Index)**: https://pypi.org
+- **pyenv Releases**: https://github.com/pyenv/pyenv/releases
+- **Build Dependencies**: https://github.com/pyenv/pyenv/wiki#suggested-build-environment
+- **Virtual Environments**: https://docs.python.org/3/tutorial/venv.html
+- **PEP 668 (System Python)**: https://peps.python.org/pep-0668/
+
+**Search Terms:**
+- "pyenv install python", "pyenv virtualenv"
+- "python version manager", "multiple python versions"
+- "pyenv commands", "pyenv local global"

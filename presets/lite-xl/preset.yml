@@ -1,5 +1,5 @@
 name: lite-xl
-description: Text editor / IDE
+description: Lightweight text editor with minimal resource footprint
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

@@ -1,8 +1,20 @@
-- name: Uninstall dagster
-  package:
-    name: dagster
-    state: absent
+- name: Uninstall dagster package
+  shell: pip3 uninstall -y dagster
   failed_when: false
+
+- name: Remove dagster binary
+  shell: |
+    DAGSTER_PATH=$(command -v dagster 2>/dev/null)
+    if [ -n "$DAGSTER_PATH" ]; then
+      rm -f "$DAGSTER_PATH"
+    fi
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v dagster
+      exit_code: 1
 
 - name: Display confirmation
   print: "dagster uninstalled"

@@ -1,8 +1,20 @@
-- name: Uninstall cargo-make
+- name: Uninstall cargo-make (macOS)
   package:
     name: cargo-make
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall cargo-make via cargo
+  shell: cargo uninstall cargo-make
+  when: not brew_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v cargo-make
+      exit_code: 1
 
 - name: Display confirmation
   print: "cargo-make uninstalled"

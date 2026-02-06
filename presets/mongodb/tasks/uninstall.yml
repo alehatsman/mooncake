@@ -1,8 +1,29 @@
-- name: Uninstall mongodb
-  package:
-    name: mongodb
-    state: absent
+- name: Uninstall mongodb via apt
+  shell: apt-get remove -y mongodb
+  when: apt_available
+  become: true
   failed_when: false
 
-- name: Display confirmation
-  print: "mongodb uninstalled"
+- name: Uninstall mongodb via dnf
+  shell: dnf remove -y mongodb
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Uninstall mongodb via yum
+  shell: yum remove -y mongodb
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Uninstall mongodb-community via Homebrew
+  shell: brew uninstall mongodb-community
+  when: brew_available
+  failed_when: false
+
+- name: Verify mongod is not installed
+  assert:
+    command:
+      cmd: command -v mongod
+      exit_code: 1
+  failed_when: false

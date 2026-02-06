@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "entr installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v entr
+      exit_code: 0

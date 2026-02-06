@@ -3,15 +3,24 @@
   register: garnet_check
   failed_when: false
 
-- name: Install garnet
+- name: Install garnet (macOS)
   package:
     name: garnet
     state: present
-  when: garnet_check.rc != 0
+  when: brew_available and garnet_check.rc != 0
 
-- name: Verify installation
-  shell: garnet --version 2>&1 || garnet -v 2>&1 || echo "installed"
-  register: garnet_version
+- name: Install garnet (Linux)
+  shell: |
+    curl -sL https://github.com/microsoft/garnet/releases/latest/download/garnet-linux-arm64 -o /tmp/garnet
+    sudo mv /tmp/garnet /usr/local/bin/garnet
+    sudo chmod +x /usr/local/bin/garnet
+  when: linux and garnet_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v garnet
+      exit_code: 0
+
+- name: Display confirmation
   print: "garnet installed"

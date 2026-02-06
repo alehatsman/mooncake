@@ -3,15 +3,24 @@
   register: lazydocker_check
   failed_when: false
 
-- name: Install lazydocker
+- name: Install lazydocker (macOS)
   package:
     name: lazydocker
     state: present
-  when: lazydocker_check.rc != 0
+  when: brew_available and lazydocker_check.rc != 0
 
-- name: Verify installation
-  shell: lazydocker --version 2>&1 || echo "installed"
-  register: lazydocker_version
+- name: Install lazydocker (Linux)
+  shell: |
+    curl -sL https://github.com/jesseduffield/lazydocker/releases/latest/download/lazydocker_Linux_arm64.tar.gz | tar xz
+    sudo mv lazydocker /usr/local/bin/
+    sudo chmod +x /usr/local/bin/lazydocker
+  when: linux and lazydocker_check.rc != 0
 
-- name: Display version
-  print: "lazydocker installed: {{ lazydocker_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v lazydocker
+      exit_code: 0
+
+- name: Display confirmation
+  print: "lazydocker installed"

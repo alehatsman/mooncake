@@ -1,8 +1,23 @@
-- name: Uninstall gcloud
+- name: Uninstall gcloud (macOS)
   package:
-    name: gcloud
+    name: google-cloud-sdk
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gcloud (Linux)
+  package:
+    name: google-cloud-sdk
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gcloud
+      exit_code: 1
 
 - name: Display confirmation
   print: "gcloud uninstalled"

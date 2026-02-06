@@ -3,15 +3,24 @@
   register: kube_bench_check
   failed_when: false
 
-- name: Install kube-bench
+- name: Install kube-bench (macOS)
   package:
     name: kube-bench
     state: present
-  when: kube_bench_check.rc != 0
+  when: brew_available and kube_bench_check.rc != 0
 
-- name: Verify installation
-  shell: kube-bench --version 2>&1 || kube-bench -v 2>&1 || echo "installed"
-  register: kube_bench_version
+- name: Install kube-bench (Linux)
+  shell: |
+    curl -sL https://github.com/aquasecurity/kube-bench/releases/latest/download/kube-bench_linux_arm64.tar.gz | tar xz
+    sudo mv kube-bench /usr/local/bin/
+    sudo chmod +x /usr/local/bin/kube-bench
+  when: linux and kube_bench_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kube-bench
+      exit_code: 0
+
+- name: Display confirmation
   print: "kube-bench installed"

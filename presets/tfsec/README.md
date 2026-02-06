@@ -1,11 +1,19 @@
 # tfsec - Terraform Security Scanner
 
-Static analysis security scanner for Terraform. Find security issues before deployment, enforce policies, compliance checks.
+Static analysis security scanner for Terraform that finds security issues before deployment.
 
 ## Quick Start
 ```yaml
 - preset: tfsec
 ```
+
+## Features
+- **1000+ Security Checks**: Comprehensive coverage for AWS, Azure, GCP
+- **Fast Scanning**: Results in seconds, no external dependencies
+- **Multiple Output Formats**: JSON, SARIF, JUnit, CSV, and more
+- **CI/CD Integration**: GitHub Actions, GitLab CI, pre-commit hooks
+- **Policy as Code**: Custom checks and severity overrides
+- **Cross-platform**: Linux and macOS support
 
 ## Basic Usage
 ```bash
@@ -305,13 +313,30 @@ tfsec --format html > security-report.html
 - Custom policy support
 - Now integrated into Trivy
 
+## Advanced Configuration
+```yaml
+- preset: tfsec
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove tfsec |
+
+## Platform Support
+- ✅ Linux (install script)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not supported)
+
 ## Agent Use
-- Automated security scanning
-- CI/CD security gates
-- Compliance checking
-- Policy enforcement
-- Pre-deployment validation
-- Security baseline verification
+- Automated security scanning in CI/CD pipelines
+- Pre-deployment validation to catch misconfigurations
+- Policy enforcement with custom severity rules
+- Compliance checking against security standards
+- Security baseline verification across environments
+- Generate SARIF reports for GitHub Security tab
 
 ## Uninstall
 ```yaml

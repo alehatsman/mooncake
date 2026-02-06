@@ -1,5 +1,5 @@
 name: etcd
-description: Install etcd - distributed reliable key-value store
+description: Install and configure etcd distributed key-value store for Kubernetes and service discovery
 version: "1.0.0"
 
 parameters:

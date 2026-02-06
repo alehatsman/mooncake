@@ -3,15 +3,21 @@
   register: kube_hunter_check
   failed_when: false
 
-- name: Install kube-hunter
+- name: Install kube-hunter (macOS)
   package:
     name: kube-hunter
     state: present
-  when: kube_hunter_check.rc != 0
+  when: brew_available and kube_hunter_check.rc != 0
 
-- name: Verify installation
-  shell: kube-hunter --version 2>&1 || kube-hunter -v 2>&1 || echo "installed"
-  register: kube_hunter_version
+- name: Install kube-hunter (Linux)
+  shell: pip3 install --user kube-hunter
+  when: linux and kube_hunter_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kube-hunter
+      exit_code: 0
+
+- name: Display confirmation
   print: "kube-hunter installed"

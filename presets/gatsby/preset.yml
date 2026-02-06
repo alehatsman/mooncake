@@ -1,5 +1,5 @@
 name: gatsby
-description: Static site generator
+description: Install Gatsby - React-based static site generator and web framework
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

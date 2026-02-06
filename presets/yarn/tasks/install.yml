@@ -3,15 +3,15 @@
   register: yarn_check
   failed_when: false
 
-- name: Install yarn (macOS)
+- name: Install yarn via Homebrew
   package:
     name: yarn
     state: present
-  when: os == "darwin" and yarn_check.rc != 0
+  when: brew_available and yarn_check.rc != 0
 
-- name: Install yarn (Linux)
+- name: Install yarn via npm
   shell: npm install -g yarn
-  when: os == "linux" and yarn_check.rc != 0
+  when: not brew_available and yarn_check.rc != 0
 
 - name: Verify installation with assert
   assert:

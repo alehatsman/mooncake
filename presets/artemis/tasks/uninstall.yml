@@ -1,8 +1,14 @@
-- name: Uninstall artemis
+- name: Uninstall artemis via package manager
   package:
     name: artemis
     state: absent
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v artemis
+      exit_code: 1
 
 - name: Display confirmation
   print: "artemis uninstalled"

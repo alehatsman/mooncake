@@ -3,15 +3,24 @@
   register: jq_check
   failed_when: false
 
-- name: Install jq
+- name: Install jq (macOS)
   package:
     name: jq
     state: present
-  when: jq_check.rc != 0
+  when: brew_available and jq_check.rc != 0
 
-- name: Verify installation
-  shell: jq --version 2>&1 || echo "installed"
-  register: jq_version
+- name: Install jq (Linux)
+  package:
+    name: jq
+    state: present
+  become: true
+  when: apt_available and jq_check.rc != 0
 
-- name: Display version
-  print: "jq installed: {{ jq_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v jq
+      exit_code: 0
+
+- name: Display confirmation
+  print: "jq installed"

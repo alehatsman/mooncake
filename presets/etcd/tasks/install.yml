@@ -13,5 +13,11 @@
   shell: etcd --version 2>&1 || etcd -v 2>&1 || echo "installed"
   register: etcd_version
 
+- name: Assert etcd is installed
+  assert:
+    command:
+      cmd: command -v etcd
+      exit_code: 0
+
 - name: Display version
   print: "etcd installed"

@@ -7,6 +7,12 @@ Find vulnerabilities in container images and filesystems. Fast, accurate CVE det
 - preset: grype
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Scan container image
@@ -24,6 +30,18 @@ grype sbom:./sbom.json
 grype docker-archive:image.tar
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: grype
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove grype |
 ## Severity Filtering
 ```bash
 # Show only CRITICAL and HIGH
@@ -291,3 +309,8 @@ grype --skip-java-bins-scanner nginx:latest
 - GitHub: https://github.com/anchore/grype
 - Docs: https://github.com/anchore/grype#readme
 - Search: "grype vs trivy", "grype ci/cd"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

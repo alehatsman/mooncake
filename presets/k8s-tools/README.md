@@ -4,6 +4,10 @@
 
 ## Quick Start
 
+```yaml
+- preset: k8s-tools
+```
+
 ```bash
 # Check kubectl version
 kubectl version --client
@@ -16,6 +20,30 @@ k9s version
 
 # View cluster info (requires cluster)
 kubectl cluster-info
+```
+
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+
+## Basic Usage
+```bash
+# Verify installations
+kubectl version --client
+helm version
+k9s version
+
+# Common kubectl commands
+kubectl get pods
+kubectl get nodes
+kubectl get services
+
+# Common helm commands
+helm list
+helm repo list
 ```
 
 ## Installed Tools
@@ -142,6 +170,12 @@ kubectl config use-context kind-kind
 kubectl config use-context docker-desktop
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
 ## Uninstall
 
 ```yaml
@@ -151,3 +185,23 @@ kubectl config use-context docker-desktop
 ```
 
 **Note:** kubeconfig files in `~/.kube/` preserved after uninstall.
+
+## Advanced Configuration
+```yaml
+- preset: k8s-tools
+  with:
+    state: present
+```
+
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove k8s-tools |
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
+
+## Resources
+- Search: "k8s-tools documentation", "k8s-tools tutorial"

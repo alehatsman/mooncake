@@ -1,5 +1,5 @@
 name: wezterm
-description: GPU-accelerated cross-platform terminal
+description: GPU-accelerated cross-platform terminal emulator with rich configuration and multiplexer capabilities
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Whether wezterm should be installed or removed
 steps:
   - name: Install wezterm
     include: tasks/install.yml

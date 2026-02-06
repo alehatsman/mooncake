@@ -11,7 +11,7 @@
   package:
     name: kubectl
     state: present
-  when: os == "darwin" and parameters.install_kubectl and kubectl_check.rc != 0
+  when: brew_available and parameters.install_kubectl and kubectl_check.rc != 0
 
 - name: Install kubectl (Debian/Ubuntu)
   shell: |
@@ -19,7 +19,7 @@
     sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
     rm kubectl
   become: true
-  when: os == "linux" and parameters.install_kubectl and kubectl_check.rc != 0
+  when: linux and parameters.install_kubectl and kubectl_check.rc != 0
   failed_when: false
 
 - name: Verify kubectl installation
@@ -43,14 +43,14 @@
   package:
     name: k9s
     state: present
-  when: os == "darwin" and parameters.install_k9s and k9s_check.rc != 0
+  when: brew_available and parameters.install_k9s and k9s_check.rc != 0
 
 - name: Install k9s (Linux)
   shell: |
     K9S_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | grep tag_name | cut -d '"' -f 4)
     curl -sL https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz | sudo tar xz -C /usr/local/bin
   become: true
-  when: os == "linux" and parameters.install_k9s and k9s_check.rc != 0
+  when: linux and parameters.install_k9s and k9s_check.rc != 0
   failed_when: false
 
 - name: Verify k9s installation
@@ -74,12 +74,12 @@
   package:
     name: helm
     state: present
-  when: os == "darwin" and parameters.install_helm and helm_check.rc != 0
+  when: brew_available and parameters.install_helm and helm_check.rc != 0
 
 - name: Install Helm (Linux)
   shell: |
     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-  when: os == "linux" and parameters.install_helm and helm_check.rc != 0
+  when: linux and parameters.install_helm and helm_check.rc != 0
   failed_when: false
 
 - name: Verify Helm installation
@@ -97,7 +97,7 @@
   package:
     name: kubectx
     state: present
-  when: os == "darwin" and parameters.install_kubectx
+  when: brew_available and parameters.install_kubectx
 
 - name: Install kubectx (Linux)
   shell: |
@@ -107,7 +107,7 @@
       sudo ln -s /opt/kubectx/kubens /usr/local/bin/kubens
     fi
   become: true
-  when: os == "linux" and parameters.install_kubectx
+  when: linux and parameters.install_kubectx
   failed_when: false
 
 - name: Display kubectx installation
@@ -180,6 +180,35 @@
 - name: Display k9s test - Warning
   print: "WARNING k9s test failed, but binary is installed"
   when: parameters.install_k9s and k9s_test.rc != 0
+
+# Assertions
+- name: Assert kubectl is installed
+  assert:
+    command:
+      cmd: command -v kubectl
+      exit_code: 0
+  when: parameters.install_kubectl
+
+- name: Assert k9s is installed
+  assert:
+    command:
+      cmd: command -v k9s
+      exit_code: 0
+  when: parameters.install_k9s
+
+- name: Assert helm is installed
+  assert:
+    command:
+      cmd: command -v helm
+      exit_code: 0
+  when: parameters.install_helm
+
+- name: Assert kubectx is installed
+  assert:
+    command:
+      cmd: command -v kubectx
+      exit_code: 0
+  when: parameters.install_kubectx
 
 # Summary
 - name: Display installation summary

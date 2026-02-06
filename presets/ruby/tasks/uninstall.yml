@@ -1,16 +1,14 @@
 # Ruby/rbenv Uninstallation
 
 - name: Remove rbenv directory
-  file:
-    path: ~/.rbenv
-    state: absent
+  shell: rm -rf "$HOME/.rbenv"
   when: parameters.state == "absent"
+  failed_when: false
 
 - name: Remove rbenv init file
-  file:
-    path: ~/.rbenv_init
-    state: absent
+  shell: rm -f "$HOME/.rbenv_init"
   when: parameters.state == "absent"
+  failed_when: false
 
 - name: Remove rbenv from shell profiles
   shell: |

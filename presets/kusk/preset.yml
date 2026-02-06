@@ -1,5 +1,5 @@
 name: kusk
-description: API gateway / load balancer
+description: OpenAPI-driven API gateway for Kubernetes
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

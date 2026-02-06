@@ -3,15 +3,24 @@
   register: argocd_autopilot_check
   failed_when: false
 
-- name: Install argocd-autopilot
+- name: Install argocd-autopilot via Homebrew
   package:
     name: argocd-autopilot
     state: present
-  when: argocd_autopilot_check.rc != 0
+  when: brew_available and argocd_autopilot_check.rc != 0
 
-- name: Verify installation
-  shell: argocd-autopilot --version 2>&1 || argocd-autopilot -v 2>&1 || echo "installed"
-  register: argocd_autopilot_version
+- name: Install argocd-autopilot via apt
+  shell: |
+    curl -sL "https://github.com/argoproj-labs/argocd-autopilot/releases/latest/download/argocd-autopilot-linux-arm64.tar.gz" | tar xz
+    sudo mv argocd-autopilot-linux-arm64 /usr/local/bin/argocd-autopilot
+    sudo chmod +x /usr/local/bin/argocd-autopilot
+  when: linux and argocd_autopilot_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v argocd-autopilot
+      exit_code: 0
+
+- name: Display confirmation
   print: "argocd-autopilot installed"

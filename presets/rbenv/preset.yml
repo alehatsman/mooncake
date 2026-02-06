@@ -1,7 +1,20 @@
 name: rbenv
-description: Language tool
+description: Lightweight Ruby version manager for managing multiple Ruby versions
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether rbenv should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install rbenv
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall rbenv
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

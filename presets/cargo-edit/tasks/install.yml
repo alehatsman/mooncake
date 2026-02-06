@@ -1,17 +1,23 @@
 - name: Check if cargo-edit is installed
-  shell: command -v cargo-edit
+  shell: command -v cargo-add
   register: cargo_edit_check
   failed_when: false
 
-- name: Install cargo-edit
+- name: Install cargo-edit via Homebrew
   package:
     name: cargo-edit
     state: present
-  when: cargo_edit_check.rc != 0
+  when: brew_available and cargo_edit_check.rc != 0
 
-- name: Verify installation
-  shell: cargo-edit --version 2>&1 || cargo-edit -v 2>&1 || echo "installed"
-  register: cargo_edit_version
+- name: Install cargo-edit via cargo
+  shell: cargo install cargo-edit
+  when: not brew_available and cargo_edit_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cargo-add
+      exit_code: 0
+
+- name: Display confirmation
   print: "cargo-edit installed"

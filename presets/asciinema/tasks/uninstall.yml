@@ -1,8 +1,28 @@
-- name: Uninstall asciinema
+- name: Uninstall asciinema via Homebrew
   package:
     name: asciinema
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall asciinema via apt
+  package:
+    name: asciinema
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Uninstall asciinema via pip3
+  shell: pip3 uninstall -y asciinema
+  when: not brew_available and not apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v asciinema
+      exit_code: 1
 
 - name: Display confirmation
   print: "asciinema uninstalled"

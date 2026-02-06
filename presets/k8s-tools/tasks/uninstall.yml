@@ -4,7 +4,7 @@
   package:
     name: kubectl
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall kubectl (Linux)
@@ -12,14 +12,14 @@
     path: /usr/local/bin/kubectl
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Uninstall k9s (macOS)
   package:
     name: k9s
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall k9s (Linux)
@@ -27,14 +27,14 @@
     path: /usr/local/bin/k9s
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Uninstall Helm (macOS)
   package:
     name: helm
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall Helm (Linux)
@@ -42,14 +42,14 @@
     path: /usr/local/bin/helm
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Uninstall kubectx (macOS)
   package:
     name: kubectx
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall kubectx (Linux)
@@ -57,7 +57,7 @@
     path: /opt/kubectx
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Remove kubectx symlink (Linux)
@@ -65,7 +65,7 @@
     path: /usr/local/bin/kubectx
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Remove kubens symlink (Linux)
@@ -73,7 +73,7 @@
     path: /usr/local/bin/kubens
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Remove krew directory
@@ -87,3 +87,24 @@
     path: ~/.kube
     state: absent
   failed_when: false
+
+- name: Assert kubectl is removed
+  assert:
+    command:
+      cmd: command -v kubectl
+      exit_code: 1
+
+- name: Assert k9s is removed
+  assert:
+    command:
+      cmd: command -v k9s
+      exit_code: 1
+
+- name: Assert helm is removed
+  assert:
+    command:
+      cmd: command -v helm
+      exit_code: 1
+
+- name: Display confirmation
+  print: "Kubernetes tools uninstalled"

@@ -1,17 +1,39 @@
 - name: Check if orientdb is installed
-  shell: command -v orientdb
+  shell: command -v orientdb.sh || test -d ~/orientdb
   register: orientdb_check
   failed_when: false
 
-- name: Install orientdb
+- name: Install orientdb via Homebrew (macOS)
   package:
     name: orientdb
     state: present
-  when: orientdb_check.rc != 0
+  when: (parameters.state == "present") and (os == "darwin") and (orientdb_check.rc != 0)
 
-- name: Verify installation
-  shell: orientdb --version 2>&1 || orientdb -v 2>&1 || echo "installed"
-  register: orientdb_version
+- name: Install orientdb via tarball (Linux)
+  shell: |
+    ORIENTDB_VERSION="3.2.32"
+    cd /tmp
+    curl -L -O "https://repo1.maven.org/maven2/com/orientechnologies/orientdb-community/${ORIENTDB_VERSION}/orientdb-community-${ORIENTDB_VERSION}.tar.gz"
+    tar -xzf orientdb-community-${ORIENTDB_VERSION}.tar.gz
+    mv orientdb-community-${ORIENTDB_VERSION} ~/orientdb
+    chmod +x ~/orientdb/bin/*.sh
+    rm -f orientdb-community-${ORIENTDB_VERSION}.tar.gz
+  when: (parameters.state == "present") and (os == "linux") and (orientdb_check.rc != 0)
 
-- name: Display version
-  print: "orientdb installed"
+- name: Verify installation with assert (Linux)
+  assert:
+    file:
+      path: ~/orientdb/bin/orientdb.sh
+      exists: true
+  when: (parameters.state == "present") and (os == "linux")
+
+- name: Verify installation with assert (macOS)
+  assert:
+    command:
+      cmd: command -v orientdb || test -d /opt/homebrew/opt/orientdb || test -d /usr/local/opt/orientdb
+      exit_code: 0
+  when: (parameters.state == "present") and (os == "darwin")
+
+- name: Display confirmation
+  print: "orientdb installed at ~/orientdb"
+  when: parameters.state == "present"

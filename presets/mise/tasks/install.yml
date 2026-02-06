@@ -3,15 +3,15 @@
   register: mise_check
   failed_when: false
 
-- name: Install mise (macOS)
+- name: Install mise via Homebrew
   package:
     name: mise
     state: present
-  when: os == "darwin" and mise_check.rc != 0
+  when: brew_available and mise_check.rc != 0
 
-- name: Install mise (Linux)
+- name: Install mise via install script
   shell: curl https://mise.run | sh
-  when: os == "linux" and mise_check.rc != 0
+  when: not brew_available and mise_check.rc != 0
 
 - name: Verify installation with assert
   assert:

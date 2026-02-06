@@ -3,15 +3,17 @@
   register: artemis_check
   failed_when: false
 
-- name: Install artemis
+- name: Install artemis via package manager
   package:
     name: artemis
     state: present
   when: artemis_check.rc != 0
 
-- name: Verify installation
-  shell: artemis --version 2>&1 || artemis -v 2>&1 || echo "installed"
-  register: artemis_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v artemis
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "artemis installed"

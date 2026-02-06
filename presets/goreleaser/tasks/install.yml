@@ -3,15 +3,24 @@
   register: goreleaser_check
   failed_when: false
 
-- name: Install goreleaser
+- name: Install goreleaser (macOS)
   package:
     name: goreleaser
     state: present
-  when: goreleaser_check.rc != 0
+  when: brew_available and goreleaser_check.rc != 0
 
-- name: Verify installation
-  shell: goreleaser --version 2>&1 || goreleaser -v 2>&1 || echo "installed"
-  register: goreleaser_version
+- name: Install goreleaser (Linux)
+  shell: |
+    curl -sSL https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_Linux_arm64.tar.gz | tar xz
+    sudo mv goreleaser /usr/local/bin/
+    sudo chmod +x /usr/local/bin/goreleaser
+  when: linux and goreleaser_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v goreleaser
+      exit_code: 0
+
+- name: Display confirmation
   print: "goreleaser installed"

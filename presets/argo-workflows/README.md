@@ -7,6 +7,16 @@ Container-native workflow engine. Define complex workflows, parallel execution, 
 - preset: argo-workflows
 ```
 
+## Features
+- **DAG workflows**: Define complex workflows with dependencies
+- **Container-native**: Each step runs in a container
+- **Parallel execution**: Run multiple steps concurrently
+- **Artifacts**: Pass data between steps via S3/GCS/Artifactory
+- **Cron scheduling**: Time-based workflow triggers
+- **Event-driven**: Trigger workflows from events (with Argo Events)
+- **Parameterization**: Template workflows with parameters
+- **Retry strategies**: Automatic retries with backoff
+
 ## Basic Usage
 ```bash
 # Submit workflow
@@ -193,6 +203,11 @@ argo cron resume my-cron
 # Delete cron
 argo cron delete my-cron
 ```
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
 
 ## Parameters
 ```bash

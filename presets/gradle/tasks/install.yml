@@ -3,15 +3,24 @@
   register: gradle_check
   failed_when: false
 
-- name: Install gradle
+- name: Install gradle (macOS)
   package:
     name: gradle
     state: present
-  when: gradle_check.rc != 0
+  when: brew_available and gradle_check.rc != 0
 
-- name: Verify installation
-  shell: gradle --version 2>&1 || gradle -v 2>&1 || echo "installed"
-  register: gradle_version
+- name: Install gradle (Linux)
+  package:
+    name: gradle
+    state: present
+  become: true
+  when: apt_available and gradle_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gradle
+      exit_code: 0
+
+- name: Display confirmation
   print: "gradle installed"

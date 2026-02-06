@@ -3,15 +3,27 @@
   register: meilisearch_check
   failed_when: false
 
-- name: Install meilisearch
-  package:
-    name: meilisearch
-    state: present
-  when: meilisearch_check.rc != 0
+- name: Install meilisearch via apt
+  shell: apt-get install -y meilisearch
+  when: apt_available and meilisearch_check.rc != 0
+  become: true
 
-- name: Verify installation
-  shell: meilisearch --version 2>&1 || meilisearch -v 2>&1 || echo "installed"
-  register: meilisearch_version
+- name: Install meilisearch via dnf
+  shell: dnf install -y meilisearch
+  when: dnf_available and meilisearch_check.rc != 0
+  become: true
 
-- name: Display version
-  print: "meilisearch installed"
+- name: Install meilisearch via yum
+  shell: yum install -y meilisearch
+  when: yum_available and meilisearch_check.rc != 0
+  become: true
+
+- name: Install meilisearch via Homebrew
+  shell: brew install meilisearch
+  when: brew_available and meilisearch_check.rc != 0
+
+- name: Verify meilisearch is installed
+  assert:
+    command:
+      cmd: command -v meilisearch
+      exit_code: 0

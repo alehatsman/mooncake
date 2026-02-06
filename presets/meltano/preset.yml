@@ -1,5 +1,5 @@
 name: meltano
-description: Data processing / ETL
+description: Install Meltano, an open-source ELT platform for building data integration pipelines with Singer taps and targets
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

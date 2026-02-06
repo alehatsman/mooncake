@@ -1,8 +1,24 @@
-- name: Uninstall kubescape
+- name: Uninstall kubescape (macOS)
   package:
     name: kubescape
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kubescape (Linux)
+  shell: |
+    KUBESCAPE_PATH=$(command -v kubescape 2>/dev/null)
+    if [ -n "$KUBESCAPE_PATH" ]; then
+      sudo rm -f "$KUBESCAPE_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kubescape
+      exit_code: 1
 
 - name: Display confirmation
   print: "kubescape uninstalled"

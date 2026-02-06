@@ -3,15 +3,21 @@
   register: poetry_check
   failed_when: false
 
-- name: Install poetry
+- name: Install poetry via Homebrew
   package:
     name: poetry
     state: present
-  when: poetry_check.rc != 0
+  when: brew_available and poetry_check.rc != 0
 
-- name: Verify installation
-  shell: poetry --version 2>&1 || poetry -v 2>&1 || echo "installed"
-  register: poetry_version
+- name: Install poetry via install script
+  shell: curl -sSL https://install.python-poetry.org | python3 -
+  when: linux and poetry_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v poetry
+      exit_code: 0
+
+- name: Display confirmation
   print: "poetry installed"

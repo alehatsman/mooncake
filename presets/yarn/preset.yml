@@ -1,7 +1,20 @@
 name: yarn
-description: Node.js / JavaScript tool
+description: Install Yarn package manager for JavaScript projects
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove Yarn
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install Yarn
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Yarn
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

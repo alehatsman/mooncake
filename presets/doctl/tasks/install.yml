@@ -9,9 +9,11 @@
     state: present
   when: doctl_check.rc != 0
 
-- name: Verify installation
-  shell: doctl --version 2>&1 || doctl -v 2>&1 || echo "installed"
-  register: doctl_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v doctl
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "doctl installed"

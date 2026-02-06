@@ -9,7 +9,7 @@
 - name: Check PyTorch MPS availability
   shell: python3 -c "import torch; print('MPS available:', torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False)"
   register: mps_available
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 # Display configuration

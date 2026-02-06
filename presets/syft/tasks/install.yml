@@ -7,12 +7,12 @@
   package:
     name: syft
     state: present
-  when: os == "darwin" and syft_check.rc != 0
+  when: brew_available and syft_check.rc != 0
 
 - name: Install syft (Linux)
   shell: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
   become: true
-  when: os == "linux" and syft_check.rc != 0
+  when: linux and syft_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -2,6 +2,16 @@
 
 Multi-threaded HTTP benchmarking tool. Lua scripting for complex scenarios, low overhead, high throughput testing.
 
+## Features
+- **Multi-threaded**: Leverage all CPU cores
+- **Lua scripting**: Complex request scenarios
+- **Low overhead**: Minimal resource usage
+- **High throughput**: Millions of requests per second
+- **Latency distribution**: Detailed percentile stats
+- **Custom headers**: Full HTTP customization
+- **HTTP/1.1 and HTTP/2**: Modern protocol support
+- **Connection pooling**: Keep-alive optimization
+
 ## Quick Start
 ```yaml
 - preset: wrk
@@ -229,6 +239,80 @@ wrk -s auth-flow.lua http://localhost:8080
 - Use Lua scripts for stateful testing
 - Monitor target server during test
 - Compare with production traffic patterns
+
+## Advanced Configuration
+
+### Complex Lua Script
+```lua
+-- advanced.lua
+-- Setup
+setup = function(thread)
+  thread:set("id", counter())
+end
+
+function counter()
+  local i = 0
+  return function()
+    i = i + 1
+    return i
+  end
+end
+
+-- Request
+request = function()
+  local id = thread:get("id")()
+  local method = "POST"
+  local path = "/api/users"
+  local headers = {}
+  headers["Content-Type"] = "application/json"
+  headers["X-Request-ID"] = tostring(id)
+  local body = string.format('{"id":%d,"timestamp":%d}', id, os.time())
+  return wrk.format(method, path, headers, body)
+end
+
+-- Response validation
+response = function(status, headers, body)
+  if status ~= 200 then
+    wrk:close()
+  end
+end
+
+-- Summary
+done = function(summary, latency, requests)
+  io.write(string.format("Success rate: %.2f%%\n",
+    100 * (summary.requests - summary.errors.connect - summary.errors.read - summary.errors.write) / summary.requests))
+end
+```
+
+### Performance Baseline Script
+```bash
+#!/bin/bash
+# establish-baseline.sh
+DURATION=60s
+THREADS=8
+CONNECTIONS=200
+
+wrk -t${THREADS} -c${CONNECTIONS} -d${DURATION} \
+  --latency \
+  http://api.example.com/health > baseline.txt
+
+# Extract key metrics
+THROUGHPUT=$(grep "Requests/sec" baseline.txt | awk '{print $2}')
+P99=$(grep "99%" baseline.txt | awk '{print $2}')
+
+echo "Baseline established: ${THROUGHPUT} req/s, p99: ${P99}"
+```
+
+## Platform Support
+- ✅ Linux (all distributions)
+- ✅ macOS (Homebrew, compile from source)
+- ✅ BSD systems
+- ❌ Windows (use WSL)
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove wrk |
 
 ## Agent Use
 - Automated performance testing

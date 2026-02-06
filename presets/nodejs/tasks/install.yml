@@ -2,18 +2,16 @@
 
 # Check if nvm is already installed
 - name: Check if nvm is installed
-  assert:
-    file:
-      path: "~/.nvm/nvm.sh"
-      exists: true
-  register: nvm_installed
+  shell: test -f ~/.nvm/nvm.sh && echo "installed" || echo "not installed"
+  register: nvm_check
   failed_when: false
 
 # Install nvm on Linux/macOS
 - name: Install nvm (Linux/macOS)
   shell: |
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  when: os in ["linux", "darwin"] and nvm_installed.failed
+    sleep 2
+  when: (os in ["linux", "darwin"]) and (nvm_check.stdout != "installed")
 
 # Create nvm initialization file
 - name: Create nvm init file
@@ -25,7 +23,7 @@
       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
       [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
     mode: "0644"
-  when: os in ["linux", "darwin"] and nvm_installed.failed
+  when: (os in ["linux", "darwin"]) and (nvm_check.stdout != "installed")
 
 # Add nvm init to shell profiles
 - name: Add nvm to shell profile
@@ -35,7 +33,7 @@
         echo '[ -f "$HOME/.nvm_init" ] && source "$HOME/.nvm_init"' >> "$profile"
       fi
     done
-  when: os in ["linux", "darwin"] and nvm_installed.failed
+  when: (os in ["linux", "darwin"]) and (nvm_check.stdout != "installed")
 
 # Install Node.js version
 - name: Install Node.js {{ parameters.version }}
@@ -43,7 +41,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install {{ parameters.version }}
-  creates: "~/.nvm/versions/node"
+  when: parameters.state == "present"
 
 # Set default version
 - name: Set Node.js {{ parameters.version }} as default
@@ -85,6 +83,12 @@
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     npm --version
   register: npm_version
+
+- name: Verify nvm installation with assert
+  assert:
+    file:
+      path: "~/.nvm/nvm.sh"
+      exists: true
 
 - name: Print installation summary
   print: |

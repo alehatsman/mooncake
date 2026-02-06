@@ -1,8 +1,17 @@
-- name: Uninstall dstat
+- name: Uninstall dstat via apt
   package:
     name: dstat
     state: absent
+  become: true
+  when: apt_available
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v dstat
+      exit_code: 1
+  when: linux
 
 - name: Display confirmation
   print: "dstat uninstalled"

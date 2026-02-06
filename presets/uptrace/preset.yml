@@ -1,4 +1,4 @@
-name: uptrace  
+name: uptrace
 description: Distributed tracing and metrics
 version: "1.0.0"
 parameters:

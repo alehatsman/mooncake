@@ -7,11 +7,11 @@
   package:
     name: vite
     state: present
-  when: os == "darwin" and vite_check.rc != 0
+  when: brew_available and vite_check.rc != 0
 
 - name: Install vite (Linux)
   shell: npm install -g vite
-  when: os == "linux" and vite_check.rc != 0
+  when: linux and vite_check.rc != 0
 
 - name: Verify installation with assert
   assert:

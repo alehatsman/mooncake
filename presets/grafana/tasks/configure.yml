@@ -6,11 +6,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start Grafana service (macOS)
   shell: brew services start grafana
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
 
 - name: Wait for Grafana to be ready
   shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:{{ parameters.port }}/api/health

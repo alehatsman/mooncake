@@ -1,13 +1,13 @@
-- name: Uninstall yamllint (macOS)
+- name: Uninstall yamllint via Homebrew
   package:
     name: yamllint
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall yamllint (Linux)
+- name: Uninstall yamllint via pip3
   shell: pip3 uninstall -y yamllint
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

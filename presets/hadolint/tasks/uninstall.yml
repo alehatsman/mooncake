@@ -1,8 +1,24 @@
-- name: Uninstall hadolint
+- name: Uninstall hadolint (macOS)
   package:
     name: hadolint
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall hadolint (Linux)
+  shell: |
+    HADOLINT_PATH=$(command -v hadolint 2>/dev/null)
+    if [ -n "$HADOLINT_PATH" ]; then
+      sudo rm -f "$HADOLINT_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v hadolint
+      exit_code: 1
 
 - name: Display confirmation
   print: "hadolint uninstalled"

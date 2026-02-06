@@ -1,5 +1,5 @@
 name: bottom
-description: System monitoring utility
+description: Graphical process and system monitor with customizable widgets
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

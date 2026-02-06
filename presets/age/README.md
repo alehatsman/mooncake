@@ -7,6 +7,15 @@ Modern, simple file encryption tool. A replacement for GPG with a focus on simpl
 - preset: age
 ```
 
+## Features
+- **Simple**: Only two commands - `age` to encrypt, `age -d` to decrypt
+- **Modern cryptography**: X25519, ChaCha20-Poly1305, HMAC-SHA256
+- **Small keys**: Public keys are one line, easy to share
+- **SSH key support**: Encrypt to SSH public keys directly
+- **Multiple recipients**: Encrypt to multiple keys in one operation
+- **Passphrase mode**: Encrypt without managing keys
+- **Streaming**: Handle large files efficiently
+
 ## Basic Usage
 ```bash
 # Generate key pair
@@ -217,12 +226,99 @@ file file.enc  # Check if actually age-encrypted
 # Solution: Key file truncated, restore from backup
 ```
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### Encrypted Configuration Management
+```bash
+# Encrypt production database credentials
+age -r age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p \
+    -o database.yml.age database.yml
+
+# Decrypt in production (identity stored securely)
+age -d -i /etc/secrets/key.txt database.yml.age > /tmp/database.yml
+./deploy --config /tmp/database.yml
+rm /tmp/database.yml
+```
+
+### Automated Backup Pipeline
+```bash
+#!/bin/bash
+# Daily encrypted backups to S3
+BACKUP_KEY="age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
+DATE=$(date +%Y%m%d)
+
+tar czf - /var/lib/myapp | \
+    age -r $BACKUP_KEY > backup-$DATE.tar.gz.age
+
+aws s3 cp backup-$DATE.tar.gz.age s3://backups/
+rm backup-$DATE.tar.gz.age
+```
+
+### CI/CD Secret Management
+```yaml
+# .github/workflows/deploy.yml
+- name: Install age
+  preset: age
+
+- name: Decrypt deployment secrets
+  run: |
+    echo "${{ secrets.AGE_PRIVATE_KEY }}" > key.txt
+    age -d -i key.txt secrets.enc > secrets.env
+    source secrets.env
+    rm key.txt secrets.env
+```
+
+### Team Secret Sharing
+```bash
+# Create team recipients file
+cat > team.txt <<EOF
+# DevOps Team
+age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p  # Alice
+age1lggyhqrw2nlhcxprm67z43rta597azn8gknawjehu9d9dl0jq3yqqvfafg  # Bob
+age1ztmn9lykvegj0xgp85lp0gjsq9zs4dp73uqx8ewue92q63m7p6qs5v8nl3  # Charlie
+EOF
+
+# Encrypt API keys for entire team
+age -R team.txt api-keys.txt > api-keys.txt.age
+git add api-keys.txt.age team.txt
+git commit -m "Add encrypted API keys"
+
+# Each team member decrypts with their own key
+age -d -i ~/.age/key.txt api-keys.txt.age > api-keys.txt
+```
+
 ## Agent Use
-- Encrypt CI/CD secrets
-- Secure configuration management
-- Automated backup encryption
-- Key rotation workflows
-- Team secret distribution
+- Encrypt CI/CD secrets before storing in version control
+- Secure configuration management in deployment pipelines
+- Automated backup encryption with key rotation
+- Team secret distribution with per-user decryption
+- Environment-specific credential management
+
+## Advanced Configuration
+```yaml
+# Use age for encrypted secrets management
+- name: Install age
+  preset: age
+
+- name: Generate encryption keys
+  shell: |
+    age-keygen -o ~/.age/key.txt
+    chmod 600 ~/.age/key.txt
+
+- name: Encrypt sensitive configuration
+  shell: |
+    age -r $(age-keygen -y ~/.age/key.txt) -o secrets.age secrets.txt
+```
 
 ## Uninstall
 ```yaml

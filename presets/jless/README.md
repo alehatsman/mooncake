@@ -7,6 +7,12 @@ Terminal JSON viewer with vim-like keybindings. Collapsible structure, search, c
 - preset: jless
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # View JSON file
@@ -23,6 +29,18 @@ jless data.yaml
 jless file1.json file2.json
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: jless
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove jless |
 ## Navigation
 ```
 Movement:
@@ -338,3 +356,8 @@ jless data.json
 ## Resources
 - GitHub: https://github.com/PaulJuliusMartinez/jless
 - Search: "jless json viewer", "jless vim"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

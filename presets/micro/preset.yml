@@ -1,7 +1,45 @@
 name: micro
-description: Text editor / IDE
+description: Modern terminal text editor with mouse support, syntax highlighting, and plugins
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove micro editor
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: Version to install (e.g., "2.0.13", "latest")
+
+  plugins:
+    type: array
+    required: false
+    default: []
+    description: List of plugins to install (e.g., ["enabled", "aspell", "detectindent"])
+
+  theme:
+    type: string
+    required: false
+    default: default
+    description: Color theme to use (e.g., "monokai", "solarized", "default")
+
+  keybinding_mode:
+    type: string
+    required: false
+    default: default
+    enum: [default, vi, emacs]
+    description: Keybinding scheme (default, vi, or emacs)
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install micro
+    include: tasks/install.yml
+    when: 'parameters.state == "present"'
+
+  - name: Uninstall micro
+    include: tasks/uninstall.yml
+    when: 'parameters.state == "absent"'

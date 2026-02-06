@@ -6,19 +6,19 @@
     state: stopped
   become: true
   failed_when: false
-  when: os == "linux"
+  when: linux
 
 - name: Stop Caddy service (macOS)
   shell: brew services stop caddy
   failed_when: false
-  when: os == "darwin"
+  when: brew_available
 
 # macOS Uninstallation
 - name: Uninstall Caddy via Homebrew (macOS)
   package:
     name: caddy
     state: absent
-  when: os == "darwin"
+  when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Caddy (Debian/Ubuntu)
@@ -26,14 +26,20 @@
     name: caddy
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Uninstall Caddy (Fedora/RHEL)
   package:
     name: caddy
     state: absent
   become: true
-  when: os == "linux" and package_manager == "dnf"
+  when: dnf_available
 
-- name: Display uninstall confirmation
-  print: "Caddy has been uninstalled"
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v caddy
+      exit_code: 1
+
+- name: Display confirmation
+  print: "caddy uninstalled"

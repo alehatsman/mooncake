@@ -1,5 +1,5 @@
 name: bazel
-description: Fast, scalable build system
+description: Google's build tool supporting multi-language projects with incremental builds and remote caching
 version: "1.0.0"
 parameters:
   state:

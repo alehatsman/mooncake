@@ -1,5 +1,5 @@
 name: apisix
-description: API gateway / load balancer
+description: Cloud-native API gateway with dynamic routing and plugin ecosystem
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

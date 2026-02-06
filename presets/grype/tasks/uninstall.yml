@@ -1,8 +1,24 @@
-- name: Uninstall grype
+- name: Uninstall grype (macOS)
   package:
     name: grype
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall grype (Linux)
+  shell: |
+    GRYPE_PATH=$(command -v grype 2>/dev/null)
+    if [ -n "$GRYPE_PATH" ]; then
+      sudo rm -f "$GRYPE_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v grype
+      exit_code: 1
 
 - name: Display confirmation
   print: "grype uninstalled"

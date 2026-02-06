@@ -9,9 +9,11 @@
     state: present
   when: fnm_check.rc != 0
 
-- name: Verify installation
-  shell: fnm --version 2>&1 || fnm -v 2>&1 || echo "installed"
-  register: fnm_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v fnm
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "fnm installed"

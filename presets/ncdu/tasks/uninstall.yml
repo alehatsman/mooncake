@@ -1,8 +1,23 @@
-- name: Uninstall ncdu
+- name: Uninstall ncdu (macOS)
   package:
     name: ncdu
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall ncdu (Linux)
+  package:
+    name: ncdu
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ncdu
+      exit_code: 1
 
 - name: Display confirmation
   print: "ncdu uninstalled"

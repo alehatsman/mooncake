@@ -1,17 +1,26 @@
 - name: Check if chruby is installed
-  shell: command -v chruby
+  shell: test -f /usr/local/share/chruby/chruby.sh && echo "installed" || echo "not installed"
   register: chruby_check
   failed_when: false
 
-- name: Install chruby
+- name: Install chruby via Homebrew
   package:
     name: chruby
     state: present
-  when: chruby_check.rc != 0
+  when: brew_available and chruby_check.stdout == "not installed"
 
-- name: Verify installation
-  shell: chruby --version 2>&1 || chruby -v 2>&1 || echo "installed"
-  register: chruby_version
+- name: Install chruby via apt
+  package:
+    name: chruby
+    state: present
+  become: true
+  when: apt_available and chruby_check.stdout == "not installed"
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    file:
+      path: /usr/local/share/chruby/chruby.sh
+      exists: true
+
+- name: Display confirmation
   print: "chruby installed"

@@ -1,7 +1,20 @@
 name: ytop
-description: System monitoring utility
-version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+description: TUI system monitor written in Rust showing CPU, memory, network, and disk usage
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether ytop should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install ytop
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall ytop
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

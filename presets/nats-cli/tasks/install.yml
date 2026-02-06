@@ -1,17 +1,23 @@
 - name: Check if nats is installed
   shell: command -v nats
-  register: nats_cli_check
+  register: nats_check
   failed_when: false
 
-- name: Install nats-cli
+- name: Install nats-cli via Homebrew
   package:
-    name: nats-cli
+    name: natscli
     state: present
-  when: nats_cli_check.rc != 0
+  when: brew_available and nats_check.rc != 0
 
-- name: Verify installation
-  shell: nats --version 2>&1 || nats -v 2>&1 || echo "installed"
-  register: nats_cli_version
+- name: Install nats-cli via go install
+  shell: go install github.com/nats-io/natscli/nats@latest
+  when: linux and nats_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nats
+      exit_code: 0
+
+- name: Display confirmation
   print: "nats-cli installed"

@@ -6,7 +6,7 @@
     state: stopped
     enabled: false
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Remove Consul systemd service
@@ -14,15 +14,15 @@
     path: /etc/systemd/system/consul.service
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Reload systemd daemon
   shell: sudo systemctl daemon-reload
-  when: os == "linux"
+  when: linux
 
 - name: Uninstall Consul (macOS)
   shell: brew uninstall consul
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Remove Consul binary (Linux)
@@ -30,7 +30,7 @@
     path: /usr/local/bin/consul
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Remove Consul configuration
   file:
@@ -38,6 +38,12 @@
     state: absent
   become: true
   failed_when: false
+
+- name: Verify uninstallation
+  assert:
+    command:
+      cmd: command -v consul
+      exit_code: 1
 
 - name: Display uninstall confirmation
   print: |

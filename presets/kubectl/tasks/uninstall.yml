@@ -1,8 +1,24 @@
-- name: Uninstall kubectl
+- name: Uninstall kubectl (macOS)
   package:
     name: kubectl
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kubectl (Linux)
+  shell: |
+    KUBECTL_PATH=$(command -v kubectl 2>/dev/null)
+    if [ -n "$KUBECTL_PATH" ]; then
+      sudo rm -f "$KUBECTL_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kubectl
+      exit_code: 1
 
 - name: Display confirmation
   print: "kubectl uninstalled"

@@ -1,7 +1,20 @@
 name: ncdu
-description: System monitoring utility
+description: Fast interactive disk usage analyzer with ncurses interface
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether ncdu should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install ncdu
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall ncdu
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

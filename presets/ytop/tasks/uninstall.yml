@@ -1,13 +1,13 @@
-- name: Uninstall ytop (macOS)
+- name: Uninstall ytop via Homebrew
   package:
     name: ytop
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall ytop (Linux)
+- name: Uninstall ytop via cargo
   shell: cargo uninstall ytop
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

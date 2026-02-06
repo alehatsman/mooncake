@@ -3,15 +3,15 @@
   register: mypy_check
   failed_when: false
 
-- name: Install mypy (macOS)
+- name: Install mypy via Homebrew
   package:
     name: mypy
     state: present
-  when: os == "darwin" and mypy_check.rc != 0
+  when: brew_available and mypy_check.rc != 0
 
-- name: Install mypy (Linux)
+- name: Install mypy via pip3
   shell: pip3 install --user mypy
-  when: os == "linux" and mypy_check.rc != 0
+  when: not brew_available and mypy_check.rc != 0
 
 - name: Verify installation with assert
   assert:

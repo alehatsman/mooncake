@@ -1,8 +1,20 @@
-- name: Uninstall httpstat
+- name: Uninstall httpstat (macOS)
   package:
     name: httpstat
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall httpstat (Linux)
+  shell: pip3 uninstall -y httpstat
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v httpstat
+      exit_code: 1
 
 - name: Display confirmation
   print: "httpstat uninstalled"

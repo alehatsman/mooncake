@@ -8,7 +8,7 @@
 # macOS Installation
 - name: Install Traefik via Homebrew (macOS)
   shell: brew install traefik
-  when: os == "darwin" and traefik_check.rc != 0
+  when: brew_available and traefik_check.rc != 0
 
 # Linux Installation
 - name: Download Traefik (Linux)
@@ -24,12 +24,18 @@
     sudo chmod +x /usr/local/bin/traefik
     rm /tmp/traefik.tar.gz
   become: true
-  when: os == "linux" and traefik_check.rc != 0
+  when: linux and traefik_check.rc != 0
 
 # Verify installation
 - name: Verify Traefik installation
   shell: traefik version
   register: traefik_version
+
+- name: Assert Traefik is executable
+  assert:
+    command:
+      cmd: command -v traefik
+      exit_code: 0
 
 - name: Display Traefik version
   print: "Traefik installed: {{ traefik_version.stdout }}"

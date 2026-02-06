@@ -4,5 +4,11 @@
     state: absent
   failed_when: false
 
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v duplicity
+      exit_code: 1
+
 - name: Display confirmation
   print: "duplicity uninstalled"

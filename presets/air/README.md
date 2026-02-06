@@ -7,6 +7,15 @@ Hot reload for Go applications. Watch for file changes, rebuild and restart auto
 - preset: air
 ```
 
+## Features
+- **Hot reload**: Automatically rebuild and restart on file changes
+- **Configurable**: Watch specific files, directories, and extensions
+- **Fast**: Minimal latency between save and restart
+- **Build control**: Custom build commands and arguments
+- **Flexible watching**: Include/exclude patterns with regex support
+- **Zero dependencies**: Single binary, no runtime requirements
+- **Color output**: Syntax-highlighted logs for better readability
+
 ## Basic Usage
 ```bash
 # Initialize config
@@ -359,15 +368,92 @@ air -c .air.test.toml
 - Zero dependencies (single binary)
 - Great for rapid iteration
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### API Development
+```bash
+# Start API server with hot reload
+cd ~/projects/myapi
+air
+
+# Make changes to handlers
+vim internal/handlers/users.go
+# Save - air automatically rebuilds and restarts
+# Test immediately: curl http://localhost:8080/users
+```
+
+### Microservice Development
+```toml
+# .air.toml for microservice
+[build]
+cmd = "go build -o ./tmp/service ./cmd/service"
+bin = "./tmp/service"
+include_ext = ["go", "proto"]
+exclude_dir = ["vendor", "tmp", "docs"]
+delay = 500
+
+[[build.args_bin]]
+"-port=8080"
+"-env=development"
+```
+
+### Multi-Service Development
+```bash
+# Terminal 1: Auth service
+cd ~/services/auth && air -c .air.toml
+
+# Terminal 2: API Gateway
+cd ~/services/gateway && air -c .air.toml
+
+# Terminal 3: User service
+cd ~/services/users && air -c .air.toml
+
+# Edit any service - automatic rebuild and restart
+# All services stay in sync during development
+```
+
+### Template-Driven Web App
+```toml
+# Watch templates and assets
+[build]
+cmd = "go build -o ./tmp/webapp ."
+bin = "./tmp/webapp"
+include_ext = ["go", "html", "tmpl", "css", "js"]
+include_dir = ["templates", "static"]
+exclude_dir = ["tmp", "vendor"]
+```
+
 ## Agent Use
-- Automated development environments
-- Local testing workflows
-- Rapid prototyping
-- Integration test setups
-- Demo environments
-- Development automation
+- Automated development environment setup for Go projects
+- CI/CD integration for local testing before push
+- Rapid prototyping with instant feedback loops
+- Demo environment with live code updates
+- Integration test development with quick iterations
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install air
+  preset: air
+
+- name: Use air in automation
+  shell: |
+    # Custom configuration here
+    echo "air configured"
+```
+
 ```yaml
 - preset: air
   with:

@@ -171,7 +171,9 @@ btop # then press 'f' and type process name
 | Themes | Multiple built-in | Basic |
 | Performance | Very efficient | Efficient |
 
-## Monitoring Examples
+## Real-World Examples
+
+### System Performance Monitoring
 ```bash
 # Monitor system during load test
 btop  # Watch CPU, memory, processes in real-time
@@ -187,6 +189,37 @@ btop  # Watch CPU, memory, processes in real-time
 
 # Check disk I/O
 # Launch btop, scroll to disk section, watch read/write activity
+```
+
+### CI/CD Resource Validation
+```yaml
+# Install btop for monitoring
+- preset: btop
+
+# Monitor resources during deployment
+- name: Start btop in background
+  shell: btop --update 500 > /tmp/btop.log 2>&1 &
+  register: btop_pid
+
+- name: Run deployment
+  shell: ./deploy.sh
+
+- name: Stop monitoring
+  shell: kill {{ btop_pid.stdout }}
+```
+
+### Development Workflow
+```bash
+# Monitor application during development
+btop
+
+# Watch for memory leaks
+# Press 'M' to sort by memory
+# Look for processes with growing memory usage
+
+# Check CPU bottlenecks
+# Press 'C' to sort by CPU
+# Identify processes with sustained high CPU
 ```
 
 ## Troubleshooting
@@ -214,6 +247,16 @@ sensors
 - Edit config: `net_iface = "eth0"` (or your interface name)
 - Or press `M` in btop, navigate to Settings, change network interface
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - System health monitoring during deployments
 - Performance baseline collection
@@ -221,6 +264,18 @@ sensors
 - Troubleshooting high load situations
 - Server capacity planning
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install btop
+  preset: btop
+
+- name: Use btop in automation
+  shell: |
+    # Custom configuration here
+    echo "btop configured"
+```
 ## Uninstall
 ```yaml
 - preset: btop

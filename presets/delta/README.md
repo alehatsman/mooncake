@@ -21,6 +21,11 @@ Install delta - a syntax-highlighting pager for git, diff, and grep output that 
     side_by_side: true
 ```
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -30,6 +35,24 @@ Install delta - a syntax-highlighting pager for git, diff, and grep output that 
 | `theme` | string | `Monokai Extended` | Color theme |
 | `line_numbers` | bool | `true` | Show line numbers in diffs |
 | `side_by_side` | bool | `false` | Display diffs side-by-side |
+
+## Basic Usage
+```bash
+# View changes (automatic with git)
+git diff
+
+# Compare files directly
+delta file1.txt file2.txt
+
+# Pipe diff output
+diff -u old.txt new.txt | delta
+
+# View commit
+git show HEAD
+
+# Compare branches
+git diff main..feature-branch
+```
 
 ## Usage
 
@@ -79,6 +102,13 @@ diff -ur dir1/ dir2/ | delta
 # With grep output
 grep -r "pattern" . | delta
 ```
+
+## Agent Use
+- Enhance code review processes with better diff visualization
+- Improve CI/CD log readability for deployment reviews
+- Generate visual diff reports for documentation
+- Automate code quality checks with syntax-highlighted comparisons
+- Create readable change summaries for automated pull requests
 
 ## Features
 
@@ -491,6 +521,18 @@ git config --global delta.side-by-side false
 git config --global delta.syntax-theme "GitHub"
 ```
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install delta
+  preset: delta
+
+- name: Use delta in automation
+  shell: |
+    # Custom configuration here
+    echo "delta configured"
+```
 ## Uninstall
 
 ```yaml

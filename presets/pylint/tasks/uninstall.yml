@@ -1,8 +1,20 @@
-- name: Uninstall pylint
+- name: Uninstall pylint (macOS)
   package:
     name: pylint
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall pylint (Linux)
+  shell: pip3 uninstall -y pylint
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pylint
+      exit_code: 1
 
 - name: Display confirmation
   print: "pylint uninstalled"

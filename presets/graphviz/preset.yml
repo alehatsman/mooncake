@@ -1,5 +1,5 @@
 name: graphviz
-description: Utility tool
+description: Graph visualization software for rendering diagrams and networks
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

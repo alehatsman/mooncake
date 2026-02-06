@@ -1,17 +1,26 @@
 - name: Check if neovim is installed
-  shell: command -v neovim
+  shell: command -v nvim
   register: neovim_check
   failed_when: false
 
-- name: Install neovim
+- name: Install neovim via Homebrew
   package:
     name: neovim
     state: present
-  when: neovim_check.rc != 0
+  when: brew_available and neovim_check.rc != 0
 
-- name: Verify installation
-  shell: neovim --version 2>&1 || echo "installed"
-  register: neovim_version
+- name: Install neovim via apt
+  package:
+    name: neovim
+    state: present
+  become: true
+  when: apt_available and neovim_check.rc != 0
 
-- name: Display version
-  print: "neovim installed: {{ neovim_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nvim
+      exit_code: 0
+
+- name: Display confirmation
+  print: "neovim installed"

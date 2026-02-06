@@ -3,15 +3,24 @@
   register: just_check
   failed_when: false
 
-- name: Install just
+- name: Install just (macOS)
   package:
     name: just
     state: present
-  when: just_check.rc != 0
+  when: brew_available and just_check.rc != 0
 
-- name: Verify installation
-  shell: just --version 2>&1 || echo "installed"
-  register: just_version
+- name: Install just (Linux)
+  shell: |
+    curl -sL https://github.com/casey/just/releases/latest/download/just-arm-unknown-linux-musleabihf.tar.gz | tar xz
+    sudo mv just /usr/local/bin/just
+    sudo chmod +x /usr/local/bin/just
+  when: linux and just_check.rc != 0
 
-- name: Display version
-  print: "just installed: {{ just_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v just
+      exit_code: 0
+
+- name: Display confirmation
+  print: "just installed"

@@ -1,5 +1,5 @@
 name: nmap
-description: Network exploration and security auditing
+description: Network discovery and security scanner for port scanning and vulnerability assessment
 version: "1.0.0"
 parameters:
   state:

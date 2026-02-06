@@ -7,6 +7,12 @@ Smarter Dockerfile linter with best practices validation. Catches errors, enforc
 - preset: hadolint
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Lint single Dockerfile
@@ -22,6 +28,18 @@ hadolint Dockerfile*
 docker run --rm -i hadolint/hadolint < Dockerfile
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: hadolint
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove hadolint |
 ## Output Formats
 ```bash
 # Default (colorized)
@@ -344,3 +362,8 @@ hadolint Dockerfile && \
 - GitHub: https://github.com/hadolint/hadolint
 - Rules: https://github.com/hadolint/hadolint#rules
 - Search: "hadolint rules", "dockerfile linter"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

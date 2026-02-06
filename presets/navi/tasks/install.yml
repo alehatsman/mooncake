@@ -3,15 +3,24 @@
   register: navi_check
   failed_when: false
 
-- name: Install navi
+- name: Install navi via Homebrew
   package:
     name: navi
     state: present
-  when: navi_check.rc != 0
+  when: brew_available and navi_check.rc != 0
 
-- name: Verify installation
-  shell: navi --version 2>&1 || navi -v 2>&1 || echo "installed"
-  register: navi_version
+- name: Install navi via GitHub release
+  shell: |
+    curl -sL https://github.com/denisidoro/navi/releases/latest/download/navi-aarch64-unknown-linux-musl.tar.gz | tar xz
+    sudo mv navi /usr/local/bin/
+    sudo chmod +x /usr/local/bin/navi
+  when: linux and navi_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v navi
+      exit_code: 0
+
+- name: Display confirmation
   print: "navi installed"

@@ -1,8 +1,24 @@
-- name: Uninstall hazelcast
+- name: Uninstall hazelcast (macOS)
   package:
     name: hazelcast
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall hazelcast (Linux)
+  shell: |
+    HAZELCAST_PATH=$(command -v hazelcast 2>/dev/null)
+    if [ -n "$HAZELCAST_PATH" ]; then
+      sudo rm -f "$HAZELCAST_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v hazelcast
+      exit_code: 1
 
 - name: Display confirmation
   print: "hazelcast uninstalled"

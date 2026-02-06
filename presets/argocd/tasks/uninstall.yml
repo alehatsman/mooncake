@@ -1,8 +1,24 @@
-- name: Uninstall argocd
+- name: Uninstall argocd (macOS)
   package:
     name: argocd
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall argocd (Linux)
+  shell: |
+    ARGOCD_PATH=$(command -v argocd 2>/dev/null)
+    if [ -n "$ARGOCD_PATH" ]; then
+      sudo rm -f "$ARGOCD_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v argocd
+      exit_code: 1
 
 - name: Display confirmation
   print: "argocd uninstalled"

@@ -1,5 +1,5 @@
 name: mongodb
-description: Install and configure MongoDB NoSQL database
+description: Document-oriented NoSQL database with flexible schema and native replication
 version: 1.0.0
 
 parameters:
@@ -8,46 +8,52 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
-    description: Whether MongoDB should be installed or removed
-
-  start_service:
-    type: bool
-    required: false
-    default: true
-    description: Start MongoDB service after installation
+    description: Install or remove MongoDB
 
   version:
     type: string
     required: false
     default: "7.0"
-    description: MongoDB version to install (e.g., "7.0", "6.0")
+    description: MongoDB version to install (e.g., "7.0", "6.0", "5.0")
+
+  service:
+    type: bool
+    required: false
+    default: true
+    description: Enable and start MongoDB as system service
 
   port:
     type: string
     required: false
     default: "27017"
-    description: MongoDB port
+    description: MongoDB server port (1024-65535)
 
   bind_ip:
     type: string
     required: false
     default: "127.0.0.1"
-    description: Bind IP address (127.0.0.1 for local, 0.0.0.0 for all)
+    description: Bind address (127.0.0.1 for local-only, 0.0.0.0 for network)
 
   data_dir:
     type: string
     required: false
     default: "/var/lib/mongodb"
-    description: Data directory path
+    description: Data directory path (created with proper permissions)
+
+  log_dir:
+    type: string
+    required: false
+    default: "/var/log/mongodb"
+    description: Log directory path
 
 steps:
   - name: Install MongoDB
     include: tasks/install.yml
     when: parameters.state == "present"
 
-  - name: Configure MongoDB
+  - name: Configure MongoDB service
     include: tasks/configure.yml
-    when: parameters.state == "present"
+    when: parameters.state == "present" and parameters.service
 
   - name: Uninstall MongoDB
     include: tasks/uninstall.yml

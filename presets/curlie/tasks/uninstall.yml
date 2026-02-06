@@ -1,8 +1,20 @@
-- name: Uninstall curlie
+- name: Uninstall curlie via Homebrew
   package:
     name: curlie
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall curlie binary
+  shell: rm -f $(go env GOPATH)/bin/curlie
+  when: not brew_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v curlie
+      exit_code: 1
 
 - name: Display confirmation
   print: "curlie uninstalled"

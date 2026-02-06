@@ -1,8 +1,24 @@
-- name: Uninstall gitkube
+- name: Uninstall gitkube (macOS)
   package:
     name: gitkube
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gitkube (Linux)
+  shell: |
+    GITKUBE_PATH=$(command -v gitkube 2>/dev/null)
+    if [ -n "$GITKUBE_PATH" ]; then
+      sudo rm -f "$GITKUBE_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gitkube
+      exit_code: 1
 
 - name: Display confirmation
   print: "gitkube uninstalled"

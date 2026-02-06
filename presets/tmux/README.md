@@ -1,28 +1,68 @@
-# Tmux Preset
+# Tmux - Terminal Multiplexer
 
-Install and configure Tmux - a powerful terminal multiplexer for managing multiple terminal sessions.
+Powerful terminal multiplexer for managing multiple terminal sessions. Split panes, create windows, detach/reattach sessions, and survive SSH disconnections.
 
 ## Quick Start
 
 ```yaml
 - preset: tmux
-  with:
-    prefix_key: "C-a"
-    mouse_mode: true
-    install_tpm: true
+```
+
+## Features
+
+- **Session Management**: Create, detach, and reattach terminal sessions
+- **Split Panes**: Vertical and horizontal pane splitting
+- **Multiple Windows**: Organize work across multiple windows
+- **Plugin System**: TPM (Tmux Plugin Manager) with tmux-resurrect, tmux-continuum
+- **Customizable**: Extensive configuration options
+- **Persistent Sessions**: Sessions survive disconnections
+- **Vi/Emacs Modes**: Copy mode with familiar keybindings
+- **Cross-platform**: Linux and macOS support
+
+## Basic Usage
+
+```bash
+# Sessions
+tmux                    # Start new session
+tmux new -s dev         # Start named session
+tmux ls                 # List sessions
+tmux attach             # Attach to last session
+tmux attach -t dev      # Attach to named session
+tmux kill-session -t dev # Kill session
+
+# Detach from session
+Ctrl-b d
+
+# Inside tmux - Windows
+Ctrl-b c         # Create new window
+Ctrl-b n         # Next window
+Ctrl-b p         # Previous window
+Ctrl-b 0-9       # Switch to window number
+Ctrl-b w         # List windows
+Ctrl-b ,         # Rename window
+Ctrl-b &         # Kill window
+
+# Panes
+Ctrl-b |         # Split horizontally
+Ctrl-b -         # Split vertically
+Ctrl-b arrow     # Navigate panes
+Alt-arrow        # Navigate without prefix
+Ctrl-b x         # Kill pane
+Ctrl-b z         # Toggle pane zoom
+Ctrl-b Space     # Cycle layouts
 ```
 
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `state` | string | `present` | `present` or `absent` |
-| `install_tpm` | bool | `true` | Install Plugin Manager |
-| `prefix_key` | string | `C-b` | Prefix key (C-b or C-a) |
-| `mouse_mode` | bool | `true` | Enable mouse support |
-| `history_limit` | string | `10000` | Scrollback history |
+| state | string | present | Install or remove tmux |
+| install_tpm | bool | true | Install Tmux Plugin Manager |
+| prefix_key | string | C-b | Prefix key (C-b or C-a) |
+| mouse_mode | bool | true | Enable mouse support |
+| history_limit | string | 10000 | Scrollback history lines |
 
-## Usage
+## Advanced Configuration
 
 ### Basic Installation
 ```yaml
@@ -44,42 +84,105 @@ Install and configure Tmux - a powerful terminal multiplexer for managing multip
     mouse_mode: false
 ```
 
-## Quick Reference
-
-### Sessions
-```bash
-tmux                    # Start new session
-tmux new -s mysession   # Start named session
-tmux ls                 # List sessions
-tmux attach             # Attach to last session
-tmux attach -t mysession # Attach to named session
-tmux kill-session -t mysession # Kill session
+### Full Configuration
+```yaml
+- preset: tmux
+  with:
+    prefix_key: "C-a"
+    mouse_mode: true
+    history_limit: "50000"
+    install_tpm: true
 ```
 
-### Key Bindings (with default C-b prefix)
+## Platform Support
 
-**Windows:**
-- `C-b c` - Create new window
-- `C-b n` - Next window
-- `C-b p` - Previous window
-- `C-b 0-9` - Switch to window number
-- `C-b w` - List windows
-- `C-b ,` - Rename window
-- `C-b &` - Kill window
+- ✅ Linux (apt, dnf, yum, pacman, zypper, source)
+- ✅ macOS (Homebrew, MacPorts, source)
+- ✅ BSD (pkg, ports)
 
-**Panes:**
-- `C-b |` - Split horizontally
-- `C-b -` - Split vertically
-- `C-b arrow` - Navigate panes
-- `Alt-arrow` - Navigate without prefix
-- `C-b x` - Kill pane
-- `C-b z` - Toggle pane zoom
+## Configuration
 
-**Other:**
-- `C-b d` - Detach session
-- `C-b r` - Reload config
-- `C-b [` - Enter copy mode (scroll)
-- `C-b ]` - Paste buffer
+- **Config file**: `~/.tmux.conf`
+- **Plugins**: `~/.tmux/plugins/` (with TPM)
+- **Default prefix**: `Ctrl-b`
+- **Sessions persist**: After disconnection
+
+## Real-World Examples
+
+### Development Environment
+```bash
+# Create project session
+tmux new -s webapp
+
+# Window 1: Editor
+vim
+
+# New window for server
+Ctrl-b c
+npm run dev
+
+# New window for logs
+Ctrl-b c
+tail -f logs/app.log
+
+# Split pane for database
+Ctrl-b |
+psql myapp_dev
+
+# Detach and continue later
+Ctrl-b d
+
+# Reattach anytime
+tmux attach -t webapp
+```
+
+### Remote Server Management
+```bash
+# SSH to server
+ssh user@server
+
+# Start tmux session
+tmux new -s admin
+
+# Monitor system
+htop
+
+# New window for logs
+Ctrl-b c
+tail -f /var/log/syslog
+
+# Disconnect safely (session continues)
+Ctrl-b d
+exit
+
+# Reconnect later
+ssh user@server
+tmux attach -t admin
+```
+
+### Pair Programming
+```bash
+# Host creates session
+tmux new -s pair
+
+# Second user SSH and attaches
+ssh user@host
+tmux attach -t pair
+
+# Both see same screen, can type simultaneously
+```
+
+### CI/CD Integration
+```yaml
+# Run tests in tmux for debugging
+- name: Run tests in tmux
+  shell: |
+    tmux new-session -d -s ci-test
+    tmux send-keys -t ci-test "npm test" Enter
+    tmux send-keys -t ci-test "npm run lint" Enter
+    sleep 60
+    tmux kill-session -t ci-test
+```
 
 ## Copy Mode (Vi-style)
 
@@ -162,27 +265,156 @@ setw -g aggressive-resize on
 set -g status-right '#[fg=yellow]#(uptime | cut -d "," -f 3-)'
 ```
 
-## Workflow Example
+## Copy Mode (Vi-style)
 
 ```bash
-# Start development session
-tmux new -s dev
+# Enter copy mode
+Ctrl-b [
 
-# Create windows
-C-b c  # Editor window
-C-b c  # Server window
-C-b c  # Database window
+# Navigate with Vi keys
+h j k l        # Move cursor
+0 $            # Start/end of line
+w b            # Word forward/backward
+/ ?            # Search forward/backward
+g G            # Top/bottom of buffer
 
-# Split panes for monitoring
-C-b |  # Split for logs
-C-b -  # Split for system monitor
+# Start selection
+Space
 
-# Detach and continue later
-C-b d
+# Copy selection
+Enter
 
-# Reattach
-tmux attach -t dev
+# Paste
+Ctrl-b ]
+
+# Exit copy mode
+q or Escape
 ```
+
+## Productivity Tips
+
+### Custom Key Bindings
+Edit `~/.tmux.conf`:
+```tmux
+# Better split commands
+bind | split-window -h
+bind - split-window -v
+unbind '"'
+unbind %
+
+# Reload config
+bind r source-file ~/.tmux.conf \; display "Config reloaded"
+
+# Vim-like pane navigation
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+
+# Resize panes
+bind -r H resize-pane -L 5
+bind -r J resize-pane -D 5
+bind -r K resize-pane -U 5
+bind -r L resize-pane -R 5
+```
+
+### Status Bar Customization
+```tmux
+# Status bar position
+set -g status-position top
+
+# Status bar colors
+set -g status-bg black
+set -g status-fg white
+
+# Status bar content
+set -g status-right '#[fg=yellow]#(uptime | cut -d "," -f 3-)'
+set -g status-left '[#S]'
+
+# Window status
+setw -g window-status-current-style 'fg=black bg=green'
+```
+
+### Session Management Script
+```bash
+#!/bin/bash
+# tmux-dev.sh - Quick development setup
+
+SESSION="dev"
+
+# Create session
+tmux new-session -d -s $SESSION
+
+# Window 1: Editor
+tmux rename-window -t $SESSION:0 'editor'
+tmux send-keys -t $SESSION:0 'cd ~/project && vim' C-m
+
+# Window 2: Server
+tmux new-window -t $SESSION:1 -n 'server'
+tmux send-keys -t $SESSION:1 'cd ~/project && npm run dev' C-m
+
+# Window 3: Logs
+tmux new-window -t $SESSION:2 -n 'logs'
+tmux send-keys -t $SESSION:2 'cd ~/project && tail -f logs/app.log' C-m
+
+# Window 4: Database
+tmux new-window -t $SESSION:3 -n 'database'
+tmux split-window -h -t $SESSION:3
+tmux send-keys -t $SESSION:3.0 'psql myapp_dev' C-m
+tmux send-keys -t $SESSION:3.1 'redis-cli' C-m
+
+# Attach to session
+tmux attach -t $SESSION
+```
+
+## Troubleshooting
+
+### Config not loading
+```bash
+# Reload config manually
+Ctrl-b :source-file ~/.tmux.conf
+
+# Or from command line
+tmux source-file ~/.tmux.conf
+```
+
+### Colors look wrong
+```bash
+# Add to ~/.tmux.conf
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",xterm-256color:Tc"
+```
+
+### Mouse not working
+```bash
+# Enable in config
+set -g mouse on
+
+# Then reload
+Ctrl-b r
+```
+
+### Sessions not persisting
+```bash
+# Install tmux-resurrect plugin
+# Add to ~/.tmux.conf
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @continuum-restore 'on'
+
+# Save: Ctrl-b Ctrl-s
+# Restore: Ctrl-b Ctrl-r
+```
+
+## Agent Use
+
+- Persistent terminal sessions for long-running tasks
+- Remote server administration without screen
+- Development environment automation
+- CI/CD test isolation
+- Pair programming and collaboration
+- Multi-service application management
+- Session recovery after disconnections
 
 ## Uninstall
 
@@ -191,3 +423,11 @@ tmux attach -t dev
   with:
     state: absent
 ```
+
+## Resources
+
+- Official site: https://github.com/tmux/tmux
+- Wiki: https://github.com/tmux/tmux/wiki
+- Man page: `man tmux`
+- Cheat sheet: https://tmuxcheatsheet.com/
+- Search: "tmux tutorial", "tmux configuration", "tmux plugins"

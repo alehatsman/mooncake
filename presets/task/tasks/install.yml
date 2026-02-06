@@ -3,18 +3,18 @@
   register: task_check
   failed_when: false
 
-- name: Install task (macOS)
+- name: Install task via Homebrew
   package:
     name: task
     state: present
-  when: os == "darwin" and task_check.rc != 0
+  when: brew_available and task_check.rc != 0
 
-- name: Install task (Linux)
+- name: Install task via apt
   package:
     name: task
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and task_check.rc != 0
+  when: apt_available and task_check.rc != 0
 
 - name: Verify installation with assert
   assert:

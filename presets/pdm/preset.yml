@@ -1,7 +1,20 @@
 name: pdm
-description: Python tool
+description: Modern Python package manager
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether PDM should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install PDM
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall PDM
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

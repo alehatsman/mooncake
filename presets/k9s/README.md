@@ -13,7 +13,14 @@ Kubernetes TUI for managing clusters. Navigate, observe, and manage K8s resource
     create_config: true
 ```
 
-## Launch
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+
+## Basic Usage
 
 ```bash
 k9s                    # Default context
@@ -74,6 +81,36 @@ k9s --readonly         # Read-only mode
 # 3. Edit YAML, save to apply
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
+## Uninstall
+```yaml
+- preset: k9s
+  with:
+    state: absent
+```
+
 ## Resources
 - Docs: https://k9scli.io/
 - GitHub: https://github.com/derailed/k9s
+
+## Advanced Configuration
+```yaml
+- preset: k9s
+  with:
+    state: present
+```
+
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove k9s |
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

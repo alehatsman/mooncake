@@ -2,6 +2,16 @@
 
 Lightning-fast CSV command line toolkit in Rust. Index, slice, select, search, and analyze massive CSV files.
 
+## Features
+- **Blazing fast**: 10-100x faster than Python tools
+- **Indexing**: Create indexes for instant operations
+- **Statistics**: Built-in stats (mean, median, stddev)
+- **Joining**: SQL-like joins on CSV files
+- **Splitting**: Split by rows, size, or column value
+- **Low memory**: Stream processing for huge files
+- **Rich operations**: Select, search, sort, frequency analysis
+- **Format conversion**: CSV, TSV, custom delimiters
+
 ## Quick Start
 ```yaml
 - preset: xsv
@@ -392,6 +402,70 @@ comm -3 \
 - Single binary (easy deployment)
 - No runtime dependencies
 - Great for CI/CD pipelines
+
+## Advanced Configuration
+
+### Automated Data Pipeline
+```bash
+#!/bin/bash
+# process-csv.sh
+INPUT=$1
+OUTPUT=${INPUT%.csv}_clean.csv
+
+# Index for speed
+xsv index "$INPUT"
+
+# Validation
+if ! xsv count "$INPUT" > /dev/null 2>&1; then
+  echo "Invalid CSV: $INPUT"
+  exit 1
+fi
+
+# Process
+xsv select required_cols "$INPUT" | \
+  xsv search -s status "active" | \
+  xsv dedup -s email | \
+  xsv sort -s created_at > "$OUTPUT"
+
+echo "Processed: $(xsv count $OUTPUT) rows"
+```
+
+### CI/CD Validation
+```yaml
+# .github/workflows/validate-data.yml
+- name: Validate CSV files
+  run: |
+    for file in data/*.csv; do
+      echo "Validating $file..."
+      xsv count "$file" || exit 1
+      xsv check "$file" || exit 1
+      ROWS=$(xsv count "$file")
+      if [ $ROWS -lt 10 ]; then
+        echo "Too few rows: $ROWS"
+        exit 1
+      fi
+    done
+```
+
+### Performance Monitoring
+```bash
+# Monitor CSV processing performance
+time xsv index large.csv
+time xsv count large.csv
+time xsv stats large.csv
+time xsv frequency -s category large.csv | head -n 20
+```
+
+## Platform Support
+- ✅ Linux (all distributions)
+- ✅ macOS (Homebrew, binary)
+- ✅ Windows (binary, Cargo)
+- ✅ BSD systems
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove xsv |
 
 ## Agent Use
 - Fast CSV validation

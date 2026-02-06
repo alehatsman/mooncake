@@ -1,8 +1,24 @@
-- name: Uninstall algolia-cli
+- name: Uninstall algolia-cli (macOS)
   package:
     name: algolia
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall algolia-cli (Linux)
+  shell: |
+    ALGOLIA_PATH=$(command -v algolia 2>/dev/null)
+    if [ -n "$ALGOLIA_PATH" ]; then
+      sudo rm -f "$ALGOLIA_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v algolia
+      exit_code: 1
 
 - name: Display confirmation
   print: "algolia-cli uninstalled"

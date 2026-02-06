@@ -7,6 +7,36 @@ Sign and verify container images. Part of Sigstore project for supply chain secu
 - preset: cosign
 ```
 
+## Features
+- **Container Image Signing**: Sign OCI container images with cryptographic signatures
+- **Keyless Signing**: OIDC-based signing without managing private keys
+- **Attestation Support**: Create and verify SLSA provenance and SBOM attestations
+- **Multiple Key Backends**: Support for local keys, KMS (Google, AWS, Azure, HashiCorp)
+- **Policy Enforcement**: Verify signatures before deployment with admission controllers
+- **Transparency Logs**: Automatic logging to Rekor for tamper-proof audit trails
+- **Multi-Platform**: Works with any OCI registry (Docker Hub, GCR, ECR, ACR)
+
+## Basic Usage
+```bash
+# Generate key pair
+cosign generate-key-pair
+
+# Sign container image
+cosign sign --key cosign.key registry.io/image:tag
+
+# Verify signature
+cosign verify --key cosign.pub registry.io/image:tag
+
+# Sign with keyless (OIDC)
+COSIGN_EXPERIMENTAL=1 cosign sign registry.io/image:tag
+
+# Create attestation
+cosign attest --key cosign.key --predicate attestation.json registry.io/image:tag
+
+# Verify attestation
+cosign verify-attestation --key cosign.pub registry.io/image:tag
+```
+
 ## Key Management
 ```bash
 # Generate key pair
@@ -171,12 +201,34 @@ spec:
 - Transparency via Rekor log
 - Compatible with Docker/Podman
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Automated image signing in CI/CD
 - Policy enforcement gates
 - Supply chain security
 - Build provenance tracking
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install cosign
+  preset: cosign
+
+- name: Use cosign in automation
+  shell: |
+    # Custom configuration here
+    echo "cosign configured"
+```
 ## Uninstall
 ```yaml
 - preset: cosign

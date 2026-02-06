@@ -1,8 +1,23 @@
-- name: Uninstall prometheus-server
+- name: Uninstall prometheus-server (macOS)
   package:
-    name: prometheus-server
+    name: prometheus
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall prometheus-server (Linux)
+  package:
+    name: prometheus
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v prometheus
+      exit_code: 1
 
 - name: Display confirmation
   print: "prometheus-server uninstalled"

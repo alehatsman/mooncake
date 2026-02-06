@@ -3,15 +3,24 @@
   register: az_check
   failed_when: false
 
-- name: Install Azure CLI
+- name: Install azure-cli via Homebrew
   package:
     name: azure-cli
     state: present
-  when: az_check.rc != 0
+  when: brew_available and az_check.rc != 0
 
-- name: Verify installation
-  shell: az --version 2>&1 || az version 2>&1 || echo "installed"
-  register: az_version
+- name: Install azure-cli via apt
+  package:
+    name: azure-cli
+    state: present
+  become: true
+  when: apt_available and az_check.rc != 0
 
-- name: Display version
-  print: "Azure CLI installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v az
+      exit_code: 0
+
+- name: Display confirmation
+  print: "azure-cli installed"

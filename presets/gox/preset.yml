@@ -1,5 +1,5 @@
 name: gox
-description: Rust/Go tool
+description: Dead simple cross-compilation tool for Go
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

@@ -3,15 +3,24 @@
   register: ninja_check
   failed_when: false
 
-- name: Install ninja
+- name: Install ninja via Homebrew
   package:
     name: ninja
     state: present
-  when: ninja_check.rc != 0
+  when: brew_available and ninja_check.rc != 0
 
-- name: Verify installation
-  shell: ninja --version 2>&1 || ninja -v 2>&1 || echo "installed"
-  register: ninja_version
+- name: Install ninja via apt
+  package:
+    name: ninja-build
+    state: present
+  become: true
+  when: apt_available and ninja_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ninja
+      exit_code: 0
+
+- name: Display confirmation
   print: "ninja installed"

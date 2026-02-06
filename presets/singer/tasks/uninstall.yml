@@ -1,11 +1,11 @@
 - name: Uninstall singer (macOS)
   shell: pip3 uninstall -y singer-python
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall singer (Linux)
   shell: pip3 uninstall -y singer-python
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

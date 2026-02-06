@@ -1,7 +1,13 @@
 name: tfsec
-description: Infrastructure as Code tool
+description: Static analysis security scanner for Terraform that finds security issues before deployment
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether tfsec should be installed or removed
 steps:
   - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
   - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

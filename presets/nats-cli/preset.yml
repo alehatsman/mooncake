@@ -1,5 +1,5 @@
 name: nats-cli
-description: Message queue / streaming
+description: NATS command-line client for managing NATS servers and messaging operations
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

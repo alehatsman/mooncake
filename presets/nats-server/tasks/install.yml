@@ -3,15 +3,27 @@
   register: nats_server_check
   failed_when: false
 
-- name: Install nats-server
-  package:
-    name: nats-server
-    state: present
-  when: nats_server_check.rc != 0
+- name: Install nats-server via apt
+  shell: apt-get install -y nats-server
+  when: apt_available and nats_server_check.rc != 0
+  become: true
 
-- name: Verify installation
-  shell: nats-server --version 2>&1 || nats-server -v 2>&1 || echo "installed"
-  register: nats_server_version
+- name: Install nats-server via dnf
+  shell: dnf install -y nats-server
+  when: dnf_available and nats_server_check.rc != 0
+  become: true
 
-- name: Display version
-  print: "nats-server installed"
+- name: Install nats-server via yum
+  shell: yum install -y nats-server
+  when: yum_available and nats_server_check.rc != 0
+  become: true
+
+- name: Install nats-server via Homebrew
+  shell: brew install nats-server
+  when: brew_available and nats_server_check.rc != 0
+
+- name: Verify nats-server is installed
+  assert:
+    command:
+      cmd: command -v nats-server
+      exit_code: 0

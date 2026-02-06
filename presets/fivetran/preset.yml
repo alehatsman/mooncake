@@ -1,5 +1,5 @@
 name: fivetran
-description: Data processing / ETL
+description: Install Fivetran CLI - automated data pipeline management tool
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

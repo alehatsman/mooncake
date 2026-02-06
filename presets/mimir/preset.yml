@@ -1,16 +1,20 @@
-name: mimir  
-description: Scalable long-term Prometheus storage
-version: "1.0.0"
+name: mimir
+description: Prometheus-compatible metrics backend with multi-tenancy and horizontal scaling for long-term metric storage
+version: 1.0.0
+
 parameters:
   state:
     type: string
     required: false
     default: present
     enum: [present, absent]
+    description: Whether Mimir should be installed or removed
+
 steps:
-  - name: Install mimir
+  - name: Install Mimir
     include: tasks/install.yml
     when: parameters.state == "present"
-  - name: Uninstall mimir
+
+  - name: Uninstall Mimir
     include: tasks/uninstall.yml
     when: parameters.state == "absent"

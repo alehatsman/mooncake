@@ -1,8 +1,12 @@
-- name: Uninstall cdktf
-  package:
-    name: cdktf
-    state: absent
+- name: Uninstall cdktf via npm
+  shell: npm uninstall -g cdktf-cli
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v cdktf
+      exit_code: 1
 
 - name: Display confirmation
   print: "cdktf uninstalled"

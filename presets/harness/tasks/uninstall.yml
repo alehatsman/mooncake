@@ -1,8 +1,24 @@
-- name: Uninstall harness
+- name: Uninstall harness (macOS)
   package:
     name: harness
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall harness (Linux)
+  shell: |
+    HARNESS_PATH=$(command -v harness 2>/dev/null)
+    if [ -n "$HARNESS_PATH" ]; then
+      sudo rm -f "$HARNESS_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v harness
+      exit_code: 1
 
 - name: Display confirmation
   print: "harness uninstalled"

@@ -1,8 +1,23 @@
-- name: Uninstall nim
+- name: Uninstall nim (macOS)
   package:
     name: nim
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall nim (Linux)
+  package:
+    name: nim
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v nim
+      exit_code: 1
 
 - name: Display confirmation
   print: "nim uninstalled"

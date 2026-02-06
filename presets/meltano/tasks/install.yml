@@ -3,15 +3,21 @@
   register: meltano_check
   failed_when: false
 
-- name: Install meltano
+- name: Install meltano via Homebrew
   package:
     name: meltano
     state: present
-  when: meltano_check.rc != 0
+  when: brew_available and meltano_check.rc != 0
 
-- name: Verify installation
-  shell: meltano --version 2>&1 || meltano -v 2>&1 || echo "installed"
-  register: meltano_version
+- name: Install meltano via pip3
+  shell: pip3 install --user meltano
+  when: linux and meltano_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v meltano
+      exit_code: 0
+
+- name: Display confirmation
   print: "meltano installed"

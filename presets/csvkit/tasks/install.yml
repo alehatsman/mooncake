@@ -3,15 +3,21 @@
   register: csvkit_check
   failed_when: false
 
-- name: Install csvkit
+- name: Install csvkit via Homebrew
   package:
     name: csvkit
     state: present
-  when: csvkit_check.rc != 0
+  when: brew_available and csvkit_check.rc != 0
 
-- name: Verify installation
-  shell: csvcut --version 2>&1 || csvcut -v 2>&1 || echo "installed"
-  register: csvkit_version
+- name: Install csvkit via pip3
+  shell: pip3 install csvkit
+  when: not brew_available and csvkit_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v csvcut
+      exit_code: 0
+
+- name: Display confirmation
   print: "csvkit installed"

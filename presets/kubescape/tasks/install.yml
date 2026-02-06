@@ -3,15 +3,21 @@
   register: kubescape_check
   failed_when: false
 
-- name: Install kubescape
+- name: Install kubescape (macOS)
   package:
     name: kubescape
     state: present
-  when: kubescape_check.rc != 0
+  when: brew_available and kubescape_check.rc != 0
 
-- name: Verify installation
-  shell: kubescape --version 2>&1 || kubescape -v 2>&1 || echo "installed"
-  register: kubescape_version
+- name: Install kubescape (Linux)
+  shell: curl -s https://raw.githubusercontent.com/kubescape/kubescape/master/install.sh | /bin/bash
+  when: linux and kubescape_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kubescape
+      exit_code: 0
+
+- name: Display confirmation
   print: "kubescape installed"

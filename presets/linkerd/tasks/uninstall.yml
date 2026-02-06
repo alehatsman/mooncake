@@ -1,8 +1,24 @@
-- name: Uninstall linkerd
+- name: Uninstall linkerd (macOS)
   package:
     name: linkerd
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall linkerd (Linux)
+  shell: |
+    LINKERD_PATH=$(command -v linkerd 2>/dev/null)
+    if [ -n "$LINKERD_PATH" ]; then
+      rm -f "$LINKERD_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v linkerd
+      exit_code: 1
 
 - name: Display confirmation
   print: "linkerd uninstalled"

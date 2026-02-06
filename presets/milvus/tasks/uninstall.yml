@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "milvus uninstalled"
+
+- name: Assert tool is removed
+  assert:
+    command:
+      cmd: command -v milvus
+      exit_code: 1

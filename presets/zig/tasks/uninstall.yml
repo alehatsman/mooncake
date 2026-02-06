@@ -1,16 +1,16 @@
-- name: Uninstall zig (macOS)
+- name: Uninstall zig via Homebrew
   package:
     name: zig
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall zig (Linux)
+- name: Uninstall zig via apt
   package:
     name: zig
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
   failed_when: false
 
 - name: Verify uninstallation with assert

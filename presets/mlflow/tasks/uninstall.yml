@@ -1,8 +1,10 @@
-- name: Uninstall mlflow
-  package:
-    name: mlflow
-    state: absent
+- name: Uninstall mlflow via pip3
+  shell: pip3 uninstall -y mlflow
   failed_when: false
 
-- name: Display confirmation
-  print: "mlflow uninstalled"
+- name: Verify mlflow is not installed
+  assert:
+    command:
+      cmd: command -v mlflow
+      exit_code: 1
+  failed_when: false

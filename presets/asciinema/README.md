@@ -7,6 +7,15 @@ Record and share terminal sessions. Create demos, tutorials, and documentation w
 - preset: asciinema
 ```
 
+## Features
+- **Lightweight recording**: Records terminal output, not video (small file sizes)
+- **Interactive playback**: Pause, copy text from recordings
+- **Web embeddable**: Embed recordings in documentation and blogs
+- **Open format**: JSON-based asciicast format
+- **Offline capable**: Local recording and playback
+- **Privacy friendly**: No video, no screen capture
+- **Share easily**: Upload to asciinema.org or self-host
+
 ## Basic Usage
 ```bash
 # Start recording
@@ -314,15 +323,137 @@ asciinema rec -c "./demo.sh" demo.cast
 - No video encoding
 - Fast playback
 
+## Platform Support
+- ✅ Linux (apt,Homebrew)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### Automated Demo Generation
+```bash
+#!/bin/bash
+# demo-api.sh - Record API demonstration
+
+asciinema rec -c "bash demo-script.sh" api-demo.cast
+
+# demo-script.sh content:
+echo "# Starting API server"
+docker-compose up -d api
+sleep 3
+echo ""
+echo "# Testing endpoints"
+curl http://localhost:8080/health
+echo ""
+curl -X POST http://localhost:8080/users -d '{"name":"demo"}'
+echo ""
+echo "# Shutting down"
+docker-compose down
+```
+
+### Tutorial Video Creation
+```bash
+#!/bin/bash
+# tutorial-kubectl.sh - Record Kubernetes tutorial
+
+cat > tutorial.sh <<'EOF'
+#!/bin/bash
+# Type commands slowly for demonstration
+type_command() {
+  echo -n "$ "
+  for ((i=0; i<${#1}; i++)); do
+    echo -n "${1:$i:1}"
+    sleep 0.05
+  done
+  echo ""
+  eval "$1"
+  sleep 1
+}
+
+type_command "kubectl get pods"
+type_command "kubectl describe pod nginx-123"
+type_command "kubectl logs nginx-123"
+EOF
+
+chmod +x tutorial.sh
+asciinema rec -c "./tutorial.sh" --title "Kubernetes Basics" kubernetes-101.cast
+
+# Convert to animated GIF
+docker run --rm -v $PWD:/data asciinema/asciicast2gif \
+  -s 2 kubernetes-101.cast kubernetes-101.gif
+```
+
+### Bug Reproduction for Support
+```bash
+#!/bin/bash
+# bug-report.sh - Record bug for GitHub issue
+
+echo "Recording bug reproduction..."
+asciinema rec --title "Database connection error" \
+  --idle-time-limit 2 \
+  bug-reproduction.cast
+
+echo "Upload to asciinema:"
+asciinema upload bug-reproduction.cast
+
+echo "Or embed in docs:"
+echo '<script src="https://asciinema.org/a/CAST_ID.js" id="asciicast-CAST_ID" async></script>'
+```
+
+### CI/CD Documentation
+```bash
+# .github/workflows/docs.yml
+name: Update CLI Documentation
+on:
+  release:
+    types: [published]
+jobs:
+  record-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tool
+        preset: asciinema
+
+      - name: Record usage demo
+        run: |
+          asciinema rec -c "mycli --help && mycli demo" demo.cast
+          asciinema upload demo.cast > cast-url.txt
+
+      - name: Update documentation
+        run: |
+          CAST_URL=$(cat cast-url.txt)
+          sed -i "s|DEMO_CAST|$CAST_URL|g" README.md
+          git commit -am "Update demo recording"
+          git push
+```
+
 ## Agent Use
-- Automated demo generation
-- Tutorial creation
-- Bug reproduction
-- Documentation automation
-- CLI testing
-- Onboarding materials
+- Generate CLI demonstrations for documentation automatically
+- Create interactive tutorials with timed command execution
+- Record bug reproductions for support tickets
+- Embed terminal sessions in web documentation
+- Automate onboarding material creation
+- CI/CD integration for keeping demos up-to-date
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install asciinema
+  preset: asciinema
+
+- name: Use asciinema in automation
+  shell: |
+    # Custom configuration here
+    echo "asciinema configured"
+```
+
 ```yaml
 - preset: asciinema
   with:

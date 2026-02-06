@@ -1,8 +1,22 @@
-- name: Uninstall nebula
+- name: Uninstall nebula (macOS)
   package:
     name: nebula
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall nebula (Linux)
+  shell: |
+    sudo rm -f /usr/local/bin/nebula
+    sudo rm -f /usr/local/bin/nebula-cert
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v nebula
+      exit_code: 1
 
 - name: Display confirmation
   print: "nebula uninstalled"

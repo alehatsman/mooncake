@@ -3,15 +3,15 @@
   register: metaflow_check
   failed_when: false
 
-- name: Install metaflow (macOS)
+- name: Install metaflow via Homebrew
   package:
     name: metaflow
     state: present
-  when: os == "darwin" and metaflow_check.rc != 0
+  when: brew_available and metaflow_check.rc != 0
 
-- name: Install metaflow (Linux)
+- name: Install metaflow via pip3
   shell: pip3 install --user metaflow
-  when: os == "linux" and metaflow_check.rc != 0
+  when: not brew_available and metaflow_check.rc != 0
 
 - name: Verify installation with assert
   assert:

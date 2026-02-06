@@ -7,6 +7,12 @@ Deploy and manage multiple Helm releases declaratively. GitOps-friendly Helm cha
 - preset: helmfile
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Sync all releases (install/upgrade)
@@ -25,6 +31,18 @@ helmfile list
 helmfile destroy
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: helmfile
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove helmfile |
 ## Helmfile Structure
 ```yaml
 # helmfile.yaml
@@ -328,3 +346,8 @@ helmfile --skip-deps sync
 - GitHub: https://github.com/helmfile/helmfile
 - Docs: https://helmfile.readthedocs.io/
 - Search: "helmfile gitops", "helmfile examples"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

@@ -1,0 +1,53 @@
+- name: Check if influx CLI is installed
+  shell: command -v influx
+  register: check
+  failed_when: false
+
+- name: Install influx CLI via apt
+  shell: |
+    wget -qO- https://repos.influxdata.com/influxdata-archive_compat.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main" | sudo tee /etc/apt/sources.list.d/influxdata.list
+    sudo apt-get update && sudo apt-get install -y influxdb2-cli
+  when: apt_available and check.rc != 0
+  become: true
+
+- name: Install influx CLI via dnf
+  shell: |
+    cat <<EOF | sudo tee /etc/yum.repos.d/influxdata.repo
+[influxdata]
+name = InfluxData Repository
+baseurl = https://repos.influxdata.com/rhel/\$releasever/\$basearch/stable
+enabled = 1
+gpgcheck = 1
+gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
+EOF
+    sudo dnf install -y influxdb2-cli
+  when: dnf_available and check.rc != 0
+  become: true
+
+- name: Install influx CLI via yum
+  shell: |
+    cat <<EOF | sudo tee /etc/yum.repos.d/influxdata.repo
+[influxdata]
+name = InfluxData Repository
+baseurl = https://repos.influxdata.com/rhel/\$releasever/\$basearch/stable
+enabled = 1
+gpgcheck = 1
+gpgkey = https://repos.influxdata.com/influxdata-archive_compat.key
+EOF
+    sudo yum install -y influxdb2-cli
+  when: yum_available and check.rc != 0
+  become: true
+
+- name: Install influx CLI via Homebrew
+  shell: brew install influxdb-cli
+  when: brew_available and check.rc != 0
+
+- name: Verify influx CLI installation
+  shell: influx version
+  register: verify
+
+- name: Display influx CLI version
+  print:
+    msg: "influx CLI {{ verify.stdout }} installed successfully"
+  when: verify.rc == 0

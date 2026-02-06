@@ -20,6 +20,12 @@
       fi
     done
 
+- name: Verify uninstallation with assert
+  assert:
+    file:
+      path: "~/.pyenv/bin/pyenv"
+      exists: false
+
 - name: Print uninstallation complete
   print: |
     pyenv and Python versions have been uninstalled.

@@ -1,8 +1,20 @@
-- name: Uninstall bitwarden-cli
+- name: Uninstall bitwarden-cli via Homebrew
   package:
     name: bitwarden-cli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall bitwarden-cli via npm
+  shell: npm uninstall -g @bitwarden/cli
+  when: not brew_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v bw
+      exit_code: 1
 
 - name: Display confirmation
   print: "bitwarden-cli uninstalled"

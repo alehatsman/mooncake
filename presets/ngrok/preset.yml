@@ -1,5 +1,5 @@
 name: ngrok
-description: Service mesh / proxy
+description: Secure introspectable tunnels to localhost for webhook testing and demos
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

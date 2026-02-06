@@ -8,7 +8,13 @@ Cache / storage system
 - preset: keydb
 ```
 
-## Usage
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+## Basic Usage
 
 ```bash
 # Basic usage
@@ -18,6 +24,18 @@ keydb --help
 keydb --version
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: keydb
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove keydb |
 ## Agent Use
 
 Automation-friendly CLI tool with:
@@ -26,6 +44,18 @@ Automation-friendly CLI tool with:
 - Scriptable interface
 - Idempotent operations
 
+## Uninstall
+```yaml
+- preset: keydb
+  with:
+    state: absent
+```
+
 ## Resources
 
 Search: "keydb documentation" or "keydb github"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

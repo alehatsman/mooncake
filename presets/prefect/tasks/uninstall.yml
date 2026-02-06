@@ -1,8 +1,12 @@
 - name: Uninstall prefect
-  package:
-    name: prefect
-    state: absent
+  shell: pip3 uninstall -y prefect
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v prefect
+      exit_code: 1
 
 - name: Display confirmation
   print: "prefect uninstalled"

@@ -1,13 +1,13 @@
-- name: Uninstall zenith (macOS)
+- name: Uninstall zenith via Homebrew
   package:
     name: zenith
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall zenith (Linux)
+- name: Uninstall zenith via cargo
   shell: cargo uninstall zenith
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

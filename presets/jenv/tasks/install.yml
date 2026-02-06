@@ -3,15 +3,24 @@
   register: jenv_check
   failed_when: false
 
-- name: Install jenv
+- name: Install jenv (macOS)
   package:
     name: jenv
     state: present
-  when: jenv_check.rc != 0
+  when: brew_available and jenv_check.rc != 0
 
-- name: Verify installation
-  shell: jenv --version 2>&1 || jenv -v 2>&1 || echo "installed"
-  register: jenv_version
+- name: Install jenv (Linux)
+  shell: |
+    git clone https://github.com/jenv/jenv.git ~/.jenv
+    echo 'export PATH="$HOME/.jenv/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(jenv init -)"' >> ~/.bashrc
+  when: linux and jenv_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v jenv
+      exit_code: 0
+
+- name: Display confirmation
   print: "jenv installed"

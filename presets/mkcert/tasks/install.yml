@@ -3,22 +3,22 @@
   register: mkcert_check
   failed_when: false
 
-- name: Install mkcert (macOS)
+- name: Install mkcert via Homebrew
   package:
     name: mkcert
     state: present
-  when: os == "darwin" and mkcert_check.rc != 0
+  when: brew_available and mkcert_check.rc != 0
 
-- name: Install mkcert (Linux)
+- name: Install libnss3-tools dependency via apt
   package:
     name: libnss3-tools
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and mkcert_check.rc != 0
+  when: apt_available and mkcert_check.rc != 0
 
-- name: Install mkcert binary (Linux)
+- name: Install mkcert via go install
   shell: go install filippo.io/mkcert@latest
-  when: os == "linux" and mkcert_check.rc != 0
+  when: not brew_available and mkcert_check.rc != 0
 
 - name: Verify installation with assert
   assert:

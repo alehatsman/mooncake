@@ -1,7 +1,46 @@
 name: mlflow
-description: Workflow orchestration
+description: Machine learning experiment tracking and model registry platform
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove MLflow
+
+  tracking_uri:
+    type: string
+    required: false
+    default: http://127.0.0.1:5000
+    description: MLflow tracking server URI
+
+  backend_store_uri:
+    type: string
+    required: false
+    description: Backend store URI for tracking server metadata (sqlite, postgresql, mysql)
+
+  default_artifact_root:
+    type: string
+    required: false
+    description: Default artifact root location for tracking server
+
+  service:
+    type: bool
+    required: false
+    default: false
+    description: Run MLflow as a system service
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install MLflow
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure service
+    include: tasks/configure.yml
+    when: parameters.state == "present" and parameters.service
+
+  - name: Uninstall MLflow
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -7,6 +7,15 @@ Advanced deployment strategies for Kubernetes. Canary, blue-green, analysis, tra
 - preset: argo-rollouts
 ```
 
+## Features
+- **Canary deployments**: Gradual traffic shifting with automated rollbacks
+- **Blue-green deployments**: Zero-downtime deployments with instant rollback
+- **Analysis**: Automated promotion based on metrics (Prometheus, Datadog, etc.)
+- **Traffic management**: Integration with service meshes (Istio, Linkerd, SMI)
+- **Progressive delivery**: Fine-grained control over rollout speed
+- **Rollback automation**: Automatic rollback on analysis failure
+- **Kubernetes-native**: CRD-based, works with standard kubectl
+
 ## Basic Usage
 ```bash
 # List rollouts
@@ -367,6 +376,16 @@ spec:
 - Manual approval gates with pause
 - Progressive delivery without code changes
 - Dashboard for visualization
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
 
 ## Agent Use
 - Automated deployment pipelines

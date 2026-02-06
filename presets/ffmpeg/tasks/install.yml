@@ -9,9 +9,11 @@
     state: present
   when: ffmpeg_check.rc != 0
 
-- name: Verify installation
-  shell: ffmpeg --version 2>&1 || ffmpeg -v 2>&1 || echo "installed"
-  register: ffmpeg_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ffmpeg
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "ffmpeg installed"

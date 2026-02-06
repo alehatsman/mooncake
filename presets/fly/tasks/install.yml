@@ -1,17 +1,23 @@
-- name: Check if fly is installed
-  shell: command -v fly
+- name: Check if flyctl is installed
+  shell: command -v flyctl
   register: fly_check
   failed_when: false
 
-- name: Install fly
+- name: Install flyctl via Homebrew
   package:
-    name: fly
+    name: flyctl
     state: present
-  when: fly_check.rc != 0
+  when: brew_available and fly_check.rc != 0
 
-- name: Verify installation
-  shell: fly --version 2>&1 || fly -v 2>&1 || echo "installed"
-  register: fly_version
+- name: Install flyctl via curl script
+  shell: curl -L https://fly.io/install.sh | sh
+  when: linux and fly_check.rc != 0
 
-- name: Display version
-  print: "fly installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v flyctl
+      exit_code: 0
+
+- name: Display confirmation
+  print: "flyctl installed"

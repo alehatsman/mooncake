@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "buildkite-agent uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v buildkite-agent
+      exit_code: 1

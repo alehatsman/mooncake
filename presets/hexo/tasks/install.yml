@@ -3,15 +3,21 @@
   register: hexo_check
   failed_when: false
 
-- name: Install hexo
+- name: Install hexo (macOS)
   package:
     name: hexo
     state: present
-  when: hexo_check.rc != 0
+  when: brew_available and hexo_check.rc != 0
 
-- name: Verify installation
-  shell: hexo --version 2>&1 || hexo -v 2>&1 || echo "installed"
-  register: hexo_version
+- name: Install hexo (Linux)
+  shell: npm install -g hexo-cli
+  when: linux and hexo_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v hexo
+      exit_code: 0
+
+- name: Display confirmation
   print: "hexo installed"

@@ -7,7 +7,7 @@
   package:
     name: terrascan
     state: present
-  when: os == "darwin" and terrascan_check.rc != 0
+  when: brew_available and terrascan_check.rc != 0
 
 - name: Install terrascan (Linux)
   shell: |
@@ -15,7 +15,7 @@
     tar -xf terrascan.tar.gz terrascan
     sudo install terrascan /usr/local/bin
     rm terrascan terrascan.tar.gz
-  when: os == "linux" and terrascan_check.rc != 0
+  when: linux and terrascan_check.rc != 0
 
 - name: Verify installation with assert
   assert:

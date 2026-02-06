@@ -1,13 +1,13 @@
-- name: Uninstall mycli (macOS)
+- name: Uninstall mycli via Homebrew
   package:
     name: mycli
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall mycli (Linux)
+- name: Uninstall mycli via pip3
   shell: pip3 uninstall -y mycli
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

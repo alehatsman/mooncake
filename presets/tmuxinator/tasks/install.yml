@@ -7,11 +7,11 @@
   package:
     name: tmuxinator
     state: present
-  when: os == "darwin" and tmuxinator_check.rc != 0
+  when: brew_available and tmuxinator_check.rc != 0
 
 - name: Install tmuxinator (Linux)
   shell: gem install --user-install tmuxinator
-  when: os == "linux" and tmuxinator_check.rc != 0
+  when: linux and tmuxinator_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -1,5 +1,5 @@
 name: ant
-description: Java/JVM tool
+description: Apache Ant build automation tool for Java projects
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

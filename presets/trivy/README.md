@@ -1,11 +1,22 @@
-# trivy - Vulnerability Scanner
+# Trivy - Comprehensive Security Scanner
 
-Comprehensive security scanner for containers, filesystems, repositories, and Kubernetes. Detects CVEs, misconfigurations, secrets, and license issues.
+All-in-one security scanner for containers, filesystems, Git repositories, and Kubernetes. Detects vulnerabilities, misconfigurations, secrets, and license issues.
 
 ## Quick Start
 ```yaml
 - preset: trivy
 ```
+
+## Features
+
+- **Vulnerability Detection**: CVE scanning for OS packages and application dependencies
+- **Misconfiguration Detection**: IaC scanning (Terraform, CloudFormation, Kubernetes)
+- **Secret Detection**: API keys, tokens, passwords in code and images
+- **SBOM Generation**: CycloneDX and SPDX format support
+- **License Compliance**: Detect incompatible or risky licenses
+- **Multi-Target**: Scan images, filesystems, repositories, Kubernetes clusters
+- **CI/CD Friendly**: Exit codes, JSON output, GitHub Actions integration
+- **Fast**: Offline mode, caching, parallel scanning
 
 ## Basic Scanning
 ```bash
@@ -263,22 +274,91 @@ if [ ! -s sbom.json ]; then
 fi
 ```
 
+## Basic Usage
+```bash
+# Scan Docker image
+trivy image myimage:latest
+
+# Scan filesystem
+trivy fs /path/to/project
+
+# Scan Git repository
+trivy repo https://github.com/user/repo
+```
+
+## Advanced Configuration
+
+### Basic Installation
+```yaml
+- preset: trivy
+```
+
+### With Specific Version
+```yaml
+- preset: trivy
+  with:
+    version: "0.48.0"
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove trivy |
+| version | string | latest | Specific version to install |
+
+## Platform Support
+
+- ✅ Linux (apt, dnf, yum, rpm, binary)
+- ✅ macOS (Homebrew, binary)
+- ✅ Windows (Chocolatey, binary)
+- ✅ Docker (official images)
+
+## Configuration
+
+- **Database**: `~/.cache/trivy/db/` (vulnerability database)
+- **Java DB**: `~/.cache/trivy/java-db/` (Java artifact vulnerabilities)
+- **Cache**: `~/.cache/trivy/` (scan results cache)
+- **Ignore file**: `.trivyignore` (project root)
+- **Config file**: `trivy.yaml` (optional)
+
+## Best Practices
+
+- **Update database regularly** in CI pipelines
+- **Use .trivyignore** for accepted vulnerabilities with justification
+- **Scan early** in the build process before deployment
+- **Set severity thresholds** appropriate to environment (stricter for prod)
+- **Enable multiple scanners** (vuln + config + secret) for complete coverage
+- **Cache results** to speed up repeated scans
+- **Combine with admission controllers** (OPA, Kyverno) in Kubernetes
+- **Archive scan results** for compliance and trend analysis
+- **Use SBOM** for supply chain security
+- **Integrate with security tools** (SIEM, vulnerability management)
+
 ## Tips
-- Update database daily in CI
-- Use `.trivyignore` for false positives
-- Scan early in build process
-- Combine with admission controllers
-- Archive scan results
-- Set severity thresholds per environment
+
+- Fast database updates (typically < 10s)
+- Offline mode for air-gapped environments
+- Low false positive rate compared to alternatives
+- Supports private registries with authentication
+- Can scan without pulling images (--image-src remote)
+- Works with podman, containerd, and other runtimes
+- Plugin system for extensibility
+- Parallel scanning for multiple targets
 
 ## Agent Use
-- Automated vulnerability scanning
+
+- Automated vulnerability scanning in CI/CD
 - Pre-deployment security gates
-- SBOM generation
-- Compliance reporting
+- SBOM generation for supply chain security
+- Compliance reporting and audit trails
+- Container registry scanning
 - Security drift detection
+- Policy enforcement automation
+- Vulnerability trend analysis
 
 ## Uninstall
+
 ```yaml
 - preset: trivy
   with:
@@ -286,5 +366,9 @@ fi
 ```
 
 ## Resources
-- Docs: https://aquasecurity.github.io/trivy/
+
+- Official docs: https://aquasecurity.github.io/trivy/
 - GitHub: https://github.com/aquasecurity/trivy
+- Community: https://slack.aquasec.com/
+- Tutorials: https://aquasecurity.github.io/trivy/latest/tutorials/
+- Search: "trivy scan examples", "trivy ci/cd", "trivy kubernetes"

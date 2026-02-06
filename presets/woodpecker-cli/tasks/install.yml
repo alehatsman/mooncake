@@ -7,7 +7,7 @@
   package:
     name: woodpecker-cli
     state: present
-  when: os == "darwin" and woodpecker_cli_check.rc != 0
+  when: brew_available and woodpecker_cli_check.rc != 0
 
 - name: Install woodpecker-cli (Linux)
   shell: |
@@ -15,7 +15,7 @@
     curl -Lo /tmp/woodpecker-cli "https://github.com/woodpecker-ci/woodpecker/releases/download/${LATEST}/woodpecker-cli_linux_amd64"
     chmod +x /tmp/woodpecker-cli
     sudo mv /tmp/woodpecker-cli /usr/local/bin/
-  when: os == "linux" and woodpecker_cli_check.rc != 0
+  when: linux and woodpecker_cli_check.rc != 0
 
 - name: Verify installation with assert
   assert:

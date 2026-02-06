@@ -3,15 +3,24 @@
   register: gron_check
   failed_when: false
 
-- name: Install gron
+- name: Install gron (macOS)
   package:
     name: gron
     state: present
-  when: gron_check.rc != 0
+  when: brew_available and gron_check.rc != 0
 
-- name: Verify installation
-  shell: gron --version 2>&1 || echo "installed"
-  register: gron_version
+- name: Install gron (Linux)
+  shell: |
+    curl -sL https://github.com/tomnomnom/gron/releases/latest/download/gron-linux-arm64-0.7.1.tgz | tar xz
+    sudo mv gron /usr/local/bin/
+    sudo chmod +x /usr/local/bin/gron
+  when: linux and gron_check.rc != 0
 
-- name: Display version
-  print: "gron installed: {{ gron_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gron
+      exit_code: 0
+
+- name: Display confirmation
+  print: "gron installed"

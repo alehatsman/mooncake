@@ -13,5 +13,11 @@
   shell: lapce --version 2>&1 || lapce -v 2>&1 || echo "installed"
   register: lapce_version
 
+- name: Assert lapce is installed
+  assert:
+    command:
+      cmd: command -v lapce
+      exit_code: 0
+
 - name: Display version
   print: "lapce installed"

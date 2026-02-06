@@ -1,7 +1,20 @@
 name: zed
-description: Text editor / IDE
-version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+description: High-performance collaborative code editor built in Rust with AI integration
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Zed should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install Zed
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Zed
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

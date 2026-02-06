@@ -1,5 +1,5 @@
 name: meson
-description: Build system focused on speed
+description: Fast, developer-friendly build system with cross-compilation support and multi-language capabilities
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,20 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Install or remove Meson
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: Specific version to install (e.g., "1.3.0", "latest")
+
+  method:
+    type: string
+    required: false
+    default: auto
+    enum: [auto, package, pip]
+    description: Installation method - auto tries package manager first, package only uses package manager, pip uses Python pip
 steps:
   - name: Install meson
     include: tasks/install.yml

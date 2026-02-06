@@ -1,8 +1,23 @@
-- name: Uninstall autojump
+- name: Uninstall autojump via Homebrew
   package:
     name: autojump
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall autojump via apt
+  package:
+    name: autojump
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v autojump
+      exit_code: 1
 
 - name: Display confirmation
   print: "autojump uninstalled"

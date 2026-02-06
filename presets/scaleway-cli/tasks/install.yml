@@ -7,11 +7,11 @@
   package:
     name: scw
     state: present
-  when: os == "darwin" and scaleway_cli_check.rc != 0
+  when: brew_available and scaleway_cli_check.rc != 0
 
 - name: Install scaleway-cli (Linux)
   shell: curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
-  when: os == "linux" and scaleway_cli_check.rc != 0
+  when: linux and scaleway_cli_check.rc != 0
 
 - name: Verify installation with assert
   assert:

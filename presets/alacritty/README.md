@@ -7,6 +7,15 @@ Fast, GPU-accelerated terminal emulator. Cross-platform, highly configurable, mi
 - preset: alacritty
 ```
 
+## Features
+- **GPU-accelerated**: Renders using OpenGL for smooth scrolling and low latency
+- **Cross-platform**: Linux, macOS, BSD with consistent behavior
+- **Fast startup**: Launches in milliseconds
+- **Highly configurable**: TOML-based configuration with live reload
+- **Vi mode**: Keyboard-driven text selection and navigation
+- **Font ligatures**: Support for programming fonts with ligatures
+- **True color**: 24-bit color support
+
 ## Basic Usage
 ```bash
 # Launch Alacritty
@@ -344,15 +353,100 @@ alacritty --print-events
 - Hot reload configuration
 - Ligature support for coding fonts
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### Development Workflow Launcher
+```bash
+# Create workspace launcher script
+#!/bin/bash
+# dev-workspace.sh
+alacritty --working-directory ~/projects/myapp \
+  --title "API Server" \
+  -e tmux new-session -s dev \; \
+    send-keys 'air' C-m \; \
+    split-window -h \; \
+    send-keys 'npm run dev' C-m \; \
+    split-window -v \; \
+    send-keys 'docker-compose up' C-m &
+```
+
+### SSH Session Manager
+```bash
+# Quick SSH connections with profiles
+alias ssh-prod='alacritty -t "Production" -e ssh user@prod.example.com'
+alias ssh-staging='alacritty -t "Staging" -e ssh user@staging.example.com'
+alias ssh-db='alacritty -t "Database" -e ssh -L 5432:localhost:5432 db.example.com'
+
+# Open multiple SSH sessions
+for server in web1 web2 web3; do
+  alacritty -t "$server" -e ssh admin@$server.example.com &
+done
+```
+
+### Themed Terminal Profiles
+```bash
+# ~/.local/bin/terminal-light
+#!/bin/bash
+alacritty --config-file ~/.config/alacritty/light-theme.toml "$@"
+
+# ~/.local/bin/terminal-dark
+#!/bin/bash
+alacritty --config-file ~/.config/alacritty/dark-theme.toml "$@"
+
+# Use based on time of day
+hour=$(date +%H)
+if [ $hour -ge 18 ] || [ $hour -le 6 ]; then
+  terminal-dark
+else
+  terminal-light
+fi
+```
+
+### CI/CD Interactive Debugging
+```yaml
+# .github/workflows/debug.yml
+- name: Launch interactive debug session
+  if: failure()
+  run: |
+    alacritty --hold -e bash -c '
+      echo "Build failed. Debug environment:"
+      echo "Logs: ./build.log"
+      echo "Artifacts: ./dist/"
+      bash
+    '
+```
+
 ## Agent Use
-- Automated terminal launching
-- CI/CD interactive sessions
-- SSH session management
-- Development environment setup
-- Container debugging
-- Remote development
+- Launch configured terminal sessions for different environments
+- Automate multi-terminal workspace setup for complex projects
+- Create profile-based SSH connection managers
+- Implement theme-switching based on time or context
+- Debugging failed CI/CD pipelines with interactive sessions
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install alacritty
+  preset: alacritty
+
+- name: Use alacritty in automation
+  shell: |
+    # Custom configuration here
+    echo "alacritty configured"
+```
+
 ```yaml
 - preset: alacritty
   with:

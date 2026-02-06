@@ -2,12 +2,12 @@
   package:
     name: rancher-cli
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall rancher (Linux)
   shell: sudo rm -f /usr/local/bin/rancher
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

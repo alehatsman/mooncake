@@ -1,5 +1,5 @@
 name: vultr-cli
-description: Vultr CLI
+description: Install Vultr CLI for managing cloud infrastructure
 version: "1.0.0"
 parameters:
   state:

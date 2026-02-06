@@ -3,15 +3,23 @@
   register: grype_check
   failed_when: false
 
-- name: Install grype
+- name: Install grype (macOS)
   package:
     name: grype
     state: present
-  when: grype_check.rc != 0
+  when: brew_available and grype_check.rc != 0
 
-- name: Verify installation
-  shell: grype --version 2>&1 || echo "installed"
-  register: grype_version
+- name: Install grype (Linux)
+  shell: |
+    curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+  become: true
+  when: linux and grype_check.rc != 0
 
-- name: Display version
-  print: "grype installed: {{ grype_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v grype
+      exit_code: 0
+
+- name: Display confirmation
+  print: "grype installed"

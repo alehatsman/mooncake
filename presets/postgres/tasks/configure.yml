@@ -7,11 +7,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start PostgreSQL service (macOS)
   shell: brew services start postgresql@{{ parameters.version }}
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
   failed_when: false
 
 # Wait for PostgreSQL to be ready
@@ -27,13 +27,13 @@
   shell: |
     sudo -u postgres psql -c "CREATE USER {{ parameters.create_user }} WITH PASSWORD '{{ parameters.create_user }}';"
   become: true
-  when: parameters.create_user != "" and os == "linux"
+  when: parameters.create_user != "" and linux
   failed_when: false
 
 - name: Create PostgreSQL user (macOS)
   shell: |
     createuser {{ parameters.create_user }}
-  when: parameters.create_user != "" and os == "darwin"
+  when: parameters.create_user != "" and brew_available
   failed_when: false
 
 # Create database if specified
@@ -41,20 +41,20 @@
   shell: |
     sudo -u postgres createdb -O {{ parameters.create_user }} {{ parameters.create_database }}
   become: true
-  when: parameters.create_database != "" and parameters.create_user != "" and os == "linux"
+  when: parameters.create_database != "" and parameters.create_user != "" and linux
   failed_when: false
 
 - name: Create PostgreSQL database with default owner (Linux)
   shell: |
     sudo -u postgres createdb {{ parameters.create_database }}
   become: true
-  when: parameters.create_database != "" and parameters.create_user == "" and os == "linux"
+  when: parameters.create_database != "" and parameters.create_user == "" and linux
   failed_when: false
 
 - name: Create PostgreSQL database (macOS)
   shell: |
     createdb {{ parameters.create_database }}
-  when: parameters.create_database != "" and os == "darwin"
+  when: parameters.create_database != "" and brew_available
   failed_when: false
 
 # Display connection info - with custom user/db

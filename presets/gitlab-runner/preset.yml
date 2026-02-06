@@ -1,5 +1,5 @@
 name: gitlab-runner
-description: CI/CD tool
+description: Install GitLab Runner - execute GitLab CI/CD pipeline jobs
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

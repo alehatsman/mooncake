@@ -3,15 +3,23 @@
   register: activemq_check
   failed_when: false
 
-- name: Install activemq
+- name: Install activemq (macOS)
   package:
     name: activemq
     state: present
-  when: activemq_check.rc != 0
+  when: brew_available and activemq_check.rc != 0
 
-- name: Verify installation
-  shell: activemq --version 2>&1 || activemq -v 2>&1 || echo "installed"
-  register: activemq_version
+- name: Install activemq (Linux)
+  package:
+    name: activemq
+    state: present
+  when: linux and activemq_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v activemq
+      exit_code: 0
+
+- name: Display confirmation
   print: "activemq installed"

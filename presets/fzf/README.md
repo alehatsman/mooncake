@@ -14,6 +14,36 @@ Install fzf - a blazingly fast command-line fuzzy finder that helps you search f
     install_shell_extensions: true
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+
+## Basic Usage
+
+```bash
+# Find and open file in vim
+vim $(fzf)
+
+# Search command history (Ctrl+R)
+# Press Ctrl+R in your shell to search through command history
+
+# Navigate directories (Alt+C)
+# Press Alt+C to fuzzy find and cd into a directory
+
+# Paste files/dirs (Ctrl+T)
+# Type a command, press Ctrl+T to select files to paste
+```
+
+## Advanced Configuration
+```yaml
+- preset: fzf
+  with:
+    state: present
+```
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -22,6 +52,11 @@ Install fzf - a blazingly fast command-line fuzzy finder that helps you search f
 | `install_shell_extensions` | bool | `true` | Install key bindings and fuzzy completion |
 | `install_vim_plugin` | bool | `false` | Install vim/neovim plugin |
 
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
 ## Usage Examples
 
 ### Basic File Finding
@@ -348,6 +383,12 @@ export FZF_DEFAULT_COMMAND='fd --type f'
 # Reduce preview size
 export FZF_DEFAULT_OPTS='--preview-window=:100'
 ```
+
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
 
 ## Uninstall
 

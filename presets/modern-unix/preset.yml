@@ -1,5 +1,5 @@
 name: modern-unix
-description: Install modern replacements for classic Unix tools
+description: High-performance replacements for classic Unix tools with better UX and speed
 version: 1.0.0
 
 parameters:
@@ -8,7 +8,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
-    description: Whether to install or remove the tools
+    description: Install or remove modern Unix tools
 
   tools:
     type: array
@@ -22,7 +22,13 @@ parameters:
       - dust       # du replacement
       - duf        # df replacement
       - bottom     # top/htop replacement
-    description: List of tools to install
+    description: List of tools to install (subset of full list)
 
 steps:
-  - include: tasks/install.yml
+  - name: Install modern Unix tools
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall modern Unix tools
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

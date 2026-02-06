@@ -1,17 +1,24 @@
-- name: Check if newrelic-cli is installed
-  shell: command -v newrelic-cli
-  register: newrelic_cli_check
+- name: Check if newrelic is installed
+  shell: command -v newrelic
+  register: newrelic_check
   failed_when: false
 
-- name: Install newrelic-cli
+- name: Install newrelic-cli via Homebrew
   package:
     name: newrelic-cli
     state: present
-  when: newrelic_cli_check.rc != 0
+  when: (parameters.state == "present") and (os == "darwin") and (newrelic_check.rc != 0)
 
-- name: Verify installation
-  shell: newrelic-cli --version 2>&1 || newrelic-cli -v 2>&1 || echo "installed"
-  register: newrelic_cli_version
+- name: Install newrelic-cli via install script
+  shell: |
+    curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash
+  when: (parameters.state == "present") and (os == "linux") and (newrelic_check.rc != 0)
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v newrelic
+      exit_code: 0
+
+- name: Display confirmation
   print: "newrelic-cli installed"

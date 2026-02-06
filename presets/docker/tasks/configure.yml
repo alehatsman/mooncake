@@ -7,30 +7,30 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 # Add user to docker group (Linux)
 - name: Get current username
   shell: whoami
   register: current_user
-  when: os == "linux" and parameters.add_user_to_group
+  when: linux and parameters.add_user_to_group
 
 - name: Add user to docker group (Linux)
   shell: usermod -aG docker {{ current_user.stdout }}
   become: true
-  when: os == "linux" and parameters.add_user_to_group
+  when: linux and parameters.add_user_to_group
   failed_when: false
 
 - name: Notify about group change
   print: |
     WARNING️  User added to docker group. You may need to log out and back in for this to take effect.
     Or run: newgrp docker
-  when: os == "linux" and parameters.add_user_to_group
+  when: linux and parameters.add_user_to_group
 
 # macOS - Docker Desktop
 - name: Start Docker Desktop (macOS)
   shell: open -a Docker
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
   failed_when: false
 
 # Verify Docker is running

@@ -11,27 +11,27 @@
   when: conda_check.rc == 0
 
 # Download Miniconda installer (macOS)
-- name: Download Miniconda installer (macOS Intel)
+- name: Download Miniconda installer for macOS Intel
   download:
     url: https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
     dest: /tmp/miniconda-installer.sh
     mode: "0755"
-  when: os == "darwin" and arch == "x86_64" and conda_check.rc != 0
+  when: brew_available and arch == "x86_64" and conda_check.rc != 0
 
-- name: Download Miniconda installer (macOS Apple Silicon)
+- name: Download Miniconda installer for macOS Apple Silicon
   download:
     url: https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
     dest: /tmp/miniconda-installer.sh
     mode: "0755"
-  when: os == "darwin" and arch == "arm64" and conda_check.rc != 0
+  when: brew_available and arch == "arm64" and conda_check.rc != 0
 
 # Download Miniconda installer (Linux)
-- name: Download Miniconda installer (Linux)
+- name: Download Miniconda installer for Linux x86_64
   download:
     url: https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     dest: /tmp/miniconda-installer.sh
     mode: "0755"
-  when: os == "linux" and conda_check.rc != 0
+  when: not brew_available and conda_check.rc != 0
 
 # Install Miniconda
 - name: Install Miniconda

@@ -1,11 +1,20 @@
-# act - Local GitHub Actions
+# act - Run GitHub Actions Locally
 
-Run GitHub Actions locally with Docker. Test workflows before pushing, debug failures, iterate faster.
+Run GitHub Actions workflows on your local machine with Docker. Test workflows before pushing, debug failures faster, and save CI minutes.
 
 ## Quick Start
 ```yaml
 - preset: act
 ```
+
+## Features
+- **Local workflow testing**: Run GitHub Actions without pushing commits
+- **Fast iteration**: Test changes in seconds, not minutes
+- **Cost savings**: Reduce cloud CI minutes by testing locally
+- **Offline development**: Work on workflows without internet
+- **Matrix testing**: Validate complex build matrices locally
+- **Secret injection**: Test with production-like secrets safely
+- **Debugging**: Verbose output and dry-run modes
 
 ## Basic Usage
 ```bash
@@ -278,23 +287,120 @@ act workflow_call -e inputs.json
 --env-file .env
 ```
 
-## Best Practices
-- **Test before pushing** to save CI minutes
-- **Use `.actrc`** for consistent configuration
-- **Mock external services** in local tests
-- **Set secrets** via environment file
-- **Use `--dry-run`** to validate syntax
-- **Match platform images** to GitHub runners
-- **Cache Docker images** for faster runs
+## Configuration
+- **Config file**: `.actrc` in project root or `~/.actrc` (global)
+- **Artifact directory**: Specify with `--artifact-server-path`
+- **Docker images**: Default uses `node:16-buster-slim`, configure via `-P` flag
+- **Cache**: Docker image cache in `~/.docker/`
+- **Requires**: Docker daemon running locally
 
-## Tips
-- Saves GitHub Actions minutes
-- Faster iteration (no push required)
-- Debug workflows locally
-- Test complex matrix strategies
-- Validate syntax before commit
-- Works offline (after image pull)
-- Great for private repos
+## Real-World Examples
+
+### Pre-Push Validation
+```bash
+#!/bin/bash
+# .git/hooks/pre-push
+echo "Testing workflows locally..."
+act push --dry-run
+if [ $? -ne 0 ]; then
+  echo "Workflow validation failed. Fix errors before pushing."
+  exit 1
+fi
+```
+
+### CI Pipeline Testing
+```yaml
+# Test full CI before merging PR
+- name: Validate pull request workflows
+  preset: act
+
+- name: Run PR checks locally
+  shell: |
+    act pull_request --env-file .env.test
+    act push -j lint -j test -j build
+```
+
+### Multi-Environment Deployment Testing
+```bash
+# Test deployments to different environments
+for env in dev staging prod; do
+  echo "Testing $env deployment..."
+  act workflow_dispatch \
+    -e deployment-events.json \
+    --secret-file ".env.$env" \
+    -j "deploy-$env"
+done
+```
+
+## Troubleshooting
+
+### Docker permission denied
+User not in docker group or daemon not running.
+```bash
+# Check Docker daemon
+docker ps
+
+# Add user to docker group (Linux)
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Or use sudo
+sudo act
+```
+
+### Workflow file not found
+Running outside Git repository or workflows in wrong location.
+```bash
+# Verify workflow files exist
+ls -la .github/workflows/
+
+# Specify workflow explicitly
+act -W .github/workflows/ci.yml
+```
+
+### Actions failing with "connection refused"
+Service dependencies not available or network issues.
+```bash
+# Use host network for service access
+act --network host
+
+# Or start services with docker-compose first
+docker-compose up -d postgres redis
+act
+```
+
+### Platform image not found
+Default image missing or wrong architecture.
+```bash
+# Pull recommended image
+docker pull catthehacker/ubuntu:act-latest
+
+# Use in act
+act -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Add to .actrc to make persistent
+echo "-P ubuntu-latest=catthehacker/ubuntu:act-latest" >> .actrc
+```
+
+## Best Practices
+- **Test before pushing** to catch errors early and save CI minutes
+- **Use `.actrc`** for project-specific configuration
+- **Mock external services** or use test instances
+- **Store secrets** in `.env` files (add to .gitignore)
+- **Use `--dry-run`** to validate workflow syntax
+- **Match platform images** to GitHub-hosted runners
+- **Cache Docker images** to speed up subsequent runs
+- **Combine with actionlint** for comprehensive validation
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
 
 ## Agent Use
 - Pre-commit workflow validation
@@ -303,6 +409,21 @@ act workflow_call -e inputs.json
 - Integration test automation
 - Deployment dry-runs
 - Cost reduction (fewer cloud runs)
+
+## Advanced Configuration
+```yaml
+# Use act with custom event files and platform configuration
+- name: Install act
+  preset: act
+
+- name: Test workflow with custom platform
+  shell: |
+    act -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+- name: Test with secrets from file
+  shell: |
+    act --env-file .env.test pull_request
+```
 
 ## Uninstall
 ```yaml

@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "btop uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v btop
+      exit_code: 1

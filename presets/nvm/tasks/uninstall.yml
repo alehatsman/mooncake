@@ -1,8 +1,22 @@
-- name: Uninstall nvm
+- name: Uninstall nvm (macOS via Homebrew)
   package:
     name: nvm
     state: absent
+  when: (parameters.state == "absent") and (os == "darwin")
   failed_when: false
+
+- name: Remove nvm directory
+  shell: rm -rf ~/.nvm ~/.nvm_init
+  when: parameters.state == "absent"
+  failed_when: false
+
+- name: Assert nvm is removed
+  assert:
+    command:
+      cmd: test -f ~/.nvm/nvm.sh
+      exit_code: 1
+  when: parameters.state == "absent"
 
 - name: Display confirmation
   print: "nvm uninstalled"
+  when: parameters.state == "absent"

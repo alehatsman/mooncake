@@ -3,15 +3,15 @@
   register: yamllint_check
   failed_when: false
 
-- name: Install yamllint (macOS)
+- name: Install yamllint via Homebrew
   package:
     name: yamllint
     state: present
-  when: os == "darwin" and yamllint_check.rc != 0
+  when: brew_available and yamllint_check.rc != 0
 
-- name: Install yamllint (Linux)
+- name: Install yamllint via pip3
   shell: pip3 install --user yamllint
-  when: os == "linux" and yamllint_check.rc != 0
+  when: not brew_available and yamllint_check.rc != 0
 
 - name: Verify installation with assert
   assert:

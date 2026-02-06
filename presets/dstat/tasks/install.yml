@@ -3,15 +3,19 @@
   register: dstat_check
   failed_when: false
 
-- name: Install dstat
+- name: Install dstat via apt
   package:
     name: dstat
     state: present
-  when: dstat_check.rc != 0
+  become: true
+  when: apt_available and dstat_check.rc != 0
 
-- name: Verify installation
-  shell: dstat --version 2>&1 || dstat -v 2>&1 || echo "installed"
-  register: dstat_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v dstat
+      exit_code: 0
+  when: apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available
 
-- name: Display version
+- name: Display confirmation
   print: "dstat installed"

@@ -1,5 +1,5 @@
 name: asciinema
-description: Utility tool
+description: Terminal session recorder and player for creating demos and tutorials
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

@@ -3,15 +3,24 @@
   register: ctop_check
   failed_when: false
 
-- name: Install ctop
+- name: Install ctop via Homebrew
   package:
     name: ctop
     state: present
-  when: ctop_check.rc != 0
+  when: brew_available and ctop_check.rc != 0
 
-- name: Verify installation
-  shell: ctop --version 2>&1 || echo "installed"
-  register: ctop_version
+- name: Install ctop via apt
+  package:
+    name: ctop
+    state: present
+  become: true
+  when: apt_available and ctop_check.rc != 0
 
-- name: Display version
-  print: "ctop installed: {{ ctop_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ctop
+      exit_code: 0
+
+- name: Display confirmation
+  print: "ctop installed"

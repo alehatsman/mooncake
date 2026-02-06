@@ -1,8 +1,49 @@
-- name: Uninstall deno
-  package:
-    name: deno
-    state: absent
+- name: Uninstall deno via apt
+  shell: apt-get remove -y deno
+  when: apt_available
   failed_when: false
+  become: true
+
+- name: Uninstall deno via dnf
+  shell: dnf remove -y deno
+  when: dnf_available
+  failed_when: false
+  become: true
+
+- name: Uninstall deno via yum
+  shell: yum remove -y deno
+  when: yum_available
+  failed_when: false
+  become: true
+
+- name: Uninstall deno via pacman
+  shell: pacman -R --noconfirm deno
+  when: pacman_available
+  failed_when: false
+  become: true
+
+- name: Uninstall deno via zypper
+  shell: zypper remove -y deno
+  when: zypper_available
+  failed_when: false
+  become: true
+
+- name: Uninstall deno via apk
+  shell: apk del deno
+  when: apk_available
+  failed_when: false
+  become: true
+
+- name: Uninstall deno via Homebrew
+  shell: brew uninstall deno
+  when: brew_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v deno
+      exit_code: 1
 
 - name: Display confirmation
   print: "deno uninstalled"

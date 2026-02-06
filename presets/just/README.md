@@ -7,6 +7,12 @@ Modern command runner with a clean syntax. Save and run project commands without
 - preset: just
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # List available recipes
@@ -26,6 +32,18 @@ just test unit integration
 just build
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: just
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove just |
 ## Justfile Syntax
 ```justfile
 # Simple recipe
@@ -268,3 +286,8 @@ alias r := dev
 - GitHub: https://github.com/casey/just
 - Docs: https://just.systems/man/en/
 - Search: "just command runner examples"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

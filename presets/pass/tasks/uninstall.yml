@@ -1,8 +1,25 @@
-- name: Uninstall pass
+- name: Uninstall pass (macOS)
   package:
     name: pass
     state: absent
+  when: (parameters.state == "absent") and (os == "darwin")
   failed_when: false
+
+- name: Uninstall pass (Linux)
+  package:
+    name: pass
+    state: absent
+  become: true
+  when: (parameters.state == "absent") and (os == "linux")
+  failed_when: false
+
+- name: Assert pass is removed
+  assert:
+    command:
+      cmd: command -v pass
+      exit_code: 1
+  when: parameters.state == "absent"
 
 - name: Display confirmation
   print: "pass uninstalled"
+  when: parameters.state == "absent"

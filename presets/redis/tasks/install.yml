@@ -4,13 +4,14 @@
   shell: command -v redis-server
   register: redis_check
   failed_when: false
+  when: parameters.state == "present"
 
 # macOS Installation
 - name: Install Redis via Homebrew (macOS)
   package:
     name: redis
     state: present
-  when: os == "darwin" and redis_check.rc != 0
+  when: parameters.state == "present" and brew_available
 
 # Linux Installation
 - name: Install Redis (Debian/Ubuntu)
@@ -18,19 +19,28 @@
     name: redis-server
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and redis_check.rc != 0
+  when: parameters.state == "present" and apt_available
 
 - name: Install Redis (RHEL/Fedora)
   package:
     name: redis
     state: present
   become: true
-  when: os == "linux" and package_manager == "dnf" and redis_check.rc != 0
+  when: parameters.state == "present" and dnf_available
 
 # Verify installation
 - name: Verify Redis installation
   shell: redis-server --version
   register: redis_version
+  when: parameters.state == "present"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v redis-server
+      exit_code: 0
+  when: parameters.state == "present"
 
 - name: Display Redis version
   print: "Redis installed: {{ redis_version.stdout }}"
+  when: parameters.state == "present"

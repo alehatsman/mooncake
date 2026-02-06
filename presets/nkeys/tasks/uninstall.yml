@@ -1,8 +1,24 @@
-- name: Uninstall nkeys
+- name: Uninstall nkeys (macOS)
   package:
     name: nkeys
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall nkeys (Linux)
+  shell: |
+    NKEYS_PATH=$(command -v nkeys 2>/dev/null)
+    if [ -n "$NKEYS_PATH" ]; then
+      rm -f "$NKEYS_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v nkeys
+      exit_code: 1
 
 - name: Display confirmation
   print: "nkeys uninstalled"

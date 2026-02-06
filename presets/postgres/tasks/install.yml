@@ -9,37 +9,43 @@
 - name: Install PostgreSQL via Homebrew (macOS)
   shell: brew install postgresql@{{ parameters.version }}
   become: false
-  when: os == "darwin" and postgres_check.rc != 0
+  when: brew_available and postgres_check.rc != 0
 
 # Linux - Debian/Ubuntu
 - name: Install PostgreSQL (Debian/Ubuntu)
   shell: apt-get install -y postgresql-{{ parameters.version }} postgresql-contrib-{{ parameters.version }} postgresql-client-{{ parameters.version }}
   become: true
-  when: os == "linux" and package_manager == "apt" and postgres_check.rc != 0
+  when: apt_available and postgres_check.rc != 0
 
 # Linux - RHEL/Fedora
 - name: Install PostgreSQL (RHEL/Fedora)
   shell: dnf install -y postgresql{{ parameters.version }} postgresql{{ parameters.version }}-server postgresql{{ parameters.version }}-contrib
   become: true
-  when: os == "linux" and package_manager == "dnf" and postgres_check.rc != 0
+  when: dnf_available and postgres_check.rc != 0
 
 # Initialize database (RHEL/Fedora)
 - name: Initialize PostgreSQL database (RHEL/Fedora)
   shell: postgresql-setup --initdb
   become: true
-  when: os == "linux" and package_manager == "dnf" and postgres_check.rc != 0
+  when: dnf_available and postgres_check.rc != 0
   failed_when: false
 
 # Verify installation
-- name: Verify PostgreSQL installation (macOS)
+- name: Verify PostgreSQL installation with assert
+  assert:
+    command:
+      cmd: command -v psql
+      exit_code: 0
+
+- name: Get PostgreSQL version (macOS)
   shell: /opt/homebrew/opt/postgresql@{{ parameters.version }}/bin/psql --version || /usr/local/opt/postgresql@{{ parameters.version }}/bin/psql --version
   register: postgres_version
-  when: os == "darwin"
+  when: brew_available
 
-- name: Verify PostgreSQL installation (Linux)
+- name: Get PostgreSQL version (Linux)
   shell: psql --version
   register: postgres_version
-  when: os == "linux"
+  when: linux
 
 - name: Display PostgreSQL version
   print: "PostgreSQL installed: {{ postgres_version.stdout }}"

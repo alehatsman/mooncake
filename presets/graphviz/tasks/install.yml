@@ -3,15 +3,24 @@
   register: graphviz_check
   failed_when: false
 
-- name: Install graphviz
+- name: Install graphviz (macOS)
   package:
     name: graphviz
     state: present
-  when: graphviz_check.rc != 0
+  when: brew_available and graphviz_check.rc != 0
 
-- name: Verify installation
-  shell: dot --version 2>&1 || dot -v 2>&1 || echo "installed"
-  register: graphviz_version
+- name: Install graphviz (Linux)
+  package:
+    name: graphviz
+    state: present
+  become: true
+  when: apt_available and graphviz_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v dot
+      exit_code: 0
+
+- name: Display confirmation
   print: "graphviz installed"

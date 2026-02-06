@@ -13,7 +13,7 @@
   become: true
   when: >
     parameters.service and
-    os == "linux"
+    linux
 
 - name: Configure Ollama launchd service (macOS)
   service:
@@ -24,4 +24,4 @@
       src_template: ../templates/launchd.plist.j2
   when: >
     parameters.service and
-    os == "darwin"
+    brew_available

@@ -1,5 +1,5 @@
 name: flyte
-description: Workflow orchestration
+description: Install Flyte CLI - workflow orchestration platform for data and ML pipelines
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

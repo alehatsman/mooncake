@@ -2,6 +2,16 @@
 
 Classic terminal multiplexer. Run multiple shell sessions in one terminal, detach and reattach, survive disconnections.
 
+## Features
+- **Session persistence**: Detach and reattach sessions across disconnections
+- **Multiple windows**: Run many shells in one terminal
+- **Split panes**: Horizontal and vertical splits (4.1+)
+- **Session sharing**: Multiple users can attach to same session
+- **Copy mode**: Scrollback buffer with vi-like navigation
+- **Monitoring**: Activity and silence alerts for windows
+- **Logging**: Record session output to files
+- **Scripting**: Automate session creation and management
+
 ## Quick Start
 ```yaml
 - preset: screen
@@ -420,6 +430,41 @@ Ctrl+A "  → Ctrl+B W    # List windows
 # Or change tmux prefix to Ctrl+A
 echo "set -g prefix C-a" >> ~/.tmux.conf
 ```
+
+## Advanced Configuration
+
+### Custom Status Bar
+```bash
+# ~/.screenrc
+hardstatus alwayslastline
+hardstatus string '%{= kG}%-Lw%{= KW}%50> %n%f* %t%{= kG}%+Lw%< %{= kG}%-=%c:%s'
+```
+
+### Automatic Startup
+```bash
+# Launch specific windows on startup
+screen -t editor vim
+screen -t server npm start
+screen -t logs tail -f app.log
+```
+
+### Nested Screen
+```bash
+# Change escape key for inner screen
+escape ^Aa  # Ctrl+A for outer, Ctrl+A a for inner
+```
+
+## Platform Support
+- ✅ Linux (all distributions via package managers)
+- ✅ macOS (Homebrew, built-in on older versions)
+- ✅ BSD systems (ports/packages)
+- ✅ Solaris
+- ❌ Windows (use WSL)
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove screen |
 
 ## Agent Use
 - Long-running automated tasks

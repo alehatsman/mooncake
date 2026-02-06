@@ -3,15 +3,24 @@
   register: miller_check
   failed_when: false
 
-- name: Install miller
+- name: Install miller (macOS)
   package:
     name: miller
     state: present
-  when: miller_check.rc != 0
+  when: brew_available and miller_check.rc != 0
 
-- name: Verify installation
-  shell: miller --version 2>&1 || echo "installed"
-  register: miller_version
+- name: Install miller (Linux)
+  package:
+    name: miller
+    state: present
+  become: true
+  when: apt_available and miller_check.rc != 0
 
-- name: Display version
-  print: "miller installed: {{ miller_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v miller
+      exit_code: 0
+
+- name: Display confirmation
+  print: "miller installed"

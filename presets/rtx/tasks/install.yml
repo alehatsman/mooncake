@@ -7,14 +7,14 @@
   package:
     name: rtx
     state: present
-  when: os == "darwin" and rtx_check.rc != 0
+  when: brew_available and rtx_check.rc != 0
 
 - name: Install rtx (Linux)
   package:
     name: rtx
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and rtx_check.rc != 0
+  when: apt_available and rtx_check.rc != 0
 
 - name: Verify installation with assert
   assert:

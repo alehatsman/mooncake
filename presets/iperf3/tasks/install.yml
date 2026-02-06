@@ -3,15 +3,24 @@
   register: iperf3_check
   failed_when: false
 
-- name: Install iperf3
+- name: Install iperf3 (macOS)
   package:
     name: iperf3
     state: present
-  when: iperf3_check.rc != 0
+  when: brew_available and iperf3_check.rc != 0
 
-- name: Verify installation
-  shell: iperf3 --version 2>&1 || iperf3 -v 2>&1 || echo "installed"
-  register: iperf3_version
+- name: Install iperf3 (Linux)
+  package:
+    name: iperf3
+    state: present
+  become: true
+  when: apt_available and iperf3_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v iperf3
+      exit_code: 0
+
+- name: Display confirmation
   print: "iperf3 installed"

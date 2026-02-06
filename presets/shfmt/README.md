@@ -2,6 +2,15 @@
 
 Format shell scripts with consistent style. Auto-format bash/sh/mksh scripts like prettier for JavaScript.
 
+## Features
+- **Multiple shells**: bash, POSIX sh, mksh, bats support
+- **Configurable indentation**: Tabs or spaces (2, 4, 8)
+- **Binary operators**: Control line break placement
+- **Switch case indentation**: Optional case indentation
+- **Fast**: Single-pass formatting
+- **Safe**: Never changes script logic
+- **Editor integration**: VS Code, Vim, Emacs plugins
+
 ## Quick Start
 ```yaml
 - preset: shfmt
@@ -337,6 +346,47 @@ shfmt --from-json < input.json
 - Preserves comments
 - Safe (doesn't change logic)
 - Integrates with most editors
+
+## Advanced Configuration
+
+### Configuration File
+```bash
+# .editorconfig
+[*.sh]
+indent_style = space
+indent_size = 2
+binary_next_line = true
+switch_case_indent = true
+space_redirects = true
+```
+
+### GitHub Actions Workflow
+```yaml
+name: Shell Format
+on: [pull_request]
+jobs:
+  shfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run shfmt
+        run: |
+          curl -L https://github.com/mvdan/sh/releases/latest/download/shfmt_linux_amd64 -o shfmt
+          chmod +x shfmt
+          ./shfmt -d -i 2 -ci .
+```
+
+## Platform Support
+- ✅ Linux (all distributions)
+- ✅ macOS (Homebrew, binary)
+- ✅ Windows (binary, Scoop)
+- ✅ BSD systems
+- ✅ Docker (mvdan/shfmt image)
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove shfmt |
 
 ## Agent Use
 - Automated code formatting

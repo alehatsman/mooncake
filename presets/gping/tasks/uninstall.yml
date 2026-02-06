@@ -1,8 +1,24 @@
-- name: Uninstall gping
+- name: Uninstall gping (macOS)
   package:
     name: gping
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gping (Linux)
+  shell: |
+    GPING_PATH=$(command -v gping 2>/dev/null)
+    if [ -n "$GPING_PATH" ]; then
+      sudo rm -f "$GPING_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gping
+      exit_code: 1
 
 - name: Display confirmation
   print: "gping uninstalled"

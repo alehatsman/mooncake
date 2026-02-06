@@ -1,5 +1,5 @@
 name: borg
-description: File transfer / backup tool
+description: Deduplicating backup program with compression and encryption
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

@@ -1,8 +1,12 @@
-- name: Uninstall cdk
-  package:
-    name: cdk
-    state: absent
+- name: Uninstall cdk via npm
+  shell: npm uninstall -g aws-cdk
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v cdk
+      exit_code: 1
 
 - name: Display confirmation
   print: "cdk uninstalled"

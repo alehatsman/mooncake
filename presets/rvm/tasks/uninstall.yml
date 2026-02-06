@@ -1,11 +1,11 @@
 - name: Uninstall rvm (macOS)
   shell: rvm implode --force
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall rvm (Linux)
   shell: rvm implode --force
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

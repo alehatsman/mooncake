@@ -1,11 +1,20 @@
-# actionlint - GitHub Actions Linter
+# actionlint - GitHub Actions Workflow Linter
 
-Static checker for GitHub Actions workflow files. Catch errors before pushing, enforce best practices, validate syntax.
+Static analysis tool for GitHub Actions workflow files. Catch syntax errors, type mismatches, and security issues before pushing to prevent CI failures.
 
 ## Quick Start
 ```yaml
 - preset: actionlint
 ```
+
+## Features
+- **Syntax validation**: Catch YAML and expression syntax errors
+- **Type checking**: Validate step outputs and context types
+- **Security scanning**: Detect shell injection vulnerabilities
+- **Best practices**: Enforce GitHub Actions conventions
+- **Shellcheck integration**: Validate shell scripts in `run` steps
+- **Fast**: Typical repository scans complete in under 1 second
+- **Zero config**: Works out of the box with sensible defaults
 
 ## Basic Usage
 ```bash
@@ -292,23 +301,157 @@ actionlint -debug
 | Shell validation | Via shellcheck | No | Yes |
 | Security checks | Yes | No | Limited |
 
-## Best Practices
-- **Lint before committing** to catch errors early
-- **Use in CI** to enforce quality
-- **Enable shellcheck** for shell script validation
-- **Configure self-hosted runners** in config file
-- **Fix, don't ignore** issues when possible
-- **Use with act** for local testing
-- **Check security warnings** carefully
+## Configuration
+- **Config file**: `.github/actionlint.yaml` (optional)
+- **Self-hosted runners**: Define custom labels in config
+- **Config variables**: Declare repository-level variables
+- **Shellcheck**: Automatically detected if installed
+- **No config needed**: Works with defaults for most projects
 
-## Tips
-- Catches 90% of workflow errors before push
-- Type-checks expressions and contexts
-- Validates action versions exist
-- Integrates with shellcheck for scripts
-- Fast (< 1 second for most repos)
-- Zero configuration needed
-- Works offline (after initial setup)
+## Real-World Examples
+
+### CI Pipeline Integration
+```yaml
+name: Workflow Validation
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install actionlint
+        preset: actionlint
+
+      - name: Lint workflows
+        shell: |
+          actionlint -color
+          if [ $? -ne 0 ]; then
+            echo "::error::Workflow linting failed"
+            exit 1
+          fi
+```
+
+### Pre-Commit Hook
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+# Only lint if workflow files changed
+WORKFLOW_FILES=$(git diff --cached --name-only | grep '^\.github/workflows/.*\.yml$')
+
+if [ -n "$WORKFLOW_FILES" ]; then
+  echo "Linting GitHub Actions workflows..."
+  echo "$WORKFLOW_FILES" | xargs actionlint
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "Workflow validation failed. Please fix the errors above."
+    echo "To skip this check, use: git commit --no-verify"
+    exit 1
+  fi
+  echo "All workflows passed validation."
+fi
+```
+
+### Combined with act for Full Validation
+```bash
+#!/bin/bash
+# validate-workflows.sh
+
+echo "1. Linting workflows with actionlint..."
+actionlint
+if [ $? -ne 0 ]; then
+  echo "Linting failed!"
+  exit 1
+fi
+
+echo "2. Testing workflows with act..."
+act -n  # Dry run
+if [ $? -ne 0 ]; then
+  echo "act validation failed!"
+  exit 1
+fi
+
+echo "All validations passed!"
+```
+
+## Troubleshooting
+
+### Shellcheck errors in run steps
+Shellcheck found issues in shell scripts within workflow.
+```bash
+# Install shellcheck for better validation
+sudo apt-get install shellcheck  # Ubuntu
+brew install shellcheck          # macOS
+
+# Disable shellcheck for specific step
+# actionlint: ignore[shellcheck]
+- run: echo $UNQUOTED_VAR
+
+# Or disable specific rule
+- run: |
+    # shellcheck disable=SC2086
+    echo $UNQUOTED_VAR
+```
+
+### False positives for secrets
+Actionlint warns about undefined secrets.
+```bash
+# Secrets are defined in repository settings, not in workflow
+# This is a warning, not an error - safe to ignore if secret exists
+
+# Document expected secrets in README.md:
+# Required secrets:
+# - DEPLOY_TOKEN: Deployment authentication
+# - SLACK_WEBHOOK: Notification webhook
+```
+
+### Type mismatch errors
+Comparing wrong types in expressions.
+```yaml
+# ERROR: Comparing string with boolean
+if: steps.test.outputs.result == true
+
+# FIX: Compare as string
+if: steps.test.outputs.result == 'true'
+
+# Or use explicit conversion
+if: fromJSON(steps.test.outputs.result) == true
+```
+
+### Unknown action version
+Referenced action tag doesn't exist.
+```yaml
+# ERROR: Tag v999 not found
+- uses: actions/checkout@v999
+
+# FIX: Use valid tag
+- uses: actions/checkout@v4
+
+# Or use commit SHA for security
+- uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+```
+
+## Best Practices
+- **Lint before committing** to catch errors early in development
+- **Run in CI** to enforce quality on all pull requests
+- **Enable shellcheck** for comprehensive shell script validation
+- **Configure custom runners** if using self-hosted infrastructure
+- **Fix issues** rather than ignoring them when possible
+- **Combine with act** for syntax + runtime validation
+- **Review security warnings** carefully before ignoring
+- **Pin action versions** to SHAs or tags (not branches)
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
 
 ## Agent Use
 - Automated workflow validation
@@ -317,6 +460,21 @@ actionlint -debug
 - Security vulnerability detection
 - Best practice enforcement
 - Pull request validation
+
+## Advanced Configuration
+```yaml
+# Use actionlint for automated workflow validation
+- name: Install actionlint
+  preset: actionlint
+
+- name: Lint workflows with custom configuration
+  shell: |
+    actionlint -format '{{json .}}' > lint-results.json
+
+- name: Lint specific workflow file
+  shell: |
+    actionlint .github/workflows/ci.yml
+```
 
 ## Uninstall
 ```yaml

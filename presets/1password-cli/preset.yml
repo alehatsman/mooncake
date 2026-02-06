@@ -1,5 +1,5 @@
 name: 1password-cli
-description: Secrets management
+description: Command-line tool for 1Password password manager and secret storage
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

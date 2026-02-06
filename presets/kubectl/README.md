@@ -7,6 +7,12 @@ Command-line tool for interacting with Kubernetes clusters.
 - preset: kubectl
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Advanced Configuration
 ```yaml
 - preset: kubectl
@@ -21,6 +27,11 @@ Command-line tool for interacting with Kubernetes clusters.
       - tree                       # Resource hierarchy
 ```
 
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove kubectl |
 ## Basic Usage
 ```bash
 # Version and cluster info
@@ -114,3 +125,8 @@ kubectl krew install neat          # Clean output
 
 ## Resources
 Search: "kubectl cheat sheet", "kubernetes kubectl reference"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

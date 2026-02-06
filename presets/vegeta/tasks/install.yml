@@ -7,7 +7,7 @@
   package:
     name: vegeta
     state: present
-  when: os == "darwin" and vegeta_check.rc != 0
+  when: brew_available and vegeta_check.rc != 0
 
 - name: Install vegeta (Linux)
   shell: |
@@ -16,7 +16,7 @@
     tar -xzf /tmp/vegeta.tar.gz -C /tmp
     sudo mv /tmp/vegeta /usr/local/bin/
     rm /tmp/vegeta.tar.gz
-  when: os == "linux" and vegeta_check.rc != 0
+  when: linux and vegeta_check.rc != 0
 
 - name: Verify installation with assert
   assert:

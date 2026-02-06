@@ -1,5 +1,5 @@
 name: wrk
-description: Modern HTTP benchmarking tool
+description: Modern HTTP benchmarking tool capable of generating significant load with multi-threaded design
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Whether wrk should be installed or removed
 steps:
   - name: Install wrk
     include: tasks/install.yml

@@ -3,15 +3,15 @@
   register: mdl_check
   failed_when: false
 
-- name: Install mdl (macOS)
+- name: Install mdl via Homebrew
   package:
     name: mdl
     state: present
-  when: os == "darwin" and mdl_check.rc != 0
+  when: brew_available and mdl_check.rc != 0
 
-- name: Install mdl (Linux)
+- name: Install mdl via gem
   shell: gem install mdl
-  when: os == "linux" and mdl_check.rc != 0
+  when: not brew_available and mdl_check.rc != 0
 
 - name: Verify installation with assert
   assert:

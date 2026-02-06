@@ -3,15 +3,22 @@
   register: circleci_cli_check
   failed_when: false
 
-- name: Install circleci-cli
+- name: Install circleci via Homebrew
   package:
-    name: circleci-cli
+    name: circleci
     state: present
-  when: circleci_cli_check.rc != 0
+  when: brew_available and circleci_cli_check.rc != 0
 
-- name: Verify installation
-  shell: circleci --version 2>&1 || circleci -v 2>&1 || echo "installed"
-  register: circleci_cli_version
+- name: Install circleci via curl script
+  shell: |
+    curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | bash
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and circleci_cli_check.rc != 0
 
-- name: Display version
-  print: "circleci-cli installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v circleci
+      exit_code: 0
+
+- name: Display confirmation
+  print: "circleci installed"

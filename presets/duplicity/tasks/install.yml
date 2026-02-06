@@ -9,9 +9,11 @@
     state: present
   when: duplicity_check.rc != 0
 
-- name: Verify installation
-  shell: duplicity --version 2>&1 || duplicity -v 2>&1 || echo "installed"
-  register: duplicity_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v duplicity
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "duplicity installed"

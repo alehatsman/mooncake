@@ -1,8 +1,12 @@
 - name: Uninstall pelican
-  package:
-    name: pelican
-    state: absent
+  shell: pip3 uninstall -y pelican
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pelican
+      exit_code: 1
 
 - name: Display confirmation
   print: "pelican uninstalled"

@@ -2,14 +2,14 @@
   package:
     name: usql
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall usql (Linux)
   file:
     path: "{{ lookup('env', 'HOME') }}/go/bin/usql"
     state: absent
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

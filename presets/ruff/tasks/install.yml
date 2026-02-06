@@ -7,11 +7,11 @@
   package:
     name: ruff
     state: present
-  when: os == "darwin" and ruff_check.rc != 0
+  when: brew_available and ruff_check.rc != 0
 
 - name: Install ruff (Linux)
   shell: pip3 install --user ruff
-  when: os == "linux" and ruff_check.rc != 0
+  when: linux and ruff_check.rc != 0
 
 - name: Verify installation with assert
   assert:

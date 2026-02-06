@@ -1,13 +1,13 @@
-- name: Uninstall markdownlint (macOS)
+- name: Uninstall markdownlint via Homebrew
   package:
     name: markdownlint-cli
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall markdownlint (Linux)
+- name: Uninstall markdownlint via npm
   shell: npm uninstall -g markdownlint-cli
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

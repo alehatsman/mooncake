@@ -3,15 +3,24 @@
   register: argocd_check
   failed_when: false
 
-- name: Install argocd
+- name: Install argocd via Homebrew
   package:
     name: argocd
     state: present
-  when: argocd_check.rc != 0
+  when: brew_available and argocd_check.rc != 0
 
-- name: Verify installation
-  shell: argocd --version 2>&1 || argocd -v 2>&1 || echo "installed"
-  register: argocd_version
+- name: Install argocd via install script
+  shell: |
+    curl -sSL -o argocd-linux-arm64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-arm64
+    sudo install -m 555 argocd-linux-arm64 /usr/local/bin/argocd
+    rm argocd-linux-arm64
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and argocd_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v argocd
+      exit_code: 0
+
+- name: Display confirmation
   print: "argocd installed"

@@ -3,15 +3,21 @@
   register: jekyll_check
   failed_when: false
 
-- name: Install jekyll
+- name: Install jekyll (macOS)
   package:
     name: jekyll
     state: present
-  when: jekyll_check.rc != 0
+  when: brew_available and jekyll_check.rc != 0
 
-- name: Verify installation
-  shell: jekyll --version 2>&1 || jekyll -v 2>&1 || echo "installed"
-  register: jekyll_version
+- name: Install jekyll (Linux)
+  shell: gem install jekyll bundler
+  when: linux and jekyll_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v jekyll
+      exit_code: 0
+
+- name: Display confirmation
   print: "jekyll installed"

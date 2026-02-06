@@ -1,5 +1,5 @@
 name: mkcert
-description: Local HTTPS certificates
+description: Install mkcert tool for generating locally-trusted HTTPS certificates
 version: "1.0.0"
 parameters:
   state:

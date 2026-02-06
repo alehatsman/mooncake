@@ -1,5 +1,5 @@
 name: sdkman
-description: Java/JVM tool
+description: SDK manager for parallel versions of multiple JVM SDKs
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

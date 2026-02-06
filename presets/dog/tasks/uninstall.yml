@@ -1,8 +1,16 @@
 - name: Uninstall dog
-  package:
-    name: dog
-    state: absent
+  shell: |
+    DOG_PATH=$(command -v dog 2>/dev/null)
+    if [ -n "$DOG_PATH" ]; then
+      sudo rm -f "$DOG_PATH"
+    fi
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v dog
+      exit_code: 1
 
 - name: Display confirmation
   print: "dog uninstalled"

@@ -7,6 +7,36 @@ Portable command-line YAML, JSON, and XML processor. Like jq, but for YAML (and 
 - preset: yq
 ```
 
+## Features
+- **Multi-format support**: YAML, JSON, XML, properties, CSV
+- **Comment preservation**: Maintains YAML comments during transformations
+- **In-place editing**: Direct file modification with automatic backups
+- **Format conversion**: Seamless conversion between YAML, JSON, XML
+- **Deep merge**: Intelligent merging of complex nested structures
+- **Kubernetes-native**: Built-in support for multi-document YAML manifests
+- **Cross-platform**: Linux, macOS, Windows
+
+## Advanced Configuration
+```yaml
+# Install yq (default)
+- preset: yq
+
+# Uninstall yq
+- preset: yq
+  with:
+    state: absent
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove (present/absent) |
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ✅ Windows (scoop, choco)
+
 ## Basic Usage
 ```bash
 # Pretty-print YAML

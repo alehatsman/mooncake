@@ -1,7 +1,20 @@
 name: vite
-description: Node.js / JavaScript tool
+description: Install Vite next-generation frontend build tool
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove Vite
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install Vite
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Vite
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

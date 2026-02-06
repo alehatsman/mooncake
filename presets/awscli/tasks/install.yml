@@ -6,41 +6,41 @@
   failed_when: false
 
 # macOS Installation
-- name: Install AWS CLI via Homebrew (macOS)
+- name: Install AWS CLI via Homebrew via Homebrew
   package:
     name: awscli
     state: present
-  when: os == "darwin" and aws_check.rc != 0
+  when: brew_available and aws_check.rc != 0
 
 # Linux - Download and install AWS CLI v2
 - name: Download AWS CLI installer (Linux)
   download:
     url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
     dest: /tmp/awscliv2.zip
-  when: os == "linux" and aws_check.rc != 0 and parameters.version == "2"
+  when: linux and aws_check.rc != 0 and parameters.version == "2"
 
 - name: Unzip AWS CLI installer (Linux)
   unarchive:
     src: /tmp/awscliv2.zip
     dest: /tmp
-  when: os == "linux" and aws_check.rc != 0 and parameters.version == "2"
+  when: linux and aws_check.rc != 0 and parameters.version == "2"
 
-- name: Install AWS CLI (Linux)
+- name: Install AWS CLI via apt
   shell: /tmp/aws/install
   become: true
-  when: os == "linux" and aws_check.rc != 0 and parameters.version == "2"
+  when: linux and aws_check.rc != 0 and parameters.version == "2"
 
 - name: Clean up installer
   file:
     path: /tmp/awscliv2.zip
     state: absent
-  when: os == "linux" and parameters.version == "2"
+  when: linux and parameters.version == "2"
 
 - name: Clean up extracted files
   file:
     path: /tmp/aws
     state: absent
-  when: os == "linux" and parameters.version == "2"
+  when: linux and parameters.version == "2"
 
 # Install v1 via pip if requested
 - name: Install AWS CLI v1 via pip
@@ -54,3 +54,9 @@
 
 - name: Display AWS CLI version
   print: "AWS CLI installed: {{ aws_version.stdout }}"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v aws
+      exit_code: 0

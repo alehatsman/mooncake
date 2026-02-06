@@ -3,15 +3,21 @@
   register: ko_check
   failed_when: false
 
-- name: Install ko
+- name: Install ko (macOS)
   package:
     name: ko
     state: present
-  when: ko_check.rc != 0
+  when: brew_available and ko_check.rc != 0
 
-- name: Verify installation
-  shell: ko --version 2>&1 || ko -v 2>&1 || echo "installed"
-  register: ko_version
+- name: Install ko (Linux)
+  shell: go install github.com/google/ko@latest
+  when: linux and ko_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ko
+      exit_code: 0
+
+- name: Display confirmation
   print: "ko installed"

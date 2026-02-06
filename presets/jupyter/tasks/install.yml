@@ -102,6 +102,12 @@
   failed_when: false
   timeout: 5s
 
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v jupyter
+      exit_code: 0
+
 - name: Display Jupyter test - Success
   print: "OK Jupyter functional test passed"
   when: jupyter_test.rc == 0

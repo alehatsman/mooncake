@@ -7,6 +7,15 @@ Fast way to navigate filesystem. Jump to frequently used directories with partia
 - preset: autojump
 ```
 
+## Features
+- **Smart jumping**: Jump to frequently used directories with partial names
+- **Learning algorithm**: Tracks directory usage frequency automatically
+- **Fast**: Sub-10ms directory switching
+- **Cross-shell**: Works with bash, zsh, fish, tcsh
+- **Weighted ranking**: More visited directories rank higher
+- **Tab completion**: Complete directory names with fuzzy matching
+- **Cross-platform**: Linux, macOS, BSD
+
 ## Basic Usage
 ```bash
 # Jump to directory
@@ -257,14 +266,85 @@ j -s > autojump-backup.txt
 - Tab completion support
 - Very fast (< 10ms)
 
+## Platform Support
+- ✅ Linux (apt, Homebrew)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### Development Workflow
+```bash
+# Quick project switching
+j api          # Jump to API project
+docker-compose up -d
+j frontend     # Jump to frontend
+npm run dev
+j docs         # Jump to documentation
+mkdocs serve
+```
+
+### CI/CD Setup Scripts
+```bash
+#!/bin/bash
+# Navigate and run tasks efficiently
+j infra && terraform apply
+j api && ./deploy.sh production
+j monitoring && docker-compose restart grafana
+```
+
+### Multi-Repo Management
+```bash
+# Update all microservices
+for service in auth users payments notifications; do
+  j $service && git pull && npm install
+done
+
+# Run tests across projects
+j api-test && npm test
+j frontend-test && npm test
+j integration && npm run test:e2e
+```
+
+### Directory Organization
+```bash
+# Add important directories manually
+j -a ~/critical-project
+j -a ~/client-deliverables
+j -a ~/infrastructure
+
+# Now access them instantly
+j critical    # → ~/critical-project
+j client      # → ~/client-deliverables
+j infra       # → ~/infrastructure
+```
+
 ## Agent Use
-- Automated directory navigation
-- Script optimization
-- Workspace switching
-- Project management automation
-- Development environment setup
+- Automated directory navigation in deployment scripts
+- Workspace switching in multi-project environments
+- Quick access to frequently used project directories
+- CI/CD pipeline navigation optimization
+- Development environment setup automation
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install autojump
+  preset: autojump
+
+- name: Use autojump in automation
+  shell: |
+    # Custom configuration here
+    echo "autojump configured"
+```
+
 ```yaml
 - preset: autojump
   with:

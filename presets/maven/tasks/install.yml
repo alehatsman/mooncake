@@ -3,15 +3,24 @@
   register: maven_check
   failed_when: false
 
-- name: Install maven
+- name: Install maven (macOS)
   package:
     name: maven
     state: present
-  when: maven_check.rc != 0
+  when: brew_available and maven_check.rc != 0
 
-- name: Verify installation
-  shell: mvn --version 2>&1 || mvn -v 2>&1 || echo "installed"
-  register: maven_version
+- name: Install maven (Linux)
+  package:
+    name: maven
+    state: present
+  become: true
+  when: apt_available and maven_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mvn
+      exit_code: 0
+
+- name: Display confirmation
   print: "maven installed"

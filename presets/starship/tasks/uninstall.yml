@@ -23,7 +23,7 @@
 
 - name: Uninstall Starship (macOS)
   shell: brew uninstall starship
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Remove Starship binary (Linux)
@@ -31,7 +31,7 @@
     path: /usr/local/bin/starship
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Verify uninstallation with assert
   assert:

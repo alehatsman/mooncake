@@ -3,15 +3,25 @@
   register: hazelcast_check
   failed_when: false
 
-- name: Install hazelcast
+- name: Install hazelcast (macOS)
   package:
     name: hazelcast
     state: present
-  when: hazelcast_check.rc != 0
+  when: brew_available and hazelcast_check.rc != 0
 
-- name: Verify installation
-  shell: hazelcast --version 2>&1 || hazelcast -v 2>&1 || echo "installed"
-  register: hazelcast_version
+- name: Install hazelcast (Linux)
+  shell: |
+    curl -sL https://github.com/hazelcast/hazelcast-command-line/releases/latest/download/hazelcast-command-line-linux-arm64.tar.gz | tar xz
+    sudo mv hazelcast-command-line*/bin/hz /usr/local/bin/hazelcast
+    sudo chmod +x /usr/local/bin/hazelcast
+    rm -rf hazelcast-command-line*
+  when: linux and hazelcast_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v hazelcast
+      exit_code: 0
+
+- name: Display confirmation
   print: "hazelcast installed"

@@ -3,15 +3,15 @@
   register: xsv_check
   failed_when: false
 
-- name: Install xsv (macOS)
+- name: Install xsv via Homebrew
   package:
     name: xsv
     state: present
-  when: os == "darwin" and xsv_check.rc != 0
+  when: brew_available and xsv_check.rc != 0
 
-- name: Install xsv (Linux)
+- name: Install xsv via cargo
   shell: cargo install xsv
-  when: os == "linux" and xsv_check.rc != 0
+  when: not brew_available and xsv_check.rc != 0
 
 - name: Verify installation with assert
   assert:

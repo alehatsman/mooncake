@@ -65,6 +65,15 @@ Container Menu (press Enter):
   o       - Output logs to file
 ```
 
+## Features
+- **Real-Time Monitoring**: Live CPU, memory, network, and I/O metrics
+- **Docker and Kubernetes**: Works with both container runtimes
+- **Interactive Interface**: Navigate, filter, and manage containers
+- **Top-Like Experience**: Familiar interface for Unix users
+- **Container Management**: Start, stop, restart, pause containers
+- **Log Viewing**: Inspect container logs without separate commands
+- **Lightweight**: Single binary, minimal resource usage
+
 ## Display Information
 ```
 Columns shown:
@@ -291,6 +300,16 @@ ctop -f "name=test"
 - Minimal performance overhead
 - Great for quick health checks
 
+## Platform Support
+- ✅ Linux (apt,Homebrew)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Automated resource monitoring
 - Anomaly detection in containers
@@ -299,6 +318,18 @@ ctop -f "name=test"
 - Resource usage trending
 - Container lifecycle management
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install ctop
+  preset: ctop
+
+- name: Use ctop in automation
+  shell: |
+    # Custom configuration here
+    echo "ctop configured"
+```
 ## Uninstall
 ```yaml
 - preset: ctop

@@ -3,15 +3,24 @@
   register: qdrant_check
   failed_when: false
 
-- name: Install qdrant
+- name: Install qdrant via Homebrew
   package:
     name: qdrant
     state: present
-  when: qdrant_check.rc != 0
+  when: brew_available and qdrant_check.rc != 0
 
-- name: Verify installation
-  shell: qdrant --version 2>&1 || qdrant -v 2>&1 || echo "installed"
-  register: qdrant_version
+- name: Install qdrant via apt
+  package:
+    name: qdrant
+    state: present
+  become: true
+  when: apt_available and qdrant_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v qdrant
+      exit_code: 0
+
+- name: Display confirmation
   print: "qdrant installed"

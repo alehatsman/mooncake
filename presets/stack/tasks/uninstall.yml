@@ -1,8 +1,22 @@
-- name: Uninstall stack
+- name: Uninstall stack (macOS)
   package:
-    name: stack
+    name: haskell-stack
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall stack binary (Linux)
+  shell: |
+    sudo rm -f /usr/local/bin/stack
+    rm -rf ~/.stack
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v stack
+      exit_code: 1
 
 - name: Display confirmation
   print: "stack uninstalled"

@@ -1,5 +1,5 @@
 name: fish
-description: Friendly interactive shell
+description: Install fish - friendly interactive shell with autosuggestions and syntax highlighting
 version: "1.0.0"
 parameters:
   state:

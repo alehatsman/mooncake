@@ -7,6 +7,36 @@ Pluggable linter for Terraform. Catch errors, enforce best practices, cloud prov
 - preset: tflint
 ```
 
+## Features
+- **Provider-specific validation**: Plugins for AWS, Azure, GCP with resource validation
+- **Best practices enforcement**: Naming conventions, deprecations, unused declarations
+- **Fast execution**: Less than 1 second for most Terraform projects
+- **Pluggable architecture**: Extend with custom rules and provider plugins
+- **Deep module inspection**: Validates referenced modules recursively
+- **CI/CD friendly**: JSON, SARIF, JUnit output formats for integration
+- **Cross-platform**: Linux, macOS, Windows
+
+## Advanced Configuration
+```yaml
+# Install tflint (default)
+- preset: tflint
+
+# Uninstall tflint
+- preset: tflint
+  with:
+    state: absent
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove (present/absent) |
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ✅ Windows (scoop, choco)
+
 ## Basic Usage
 ```bash
 # Lint current directory

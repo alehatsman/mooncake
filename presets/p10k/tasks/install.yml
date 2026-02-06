@@ -1,17 +1,26 @@
 - name: Check if p10k is installed
-  shell: command -v p10k
+  assert:
+    file:
+      path: "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k"
+      exists: true
   register: p10k_check
   failed_when: false
 
-- name: Install p10k
+- name: Install p10k via Homebrew
   package:
-    name: p10k
+    name: romkatv/powerlevel10k/powerlevel10k
     state: present
-  when: p10k_check.rc != 0
+  when: brew_available and p10k_check.failed
 
-- name: Verify installation
-  shell: p10k --version 2>&1 || p10k -v 2>&1 || echo "installed"
-  register: p10k_version
+- name: Install p10k via git clone
+  shell: git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k
+  when: linux and p10k_check.failed
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    file:
+      path: "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k"
+      exists: true
+
+- name: Display confirmation
   print: "p10k installed"

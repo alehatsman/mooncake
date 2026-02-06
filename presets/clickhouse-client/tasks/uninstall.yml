@@ -1,8 +1,23 @@
-- name: Uninstall clickhouse-client
+- name: Uninstall clickhouse-client (macOS)
+  package:
+    name: clickhouse
+    state: absent
+  when: brew_available
+  failed_when: false
+
+- name: Uninstall clickhouse-client (Linux)
   package:
     name: clickhouse-client
     state: absent
+  become: true
+  when: apt_available
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v clickhouse-client
+      exit_code: 1
 
 - name: Display confirmation
   print: "clickhouse-client uninstalled"

@@ -2,7 +2,7 @@
   package:
     name: werf
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall werf (Linux)
@@ -10,7 +10,7 @@
     path: /usr/local/bin/werf
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

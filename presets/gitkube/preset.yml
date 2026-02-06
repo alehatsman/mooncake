@@ -1,5 +1,5 @@
 name: gitkube
-description: GitOps / CD tool
+description: Install Gitkube - git push to deploy applications on Kubernetes clusters
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

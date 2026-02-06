@@ -1,6 +1,16 @@
 # Terraform Preset
 
-**Status:** ✓ Installed successfully
+Infrastructure as Code tool. Provision and manage cloud resources declaratively across AWS, Azure, GCP, and 3000+ providers.
+
+## Features
+- **Multi-cloud**: AWS, Azure, GCP, and 3000+ providers
+- **Declarative**: Define desired state, Terraform handles changes
+- **State management**: Track infrastructure in state files
+- **Modules**: Reusable infrastructure components
+- **Plan & Apply**: Preview changes before applying
+- **Resource graph**: Understand dependencies
+- **Workspaces**: Manage multiple environments
+- **Version control**: Store configurations in git
 
 ## Quick Start
 
@@ -252,6 +262,73 @@ override.tf.json
 terraform.rc
 ```
 
+## Basic Usage
+```bash
+# Initialize Terraform
+terraform init
+
+# Plan changes
+terraform plan
+
+# Apply changes
+terraform apply
+
+# Destroy infrastructure
+terraform destroy
+```
+
+## Advanced Configuration
+
+### Backend Configuration
+```hcl
+# Remote state with locking
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-locks"
+  }
+}
+```
+
+### Module Composition
+```hcl
+# modules/vpc/main.tf
+module "network" {
+  source = "./modules/vpc"
+  cidr   = var.vpc_cidr
+}
+
+module "compute" {
+  source = "./modules/ec2"
+  vpc_id = module.network.vpc_id
+  subnet_ids = module.network.subnet_ids
+}
+```
+
+### Automated Testing
+```bash
+# Terraform validate and plan in CI
+terraform init -backend=false
+terraform validate
+terraform fmt -check
+terraform plan -out=plan.tfplan
+```
+
+## Platform Support
+- ✅ Linux (amd64, arm64)
+- ✅ macOS (Intel, Apple Silicon)
+- ✅ Windows (amd64)
+- ✅ BSD systems
+- ✅ Docker container
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove terraform |
+
 ## Uninstall
 
 ```yaml
@@ -261,3 +338,16 @@ terraform.rc
 ```
 
 **Note:** Terraform state files preserved after uninstall.
+
+## Agent Use
+- Automate infrastructure provisioning in CI/CD pipelines
+- Generate Terraform configurations from templates
+- Validate and plan infrastructure changes
+- Manage state and workspace operations
+- Deploy multi-environment infrastructure
+
+## Resources
+- Official docs: https://www.terraform.io/docs
+- Registry: https://registry.terraform.io/
+- Tutorials: https://learn.hashicorp.com/terraform
+- Search: "terraform tutorial", "terraform best practices", "terraform modules"

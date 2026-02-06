@@ -2,21 +2,21 @@
 
 - name: Uninstall OpenJDK (macOS)
   shell: brew uninstall openjdk@{{ parameters.version }}
-  when: os == "darwin"
+  when: brew_available
 
 - name: Uninstall OpenJDK (Debian/Ubuntu)
   package:
     name: "openjdk-{{ parameters.version }}-jdk"
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Uninstall OpenJDK (RHEL/Fedora)
   package:
     name: "java-{{ parameters.version }}-openjdk-devel"
     state: absent
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: dnf_available or yum_available
 
 - name: Remove Java environment file
   file:
@@ -31,6 +31,12 @@
       fi
     done
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v java
+      exit_code: 1
 
 - name: Display uninstall confirmation
   print: "Java uninstalled."

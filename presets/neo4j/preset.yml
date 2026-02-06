@@ -1,7 +1,20 @@
 name: neo4j
-description: Graph / vector database
+description: Graph database management system with native graph storage and Cypher query language
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether neo4j should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install neo4j
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall neo4j
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -2,12 +2,12 @@
   package:
     name: swiftenv
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall swiftenv (Linux)
   shell: rm -rf ~/.swiftenv
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

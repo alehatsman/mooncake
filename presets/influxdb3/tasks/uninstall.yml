@@ -1,8 +1,24 @@
-- name: Uninstall influxdb3
+- name: Uninstall influxdb3 (macOS)
   package:
     name: influxdb3
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall influxdb3 (Linux)
+  shell: |
+    INFLUXDB3_PATH=$(command -v influxdb3 2>/dev/null)
+    if [ -n "$INFLUXDB3_PATH" ]; then
+      sudo rm -f "$INFLUXDB3_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v influxdb3
+      exit_code: 1
 
 - name: Display confirmation
   print: "influxdb3 uninstalled"

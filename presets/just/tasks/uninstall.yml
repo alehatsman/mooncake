@@ -1,8 +1,24 @@
-- name: Uninstall just
+- name: Uninstall just (macOS)
   package:
     name: just
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall just (Linux)
+  shell: |
+    JUST_PATH=$(command -v just 2>/dev/null)
+    if [ -n "$JUST_PATH" ]; then
+      sudo rm -f "$JUST_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v just
+      exit_code: 1
 
 - name: Display confirmation
   print: "just uninstalled"

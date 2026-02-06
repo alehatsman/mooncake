@@ -1,5 +1,5 @@
 name: fluxcd
-description: CI/CD tool
+description: Install FluxCD v2 - GitOps continuous delivery for Kubernetes clusters
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

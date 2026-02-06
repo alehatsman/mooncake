@@ -3,15 +3,28 @@
   register: bottom_check
   failed_when: false
 
-- name: Install bottom
+- name: Install bottom via Homebrew
   package:
     name: bottom
     state: present
-  when: bottom_check.rc != 0
+  when: brew_available and bottom_check.rc != 0
 
-- name: Verify installation
-  shell: btm --version 2>&1 || btm -v 2>&1 || echo "installed"
-  register: bottom_version
+- name: Install bottom via apt
+  package:
+    name: bottom
+    state: present
+  become: true
+  when: apt_available and bottom_check.rc != 0
 
-- name: Display version
+- name: Install bottom via cargo
+  shell: cargo install bottom
+  when: not brew_available and not apt_available and bottom_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v btm
+      exit_code: 0
+
+- name: Display confirmation
   print: "bottom installed"

@@ -6,7 +6,7 @@
     state: stopped
   become: true
   failed_when: false
-  when: os == "linux"
+  when: linux
 
 - name: Disable MinIO service (Linux)
   service:
@@ -14,31 +14,31 @@
     enabled: false
   become: true
   failed_when: false
-  when: os == "linux"
+  when: linux
 
 - name: Remove MinIO systemd service (Linux)
   file:
     path: /etc/systemd/system/minio.service
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Reload systemd daemon (Linux)
   shell: systemctl daemon-reload
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Stop MinIO server (macOS)
   shell: pkill -f "minio server"
   failed_when: false
-  when: os == "darwin"
+  when: brew_available
 
 # macOS Uninstallation
 - name: Uninstall MinIO via Homebrew (macOS)
   package:
     name: minio/stable/minio
     state: absent
-  when: os == "darwin"
+  when: brew_available
 
 # Linux Uninstallation
 - name: Remove MinIO binaries (Linux)
@@ -49,13 +49,19 @@
   loop:
     - /usr/local/bin/minio
     - /usr/local/bin/mc
-  when: os == "linux"
+  when: linux
 
 - name: Clean up log file
   file:
     path: /tmp/minio.log
     state: absent
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v minio
+      exit_code: 1
 
 - name: Display uninstall confirmation
   print: "MinIO has been uninstalled (data in {{ parameters.data_dir }} remains)"

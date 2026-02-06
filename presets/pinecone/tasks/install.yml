@@ -3,15 +3,15 @@
   register: pinecone_check
   failed_when: false
 
-- name: Install pinecone
-  package:
-    name: pinecone
-    state: present
+- name: Install pinecone via pip3
+  shell: pip3 install --user pinecone-client
   when: pinecone_check.rc != 0
 
-- name: Verify installation
-  shell: pinecone --version 2>&1 || pinecone -v 2>&1 || echo "installed"
-  register: pinecone_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: python3 -c "import pinecone; print('ok')"
+      exit_code: 0
 
-- name: Display version
-  print: "pinecone installed"
+- name: Display confirmation
+  print: "pinecone client installed"

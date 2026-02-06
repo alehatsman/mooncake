@@ -1,8 +1,29 @@
-- name: Uninstall nats-server
-  package:
-    name: nats-server
-    state: absent
+- name: Uninstall nats-server via apt
+  shell: apt-get remove -y nats-server
+  when: apt_available
+  become: true
   failed_when: false
 
-- name: Display confirmation
-  print: "nats-server uninstalled"
+- name: Uninstall nats-server via dnf
+  shell: dnf remove -y nats-server
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Uninstall nats-server via yum
+  shell: yum remove -y nats-server
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Uninstall nats-server via Homebrew
+  shell: brew uninstall nats-server
+  when: brew_available
+  failed_when: false
+
+- name: Verify nats-server is not installed
+  assert:
+    command:
+      cmd: command -v nats-server
+      exit_code: 1
+  failed_when: false

@@ -9,9 +9,11 @@
     state: present
   when: drone_cli_check.rc != 0
 
-- name: Verify installation
-  shell: drone --version 2>&1 || drone -v 2>&1 || echo "installed"
-  register: drone_cli_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v drone
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "drone-cli installed"

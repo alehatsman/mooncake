@@ -8,11 +8,11 @@
 # macOS Installation
 - name: Install PHP via Homebrew (macOS)
   shell: brew install php@{{ parameters.version }}
-  when: os == "darwin" and php_check.rc != 0
+  when: brew_available and php_check.rc != 0
 
 - name: Link PHP (macOS)
   shell: brew link --force --overwrite php@{{ parameters.version }}
-  when: os == "darwin" and php_check.rc != 0
+  when: brew_available and php_check.rc != 0
   failed_when: false
 
 # Linux - Debian/Ubuntu
@@ -21,14 +21,14 @@
     sudo add-apt-repository -y ppa:ondrej/php
     sudo apt-get update
   become: true
-  when: os == "linux" and package_manager == "apt" and php_check.rc != 0
+  when: apt_available and php_check.rc != 0
 
 - name: Install PHP (Debian/Ubuntu)
   package:
     name: "php{{ parameters.version }}"
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and php_check.rc != 0
+  when: apt_available and php_check.rc != 0
 
 # Linux - RHEL/Fedora
 - name: Install PHP (RHEL/Fedora)
@@ -36,13 +36,13 @@
     name: php
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"] and php_check.rc != 0
+  when: dnf_available or yum_available and php_check.rc != 0
 
 # Install extensions
 - name: Install PHP extensions (macOS)
   shell: brew install php@{{ parameters.version }}-{{ item }}
   with_items: parameters.extensions
-  when: os == "darwin" and parameters.extensions | length > 0
+  when: brew_available and parameters.extensions | length > 0
   failed_when: false
 
 - name: Install PHP extensions (Linux)
@@ -51,10 +51,16 @@
     state: present
   become: true
   with_items: parameters.extensions
-  when: os == "linux" and parameters.extensions | length > 0
+  when: linux and parameters.extensions | length > 0
 
 # Verify installation
-- name: Verify PHP installation
+- name: Verify PHP installation with assert
+  assert:
+    command:
+      cmd: command -v php
+      exit_code: 0
+
+- name: Get PHP version
   shell: php -v | head -1
   register: php_version
 

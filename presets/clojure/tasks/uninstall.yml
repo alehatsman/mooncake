@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "clojure uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v clj
+      exit_code: 1

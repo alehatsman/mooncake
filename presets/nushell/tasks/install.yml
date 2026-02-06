@@ -3,15 +3,24 @@
   register: nushell_check
   failed_when: false
 
-- name: Install nushell
+- name: Install nushell via Homebrew
   package:
     name: nushell
     state: present
-  when: nushell_check.rc != 0
+  when: brew_available and nushell_check.rc != 0
 
-- name: Verify installation
-  shell: nu --version 2>&1 || nu -v 2>&1 || echo "installed"
-  register: nushell_version
+- name: Install nushell via apt
+  package:
+    name: nushell
+    state: present
+  become: true
+  when: apt_available and nushell_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nu
+      exit_code: 0
+
+- name: Display confirmation
   print: "nushell installed"

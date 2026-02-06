@@ -1,8 +1,29 @@
-- name: Uninstall mosquitto
-  package:
-    name: mosquitto
-    state: absent
+- name: Uninstall mosquitto via apt
+  shell: apt-get remove -y mosquitto
+  when: apt_available
+  become: true
   failed_when: false
 
-- name: Display confirmation
-  print: "mosquitto uninstalled"
+- name: Uninstall mosquitto via dnf
+  shell: dnf remove -y mosquitto
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Uninstall mosquitto via yum
+  shell: yum remove -y mosquitto
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Uninstall mosquitto via Homebrew
+  shell: brew uninstall mosquitto
+  when: brew_available
+  failed_when: false
+
+- name: Verify mosquitto is not installed
+  assert:
+    command:
+      cmd: command -v mosquitto
+      exit_code: 1
+  failed_when: false

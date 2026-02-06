@@ -3,21 +3,77 @@
   register: meson_check
   failed_when: false
 
-- name: Install meson (macOS)
-  package:
-    name: meson
-    state: present
-  when: os == "darwin" and meson_check.rc != 0
+# Auto method: try package manager first
+- name: Install meson via apt
+  shell: apt-get install -y meson
+  when: parameters.method != "pip" and apt_available and meson_check.rc != 0
+  become: true
+  register: apt_install
+  failed_when: false
 
-- name: Install meson (Linux)
-  shell: pip3 install --user meson
-  when: os == "linux" and meson_check.rc != 0
+- name: Install meson via dnf
+  shell: dnf install -y meson
+  when: parameters.method != "pip" and dnf_available and meson_check.rc != 0 and apt_install.rc != 0
+  become: true
+  register: dnf_install
+  failed_when: false
 
-- name: Verify installation with assert
+- name: Install meson via yum
+  shell: yum install -y meson
+  when: parameters.method != "pip" and yum_available and meson_check.rc != 0 and apt_install.rc != 0 and dnf_install.rc != 0
+  become: true
+  register: yum_install
+  failed_when: false
+
+- name: Install meson via pacman
+  shell: pacman -S --noconfirm meson
+  when: parameters.method != "pip" and pacman_available and meson_check.rc != 0 and apt_install.rc != 0 and dnf_install.rc != 0 and yum_install.rc != 0
+  become: true
+  register: pacman_install
+  failed_when: false
+
+- name: Install meson via zypper
+  shell: zypper install -y meson
+  when: parameters.method != "pip" and zypper_available and meson_check.rc != 0 and apt_install.rc != 0 and dnf_install.rc != 0 and yum_install.rc != 0 and pacman_install.rc != 0
+  become: true
+  register: zypper_install
+  failed_when: false
+
+- name: Install meson via apk
+  shell: apk add --no-cache meson
+  when: parameters.method != "pip" and apk_available and meson_check.rc != 0 and apt_install.rc != 0 and dnf_install.rc != 0 and yum_install.rc != 0 and pacman_install.rc != 0 and zypper_install.rc != 0
+  become: true
+  register: apk_install
+  failed_when: false
+
+- name: Install meson via Homebrew
+  shell: brew install meson
+  when: parameters.method != "pip" and brew_available and meson_check.rc != 0 and apt_install.rc != 0 and dnf_install.rc != 0 and yum_install.rc != 0 and pacman_install.rc != 0 and zypper_install.rc != 0 and apk_install.rc != 0
+  register: brew_install
+  failed_when: false
+
+# Fall back to pip if package manager install failed or method is pip
+- name: Install meson via pip3 with version
+  shell: |
+    {% if parameters.version != 'latest' %}
+    pip3 install --user meson=={{ parameters.version }}
+    {% else %}
+    pip3 install --user meson
+    {% endif %}
+  when: meson_check.rc != 0 or parameters.method == "pip"
+  register: pip_install
+  failed_when: false
+
+# Verify installation
+- name: Verify meson is installed
   assert:
     command:
       cmd: command -v meson
       exit_code: 0
 
-- name: Display version
-  print: "meson installed"
+- name: Display meson version
+  shell: meson --version
+  register: meson_version
+
+- name: Confirm installation
+  print: "Meson {{ meson_version.stdout }} installed successfully"

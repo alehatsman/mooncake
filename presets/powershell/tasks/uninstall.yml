@@ -1,8 +1,23 @@
-- name: Uninstall powershell
+- name: Uninstall powershell (macOS)
   package:
     name: powershell
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall powershell (Linux)
+  package:
+    name: powershell
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pwsh
+      exit_code: 1
 
 - name: Display confirmation
   print: "powershell uninstalled"

@@ -9,9 +9,11 @@
     state: present
   when: fzf_check.rc != 0
 
-- name: Verify installation
-  shell: fzf --version 2>&1 || echo "installed"
-  register: fzf_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v fzf
+      exit_code: 0
 
-- name: Display version
-  print: "fzf installed: {{ fzf_version.stdout }}"
+- name: Display confirmation
+  print: "fzf installed"

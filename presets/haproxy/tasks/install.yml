@@ -3,15 +3,24 @@
   register: haproxy_check
   failed_when: false
 
-- name: Install haproxy
+- name: Install haproxy (macOS)
   package:
     name: haproxy
     state: present
-  when: haproxy_check.rc != 0
+  when: brew_available and haproxy_check.rc != 0
 
-- name: Verify installation
-  shell: haproxy --version 2>&1 || haproxy -v 2>&1 || echo "installed"
-  register: haproxy_version
+- name: Install haproxy (Linux)
+  package:
+    name: haproxy
+    state: present
+  become: true
+  when: apt_available and haproxy_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v haproxy
+      exit_code: 0
+
+- name: Display confirmation
   print: "haproxy installed"

@@ -7,7 +7,7 @@
   package:
     name: tekton-cli
     state: present
-  when: os == "darwin" and tekton_cli_check.rc != 0
+  when: brew_available and tekton_cli_check.rc != 0
 
 - name: Install tekton-cli (Linux)
   shell: |
@@ -15,7 +15,7 @@
     tar xvzf tkn_$(uname -s)_$(uname -m).tar.gz -C /tmp
     sudo mv /tmp/tkn /usr/local/bin/
     rm tkn_$(uname -s)_$(uname -m).tar.gz
-  when: os == "linux" and tekton_cli_check.rc != 0
+  when: linux and tekton_cli_check.rc != 0
 
 - name: Verify installation with assert
   assert:

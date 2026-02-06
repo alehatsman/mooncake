@@ -1,4 +1,4 @@
-name: pyroscope  
+name: pyroscope
 description: Continuous profiling platform
 version: "1.0.0"
 parameters:

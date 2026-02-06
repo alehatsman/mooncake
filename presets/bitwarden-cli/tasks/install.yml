@@ -3,15 +3,21 @@
   register: bitwarden_cli_check
   failed_when: false
 
-- name: Install bitwarden-cli
+- name: Install bitwarden-cli via Homebrew
   package:
     name: bitwarden-cli
     state: present
-  when: bitwarden_cli_check.rc != 0
+  when: brew_available and bitwarden_cli_check.rc != 0
 
-- name: Verify installation
-  shell: bw --version 2>&1 || bw -v 2>&1 || echo "installed"
-  register: bitwarden_cli_version
+- name: Install bitwarden-cli via npm
+  shell: npm install -g @bitwarden/cli
+  when: not brew_available and bitwarden_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v bw
+      exit_code: 0
+
+- name: Display confirmation
   print: "bitwarden-cli installed"

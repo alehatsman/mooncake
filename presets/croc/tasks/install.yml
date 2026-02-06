@@ -3,15 +3,24 @@
   register: croc_check
   failed_when: false
 
-- name: Install croc
+- name: Install croc via Homebrew
   package:
     name: croc
     state: present
-  when: croc_check.rc != 0
+  when: brew_available and croc_check.rc != 0
 
-- name: Verify installation
-  shell: croc --version 2>&1 || croc -v 2>&1 || echo "installed"
-  register: croc_version
+- name: Install croc via apt
+  package:
+    name: croc
+    state: present
+  become: true
+  when: apt_available and croc_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v croc
+      exit_code: 0
+
+- name: Display confirmation
   print: "croc installed"

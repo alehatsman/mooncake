@@ -7,14 +7,14 @@
   package:
     name: shellcheck
     state: present
-  when: os == "darwin" and shellcheck_check.rc != 0
+  when: brew_available and shellcheck_check.rc != 0
 
 - name: Install shellcheck (Linux)
   package:
     name: shellcheck
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and shellcheck_check.rc != 0
+  when: apt_available and shellcheck_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -2,7 +2,7 @@
   package:
     name: tflint
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall tflint (Linux)
@@ -10,7 +10,7 @@
     path: /usr/local/bin/tflint
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

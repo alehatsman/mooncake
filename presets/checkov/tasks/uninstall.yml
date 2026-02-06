@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "checkov uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v checkov
+      exit_code: 1

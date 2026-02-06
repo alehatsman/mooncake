@@ -1,5 +1,5 @@
 name: tmuxinator
-description: Utility tool
+description: Tmux session manager with project configurations
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

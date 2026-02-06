@@ -1,8 +1,20 @@
-- name: Uninstall pipenv
+- name: Uninstall pipenv (macOS)
   package:
     name: pipenv
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall pipenv (Linux)
+  shell: pip3 uninstall -y pipenv
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pipenv
+      exit_code: 1
 
 - name: Display confirmation
   print: "pipenv uninstalled"

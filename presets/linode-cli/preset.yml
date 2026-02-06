@@ -1,5 +1,5 @@
 name: linode-cli
-description: Linode CLI
+description: Linode cloud platform command-line interface
 version: "1.0.0"
 parameters:
   state:

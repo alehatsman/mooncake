@@ -3,15 +3,21 @@
   register: gox_check
   failed_when: false
 
-- name: Install gox
+- name: Install gox (macOS)
   package:
     name: gox
     state: present
-  when: gox_check.rc != 0
+  when: brew_available and gox_check.rc != 0
 
-- name: Verify installation
-  shell: gox --version 2>&1 || gox -v 2>&1 || echo "installed"
-  register: gox_version
+- name: Install gox (Linux)
+  shell: go install github.com/mitchellh/gox@latest
+  when: linux and gox_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gox
+      exit_code: 0
+
+- name: Display confirmation
   print: "gox installed"

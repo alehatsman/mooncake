@@ -2,7 +2,14 @@
   package:
     name: riak
     state: absent
+  become: true
   failed_when: false
+
+- name: Assert riak is removed
+  assert:
+    command:
+      cmd: command -v riak
+      exit_code: 1
 
 - name: Display confirmation
   print: "riak uninstalled"

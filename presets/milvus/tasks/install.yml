@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "milvus installed"
+
+- name: Verify installation
+  assert:
+    command:
+      cmd: command -v milvus
+      exit_code: 0

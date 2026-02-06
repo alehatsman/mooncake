@@ -3,15 +3,21 @@
   register: cargo_watch_check
   failed_when: false
 
-- name: Install cargo-watch
+- name: Install cargo-watch via Homebrew
   package:
     name: cargo-watch
     state: present
-  when: cargo_watch_check.rc != 0
+  when: brew_available and cargo_watch_check.rc != 0
 
-- name: Verify installation
-  shell: cargo-watch --version 2>&1 || cargo-watch -v 2>&1 || echo "installed"
-  register: cargo_watch_version
+- name: Install cargo-watch via cargo
+  shell: cargo install cargo-watch
+  when: not brew_available and cargo_watch_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cargo-watch
+      exit_code: 0
+
+- name: Display confirmation
   print: "cargo-watch installed"

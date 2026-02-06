@@ -1,8 +1,23 @@
-- name: Uninstall cmake
+- name: Uninstall cmake via Homebrew
   package:
     name: cmake
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall cmake via apt
+  package:
+    name: cmake
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v cmake
+      exit_code: 1
 
 - name: Display confirmation
   print: "cmake uninstalled"

@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "clojure installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v clj
+      exit_code: 0

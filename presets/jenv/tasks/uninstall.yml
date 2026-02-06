@@ -1,8 +1,22 @@
-- name: Uninstall jenv
+- name: Uninstall jenv (macOS)
   package:
     name: jenv
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall jenv (Linux)
+  shell: |
+    rm -rf ~/.jenv
+    sed -i '/jenv/d' ~/.bashrc 2>/dev/null || true
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v jenv
+      exit_code: 1
 
 - name: Display confirmation
   print: "jenv uninstalled"

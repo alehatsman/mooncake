@@ -3,15 +3,35 @@
   register: riak_check
   failed_when: false
 
-- name: Install riak
+- name: Install riak (macOS)
   package:
     name: riak
     state: present
-  when: riak_check.rc != 0
+  when: brew_available
+
+- name: Install riak (Debian/Ubuntu)
+  package:
+    name: riak
+    state: present
+  become: true
+  when: apt_available
+
+- name: Install riak (RHEL/Fedora)
+  package:
+    name: riak
+    state: present
+  become: true
+  when: (dnf_available | default(false)) or (yum_available | default(false))
 
 - name: Verify installation
-  shell: riak --version 2>&1 || riak -v 2>&1 || echo "installed"
+  shell: riak version 2>&1 || riak --version 2>&1 || echo "installed"
   register: riak_version
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v riak
+      exit_code: 0
 
 - name: Display version
   print: "riak installed"

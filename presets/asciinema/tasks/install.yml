@@ -3,15 +3,28 @@
   register: asciinema_check
   failed_when: false
 
-- name: Install asciinema
+- name: Install asciinema via Homebrew
   package:
     name: asciinema
     state: present
-  when: asciinema_check.rc != 0
+  when: brew_available and asciinema_check.rc != 0
 
-- name: Verify installation
-  shell: asciinema --version 2>&1 || asciinema -v 2>&1 || echo "installed"
-  register: asciinema_version
+- name: Install asciinema via apt
+  package:
+    name: asciinema
+    state: present
+  become: true
+  when: apt_available and asciinema_check.rc != 0
 
-- name: Display version
+- name: Install asciinema via pip3
+  shell: pip3 install asciinema
+  when: not brew_available and not apt_available and asciinema_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v asciinema
+      exit_code: 0
+
+- name: Display confirmation
   print: "asciinema installed"

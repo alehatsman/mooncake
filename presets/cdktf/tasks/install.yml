@@ -3,15 +3,15 @@
   register: cdktf_check
   failed_when: false
 
-- name: Install cdktf
-  package:
-    name: cdktf
-    state: present
+- name: Install cdktf via npm
+  shell: npm install -g cdktf-cli
   when: cdktf_check.rc != 0
 
-- name: Verify installation
-  shell: cdktf --version 2>&1 || cdktf -v 2>&1 || echo "installed"
-  register: cdktf_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cdktf
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "cdktf installed"

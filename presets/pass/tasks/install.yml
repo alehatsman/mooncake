@@ -3,15 +3,24 @@
   register: pass_check
   failed_when: false
 
-- name: Install pass
+- name: Install pass via Homebrew
   package:
     name: pass
     state: present
-  when: pass_check.rc != 0
+  when: (parameters.state == "present") and (os == "darwin") and (pass_check.rc != 0)
 
-- name: Verify installation
-  shell: pass --version 2>&1 || pass -v 2>&1 || echo "installed"
-  register: pass_version
+- name: Install pass via apt
+  package:
+    name: pass
+    state: present
+  become: true
+  when: (parameters.state == "present") and (os == "linux") and (pass_check.rc != 0)
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pass
+      exit_code: 0
+
+- name: Display confirmation
   print: "pass installed"

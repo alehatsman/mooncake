@@ -1,7 +1,46 @@
 name: janusgraph
-description: Graph / vector database
+description: Distributed graph database with Gremlin query support
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether JanusGraph should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: JanusGraph version to install (e.g., "1.0.0", "latest")
+
+  storage_backend:
+    type: string
+    required: false
+    default: berkeleyje
+    enum: [berkeleyje, cassandra, hbase]
+    description: Storage backend for graph data
+
+  index_backend:
+    type: string
+    required: false
+    default: lucene
+    enum: [lucene, elasticsearch, solr]
+    description: Index backend for search capabilities
+
+  service:
+    type: bool
+    required: false
+    default: false
+    description: Configure JanusGraph as system service
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install JanusGraph
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall JanusGraph
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

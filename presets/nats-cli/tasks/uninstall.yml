@@ -1,8 +1,24 @@
-- name: Uninstall nats-cli
+- name: Uninstall nats-cli (macOS)
   package:
-    name: nats-cli
+    name: natscli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall nats-cli (Linux)
+  shell: |
+    NATS_PATH=$(command -v nats 2>/dev/null)
+    if [ -n "$NATS_PATH" ]; then
+      rm -f "$NATS_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v nats
+      exit_code: 1
 
 - name: Display confirmation
   print: "nats-cli uninstalled"

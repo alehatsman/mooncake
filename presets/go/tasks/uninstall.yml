@@ -5,7 +5,7 @@
   package:
     name: go
     state: absent
-  when: os == "darwin"
+  when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Go (Debian/Ubuntu)
@@ -13,21 +13,27 @@
     name: golang-go
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Uninstall Go (Fedora/RHEL)
   package:
     name: golang
     state: absent
   become: true
-  when: os == "linux" and package_manager == "dnf"
+  when: dnf_available
 
 - name: Uninstall Go (Arch)
   package:
     name: go
     state: absent
   become: true
-  when: os == "linux" and package_manager == "pacman"
+  when: pacman_available
 
-- name: Display uninstall confirmation
-  print: "Go has been uninstalled (GOPATH {{ parameters.gopath }} remains)"
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v go
+      exit_code: 1
+
+- name: Display confirmation
+  print: "Go uninstalled"

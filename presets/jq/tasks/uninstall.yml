@@ -1,8 +1,23 @@
-- name: Uninstall jq
+- name: Uninstall jq (macOS)
   package:
     name: jq
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall jq (Linux)
+  package:
+    name: jq
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v jq
+      exit_code: 1
 
 - name: Display confirmation
   print: "jq uninstalled"

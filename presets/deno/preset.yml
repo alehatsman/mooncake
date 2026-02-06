@@ -1,5 +1,5 @@
 name: deno
-description: Node.js / JavaScript tool
+description: Install Deno - secure runtime for JavaScript and TypeScript
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

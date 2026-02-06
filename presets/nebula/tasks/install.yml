@@ -3,15 +3,28 @@
   register: nebula_check
   failed_when: false
 
-- name: Install nebula
+- name: Install nebula via Homebrew
   package:
     name: nebula
     state: present
-  when: nebula_check.rc != 0
+  when: brew_available and nebula_check.rc != 0
 
-- name: Verify installation
-  shell: nebula --version 2>&1 || nebula -v 2>&1 || echo "installed"
-  register: nebula_version
+- name: Install nebula via GitHub release
+  shell: |
+    ARCH=$(uname -m)
+    if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
+    if [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi
+    curl -sL https://github.com/slackhq/nebula/releases/latest/download/nebula-linux-${ARCH}.tar.gz | tar xz
+    sudo mv nebula /usr/local/bin/
+    sudo mv nebula-cert /usr/local/bin/
+    sudo chmod +x /usr/local/bin/nebula /usr/local/bin/nebula-cert
+  when: linux and nebula_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nebula
+      exit_code: 0
+
+- name: Display confirmation
   print: "nebula installed"

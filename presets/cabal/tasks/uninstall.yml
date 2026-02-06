@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "cabal uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v cabal
+      exit_code: 1

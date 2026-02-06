@@ -2,32 +2,38 @@
 
 - name: Stop Kafka service (macOS)
   shell: brew services stop kafka
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Stop Kafka service (Linux)
   shell: |
     pkill -f kafka.Kafka
     pkill -f zookeeper
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Uninstall Kafka (macOS)
   shell: brew uninstall kafka
-  when: os == "darwin"
+  when: brew_available
 
 - name: Remove Kafka directory (Linux)
   file:
     path: /opt/kafka
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
 
 - name: Remove Kafka user (Linux)
   shell: sudo userdel kafka
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
+
+- name: Assert Kafka is removed
+  assert:
+    command:
+      cmd: command -v kafka-topics.sh
+      exit_code: 1
 
 - name: Display uninstall confirmation
   print: "Kafka uninstalled. Data directory preserved at {{ parameters.data_dir }}"

@@ -1,13 +1,13 @@
-- name: Uninstall mise (macOS)
+- name: Uninstall mise via Homebrew
   package:
     name: mise
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall mise (Linux)
+- name: Uninstall mise files
   shell: rm -rf ~/.local/share/mise ~/.local/bin/mise ~/.config/mise
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

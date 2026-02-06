@@ -3,15 +3,24 @@
   register: borg_check
   failed_when: false
 
-- name: Install borg
+- name: Install borgbackup via Homebrew
   package:
-    name: borg
+    name: borgbackup
     state: present
-  when: borg_check.rc != 0
+  when: brew_available and borg_check.rc != 0
 
-- name: Verify installation
-  shell: borg --version 2>&1 || borg -v 2>&1 || echo "installed"
-  register: borg_version
+- name: Install borgbackup via apt
+  package:
+    name: borgbackup
+    state: present
+  become: true
+  when: apt_available and borg_check.rc != 0
 
-- name: Display version
-  print: "borg installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v borg
+      exit_code: 0
+
+- name: Display confirmation
+  print: "borgbackup installed"

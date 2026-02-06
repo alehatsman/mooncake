@@ -3,15 +3,24 @@
   register: leiningen_check
   failed_when: false
 
-- name: Install leiningen
+- name: Install leiningen via Homebrew
   package:
     name: leiningen
     state: present
-  when: leiningen_check.rc != 0
+  when: brew_available and leiningen_check.rc != 0
 
-- name: Verify installation
-  shell: lein --version 2>&1 || lein -v 2>&1 || echo "installed"
-  register: leiningen_version
+- name: Install leiningen (Linux)
+  package:
+    name: leiningen
+    state: present
+  become: true
+  when: apt_available and leiningen_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v lein
+      exit_code: 0
+
+- name: Display confirmation
   print: "leiningen installed"

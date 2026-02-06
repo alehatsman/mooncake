@@ -3,15 +3,24 @@
   register: kubectl_check
   failed_when: false
 
-- name: Install kubectl
+- name: Install kubectl (macOS)
   package:
     name: kubectl
     state: present
-  when: kubectl_check.rc != 0
+  when: brew_available and kubectl_check.rc != 0
 
-- name: Verify installation
-  shell: kubectl --version 2>&1 || echo "installed"
-  register: kubectl_version
+- name: Install kubectl (Linux)
+  shell: |
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm kubectl
+  when: linux and kubectl_check.rc != 0
 
-- name: Display version
-  print: "kubectl installed: {{ kubectl_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kubectl
+      exit_code: 0
+
+- name: Display confirmation
+  print: "kubectl installed"

@@ -1,31 +1,70 @@
-# ant
+# Apache Ant - Java Build Tool
 
-Java/JVM tool
+Build automation tool for Java projects. XML-based build scripts with extensive task library.
 
 ## Quick Start
-
 ```yaml
 - preset: ant
 ```
 
-## Usage
+## Features
+- **XML build files**: Declarative build configuration
+- **Extensive tasks**: Compile, test, package, deploy
+- **Cross-platform**: Runs on any Java-supported platform
+- **Extensible**: Custom tasks in Java
+- **Dependencies**: Target dependency management
+- **Properties**: Build-time configuration via properties
+- **Ant-contrib**: Additional tasks via extensions
 
+## Basic Usage
 ```bash
-# Basic usage
-ant --help
+# Run default target
+ant
 
-# Common operations
-ant --version
+# Run specific target
+ant compile
+
+# Run multiple targets
+ant clean compile test
+
+# Use custom build file
+ant -f custom-build.xml
+
+# Set property
+ant -Dversion=1.0.0 build
 ```
 
-## Agent Use
+## Advanced Configuration
+```yaml
+- preset: ant
+  with:
+    state: present
+  become: true
+```
 
-Automation-friendly CLI tool with:
-- Exit codes for error handling  
-- JSON/YAML output support (where applicable)
-- Scriptable interface
-- Idempotent operations
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Agent Use
+- Automated deployment and configuration
+- Infrastructure as code workflows
+- CI/CD pipeline integration
+- Development environment setup
+- Production service management
+
+## Uninstall
+```yaml
+- preset: ant
+  with:
+    state: absent
+```
 
 ## Resources
-
-Search: "ant documentation" or "ant github"
+- Search: "ant documentation", "ant tutorial"

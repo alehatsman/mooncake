@@ -3,15 +3,24 @@
   register: helix_check
   failed_when: false
 
-- name: Install helix
+- name: Install helix (macOS)
   package:
     name: helix
     state: present
-  when: helix_check.rc != 0
+  when: brew_available and helix_check.rc != 0
 
-- name: Verify installation
-  shell: hx --version 2>&1 || hx -v 2>&1 || echo "installed"
-  register: helix_version
+- name: Install helix (Linux)
+  package:
+    name: helix
+    state: present
+  become: true
+  when: apt_available and helix_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v hx
+      exit_code: 0
+
+- name: Display confirmation
   print: "helix installed"

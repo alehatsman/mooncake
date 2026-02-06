@@ -1,5 +1,5 @@
 name: minio
-description: Install and configure MinIO S3-compatible object storage
+description: S3-compatible object storage server for private cloud and data lakes
 version: 1.0.0
 
 parameters:

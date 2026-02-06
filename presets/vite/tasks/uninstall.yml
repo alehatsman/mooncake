@@ -2,12 +2,12 @@
   package:
     name: vite
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall vite (Linux)
   shell: npm uninstall -g vite
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

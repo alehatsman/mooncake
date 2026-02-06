@@ -3,15 +3,35 @@
   register: gcloud_check
   failed_when: false
 
-- name: Install gcloud
+- name: Install gcloud (macOS)
   package:
-    name: gcloud
+    name: google-cloud-sdk
     state: present
-  when: gcloud_check.rc != 0
+  when: brew_available and gcloud_check.rc != 0
 
-- name: Verify installation
-  shell: gcloud --version 2>&1 || gcloud -v 2>&1 || echo "installed"
-  register: gcloud_version
+- name: Install gcloud prerequisites (Linux)
+  shell: sudo apt-get update -qq && sudo apt-get install -y -qq apt-transport-https ca-certificates gnupg curl
+  when: apt_available and gcloud_check.rc != 0
 
-- name: Display version
+- name: Add Google Cloud SDK repository (Linux)
+  shell: |
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+    sudo apt-get update -qq
+  when: apt_available and gcloud_check.rc != 0
+
+- name: Install gcloud (Linux)
+  package:
+    name: google-cloud-sdk
+    state: present
+  become: true
+  when: apt_available and gcloud_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gcloud
+      exit_code: 0
+
+- name: Display confirmation
   print: "gcloud installed"

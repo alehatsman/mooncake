@@ -7,11 +7,11 @@
   package:
     name: usql
     state: present
-  when: os == "darwin" and usql_check.rc != 0
+  when: brew_available and usql_check.rc != 0
 
 - name: Install usql (Linux)
   shell: go install github.com/xo/usql@latest
-  when: os == "linux" and usql_check.rc != 0
+  when: linux and usql_check.rc != 0
 
 - name: Verify installation with assert
   assert:

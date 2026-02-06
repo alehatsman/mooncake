@@ -1,7 +1,13 @@
 name: shellcheck
-description: Utility tool
+description: Static analysis tool for shell scripts that catches bugs and enforces best practices
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether shellcheck should be installed or removed
 steps:
   - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
   - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

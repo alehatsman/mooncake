@@ -3,15 +3,21 @@
   register: oh_my_posh_check
   failed_when: false
 
-- name: Install oh-my-posh
+- name: Install oh-my-posh via Homebrew
   package:
     name: oh-my-posh
     state: present
-  when: oh_my_posh_check.rc != 0
+  when: brew_available and oh_my_posh_check.rc != 0
 
-- name: Verify installation
-  shell: oh-my-posh --version 2>&1 || oh-my-posh -v 2>&1 || echo "installed"
-  register: oh_my_posh_version
+- name: Install oh-my-posh via install script
+  shell: curl -s https://ohmyposh.dev/install.sh | bash -s
+  when: linux and oh_my_posh_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v oh-my-posh
+      exit_code: 0
+
+- name: Display confirmation
   print: "oh-my-posh installed"

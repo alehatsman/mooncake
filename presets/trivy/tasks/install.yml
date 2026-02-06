@@ -7,14 +7,14 @@
   package:
     name: trivy
     state: present
-  when: os == "darwin" and trivy_check.rc != 0
+  when: brew_available and trivy_check.rc != 0
 
 - name: Install trivy (Linux)
   shell: |
     wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
     echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
     sudo apt-get update && sudo apt-get install -y trivy
-  when: os == "linux" and package_manager == "apt" and trivy_check.rc != 0
+  when: apt_available and trivy_check.rc != 0
 
 - name: Verify installation with assert
   assert:

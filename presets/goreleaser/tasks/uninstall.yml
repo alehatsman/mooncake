@@ -1,8 +1,24 @@
-- name: Uninstall goreleaser
+- name: Uninstall goreleaser (macOS)
   package:
     name: goreleaser
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall goreleaser (Linux)
+  shell: |
+    GORELEASER_PATH=$(command -v goreleaser 2>/dev/null)
+    if [ -n "$GORELEASER_PATH" ]; then
+      sudo rm -f "$GORELEASER_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v goreleaser
+      exit_code: 1
 
 - name: Display confirmation
   print: "goreleaser uninstalled"

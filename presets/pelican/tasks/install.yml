@@ -3,15 +3,19 @@
   register: pelican_check
   failed_when: false
 
-- name: Install pelican
-  package:
-    name: pelican
-    state: present
+- name: Install pelican via pip3
+  shell: pip3 install --user pelican
   when: pelican_check.rc != 0
 
-- name: Verify installation
-  shell: pelican --version 2>&1 || pelican -v 2>&1 || echo "installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pelican
+      exit_code: 0
+
+- name: Get pelican version
+  shell: pelican --version 2>&1 | head -1
   register: pelican_version
 
 - name: Display version
-  print: "pelican installed"
+  print: "pelican installed: {{ pelican_version.stdout }}"

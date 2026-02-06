@@ -10,7 +10,7 @@
   package:
     name: mysql
     state: present
-  when: os == "darwin" and mysql_check.rc != 0
+  when: brew_available and mysql_check.rc != 0
 
 # Linux - Debian/Ubuntu
 - name: Install MySQL (Debian/Ubuntu)
@@ -18,7 +18,7 @@
     name: mysql-server
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and mysql_check.rc != 0
+  when: apt_available and mysql_check.rc != 0
 
 # Linux - RHEL/Fedora/CentOS
 - name: Install MySQL (RHEL/Fedora/CentOS)
@@ -26,7 +26,7 @@
     name: mysql-server
     state: present
   become: true
-  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum") and mysql_check.rc != 0
+  when: dnf_available or yum_available and mysql_check.rc != 0
 
 # Linux - Arch
 - name: Install MySQL (Arch)
@@ -34,12 +34,18 @@
     name: mysql
     state: present
   become: true
-  when: os == "linux" and package_manager == "pacman" and mysql_check.rc != 0
+  when: pacman_available and mysql_check.rc != 0
 
 # Verify installation
-- name: Verify MySQL installation
+- name: Verify mysql is installed
+  assert:
+    command:
+      cmd: command -v mysql
+      exit_code: 0
+
+- name: Display MySQL version
   shell: mysql --version
   register: mysql_version
 
-- name: Display MySQL version
+- name: Print version
   print: "MySQL installed: {{ mysql_version.stdout }}"

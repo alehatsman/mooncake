@@ -1,8 +1,20 @@
-- name: Uninstall black
+- name: Uninstall black via Homebrew
   package:
     name: black
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall black via pip3
+  shell: pip3 uninstall -y black
+  when: not brew_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v black
+      exit_code: 1
 
 - name: Display confirmation
   print: "black uninstalled"

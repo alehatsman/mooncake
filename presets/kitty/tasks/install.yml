@@ -13,5 +13,11 @@
   shell: kitty --version 2>&1 || kitty -v 2>&1 || echo "installed"
   register: kitty_version
 
+- name: Assert kitty is installed
+  assert:
+    command:
+      cmd: command -v kitty
+      exit_code: 0
+
 - name: Display version
   print: "kitty installed"

@@ -8,7 +8,7 @@
 # macOS Installation
 - name: Install k9s via Homebrew (macOS)
   shell: brew install derailed/k9s/k9s
-  when: os == "darwin" and k9s_check.rc != 0
+  when: brew_available and k9s_check.rc != 0
 
 # Linux Installation
 - name: Download and install k9s (Linux)
@@ -19,15 +19,17 @@
     sudo mv /tmp/k9s /usr/local/bin/
     sudo chmod +x /usr/local/bin/k9s
     rm /tmp/k9s.tar.gz /tmp/README.md /tmp/LICENSE
-  when: os == "linux" and k9s_check.rc != 0
+  when: linux and k9s_check.rc != 0
 
 # Verify installation
-- name: Verify k9s installation
-  shell: k9s version
-  register: k9s_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v k9s
+      exit_code: 0
 
-- name: Display k9s version
-  print: "k9s installed: {{ k9s_version.stdout }}"
+- name: Display confirmation
+  print: "k9s installed"
 
 # Check for kubectl
 - name: Check if kubectl is installed

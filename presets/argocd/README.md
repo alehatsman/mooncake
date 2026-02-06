@@ -7,6 +7,16 @@ Declarative GitOps CD for Kubernetes. Sync apps from Git, automate deployments, 
 - preset: argocd
 ```
 
+## Features
+- **GitOps workflow**: Declarative app deployment from Git repositories
+- **Multi-cluster support**: Manage applications across multiple Kubernetes clusters
+- **Automated sync**: Continuous reconciliation of desired vs actual state
+- **Web UI + CLI**: Full-featured GUI and command-line interface
+- **SSO integration**: OIDC, SAML, LDAP authentication
+- **RBAC**: Fine-grained access control for projects and applications
+- **Rollback**: Easy rollback to previous versions
+- **Health assessment**: Automatic application health checking
+
 ## Basic Usage
 ```bash
 # Login
@@ -343,15 +353,137 @@ kubectl get events -n myapp
 - SSO integration (OIDC, SAML, LDAP)
 - Webhook support for instant sync
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Real-World Examples
+
+### CI/CD Pipeline Integration
+```bash
+#!/bin/bash
+# deploy.sh - Automated deployment via ArgoCD
+
+# Login with token from CI secret
+argocd login argocd.example.com --auth-token $ARGOCD_TOKEN --grpc-web
+
+# Update image tag in Git (GitOps approach)
+git clone https://github.com/org/k8s-manifests
+cd k8s-manifests
+yq eval ".spec.template.spec.containers[0].image = \"myapp:$CI_COMMIT_SHA\"" \
+  -i overlays/production/deployment.yaml
+git commit -am "Update production to $CI_COMMIT_SHA"
+git push
+
+# Sync and wait for deployment
+argocd app sync myapp-prod --prune --timeout 600
+argocd app wait myapp-prod --health --timeout 600
+
+# Verify deployment
+argocd app get myapp-prod --show-params
+```
+
+### Multi-Environment Promotion
+```bash
+#!/bin/bash
+# promote.sh - Promote image from staging to production
+
+STAGING_IMAGE=$(argocd app get myapp-staging -o json | \
+  jq -r '.spec.source.helm.parameters[] | select(.name=="image.tag") | .value')
+
+echo "Promoting $STAGING_IMAGE from staging to production"
+
+# Update production app
+argocd app set myapp-prod \
+  --helm-set image.tag=$STAGING_IMAGE \
+  --helm-set environment=production
+
+# Sync with confirmation
+argocd app sync myapp-prod --dry-run
+read -p "Proceed with production deployment? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  argocd app sync myapp-prod --timeout 600
+  argocd app wait myapp-prod --health
+  echo "Production deployment complete: $STAGING_IMAGE"
+fi
+```
+
+### Disaster Recovery
+```bash
+#!/bin/bash
+# rollback.sh - Quick rollback to previous revision
+
+APP_NAME="myapp-prod"
+
+# Get current and previous revisions
+CURRENT=$(argocd app get $APP_NAME -o json | jq -r '.status.sync.revision')
+HISTORY=$(argocd app history $APP_NAME -o json)
+PREVIOUS=$(echo $HISTORY | jq -r '.[1].revision')
+
+echo "Current: $CURRENT"
+echo "Rolling back to: $PREVIOUS"
+
+# Rollback
+argocd app rollback $APP_NAME $(echo $HISTORY | jq -r '.[1].id')
+argocd app wait $APP_NAME --sync --health --timeout 300
+
+echo "Rollback complete"
+```
+
+### Cluster Migration
+```bash
+#!/bin/bash
+# migrate-cluster.sh - Move app to new cluster
+
+SOURCE_APP="myapp-old-cluster"
+DEST_CLUSTER="https://new-cluster.k8s.local"
+
+# Export app definition
+argocd app get $SOURCE_APP -o yaml > myapp-export.yaml
+
+# Create on new cluster
+sed "s|destination:.*|destination:\n  server: $DEST_CLUSTER|g" \
+  myapp-export.yaml | argocd app create -f -
+
+# Sync to new cluster
+argocd app sync myapp-new-cluster --timeout 600
+
+# Verify before deletion
+argocd app get myapp-new-cluster
+read -p "Delete old app? (y/n) " -n 1 -r
+echo
+[[ $REPLY =~ ^[Yy]$ ]] && argocd app delete $SOURCE_APP --cascade
+```
+
 ## Agent Use
-- Automated deployment pipelines
-- Multi-environment management
-- GitOps workflow automation
-- Cluster bootstrapping
-- Application lifecycle management
-- Compliance enforcement
+- Automated GitOps deployment pipelines with sync and health checks
+- Multi-environment promotion workflows (dev → staging → production)
+- Disaster recovery and rollback automation
+- Cluster migration and application portability
+- Compliance enforcement through policy-as-code
+- Application lifecycle management across Kubernetes clusters
 
 ## Uninstall
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install argocd
+  preset: argocd
+
+- name: Use argocd in automation
+  shell: |
+    # Custom configuration here
+    echo "argocd configured"
+```
+
 ```yaml
 - preset: argocd
   with:

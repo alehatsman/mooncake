@@ -1,8 +1,20 @@
-- name: Uninstall procs
+- name: Uninstall procs (macOS)
   package:
     name: procs
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall procs (Linux)
+  shell: cargo uninstall procs
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v procs
+      exit_code: 1
 
 - name: Display confirmation
   print: "procs uninstalled"

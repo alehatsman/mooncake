@@ -1,5 +1,5 @@
 name: nim
-description: Language tool
+description: Efficient systems programming language with Python-like syntax and C performance
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

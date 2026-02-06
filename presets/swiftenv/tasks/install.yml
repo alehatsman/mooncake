@@ -7,11 +7,11 @@
   package:
     name: swiftenv
     state: present
-  when: os == "darwin" and swiftenv_check.rc != 0
+  when: brew_available and swiftenv_check.rc != 0
 
 - name: Install swiftenv (Linux)
   shell: git clone https://github.com/kylef/swiftenv.git ~/.swiftenv
-  when: os == "linux" and swiftenv_check.rc != 0
+  when: linux and swiftenv_check.rc != 0
 
 - name: Verify installation with assert
   assert:

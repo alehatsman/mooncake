@@ -3,15 +3,21 @@
   register: linode_cli_check
   failed_when: false
 
-- name: Install linode-cli
+- name: Install linode-cli (macOS)
   package:
     name: linode-cli
     state: present
-  when: linode_cli_check.rc != 0
+  when: brew_available and linode_cli_check.rc != 0
 
-- name: Verify installation
-  shell: linode-cli --version 2>&1 || linode-cli -v 2>&1 || echo "installed"
-  register: linode_cli_version
+- name: Install linode-cli (Linux)
+  shell: pip3 install --user linode-cli
+  when: linux and linode_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v linode-cli
+      exit_code: 0
+
+- name: Display confirmation
   print: "linode-cli installed"

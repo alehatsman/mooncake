@@ -3,15 +3,24 @@
   register: kubectx_check
   failed_when: false
 
-- name: Install kubectx
+- name: Install kubectx (macOS)
   package:
     name: kubectx
     state: present
-  when: kubectx_check.rc != 0
+  when: brew_available and kubectx_check.rc != 0
 
-- name: Verify installation
-  shell: kubectx --version 2>&1 || echo "installed"
-  register: kubectx_version
+- name: Install kubectx (Linux)
+  shell: |
+    curl -sL https://github.com/ahmetb/kubectx/releases/latest/download/kubectx -o /tmp/kubectx
+    sudo mv /tmp/kubectx /usr/local/bin/kubectx
+    sudo chmod +x /usr/local/bin/kubectx
+  when: linux and kubectx_check.rc != 0
 
-- name: Display version
-  print: "kubectx installed: {{ kubectx_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v kubectx
+      exit_code: 0
+
+- name: Display confirmation
+  print: "kubectx installed"

@@ -1,8 +1,23 @@
-- name: Uninstall croc
+- name: Uninstall croc via Homebrew
   package:
     name: croc
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall croc via apt
+  package:
+    name: croc
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v croc
+      exit_code: 1
 
 - name: Display confirmation
   print: "croc uninstalled"

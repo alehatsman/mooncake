@@ -1,5 +1,5 @@
 name: memcached
-description: Install Memcached high-performance distributed memory caching system
+description: Install Memcached, a free, open-source, high-performance distributed memory caching system for reducing database load
 version: 1.0.0
 
 parameters:

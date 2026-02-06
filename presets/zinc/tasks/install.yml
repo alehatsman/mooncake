@@ -3,15 +3,15 @@
   register: zinc_check
   failed_when: false
 
-- name: Install zinc (macOS)
+- name: Install zinc via Homebrew
   package:
     name: zinc
     state: present
-  when: os == "darwin" and zinc_check.rc != 0
+  when: brew_available and zinc_check.rc != 0
 
-- name: Install zinc (Linux)
+- name: Install zinc via cargo
   shell: cargo install zinc
-  when: os == "linux" and zinc_check.rc != 0
+  when: not brew_available and zinc_check.rc != 0
 
 - name: Verify installation with assert
   assert:

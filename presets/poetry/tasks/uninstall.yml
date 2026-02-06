@@ -1,8 +1,21 @@
-- name: Uninstall poetry
+- name: Uninstall poetry (macOS)
   package:
     name: poetry
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall poetry (Linux)
+  shell: |
+    curl -sSL https://install.python-poetry.org | python3 - --uninstall
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v poetry
+      exit_code: 1
 
 - name: Display confirmation
   print: "poetry uninstalled"

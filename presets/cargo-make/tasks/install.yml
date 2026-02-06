@@ -3,15 +3,21 @@
   register: cargo_make_check
   failed_when: false
 
-- name: Install cargo-make
+- name: Install cargo-make via Homebrew
   package:
     name: cargo-make
     state: present
-  when: cargo_make_check.rc != 0
+  when: brew_available and cargo_make_check.rc != 0
 
-- name: Verify installation
-  shell: cargo-make --version 2>&1 || cargo-make -v 2>&1 || echo "installed"
-  register: cargo_make_version
+- name: Install cargo-make via cargo
+  shell: cargo install cargo-make
+  when: not brew_available and cargo_make_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cargo-make
+      exit_code: 0
+
+- name: Display confirmation
   print: "cargo-make installed"

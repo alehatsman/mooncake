@@ -1,8 +1,28 @@
-- name: Uninstall bandwhich
+- name: Uninstall bandwhich via Homebrew
   package:
     name: bandwhich
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall bandwhich via apt
+  package:
+    name: bandwhich
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Uninstall bandwhich via cargo
+  shell: cargo uninstall bandwhich
+  when: not brew_available and not apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v bandwhich
+      exit_code: 1
 
 - name: Display confirmation
   print: "bandwhich uninstalled"

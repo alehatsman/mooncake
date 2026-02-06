@@ -3,15 +3,24 @@
   register: pyroscope_check
   failed_when: false
 
-- name: Install pyroscope
+- name: Install pyroscope via Homebrew
   package:
     name: pyroscope
     state: present
-  when: pyroscope_check.rc != 0
+  when: brew_available and pyroscope_check.rc != 0
 
-- name: Verify installation
-  shell: pyroscope --version 2>&1 || pyroscope -v 2>&1 || echo "installed"
-  register: pyroscope_version
+- name: Install pyroscope via apt
+  package:
+    name: pyroscope
+    state: present
+  become: true
+  when: apt_available and pyroscope_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pyroscope
+      exit_code: 0
+
+- name: Display confirmation
   print: "pyroscope installed"

@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "datadog-agent uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v datadog-agent
+      exit_code: 1

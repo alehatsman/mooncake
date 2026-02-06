@@ -1,31 +1,69 @@
-# anchore
+# Anchore - Container Security
 
-Security scanning tool
+Container image security and compliance scanning. Detect vulnerabilities, enforce policies, and generate SBOMs.
 
 ## Quick Start
-
 ```yaml
 - preset: anchore
 ```
 
-## Usage
+## Features
+- **Vulnerability scanning**: CVE detection in container images
+- **Policy enforcement**: Custom security and compliance policies
+- **SBOM generation**: Software Bill of Materials creation
+- **CI/CD integration**: Scan in build pipelines
+- **Multi-registry**: Scan images from any registry
+- **Continuous monitoring**: Track vulnerabilities over time
+- **Compliance reports**: Generate compliance documentation
 
+## Basic Usage
 ```bash
-# Basic usage
-anchore --help
+# Scan image
+anchore-cli image add docker.io/library/nginx:latest
+anchore-cli image wait docker.io/library/nginx:latest
+anchore-cli image vuln docker.io/library/nginx:latest all
 
-# Common operations
-anchore --version
+# List images
+anchore-cli image list
+
+# Policy check
+anchore-cli evaluate check docker.io/library/nginx:latest
+
+# Generate SBOM
+anchore-cli image content docker.io/library/nginx:latest os
 ```
 
-## Agent Use
+## Advanced Configuration
+```yaml
+- preset: anchore
+  with:
+    state: present
+  become: true
+```
 
-Automation-friendly CLI tool with:
-- Exit codes for error handling  
-- JSON/YAML output support (where applicable)
-- Scriptable interface
-- Idempotent operations
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
+## Agent Use
+- Automated deployment and configuration
+- Infrastructure as code workflows
+- CI/CD pipeline integration
+- Development environment setup
+- Production service management
+
+## Uninstall
+```yaml
+- preset: anchore
+  with:
+    state: absent
+```
 
 ## Resources
-
-Search: "anchore documentation" or "anchore github"
+- Search: "anchore documentation", "anchore tutorial"

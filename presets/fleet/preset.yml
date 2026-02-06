@@ -1,5 +1,5 @@
 name: fleet
-description: GitOps / CD tool
+description: Install Rancher Fleet - GitOps at scale for managing Kubernetes clusters
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

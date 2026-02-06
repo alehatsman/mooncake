@@ -1,7 +1,20 @@
 name: restic
-description: File transfer / backup tool
+description: Fast, secure backup program with encryption and deduplication
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether restic should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install restic
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall restic
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

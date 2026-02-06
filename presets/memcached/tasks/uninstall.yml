@@ -1,8 +1,29 @@
-- name: Uninstall memcached
-  package:
-    name: memcached
-    state: absent
+- name: Uninstall memcached via apt
+  shell: apt-get remove -y memcached
+  when: apt_available
+  become: true
   failed_when: false
 
-- name: Display confirmation
-  print: "memcached uninstalled"
+- name: Uninstall memcached via dnf
+  shell: dnf remove -y memcached
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Uninstall memcached via yum
+  shell: yum remove -y memcached
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Uninstall memcached via Homebrew
+  shell: brew uninstall memcached
+  when: brew_available
+  failed_when: false
+
+- name: Verify memcached is not installed
+  assert:
+    command:
+      cmd: command -v memcached
+      exit_code: 1
+  failed_when: false

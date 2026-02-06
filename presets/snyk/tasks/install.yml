@@ -7,11 +7,11 @@
   package:
     name: snyk
     state: present
-  when: os == "darwin" and snyk_check.rc != 0
+  when: brew_available and snyk_check.rc != 0
 
 - name: Install snyk (Linux)
   shell: npm install -g snyk
-  when: os == "linux" and snyk_check.rc != 0
+  when: linux and snyk_check.rc != 0
 
 - name: Verify installation with assert
   assert:

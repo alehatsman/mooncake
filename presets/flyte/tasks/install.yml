@@ -13,5 +13,11 @@
   shell: flytectl --version 2>&1 || flytectl -v 2>&1 || echo "installed"
   register: flyte_version
 
+- name: Assert flytectl is installed
+  assert:
+    command:
+      cmd: command -v flytectl
+      exit_code: 0
+
 - name: Display version
   print: "flyte installed"

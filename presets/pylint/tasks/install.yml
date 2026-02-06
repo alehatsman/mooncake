@@ -3,15 +3,21 @@
   register: pylint_check
   failed_when: false
 
-- name: Install pylint
+- name: Install  via Homebrew
   package:
     name: pylint
     state: present
-  when: pylint_check.rc != 0
+  when: brew_available and pylint_check.rc != 0
 
-- name: Verify installation
-  shell: pylint --version 2>&1 || pylint -v 2>&1 || echo "installed"
-  register: pylint_version
+- name: Install pylint via apt
+  shell: pip3 install --user pylint
+  when: linux and pylint_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pylint
+      exit_code: 0
+
+- name: Display confirmation
   print: "pylint installed"

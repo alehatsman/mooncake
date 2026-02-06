@@ -1,7 +1,26 @@
 name: zig
-description: Language tool
-version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+description: General-purpose programming language and toolchain for maintaining robust, optimal, and reusable software
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Zig should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: Zig version to install (e.g., "0.12.0", "latest")
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install Zig
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Zig
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

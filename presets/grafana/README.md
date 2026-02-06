@@ -4,6 +4,10 @@
 
 ## Quick Start
 
+```yaml
+- preset: grafana
+```
+
 ```bash
 # Access web UI
 open http://localhost:3000  # macOS
@@ -14,13 +18,19 @@ Username: admin
 Password: admin  # (change on first login)
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Configuration
 
 - **Config file:** `/etc/grafana/grafana.ini` (Linux), `/usr/local/etc/grafana/grafana.ini` (macOS)
 - **Data directory:** `/var/lib/grafana`
 - **Web UI port:** 3000 (default)
 
-## Common Operations
+## Basic Usage
 
 ```bash
 # Restart Grafana
@@ -70,6 +80,12 @@ curl -u admin:admin -X POST \
 Dashboard ID: 1860
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
 ## Uninstall
 
 ```yaml
@@ -79,3 +95,23 @@ Dashboard ID: 1860
 ```
 
 **Note:** Configuration and data in `/var/lib/grafana` preserved after uninstall.
+
+## Advanced Configuration
+```yaml
+- preset: grafana
+  with:
+    state: present
+```
+
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove grafana |
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
+
+## Resources
+- Search: "grafana documentation", "grafana tutorial"

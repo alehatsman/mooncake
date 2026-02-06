@@ -2,6 +2,17 @@
 
 Lightweight Ruby version management. Install and switch Ruby versions per project without sudo.
 
+## Features
+
+- **Multiple Ruby versions** - MRI, JRuby, TruffleRuby support
+- **Shim-based** - No PATH pollution
+- **Zero config** - Works out of box
+- **Per-project versions** - Automatic .ruby-version detection
+- **Plugin system** - ruby-build, rbenv-vars, etc.
+- **Shell integration** - Bash, Zsh, Fish
+- **Bundler compatible** - Works seamlessly
+- **Fast** - < 3000 lines of bash
+
 ## Quick Start
 ```yaml
 - preset: rbenv
@@ -317,6 +328,87 @@ rm -rf ~/.rbenv/cache
 | Gemsets | Plugin | Built-in | No | No |
 | Speed | Fast | Slow | Fastest | Fast |
 | Ruby only | Yes | Yes | Yes | No (Multi) |
+
+## Advanced Configuration
+
+### Custom RUBY_ROOT
+```bash
+export RBENV_ROOT=/opt/rbenv
+```
+
+### Build with Custom Options
+```bash
+# JIT compilation
+RUBY_CONFIGURE_OPTS="--enable-yjit" rbenv install 3.3.0
+
+# OpenSSL path
+RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@3)" \
+  rbenv install 3.3.0
+
+# Jemalloc allocator
+RUBY_CONFIGURE_OPTS="--with-jemalloc" rbenv install 3.3.0
+
+# All optimizations
+RUBY_CONFIGURE_OPTS="--enable-yjit --with-jemalloc" \
+CFLAGS="-O3 -march=native" \
+rbenv install 3.3.0
+```
+
+### Speed Optimization
+```bash
+# Parallel builds
+export MAKEFLAGS="-j $(nproc)"
+
+# Cache downloads
+export RUBY_BUILD_CACHE_PATH=~/.rbenv/cache
+```
+
+### Default Gems
+```bash
+# Auto-install on every new Ruby
+cat > ~/.rbenv/default-gems <<EOF
+bundler
+rake
+pry
+rubocop
+solargraph
+EOF
+```
+
+### Environment Variables (rbenv-vars plugin)
+```bash
+# Per-project environment
+cat > .rbenv-vars <<EOF
+RAILS_ENV=development
+DATABASE_URL=postgres://localhost/mydb
+REDIS_URL=redis://localhost:6379
+EOF
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `state` | string | `present` | `present` or `absent` |
+| `version` | string | `3.3.0` | Ruby version to install |
+| `set_global` | bool | `true` | Set as global Ruby version |
+| `additional_versions` | array | `[]` | Other versions to install |
+| `install_bundler` | bool | `true` | Install Bundler gem |
+
+## Platform Support
+
+- ✅ **Linux** - All distributions
+- ✅ **macOS** - Intel and Apple Silicon
+- ✅ **FreeBSD/OpenBSD** - Community supported
+- ⚠️ **Windows** - WSL only
+
+**Build Requirements:**
+- GCC or Clang
+- Make
+- OpenSSL
+- readline
+- zlib
+- libyaml
 
 ## Migration from RVM
 ```bash

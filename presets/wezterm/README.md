@@ -2,6 +2,16 @@
 
 Modern cross-platform terminal emulator with GPU acceleration, built-in multiplexer, and Lua configuration.
 
+## Features
+- **GPU acceleration**: WebGPU/OpenGL rendering
+- **Built-in multiplexer**: Tabs and splits without tmux
+- **Lua configuration**: Full programming language for config
+- **SSH integration**: Built-in SSH multiplexing
+- **Image protocol**: Display images in terminal
+- **Ligatures**: Font ligature support
+- **Color schemes**: 200+ built-in themes
+- **Cross-platform**: Linux, macOS, Windows
+
 ## Quick Start
 ```yaml
 - preset: wezterm
@@ -454,6 +464,58 @@ wezterm cli capture-pane --pane-id 0
 - SSH multiplexing
 - Serial port support
 - Active development
+
+## Advanced Configuration
+
+### Theme Switching
+```lua
+-- Auto dark/light mode
+wezterm.on('window-config-reloaded', function(window, pane)
+  local appearance = window:get_appearance()
+  if appearance:find('Dark') then
+    window:set_config_overrides({
+      color_scheme = 'Tokyo Night'
+    })
+  else
+    window:set_config_overrides({
+      color_scheme = 'Tokyo Night Day'
+    })
+  end
+end)
+```
+
+### Smart Tab Management
+```lua
+-- Auto-name tabs
+wezterm.on('format-tab-title', function(tab, tabs, panes, config, hover, max_width)
+  local pane = tab.active_pane
+  local process = pane.foreground_process_name
+  local title = process:match("([^/\\]+)$") or process
+  return {
+    {Text = ' ' .. tab.tab_index + 1 .. ': ' .. title .. ' '},
+  }
+end)
+```
+
+### Performance Tuning
+```lua
+-- Maximum performance
+config.front_end = 'WebGpu'
+config.max_fps = 120
+config.animation_fps = 1
+config.cursor_blink_rate = 0
+```
+
+## Platform Support
+- ✅ Linux (AppImage, packages)
+- ✅ macOS (Homebrew, DMG)
+- ✅ Windows (MSI installer)
+- ✅ BSD systems (packages)
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove wezterm |
 
 ## Agent Use
 - Automated terminal sessions

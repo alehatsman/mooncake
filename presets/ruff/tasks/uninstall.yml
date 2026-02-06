@@ -2,12 +2,12 @@
   package:
     name: ruff
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall ruff (Linux)
   shell: pip3 uninstall -y ruff
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

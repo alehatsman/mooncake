@@ -1,5 +1,5 @@
 name: bandwhich
-description: Network bandwidth monitor
+description: Terminal bandwidth utilization tool showing real-time network usage per process
 version: "1.0.0"
 parameters:
   state:

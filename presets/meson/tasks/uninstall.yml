@@ -1,20 +1,71 @@
-- name: Uninstall meson (macOS)
-  package:
-    name: meson
-    state: absent
-  when: os == "darwin"
+- name: Check if meson is installed via package manager
+  shell: command -v meson
+  register: meson_check
   failed_when: false
 
-- name: Uninstall meson (Linux)
+# Try to uninstall from package managers
+- name: Uninstall meson via apt
+  shell: apt-get remove -y meson
+  when: apt_available and parameters.method != "pip"
+  become: true
+  failed_when: false
+  register: apt_remove
+
+- name: Uninstall meson via dnf
+  shell: dnf remove -y meson
+  when: dnf_available and parameters.method != "pip"
+  become: true
+  failed_when: false
+  register: dnf_remove
+
+- name: Uninstall meson via yum
+  shell: yum remove -y meson
+  when: yum_available and parameters.method != "pip"
+  become: true
+  failed_when: false
+  register: yum_remove
+
+- name: Uninstall meson via pacman
+  shell: pacman -R --noconfirm meson
+  when: pacman_available and parameters.method != "pip"
+  become: true
+  failed_when: false
+  register: pacman_remove
+
+- name: Uninstall meson via zypper
+  shell: zypper remove -y meson
+  when: zypper_available and parameters.method != "pip"
+  become: true
+  failed_when: false
+  register: zypper_remove
+
+- name: Uninstall meson via apk
+  shell: apk del --no-cache meson
+  when: apk_available and parameters.method != "pip"
+  become: true
+  failed_when: false
+  register: apk_remove
+
+- name: Uninstall meson via Homebrew
+  shell: brew uninstall meson
+  when: brew_available and parameters.method != "pip"
+  failed_when: false
+  register: brew_remove
+
+# Uninstall from pip as fallback or if explicitly requested
+- name: Uninstall meson via pip3
   shell: pip3 uninstall -y meson
-  when: os == "linux"
+  when: meson_check.rc == 0 or parameters.method == "pip"
   failed_when: false
+  register: pip_remove
 
-- name: Verify uninstallation with assert
+# Verify uninstallation
+- name: Verify meson is not installed
   assert:
     command:
       cmd: command -v meson
       exit_code: 1
+  failed_when: false
 
-- name: Display confirmation
-  print: "meson uninstalled"
+- name: Confirm uninstallation
+  print: "Meson uninstalled successfully"

@@ -6,19 +6,19 @@
     state: stopped
     enabled: false
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Stop PostgreSQL service (macOS)
   shell: brew services stop postgresql@{{ parameters.version }}
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall PostgreSQL (macOS)
   package:
     name: "postgresql@{{ parameters.version }}"
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall PostgreSQL (Debian/Ubuntu)
@@ -29,7 +29,7 @@
       - postgresql-client-{{ parameters.version }}
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
   failed_when: false
 
 - name: Uninstall PostgreSQL (RHEL/Fedora)
@@ -40,7 +40,7 @@
       - postgresql{{ parameters.version }}-contrib
     state: absent
   become: true
-  when: os == "linux" and package_manager == "dnf"
+  when: dnf_available
   failed_when: false
 
 - name: Remove PostgreSQL data directory
@@ -48,5 +48,14 @@
     path: /var/lib/postgresql
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v psql
+      exit_code: 1
+
+- name: Display confirmation
+  print: "PostgreSQL uninstalled"

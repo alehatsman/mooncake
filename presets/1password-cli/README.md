@@ -1,11 +1,20 @@
-# op - 1Password CLI
+# 1Password CLI - Password and Secrets Management
 
-Secure secrets management from command line. Access passwords, API keys, SSH keys, and documents stored in 1Password.
+Command-line interface for 1Password. Access passwords, API keys, SSH keys, and documents from the terminal or CI/CD pipelines.
 
 ## Quick Start
 ```yaml
 - preset: 1password-cli
 ```
+
+## Features
+- **Secure CLI access**: Retrieve secrets without opening the GUI
+- **Service accounts**: Passwordless authentication for CI/CD
+- **Secret references**: Load secrets directly into environment with `op://` URLs
+- **SSH integration**: Use 1Password as SSH agent
+- **Cross-platform**: Linux, macOS, Windows support
+- **Team collaboration**: Share vaults and items with access control
+- **Biometric unlock**: Touch ID/Windows Hello support
 
 ## Authentication
 ```bash
@@ -277,23 +286,112 @@ op run -- terraform apply
 op run -- ./deploy.sh
 ```
 
+## Configuration
+- **Config directory**: `~/.config/op/` (Linux), `~/Library/Group Containers/2BUA8C4S2C.com.1password/` (macOS)
+- **Service accounts**: Store token in `OP_SERVICE_ACCOUNT_TOKEN` environment variable
+- **SSH agent**: Socket at `~/.1password/agent.sock`
+- **Cache**: Encrypted session cached locally after signin
+
+## Real-World Examples
+
+### Deployment Script with Secrets
+```bash
+#!/bin/bash
+# Store secrets in 1Password, reference in .env
+cat > .env <<EOF
+DB_PASSWORD=op://Private/Database/password
+API_KEY=op://Private/API/credential
+AWS_ACCESS_KEY_ID=op://Private/AWS/access_key_id
+AWS_SECRET_ACCESS_KEY=op://Private/AWS/secret_access_key
+EOF
+
+# Run deployment with secrets injected
+op run -- ./deploy.sh
+```
+
+### Rotate Database Passwords
+```bash
+# Generate new password
+NEW_PASSWORD=$(op item get "Production DB" --fields password)
+
+# Update database
+mysql -u root -p"$OLD_PASSWORD" -e "ALTER USER 'app'@'%' IDENTIFIED BY '$NEW_PASSWORD';"
+
+# Update 1Password
+op item edit "Production DB" password="$NEW_PASSWORD"
+
+# Update application secrets
+op item edit "App Config" database_password="$NEW_PASSWORD"
+```
+
+### Team Onboarding
+```yaml
+# Grant new team member access
+- preset: 1password-cli
+
+- name: Create developer vault access
+  shell: |
+    op vault user grant "Development" user@example.com --permissions read
+    op group user add "Developers" user@example.com
+```
+
+## Troubleshooting
+
+### "no identities match" error
+Authentication failed or wrong account selected.
+```bash
+# List signed-in accounts
+op account list
+
+# Sign in to correct account
+op signin --account my.1password.com
+
+# Or use specific account
+op --account my item list
+```
+
+### Service account authentication failing
+Token invalid or expired.
+```bash
+# Verify token format (should start with ops_)
+echo $OP_SERVICE_ACCOUNT_TOKEN | cut -c1-4
+
+# Test token
+export OP_SERVICE_ACCOUNT_TOKEN="ops_xxx"
+op item list
+
+# Regenerate token in 1Password web interface if needed
+```
+
+### "command not found: op"
+Binary not in PATH after installation.
+```bash
+# Verify installation
+which op || echo "Not installed"
+
+# Add to PATH (if installed to custom location)
+export PATH="$PATH:/usr/local/bin"
+```
+
 ## Best Practices
 - **Use service accounts** for CI/CD (not personal accounts)
 - **Reference secrets** with op:// URLs, don't hardcode
-- **Rotate secrets** regularly
+- **Rotate secrets** regularly using op commands
 - **Use vaults** to organize secrets by team/project
 - **Enable 2FA** on 1Password account
 - **Use `op run`** to inject secrets at runtime
-- **Never log** secret values
+- **Never log** secret values in scripts or CI output
+- **Audit access** regularly via web interface
 
-## Tips
-- Works offline after initial sync
-- Biometric unlock on supported platforms
-- SSH agent integration for Git
-- Browser extension sync
-- Team sharing with access controls
-- Audit logs for compliance
-- Cross-platform (Mac, Linux, Windows)
+## Platform Support
+- ✅ Linux (apt,dnf,yum,Homebrew)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
 
 ## Agent Use
 - Automated secret injection
@@ -303,6 +401,18 @@ op run -- ./deploy.sh
 - Development environment setup
 - Secure credential storage
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install 1password-cli
+  preset: 1password-cli
+
+- name: Use 1password-cli in automation
+  shell: |
+    # Custom configuration here
+    echo "1password-cli configured"
+```
 ## Uninstall
 ```yaml
 - preset: 1password-cli

@@ -7,6 +7,37 @@ httpie-compatible HTTP client in Rust. Faster than httpie, drop-in replacement w
 - preset: xh
 ```
 
+## Features
+- **10x faster than httpie**: Native Rust binary with zero Python overhead
+- **httpie-compatible syntax**: Drop-in replacement with familiar interface
+- **Built-in downloads**: Native download manager with resume support
+- **Session persistence**: Cookies and authentication persist across requests
+- **Small binary**: ~5MB executable, no runtime dependencies
+- **JSON highlighting**: Automatic syntax highlighting and formatting
+- **Cross-platform**: Linux, macOS, Windows, BSD
+
+## Advanced Configuration
+```yaml
+# Install xh (default)
+- preset: xh
+
+# Uninstall xh
+- preset: xh
+  with:
+    state: absent
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove (present/absent) |
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ✅ Windows (scoop, winget)
+- ✅ BSD (pkg)
+
 ## Basic Usage
 ```bash
 # Simple GET

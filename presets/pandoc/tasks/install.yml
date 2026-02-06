@@ -3,15 +3,24 @@
   register: pandoc_check
   failed_when: false
 
-- name: Install pandoc
+- name: Install  via Homebrew
   package:
     name: pandoc
     state: present
-  when: pandoc_check.rc != 0
+  when: brew_available and pandoc_check.rc != 0
 
-- name: Verify installation
-  shell: pandoc --version 2>&1 || pandoc -v 2>&1 || echo "installed"
-  register: pandoc_version
+- name: Install pandoc via apt
+  package:
+    name: pandoc
+    state: present
+  become: true
+  when: apt_available and pandoc_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pandoc
+      exit_code: 0
+
+- name: Display confirmation
   print: "pandoc installed"

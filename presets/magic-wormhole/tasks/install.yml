@@ -3,15 +3,15 @@
   register: magic_wormhole_check
   failed_when: false
 
-- name: Install magic-wormhole (macOS)
+- name: Install magic-wormhole via Homebrew
   package:
     name: magic-wormhole
     state: present
-  when: os == "darwin" and magic_wormhole_check.rc != 0
+  when: brew_available and magic_wormhole_check.rc != 0
 
-- name: Install magic-wormhole (Linux)
+- name: Install magic-wormhole via pip3
   shell: pip3 install --user magic-wormhole
-  when: os == "linux" and magic_wormhole_check.rc != 0
+  when: not brew_available and magic_wormhole_check.rc != 0
 
 - name: Verify installation with assert
   assert:

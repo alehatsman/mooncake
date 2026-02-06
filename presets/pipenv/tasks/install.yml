@@ -3,15 +3,21 @@
   register: pipenv_check
   failed_when: false
 
-- name: Install pipenv
+- name: Install pipenv via Homebrew
   package:
     name: pipenv
     state: present
-  when: pipenv_check.rc != 0
+  when: brew_available and pipenv_check.rc != 0
 
-- name: Verify installation
-  shell: pipenv --version 2>&1 || pipenv -v 2>&1 || echo "installed"
-  register: pipenv_version
+- name: Install pipenv via pip3
+  shell: pip3 install --user pipenv
+  when: linux and pipenv_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pipenv
+      exit_code: 0
+
+- name: Display confirmation
   print: "pipenv installed"

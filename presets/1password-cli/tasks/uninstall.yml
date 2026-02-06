@@ -1,34 +1,40 @@
 - name: Uninstall op (macOS)
   shell: brew uninstall 1password-cli
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall op (Debian/Ubuntu)
-  shell: sudo apt-get remove -y 1password-cli
-  when: os == "linux" and apt_available
+  shell: sudo apt-get purge -y 1password-cli && sudo apt-get autoremove -y
+  when: apt_available
   failed_when: false
 
 - name: Remove 1Password repository (Debian/Ubuntu)
   shell: |
     sudo rm -f /etc/apt/sources.list.d/1password.list
     sudo rm -f /usr/share/keyrings/1password-archive-keyring.gpg
-  when: os == "linux" and apt_available
+  when: apt_available
   failed_when: false
 
 - name: Uninstall op with DNF (Fedora)
   shell: sudo dnf remove -y 1password-cli
-  when: os == "linux" and dnf_available
+  when: dnf_available
   failed_when: false
 
 - name: Uninstall op with YUM (RHEL/CentOS)
   shell: sudo yum remove -y 1password-cli
-  when: os == "linux" and yum_available and not dnf_available
+  when: yum_available
   failed_when: false
 
 - name: Remove 1Password repository (RHEL/Fedora)
   shell: sudo rm -f /etc/yum.repos.d/1password.repo
-  when: os == "linux" and (dnf_available or yum_available)
+  when: dnf_available or yum_available
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v op
+      exit_code: 1
 
 - name: Display confirmation
   print: "op uninstalled"

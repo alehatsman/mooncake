@@ -3,15 +3,15 @@
   register: eleventy_check
   failed_when: false
 
-- name: Install eleventy
-  package:
-    name: eleventy
-    state: present
+- name: Install eleventy via npm
+  shell: npm install -g @11ty/eleventy
   when: eleventy_check.rc != 0
 
-- name: Verify installation
-  shell: eleventy --version 2>&1 || eleventy -v 2>&1 || echo "installed"
-  register: eleventy_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v eleventy
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "eleventy installed"

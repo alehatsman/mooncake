@@ -3,15 +3,28 @@
   register: atuin_check
   failed_when: false
 
-- name: Install atuin
+- name: Install atuin via Homebrew
   package:
     name: atuin
     state: present
-  when: atuin_check.rc != 0
+  when: brew_available and atuin_check.rc != 0
 
-- name: Verify installation
-  shell: atuin --version 2>&1 || atuin -v 2>&1 || echo "installed"
-  register: atuin_version
+- name: Install atuin via apt
+  package:
+    name: atuin
+    state: present
+  become: true
+  when: apt_available and atuin_check.rc != 0
 
-- name: Display version
+- name: Install atuin via cargo
+  shell: cargo install atuin
+  when: not brew_available and not apt_available and atuin_check.rc != 0
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v atuin
+      exit_code: 0
+
+- name: Display confirmation
   print: "atuin installed"

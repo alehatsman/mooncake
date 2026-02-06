@@ -1,8 +1,20 @@
-- name: Uninstall hexo
+- name: Uninstall hexo (macOS)
   package:
     name: hexo
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall hexo (Linux)
+  shell: npm uninstall -g hexo-cli
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v hexo
+      exit_code: 1
 
 - name: Display confirmation
   print: "hexo uninstalled"

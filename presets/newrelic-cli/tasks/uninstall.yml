@@ -1,8 +1,26 @@
-- name: Uninstall newrelic-cli
+- name: Uninstall newrelic-cli (macOS)
   package:
     name: newrelic-cli
     state: absent
+  when: (parameters.state == "absent") and (os == "darwin")
+  failed_when: false
+
+- name: Uninstall newrelic-cli (Linux)
+  shell: |
+    NEWRELIC_PATH=$(command -v newrelic 2>/dev/null)
+    if [ -n "$NEWRELIC_PATH" ]; then
+      sudo rm -f "$NEWRELIC_PATH"
+    fi
+  when: (parameters.state == "absent") and (os == "linux")
   failed_when: false
 
 - name: Display confirmation
   print: "newrelic-cli uninstalled"
+  when: parameters.state == "absent"
+
+- name: Assert tool is removed
+  assert:
+    command:
+      cmd: command -v newrelic
+      exit_code: 1
+  when: parameters.state == "absent"

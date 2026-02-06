@@ -3,15 +3,26 @@
   register: grafana_agent_check
   failed_when: false
 
-- name: Install grafana-agent
+- name: Install grafana-agent (macOS)
   package:
     name: grafana-agent
     state: present
-  when: grafana_agent_check.rc != 0
+  when: brew_available and grafana_agent_check.rc != 0
 
-- name: Verify installation
-  shell: grafana-agent --version 2>&1 || grafana-agent -v 2>&1 || echo "installed"
-  register: grafana_agent_version
+- name: Install grafana-agent (Linux)
+  shell: |
+    curl -sL https://github.com/grafana/agent/releases/latest/download/grafana-agent-linux-arm64.zip -o /tmp/grafana-agent.zip
+    unzip -o /tmp/grafana-agent.zip -d /tmp
+    sudo mv /tmp/grafana-agent-linux-arm64 /usr/local/bin/grafana-agent
+    sudo chmod +x /usr/local/bin/grafana-agent
+    rm /tmp/grafana-agent.zip
+  when: linux and grafana_agent_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v grafana-agent
+      exit_code: 0
+
+- name: Display confirmation
   print: "grafana-agent installed"

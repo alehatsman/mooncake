@@ -3,15 +3,21 @@
   register: flux_check
   failed_when: false
 
-- name: Install flux
+- name: Install flux via Homebrew
   package:
-    name: flux
+    name: fluxcd/tap/flux
     state: present
-  when: flux_check.rc != 0
+  when: brew_available and flux_check.rc != 0
 
-- name: Verify installation
-  shell: flux --version 2>&1 || flux -v 2>&1 || echo "installed"
-  register: flux_version
+- name: Install flux via curl script
+  shell: curl -s https://fluxcd.io/install.sh | sudo bash
+  when: linux and flux_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v flux
+      exit_code: 0
+
+- name: Display confirmation
   print: "flux installed"

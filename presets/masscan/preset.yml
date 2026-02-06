@@ -1,5 +1,5 @@
 name: masscan
-description: Fast port scanner
+description: Ultra-fast TCP port scanner for network reconnaissance
 version: "1.0.0"
 parameters:
   state:

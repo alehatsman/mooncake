@@ -1,5 +1,5 @@
 name: argo-rollouts
-description: GitOps / CD tool
+description: Progressive delivery controller for Kubernetes with canary and blue-green deployments
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

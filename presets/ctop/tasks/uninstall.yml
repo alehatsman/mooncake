@@ -1,8 +1,23 @@
-- name: Uninstall ctop
+- name: Uninstall ctop via Homebrew
   package:
     name: ctop
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall ctop via apt
+  package:
+    name: ctop
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ctop
+      exit_code: 1
 
 - name: Display confirmation
   print: "ctop uninstalled"

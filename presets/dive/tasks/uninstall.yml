@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "dive uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v dive
+      exit_code: 1

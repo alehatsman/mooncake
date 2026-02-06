@@ -4,5 +4,11 @@
     state: absent
   failed_when: false
 
+- name: Assert flink is removed
+  assert:
+    command:
+      cmd: command -v flink
+      exit_code: 1
+
 - name: Display confirmation
   print: "flink uninstalled"

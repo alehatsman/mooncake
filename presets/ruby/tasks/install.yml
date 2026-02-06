@@ -9,7 +9,7 @@
       - libyaml
       - gmp
     state: present
-  when: package_manager == "brew"
+  when: brew_available
 
 - name: Install Ruby build dependencies (Debian/Ubuntu)
   package:
@@ -22,7 +22,7 @@
       - libffi-dev
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Install Ruby build dependencies (RHEL/Fedora)
   package:
@@ -35,32 +35,29 @@
       - libffi-devel
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: (dnf_available | default(false)) or (yum_available | default(false))
 
 # Check if rbenv is installed
 - name: Check if rbenv is installed
-  assert:
-    file:
-      path: "~/.rbenv/bin/rbenv"
-      exists: true
+  shell: command -v rbenv || test -f "$HOME/.rbenv/bin/rbenv"
   register: rbenv_installed
   failed_when: false
 
 # Install rbenv
 - name: Install rbenv
   shell: curl -fsSL https://github.com/rbenv/rbenv-installer/raw/main/bin/rbenv-installer | bash
-  when: rbenv_installed.failed
+  when: rbenv_installed.rc != 0
 
 # Create rbenv initialization file
 - name: Create rbenv init file
-  file:
-    path: "~/.rbenv_init"
-    content: |
-      # rbenv configuration
-      export PATH="$HOME/.rbenv/bin:$PATH"
-      eval "$(rbenv init -)"
-    mode: "0644"
-  when: rbenv_installed.failed
+  shell: |
+    cat > "$HOME/.rbenv_init" << 'EOF'
+    # rbenv configuration
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    EOF
+    chmod 0644 "$HOME/.rbenv_init"
+  when: rbenv_installed.rc != 0
 
 # Add rbenv init to shell profiles
 - name: Add rbenv to shell profile
@@ -70,7 +67,7 @@
         echo '[ -f "$HOME/.rbenv_init" ] && source "$HOME/.rbenv_init"' >> "$profile"
       fi
     done
-  when: rbenv_installed.failed
+  when: rbenv_installed.rc != 0
 
 # Install Ruby version
 - name: Install Ruby {{ parameters.version }}
@@ -78,7 +75,6 @@
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init -)"
     rbenv install -s {{ parameters.version }}
-  creates: "~/.rbenv/versions/{{ parameters.version }}"
 
 # Set global version
 - name: Set Ruby {{ parameters.version }} as global version

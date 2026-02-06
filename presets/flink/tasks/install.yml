@@ -13,5 +13,11 @@
   shell: flink --version 2>&1 || flink -v 2>&1 || echo "installed"
   register: flink_version
 
+- name: Assert flink is installed
+  assert:
+    command:
+      cmd: command -v flink
+      exit_code: 0
+
 - name: Display version
   print: "flink installed"

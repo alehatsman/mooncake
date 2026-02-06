@@ -2,7 +2,7 @@
   package:
     name: tfsec
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall tfsec (Linux)

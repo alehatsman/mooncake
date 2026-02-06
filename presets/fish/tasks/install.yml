@@ -9,9 +9,11 @@
     state: present
   when: fish_check.rc != 0
 
-- name: Verify installation
-  shell: fish --version 2>&1 || fish -v 2>&1 || echo "installed"
-  register: fish_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v fish
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "fish installed"

@@ -1,5 +1,5 @@
 name: falco
-description: Security scanning tool
+description: Install Falco runtime security and threat detection for containers and Kubernetes
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

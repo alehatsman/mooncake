@@ -1,8 +1,20 @@
-- name: Uninstall ignite
+- name: Uninstall ignite (macOS)
   package:
     name: ignite
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall ignite (Linux)
+  shell: npm uninstall -g ignite-cli
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ignite
+      exit_code: 1
 
 - name: Display confirmation
   print: "ignite uninstalled"

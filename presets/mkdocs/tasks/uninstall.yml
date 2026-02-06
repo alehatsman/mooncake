@@ -1,13 +1,13 @@
-- name: Uninstall mkdocs (macOS)
+- name: Uninstall mkdocs via Homebrew
   package:
     name: mkdocs
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall mkdocs (Linux)
+- name: Uninstall mkdocs via pip3
   shell: pip3 uninstall -y mkdocs
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

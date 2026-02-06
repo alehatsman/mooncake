@@ -7,14 +7,14 @@
   package:
     name: wezterm
     state: present
-  when: os == "darwin" and wezterm_check.rc != 0
+  when: brew_available and wezterm_check.rc != 0
 
 - name: Install wezterm (Linux)
   shell: |
     curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/wezterm-fury.gpg
     echo 'deb [signed-by=/etc/apt/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
     sudo apt update && sudo apt install -y wezterm
-  when: os == "linux" and package_manager == "apt" and wezterm_check.rc != 0
+  when: apt_available and wezterm_check.rc != 0
 
 - name: Verify installation with assert
   assert:

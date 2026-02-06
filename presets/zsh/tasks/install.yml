@@ -5,32 +5,39 @@
   register: zsh_check
   failed_when: false
 
-# macOS Installation
-- name: Install Zsh via Homebrew (macOS)
+# Homebrew Installation
+- name: Install Zsh via Homebrew
   shell: brew install zsh
-  when: os == "darwin" and zsh_check.rc != 0
+  when: brew_available and zsh_check.rc != 0
 
-# Linux Installation
-- name: Install Zsh (Debian/Ubuntu)
+# Linux Package Manager Installation
+- name: Install Zsh via apt
   package:
     name: zsh
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and zsh_check.rc != 0
+  when: apt_available and zsh_check.rc != 0
 
-- name: Install Zsh (RHEL/Fedora)
+- name: Install Zsh via dnf
   package:
     name: zsh
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"] and zsh_check.rc != 0
+  when: dnf_available and zsh_check.rc != 0
 
-- name: Install Zsh (Arch)
+- name: Install Zsh via yum
   package:
     name: zsh
     state: present
   become: true
-  when: os == "linux" and package_manager == "pacman" and zsh_check.rc != 0
+  when: yum_available and zsh_check.rc != 0
+
+- name: Install Zsh via pacman
+  package:
+    name: zsh
+    state: present
+  become: true
+  when: pacman_available and zsh_check.rc != 0
 
 # Verify Zsh installation
 - name: Verify Zsh installation with assert
@@ -89,7 +96,7 @@
       echo "{{ zsh_path.stdout }}" | sudo tee -a /etc/shells
     fi
   become: true
-  when: parameters.set_default_shell and os == "linux"
+  when: parameters.set_default_shell and not brew_available
   failed_when: false
 
 - name: Set Zsh as default shell

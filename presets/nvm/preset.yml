@@ -1,5 +1,5 @@
 name: nvm
-description: Node.js / JavaScript tool
+description: Node Version Manager for managing multiple Node.js versions
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

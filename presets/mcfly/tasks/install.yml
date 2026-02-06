@@ -3,15 +3,21 @@
   register: mcfly_check
   failed_when: false
 
-- name: Install mcfly
+- name: Install mcfly (macOS)
   package:
     name: mcfly
     state: present
-  when: mcfly_check.rc != 0
+  when: brew_available and mcfly_check.rc != 0
 
-- name: Verify installation
-  shell: mcfly --version 2>&1 || mcfly -v 2>&1 || echo "installed"
-  register: mcfly_version
+- name: Install mcfly (Linux)
+  shell: curl -LSfs https://raw.githubusercontent.com/cantino/mcfly/master/ci/install.sh | sh -s -- --git cantino/mcfly
+  when: linux and mcfly_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v mcfly
+      exit_code: 0
+
+- name: Display confirmation
   print: "mcfly installed"

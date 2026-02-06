@@ -7,6 +7,12 @@ Terminal JSON viewer with JavaScript syntax. Interactive exploration, pretty pri
 - preset: fx
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # View JSON file
@@ -21,6 +27,18 @@ fx data.json '.name'
 echo '{"name":"alice","age":30}' | fx '.name'
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: fx
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove fx |
 ## Interactive Mode
 ```bash
 # Open in interactive mode
@@ -294,3 +312,8 @@ fx users.json '
 ## Resources
 - GitHub: https://github.com/antonmedv/fx
 - Search: "fx json viewer", "fx javascript queries"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

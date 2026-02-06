@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "cosign uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v cosign
+      exit_code: 1

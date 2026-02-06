@@ -1,5 +1,5 @@
 name: m3db
-description: Time-series / analytics database
+description: Distributed time-series database for metrics at scale
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

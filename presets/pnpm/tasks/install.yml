@@ -3,15 +3,21 @@
   register: pnpm_check
   failed_when: false
 
-- name: Install pnpm
+- name: Install pnpm via Homebrew
   package:
     name: pnpm
     state: present
-  when: pnpm_check.rc != 0
+  when: brew_available and pnpm_check.rc != 0
 
-- name: Verify installation
-  shell: pnpm --version 2>&1 || pnpm -v 2>&1 || echo "installed"
-  register: pnpm_version
+- name: Install pnpm via npm
+  shell: npm install -g pnpm
+  when: linux and pnpm_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v pnpm
+      exit_code: 0
+
+- name: Display confirmation
   print: "pnpm installed"

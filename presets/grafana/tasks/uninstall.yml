@@ -6,19 +6,19 @@
     state: stopped
   become: true
   failed_when: false
-  when: os == "linux"
+  when: linux
 
 - name: Stop Grafana service (macOS)
   shell: brew services stop grafana
   failed_when: false
-  when: os == "darwin"
+  when: brew_available
 
 # macOS Uninstallation
 - name: Uninstall Grafana via Homebrew (macOS)
   package:
     name: grafana
     state: absent
-  when: os == "darwin"
+  when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Grafana (Debian/Ubuntu)
@@ -26,14 +26,20 @@
     name: grafana
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Uninstall Grafana (RHEL/Fedora)
   package:
     name: grafana
     state: absent
   become: true
-  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum")
+  when: dnf_available or yum_available
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v grafana-server
+      exit_code: 1
 
 - name: Display uninstall confirmation
   print: "Grafana has been uninstalled (configuration and data in /var/lib/grafana may remain)"

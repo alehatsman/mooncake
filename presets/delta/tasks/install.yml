@@ -3,15 +3,25 @@
   register: delta_check
   failed_when: false
 
-- name: Install delta
+- name: Install delta (macOS)
   package:
-    name: delta
+    name: git-delta
     state: present
-  when: delta_check.rc != 0
+  when: brew_available and delta_check.rc != 0
 
-- name: Verify installation
-  shell: delta --version 2>&1 || echo "installed"
-  register: delta_version
+- name: Install delta via install script
+  shell: |
+    curl -sL https://github.com/dandavison/delta/releases/latest/download/delta-0.18.2-aarch64-unknown-linux-gnu.tar.gz | tar xz
+    sudo mv delta-0.18.2-aarch64-unknown-linux-gnu/delta /usr/local/bin/
+    sudo chmod +x /usr/local/bin/delta
+    rm -rf delta-0.18.2-aarch64-unknown-linux-gnu
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and delta_check.rc != 0
 
-- name: Display version
-  print: "delta installed: {{ delta_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v delta
+      exit_code: 0
+
+- name: Display confirmation
+  print: "delta installed"

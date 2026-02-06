@@ -6,41 +6,37 @@
     state: stopped
   become: true
   failed_when: false
-  when: os == "linux"
+  when: (parameters.state == "absent") and (os == "linux")
 
 - name: Stop Nginx service (macOS)
   shell: brew services stop nginx
   failed_when: false
-  when: os == "darwin"
+  when: (parameters.state == "absent") and (os == "darwin")
 
 # macOS Uninstallation
 - name: Uninstall Nginx via Homebrew (macOS)
   package:
     name: nginx
     state: absent
-  when: os == "darwin"
+  when: (parameters.state == "absent") and (os == "darwin")
+  failed_when: false
 
 # Linux Uninstallation
-- name: Uninstall Nginx (Debian/Ubuntu)
+- name: Uninstall Nginx (Linux)
   package:
     name: nginx
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
-
-- name: Uninstall Nginx (RHEL/Fedora/CentOS)
-  package:
-    name: nginx
-    state: absent
-  become: true
-  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum")
-
-- name: Uninstall Nginx (Arch)
-  package:
-    name: nginx
-    state: absent
-  become: true
-  when: os == "linux" and package_manager == "pacman"
+  when: (parameters.state == "absent") and (os == "linux")
+  failed_when: false
 
 - name: Display uninstall confirmation
   print: "Nginx has been uninstalled"
+  when: parameters.state == "absent"
+
+- name: Assert tool is removed
+  assert:
+    command:
+      cmd: command -v nginx
+      exit_code: 1
+  when: parameters.state == "absent"

@@ -7,14 +7,14 @@
   package:
     name: wrk
     state: present
-  when: os == "darwin" and wrk_check.rc != 0
+  when: brew_available and wrk_check.rc != 0
 
 - name: Install wrk (Linux)
   package:
     name: wrk
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and wrk_check.rc != 0
+  when: apt_available and wrk_check.rc != 0
 
 - name: Verify installation with assert
   assert:

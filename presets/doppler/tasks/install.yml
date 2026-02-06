@@ -9,9 +9,11 @@
     state: present
   when: doppler_check.rc != 0
 
-- name: Verify installation
-  shell: doppler --version 2>&1 || doppler -v 2>&1 || echo "installed"
-  register: doppler_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v doppler
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "doppler installed"

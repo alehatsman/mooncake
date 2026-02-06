@@ -3,15 +3,21 @@
   register: black_check
   failed_when: false
 
-- name: Install black
+- name: Install black via Homebrew
   package:
     name: black
     state: present
-  when: black_check.rc != 0
+  when: brew_available and black_check.rc != 0
 
-- name: Verify installation
-  shell: black --version 2>&1 || black -v 2>&1 || echo "installed"
-  register: black_version
+- name: Install black via pip3
+  shell: pip3 install black
+  when: not brew_available and black_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v black
+      exit_code: 0
+
+- name: Display confirmation
   print: "black installed"

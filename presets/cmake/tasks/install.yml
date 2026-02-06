@@ -3,15 +3,24 @@
   register: cmake_check
   failed_when: false
 
-- name: Install cmake
+- name: Install cmake via Homebrew
   package:
     name: cmake
     state: present
-  when: cmake_check.rc != 0
+  when: brew_available and cmake_check.rc != 0
 
-- name: Verify installation
-  shell: cmake --version 2>&1 || cmake -v 2>&1 || echo "installed"
-  register: cmake_version
+- name: Install cmake via apt
+  package:
+    name: cmake
+    state: present
+  become: true
+  when: apt_available and cmake_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cmake
+      exit_code: 0
+
+- name: Display confirmation
   print: "cmake installed"

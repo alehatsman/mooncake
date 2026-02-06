@@ -1,8 +1,20 @@
-- name: Uninstall linode-cli
+- name: Uninstall linode-cli (macOS)
   package:
     name: linode-cli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall linode-cli (Linux)
+  shell: pip3 uninstall -y linode-cli
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v linode-cli
+      exit_code: 1
 
 - name: Display confirmation
   print: "linode-cli uninstalled"

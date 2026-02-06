@@ -3,15 +3,24 @@
   register: lazygit_check
   failed_when: false
 
-- name: Install lazygit
+- name: Install lazygit (macOS)
   package:
     name: lazygit
     state: present
-  when: lazygit_check.rc != 0
+  when: brew_available and lazygit_check.rc != 0
 
-- name: Verify installation
-  shell: lazygit --version 2>&1 || echo "installed"
-  register: lazygit_version
+- name: Install lazygit (Linux)
+  shell: |
+    curl -sL https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_Linux_arm64.tar.gz | tar xz
+    sudo mv lazygit /usr/local/bin/
+    sudo chmod +x /usr/local/bin/lazygit
+  when: linux and lazygit_check.rc != 0
 
-- name: Display version
-  print: "lazygit installed: {{ lazygit_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v lazygit
+      exit_code: 0
+
+- name: Display confirmation
+  print: "lazygit installed"

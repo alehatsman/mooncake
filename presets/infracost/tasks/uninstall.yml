@@ -1,8 +1,24 @@
-- name: Uninstall infracost
+- name: Uninstall infracost (macOS)
   package:
     name: infracost
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall infracost (Linux)
+  shell: |
+    INFRACOST_PATH=$(command -v infracost 2>/dev/null)
+    if [ -n "$INFRACOST_PATH" ]; then
+      sudo rm -f "$INFRACOST_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v infracost
+      exit_code: 1
 
 - name: Display confirmation
   print: "infracost uninstalled"

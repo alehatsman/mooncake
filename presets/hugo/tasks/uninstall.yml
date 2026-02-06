@@ -1,8 +1,23 @@
-- name: Uninstall hugo
+- name: Uninstall hugo (macOS)
   package:
     name: hugo
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall hugo (Linux)
+  package:
+    name: hugo
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v hugo
+      exit_code: 1
 
 - name: Display confirmation
   print: "hugo uninstalled"

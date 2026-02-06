@@ -1,5 +1,5 @@
 name: metaflow
-description: Workflow orchestration
+description: Python framework for building and managing data science workflows with cloud integration
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

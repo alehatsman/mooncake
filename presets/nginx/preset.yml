@@ -1,5 +1,5 @@
 name: nginx
-description: Install and configure Nginx web server
+description: High-performance HTTP server, reverse proxy, and load balancer
 version: 1.0.0
 
 parameters:

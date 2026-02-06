@@ -1,13 +1,13 @@
-- name: Uninstall yarn (macOS)
+- name: Uninstall yarn via Homebrew
   package:
     name: yarn
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall yarn (Linux)
+- name: Uninstall yarn via npm
   shell: npm uninstall -g yarn
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

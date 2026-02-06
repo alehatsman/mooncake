@@ -1,5 +1,5 @@
 name: kube-hunter
-description: Security scanning tool
+description: Kubernetes penetration testing and security scanner
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

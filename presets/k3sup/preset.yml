@@ -1,5 +1,5 @@
 name: k3sup
-description: GitOps / CD tool
+description: Bootstrap Kubernetes with k3s over SSH
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

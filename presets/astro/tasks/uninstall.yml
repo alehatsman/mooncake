@@ -1,8 +1,12 @@
-- name: Uninstall astro
-  package:
-    name: astro
-    state: absent
+- name: Uninstall astro via npm
+  shell: npm uninstall -g astro
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v astro
+      exit_code: 1
 
 - name: Display confirmation
   print: "astro uninstalled"

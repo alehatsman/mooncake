@@ -5,12 +5,12 @@
   package:
     name: tflint
     state: present
-  when: os == "darwin" and parameters.install_tflint != false
+  when: brew_available and parameters.install_tflint != false
 
 - name: Install TFLint (Linux)
   shell: |
     curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-  when: os == "linux" and parameters.install_tflint != false
+  when: linux and parameters.install_tflint != false
   failed_when: false
 
 - name: Verify TFLint installation
@@ -23,12 +23,12 @@
   package:
     name: tfsec
     state: present
-  when: os == "darwin" and parameters.install_tfsec != false
+  when: brew_available and parameters.install_tfsec != false
 
 - name: Install tfsec (Linux)
   shell: |
     curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-  when: os == "linux" and parameters.install_tfsec != false
+  when: linux and parameters.install_tfsec != false
   failed_when: false
 
 - name: Verify tfsec installation
@@ -41,7 +41,7 @@
   package:
     name: terraform-docs
     state: present
-  when: os == "darwin" and parameters.install_terraform_docs != false
+  when: brew_available and parameters.install_terraform_docs != false
 
 - name: Install terraform-docs (Linux)
   shell: |
@@ -50,7 +50,7 @@
     sudo mv /tmp/terraform-docs /usr/local/bin/
     chmod +x /usr/local/bin/terraform-docs
   become: true
-  when: os == "linux" and parameters.install_terraform_docs != false
+  when: linux and parameters.install_terraform_docs != false
   failed_when: false
 
 - name: Verify terraform-docs installation

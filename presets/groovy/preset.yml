@@ -1,5 +1,5 @@
 name: groovy
-description: Java/JVM tool
+description: Dynamic language for the JVM with scripting and DSL capabilities
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

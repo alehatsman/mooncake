@@ -3,15 +3,15 @@
   register: mkdocs_check
   failed_when: false
 
-- name: Install mkdocs (macOS)
+- name: Install mkdocs via Homebrew
   package:
     name: mkdocs
     state: present
-  when: os == "darwin" and mkdocs_check.rc != 0
+  when: brew_available and mkdocs_check.rc != 0
 
-- name: Install mkdocs (Linux)
+- name: Install mkdocs via pip3
   shell: pip3 install --user mkdocs
-  when: os == "linux" and mkdocs_check.rc != 0
+  when: not brew_available and mkdocs_check.rc != 0
 
 - name: Verify installation with assert
   assert:

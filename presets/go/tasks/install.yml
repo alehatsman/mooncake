@@ -10,7 +10,7 @@
   package:
     name: go
     state: present
-  when: os == "darwin" and go_check.rc != 0
+  when: brew_available and go_check.rc != 0
 
 # Linux - via package manager
 - name: Install Go (Debian/Ubuntu)
@@ -18,26 +18,28 @@
     name: golang-go
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and go_check.rc != 0
+  when: apt_available and go_check.rc != 0
 
 - name: Install Go (Fedora/RHEL)
   package:
     name: golang
     state: present
   become: true
-  when: os == "linux" and package_manager == "dnf" and go_check.rc != 0
+  when: dnf_available and go_check.rc != 0
 
 - name: Install Go (Arch)
   package:
     name: go
     state: present
   become: true
-  when: os == "linux" and package_manager == "pacman" and go_check.rc != 0
+  when: pacman_available and go_check.rc != 0
 
 # Verify installation
-- name: Verify Go installation
-  shell: go version
-  register: go_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v go
+      exit_code: 0
 
-- name: Display Go version
-  print: "Go installed: {{ go_version.stdout }}"
+- name: Display confirmation
+  print: "Go installed"

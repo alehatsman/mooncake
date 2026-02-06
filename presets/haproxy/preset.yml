@@ -1,7 +1,20 @@
 name: haproxy
-description: Service mesh / proxy
+description: High performance TCP/HTTP load balancer
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove HAProxy
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install HAProxy
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall HAProxy
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

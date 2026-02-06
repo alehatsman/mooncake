@@ -1,0 +1,20 @@
+name: cqlsh
+description: Cassandra Query Language Shell - interactive CQL command-line interface
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall cqlsh
+
+steps:
+  - name: Install cqlsh
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall cqlsh
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

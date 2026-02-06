@@ -1,5 +1,5 @@
 name: syft
-description: SBOM generation tool
+description: Software Bill of Materials (SBOM) generation tool for containers and filesystems with multi-format support
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Whether syft should be installed or removed
 steps:
   - name: Install syft
     include: tasks/install.yml

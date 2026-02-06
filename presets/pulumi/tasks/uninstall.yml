@@ -1,8 +1,20 @@
-- name: Uninstall pulumi
+- name: Uninstall pulumi (macOS)
   package:
     name: pulumi
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall pulumi (Linux)
+  shell: rm -rf ~/.pulumi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pulumi
+      exit_code: 1
 
 - name: Display confirmation
   print: "pulumi uninstalled"

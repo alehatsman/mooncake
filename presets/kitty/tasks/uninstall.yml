@@ -4,5 +4,11 @@
     state: absent
   failed_when: false
 
+- name: Assert kitty is removed
+  assert:
+    command:
+      cmd: command -v kitty
+      exit_code: 1
+
 - name: Display confirmation
   print: "kitty uninstalled"

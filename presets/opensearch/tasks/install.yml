@@ -1,17 +1,46 @@
 - name: Check if opensearch is installed
-  shell: command -v opensearch
+  shell: command -v opensearch || test -d /usr/share/opensearch
   register: opensearch_check
   failed_when: false
 
-- name: Install opensearch
+- name: Install opensearch via Homebrew (macOS)
   package:
     name: opensearch
     state: present
-  when: opensearch_check.rc != 0
+  when: (parameters.state == "present") and (os == "darwin") and (opensearch_check.rc != 0)
 
-- name: Verify installation
-  shell: opensearch --version 2>&1 || opensearch -v 2>&1 || echo "installed"
-  register: opensearch_version
+- name: Download and extract opensearch (Linux)
+  shell: |
+    OPENSEARCH_VERSION="2.11.1"
+    cd /tmp
+    curl -L -O "https://artifacts.opensearch.org/releases/bundle/opensearch/${OPENSEARCH_VERSION}/opensearch-${OPENSEARCH_VERSION}-linux-x64.tar.gz"
+    tar -xzf opensearch-${OPENSEARCH_VERSION}-linux-x64.tar.gz
+    rm -f opensearch-${OPENSEARCH_VERSION}-linux-x64.tar.gz
+  when: (parameters.state == "present") and (os == "linux") and (opensearch_check.rc != 0)
 
-- name: Display version
+- name: Create opensearch directory (Linux)
+  file:
+    path: /usr/share/opensearch
+    state: directory
+    mode: "0755"
+  become: true
+  when: (parameters.state == "present") and (os == "linux") and (opensearch_check.rc != 0)
+
+- name: Move opensearch files (Linux)
+  shell: |
+    cp -r /tmp/opensearch-*/* /usr/share/opensearch/
+    ln -sf /usr/share/opensearch/bin/opensearch /usr/local/bin/opensearch
+    rm -rf /tmp/opensearch-*
+  become: true
+  when: (parameters.state == "present") and (os == "linux") and (opensearch_check.rc != 0)
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v opensearch || test -d /usr/share/opensearch
+      exit_code: 0
+  when: parameters.state == "present"
+
+- name: Display confirmation
   print: "opensearch installed"
+  when: parameters.state == "present"

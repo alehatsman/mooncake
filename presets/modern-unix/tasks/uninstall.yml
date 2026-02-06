@@ -1,0 +1,42 @@
+# Modern Unix Tools Uninstallation
+
+- name: Remove {{ item }} via apt
+  shell: apt-get remove -y {{ item }}
+  with_items: parameters.tools
+  when: apt_available
+  become: true
+  failed_when: false
+
+- name: Remove {{ item }} via dnf
+  shell: dnf remove -y {{ item }}
+  with_items: parameters.tools
+  when: dnf_available
+  become: true
+  failed_when: false
+
+- name: Remove {{ item }} via yum
+  shell: yum remove -y {{ item }}
+  with_items: parameters.tools
+  when: yum_available
+  become: true
+  failed_when: false
+
+- name: Remove {{ item }} via pacman
+  shell: pacman -R --noconfirm {{ item }}
+  with_items: parameters.tools
+  when: pacman_available
+  become: true
+  failed_when: false
+
+- name: Remove {{ item }} via Homebrew
+  shell: brew uninstall {{ item }}
+  with_items: parameters.tools
+  when: brew_available
+  failed_when: false
+
+- name: Verify bat is not installed
+  assert:
+    command:
+      cmd: command -v bat
+      exit_code: 1
+  failed_when: false

@@ -3,15 +3,24 @@
   register: hadolint_check
   failed_when: false
 
-- name: Install hadolint
+- name: Install hadolint (macOS)
   package:
     name: hadolint
     state: present
-  when: hadolint_check.rc != 0
+  when: brew_available and hadolint_check.rc != 0
 
-- name: Verify installation
-  shell: hadolint --version 2>&1 || echo "installed"
-  register: hadolint_version
+- name: Install hadolint (Linux)
+  shell: |
+    curl -sL https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-arm64 -o /tmp/hadolint
+    sudo mv /tmp/hadolint /usr/local/bin/hadolint
+    sudo chmod +x /usr/local/bin/hadolint
+  when: linux and hadolint_check.rc != 0
 
-- name: Display version
-  print: "hadolint installed: {{ hadolint_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v hadolint
+      exit_code: 0
+
+- name: Display confirmation
+  print: "hadolint installed"

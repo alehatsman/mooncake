@@ -3,15 +3,21 @@
   register: gatsby_check
   failed_when: false
 
-- name: Install gatsby
+- name: Install gatsby-cli (macOS)
   package:
-    name: gatsby
+    name: gatsby-cli
     state: present
-  when: gatsby_check.rc != 0
+  when: brew_available and gatsby_check.rc != 0
 
-- name: Verify installation
-  shell: gatsby --version 2>&1 || gatsby -v 2>&1 || echo "installed"
-  register: gatsby_version
+- name: Install gatsby-cli (Linux)
+  shell: npm install -g gatsby-cli
+  when: linux and gatsby_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gatsby
+      exit_code: 0
+
+- name: Display confirmation
   print: "gatsby installed"

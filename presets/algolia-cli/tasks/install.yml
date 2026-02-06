@@ -3,15 +3,25 @@
   register: algolia_cli_check
   failed_when: false
 
-- name: Install algolia-cli
+- name: Install algolia-cli via Homebrew
   package:
     name: algolia
     state: present
-  when: algolia_cli_check.rc != 0
+  when: brew_available and algolia_cli_check.rc != 0
 
-- name: Verify installation
-  shell: algolia --version 2>&1 || algolia -v 2>&1 || echo "installed"
-  register: algolia_cli_version
+- name: Install algolia-cli via apt
+  shell: |
+    curl -sL https://github.com/algolia/cli/releases/download/v1.7.3/algolia_1.7.3_linux_arm64.tar.gz | tar xz
+    sudo mv algolia_1.7.3_linux_arm64/algolia /usr/local/bin/
+    sudo chmod +x /usr/local/bin/algolia
+    rm -rf algolia_1.7.3_linux_arm64
+  when: linux and algolia_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v algolia
+      exit_code: 0
+
+- name: Display confirmation
   print: "algolia-cli installed"

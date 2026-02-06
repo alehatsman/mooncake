@@ -1,8 +1,22 @@
-- name: Uninstall pdm
+- name: Uninstall pdm (macOS)
   package:
     name: pdm
     state: absent
+  when: (parameters.state == "absent") and (os == "darwin")
   failed_when: false
+
+- name: Uninstall pdm (Linux)
+  shell: pip3 uninstall -y pdm
+  when: (parameters.state == "absent") and (os == "linux")
+  failed_when: false
+
+- name: Assert pdm is removed
+  assert:
+    command:
+      cmd: command -v pdm
+      exit_code: 1
+  when: parameters.state == "absent"
 
 - name: Display confirmation
   print: "pdm uninstalled"
+  when: parameters.state == "absent"

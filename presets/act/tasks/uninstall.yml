@@ -1,8 +1,24 @@
-- name: Uninstall act
+- name: Uninstall act (macOS)
   package:
     name: act
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall act (Linux)
+  shell: |
+    ACT_PATH=$(which act 2>/dev/null)
+    if [ -n "$ACT_PATH" ]; then
+      sudo rm -f "$ACT_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v act
+      exit_code: 1
 
 - name: Display confirmation
   print: "act uninstalled"

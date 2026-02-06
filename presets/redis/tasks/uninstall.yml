@@ -6,19 +6,19 @@
     state: stopped
     enabled: false
   become: true
-  when: os == "linux"
+  when: parameters.state == "absent" and os == "linux"
   failed_when: false
 
 - name: Stop Redis service (macOS)
   shell: brew services stop redis
-  when: os == "darwin"
+  when: parameters.state == "absent" and os == "darwin"
   failed_when: false
 
 - name: Uninstall Redis (macOS)
   package:
     name: redis
     state: absent
-  when: os == "darwin"
+  when: parameters.state == "absent" and os == "darwin"
   failed_when: false
 
 - name: Uninstall Redis (Debian/Ubuntu)
@@ -26,7 +26,7 @@
     name: redis-server
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: parameters.state == "absent" and apt_available
   failed_when: false
 
 - name: Uninstall Redis (RHEL/Fedora)
@@ -34,7 +34,7 @@
     name: redis
     state: absent
   become: true
-  when: os == "linux" and package_manager == "dnf"
+  when: parameters.state == "absent" and dnf_available
   failed_when: false
 
 - name: Remove Redis data directory
@@ -42,7 +42,7 @@
     path: /var/lib/redis
     state: absent
   become: true
-  when: os == "linux"
+  when: parameters.state == "absent" and os == "linux"
   failed_when: false
 
 - name: Remove Redis configuration
@@ -50,5 +50,12 @@
     path: /etc/redis
     state: absent
   become: true
-  when: os == "linux"
+  when: parameters.state == "absent" and os == "linux"
   failed_when: false
+
+- name: Assert tool is removed
+  assert:
+    command:
+      cmd: command -v redis-server
+      exit_code: 1
+  when: parameters.state == "absent"

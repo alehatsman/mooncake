@@ -1,8 +1,20 @@
-- name: Uninstall litecli
+- name: Uninstall litecli (macOS)
   package:
     name: litecli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall litecli (Linux)
+  shell: pip3 uninstall -y litecli
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v litecli
+      exit_code: 1
 
 - name: Display confirmation
   print: "litecli uninstalled"

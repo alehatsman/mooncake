@@ -1,8 +1,20 @@
-- name: Uninstall flux
+- name: Uninstall flux (macOS)
   package:
-    name: flux
+    name: fluxcd/tap/flux
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall flux binary (Linux)
+  shell: sudo rm -f /usr/local/bin/flux
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v flux
+      exit_code: 1
 
 - name: Display confirmation
   print: "flux uninstalled"

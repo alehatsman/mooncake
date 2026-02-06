@@ -3,15 +3,21 @@
   register: bun_check
   failed_when: false
 
-- name: Install bun
+- name: Install bun via Homebrew
   package:
     name: bun
     state: present
-  when: bun_check.rc != 0
+  when: brew_available and bun_check.rc != 0
 
-- name: Verify installation
-  shell: bun --version 2>&1 || bun -v 2>&1 || echo "installed"
-  register: bun_version
+- name: Install bun via curl script
+  shell: curl -fsSL https://bun.sh/install | bash
+  when: linux and bun_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v bun
+      exit_code: 0
+
+- name: Display confirmation
   print: "bun installed"

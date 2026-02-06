@@ -1,5 +1,5 @@
 name: imagemagick
-description: Utility tool
+description: Image manipulation suite for editing and converting images
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

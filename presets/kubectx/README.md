@@ -15,6 +15,11 @@ Fast way to switch between Kubernetes clusters and namespaces.
     configure_aliases: true     # Shell aliases (ctx, ns)
 ```
 
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove kubectx |
 ## Basic Usage
 ```bash
 # Context switching
@@ -100,3 +105,8 @@ dnf install fzf    # Fedora
 ## Resources
 - Repository: https://github.com/ahmetb/kubectx
 - Search: "kubectx tutorial", "kubectl context management"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

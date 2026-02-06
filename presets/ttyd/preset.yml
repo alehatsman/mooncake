@@ -1,5 +1,5 @@
 name: ttyd
-description: Utility tool
+description: Share terminal over the web with browser-based access
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

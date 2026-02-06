@@ -1,15 +1,24 @@
 # terragrunt - Terraform Wrapper
 
-Keep Terraform code DRY. Manage multiple environments, remote state, dependencies, and before/after hooks.
+Keep Terraform code DRY. Orchestrate multiple environments, manage remote state, handle dependencies, and automate workflows with hooks.
 
 ## Quick Start
 ```yaml
 - preset: terragrunt
 ```
 
+## Features
+- **DRY configuration**: Share common settings across environments
+- **Remote state automation**: Auto-create S3 buckets, DynamoDB tables, GCS buckets
+- **Dependency management**: Execute modules in correct order with outputs
+- **Multiple environments**: Manage dev/staging/prod with minimal duplication
+- **Before/after hooks**: Run custom commands during Terraform lifecycle
+- **Run-all commands**: Execute operations across all modules in parallel
+- **Generate files**: Auto-create provider, backend, and version files
+
 ## Basic Usage
 ```bash
-# Run terraform commands through terragrunt
+# Run Terraform commands through Terragrunt
 terragrunt init
 terragrunt plan
 terragrunt apply
@@ -20,9 +29,32 @@ terragrunt apply -auto-approve
 
 # Run in all modules
 terragrunt run-all apply
+terragrunt run-all plan
+terragrunt run-all destroy
 ```
 
-## Configuration
+## Advanced Configuration
+```yaml
+# Install terragrunt (default)
+- preset: terragrunt
+
+# Uninstall terragrunt
+- preset: terragrunt
+  with:
+    state: absent
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove (present/absent) |
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ✅ Windows (scoop, choco)
+
+## Configuration Structure
 ```hcl
 # terragrunt.hcl
 terraform {
@@ -48,9 +80,29 @@ inputs = {
 }
 ```
 
+## Directory Structure
+```
+infrastructure/
+├── terragrunt.hcl          # Root config (shared settings)
+├── dev/
+│   ├── vpc/
+│   │   └── terragrunt.hcl  # Inherits root + env-specific inputs
+│   ├── rds/
+│   │   └── terragrunt.hcl
+│   └── eks/
+│       └── terragrunt.hcl
+└── prod/
+    ├── vpc/
+    │   └── terragrunt.hcl
+    ├── rds/
+    │   └── terragrunt.hcl
+    └── eks/
+        └── terragrunt.hcl
+```
+
 ## DRY Configuration
 ```hcl
-# root terragrunt.hcl
+# root/terragrunt.hcl - Shared configuration
 remote_state {
   backend = "s3"
   config = {
@@ -60,7 +112,7 @@ remote_state {
   }
 }
 
-# dev/vpc/terragrunt.hcl
+# dev/vpc/terragrunt.hcl - Environment-specific
 include "root" {
   path = find_in_parent_folders()
 }
@@ -75,26 +127,6 @@ inputs = {
 }
 ```
 
-## Directory Structure
-```
-infrastructure/
-├── terragrunt.hcl          # Root config
-├── dev/
-│   ├── vpc/
-│   │   └── terragrunt.hcl  # Inherits root + specific inputs
-│   ├── rds/
-│   │   └── terragrunt.hcl
-│   └── eks/
-│       └── terragrunt.hcl
-└── prod/
-    ├── vpc/
-    │   └── terragrunt.hcl
-    ├── rds/
-    │   └── terragrunt.hcl
-    └── eks/
-        └── terragrunt.hcl
-```
-
 ## Dependencies
 ```hcl
 # rds/terragrunt.hcl
@@ -106,41 +138,40 @@ inputs = {
   vpc_id     = dependency.vpc.outputs.vpc_id
   subnet_ids = dependency.vpc.outputs.private_subnet_ids
 }
+
+# eks/terragrunt.hcl
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+dependency "rds" {
+  config_path = "../rds"
+}
+
+inputs = {
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  subnet_ids   = dependency.vpc.outputs.private_subnet_ids
+  db_endpoint  = dependency.rds.outputs.endpoint
+}
 ```
 
-## Run All Commands
+## Run-All Commands
 ```bash
-# Apply all modules
+# Apply all modules (respects dependencies)
 terragrunt run-all apply
 
 # Plan all modules
 terragrunt run-all plan
 
-# Destroy all modules
+# Destroy all modules (reverse order)
 terragrunt run-all destroy
 
-# With dependencies
+# Non-interactive mode
 terragrunt run-all apply --terragrunt-non-interactive
 
 # Specific directories
 cd dev/
 terragrunt run-all plan
-```
-
-## Hooks
-```hcl
-terraform {
-  before_hook "before_init" {
-    commands = ["init"]
-    execute  = ["echo", "Running init..."]
-  }
-
-  after_hook "after_apply" {
-    commands     = ["apply"]
-    execute      = ["./notify-slack.sh", "deployed"]
-    run_on_error = false
-  }
-}
 ```
 
 ## Remote State Management
@@ -161,6 +192,7 @@ remote_state {
 
     s3_bucket_tags = {
       Name = "Terraform State"
+      Team = "Infrastructure"
     }
 
     dynamodb_table_tags = {
@@ -179,6 +211,13 @@ generate "provider" {
   contents  = <<EOF
 provider "aws" {
   region = "us-east-1"
+
+  default_tags {
+    tags = {
+      Environment = "production"
+      ManagedBy   = "Terragrunt"
+    }
+  }
 }
 EOF
 }
@@ -201,12 +240,41 @@ EOF
 }
 ```
 
+## Hooks
+```hcl
+terraform {
+  before_hook "before_init" {
+    commands = ["init"]
+    execute  = ["echo", "Initializing Terraform..."]
+  }
+
+  after_hook "after_apply" {
+    commands     = ["apply"]
+    execute      = ["./notify-slack.sh", "deployed"]
+    run_on_error = false
+  }
+
+  after_hook "post_destroy" {
+    commands     = ["destroy"]
+    execute      = ["./cleanup.sh"]
+    run_on_error = true
+  }
+}
+```
+
+## Configuration
+- **Root config**: `terragrunt.hcl` in project root for shared settings
+- **Module config**: `terragrunt.hcl` in each module directory
+- **Cache**: `.terragrunt-cache/` in each module (gitignored)
+- **Working dir**: Terragrunt downloads modules to cache before running
+
 ## Multiple Environments
 ```hcl
 # env.hcl (per environment)
 locals {
   environment = "dev"
   region      = "us-east-1"
+  account_id  = "123456789012"
 }
 
 # terragrunt.hcl
@@ -217,11 +285,35 @@ locals {
 inputs = {
   environment = local.env_vars.locals.environment
   region      = local.env_vars.locals.region
+  account_id  = local.env_vars.locals.account_id
 }
 ```
 
-## CI/CD Integration
-```bash
+## Real-World Examples
+
+### Multi-Environment Infrastructure
+```
+infrastructure/
+├── terragrunt.hcl          # Shared config
+├── dev/
+│   ├── env.hcl             # Dev-specific vars
+│   ├── vpc/terragrunt.hcl
+│   ├── eks/terragrunt.hcl
+│   └── rds/terragrunt.hcl
+├── staging/
+│   ├── env.hcl
+│   ├── vpc/terragrunt.hcl
+│   ├── eks/terragrunt.hcl
+│   └── rds/terragrunt.hcl
+└── prod/
+    ├── env.hcl
+    ├── vpc/terragrunt.hcl
+    ├── eks/terragrunt.hcl
+    └── rds/terragrunt.hcl
+```
+
+### CI/CD Integration
+```yaml
 # GitHub Actions
 - name: Terragrunt Plan
   run: |
@@ -232,8 +324,11 @@ inputs = {
   run: |
     cd infrastructure/prod
     terragrunt run-all apply -auto-approve
+  if: github.ref == 'refs/heads/main'
+```
 
-# GitLab CI
+### GitLab CI
+```yaml
 terragrunt:plan:
   script:
     - cd infrastructure/$ENVIRONMENT
@@ -244,6 +339,8 @@ terragrunt:apply:
     - cd infrastructure/$ENVIRONMENT
     - terragrunt run-all apply -auto-approve
   when: manual
+  only:
+    - main
 ```
 
 ## Debugging
@@ -254,11 +351,14 @@ terragrunt plan --terragrunt-log-level debug
 # Show configuration
 terragrunt terragrunt-info
 
-# Validate configuration
+# Validate all configurations
 terragrunt validate-all
 
 # Graph dependencies
 terragrunt graph-dependencies | dot -Tpng > graph.png
+
+# Show execution plan
+terragrunt run-all plan --terragrunt-log-level info
 ```
 
 ## Working Directory
@@ -272,52 +372,104 @@ terragrunt plan
 ```
 
 ## Common Patterns
+
+### Read YAML Config
 ```hcl
-# Read YAML config
 locals {
   config = yamldecode(file("config.yaml"))
 }
 
 inputs = {
   vpc_cidr = local.config.vpc_cidr
+  subnets  = local.config.subnets
 }
+```
 
-# Conditional inputs
+### Conditional Inputs
+```hcl
 inputs = {
   enable_monitoring = get_env("ENVIRONMENT") == "prod" ? true : false
+  instance_count    = get_env("ENVIRONMENT") == "prod" ? 5 : 1
 }
+```
 
-# Dynamic source
+### Dynamic Source
+```hcl
 terraform {
   source = get_env("TF_MODULE_SOURCE", "git::https://github.com/org/modules.git//vpc")
 }
 ```
 
+### Module Versioning
+```hcl
+locals {
+  module_version = "v2.0.0"
+}
+
+terraform {
+  source = "git::https://github.com/org/modules.git//vpc?ref=${local.module_version}"
+}
+```
+
+## Advanced Features
+
+### Mock Outputs
+```hcl
+# For development/testing
+dependency "vpc" {
+  config_path = "../vpc"
+
+  mock_outputs = {
+    vpc_id = "vpc-12345678"
+    subnet_ids = ["subnet-1", "subnet-2"]
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+```
+
+### Skip Dependencies
+```bash
+# Skip dependency checks
+terragrunt apply --terragrunt-ignore-dependency-errors
+
+# Exclude specific modules
+terragrunt run-all apply --terragrunt-exclude-dir dev/eks
+```
+
+### Parallel Execution
+```bash
+# Control parallelism
+terragrunt run-all apply --terragrunt-parallelism 5
+
+# Disable parallel execution
+terragrunt run-all apply --terragrunt-parallelism 1
+```
+
 ## Best Practices
-- **Use version pinning** for modules
-- **Keep state per environment** (separate backends)
-- **Use dependencies** instead of data sources where possible
-- **Generate common files** (provider, versions)
-- **Use run-all** for multi-module changes
-- **Enable state locking** (DynamoDB)
-- **Tag resources** via inputs
+- **Version pinning**: Pin module versions in source URLs
+- **Separate backends**: Use different S3 buckets/prefixes per environment
+- **Dependencies over data sources**: Use `dependency` blocks for module outputs
+- **Generate common files**: Auto-generate provider and version files
+- **Use run-all**: Leverage parallel execution for multi-module changes
+- **State locking**: Enable DynamoDB locking to prevent concurrent modifications
+- **Tag resources**: Include environment tags via inputs
 
 ## Tips
-- DRY configuration (Don't Repeat Yourself)
-- Automatic backend configuration
-- Dependency management
-- Hooks for custom logic
+- DRY configuration eliminates duplicate code
+- Automatic backend setup and state management
+- Dependency resolution with output passing
+- Hooks enable custom workflows (notifications, cleanup, validation)
 - Works with any Terraform module
-- Multi-environment support
-- Parallel execution
+- Multi-environment support with minimal duplication
+- Parallel execution speeds up large deployments
 
 ## Agent Use
-- Multi-environment deployment
-- Infrastructure automation
-- State management
+- Multi-environment infrastructure deployment
+- Automated infrastructure provisioning
+- Remote state management
 - Dependency orchestration
 - CI/CD pipeline integration
-- Configuration templating
+- Configuration templating and generation
 
 ## Uninstall
 ```yaml
@@ -326,7 +478,10 @@ terraform {
     state: absent
 ```
 
+**Note:** Terraform state files and infrastructure remain after uninstall. Only the Terragrunt CLI is removed.
+
 ## Resources
 - GitHub: https://github.com/gruntwork-io/terragrunt
 - Docs: https://terragrunt.gruntwork.io/
-- Search: "terragrunt examples", "terragrunt dry"
+- Examples: https://github.com/gruntwork-io/terragrunt-infrastructure-live-example
+- Search: "terragrunt examples", "terragrunt dry configuration"

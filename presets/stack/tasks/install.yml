@@ -3,15 +3,21 @@
   register: stack_check
   failed_when: false
 
-- name: Install stack
+- name: Install stack via Homebrew
   package:
-    name: stack
+    name: haskell-stack
     state: present
-  when: stack_check.rc != 0
+  when: brew_available and stack_check.rc != 0
 
-- name: Verify installation
-  shell: stack --version 2>&1 || stack -v 2>&1 || echo "installed"
-  register: stack_version
+- name: Install stack (Linux)
+  shell: curl -sSL https://get.haskellstack.org/ | sh
+  when: linux and stack_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v stack
+      exit_code: 0
+
+- name: Display confirmation
   print: "stack installed"

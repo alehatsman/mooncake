@@ -7,11 +7,11 @@
   package:
     name: werf
     state: present
-  when: os == "darwin" and werf_check.rc != 0
+  when: brew_available and werf_check.rc != 0
 
 - name: Install werf (Linux)
   shell: curl -sSL https://werf.io/install.sh | bash -s -- --ci
-  when: os == "linux" and werf_check.rc != 0
+  when: linux and werf_check.rc != 0
 
 - name: Verify installation with assert
   assert:

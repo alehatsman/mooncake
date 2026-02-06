@@ -1,7 +1,13 @@
 name: terragrunt
-description: Infrastructure as Code tool
+description: Terraform wrapper for keeping configurations DRY with remote state management and dependency handling
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether terragrunt should be installed or removed
 steps:
   - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
   - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

@@ -4,11 +4,13 @@
   file:
     path: "~/.nvm"
     state: absent
+  when: parameters.state == "absent"
 
 - name: Remove nvm init file
   file:
     path: "~/.nvm_init"
     state: absent
+  when: parameters.state == "absent"
 
 - name: Remove nvm from shell profiles
   shell: |
@@ -19,6 +21,14 @@
         sed -i '' '/.nvm_init/d' "$profile" 2>/dev/null || true
       fi
     done
+  when: parameters.state == "absent"
+
+- name: Assert nvm is removed
+  assert:
+    file:
+      path: "~/.nvm/nvm.sh"
+      exists: false
+  when: parameters.state == "absent"
 
 - name: Print uninstallation complete
   print: |
@@ -26,3 +36,4 @@
 
     Note: npm global packages were removed with Node.js.
     Restart your terminal for changes to take effect.
+  when: parameters.state == "absent"

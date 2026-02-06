@@ -1,5 +1,5 @@
-name: datadog-agent  
-description: Datadog monitoring agent
+name: datadog-agent
+description: Install Datadog Agent for infrastructure monitoring, metrics collection, and APM tracing
 version: "1.0.0"
 parameters:
   state:

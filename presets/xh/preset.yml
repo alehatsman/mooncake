@@ -1,5 +1,5 @@
 name: xh
-description: Friendly HTTP client (httpie clone)
+description: Fast HTTP client in Rust, httpie-compatible with additional features like downloads and sessions
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Whether xh should be installed or removed
 steps:
   - name: Install xh
     include: tasks/install.yml

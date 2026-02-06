@@ -7,11 +7,11 @@
   package:
     name: rustup
     state: present
-  when: os == "darwin" and rustup_check.rc != 0
+  when: brew_available and rustup_check.rc != 0
 
 - name: Install rustup (Linux)
   shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  when: os == "linux" and rustup_check.rc != 0
+  when: linux and rustup_check.rc != 0
 
 - name: Verify installation with assert
   assert:

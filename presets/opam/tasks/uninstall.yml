@@ -1,8 +1,23 @@
-- name: Uninstall opam
+- name: Uninstall opam (macOS)
   package:
     name: opam
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall opam (Linux)
+  package:
+    name: opam
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v opam
+      exit_code: 1
 
 - name: Display confirmation
   print: "opam uninstalled"

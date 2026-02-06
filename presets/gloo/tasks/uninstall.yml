@@ -1,8 +1,25 @@
-- name: Uninstall gloo
+- name: Uninstall gloo (macOS)
   package:
     name: gloo
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gloo (Linux)
+  shell: |
+    GLOOCTL_PATH=$(command -v glooctl 2>/dev/null)
+    if [ -n "$GLOOCTL_PATH" ]; then
+      sudo rm -f "$GLOOCTL_PATH"
+      rm -rf $HOME/.gloo
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v glooctl
+      exit_code: 1
 
 - name: Display confirmation
   print: "gloo uninstalled"

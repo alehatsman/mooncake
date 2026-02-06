@@ -1,8 +1,24 @@
-- name: Uninstall golangci-lint
+- name: Uninstall golangci-lint (macOS)
   package:
     name: golangci-lint
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall golangci-lint (Linux)
+  shell: |
+    GOLANGCI_PATH=$(command -v golangci-lint 2>/dev/null)
+    if [ -n "$GOLANGCI_PATH" ]; then
+      sudo rm -f "$GOLANGCI_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v golangci-lint
+      exit_code: 1
 
 - name: Display confirmation
   print: "golangci-lint uninstalled"

@@ -5,11 +5,11 @@
 
 - name: Install singer (macOS)
   shell: pip3 install --user singer-python
-  when: os == "darwin" and singer_check.rc != 0
+  when: brew_available and singer_check.rc != 0
 
 - name: Install singer (Linux)
   shell: pip3 install --user singer-python
-  when: os == "linux" and singer_check.rc != 0
+  when: linux and singer_check.rc != 0
 
 - name: Verify installation with assert
   assert:

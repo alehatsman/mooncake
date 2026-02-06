@@ -1,41 +1,39 @@
 # Modern Unix Tools Installation
 
-- name: Install {{ item }} via {{ package_manager }}
-  package:
-    name: "{{ item }}"
-    state: present
+- name: Install {{ item }} via apt
+  shell: apt-get install -y {{ item }}
   with_items: parameters.tools
+  when: apt_available
   become: true
-  when: package_manager != "brew" and parameters.state == "present"
 
-- name: Install {{ item }} via {{ package_manager }}
-  package:
-    name: "{{ item }}"
-    state: present
+- name: Install {{ item }} via dnf
+  shell: dnf install -y {{ item }}
   with_items: parameters.tools
-  when: package_manager == "brew" and parameters.state == "present"
-
-- name: Remove {{ item }} via {{ package_manager }}
-  package:
-    name: "{{ item }}"
-    state: absent
-  with_items: parameters.tools
+  when: dnf_available
   become: true
-  when: package_manager != "brew" and parameters.state == "absent"
 
-- name: Remove {{ item }} via {{ package_manager }}
-  package:
-    name: "{{ item }}"
-    state: absent
+- name: Install {{ item }} via yum
+  shell: yum install -y {{ item }}
   with_items: parameters.tools
-  when: package_manager == "brew" and parameters.state == "absent"
+  when: yum_available
+  become: true
 
-- name: Verify installation
+- name: Install {{ item }} via pacman
+  shell: pacman -S --noconfirm {{ item }}
+  with_items: parameters.tools
+  when: pacman_available
+  become: true
+
+- name: Install {{ item }} via Homebrew
+  shell: brew install {{ item }}
+  with_items: parameters.tools
+  when: brew_available
+
+- name: Verify bat is installed
   assert:
     command:
       cmd: command -v bat
       exit_code: 0
-  when: parameters.state == "present"
 
 - name: Print installation complete message
   print: |
@@ -48,4 +46,3 @@
       dust                 # Disk usage
       duf                  # Disk free
       btm                  # System monitor
-  when: parameters.state == "present"

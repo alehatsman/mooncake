@@ -1,8 +1,20 @@
-- name: Uninstall pgcli
+- name: Uninstall pgcli (macOS)
   package:
     name: pgcli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall pgcli (Linux)
+  shell: pip3 uninstall -y pgcli
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pgcli
+      exit_code: 1
 
 - name: Display confirmation
   print: "pgcli uninstalled"

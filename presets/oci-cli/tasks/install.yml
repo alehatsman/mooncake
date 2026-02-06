@@ -1,17 +1,23 @@
 - name: Check if oci is installed
   shell: command -v oci
-  register: oci_cli_check
+  register: oci_check
   failed_when: false
 
-- name: Install oci-cli
+- name: Install oci-cli via Homebrew
   package:
     name: oci-cli
     state: present
-  when: oci_cli_check.rc != 0
+  when: brew_available and oci_check.rc != 0
 
-- name: Verify installation
-  shell: oci --version 2>&1 || oci -v 2>&1 || echo "installed"
-  register: oci_cli_version
+- name: Install oci-cli via install script
+  shell: bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
+  when: linux and oci_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v oci
+      exit_code: 0
+
+- name: Display confirmation
   print: "oci-cli installed"

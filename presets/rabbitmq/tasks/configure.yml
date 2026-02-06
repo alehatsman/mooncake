@@ -6,11 +6,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start RabbitMQ service (macOS)
   shell: brew services start rabbitmq
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
 
 - name: Wait for RabbitMQ to be ready
   shell: rabbitmqctl status

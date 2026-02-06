@@ -1,8 +1,24 @@
-- name: Uninstall ko
+- name: Uninstall ko (macOS)
   package:
     name: ko
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall ko (Linux)
+  shell: |
+    KO_PATH=$(command -v ko 2>/dev/null)
+    if [ -n "$KO_PATH" ]; then
+      rm -f "$KO_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ko
+      exit_code: 1
 
 - name: Display confirmation
   print: "ko uninstalled"

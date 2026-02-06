@@ -7,6 +7,15 @@ Automatic environment variable loading per directory. Load/unload environment va
 - preset: direnv
 ```
 
+## Features
+- **Automatic Loading**: Environment variables load/unload when entering/leaving directories
+- **Per-Project Config**: Each project has isolated environment settings
+- **Shell Integration**: Works with bash, zsh, fish, and other shells
+- **Language Support**: Built-in layouts for Python, Node.js, Ruby, Go, Rust
+- **Path Management**: Easy PATH manipulation with PATH_add helper
+- **Secrets Safety**: Load secrets from files without committing to git
+- **Watch Files**: Automatically reload when dependencies change
+
 ## Basic Usage
 ```bash
 # Initialize in project
@@ -410,6 +419,16 @@ PATH_add notebooks
 - Fast (< 5ms overhead)
 - Secure (allow-list model)
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Automated development environments
 - Multi-project setup
@@ -418,6 +437,18 @@ PATH_add notebooks
 - Team environment consistency
 - Configuration automation
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install direnv
+  preset: direnv
+
+- name: Use direnv in automation
+  shell: |
+    # Custom configuration here
+    echo "direnv configured"
+```
 ## Uninstall
 ```yaml
 - preset: direnv

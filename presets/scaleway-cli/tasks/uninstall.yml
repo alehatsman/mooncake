@@ -2,12 +2,12 @@
   package:
     name: scw
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall scaleway-cli (Linux)
   shell: sudo rm -f /usr/local/bin/scw
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

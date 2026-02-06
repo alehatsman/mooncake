@@ -2,12 +2,12 @@
   package:
     name: volta
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall volta (Linux)
   shell: rm -rf ~/.volta
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

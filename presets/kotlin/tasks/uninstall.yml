@@ -1,8 +1,22 @@
-- name: Uninstall kotlin
+- name: Uninstall kotlin (macOS)
   package:
     name: kotlin
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kotlin (Linux)
+  shell: |
+    sudo rm -rf /usr/local/kotlinc
+    sudo rm -f /usr/local/bin/kotlin /usr/local/bin/kotlinc
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kotlin
+      exit_code: 1
 
 - name: Display confirmation
   print: "kotlin uninstalled"

@@ -9,8 +9,14 @@
     state: present
   when: age_check.rc != 0
 
-- name: Verify installation
-  shell: age --version 2>&1 || echo "installed"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: age --version
+      exit_code: 0
+
+- name: Display version
+  shell: age --version
   register: age_version
 
 - name: Display version

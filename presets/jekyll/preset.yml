@@ -1,7 +1,32 @@
 name: jekyll
-description: Static site generator
+description: Static site generator for blogs and documentation
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Jekyll should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: Jekyll gem version (e.g., "4.3.0", "latest")
+
+  install_bundler:
+    type: bool
+    required: false
+    default: true
+    description: Install Bundler for dependency management
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install Jekyll
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Jekyll
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

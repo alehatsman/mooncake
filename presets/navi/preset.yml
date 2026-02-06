@@ -1,5 +1,5 @@
 name: navi
-description: CLI productivity tool
+description: Interactive cheatsheet tool for discovering and executing command-line commands
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

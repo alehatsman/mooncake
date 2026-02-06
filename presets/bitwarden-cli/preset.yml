@@ -1,5 +1,5 @@
 name: bitwarden-cli
-description: Secrets management
+description: Official command-line interface for Bitwarden password manager
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

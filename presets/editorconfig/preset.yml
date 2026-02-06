@@ -1,5 +1,5 @@
 name: editorconfig
-description: Utility tool
+description: Install EditorConfig core - maintain consistent coding styles across editors
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

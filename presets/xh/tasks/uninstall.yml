@@ -1,13 +1,13 @@
-- name: Uninstall xh (macOS)
+- name: Uninstall xh via Homebrew
   package:
     name: xh
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall xh (Linux)
+- name: Uninstall xh via cargo
   shell: cargo uninstall xh
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

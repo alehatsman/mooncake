@@ -2,12 +2,12 @@
   package:
     name: metaflow
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall metaflow (Linux)
+- name: Uninstall metaflow via pip3
   shell: pip3 uninstall -y metaflow
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

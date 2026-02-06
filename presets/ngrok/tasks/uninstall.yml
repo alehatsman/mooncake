@@ -1,8 +1,24 @@
-- name: Uninstall ngrok
+- name: Uninstall ngrok (macOS)
   package:
     name: ngrok
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall ngrok (Linux)
+  shell: |
+    NGROK_PATH=$(command -v ngrok 2>/dev/null)
+    if [ -n "$NGROK_PATH" ]; then
+      sudo rm -f "$NGROK_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ngrok
+      exit_code: 1
 
 - name: Display confirmation
   print: "ngrok uninstalled"

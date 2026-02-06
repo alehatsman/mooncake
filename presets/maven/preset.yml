@@ -1,5 +1,5 @@
 name: maven
-description: Java/JVM tool
+description: Java build tool and dependency manager
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

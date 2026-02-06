@@ -1,8 +1,21 @@
-- name: Uninstall next
-  package:
-    name: next
-    state: absent
+- name: Check if npm is installed
+  shell: command -v npm
+  register: npm_check
+  failed_when: false
+  when: parameters.state == "absent"
+
+- name: Uninstall Next.js CLI globally
+  shell: npm uninstall -g next
+  when: (parameters.state == "absent") and (npm_check.rc == 0)
   failed_when: false
 
 - name: Display confirmation
-  print: "next uninstalled"
+  print: "Next.js CLI uninstalled"
+  when: parameters.state == "absent"
+
+- name: Verify removal
+  assert:
+    command:
+      cmd: npm list -g next
+      exit_code: 1
+  when: (parameters.state == "absent") and (npm_check.rc == 0)

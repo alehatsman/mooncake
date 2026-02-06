@@ -7,6 +7,15 @@ curl with httpie syntax. Power of curl with the ease of httpie. Best of both wor
 - preset: curlie
 ```
 
+## Features
+- **HTTPie Syntax**: Simple, intuitive command syntax for API calls
+- **curl Power**: Full curl features and compatibility
+- **Syntax Highlighting**: Colored JSON/XML output for readability
+- **Session Support**: Save and reuse headers and cookies
+- **Form and File Uploads**: Easy multipart form handling
+- **Authentication**: Built-in support for basic, bearer, and custom auth
+- **Best of Both**: Combines httpie's UX with curl's performance
+
 ## Basic Usage
 ```bash
 # Simple GET
@@ -281,6 +290,16 @@ curlie --trace-ascii debug.txt example.com
 - Fast startup time
 - Works offline
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - API endpoint testing
 - CI/CD health checks
@@ -289,6 +308,18 @@ curlie --trace-ascii debug.txt example.com
 - Service verification
 - Response validation
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install curlie
+  preset: curlie
+
+- name: Use curlie in automation
+  shell: |
+    # Custom configuration here
+    echo "curlie configured"
+```
 ## Uninstall
 ```yaml
 - preset: curlie

@@ -3,15 +3,24 @@
   register: nim_check
   failed_when: false
 
-- name: Install nim
+- name: Install nim via Homebrew
   package:
     name: nim
     state: present
-  when: nim_check.rc != 0
+  when: brew_available and nim_check.rc != 0
 
-- name: Verify installation
-  shell: nim --version 2>&1 || nim -v 2>&1 || echo "installed"
-  register: nim_version
+- name: Install nim via apt
+  package:
+    name: nim
+    state: present
+  become: true
+  when: apt_available and nim_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nim
+      exit_code: 0
+
+- name: Display confirmation
   print: "nim installed"

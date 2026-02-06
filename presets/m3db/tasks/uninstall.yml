@@ -4,5 +4,11 @@
     state: absent
   failed_when: false
 
+- name: Assert m3db is removed
+  assert:
+    command:
+      cmd: command -v m3db
+      exit_code: 1
+
 - name: Display confirmation
   print: "m3db uninstalled"

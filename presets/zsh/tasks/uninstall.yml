@@ -11,24 +11,31 @@
 - name: Remove Zsh config
   shell: rm -f ~/.zshrc ~/.zshrc.bak ~/.zsh_history
 
-- name: Uninstall Zsh (macOS)
+- name: Uninstall Zsh via Homebrew
   shell: brew uninstall zsh
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall Zsh (Debian/Ubuntu)
+- name: Uninstall Zsh via apt
   package:
     name: zsh
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
-- name: Uninstall Zsh (RHEL/Fedora)
+- name: Uninstall Zsh via dnf
   package:
     name: zsh
     state: absent
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: dnf_available
+
+- name: Uninstall Zsh via yum
+  package:
+    name: zsh
+    state: absent
+  become: true
+  when: yum_available
 
 - name: Verify uninstallation with assert
   assert:

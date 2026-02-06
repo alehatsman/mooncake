@@ -36,7 +36,7 @@
     action: set_vars
     vars:
       pytorch_variant: mps
-  when: parameters.gpu_support == "mps" or (parameters.gpu_support == "auto" and mps_check.rc == 0 and os == "darwin")
+  when: parameters.gpu_support == "mps" or (parameters.gpu_support == "auto" and mps_check.rc == 0 and brew_available)
 
 - name: Set GPU variant - CPU only
   vars:
@@ -93,6 +93,12 @@
   register: pytorch_test
   failed_when: false
   timeout: 10s
+
+- name: Verify PyTorch installation with assert
+  assert:
+    command:
+      cmd: python3 -c "import torch; print(torch.__version__)"
+      exit_code: 0
 
 - name: Display PyTorch test - Success
   print: "OK PyTorch functional test passed (tensor operations working)"

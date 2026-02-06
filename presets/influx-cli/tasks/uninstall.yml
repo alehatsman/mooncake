@@ -1,0 +1,33 @@
+- name: Check if influx CLI is installed
+  shell: command -v influx
+  register: check
+  failed_when: false
+
+- name: Uninstall influx CLI via apt
+  shell: apt-get remove -y influxdb2-cli
+  when: apt_available and check.rc == 0
+  become: true
+
+- name: Uninstall influx CLI via dnf
+  shell: dnf remove -y influxdb2-cli
+  when: dnf_available and check.rc == 0
+  become: true
+
+- name: Uninstall influx CLI via yum
+  shell: yum remove -y influxdb2-cli
+  when: yum_available and check.rc == 0
+  become: true
+
+- name: Uninstall influx CLI via Homebrew
+  shell: brew uninstall influxdb-cli
+  when: brew_available and check.rc == 0
+
+- name: Verify influx CLI removal
+  shell: command -v influx
+  register: verify
+  failed_when: false
+
+- name: Confirm removal
+  print:
+    msg: "influx CLI uninstalled successfully"
+  when: verify.rc != 0

@@ -3,15 +3,15 @@
   register: mitmproxy_check
   failed_when: false
 
-- name: Install mitmproxy (macOS)
+- name: Install mitmproxy via Homebrew
   package:
     name: mitmproxy
     state: present
-  when: os == "darwin" and mitmproxy_check.rc != 0
+  when: brew_available and mitmproxy_check.rc != 0
 
-- name: Install mitmproxy (Linux)
+- name: Install mitmproxy via pip3
   shell: pip3 install --user mitmproxy
-  when: os == "linux" and mitmproxy_check.rc != 0
+  when: not brew_available and mitmproxy_check.rc != 0
 
 - name: Verify installation with assert
   assert:

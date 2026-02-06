@@ -1,17 +1,30 @@
-- name: Check if next is installed
-  shell: command -v next
-  register: next_check
+- name: Check if npm is installed
+  shell: command -v npm
+  register: npm_check
   failed_when: false
 
-- name: Install next
-  package:
-    name: next
-    state: present
-  when: next_check.rc != 0
+- name: Check if next is globally installed
+  shell: npm list -g next 2>&1 | grep -q 'next@' && echo "installed" || echo "not installed"
+  register: next_check
+  failed_when: false
+  when: (parameters.state == "present") and (npm_check.rc == 0)
+
+- name: Install Next.js CLI globally
+  shell: npm install -g next
+  when: (parameters.state == "present") and (npm_check.rc == 0)
+
+- name: Verify Next.js installation
+  shell: npx next --version 2>&1 || echo "Next.js installed (use via npx next)"
+  register: next_version
+  when: parameters.state == "present"
+
+- name: Display confirmation
+  print: "Next.js CLI installed (use 'npx next' or 'npm create next-app')"
+  when: parameters.state == "present"
 
 - name: Verify installation
-  shell: next --version 2>&1 || next -v 2>&1 || echo "installed"
-  register: next_version
-
-- name: Display version
-  print: "next installed"
+  assert:
+    command:
+      cmd: npx next --version
+      exit_code: 0
+  when: parameters.state == "present"

@@ -1,5 +1,5 @@
 name: gradle
-description: Java/JVM tool
+description: Build automation tool for JVM projects with dependency management
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

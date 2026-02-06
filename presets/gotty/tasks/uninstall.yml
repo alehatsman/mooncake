@@ -1,8 +1,24 @@
-- name: Uninstall gotty
+- name: Uninstall gotty (macOS)
   package:
     name: gotty
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gotty (Linux)
+  shell: |
+    GOTTY_PATH=$(command -v gotty 2>/dev/null)
+    if [ -n "$GOTTY_PATH" ]; then
+      sudo rm -f "$GOTTY_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gotty
+      exit_code: 1
 
 - name: Display confirmation
   print: "gotty uninstalled"

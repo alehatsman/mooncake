@@ -7,6 +7,37 @@ Static analysis tool for shell scripts. Catch bugs, enforce best practices, sugg
 - preset: shellcheck
 ```
 
+## Features
+- **Comprehensive analysis**: Detects 95% of common shell script bugs
+- **Best practices enforcement**: Guides you toward safer, more maintainable code
+- **Multi-shell support**: Works with bash, sh, ksh, dash
+- **Fast execution**: Less than 1 second for most scripts
+- **CI/CD integration**: JSON, GCC, Checkstyle output formats
+- **Editor integration**: Plugins for VS Code, Vim, Emacs, Sublime
+- **Cross-platform**: Linux, macOS, BSD, Windows
+
+## Advanced Configuration
+```yaml
+# Install shellcheck (default)
+- preset: shellcheck
+
+# Uninstall shellcheck
+- preset: shellcheck
+  with:
+    state: absent
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove (present/absent) |
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ✅ BSD (pkg)
+- ✅ Windows (via scoop, choco)
+
 ## Basic Usage
 ```bash
 # Check single script

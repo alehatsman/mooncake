@@ -13,6 +13,40 @@ Manage GitHub repos, PRs, issues, and Actions from the command line. Native GitH
     configure_auth: true
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+
+## Basic Usage
+```bash
+# Check version
+gh --version
+
+# View repository
+gh repo view
+
+# Clone a repository
+gh repo clone owner/repo
+
+# Create a repository
+gh repo create my-new-repo --public
+
+# List pull requests
+gh pr list
+
+# Create a pull request
+gh pr create --title "My PR" --body "Description"
+
+# List issues
+gh issue list
+
+# Create an issue
+gh issue create --title "Bug report" --body "Details"
+```
+
 ## Authentication
 ```bash
 # Interactive login
@@ -400,3 +434,20 @@ export GH_TOKEN=ghp_xxx
 - GitHub: https://github.com/cli/cli
 - Docs: https://cli.github.com/manual/
 - Search: "gh cli examples", "gh automation"
+
+## Advanced Configuration
+```yaml
+- preset: gh
+  with:
+    state: present
+```
+
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove gh |
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

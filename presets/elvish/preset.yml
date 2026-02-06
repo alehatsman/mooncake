@@ -1,5 +1,5 @@
 name: elvish
-description: Expressive programming language and shell
+description: Install Elvish - friendly interactive shell and expressive programming language
 version: "1.0.0"
 parameters:
   state:

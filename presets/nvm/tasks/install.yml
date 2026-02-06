@@ -1,17 +1,23 @@
 - name: Check if nvm is installed
-  shell: command -v nvm
+  shell: test -f ~/.nvm/nvm.sh && echo "installed" || echo "not installed"
   register: nvm_check
   failed_when: false
 
-- name: Install nvm
+- name: Install nvm via Homebrew (macOS)
   package:
     name: nvm
     state: present
-  when: nvm_check.rc != 0
+  when: (parameters.state == "present") and (os == "darwin") and (nvm_check.stdout != "installed")
 
-- name: Verify installation
-  shell: nvm --version 2>&1 || nvm -v 2>&1 || echo "installed"
-  register: nvm_version
+- name: Install nvm via install script (Linux)
+  shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  when: (parameters.state == "present") and (os == "linux") and (nvm_check.stdout != "installed")
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    file:
+      path: "~/.nvm/nvm.sh"
+      exists: true
+
+- name: Display confirmation
   print: "nvm installed"

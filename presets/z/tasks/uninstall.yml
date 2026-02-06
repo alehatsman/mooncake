@@ -1,13 +1,13 @@
-- name: Uninstall z (macOS)
+- name: Uninstall z via Homebrew
   package:
     name: z
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall z (Linux)
+- name: Uninstall z files
   shell: rm -f ~/.z.sh ~/.z
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert
@@ -15,7 +15,7 @@
     file:
       path: ~/.z.sh
       exists: false
-  when: os == "linux"
+  when: not brew_available
 
 - name: Display confirmation
   print: "z uninstalled"

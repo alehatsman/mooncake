@@ -1,5 +1,5 @@
 name: hugo
-description: Static site generator
+description: Fast static site generator written in Go for building websites
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

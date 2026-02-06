@@ -2,12 +2,12 @@
   package:
     name: sccache
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall sccache (Linux)
   shell: cargo uninstall sccache
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "cabal installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cabal
+      exit_code: 0

@@ -1,8 +1,24 @@
-- name: Uninstall lazygit
+- name: Uninstall lazygit (macOS)
   package:
     name: lazygit
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall lazygit (Linux)
+  shell: |
+    LAZYGIT_PATH=$(command -v lazygit 2>/dev/null)
+    if [ -n "$LAZYGIT_PATH" ]; then
+      sudo rm -f "$LAZYGIT_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v lazygit
+      exit_code: 1
 
 - name: Display confirmation
   print: "lazygit uninstalled"

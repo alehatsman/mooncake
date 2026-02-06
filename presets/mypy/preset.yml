@@ -1,7 +1,20 @@
 name: mypy
-description: Python tool
+description: Static type checker for Python code
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether mypy should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install mypy
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall mypy
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

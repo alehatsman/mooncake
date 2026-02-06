@@ -1,5 +1,5 @@
 name: ambassador
-description: API gateway / load balancer
+description: Kubernetes-native API gateway built on Envoy Proxy for traffic management
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

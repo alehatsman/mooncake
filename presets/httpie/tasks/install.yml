@@ -1,17 +1,26 @@
 - name: Check if httpie is installed
-  shell: command -v httpie
+  shell: command -v http
   register: httpie_check
   failed_when: false
 
-- name: Install httpie
+- name: Install httpie (macOS)
   package:
     name: httpie
     state: present
-  when: httpie_check.rc != 0
+  when: brew_available and httpie_check.rc != 0
 
-- name: Verify installation
-  shell: httpie --version 2>&1 || echo "installed"
-  register: httpie_version
+- name: Install httpie (Linux)
+  package:
+    name: httpie
+    state: present
+  become: true
+  when: apt_available and httpie_check.rc != 0
 
-- name: Display version
-  print: "httpie installed: {{ httpie_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v http
+      exit_code: 0
+
+- name: Display confirmation
+  print: "httpie installed"

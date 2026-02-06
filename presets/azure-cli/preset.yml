@@ -1,5 +1,5 @@
 name: azure-cli
-description: Microsoft Azure CLI
+description: Official command-line interface for managing Microsoft Azure cloud resources
 version: "1.0.0"
 parameters:
   state:

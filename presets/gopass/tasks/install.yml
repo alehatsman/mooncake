@@ -3,15 +3,24 @@
   register: gopass_check
   failed_when: false
 
-- name: Install gopass
+- name: Install gopass (macOS)
   package:
     name: gopass
     state: present
-  when: gopass_check.rc != 0
+  when: brew_available and gopass_check.rc != 0
 
-- name: Verify installation
-  shell: gopass --version 2>&1 || gopass -v 2>&1 || echo "installed"
-  register: gopass_version
+- name: Install gopass (Linux)
+  package:
+    name: gopass
+    state: present
+  become: true
+  when: apt_available and gopass_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gopass
+      exit_code: 0
+
+- name: Display confirmation
   print: "gopass installed"

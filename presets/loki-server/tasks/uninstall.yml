@@ -4,5 +4,11 @@
     state: absent
   failed_when: false
 
+- name: Assert loki is removed
+  assert:
+    command:
+      cmd: command -v loki
+      exit_code: 1
+
 - name: Display confirmation
   print: "loki-server uninstalled"

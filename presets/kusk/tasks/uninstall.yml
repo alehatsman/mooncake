@@ -1,8 +1,24 @@
-- name: Uninstall kusk
+- name: Uninstall kusk (macOS)
   package:
     name: kusk
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kusk (Linux)
+  shell: |
+    KUSK_PATH=$(command -v kusk 2>/dev/null)
+    if [ -n "$KUSK_PATH" ]; then
+      sudo rm -f "$KUSK_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kusk
+      exit_code: 1
 
 - name: Display confirmation
   print: "kusk uninstalled"

@@ -3,15 +3,21 @@
   register: hatch_check
   failed_when: false
 
-- name: Install hatch
+- name: Install hatch (macOS)
   package:
     name: hatch
     state: present
-  when: hatch_check.rc != 0
+  when: brew_available and hatch_check.rc != 0
 
-- name: Verify installation
-  shell: hatch --version 2>&1 || hatch -v 2>&1 || echo "installed"
-  register: hatch_version
+- name: Install hatch (Linux)
+  shell: pip3 install --user hatch
+  when: linux and hatch_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v hatch
+      exit_code: 0
+
+- name: Display confirmation
   print: "hatch installed"

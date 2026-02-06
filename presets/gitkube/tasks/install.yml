@@ -3,15 +3,24 @@
   register: gitkube_check
   failed_when: false
 
-- name: Install gitkube
+- name: Install gitkube (macOS)
   package:
     name: gitkube
     state: present
-  when: gitkube_check.rc != 0
+  when: brew_available and gitkube_check.rc != 0
 
-- name: Verify installation
-  shell: gitkube --version 2>&1 || gitkube -v 2>&1 || echo "installed"
-  register: gitkube_version
+- name: Install gitkube (Linux)
+  shell: |
+    curl -sL https://github.com/hasura/gitkube/releases/latest/download/gitkube-linux-arm64 -o /tmp/gitkube
+    sudo mv /tmp/gitkube /usr/local/bin/gitkube
+    sudo chmod +x /usr/local/bin/gitkube
+  when: linux and gitkube_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v gitkube
+      exit_code: 0
+
+- name: Display confirmation
   print: "gitkube installed"

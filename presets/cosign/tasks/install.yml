@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "cosign installed: {{ cosign_version.stdout }}"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v cosign
+      exit_code: 0

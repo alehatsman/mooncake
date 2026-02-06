@@ -1,5 +1,5 @@
 name: sbt
-description: Java/JVM tool
+description: Interactive build tool for Scala and Java projects
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

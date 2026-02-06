@@ -1,5 +1,5 @@
 name: leiningen
-description: Java/JVM tool
+description: Clojure build automation and dependency management tool
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

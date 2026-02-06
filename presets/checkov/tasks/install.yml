@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "checkov installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v checkov
+      exit_code: 0

@@ -1,5 +1,5 @@
 name: arangodb
-description: Graph / vector database
+description: Multi-model database supporting graphs, documents, key-value, and search
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

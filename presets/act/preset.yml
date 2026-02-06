@@ -1,5 +1,5 @@
 name: act
-description: CI/CD tool
+description: Run GitHub Actions workflows locally with Docker for testing and debugging
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

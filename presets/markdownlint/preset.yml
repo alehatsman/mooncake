@@ -1,5 +1,5 @@
 name: markdownlint
-description: Utility tool
+description: Markdown linter and style checker for consistent documentation
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

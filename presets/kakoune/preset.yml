@@ -1,5 +1,5 @@
 name: kakoune
-description: Text editor / IDE
+description: Modal code editor with multiple selections and interactive feedback
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

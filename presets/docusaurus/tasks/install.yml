@@ -3,15 +3,15 @@
   register: docusaurus_check
   failed_when: false
 
-- name: Install docusaurus
-  package:
-    name: docusaurus
-    state: present
+- name: Install docusaurus via npm
+  shell: npm install -g @docusaurus/init
   when: docusaurus_check.rc != 0
 
-- name: Verify installation
-  shell: docusaurus --version 2>&1 || docusaurus -v 2>&1 || echo "installed"
-  register: docusaurus_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v docusaurus
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "docusaurus installed"

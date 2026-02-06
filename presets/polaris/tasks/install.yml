@@ -3,15 +3,31 @@
   register: polaris_check
   failed_when: false
 
-- name: Install polaris
+- name: Install polaris via Homebrew
   package:
     name: polaris
     state: present
-  when: polaris_check.rc != 0
+  when: brew_available and polaris_check.rc != 0
 
-- name: Verify installation
-  shell: polaris --version 2>&1 || polaris -v 2>&1 || echo "installed"
+- name: Install polaris via binary (Linux)
+  shell: |
+    curl -L https://github.com/FairwindsOps/polaris/releases/latest/download/polaris_linux_amd64.tar.gz -o /tmp/polaris.tar.gz
+    tar -xzf /tmp/polaris.tar.gz -C /tmp
+    sudo mv /tmp/polaris /usr/local/bin/polaris
+    sudo chmod +x /usr/local/bin/polaris
+    rm /tmp/polaris.tar.gz
+  when: linux and polaris_check.rc != 0
+  become: true
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v polaris
+      exit_code: 0
+
+- name: Get polaris version
+  shell: polaris version
   register: polaris_version
 
 - name: Display version
-  print: "polaris installed"
+  print: "polaris installed: {{ polaris_version.stdout }}"

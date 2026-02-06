@@ -1,8 +1,22 @@
-- name: Uninstall oci-cli
+- name: Uninstall oci-cli (macOS)
   package:
     name: oci-cli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall oci-cli (Linux)
+  shell: |
+    rm -rf ~/lib/oracle-cli
+    rm -f ~/bin/oci
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v oci
+      exit_code: 1
 
 - name: Display confirmation
   print: "oci-cli uninstalled"

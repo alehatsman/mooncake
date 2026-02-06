@@ -3,15 +3,24 @@
   register: autojump_check
   failed_when: false
 
-- name: Install autojump
+- name: Install autojump via Homebrew
   package:
     name: autojump
     state: present
-  when: autojump_check.rc != 0
+  when: brew_available and autojump_check.rc != 0
 
-- name: Verify installation
-  shell: autojump --version 2>&1 || autojump -v 2>&1 || echo "installed"
-  register: autojump_version
+- name: Install autojump via apt
+  package:
+    name: autojump
+    state: present
+  become: true
+  when: apt_available and autojump_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v autojump
+      exit_code: 0
+
+- name: Display confirmation
   print: "autojump installed"

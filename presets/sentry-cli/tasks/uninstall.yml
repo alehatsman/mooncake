@@ -2,12 +2,12 @@
   package:
     name: sentry-cli
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall sentry-cli (Linux)
   shell: npm uninstall -g @sentry/cli
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

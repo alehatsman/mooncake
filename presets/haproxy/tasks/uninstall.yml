@@ -1,8 +1,23 @@
-- name: Uninstall haproxy
+- name: Uninstall haproxy (macOS)
   package:
     name: haproxy
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall haproxy (Linux)
+  package:
+    name: haproxy
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v haproxy
+      exit_code: 1
 
 - name: Display confirmation
   print: "haproxy uninstalled"

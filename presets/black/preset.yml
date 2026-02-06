@@ -1,5 +1,5 @@
 name: black
-description: Python tool
+description: Uncompromising Python code formatter with deterministic output
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

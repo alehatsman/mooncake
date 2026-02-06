@@ -3,15 +3,22 @@
   register: infracost_check
   failed_when: false
 
-- name: Install infracost
+- name: Install infracost (macOS)
   package:
     name: infracost
     state: present
-  when: infracost_check.rc != 0
+  when: brew_available and infracost_check.rc != 0
 
-- name: Verify installation
-  shell: infracost --version 2>&1 || infracost -v 2>&1 || echo "installed"
-  register: infracost_version
+- name: Install infracost (Linux)
+  shell: |
+    curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh
+  when: linux and infracost_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v infracost
+      exit_code: 0
+
+- name: Display confirmation
   print: "infracost installed"

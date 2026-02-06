@@ -3,15 +3,24 @@
   register: nmap_check
   failed_when: false
 
-- name: Install nmap
+- name: Install nmap via Homebrew
   package:
     name: nmap
     state: present
-  when: nmap_check.rc != 0
+  when: brew_available and nmap_check.rc != 0
 
-- name: Verify installation
-  shell: nmap --version 2>&1 || nmap -v 2>&1 || echo "installed"
-  register: nmap_version
+- name: Install nmap via apt
+  package:
+    name: nmap
+    state: present
+  become: true
+  when: apt_available and nmap_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nmap
+      exit_code: 0
+
+- name: Display confirmation
   print: "nmap installed"

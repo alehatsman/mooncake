@@ -8,13 +8,13 @@
 # macOS Installation
 - name: Install OpenJDK via Homebrew (macOS)
   shell: brew install openjdk@{{ parameters.version }}
-  when: os == "darwin" and java_check.rc != 0
+  when: brew_available and java_check.rc != 0
 
 - name: Link Java (macOS)
   shell: |
     sudo ln -sfn /opt/homebrew/opt/openjdk@{{ parameters.version }}/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-{{ parameters.version }}.jdk
   become: true
-  when: os == "darwin" and java_check.rc != 0
+  when: brew_available and java_check.rc != 0
   failed_when: false
 
 # Linux - Debian/Ubuntu
@@ -23,7 +23,7 @@
     name: "openjdk-{{ parameters.version }}-jdk"
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and java_check.rc != 0
+  when: apt_available and java_check.rc != 0
 
 # Linux - RHEL/Fedora
 - name: Install OpenJDK (RHEL/Fedora)
@@ -31,7 +31,7 @@
     name: "java-{{ parameters.version }}-openjdk-devel"
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"] and java_check.rc != 0
+  when: dnf_available or yum_available and java_check.rc != 0
 
 # Set JAVA_HOME
 - name: Create Java environment file
@@ -54,6 +54,12 @@
   when: parameters.set_java_home
 
 # Verify installation
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v java
+      exit_code: 0
+
 - name: Get JAVA_HOME path
   shell: |
     if [ "{{ os }}" = "darwin" ]; then
@@ -63,12 +69,8 @@
     fi
   register: java_home
 
-- name: Verify Java installation
-  shell: java -version 2>&1 | head -1
-  register: java_version
-
-- name: Display Java version
-  print: "Java installed: {{ java_version.stdout }}"
+- name: Display confirmation
+  print: "Java installed"
 
 - name: Display JAVA_HOME
   print: "JAVA_HOME: {{ java_home.stdout }}"

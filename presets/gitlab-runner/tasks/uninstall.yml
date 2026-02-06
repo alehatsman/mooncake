@@ -1,8 +1,20 @@
-- name: Uninstall gitlab-runner
+- name: Uninstall gitlab-runner (macOS)
   package:
     name: gitlab-runner
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall gitlab-runner (Linux)
+  shell: sudo apt-get purge -y gitlab-runner
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v gitlab-runner
+      exit_code: 1
 
 - name: Display confirmation
   print: "gitlab-runner uninstalled"

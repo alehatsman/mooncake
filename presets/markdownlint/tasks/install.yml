@@ -3,15 +3,15 @@
   register: markdownlint_check
   failed_when: false
 
-- name: Install markdownlint (macOS)
+- name: Install markdownlint via Homebrew
   package:
     name: markdownlint-cli
     state: present
-  when: os == "darwin" and markdownlint_check.rc != 0
+  when: brew_available and markdownlint_check.rc != 0
 
-- name: Install markdownlint (Linux)
+- name: Install markdownlint via npm
   shell: npm install -g markdownlint-cli
-  when: os == "linux" and markdownlint_check.rc != 0
+  when: not brew_available and markdownlint_check.rc != 0
 
 - name: Verify installation with assert
   assert:

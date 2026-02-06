@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "alacritty uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v alacritty
+      exit_code: 1

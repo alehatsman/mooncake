@@ -3,15 +3,21 @@
   register: httpstat_check
   failed_when: false
 
-- name: Install httpstat
+- name: Install httpstat (macOS)
   package:
     name: httpstat
     state: present
-  when: httpstat_check.rc != 0
+  when: brew_available and httpstat_check.rc != 0
 
-- name: Verify installation
-  shell: httpstat --version 2>&1 || echo "installed"
-  register: httpstat_version
+- name: Install httpstat (Linux)
+  shell: pip3 install --user httpstat
+  when: linux and httpstat_check.rc != 0
 
-- name: Display version
-  print: "httpstat installed: {{ httpstat_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v httpstat
+      exit_code: 0
+
+- name: Display confirmation
+  print: "httpstat installed"

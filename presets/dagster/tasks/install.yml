@@ -3,15 +3,19 @@
   register: dagster_check
   failed_when: false
 
+- name: Install prerequisites (Linux)
+  shell: sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip
+  when: apt_available and dagster_check.rc != 0
+
 - name: Install dagster
-  package:
-    name: dagster
-    state: present
+  shell: pip3 install dagster
   when: dagster_check.rc != 0
 
-- name: Verify installation
-  shell: dagster --version 2>&1 || dagster -v 2>&1 || echo "installed"
-  register: dagster_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v dagster
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "dagster installed"

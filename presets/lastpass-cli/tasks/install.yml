@@ -3,15 +3,24 @@
   register: lastpass_cli_check
   failed_when: false
 
-- name: Install lastpass-cli
+- name: Install lastpass-cli (macOS)
   package:
     name: lastpass-cli
     state: present
-  when: lastpass_cli_check.rc != 0
+  when: brew_available and lastpass_cli_check.rc != 0
 
-- name: Verify installation
-  shell: lpass --version 2>&1 || lpass -v 2>&1 || echo "installed"
-  register: lastpass_cli_version
+- name: Install lastpass-cli (Linux)
+  package:
+    name: lastpass-cli
+    state: present
+  become: true
+  when: apt_available and lastpass_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v lpass
+      exit_code: 0
+
+- name: Display confirmation
   print: "lastpass-cli installed"

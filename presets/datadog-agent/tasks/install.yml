@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "datadog-agent installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v datadog-agent
+      exit_code: 0

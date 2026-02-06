@@ -7,6 +7,12 @@ Flatten JSON to make it greppable. Transform JSON into discrete assignments, fil
 - preset: gron
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Flatten JSON
@@ -22,6 +28,18 @@ gron data.json | grep email
 gron data.json | grep email | gron --ungron
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: gron
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove gron |
 ## How It Works
 ```bash
 # Input JSON:
@@ -309,3 +327,8 @@ gron data.json | grep --color=always email | less -R
 ## Resources
 - GitHub: https://github.com/tomnomnom/gron
 - Search: "gron json grep", "gron examples"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

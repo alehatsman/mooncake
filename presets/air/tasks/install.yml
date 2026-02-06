@@ -3,15 +3,23 @@
   register: air_check
   failed_when: false
 
-- name: Install air
+- name: Install air via Homebrew
   package:
     name: air
     state: present
-  when: air_check.rc != 0
+  when: brew_available and air_check.rc != 0
 
-- name: Verify installation
-  shell: air --version 2>&1 || air -v 2>&1 || echo "installed"
-  register: air_version
+- name: Install air via install script
+  shell: |
+    curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s
+    sudo mv ./bin/air /usr/local/bin/
+  when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and air_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v air
+      exit_code: 0
+
+- name: Display confirmation
   print: "air installed"

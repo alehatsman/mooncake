@@ -3,18 +3,18 @@
   register: masscan_check
   failed_when: false
 
-- name: Install masscan (macOS)
+- name: Install masscan via Homebrew
   package:
     name: masscan
     state: present
-  when: os == "darwin" and masscan_check.rc != 0
+  when: brew_available and masscan_check.rc != 0
 
-- name: Install masscan (Linux)
+- name: Install masscan via apt
   package:
     name: masscan
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and masscan_check.rc != 0
+  when: apt_available and masscan_check.rc != 0
 
 - name: Verify installation with assert
   assert:

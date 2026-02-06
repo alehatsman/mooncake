@@ -5,23 +5,20 @@
   failed_when: false
 
 - name: Remove cargo directory
-  file:
-    path: "~/.cargo"
-    state: absent
+  shell: rm -rf "$HOME/.cargo"
+  failed_when: false
 
 - name: Remove rustup directory
-  file:
-    path: "~/.rustup"
-    state: absent
+  shell: rm -rf "$HOME/.rustup"
+  failed_when: false
 
 - name: Remove cargo init file
-  file:
-    path: "~/.cargo_init"
-    state: absent
+  shell: rm -f "$HOME/.cargo_init"
+  failed_when: false
 
 - name: Remove cargo env from shell profiles
   shell: |
-    for profile in "~/.bashrc" "~/.zshrc" "~/.profile"; do
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
       if [ -f "$profile" ]; then
         # Remove lines that source .cargo_init
         sed -i.bak '/.cargo_init/d' "$profile" 2>/dev/null || \

@@ -8,32 +8,32 @@
 # macOS Installation
 - name: Install Elasticsearch via Homebrew (macOS)
   shell: brew tap elastic/tap && brew install elastic/tap/elasticsearch-full
-  when: os == "darwin" and elasticsearch_check.rc != 0
+  when: brew_available and elasticsearch_check.rc != 0
 
 # Linux - Debian/Ubuntu
 - name: Add Elasticsearch GPG key (Debian/Ubuntu)
   shell: |
     wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
   become: true
-  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+  when: apt_available and elasticsearch_check.rc != 0
 
 - name: Add Elasticsearch repository (Debian/Ubuntu)
   shell: |
     echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/{{ parameters.version }}/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-{{ parameters.version }}.list
   become: true
-  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+  when: apt_available and elasticsearch_check.rc != 0
 
 - name: Update apt cache (Debian/Ubuntu)
   shell: apt-get update
   become: true
-  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+  when: apt_available and elasticsearch_check.rc != 0
 
 - name: Install Elasticsearch (Debian/Ubuntu)
   package:
     name: elasticsearch
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+  when: apt_available and elasticsearch_check.rc != 0
 
 # Linux - RHEL/Fedora
 - name: Add Elasticsearch repository (RHEL/Fedora)
@@ -49,17 +49,23 @@
     type=rpm-md
     EOF
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"] and elasticsearch_check.rc != 0
+  when: dnf_available or yum_available and elasticsearch_check.rc != 0
 
 - name: Install Elasticsearch (RHEL/Fedora)
   package:
     name: elasticsearch
     state: present
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"] and elasticsearch_check.rc != 0
+  when: dnf_available or yum_available and elasticsearch_check.rc != 0
 
 # Verify installation
-- name: Verify Elasticsearch installation
+- name: Verify Elasticsearch installation with assert
+  assert:
+    command:
+      cmd: elasticsearch --version
+      exit_code: 0
+
+- name: Get Elasticsearch version
   shell: elasticsearch --version
   register: elasticsearch_version
 

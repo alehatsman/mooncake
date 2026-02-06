@@ -1,5 +1,5 @@
 name: mtr
-description: Network diagnostic tool (traceroute + ping)
+description: Network diagnostic tool combining traceroute and ping with real-time latency monitoring
 version: "1.0.0"
 parameters:
   state:
@@ -7,6 +7,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
+    description: Install or remove mtr
 steps:
   - name: Install mtr
     include: tasks/install.yml

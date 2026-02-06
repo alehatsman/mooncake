@@ -4,6 +4,10 @@
 
 ## Quick Start
 
+```yaml
+- preset: go
+```
+
 ```bash
 # Check version
 go version
@@ -17,6 +21,38 @@ go run main.go
 
 # Build binary
 go build -o myapp
+```
+
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+
+## Basic Usage
+```bash
+# Check Go version
+go version
+
+# Initialize a new module
+go mod init example.com/myproject
+
+# Build your program
+go build
+
+# Run your program
+go run main.go
+
+# Format code
+go fmt ./...
+
+# Run tests
+go test ./...
+
+# Install dependencies
+go mod download
+go mod tidy
 ```
 
 ## Environment
@@ -70,6 +106,12 @@ Add to your `~/.bashrc` or `~/.zshrc`:
 export PATH=$PATH:$(go env GOPATH)/bin
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
 ## Uninstall
 
 ```yaml
@@ -79,3 +121,23 @@ export PATH=$PATH:$(go env GOPATH)/bin
 ```
 
 **Note:** GOPATH directory is preserved after uninstall.
+
+## Advanced Configuration
+```yaml
+- preset: go
+  with:
+    state: present
+```
+
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove go |
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
+
+## Resources
+- Search: "go documentation", "go tutorial"

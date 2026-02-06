@@ -3,15 +3,24 @@
   register: ngrok_check
   failed_when: false
 
-- name: Install ngrok
+- name: Install ngrok via Homebrew
   package:
     name: ngrok
     state: present
-  when: ngrok_check.rc != 0
+  when: brew_available and ngrok_check.rc != 0
 
-- name: Verify installation
-  shell: ngrok --version 2>&1 || ngrok -v 2>&1 || echo "installed"
-  register: ngrok_version
+- name: Install ngrok via tarball
+  shell: |
+    curl -sL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz | tar xz
+    sudo mv ngrok /usr/local/bin/
+    sudo chmod +x /usr/local/bin/ngrok
+  when: linux and ngrok_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ngrok
+      exit_code: 0
+
+- name: Display confirmation
   print: "ngrok installed"

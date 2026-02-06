@@ -1,8 +1,24 @@
-- name: Uninstall kube-bench
+- name: Uninstall kube-bench (macOS)
   package:
     name: kube-bench
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall kube-bench (Linux)
+  shell: |
+    KUBE_BENCH_PATH=$(command -v kube-bench 2>/dev/null)
+    if [ -n "$KUBE_BENCH_PATH" ]; then
+      sudo rm -f "$KUBE_BENCH_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v kube-bench
+      exit_code: 1
 
 - name: Display confirmation
   print: "kube-bench uninstalled"

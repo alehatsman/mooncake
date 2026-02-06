@@ -13,5 +13,11 @@
   shell: loki --version 2>&1 || loki -v 2>&1 || echo "installed"
   register: loki_server_version
 
+- name: Assert loki is installed
+  assert:
+    command:
+      cmd: command -v loki
+      exit_code: 0
+
 - name: Display version
   print: "loki-server installed"

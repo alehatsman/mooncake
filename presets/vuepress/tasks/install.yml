@@ -7,11 +7,11 @@
   package:
     name: vuepress
     state: present
-  when: os == "darwin" and vuepress_check.rc != 0
+  when: brew_available and vuepress_check.rc != 0
 
 - name: Install vuepress (Linux)
   shell: npm install -g vuepress
-  when: os == "linux" and vuepress_check.rc != 0
+  when: linux and vuepress_check.rc != 0
 
 - name: Verify installation with assert
   assert:

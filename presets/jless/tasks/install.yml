@@ -3,15 +3,26 @@
   register: jless_check
   failed_when: false
 
-- name: Install jless
+- name: Install jless (macOS)
   package:
     name: jless
     state: present
-  when: jless_check.rc != 0
+  when: brew_available and jless_check.rc != 0
 
-- name: Verify installation
-  shell: jless --version 2>&1 || echo "installed"
-  register: jless_version
+- name: Install jless (Linux)
+  shell: |
+    curl -sL https://github.com/PaulJuliusMartinez/jless/releases/latest/download/jless-v0.9.0-aarch64-unknown-linux-gnu.zip -o /tmp/jless.zip
+    unzip -o /tmp/jless.zip -d /tmp
+    sudo mv /tmp/jless /usr/local/bin/jless
+    sudo chmod +x /usr/local/bin/jless
+    rm /tmp/jless.zip
+  when: linux and jless_check.rc != 0
 
-- name: Display version
-  print: "jless installed: {{ jless_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v jless
+      exit_code: 0
+
+- name: Display confirmation
+  print: "jless installed"

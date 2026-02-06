@@ -6,45 +6,59 @@
     state: stopped
     enabled: false
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Stop Elasticsearch service (macOS)
   shell: brew services stop elastic/tap/elasticsearch-full
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall Elasticsearch (macOS)
   shell: brew uninstall elastic/tap/elasticsearch-full
-  when: os == "darwin"
+  when: brew_available
 
 - name: Uninstall Elasticsearch (Debian/Ubuntu)
   package:
     name: elasticsearch
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Uninstall Elasticsearch (RHEL/Fedora)
   package:
     name: elasticsearch
     state: absent
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: dnf_available or yum_available
 
 - name: Remove Elasticsearch repository (Debian/Ubuntu)
   file:
     path: "/etc/apt/sources.list.d/elastic-{{ parameters.version }}.list"
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
 
 - name: Remove Elasticsearch repository (RHEL/Fedora)
   file:
     path: /etc/yum.repos.d/elasticsearch.repo
     state: absent
   become: true
-  when: os == "linux" and package_manager in ["dnf", "yum"]
+  when: dnf_available or yum_available
+
+- name: Verify uninstallation (brew)
+  assert:
+    command:
+      cmd: brew list elastic/tap/elasticsearch-full
+      exit_code: 1
+  when: brew_available
+  failed_when: false
+
+- name: Verify uninstallation (package)
+  shell: dpkg -l elasticsearch 2>/dev/null || rpm -q elasticsearch 2>/dev/null
+  register: pkg_check
+  failed_when: false
+  when: apt_available or dnf_available or yum_available
 
 - name: Display uninstall confirmation
   print: "Elasticsearch uninstalled. Data directory preserved at {{ parameters.data_dir }}"

@@ -1,7 +1,20 @@
 name: mise
-description: CLI productivity tool
+description: Polyglot development environment and version manager for 100+ languages
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Install or remove mise
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install mise
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall mise
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

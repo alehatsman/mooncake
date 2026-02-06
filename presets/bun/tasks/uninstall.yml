@@ -1,8 +1,20 @@
-- name: Uninstall bun
+- name: Uninstall bun via Homebrew
   package:
     name: bun
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall bun via script
+  shell: rm -rf ~/.bun
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v bun
+      exit_code: 1
 
 - name: Display confirmation
   print: "bun uninstalled"

@@ -1,5 +1,5 @@
 name: oh-my-posh
-description: Prompt theme engine
+description: Customizable prompt theme engine for any shell with Git integration
 version: "1.0.0"
 parameters:
   state:

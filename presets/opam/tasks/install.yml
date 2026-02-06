@@ -3,15 +3,24 @@
   register: opam_check
   failed_when: false
 
-- name: Install opam
+- name: Install opam via Homebrew
   package:
     name: opam
     state: present
-  when: opam_check.rc != 0
+  when: brew_available and opam_check.rc != 0
 
-- name: Verify installation
-  shell: opam --version 2>&1 || opam -v 2>&1 || echo "installed"
-  register: opam_version
+- name: Install opam via apt
+  package:
+    name: opam
+    state: present
+  become: true
+  when: apt_available and opam_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v opam
+      exit_code: 0
+
+- name: Display confirmation
   print: "opam installed"

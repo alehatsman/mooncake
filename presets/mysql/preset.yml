@@ -1,5 +1,5 @@
 name: mysql
-description: Install and configure MySQL database server
+description: Relational database management system for data persistence
 version: 1.0.0
 
 parameters:
@@ -24,12 +24,12 @@ parameters:
   create_database:
     type: string
     required: false
-    description: Database name to create
+    description: Database name to create after installation
 
   create_user:
     type: string
     required: false
-    description: Username to create
+    description: Username to create with access to database
 
   user_password:
     type: string
@@ -37,10 +37,10 @@ parameters:
     description: Password for created user
 
   port:
-    type: string
+    type: number
     required: false
-    default: "3306"
-    description: MySQL port
+    default: 3306
+    description: MySQL listening port (1024-65535)
 
 steps:
   - name: Install MySQL

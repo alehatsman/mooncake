@@ -1,8 +1,20 @@
-- name: Uninstall asdf
+- name: Uninstall asdf via Homebrew
   package:
     name: asdf
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall asdf via directory removal
+  shell: rm -rf ~/.asdf
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    file:
+      path: ~/.asdf
+      exists: false
 
 - name: Display confirmation
   print: "asdf uninstalled"

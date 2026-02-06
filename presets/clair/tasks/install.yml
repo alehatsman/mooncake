@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "clair installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v clair
+      exit_code: 0

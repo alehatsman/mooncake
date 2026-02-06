@@ -3,15 +3,21 @@
   register: nkeys_check
   failed_when: false
 
-- name: Install nkeys
+- name: Install nkeys via Homebrew
   package:
     name: nkeys
     state: present
-  when: nkeys_check.rc != 0
+  when: brew_available and nkeys_check.rc != 0
 
-- name: Verify installation
-  shell: nkeys --version 2>&1 || nkeys -v 2>&1 || echo "installed"
-  register: nkeys_version
+- name: Install nkeys via go install
+  shell: go install github.com/nats-io/nkeys/nkeys@latest
+  when: linux and nkeys_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v nkeys
+      exit_code: 0
+
+- name: Display confirmation
   print: "nkeys installed"

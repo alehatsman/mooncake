@@ -1,8 +1,23 @@
-- name: Uninstall pandoc
+- name: Uninstall pandoc (macOS)
   package:
     name: pandoc
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall pandoc (Linux)
+  package:
+    name: pandoc
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v pandoc
+      exit_code: 1
 
 - name: Display confirmation
   print: "pandoc uninstalled"

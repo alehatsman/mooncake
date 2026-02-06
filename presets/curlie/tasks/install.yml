@@ -3,15 +3,21 @@
   register: curlie_check
   failed_when: false
 
-- name: Install curlie
+- name: Install curlie via Homebrew
   package:
     name: curlie
     state: present
-  when: curlie_check.rc != 0
+  when: brew_available and curlie_check.rc != 0
 
-- name: Verify installation
-  shell: curlie --version 2>&1 || echo "installed"
-  register: curlie_version
+- name: Install curlie via go install
+  shell: go install github.com/rs/curlie@latest
+  when: not brew_available and curlie_check.rc != 0
 
-- name: Display version
-  print: "curlie installed: {{ curlie_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v curlie
+      exit_code: 0
+
+- name: Display confirmation
+  print: "curlie installed"

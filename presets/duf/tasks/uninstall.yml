@@ -6,3 +6,9 @@
 
 - name: Display confirmation
   print: "duf uninstalled"
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v duf
+      exit_code: 1

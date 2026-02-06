@@ -1,13 +1,13 @@
-- name: Uninstall mitmproxy (macOS)
+- name: Uninstall mitmproxy via Homebrew
   package:
     name: mitmproxy
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
-- name: Uninstall mitmproxy (Linux)
+- name: Uninstall mitmproxy via pip3
   shell: pip3 uninstall -y mitmproxy
-  when: os == "linux"
+  when: not brew_available
   failed_when: false
 
 - name: Verify uninstallation with assert

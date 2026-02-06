@@ -1,5 +1,5 @@
 name: manticore
-description: Search / analytics engine
+description: High-performance full-text search engine
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

@@ -1,8 +1,28 @@
-- name: Uninstall bottom
+- name: Uninstall bottom via Homebrew
   package:
     name: bottom
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall bottom via apt
+  package:
+    name: bottom
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Uninstall bottom via cargo
+  shell: cargo uninstall bottom
+  when: not brew_available and not apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v btm
+      exit_code: 1
 
 - name: Display confirmation
   print: "bottom uninstalled"

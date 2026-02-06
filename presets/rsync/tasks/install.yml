@@ -7,14 +7,14 @@
   package:
     name: rsync
     state: present
-  when: os == "darwin" and rsync_check.rc != 0
+  when: brew_available and rsync_check.rc != 0
 
 - name: Install rsync (Linux)
   package:
     name: rsync
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and rsync_check.rc != 0
+  when: apt_available and rsync_check.rc != 0
 
 - name: Verify installation with assert
   assert:

@@ -1,7 +1,20 @@
 name: zenith
-description: System monitoring utility
-version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+description: Cross-platform system monitoring tool with process viewer and interactive charts
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether zenith should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install zenith
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall zenith
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

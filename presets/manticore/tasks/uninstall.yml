@@ -1,8 +1,23 @@
-- name: Uninstall manticore
+- name: Uninstall manticore via Homebrew
   package:
     name: manticore
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall manticore via apt
+  package:
+    name: manticore
+    state: absent
+  become: true
+  when: apt_available
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v manticore
+      exit_code: 1
 
 - name: Display confirmation
   print: "manticore uninstalled"

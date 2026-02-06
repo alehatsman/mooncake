@@ -7,14 +7,14 @@
   package:
     name: quickwit
     state: present
-  when: os == "darwin" and quickwit_check.rc != 0
+  when: brew_available and quickwit_check.rc != 0
 
 - name: Install quickwit (Linux)
   package:
     name: quickwit
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and quickwit_check.rc != 0
+  when: apt_available and quickwit_check.rc != 0
 
 - name: Verify installation with assert
   assert:

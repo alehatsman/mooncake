@@ -1,5 +1,5 @@
 name: argocd-autopilot
-description: GitOps / CD tool
+description: Automated GitOps bootstrap for Argo CD with opinionated repository structure
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

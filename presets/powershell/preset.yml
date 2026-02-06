@@ -1,5 +1,5 @@
 name: powershell
-description: PowerShell cross-platform
+description: Cross-platform task automation and configuration management framework
 version: "1.0.0"
 parameters:
   state:

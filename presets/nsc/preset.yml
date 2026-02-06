@@ -1,5 +1,5 @@
 name: nsc
-description: Message queue / streaming
+description: NATS account management tool for creating users and managing permissions
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

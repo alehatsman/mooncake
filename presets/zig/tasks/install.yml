@@ -3,18 +3,18 @@
   register: zig_check
   failed_when: false
 
-- name: Install zig (macOS)
+- name: Install zig via Homebrew
   package:
     name: zig
     state: present
-  when: os == "darwin" and zig_check.rc != 0
+  when: brew_available and zig_check.rc != 0
 
-- name: Install zig (Linux)
+- name: Install zig via apt
   package:
     name: zig
     state: present
   become: true
-  when: os == "linux" and package_manager == "apt" and zig_check.rc != 0
+  when: apt_available and zig_check.rc != 0
 
 - name: Verify installation with assert
   assert:

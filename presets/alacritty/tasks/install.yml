@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "alacritty installed"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v alacritty
+      exit_code: 0

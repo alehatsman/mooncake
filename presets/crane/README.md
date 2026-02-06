@@ -7,6 +7,36 @@ Fast container image manipulation without Docker daemon. Part of Google's go-con
 - preset: crane
 ```
 
+## Features
+- **No Docker Required**: Manipulate images without Docker daemon
+- **Fast Operations**: Efficient layer-based copying and pulling
+- **Multi-Registry**: Works with any OCI-compliant registry
+- **Cross-Platform**: Copy images between different registries seamlessly
+- **Image Analysis**: Inspect manifests, configs, and layers
+- **Tarball Support**: Export and import images as tarballs
+- **Lightweight**: Single binary with no dependencies
+
+## Basic Usage
+```bash
+# Copy image between registries
+crane copy source.io/app:v1 dest.io/app:v1
+
+# Pull image to tarball
+crane pull nginx:latest nginx.tar
+
+# Push tarball to registry
+crane push nginx.tar registry.io/nginx:v1
+
+# List tags
+crane ls nginx
+
+# Get image digest
+crane digest nginx:latest
+
+# Get manifest
+crane manifest nginx:latest | jq
+```
+
 ## Basic Commands
 ```bash
 # Pull image to tarball
@@ -183,6 +213,16 @@ crane auth get registry.io
 - **Auth**: Respects Docker credentials by default
 - **Streaming**: Efficient for large images
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Registry synchronization
 - Image promotion pipelines
@@ -190,6 +230,18 @@ crane auth get registry.io
 - Tag management automation
 - Mirror maintenance
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install crane
+  preset: crane
+
+- name: Use crane in automation
+  shell: |
+    # Custom configuration here
+    echo "crane configured"
+```
 ## Uninstall
 ```yaml
 - preset: crane

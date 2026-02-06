@@ -1,5 +1,5 @@
 name: vault
-description: Install and configure HashiCorp Vault secrets management
+description: Install and configure HashiCorp Vault secrets management platform
 version: 1.0.0
 
 parameters:
@@ -8,7 +8,7 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
-    description: Whether Vault should be installed or removed
+    description: Install or remove Vault
 
   start_service:
     type: bool
@@ -27,7 +27,7 @@ parameters:
     type: string
     required: false
     default: "8200"
-    description: Vault server port
+    description: Vault server port (1024-65535)
 
   address:
     type: string

@@ -7,6 +7,12 @@ Lightweight and flexible command-line JSON processor. Query, filter, and transfo
 - preset: jq
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
 ## Basic Usage
 ```bash
 # Pretty-print JSON
@@ -26,6 +32,18 @@ jq '.name, .age' data.json
 jq '{name: .name, email: .email}' data.json
 ```
 
+
+## Advanced Configuration
+```yaml
+- preset: jq
+  with:
+    state: present
+```
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Install or remove jq |
 ## Filtering and Selection
 ```bash
 # Array operations
@@ -233,3 +251,8 @@ curl https://api.example.com/users | jq '.[0].id' | xargs -I {} curl https://api
 - Official docs: https://jqlang.github.io/jq/
 - Interactive playground: https://jqplay.org/
 - Search: "jq cookbook", "jq cheat sheet"
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)

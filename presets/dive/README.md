@@ -7,6 +7,15 @@ Explore Docker image layers, find ways to shrink image size, and discover file c
 - preset: dive
 ```
 
+## Features
+- **Layer-by-Layer Analysis**: Inspect each Docker image layer individually
+- **File Change Tracking**: See exactly what files were added, modified, or removed
+- **Efficiency Score**: Calculate wasted space and image bloat
+- **Interactive UI**: Navigate layers and files with keyboard shortcuts
+- **CI/CD Integration**: Automated efficiency threshold checks
+- **Size Optimization**: Identify opportunities to reduce image size
+- **TUI Interface**: Terminal-based user interface with color coding
+
 ## Basic Usage
 ```bash
 # Analyze image
@@ -311,6 +320,16 @@ dive --ci-config custom-rules.yaml myapp:latest
 dive --json myapp:latest > analysis.json
 ```
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Automated image optimization validation
 - CI/CD quality gates
@@ -318,6 +337,18 @@ dive --json myapp:latest > analysis.json
 - Build optimization guidance
 - Container image auditing
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install dive
+  preset: dive
+
+- name: Use dive in automation
+  shell: |
+    # Custom configuration here
+    echo "dive configured"
+```
 ## Uninstall
 ```yaml
 - preset: dive

@@ -1,5 +1,5 @@
 name: golangci-lint
-description: Rust/Go tool
+description: Fast linters runner for Go with parallel execution and caching
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:

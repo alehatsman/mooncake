@@ -1,8 +1,24 @@
-- name: Uninstall crossplane
+- name: Uninstall crossplane via Homebrew
   package:
-    name: crossplane
+    name: crossplane-cli
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall crossplane binary
+  shell: |
+    CROSSPLANE_PATH=$(command -v crossplane 2>/dev/null)
+    if [ -n "$CROSSPLANE_PATH" ]; then
+      sudo rm -f "$CROSSPLANE_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v crossplane
+      exit_code: 1
 
 - name: Display confirmation
   print: "crossplane uninstalled"

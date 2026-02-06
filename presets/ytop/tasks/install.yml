@@ -3,15 +3,15 @@
   register: ytop_check
   failed_when: false
 
-- name: Install ytop (macOS)
+- name: Install ytop via Homebrew
   package:
     name: ytop
     state: present
-  when: os == "darwin" and ytop_check.rc != 0
+  when: brew_available and ytop_check.rc != 0
 
-- name: Install ytop (Linux)
+- name: Install ytop via cargo
   shell: cargo install ytop
-  when: os == "linux" and ytop_check.rc != 0
+  when: not brew_available and ytop_check.rc != 0
 
 - name: Verify installation with assert
   assert:

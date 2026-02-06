@@ -24,11 +24,11 @@
     state: started
     enabled: true
   become: true
-  when: os == "linux" and parameters.start_service
+  when: linux and parameters.start_service
 
 - name: Start Elasticsearch service (macOS)
   shell: brew services start elastic/tap/elasticsearch-full
-  when: os == "darwin" and parameters.start_service
+  when: brew_available and parameters.start_service
 
 - name: Wait for Elasticsearch to be ready
   shell: curl -s http://localhost:{{ parameters.http_port }}/_cluster/health

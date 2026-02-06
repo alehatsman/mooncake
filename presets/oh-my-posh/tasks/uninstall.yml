@@ -1,8 +1,24 @@
-- name: Uninstall oh-my-posh
+- name: Uninstall oh-my-posh (macOS)
   package:
     name: oh-my-posh
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall oh-my-posh (Linux)
+  shell: |
+    OH_MY_POSH_PATH=$(command -v oh-my-posh 2>/dev/null)
+    if [ -n "$OH_MY_POSH_PATH" ]; then
+      sudo rm -f "$OH_MY_POSH_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v oh-my-posh
+      exit_code: 1
 
 - name: Display confirmation
   print: "oh-my-posh uninstalled"

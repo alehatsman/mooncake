@@ -304,6 +304,16 @@ duf --json | jq -r '.[] |
    disk_used_bytes{mount=\"\(.mount_point)\"} \(.used)"'
 ```
 
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman, zypper, apk)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
+## Parameters
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| state | string | present | Whether to install (present) or remove (absent) |
+
 ## Agent Use
 - Pre-deployment disk space validation
 - Post-deployment monitoring
@@ -312,6 +322,18 @@ duf --json | jq -r '.[] |
 - Capacity planning data collection
 - Infrastructure health checks
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install duf
+  preset: duf
+
+- name: Use duf in automation
+  shell: |
+    # Custom configuration here
+    echo "duf configured"
+```
 ## Uninstall
 ```yaml
 - preset: duf

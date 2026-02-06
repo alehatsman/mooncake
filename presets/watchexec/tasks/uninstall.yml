@@ -2,12 +2,12 @@
   package:
     name: watchexec
     state: absent
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall watchexec (Linux)
   shell: cargo uninstall watchexec-cli
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Verify uninstallation with assert

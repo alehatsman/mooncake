@@ -6,7 +6,7 @@
     state: stopped
     enabled: false
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Uninstall Docker (macOS)
@@ -14,7 +14,7 @@
     name: docker
     state: absent
   become: true
-  when: os == "darwin"
+  when: brew_available
   failed_when: false
 
 - name: Uninstall Docker Engine (Debian/Ubuntu)
@@ -27,7 +27,7 @@
       - docker-compose-plugin
     state: absent
   become: true
-  when: os == "linux" and package_manager == "apt"
+  when: apt_available
   failed_when: false
 
 - name: Uninstall Docker (RHEL/Fedora)
@@ -40,7 +40,7 @@
       - docker-compose-plugin
     state: absent
   become: true
-  when: os == "linux" and package_manager == "dnf"
+  when: dnf_available
   failed_when: false
 
 - name: Remove Docker data directory
@@ -48,7 +48,7 @@
     path: /var/lib/docker
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
 
 - name: Remove Docker configuration
@@ -56,5 +56,14 @@
     path: /etc/docker
     state: absent
   become: true
-  when: os == "linux"
+  when: linux
   failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v docker
+      exit_code: 1
+
+- name: Display confirmation
+  print: "Docker uninstalled"

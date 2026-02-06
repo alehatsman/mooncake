@@ -13,5 +13,11 @@
   shell: lite-xl --version 2>&1 || lite-xl -v 2>&1 || echo "installed"
   register: lite_xl_version
 
+- name: Assert lite-xl is installed
+  assert:
+    command:
+      cmd: command -v lite-xl
+      exit_code: 0
+
 - name: Display version
   print: "lite-xl installed"

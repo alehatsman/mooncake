@@ -1,8 +1,20 @@
-- name: Uninstall p10k
+- name: Uninstall p10k (macOS)
   package:
-    name: p10k
+    name: romkatv/powerlevel10k/powerlevel10k
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall p10k (Linux)
+  shell: rm -rf ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    file:
+      path: "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k"
+      exists: false
 
 - name: Display confirmation
   print: "p10k uninstalled"

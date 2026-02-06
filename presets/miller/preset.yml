@@ -1,5 +1,5 @@
 name: miller
-description: Like awk/sed/cut/join for CSV/TSV/JSON/etc
+description: Process CSV, JSON, TSV, and other structured data formats using named fields
 version: "1.0.0"
 parameters:
   state:

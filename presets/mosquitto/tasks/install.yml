@@ -3,15 +3,27 @@
   register: mosquitto_check
   failed_when: false
 
-- name: Install mosquitto
-  package:
-    name: mosquitto
-    state: present
-  when: mosquitto_check.rc != 0
+- name: Install mosquitto via apt
+  shell: apt-get install -y mosquitto
+  when: apt_available and mosquitto_check.rc != 0
+  become: true
 
-- name: Verify installation
-  shell: mosquitto --version 2>&1 || mosquitto -v 2>&1 || echo "installed"
-  register: mosquitto_version
+- name: Install mosquitto via dnf
+  shell: dnf install -y mosquitto
+  when: dnf_available and mosquitto_check.rc != 0
+  become: true
 
-- name: Display version
-  print: "mosquitto installed"
+- name: Install mosquitto via yum
+  shell: yum install -y mosquitto
+  when: yum_available and mosquitto_check.rc != 0
+  become: true
+
+- name: Install mosquitto via Homebrew
+  shell: brew install mosquitto
+  when: brew_available and mosquitto_check.rc != 0
+
+- name: Verify mosquitto is installed
+  assert:
+    command:
+      cmd: command -v mosquitto
+      exit_code: 0

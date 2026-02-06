@@ -1,16 +1,20 @@
 name: redis-cli
-description: Redis command-line client
+description: Redis command-line interface for interacting with Redis servers
 version: "1.0.0"
+
 parameters:
   state:
     type: string
     required: false
     default: present
     enum: [present, absent]
+    description: Whether redis-cli should be installed or removed
+
 steps:
   - name: Install redis-cli
     include: tasks/install.yml
     when: parameters.state == "present"
+
   - name: Uninstall redis-cli
     include: tasks/uninstall.yml
     when: parameters.state == "absent"

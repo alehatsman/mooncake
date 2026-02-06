@@ -1,8 +1,24 @@
-- name: Uninstall httpx
+- name: Uninstall httpx (macOS)
   package:
     name: httpx
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall httpx (Linux)
+  shell: |
+    HTTPX_PATH=$(command -v httpx 2>/dev/null)
+    if [ -n "$HTTPX_PATH" ]; then
+      sudo rm -f "$HTTPX_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v httpx
+      exit_code: 1
 
 - name: Display confirmation
   print: "httpx uninstalled"

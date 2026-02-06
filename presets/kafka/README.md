@@ -11,6 +11,19 @@ Install and configure Apache Kafka - a distributed streaming platform for buildi
     start_service: true
 ```
 
+
+## Features
+- **Cross-platform**: Linux and macOS support
+- **Simple installation**: One command to install
+- **Package manager integration**: Uses system package managers
+- **Easy uninstall**: Clean removal with `state: absent`
+## Advanced Configuration
+```yaml
+- preset: kafka
+  with:
+    state: present
+```
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -22,7 +35,12 @@ Install and configure Apache Kafka - a distributed streaming platform for buildi
 | `port` | string | `9092` | Kafka port |
 | `data_dir` | string | `/tmp/kafka-logs` | Data directory |
 
-## Usage
+
+## Platform Support
+- ✅ Linux (apt, dnf, yum, pacman)
+- ✅ macOS (Homebrew)
+- ❌ Windows (not yet supported)
+## Basic Usage
 
 ### Modern Setup (KRaft)
 ```yaml
@@ -133,6 +151,12 @@ default.replication.factor=3
 min.insync.replicas=2
 ```
 
+## Agent Use
+- Automated environment setup
+- CI/CD pipeline integration
+- Development environment provisioning
+- Infrastructure automation
+
 ## Uninstall
 
 ```yaml
@@ -142,3 +166,6 @@ min.insync.replicas=2
 ```
 
 **Note:** Data directory preserved after uninstall.
+
+## Resources
+- Search: "kafka documentation", "kafka tutorial"

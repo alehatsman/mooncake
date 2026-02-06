@@ -3,15 +3,24 @@
   register: clickhouse_client_check
   failed_when: false
 
-- name: Install clickhouse-client
+- name: Install clickhouse-client via Homebrew
+  package:
+    name: clickhouse
+    state: present
+  when: brew_available and clickhouse_client_check.rc != 0
+
+- name: Install clickhouse-client (Linux)
   package:
     name: clickhouse-client
     state: present
-  when: clickhouse_client_check.rc != 0
+  become: true
+  when: apt_available and clickhouse_client_check.rc != 0
 
-- name: Verify installation
-  shell: clickhouse-client --version 2>&1 || clickhouse-client -v 2>&1 || echo "installed"
-  register: clickhouse_client_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v clickhouse-client
+      exit_code: 0
 
-- name: Display version
+- name: Display confirmation
   print: "clickhouse-client installed"

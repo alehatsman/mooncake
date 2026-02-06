@@ -1,7 +1,20 @@
 name: pass
-description: Secrets management
+description: Unix password manager
 version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether pass should be installed or removed
+
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - name: Install pass
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall pass
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

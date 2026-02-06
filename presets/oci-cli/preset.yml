@@ -1,5 +1,5 @@
 name: oci-cli
-description: Oracle Cloud CLI
+description: Oracle Cloud Infrastructure command-line interface for managing OCI resources
 version: "1.0.0"
 parameters:
   state:

@@ -1,8 +1,24 @@
-- name: Uninstall lazydocker
+- name: Uninstall lazydocker (macOS)
   package:
     name: lazydocker
     state: absent
+  when: brew_available
   failed_when: false
+
+- name: Uninstall lazydocker (Linux)
+  shell: |
+    LAZYDOCKER_PATH=$(command -v lazydocker 2>/dev/null)
+    if [ -n "$LAZYDOCKER_PATH" ]; then
+      sudo rm -f "$LAZYDOCKER_PATH"
+    fi
+  when: linux
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v lazydocker
+      exit_code: 1
 
 - name: Display confirmation
   print: "lazydocker uninstalled"

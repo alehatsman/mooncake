@@ -15,3 +15,9 @@
 
 - name: Display version
   print: "duf installed: {{ duf_version.stdout }}"
+
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v duf
+      exit_code: 0

@@ -20,6 +20,48 @@ Install HashiCorp Consul - a service mesh solution providing service discovery, 
   become: true
 ```
 
+## Features
+- **Service Discovery**: DNS and HTTP interfaces for finding services
+- **Health Checking**: Integrated health checks with configurable scripts, HTTP, TCP, and gRPC probes
+- **Key-Value Store**: Hierarchical key-value storage with transactions and watchers
+- **Service Mesh**: Mutual TLS encryption and identity-based authorization with Consul Connect
+- **Multi-Datacenter**: WAN federation with automatic failover across datacenters
+- **UI Dashboard**: Web interface for cluster visualization and management
+- **High Availability**: Raft consensus protocol for fault-tolerant clusters
+- **ACL System**: Fine-grained access control for services, keys, and cluster operations
+
+## Basic Usage
+```bash
+# Check cluster status
+consul members
+
+# List services
+consul catalog services
+
+# Get service instances
+consul catalog nodes -service=web
+
+# Key-value operations
+consul kv put config/db/host localhost
+consul kv get config/db/host
+consul kv get -recurse config/
+
+# Register service
+consul services register -name=web -port=8080
+
+# Check health
+consul catalog health web
+
+# Watch for changes
+consul watch -type=key -key=config/feature cat
+consul watch -type=service -service=web
+```
+
+## Platform Support
+- ❌ Linux (Homebrew)
+- ✅ macOS (Homebrew)
+- ❌ Windows
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -519,6 +561,16 @@ consul intention list
 consul intention check web database
 ```
 
+## Agent Use
+- Automate service registration and deregistration in deployment pipelines
+- Implement dynamic service discovery for microservices architectures
+- Store and retrieve application configuration with KV store watchers
+- Set up health-based load balancing and failover strategies
+- Deploy service mesh with automatic mutual TLS between services
+- Manage multi-datacenter deployments with automatic DNS failover
+- Track service dependencies and perform impact analysis
+- Implement feature flags and configuration updates without restarts
+
 ## Configuration Management
 
 ### Consul Template
@@ -790,6 +842,18 @@ dig @127.0.0.1 -p 8600 web.service.consul
 nslookup web.service.consul 127.0.0.1
 ```
 
+
+## Advanced Configuration
+```yaml
+# Use with Mooncake preset system
+- name: Install consul
+  preset: consul
+
+- name: Use consul in automation
+  shell: |
+    # Custom configuration here
+    echo "consul configured"
+```
 ## Uninstall
 
 ```yaml
