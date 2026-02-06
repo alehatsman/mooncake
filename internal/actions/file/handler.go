@@ -235,6 +235,7 @@ func (h *Handler) createDirectory(ctx actions.Context, ec *executor.ExecutionCon
 	// Set ownership if specified
 	if file.Owner != "" || file.Group != "" {
 		if err := h.setOwnership(renderedPath, file.Owner, file.Group, file.Recurse, step, ec); err != nil {
+			result.Failed = true
 			return fmt.Errorf("failed to set ownership: %w", err)
 		}
 	}
@@ -297,6 +298,7 @@ func (h *Handler) createOrUpdateFile(ctx actions.Context, ec *executor.Execution
 	// Set ownership if specified
 	if file.Owner != "" || file.Group != "" {
 		if err := h.setOwnership(renderedPath, file.Owner, file.Group, false, step, ec); err != nil {
+			result.Failed = true
 			return fmt.Errorf("failed to set ownership: %w", err)
 		}
 	}
@@ -401,6 +403,7 @@ func (h *Handler) touchFile(ctx actions.Context, ec *executor.ExecutionContext, 
 	// Set ownership if specified
 	if file.Owner != "" || file.Group != "" {
 		if err := h.setOwnership(renderedPath, file.Owner, file.Group, false, step, ec); err != nil {
+			result.Failed = true
 			return fmt.Errorf("failed to set ownership: %w", err)
 		}
 	}
@@ -576,6 +579,7 @@ func (h *Handler) setPermissions(ctx actions.Context, ec *executor.ExecutionCont
 	// Set ownership if specified
 	if file.Owner != "" || file.Group != "" {
 		if err := h.setOwnership(renderedPath, file.Owner, file.Group, file.Recurse, step, ec); err != nil {
+			result.Failed = true
 			return fmt.Errorf("failed to set ownership: %w", err)
 		}
 	}
