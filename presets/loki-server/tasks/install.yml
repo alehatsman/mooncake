@@ -1,15 +1,17 @@
 - name: Check if loki is installed
   shell: command -v loki
-  register: loki-server_check
+  register: loki_server_check
   failed_when: false
 
-- name: Install loki (macOS)
-  shell: brew install loki
-  when: os == "darwin" and loki-server_check.rc != 0
+- name: Install loki-server
+  package:
+    name: loki-server
+    state: present
+  when: loki_server_check.rc != 0
 
 - name: Verify installation
   shell: loki --version 2>&1 || loki -v 2>&1 || echo "installed"
-  register: loki-server_version
+  register: loki_server_version
 
 - name: Display version
-  print: "loki installed"
+  print: "loki-server installed"

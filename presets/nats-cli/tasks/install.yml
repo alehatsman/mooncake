@@ -1,15 +1,17 @@
 - name: Check if nats is installed
   shell: command -v nats
-  register: nats-cli_check
+  register: nats_cli_check
   failed_when: false
 
-- name: Install nats (macOS)
-  shell: brew install nats
-  when: os == "darwin" and nats-cli_check.rc != 0
+- name: Install nats-cli
+  package:
+    name: nats-cli
+    state: present
+  when: nats_cli_check.rc != 0
 
 - name: Verify installation
   shell: nats --version 2>&1 || nats -v 2>&1 || echo "installed"
-  register: nats-cli_version
+  register: nats_cli_version
 
 - name: Display version
-  print: "nats installed"
+  print: "nats-cli installed"

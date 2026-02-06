@@ -1,6 +1,7 @@
-- name: Uninstall meson (macOS)
-  shell: brew uninstall meson
-  when: os == "darwin"
+- name: Uninstall meson
+  package:
+    name: meson
+    state: absent
   failed_when: false
 
 - name: Display confirmation

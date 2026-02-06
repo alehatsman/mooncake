@@ -1,7 +1,8 @@
-- name: Uninstall wormhole (macOS)
-  shell: brew uninstall wormhole
-  when: os == "darwin"
+- name: Uninstall magic-wormhole
+  package:
+    name: magic-wormhole
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "wormhole uninstalled"
+  print: "magic-wormhole uninstalled"

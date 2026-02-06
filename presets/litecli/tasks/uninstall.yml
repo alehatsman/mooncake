@@ -1,6 +1,7 @@
-- name: Uninstall litecli (macOS)
-  shell: brew uninstall litecli
-  when: os == "darwin"
+- name: Uninstall litecli
+  package:
+    name: litecli
+    state: absent
   failed_when: false
 
 - name: Display confirmation

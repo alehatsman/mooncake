@@ -3,9 +3,11 @@
   register: masscan_check
   failed_when: false
 
-- name: Install masscan (macOS)
-  shell: brew install masscan
-  when: os == "darwin" and masscan_check.rc != 0
+- name: Install masscan
+  package:
+    name: masscan
+    state: present
+  when: masscan_check.rc != 0
 
 - name: Verify installation
   shell: masscan --version 2>&1 || masscan -v 2>&1 || echo "installed"

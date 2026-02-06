@@ -1,7 +1,8 @@
-- name: Uninstall lein (macOS)
-  shell: brew uninstall lein
-  when: os == "darwin"
+- name: Uninstall leiningen
+  package:
+    name: leiningen
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "lein uninstalled"
+  print: "leiningen uninstalled"

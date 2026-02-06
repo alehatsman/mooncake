@@ -3,9 +3,11 @@
   register: mosquitto_check
   failed_when: false
 
-- name: Install mosquitto (macOS)
-  shell: brew install mosquitto
-  when: os == "darwin" and mosquitto_check.rc != 0
+- name: Install mosquitto
+  package:
+    name: mosquitto
+    state: present
+  when: mosquitto_check.rc != 0
 
 - name: Verify installation
   shell: mosquitto --version 2>&1 || mosquitto -v 2>&1 || echo "installed"

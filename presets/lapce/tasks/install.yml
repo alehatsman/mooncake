@@ -3,9 +3,11 @@
   register: lapce_check
   failed_when: false
 
-- name: Install lapce (macOS)
-  shell: brew install lapce
-  when: os == "darwin" and lapce_check.rc != 0
+- name: Install lapce
+  package:
+    name: lapce
+    state: present
+  when: lapce_check.rc != 0
 
 - name: Verify installation
   shell: lapce --version 2>&1 || lapce -v 2>&1 || echo "installed"

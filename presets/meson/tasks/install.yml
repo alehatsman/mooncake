@@ -3,9 +3,11 @@
   register: meson_check
   failed_when: false
 
-- name: Install meson (macOS)
-  shell: brew install meson
-  when: os == "darwin" and meson_check.rc != 0
+- name: Install meson
+  package:
+    name: meson
+    state: present
+  when: meson_check.rc != 0
 
 - name: Verify installation
   shell: meson --version 2>&1 || meson -v 2>&1 || echo "installed"

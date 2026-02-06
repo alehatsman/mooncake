@@ -3,9 +3,11 @@
   register: meilisearch_check
   failed_when: false
 
-- name: Install meilisearch (macOS)
-  shell: brew install meilisearch
-  when: os == "darwin" and meilisearch_check.rc != 0
+- name: Install meilisearch
+  package:
+    name: meilisearch
+    state: present
+  when: meilisearch_check.rc != 0
 
 - name: Verify installation
   shell: meilisearch --version 2>&1 || meilisearch -v 2>&1 || echo "installed"

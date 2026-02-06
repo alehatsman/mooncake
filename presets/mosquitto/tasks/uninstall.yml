@@ -1,6 +1,7 @@
-- name: Uninstall mosquitto (macOS)
-  shell: brew uninstall mosquitto
-  when: os == "darwin"
+- name: Uninstall mosquitto
+  package:
+    name: mosquitto
+    state: absent
   failed_when: false
 
 - name: Display confirmation

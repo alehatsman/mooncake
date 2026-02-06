@@ -1,15 +1,17 @@
 - name: Check if wormhole is installed
   shell: command -v wormhole
-  register: magic-wormhole_check
+  register: magic_wormhole_check
   failed_when: false
 
-- name: Install wormhole (macOS)
-  shell: brew install wormhole
-  when: os == "darwin" and magic-wormhole_check.rc != 0
+- name: Install magic-wormhole
+  package:
+    name: magic-wormhole
+    state: present
+  when: magic_wormhole_check.rc != 0
 
 - name: Verify installation
   shell: wormhole --version 2>&1 || wormhole -v 2>&1 || echo "installed"
-  register: magic-wormhole_version
+  register: magic_wormhole_version
 
 - name: Display version
-  print: "wormhole installed"
+  print: "magic-wormhole installed"

@@ -1,6 +1,7 @@
-- name: Uninstall mdl (macOS)
-  shell: brew uninstall mdl
-  when: os == "darwin"
+- name: Uninstall mdl
+  package:
+    name: mdl
+    state: absent
   failed_when: false
 
 - name: Display confirmation

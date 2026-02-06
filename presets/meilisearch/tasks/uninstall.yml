@@ -1,6 +1,7 @@
-- name: Uninstall meilisearch (macOS)
-  shell: brew uninstall meilisearch
-  when: os == "darwin"
+- name: Uninstall meilisearch
+  package:
+    name: meilisearch
+    state: absent
   failed_when: false
 
 - name: Display confirmation

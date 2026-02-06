@@ -1,6 +1,7 @@
-- name: Uninstall linkerd (macOS)
-  shell: brew uninstall linkerd
-  when: os == "darwin"
+- name: Uninstall linkerd
+  package:
+    name: linkerd
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall make (macOS)
-  shell: brew uninstall make
-  when: os == "darwin"
+- name: Uninstall make
+  package:
+    name: make
+    state: absent
   failed_when: false
 
 - name: Display confirmation

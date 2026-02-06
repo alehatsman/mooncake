@@ -1,6 +1,7 @@
-- name: Uninstall linode-cli (macOS)
-  shell: brew uninstall linode-cli
-  when: os == "darwin"
+- name: Uninstall linode-cli
+  package:
+    name: linode-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation

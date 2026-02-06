@@ -1,15 +1,17 @@
 - name: Check if kube-hunter is installed
   shell: command -v kube-hunter
-  register: kube-hunter_check
+  register: kube_hunter_check
   failed_when: false
 
-- name: Install kube-hunter (macOS)
-  shell: brew install kube-hunter
-  when: os == "darwin" and kube-hunter_check.rc != 0
+- name: Install kube-hunter
+  package:
+    name: kube-hunter
+    state: present
+  when: kube_hunter_check.rc != 0
 
 - name: Verify installation
   shell: kube-hunter --version 2>&1 || kube-hunter -v 2>&1 || echo "installed"
-  register: kube-hunter_version
+  register: kube_hunter_version
 
 - name: Display version
   print: "kube-hunter installed"

@@ -1,6 +1,7 @@
-- name: Uninstall m3db (macOS)
-  shell: brew uninstall m3db
-  when: os == "darwin"
+- name: Uninstall m3db
+  package:
+    name: m3db
+    state: absent
   failed_when: false
 
 - name: Display confirmation

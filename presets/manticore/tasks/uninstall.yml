@@ -1,6 +1,7 @@
-- name: Uninstall manticore (macOS)
-  shell: brew uninstall manticore
-  when: os == "darwin"
+- name: Uninstall manticore
+  package:
+    name: manticore
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: markdownlint_check
   failed_when: false
 
-- name: Install markdownlint (macOS)
-  shell: brew install markdownlint
-  when: os == "darwin" and markdownlint_check.rc != 0
+- name: Install markdownlint
+  package:
+    name: markdownlint
+    state: present
+  when: markdownlint_check.rc != 0
 
 - name: Verify installation
   shell: markdownlint --version 2>&1 || markdownlint -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall kube-hunter (macOS)
-  shell: brew uninstall kube-hunter
-  when: os == "darwin"
+- name: Uninstall kube-hunter
+  package:
+    name: kube-hunter
+    state: absent
   failed_when: false
 
 - name: Display confirmation

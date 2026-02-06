@@ -1,7 +1,8 @@
-- name: Uninstall loki (macOS)
-  shell: brew uninstall loki
-  when: os == "darwin"
+- name: Uninstall loki-server
+  package:
+    name: loki-server
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "loki uninstalled"
+  print: "loki-server uninstalled"

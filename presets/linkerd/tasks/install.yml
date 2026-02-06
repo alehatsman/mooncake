@@ -3,9 +3,11 @@
   register: linkerd_check
   failed_when: false
 
-- name: Install linkerd (macOS)
-  shell: brew install linkerd
-  when: os == "darwin" and linkerd_check.rc != 0
+- name: Install linkerd
+  package:
+    name: linkerd
+    state: present
+  when: linkerd_check.rc != 0
 
 - name: Verify installation
   shell: linkerd --version 2>&1 || linkerd -v 2>&1 || echo "installed"

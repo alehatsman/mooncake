@@ -3,9 +3,11 @@
   register: litecli_check
   failed_when: false
 
-- name: Install litecli (macOS)
-  shell: brew install litecli
-  when: os == "darwin" and litecli_check.rc != 0
+- name: Install litecli
+  package:
+    name: litecli
+    state: present
+  when: litecli_check.rc != 0
 
 - name: Verify installation
   shell: litecli --version 2>&1 || litecli -v 2>&1 || echo "installed"

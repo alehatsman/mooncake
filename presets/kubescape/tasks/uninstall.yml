@@ -1,6 +1,7 @@
-- name: Uninstall kubescape (macOS)
-  shell: brew uninstall kubescape
-  when: os == "darwin"
+- name: Uninstall kubescape
+  package:
+    name: kubescape
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: manticore_check
   failed_when: false
 
-- name: Install manticore (macOS)
-  shell: brew install manticore
-  when: os == "darwin" and manticore_check.rc != 0
+- name: Install manticore
+  package:
+    name: manticore
+    state: present
+  when: manticore_check.rc != 0
 
 - name: Verify installation
   shell: manticore --version 2>&1 || manticore -v 2>&1 || echo "installed"

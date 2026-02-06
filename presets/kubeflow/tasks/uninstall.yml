@@ -1,7 +1,8 @@
-- name: Uninstall kfctl (macOS)
-  shell: brew uninstall kfctl
-  when: os == "darwin"
+- name: Uninstall kubeflow
+  package:
+    name: kubeflow
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "kfctl uninstalled"
+  print: "kubeflow uninstalled"

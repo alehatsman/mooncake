@@ -1,39 +1,8 @@
-# MongoDB Uninstallation Tasks
-
-- name: Stop MongoDB service (Linux)
-  service:
-    name: mongod
-    state: stopped
-  become: true
+- name: Uninstall mongodb
+  package:
+    name: mongodb
+    state: absent
   failed_when: false
-  when: os == "linux"
 
-- name: Stop MongoDB service (macOS)
-  shell: brew services stop mongodb-community
-  failed_when: false
-  when: os == "darwin"
-
-# macOS Uninstallation
-- name: Uninstall MongoDB via Homebrew (macOS)
-  package:
-    name: mongodb-community
-    state: absent
-  when: os == "darwin"
-
-# Linux Uninstallation
-- name: Uninstall MongoDB (Debian/Ubuntu)
-  package:
-    name: mongodb-org
-    state: absent
-  become: true
-  when: os == "linux" and package_manager == "apt"
-
-- name: Uninstall MongoDB (RHEL/Fedora)
-  package:
-    name: mongodb-org
-    state: absent
-  become: true
-  when: os == "linux" and (package_manager == "dnf" or package_manager == "yum")
-
-- name: Display uninstall confirmation
-  print: "MongoDB has been uninstalled (data directory {{ parameters.data_dir }} may remain)"
+- name: Display confirmation
+  print: "mongodb uninstalled"

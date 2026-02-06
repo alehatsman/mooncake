@@ -1,15 +1,17 @@
 - name: Check if lite-xl is installed
   shell: command -v lite-xl
-  register: lite-xl_check
+  register: lite_xl_check
   failed_when: false
 
-- name: Install lite-xl (macOS)
-  shell: brew install lite-xl
-  when: os == "darwin" and lite-xl_check.rc != 0
+- name: Install lite-xl
+  package:
+    name: lite-xl
+    state: present
+  when: lite_xl_check.rc != 0
 
 - name: Verify installation
   shell: lite-xl --version 2>&1 || lite-xl -v 2>&1 || echo "installed"
-  register: lite-xl_version
+  register: lite_xl_version
 
 - name: Display version
   print: "lite-xl installed"

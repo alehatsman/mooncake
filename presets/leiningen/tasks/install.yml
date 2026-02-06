@@ -3,13 +3,15 @@
   register: leiningen_check
   failed_when: false
 
-- name: Install lein (macOS)
-  shell: brew install lein
-  when: os == "darwin" and leiningen_check.rc != 0
+- name: Install leiningen
+  package:
+    name: leiningen
+    state: present
+  when: leiningen_check.rc != 0
 
 - name: Verify installation
   shell: lein --version 2>&1 || lein -v 2>&1 || echo "installed"
   register: leiningen_version
 
 - name: Display version
-  print: "lein installed"
+  print: "leiningen installed"

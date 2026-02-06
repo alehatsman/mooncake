@@ -1,15 +1,17 @@
 - name: Check if lpass is installed
   shell: command -v lpass
-  register: lastpass-cli_check
+  register: lastpass_cli_check
   failed_when: false
 
-- name: Install lpass (macOS)
-  shell: brew install lpass
-  when: os == "darwin" and lastpass-cli_check.rc != 0
+- name: Install lastpass-cli
+  package:
+    name: lastpass-cli
+    state: present
+  when: lastpass_cli_check.rc != 0
 
 - name: Verify installation
   shell: lpass --version 2>&1 || lpass -v 2>&1 || echo "installed"
-  register: lastpass-cli_version
+  register: lastpass_cli_version
 
 - name: Display version
-  print: "lpass installed"
+  print: "lastpass-cli installed"

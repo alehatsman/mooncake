@@ -1,6 +1,7 @@
-- name: Uninstall mcfly (macOS)
-  shell: brew uninstall mcfly
-  when: os == "darwin"
+- name: Uninstall mcfly
+  package:
+    name: mcfly
+    state: absent
   failed_when: false
 
 - name: Display confirmation
