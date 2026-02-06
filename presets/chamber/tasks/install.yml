@@ -3,9 +3,11 @@
   register: chamber_check
   failed_when: false
 
-- name: Install chamber (macOS)
-  shell: brew install chamber
-  when: os == "darwin" and chamber_check.rc != 0
+- name: Install chamber
+  package:
+    name: chamber
+    state: present
+  when: chamber_check.rc != 0
 
 - name: Verify installation
   shell: chamber --version 2>&1 || chamber -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: contour_check
   failed_when: false
 
-- name: Install contour (macOS)
-  shell: brew install contour
-  when: os == "darwin" and contour_check.rc != 0
+- name: Install contour
+  package:
+    name: contour
+    state: present
+  when: contour_check.rc != 0
 
 - name: Verify installation
   shell: contour --version 2>&1 || contour -v 2>&1 || echo "installed"

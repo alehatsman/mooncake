@@ -3,9 +3,11 @@
   register: chruby_check
   failed_when: false
 
-- name: Install chruby (macOS)
-  shell: brew install chruby
-  when: os == "darwin" and chruby_check.rc != 0
+- name: Install chruby
+  package:
+    name: chruby
+    state: present
+  when: chruby_check.rc != 0
 
 - name: Verify installation
   shell: chruby --version 2>&1 || chruby -v 2>&1 || echo "installed"

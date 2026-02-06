@@ -1,6 +1,7 @@
-- name: Uninstall couchbase (macOS)
-  shell: brew uninstall couchbase
-  when: os == "darwin"
+- name: Uninstall couchbase
+  package:
+    name: couchbase
+    state: absent
   failed_when: false
 
 - name: Display confirmation

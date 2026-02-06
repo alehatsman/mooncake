@@ -3,13 +3,15 @@
   register: cassandra_check
   failed_when: false
 
-- name: Install cass (macOS)
-  shell: brew install cass
-  when: os == "darwin" and cassandra_check.rc != 0
+- name: Install cassandra
+  package:
+    name: cassandra
+    state: present
+  when: cassandra_check.rc != 0
 
 - name: Verify installation
   shell: cass --version 2>&1 || cass -v 2>&1 || echo "installed"
   register: cassandra_version
 
 - name: Display version
-  print: "cass installed"
+  print: "cassandra installed"

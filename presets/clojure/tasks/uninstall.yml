@@ -1,7 +1,8 @@
-- name: Uninstall clj (macOS)
-  shell: brew uninstall clj
-  when: os == "darwin"
+- name: Uninstall clojure
+  package:
+    name: clojure
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "clj uninstalled"
+  print: "clojure uninstalled"

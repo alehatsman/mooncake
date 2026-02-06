@@ -1,6 +1,7 @@
-- name: Uninstall croc (macOS)
-  shell: brew uninstall croc
-  when: os == "darwin"
+- name: Uninstall croc
+  package:
+    name: croc
+    state: absent
   failed_when: false
 
 - name: Display confirmation

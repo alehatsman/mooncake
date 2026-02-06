@@ -3,9 +3,11 @@
   register: crossplane_check
   failed_when: false
 
-- name: Install crossplane (macOS)
-  shell: brew install crossplane
-  when: os == "darwin" and crossplane_check.rc != 0
+- name: Install crossplane
+  package:
+    name: crossplane
+    state: present
+  when: crossplane_check.rc != 0
 
 - name: Verify installation
   shell: crossplane --version 2>&1 || crossplane -v 2>&1 || echo "installed"

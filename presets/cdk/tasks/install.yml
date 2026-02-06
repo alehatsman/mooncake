@@ -3,9 +3,11 @@
   register: cdk_check
   failed_when: false
 
-- name: Install cdk (macOS)
-  shell: brew install cdk
-  when: os == "darwin" and cdk_check.rc != 0
+- name: Install cdk
+  package:
+    name: cdk
+    state: present
+  when: cdk_check.rc != 0
 
 - name: Verify installation
   shell: cdk --version 2>&1 || cdk -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall cortex (macOS)
-  shell: brew uninstall cortex
-  when: os == "darwin"
+- name: Uninstall cortex
+  package:
+    name: cortex
+    state: absent
   failed_when: false
 
 - name: Display confirmation

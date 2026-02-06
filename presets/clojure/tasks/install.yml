@@ -3,13 +3,15 @@
   register: clojure_check
   failed_when: false
 
-- name: Install clj (macOS)
-  shell: brew install clj
-  when: os == "darwin" and clojure_check.rc != 0
+- name: Install clojure
+  package:
+    name: clojure
+    state: present
+  when: clojure_check.rc != 0
 
 - name: Verify installation
   shell: clj --version 2>&1 || clj -v 2>&1 || echo "installed"
   register: clojure_version
 
 - name: Display version
-  print: "clj installed"
+  print: "clojure installed"

@@ -1,6 +1,7 @@
-- name: Uninstall clair (macOS)
-  shell: brew uninstall clair
-  when: os == "darwin"
+- name: Uninstall clair
+  package:
+    name: clair
+    state: absent
   failed_when: false
 
 - name: Display confirmation

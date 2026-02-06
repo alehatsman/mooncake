@@ -1,6 +1,7 @@
-- name: Uninstall chamber (macOS)
-  shell: brew uninstall chamber
-  when: os == "darwin"
+- name: Uninstall chamber
+  package:
+    name: chamber
+    state: absent
   failed_when: false
 
 - name: Display confirmation

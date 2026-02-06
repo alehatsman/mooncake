@@ -3,9 +3,11 @@
   register: cortex_check
   failed_when: false
 
-- name: Install cortex (macOS)
-  shell: brew install cortex
-  when: os == "darwin" and cortex_check.rc != 0
+- name: Install cortex
+  package:
+    name: cortex
+    state: present
+  when: cortex_check.rc != 0
 
 - name: Verify installation
   shell: cortex --version 2>&1 || cortex -v 2>&1 || echo "installed"

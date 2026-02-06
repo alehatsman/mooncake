@@ -3,9 +3,11 @@
   register: couchbase_check
   failed_when: false
 
-- name: Install couchbase (macOS)
-  shell: brew install couchbase
-  when: os == "darwin" and couchbase_check.rc != 0
+- name: Install couchbase
+  package:
+    name: couchbase
+    state: present
+  when: couchbase_check.rc != 0
 
 - name: Verify installation
   shell: couchbase --version 2>&1 || couchbase -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall cargo-make (macOS)
-  shell: brew uninstall cargo-make
-  when: os == "darwin"
+- name: Uninstall cargo-make
+  package:
+    name: cargo-make
+    state: absent
   failed_when: false
 
 - name: Display confirmation

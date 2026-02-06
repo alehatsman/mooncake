@@ -1,7 +1,8 @@
-- name: Uninstall cass (macOS)
-  shell: brew uninstall cass
-  when: os == "darwin"
+- name: Uninstall cassandra
+  package:
+    name: cassandra
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "cass uninstalled"
+  print: "cassandra uninstalled"

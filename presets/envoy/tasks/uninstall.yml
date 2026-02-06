@@ -1,6 +1,7 @@
-- name: Uninstall envoy (macOS)
-  shell: brew uninstall envoy
-  when: os == "darwin"
+- name: Uninstall envoy
+  package:
+    name: envoy
+    state: absent
   failed_when: false
 
 - name: Display confirmation

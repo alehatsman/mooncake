@@ -1,6 +1,7 @@
-- name: Uninstall crossplane (macOS)
-  shell: brew uninstall crossplane
-  when: os == "darwin"
+- name: Uninstall crossplane
+  package:
+    name: crossplane
+    state: absent
   failed_when: false
 
 - name: Display confirmation

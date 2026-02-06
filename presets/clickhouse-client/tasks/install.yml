@@ -1,15 +1,17 @@
 - name: Check if clickhouse-client is installed
   shell: command -v clickhouse-client
-  register: clickhouse-client_check
+  register: clickhouse_client_check
   failed_when: false
 
-- name: Install clickhouse-client (macOS)
-  shell: brew install clickhouse-client
-  when: os == "darwin" and clickhouse-client_check.rc != 0
+- name: Install clickhouse-client
+  package:
+    name: clickhouse-client
+    state: present
+  when: clickhouse_client_check.rc != 0
 
 - name: Verify installation
   shell: clickhouse-client --version 2>&1 || clickhouse-client -v 2>&1 || echo "installed"
-  register: clickhouse-client_version
+  register: clickhouse_client_version
 
 - name: Display version
   print: "clickhouse-client installed"

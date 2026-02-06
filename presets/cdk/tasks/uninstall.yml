@@ -1,6 +1,7 @@
-- name: Uninstall cdk (macOS)
-  shell: brew uninstall cdk
-  when: os == "darwin"
+- name: Uninstall cdk
+  package:
+    name: cdk
+    state: absent
   failed_when: false
 
 - name: Display confirmation

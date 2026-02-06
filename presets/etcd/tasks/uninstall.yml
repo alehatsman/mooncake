@@ -1,52 +1,8 @@
-# etcd Uninstallation Tasks
-
-- name: Stop etcd service (Linux)
-  service:
+- name: Uninstall etcd
+  package:
     name: etcd
-    state: stopped
-    enabled: false
-  become: true
-  when: os == "linux"
-  failed_when: false
-
-- name: Stop etcd service (macOS)
-  shell: brew services stop etcd
-  when: os == "darwin"
-  failed_when: false
-
-- name: Remove etcd systemd service
-  file:
-    path: /etc/systemd/system/etcd.service
     state: absent
-  become: true
-  when: os == "linux"
-
-- name: Reload systemd daemon
-  shell: sudo systemctl daemon-reload
-  when: os == "linux"
-
-- name: Uninstall etcd (macOS)
-  shell: brew uninstall etcd
-  when: os == "darwin"
   failed_when: false
 
-- name: Remove etcd binaries (Linux)
-  shell: |
-    sudo rm -f /usr/local/bin/etcd
-    sudo rm -f /usr/local/bin/etcdctl
-    sudo rm -f /usr/local/bin/etcdutl
-  when: os == "linux"
-
-- name: Remove etcd configuration
-  file:
-    path: /etc/etcd
-    state: absent
-  become: true
-  failed_when: false
-
-- name: Display uninstall confirmation
-  print: |
-    etcd uninstalled.
-
-    Note: Data directory not removed for safety.
-    To remove data: sudo rm -rf {{ parameters.data_dir }}
+- name: Display confirmation
+  print: "etcd uninstalled"

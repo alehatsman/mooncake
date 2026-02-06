@@ -1,6 +1,7 @@
-- name: Uninstall deno (macOS)
-  shell: brew uninstall deno
-  when: os == "darwin"
+- name: Uninstall deno
+  package:
+    name: deno
+    state: absent
   failed_when: false
 
 - name: Display confirmation

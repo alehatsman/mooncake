@@ -1,6 +1,7 @@
-- name: Uninstall checkov (macOS)
-  shell: brew uninstall checkov
-  when: os == "darwin"
+- name: Uninstall checkov
+  package:
+    name: checkov
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: deno_check
   failed_when: false
 
-- name: Install deno (macOS)
-  shell: brew install deno
-  when: os == "darwin" and deno_check.rc != 0
+- name: Install deno
+  package:
+    name: deno
+    state: present
+  when: deno_check.rc != 0
 
 - name: Verify installation
   shell: deno --version 2>&1 || deno -v 2>&1 || echo "installed"

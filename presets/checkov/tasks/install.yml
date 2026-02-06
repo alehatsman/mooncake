@@ -3,9 +3,11 @@
   register: checkov_check
   failed_when: false
 
-- name: Install checkov (macOS)
-  shell: brew install checkov
-  when: os == "darwin" and checkov_check.rc != 0
+- name: Install checkov
+  package:
+    name: checkov
+    state: present
+  when: checkov_check.rc != 0
 
 - name: Verify installation
   shell: checkov --version 2>&1 || checkov -v 2>&1 || echo "installed"

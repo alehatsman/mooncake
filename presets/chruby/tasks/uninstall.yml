@@ -1,6 +1,7 @@
-- name: Uninstall chruby (macOS)
-  shell: brew uninstall chruby
-  when: os == "darwin"
+- name: Uninstall chruby
+  package:
+    name: chruby
+    state: absent
   failed_when: false
 
 - name: Display confirmation

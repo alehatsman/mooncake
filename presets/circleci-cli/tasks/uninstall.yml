@@ -1,7 +1,8 @@
-- name: Uninstall circleci (macOS)
-  shell: brew uninstall circleci
-  when: os == "darwin"
+- name: Uninstall circleci-cli
+  package:
+    name: circleci-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "circleci uninstalled"
+  print: "circleci-cli uninstalled"

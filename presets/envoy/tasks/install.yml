@@ -3,9 +3,11 @@
   register: envoy_check
   failed_when: false
 
-- name: Install envoy (macOS)
-  shell: brew install envoy
-  when: os == "darwin" and envoy_check.rc != 0
+- name: Install envoy
+  package:
+    name: envoy
+    state: present
+  when: envoy_check.rc != 0
 
 - name: Verify installation
   shell: envoy --version 2>&1 || envoy -v 2>&1 || echo "installed"

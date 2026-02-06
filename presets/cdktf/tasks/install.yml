@@ -3,9 +3,11 @@
   register: cdktf_check
   failed_when: false
 
-- name: Install cdktf (macOS)
-  shell: brew install cdktf
-  when: os == "darwin" and cdktf_check.rc != 0
+- name: Install cdktf
+  package:
+    name: cdktf
+    state: present
+  when: cdktf_check.rc != 0
 
 - name: Verify installation
   shell: cdktf --version 2>&1 || cdktf -v 2>&1 || echo "installed"
