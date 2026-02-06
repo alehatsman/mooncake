@@ -1,6 +1,7 @@
-- name: Uninstall opensearch (macOS)
-  shell: brew uninstall opensearch
-  when: os == "darwin"
+- name: Uninstall opensearch
+  package:
+    name: opensearch
+    state: absent
   failed_when: false
 
 - name: Display confirmation

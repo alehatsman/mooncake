@@ -3,9 +3,11 @@
   register: metaflow_check
   failed_when: false
 
-- name: Install metaflow (macOS)
-  shell: brew install metaflow
-  when: os == "darwin" and metaflow_check.rc != 0
+- name: Install metaflow
+  package:
+    name: metaflow
+    state: present
+  when: metaflow_check.rc != 0
 
 - name: Verify installation
   shell: metaflow --version 2>&1 || metaflow -v 2>&1 || echo "installed"

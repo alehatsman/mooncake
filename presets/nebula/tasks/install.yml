@@ -3,9 +3,11 @@
   register: nebula_check
   failed_when: false
 
-- name: Install nebula (macOS)
-  shell: brew install nebula
-  when: os == "darwin" and nebula_check.rc != 0
+- name: Install nebula
+  package:
+    name: nebula
+    state: present
+  when: nebula_check.rc != 0
 
 - name: Verify installation
   shell: nebula --version 2>&1 || nebula -v 2>&1 || echo "installed"

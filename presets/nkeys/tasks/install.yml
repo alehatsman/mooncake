@@ -3,9 +3,11 @@
   register: nkeys_check
   failed_when: false
 
-- name: Install nkeys (macOS)
-  shell: brew install nkeys
-  when: os == "darwin" and nkeys_check.rc != 0
+- name: Install nkeys
+  package:
+    name: nkeys
+    state: present
+  when: nkeys_check.rc != 0
 
 - name: Verify installation
   shell: nkeys --version 2>&1 || nkeys -v 2>&1 || echo "installed"

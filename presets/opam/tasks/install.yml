@@ -3,9 +3,11 @@
   register: opam_check
   failed_when: false
 
-- name: Install opam (macOS)
-  shell: brew install opam
-  when: os == "darwin" and opam_check.rc != 0
+- name: Install opam
+  package:
+    name: opam
+    state: present
+  when: opam_check.rc != 0
 
 - name: Verify installation
   shell: opam --version 2>&1 || opam -v 2>&1 || echo "installed"

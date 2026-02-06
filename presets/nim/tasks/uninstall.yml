@@ -1,6 +1,7 @@
-- name: Uninstall nim (macOS)
-  shell: brew uninstall nim
-  when: os == "darwin"
+- name: Uninstall nim
+  package:
+    name: nim
+    state: absent
   failed_when: false
 
 - name: Display confirmation

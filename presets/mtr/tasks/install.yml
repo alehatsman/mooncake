@@ -3,9 +3,11 @@
   register: mtr_check
   failed_when: false
 
-- name: Install mtr (macOS)
-  shell: brew install mtr
-  when: os == "darwin" and mtr_check.rc != 0
+- name: Install mtr
+  package:
+    name: mtr
+    state: present
+  when: mtr_check.rc != 0
 
 - name: Verify installation
   shell: mtr --version 2>&1 || mtr -v 2>&1 || echo "installed"

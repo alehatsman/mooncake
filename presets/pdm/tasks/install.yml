@@ -3,9 +3,11 @@
   register: pdm_check
   failed_when: false
 
-- name: Install pdm (macOS)
-  shell: brew install pdm
-  when: os == "darwin" and pdm_check.rc != 0
+- name: Install pdm
+  package:
+    name: pdm
+    state: present
+  when: pdm_check.rc != 0
 
 - name: Verify installation
   shell: pdm --version 2>&1 || pdm -v 2>&1 || echo "installed"

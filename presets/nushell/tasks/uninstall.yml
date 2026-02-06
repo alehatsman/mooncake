@@ -1,7 +1,8 @@
-- name: Uninstall nu (macOS)
-  shell: brew uninstall nu
-  when: os == "darwin"
+- name: Uninstall nushell
+  package:
+    name: nushell
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "nu uninstalled"
+  print: "nushell uninstalled"

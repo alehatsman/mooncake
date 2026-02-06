@@ -1,6 +1,7 @@
-- name: Uninstall next (macOS)
-  shell: brew uninstall next
-  when: os == "darwin"
+- name: Uninstall next
+  package:
+    name: next
+    state: absent
   failed_when: false
 
 - name: Display confirmation

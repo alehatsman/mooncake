@@ -1,6 +1,7 @@
-- name: Uninstall ngrok (macOS)
-  shell: brew uninstall ngrok
-  when: os == "darwin"
+- name: Uninstall ngrok
+  package:
+    name: ngrok
+    state: absent
   failed_when: false
 
 - name: Display confirmation

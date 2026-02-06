@@ -3,13 +3,15 @@
   register: nushell_check
   failed_when: false
 
-- name: Install nu (macOS)
-  shell: brew install nu
-  when: os == "darwin" and nushell_check.rc != 0
+- name: Install nushell
+  package:
+    name: nushell
+    state: present
+  when: nushell_check.rc != 0
 
 - name: Verify installation
   shell: nu --version 2>&1 || nu -v 2>&1 || echo "installed"
   register: nushell_version
 
 - name: Display version
-  print: "nu installed"
+  print: "nushell installed"

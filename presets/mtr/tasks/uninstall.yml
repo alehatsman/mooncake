@@ -1,6 +1,7 @@
-- name: Uninstall mtr (macOS)
-  shell: brew uninstall mtr
-  when: os == "darwin"
+- name: Uninstall mtr
+  package:
+    name: mtr
+    state: absent
   failed_when: false
 
 - name: Display confirmation

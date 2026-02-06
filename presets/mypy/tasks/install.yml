@@ -3,9 +3,11 @@
   register: mypy_check
   failed_when: false
 
-- name: Install mypy (macOS)
-  shell: brew install mypy
-  when: os == "darwin" and mypy_check.rc != 0
+- name: Install mypy
+  package:
+    name: mypy
+    state: present
+  when: mypy_check.rc != 0
 
 - name: Verify installation
   shell: mypy --version 2>&1 || mypy -v 2>&1 || echo "installed"

@@ -1,7 +1,8 @@
-- name: Uninstall oci (macOS)
-  shell: brew uninstall oci
-  when: os == "darwin"
+- name: Uninstall oci-cli
+  package:
+    name: oci-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "oci uninstalled"
+  print: "oci-cli uninstalled"

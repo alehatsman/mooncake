@@ -1,6 +1,7 @@
-- name: Uninstall neo4j (macOS)
-  shell: brew uninstall neo4j
-  when: os == "darwin"
+- name: Uninstall neo4j
+  package:
+    name: neo4j
+    state: absent
   failed_when: false
 
 - name: Display confirmation

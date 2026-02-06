@@ -1,6 +1,7 @@
-- name: Uninstall ninja (macOS)
-  shell: brew uninstall ninja
-  when: os == "darwin"
+- name: Uninstall ninja
+  package:
+    name: ninja
+    state: absent
   failed_when: false
 
 - name: Display confirmation

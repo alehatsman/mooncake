@@ -1,6 +1,7 @@
-- name: Uninstall pdm (macOS)
-  shell: brew uninstall pdm
-  when: os == "darwin"
+- name: Uninstall pdm
+  package:
+    name: pdm
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall opam (macOS)
-  shell: brew uninstall opam
-  when: os == "darwin"
+- name: Uninstall opam
+  package:
+    name: opam
+    state: absent
   failed_when: false
 
 - name: Display confirmation

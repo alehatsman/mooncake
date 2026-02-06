@@ -1,6 +1,7 @@
-- name: Uninstall mise (macOS)
-  shell: brew uninstall mise
-  when: os == "darwin"
+- name: Uninstall mise
+  package:
+    name: mise
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,15 +1,17 @@
 - name: Check if oci is installed
   shell: command -v oci
-  register: oci-cli_check
+  register: oci_cli_check
   failed_when: false
 
-- name: Install oci (macOS)
-  shell: brew install oci
-  when: os == "darwin" and oci-cli_check.rc != 0
+- name: Install oci-cli
+  package:
+    name: oci-cli
+    state: present
+  when: oci_cli_check.rc != 0
 
 - name: Verify installation
   shell: oci --version 2>&1 || oci -v 2>&1 || echo "installed"
-  register: oci-cli_version
+  register: oci_cli_version
 
 - name: Display version
-  print: "oci installed"
+  print: "oci-cli installed"

@@ -3,9 +3,11 @@
   register: ngrok_check
   failed_when: false
 
-- name: Install ngrok (macOS)
-  shell: brew install ngrok
-  when: os == "darwin" and ngrok_check.rc != 0
+- name: Install ngrok
+  package:
+    name: ngrok
+    state: present
+  when: ngrok_check.rc != 0
 
 - name: Verify installation
   shell: ngrok --version 2>&1 || ngrok -v 2>&1 || echo "installed"

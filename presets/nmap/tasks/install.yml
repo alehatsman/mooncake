@@ -3,9 +3,11 @@
   register: nmap_check
   failed_when: false
 
-- name: Install nmap (macOS)
-  shell: brew install nmap
-  when: os == "darwin" and nmap_check.rc != 0
+- name: Install nmap
+  package:
+    name: nmap
+    state: present
+  when: nmap_check.rc != 0
 
 - name: Verify installation
   shell: nmap --version 2>&1 || nmap -v 2>&1 || echo "installed"

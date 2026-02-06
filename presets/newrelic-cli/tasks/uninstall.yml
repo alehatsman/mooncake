@@ -1,6 +1,7 @@
-- name: Uninstall newrelic-cli (macOS)
-  shell: brew uninstall newrelic-cli
-  when: os == "darwin"
+- name: Uninstall newrelic-cli
+  package:
+    name: newrelic-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation

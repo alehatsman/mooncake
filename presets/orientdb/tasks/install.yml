@@ -3,9 +3,11 @@
   register: orientdb_check
   failed_when: false
 
-- name: Install orientdb (macOS)
-  shell: brew install orientdb
-  when: os == "darwin" and orientdb_check.rc != 0
+- name: Install orientdb
+  package:
+    name: orientdb
+    state: present
+  when: orientdb_check.rc != 0
 
 - name: Verify installation
   shell: orientdb --version 2>&1 || orientdb -v 2>&1 || echo "installed"

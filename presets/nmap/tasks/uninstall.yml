@@ -1,6 +1,7 @@
-- name: Uninstall nmap (macOS)
-  shell: brew uninstall nmap
-  when: os == "darwin"
+- name: Uninstall nmap
+  package:
+    name: nmap
+    state: absent
   failed_when: false
 
 - name: Display confirmation

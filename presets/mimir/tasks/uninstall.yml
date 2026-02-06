@@ -1,6 +1,7 @@
-- name: Uninstall mimir (macOS)
-  shell: brew uninstall mimir
-  when: os == "darwin"
+- name: Uninstall mimir
+  package:
+    name: mimir
+    state: absent
   failed_when: false
 
 - name: Display confirmation

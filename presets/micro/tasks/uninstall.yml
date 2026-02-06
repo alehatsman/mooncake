@@ -1,6 +1,7 @@
-- name: Uninstall micro (macOS)
-  shell: brew uninstall micro
-  when: os == "darwin"
+- name: Uninstall micro
+  package:
+    name: micro
+    state: absent
   failed_when: false
 
 - name: Display confirmation

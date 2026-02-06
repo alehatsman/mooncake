@@ -3,9 +3,11 @@
   register: mise_check
   failed_when: false
 
-- name: Install mise (macOS)
-  shell: brew install mise
-  when: os == "darwin" and mise_check.rc != 0
+- name: Install mise
+  package:
+    name: mise
+    state: present
+  when: mise_check.rc != 0
 
 - name: Verify installation
   shell: mise --version 2>&1 || mise -v 2>&1 || echo "installed"

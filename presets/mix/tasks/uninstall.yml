@@ -1,6 +1,7 @@
-- name: Uninstall mix (macOS)
-  shell: brew uninstall mix
-  when: os == "darwin"
+- name: Uninstall mix
+  package:
+    name: mix
+    state: absent
   failed_when: false
 
 - name: Display confirmation

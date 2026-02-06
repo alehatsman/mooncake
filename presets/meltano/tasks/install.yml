@@ -3,9 +3,11 @@
   register: meltano_check
   failed_when: false
 
-- name: Install meltano (macOS)
-  shell: brew install meltano
-  when: os == "darwin" and meltano_check.rc != 0
+- name: Install meltano
+  package:
+    name: meltano
+    state: present
+  when: meltano_check.rc != 0
 
 - name: Verify installation
   shell: meltano --version 2>&1 || meltano -v 2>&1 || echo "installed"

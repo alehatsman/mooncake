@@ -3,9 +3,11 @@
   register: mimir_check
   failed_when: false
 
-- name: Install mimir (macOS)
-  shell: brew install mimir
-  when: os == "darwin" and mimir_check.rc != 0
+- name: Install mimir
+  package:
+    name: mimir
+    state: present
+  when: mimir_check.rc != 0
 
 - name: Verify installation
   shell: mimir --version 2>&1 || mimir -v 2>&1 || echo "installed"

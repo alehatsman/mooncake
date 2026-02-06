@@ -3,9 +3,11 @@
   register: mitmproxy_check
   failed_when: false
 
-- name: Install mitmproxy (macOS)
-  shell: brew install mitmproxy
-  when: os == "darwin" and mitmproxy_check.rc != 0
+- name: Install mitmproxy
+  package:
+    name: mitmproxy
+    state: present
+  when: mitmproxy_check.rc != 0
 
 - name: Verify installation
   shell: mitmproxy --version 2>&1 || mitmproxy -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall oh-my-posh (macOS)
-  shell: brew uninstall oh-my-posh
-  when: os == "darwin"
+- name: Uninstall oh-my-posh
+  package:
+    name: oh-my-posh
+    state: absent
   failed_when: false
 
 - name: Display confirmation

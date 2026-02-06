@@ -1,6 +1,7 @@
-- name: Uninstall milvus (macOS)
-  shell: brew uninstall milvus
-  when: os == "darwin"
+- name: Uninstall milvus
+  package:
+    name: milvus
+    state: absent
   failed_when: false
 
 - name: Display confirmation

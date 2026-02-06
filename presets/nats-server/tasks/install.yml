@@ -1,15 +1,17 @@
 - name: Check if nats-server is installed
   shell: command -v nats-server
-  register: nats-server_check
+  register: nats_server_check
   failed_when: false
 
-- name: Install nats-server (macOS)
-  shell: brew install nats-server
-  when: os == "darwin" and nats-server_check.rc != 0
+- name: Install nats-server
+  package:
+    name: nats-server
+    state: present
+  when: nats_server_check.rc != 0
 
 - name: Verify installation
   shell: nats-server --version 2>&1 || nats-server -v 2>&1 || echo "installed"
-  register: nats-server_version
+  register: nats_server_version
 
 - name: Display version
   print: "nats-server installed"

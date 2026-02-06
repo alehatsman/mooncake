@@ -3,9 +3,11 @@
   register: pelican_check
   failed_when: false
 
-- name: Install pelican (macOS)
-  shell: brew install pelican
-  when: os == "darwin" and pelican_check.rc != 0
+- name: Install pelican
+  package:
+    name: pelican
+    state: present
+  when: pelican_check.rc != 0
 
 - name: Verify installation
   shell: pelican --version 2>&1 || pelican -v 2>&1 || echo "installed"

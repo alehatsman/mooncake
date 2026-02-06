@@ -1,6 +1,7 @@
-- name: Uninstall metaflow (macOS)
-  shell: brew uninstall metaflow
-  when: os == "darwin"
+- name: Uninstall metaflow
+  package:
+    name: metaflow
+    state: absent
   failed_when: false
 
 - name: Display confirmation

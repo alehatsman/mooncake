@@ -3,9 +3,11 @@
   register: micro_check
   failed_when: false
 
-- name: Install micro (macOS)
-  shell: brew install micro
-  when: os == "darwin" and micro_check.rc != 0
+- name: Install micro
+  package:
+    name: micro
+    state: present
+  when: micro_check.rc != 0
 
 - name: Verify installation
   shell: micro --version 2>&1 || micro -v 2>&1 || echo "installed"

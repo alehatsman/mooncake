@@ -3,9 +3,11 @@
   register: nsc_check
   failed_when: false
 
-- name: Install nsc (macOS)
-  shell: brew install nsc
-  when: os == "darwin" and nsc_check.rc != 0
+- name: Install nsc
+  package:
+    name: nsc
+    state: present
+  when: nsc_check.rc != 0
 
 - name: Verify installation
   shell: nsc --version 2>&1 || nsc -v 2>&1 || echo "installed"

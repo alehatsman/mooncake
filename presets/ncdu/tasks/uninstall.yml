@@ -1,6 +1,7 @@
-- name: Uninstall ncdu (macOS)
-  shell: brew uninstall ncdu
-  when: os == "darwin"
+- name: Uninstall ncdu
+  package:
+    name: ncdu
+    state: absent
   failed_when: false
 
 - name: Display confirmation

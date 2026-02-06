@@ -3,9 +3,11 @@
   register: neo4j_check
   failed_when: false
 
-- name: Install neo4j (macOS)
-  shell: brew install neo4j
-  when: os == "darwin" and neo4j_check.rc != 0
+- name: Install neo4j
+  package:
+    name: neo4j
+    state: present
+  when: neo4j_check.rc != 0
 
 - name: Verify installation
   shell: neo4j --version 2>&1 || neo4j -v 2>&1 || echo "installed"

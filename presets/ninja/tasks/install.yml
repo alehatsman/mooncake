@@ -3,9 +3,11 @@
   register: ninja_check
   failed_when: false
 
-- name: Install ninja (macOS)
-  shell: brew install ninja
-  when: os == "darwin" and ninja_check.rc != 0
+- name: Install ninja
+  package:
+    name: ninja
+    state: present
+  when: ninja_check.rc != 0
 
 - name: Verify installation
   shell: ninja --version 2>&1 || ninja -v 2>&1 || echo "installed"

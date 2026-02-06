@@ -3,9 +3,11 @@
   register: pandoc_check
   failed_when: false
 
-- name: Install pandoc (macOS)
-  shell: brew install pandoc
-  when: os == "darwin" and pandoc_check.rc != 0
+- name: Install pandoc
+  package:
+    name: pandoc
+    state: present
+  when: pandoc_check.rc != 0
 
 - name: Verify installation
   shell: pandoc --version 2>&1 || pandoc -v 2>&1 || echo "installed"

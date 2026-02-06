@@ -1,6 +1,7 @@
-- name: Uninstall mlflow (macOS)
-  shell: brew uninstall mlflow
-  when: os == "darwin"
+- name: Uninstall mlflow
+  package:
+    name: mlflow
+    state: absent
   failed_when: false
 
 - name: Display confirmation

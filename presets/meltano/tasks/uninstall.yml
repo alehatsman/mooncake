@@ -1,6 +1,7 @@
-- name: Uninstall meltano (macOS)
-  shell: brew uninstall meltano
-  when: os == "darwin"
+- name: Uninstall meltano
+  package:
+    name: meltano
+    state: absent
   failed_when: false
 
 - name: Display confirmation

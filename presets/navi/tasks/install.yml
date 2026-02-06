@@ -3,9 +3,11 @@
   register: navi_check
   failed_when: false
 
-- name: Install navi (macOS)
-  shell: brew install navi
-  when: os == "darwin" and navi_check.rc != 0
+- name: Install navi
+  package:
+    name: navi
+    state: present
+  when: navi_check.rc != 0
 
 - name: Verify installation
   shell: navi --version 2>&1 || navi -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: opensearch_check
   failed_when: false
 
-- name: Install opensearch (macOS)
-  shell: brew install opensearch
-  when: os == "darwin" and opensearch_check.rc != 0
+- name: Install opensearch
+  package:
+    name: opensearch
+    state: present
+  when: opensearch_check.rc != 0
 
 - name: Verify installation
   shell: opensearch --version 2>&1 || opensearch -v 2>&1 || echo "installed"

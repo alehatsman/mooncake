@@ -1,6 +1,7 @@
-- name: Uninstall pandoc (macOS)
-  shell: brew uninstall pandoc
-  when: os == "darwin"
+- name: Uninstall pandoc
+  package:
+    name: pandoc
+    state: absent
   failed_when: false
 
 - name: Display confirmation

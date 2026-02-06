@@ -3,9 +3,11 @@
   register: milvus_check
   failed_when: false
 
-- name: Install milvus (macOS)
-  shell: brew install milvus
-  when: os == "darwin" and milvus_check.rc != 0
+- name: Install milvus
+  package:
+    name: milvus
+    state: present
+  when: milvus_check.rc != 0
 
 - name: Verify installation
   shell: milvus --version 2>&1 || milvus -v 2>&1 || echo "installed"

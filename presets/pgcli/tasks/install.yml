@@ -3,9 +3,11 @@
   register: pgcli_check
   failed_when: false
 
-- name: Install pgcli (macOS)
-  shell: brew install pgcli
-  when: os == "darwin" and pgcli_check.rc != 0
+- name: Install pgcli
+  package:
+    name: pgcli
+    state: present
+  when: pgcli_check.rc != 0
 
 - name: Verify installation
   shell: pgcli --version 2>&1 || pgcli -v 2>&1 || echo "installed"

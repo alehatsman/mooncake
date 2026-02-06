@@ -1,6 +1,7 @@
-- name: Uninstall mypy (macOS)
-  shell: brew uninstall mypy
-  when: os == "darwin"
+- name: Uninstall mypy
+  package:
+    name: mypy
+    state: absent
   failed_when: false
 
 - name: Display confirmation

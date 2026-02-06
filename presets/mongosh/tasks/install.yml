@@ -3,9 +3,11 @@
   register: mongosh_check
   failed_when: false
 
-- name: Install mongosh (macOS)
-  shell: brew install mongosh
-  when: os == "darwin" and mongosh_check.rc != 0
+- name: Install mongosh
+  package:
+    name: mongosh
+    state: present
+  when: mongosh_check.rc != 0
 
 - name: Verify installation
   shell: mongosh --version 2>&1 || mongosh -v 2>&1 || echo "installed"

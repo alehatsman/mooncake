@@ -1,6 +1,7 @@
-- name: Uninstall nkeys (macOS)
-  shell: brew uninstall nkeys
-  when: os == "darwin"
+- name: Uninstall nkeys
+  package:
+    name: nkeys
+    state: absent
   failed_when: false
 
 - name: Display confirmation

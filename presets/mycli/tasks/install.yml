@@ -3,9 +3,11 @@
   register: mycli_check
   failed_when: false
 
-- name: Install mycli (macOS)
-  shell: brew install mycli
-  when: os == "darwin" and mycli_check.rc != 0
+- name: Install mycli
+  package:
+    name: mycli
+    state: present
+  when: mycli_check.rc != 0
 
 - name: Verify installation
   shell: mycli --version 2>&1 || mycli -v 2>&1 || echo "installed"

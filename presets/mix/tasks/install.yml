@@ -3,9 +3,11 @@
   register: mix_check
   failed_when: false
 
-- name: Install mix (macOS)
-  shell: brew install mix
-  when: os == "darwin" and mix_check.rc != 0
+- name: Install mix
+  package:
+    name: mix
+    state: present
+  when: mix_check.rc != 0
 
 - name: Verify installation
   shell: mix --version 2>&1 || mix -v 2>&1 || echo "installed"

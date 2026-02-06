@@ -1,6 +1,7 @@
-- name: Uninstall pass (macOS)
-  shell: brew uninstall pass
-  when: os == "darwin"
+- name: Uninstall pass
+  package:
+    name: pass
+    state: absent
   failed_when: false
 
 - name: Display confirmation

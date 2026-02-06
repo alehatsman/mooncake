@@ -1,6 +1,7 @@
-- name: Uninstall nats-server (macOS)
-  shell: brew uninstall nats-server
-  when: os == "darwin"
+- name: Uninstall nats-server
+  package:
+    name: nats-server
+    state: absent
   failed_when: false
 
 - name: Display confirmation

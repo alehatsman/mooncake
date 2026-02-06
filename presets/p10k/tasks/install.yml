@@ -3,9 +3,11 @@
   register: p10k_check
   failed_when: false
 
-- name: Install p10k (macOS)
-  shell: brew install p10k
-  when: os == "darwin" and p10k_check.rc != 0
+- name: Install p10k
+  package:
+    name: p10k
+    state: present
+  when: p10k_check.rc != 0
 
 - name: Verify installation
   shell: p10k --version 2>&1 || p10k -v 2>&1 || echo "installed"

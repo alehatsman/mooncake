@@ -1,6 +1,7 @@
-- name: Uninstall pelican (macOS)
-  shell: brew uninstall pelican
-  when: os == "darwin"
+- name: Uninstall pelican
+  package:
+    name: pelican
+    state: absent
   failed_when: false
 
 - name: Display confirmation

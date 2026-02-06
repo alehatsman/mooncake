@@ -1,6 +1,7 @@
-- name: Uninstall mongosh (macOS)
-  shell: brew uninstall mongosh
-  when: os == "darwin"
+- name: Uninstall mongosh
+  package:
+    name: mongosh
+    state: absent
   failed_when: false
 
 - name: Display confirmation

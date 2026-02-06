@@ -1,6 +1,7 @@
-- name: Uninstall orientdb (macOS)
-  shell: brew uninstall orientdb
-  when: os == "darwin"
+- name: Uninstall orientdb
+  package:
+    name: orientdb
+    state: absent
   failed_when: false
 
 - name: Display confirmation

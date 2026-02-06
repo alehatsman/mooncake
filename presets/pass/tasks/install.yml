@@ -3,9 +3,11 @@
   register: pass_check
   failed_when: false
 
-- name: Install pass (macOS)
-  shell: brew install pass
-  when: os == "darwin" and pass_check.rc != 0
+- name: Install pass
+  package:
+    name: pass
+    state: present
+  when: pass_check.rc != 0
 
 - name: Verify installation
   shell: pass --version 2>&1 || pass -v 2>&1 || echo "installed"

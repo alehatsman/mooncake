@@ -3,9 +3,11 @@
   register: next_check
   failed_when: false
 
-- name: Install next (macOS)
-  shell: brew install next
-  when: os == "darwin" and next_check.rc != 0
+- name: Install next
+  package:
+    name: next
+    state: present
+  when: next_check.rc != 0
 
 - name: Verify installation
   shell: next --version 2>&1 || next -v 2>&1 || echo "installed"
