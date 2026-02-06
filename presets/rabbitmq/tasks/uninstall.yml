@@ -1,0 +1,36 @@
+# RabbitMQ Uninstallation Tasks
+
+- name: Stop RabbitMQ service (Linux)
+  service:
+    name: rabbitmq-server
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Stop RabbitMQ service (macOS)
+  shell: brew services stop rabbitmq
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall RabbitMQ (macOS)
+  shell: brew uninstall rabbitmq
+  when: os == "darwin"
+
+- name: Uninstall RabbitMQ (Debian/Ubuntu)
+  package:
+    name: rabbitmq-server
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall RabbitMQ (RHEL/Fedora)
+  package:
+    name: rabbitmq-server
+    state: absent
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+- name: Display uninstall confirmation
+  print: "RabbitMQ uninstalled. Data directory preserved."

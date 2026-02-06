@@ -1,0 +1,27 @@
+# Ruby/rbenv Uninstallation
+
+- name: Remove rbenv directory
+  file:
+    path: ~/.rbenv
+    state: absent
+  when: parameters.state == "absent"
+
+- name: Remove rbenv init file
+  file:
+    path: ~/.rbenv_init
+    state: absent
+  when: parameters.state == "absent"
+
+- name: Remove rbenv from shell profiles
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ]; then
+        sed -i.bak '/\.rbenv_init/d' "$profile" 2>/dev/null || sed -i '' '/\.rbenv_init/d' "$profile"
+      fi
+    done
+  when: parameters.state == "absent"
+  failed_when: false
+
+- name: Print uninstallation complete
+  print: "Ruby and rbenv uninstalled successfully!"
+  when: parameters.state == "absent"

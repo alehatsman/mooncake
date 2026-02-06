@@ -1,0 +1,75 @@
+# Memcached Installation Tasks
+
+- name: Check if Memcached is already installed
+  shell: command -v memcached
+  register: memcached_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Memcached via Homebrew (macOS)
+  shell: brew install memcached
+  when: os == "darwin" and memcached_check.rc != 0
+
+# Linux Installation
+- name: Install Memcached (Debian/Ubuntu)
+  package:
+    name: memcached
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and memcached_check.rc != 0
+
+- name: Install Memcached (RHEL/Fedora)
+  package:
+    name: memcached
+    state: present
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and memcached_check.rc != 0
+
+# Verify installation
+- name: Verify Memcached installation
+  shell: memcached -h | head -1
+  register: memcached_version
+
+- name: Display Memcached version
+  print: "Memcached installed"
+
+# Configure Memcached (Linux)
+- name: Configure Memcached (Linux)
+  shell: |
+    sudo sed -i "s/^-m.*/-m {{ parameters.memory_limit }}/" /etc/memcached.conf
+    sudo sed -i "s/^-p.*/-p {{ parameters.port }}/" /etc/memcached.conf
+    sudo sed -i "s/^-c.*/-c {{ parameters.max_connections }}/" /etc/memcached.conf
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+# Start service
+- name: Start Memcached service (Linux)
+  service:
+    name: memcached
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Memcached service (macOS)
+  shell: |
+    brew services start memcached
+  when: os == "darwin" and parameters.start_service
+
+- name: Display installation summary
+  print: |
+    Memcached installed successfully!
+    
+    Configuration:
+      - Port: {{ parameters.port }}
+      - Memory limit: {{ parameters.memory_limit }}MB
+      - Max connections: {{ parameters.max_connections }}
+    
+    Test connection:
+      telnet localhost {{ parameters.port }}
+      stats
+      quit
+    
+    Or use telnet alternative:
+      echo "stats" | nc localhost {{ parameters.port }}

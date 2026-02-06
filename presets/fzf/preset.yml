@@ -1,0 +1,32 @@
+name: fzf
+description: Install fzf - command-line fuzzy finder
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: true
+    default: "present"
+    enum: ["present", "absent"]
+    description: "Whether to install or uninstall fzf"
+
+  install_shell_extensions:
+    type: bool
+    required: false
+    default: true
+    description: "Install key bindings and fuzzy completion"
+
+  install_vim_plugin:
+    type: bool
+    required: false
+    default: false
+    description: "Install vim/neovim plugin"
+
+steps:
+  - name: Install fzf
+    include_vars: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall fzf
+    include_vars: tasks/uninstall.yml
+    when: parameters.state == "absent"

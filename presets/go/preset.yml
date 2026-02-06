@@ -19,7 +19,7 @@ parameters:
   gopath:
     type: string
     required: false
-    default: "$HOME/go"
+    default: "~/go"
     description: GOPATH directory
 
 steps:

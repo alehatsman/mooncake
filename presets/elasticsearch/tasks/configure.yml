@@ -1,0 +1,51 @@
+# Elasticsearch Configuration Tasks
+
+- name: Ensure data directory exists
+  file:
+    path: "{{ parameters.data_dir }}"
+    state: directory
+    mode: "0755"
+  when: parameters.data_dir != "/var/lib/elasticsearch"
+
+- name: Configure JVM heap size
+  shell: |
+    if [ -f /etc/elasticsearch/jvm.options ]; then
+      sudo sed -i 's/^-Xms.*/-Xms{{ parameters.heap_size }}/' /etc/elasticsearch/jvm.options
+      sudo sed -i 's/^-Xmx.*/-Xmx{{ parameters.heap_size }}/' /etc/elasticsearch/jvm.options
+    elif [ -f /opt/homebrew/etc/elasticsearch/jvm.options ]; then
+      sed -i '' 's/^-Xms.*/-Xms{{ parameters.heap_size }}/' /opt/homebrew/etc/elasticsearch/jvm.options
+      sed -i '' 's/^-Xmx.*/-Xmx{{ parameters.heap_size }}/' /opt/homebrew/etc/elasticsearch/jvm.options
+    fi
+  failed_when: false
+
+- name: Start Elasticsearch service (Linux)
+  service:
+    name: elasticsearch
+    state: started
+    enabled: true
+  become: true
+  when: os == "linux" and parameters.start_service
+
+- name: Start Elasticsearch service (macOS)
+  shell: brew services start elastic/tap/elasticsearch-full
+  when: os == "darwin" and parameters.start_service
+
+- name: Wait for Elasticsearch to be ready
+  shell: curl -s http://localhost:{{ parameters.http_port }}/_cluster/health
+  register: elasticsearch_ready
+  until: elasticsearch_ready.rc == 0
+  retries: 30
+  delay: 2
+  failed_when: false
+  when: parameters.start_service
+
+- name: Display Elasticsearch information
+  print: |
+    Elasticsearch is running:
+    - HTTP API: http://localhost:{{ parameters.http_port }}
+    - Cluster: {{ parameters.cluster_name }}
+    - Data directory: {{ parameters.data_dir }}
+
+    Test connection:
+      curl http://localhost:{{ parameters.http_port }}
+  when: parameters.start_service and elasticsearch_ready.rc == 0

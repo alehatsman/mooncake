@@ -1,0 +1,97 @@
+# fzf Installation Tasks
+
+- name: Check if fzf is already installed
+  shell: command -v fzf
+  register: fzf_check
+  failed_when: false
+
+# macOS Installation
+- name: Install fzf via Homebrew (macOS)
+  shell: brew install fzf
+  when: os == "darwin" and fzf_check.rc != 0
+
+# Linux Installation
+- name: Install fzf via package manager (Debian/Ubuntu)
+  shell: sudo apt-get update && sudo apt-get install -y fzf
+  when: os == "linux" and apt_available and fzf_check.rc != 0
+
+- name: Install fzf via package manager (Fedora/RHEL)
+  shell: sudo dnf install -y fzf
+  when: os == "linux" and dnf_available and fzf_check.rc != 0
+
+- name: Install fzf via git (fallback)
+  shell: |
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install --bin
+    sudo ln -sf ~/.fzf/bin/fzf /usr/local/bin/fzf
+  when: os == "linux" and fzf_check.rc != 0 and not apt_available and not dnf_available
+
+# Verify installation
+- name: Verify fzf installation
+  shell: fzf --version
+  register: fzf_version
+
+- name: Display fzf version
+  print: "fzf installed: {{ fzf_version.stdout }}"
+
+# Install shell extensions (key bindings and completion)
+- name: Install shell extensions (macOS)
+  shell: $(brew --prefix)/opt/fzf/install --key-bindings --completion --no-update-rc
+  when: os == "darwin" and parameters.install_shell_extensions
+
+- name: Install shell extensions (Linux)
+  shell: |
+    if [ -d ~/.fzf ]; then
+      ~/.fzf/install --key-bindings --completion --no-update-rc
+    elif [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
+      # Debian/Ubuntu package location
+      echo 'source /usr/share/doc/fzf/examples/key-bindings.bash' >> ~/.bashrc
+      echo 'source /usr/share/doc/fzf/examples/completion.bash' >> ~/.bashrc
+    fi
+  when: os == "linux" and parameters.install_shell_extensions
+
+# Vim plugin
+- name: Install vim plugin
+  shell: |
+    mkdir -p ~/.vim/pack/vendor/start
+    if [ ! -d ~/.vim/pack/vendor/start/fzf ]; then
+      ln -s ~/.fzf ~/.vim/pack/vendor/start/fzf
+    fi
+  when: parameters.install_vim_plugin
+
+- name: Display fzf usage examples
+  print: |
+    fzf installed successfully!
+
+    Key bindings (if shell extensions installed):
+      Ctrl+T   - Paste selected files/dirs onto command line
+      Ctrl+R   - Paste selected command from history
+      Alt+C    - cd into selected directory
+
+    Basic usage:
+      # Find files
+      find . -type f | fzf
+
+      # Search command history
+      history | fzf
+
+      # Interactive file search
+      vim $(fzf)
+
+      # Preview files
+      fzf --preview 'cat {}'
+
+      # Multi-select with Tab
+      fzf --multi
+
+    Examples:
+      # Kill process
+      kill -9 $(ps aux | fzf | awk '{print $2}')
+
+      # Checkout git branch
+      git checkout $(git branch | fzf)
+
+      # Search and edit files
+      rg --files | fzf --preview 'bat --color=always {}' | xargs nvim
+
+    More info: https://github.com/junegunn/fzf

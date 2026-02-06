@@ -1,0 +1,47 @@
+# RabbitMQ Installation Tasks
+
+- name: Check if RabbitMQ is already installed
+  shell: command -v rabbitmq-server
+  register: rabbitmq_check
+  failed_when: false
+
+# macOS Installation
+- name: Install RabbitMQ via Homebrew (macOS)
+  shell: brew install rabbitmq
+  when: os == "darwin" and rabbitmq_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Add Erlang repository (Debian/Ubuntu)
+  shell: |
+    curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc | sudo gpg --dearmor -o /usr/share/keyrings/rabbitmq.gpg
+    echo "deb [signed-by=/usr/share/keyrings/rabbitmq.gpg] https://ppa1.rabbitmq.com/rabbitmq/rabbitmq-server/deb/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/rabbitmq.list
+  become: true
+  when: os == "linux" and package_manager == "apt" and rabbitmq_check.rc != 0
+
+- name: Update apt cache (Debian/Ubuntu)
+  shell: apt-get update
+  become: true
+  when: os == "linux" and package_manager == "apt" and rabbitmq_check.rc != 0
+
+- name: Install RabbitMQ (Debian/Ubuntu)
+  package:
+    name: rabbitmq-server
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and rabbitmq_check.rc != 0
+
+# Linux - RHEL/Fedora
+- name: Install RabbitMQ (RHEL/Fedora)
+  shell: |
+    curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | sudo bash
+    sudo dnf install -y rabbitmq-server
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and rabbitmq_check.rc != 0
+
+# Verify installation
+- name: Verify RabbitMQ installation
+  shell: rabbitmq-server --version 2>&1 || rabbitmqctl version
+  register: rabbitmq_version
+
+- name: Display RabbitMQ version
+  print: "RabbitMQ installed: {{ rabbitmq_version.stdout }}"

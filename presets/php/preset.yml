@@ -1,0 +1,38 @@
+name: php
+description: Install PHP programming language with Composer
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether PHP should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "8.3"
+    description: PHP version (7.4, 8.0, 8.1, 8.2, 8.3)
+
+  install_composer:
+    type: bool
+    required: false
+    default: true
+    description: Install Composer package manager
+
+  extensions:
+    type: array
+    required: false
+    default: []
+    description: PHP extensions to install (e.g., mbstring, xml, curl)
+
+steps:
+  - name: Install PHP
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall PHP
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

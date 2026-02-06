@@ -1,0 +1,47 @@
+# Consul Uninstallation Tasks
+
+- name: Stop Consul service (Linux)
+  service:
+    name: consul
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Remove Consul systemd service
+  file:
+    path: /etc/systemd/system/consul.service
+    state: absent
+  become: true
+  when: os == "linux"
+
+- name: Reload systemd daemon
+  shell: sudo systemctl daemon-reload
+  when: os == "linux"
+
+- name: Uninstall Consul (macOS)
+  shell: brew uninstall consul
+  when: os == "darwin"
+  failed_when: false
+
+- name: Remove Consul binary (Linux)
+  file:
+    path: /usr/local/bin/consul
+    state: absent
+  become: true
+  when: os == "linux"
+
+- name: Remove Consul configuration
+  file:
+    path: /etc/consul.d
+    state: absent
+  become: true
+  failed_when: false
+
+- name: Display uninstall confirmation
+  print: |
+    Consul uninstalled.
+
+    Note: Data directory not removed for safety.
+    To remove data: sudo rm -rf {{ parameters.data_dir }}

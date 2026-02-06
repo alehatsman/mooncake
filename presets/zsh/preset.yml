@@ -1,0 +1,44 @@
+name: zsh
+description: Install Zsh shell with Oh My Zsh framework
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Zsh should be installed or removed
+
+  install_ohmyzsh:
+    type: bool
+    required: false
+    default: true
+    description: Install Oh My Zsh framework
+
+  theme:
+    type: string
+    required: false
+    default: "robbyrussell"
+    description: Oh My Zsh theme (robbyrussell, agnoster, powerlevel10k)
+
+  plugins:
+    type: array
+    required: false
+    default: ["git", "docker", "kubectl"]
+    description: Oh My Zsh plugins to enable
+
+  set_default_shell:
+    type: bool
+    required: false
+    default: true
+    description: Set Zsh as default shell
+
+steps:
+  - name: Install Zsh
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Zsh
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

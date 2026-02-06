@@ -1,25 +1,29 @@
-# Tmux Uninstallation
+# Tmux Uninstallation Tasks
 
-- name: Remove tmux via {{ package_manager }}
+- name: Remove TPM directory
+  shell: rm -rf ~/.tmux/plugins
+  when: parameters.install_tpm
+
+- name: Remove Tmux config
+  shell: rm -f ~/.tmux.conf
+
+- name: Uninstall Tmux (macOS)
+  shell: brew uninstall tmux
+  when: os == "darwin"
+
+- name: Uninstall Tmux (Debian/Ubuntu)
   package:
     name: tmux
     state: absent
   become: true
-  when: package_manager != "brew"
+  when: os == "linux" and package_manager == "apt"
 
-- name: Remove tmux via {{ package_manager }}
+- name: Uninstall Tmux (RHEL/Fedora)
   package:
     name: tmux
     state: absent
-  when: package_manager == "brew"
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
 
-- name: Remove tmux configuration
-  file:
-    path: "{{ parameters.config_path }}"
-    state: absent
-
-- name: Print uninstallation complete
-  print: |
-    Tmux has been uninstalled.
-
-    Note: Any running tmux sessions were terminated.
+- name: Display uninstall confirmation
+  print: "Tmux uninstalled."

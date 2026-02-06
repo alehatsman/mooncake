@@ -1,0 +1,36 @@
+# Java Uninstallation Tasks
+
+- name: Uninstall OpenJDK (macOS)
+  shell: brew uninstall openjdk@{{ parameters.version }}
+  when: os == "darwin"
+
+- name: Uninstall OpenJDK (Debian/Ubuntu)
+  package:
+    name: "openjdk-{{ parameters.version }}-jdk"
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall OpenJDK (RHEL/Fedora)
+  package:
+    name: "java-{{ parameters.version }}-openjdk-devel"
+    state: absent
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+- name: Remove Java environment file
+  file:
+    path: "~/.java_env"
+    state: absent
+
+- name: Remove Java env from shell profiles
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ]; then
+        sed -i.bak '/\.java_env/d' "$profile" 2>/dev/null || sed -i '' '/\.java_env/d' "$profile"
+      fi
+    done
+  failed_when: false
+
+- name: Display uninstall confirmation
+  print: "Java uninstalled."

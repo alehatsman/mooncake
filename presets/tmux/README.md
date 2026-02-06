@@ -1,51 +1,15 @@
 # Tmux Preset
 
-Install and configure tmux (terminal multiplexer) with sensible defaults for productivity.
+Install and configure Tmux - a powerful terminal multiplexer for managing multiple terminal sessions.
 
-## Features
+## Quick Start
 
-- ✅ Installs tmux via system package manager
-- ✅ Optional sensible configuration
-- ✅ Customizable prefix key (default: C-a)
-- ✅ Mouse support enabled by default
-- ✅ Vi key bindings in copy mode
-- ✅ Better pane split keys (| and -)
-- ✅ Vim-like pane navigation (hjkl)
-- ✅ Modern status bar with colors
-- ✅ Cross-platform (Linux, macOS)
-
-## Usage
-
-### Install tmux with sensible defaults
 ```yaml
-- name: Install tmux
-  preset: tmux
-```
-
-### Install without configuration
-```yaml
-- name: Install tmux (no config)
-  preset: tmux
+- preset: tmux
   with:
-    configure: false
-```
-
-### Customize configuration
-```yaml
-- name: Install tmux with custom settings
-  preset: tmux
-  with:
-    prefix_key: "C-b"      # Use default prefix
-    mouse_mode: false      # Disable mouse
-    vi_mode: true          # Enable vi bindings
-```
-
-### Uninstall
-```yaml
-- name: Remove tmux
-  preset: tmux
-  with:
-    state: absent
+    prefix_key: "C-a"
+    mouse_mode: true
+    install_tpm: true
 ```
 
 ## Parameters
@@ -53,232 +17,177 @@ Install and configure tmux (terminal multiplexer) with sensible defaults for pro
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `state` | string | `present` | `present` or `absent` |
-| `configure` | bool | `true` | Install configuration file |
-| `config_path` | string | `~/.tmux.conf` | Path to config file |
-| `prefix_key` | string | `C-a` | Tmux prefix key |
+| `install_tpm` | bool | `true` | Install Plugin Manager |
+| `prefix_key` | string | `C-b` | Prefix key (C-b or C-a) |
 | `mouse_mode` | bool | `true` | Enable mouse support |
-| `vi_mode` | bool | `true` | Use vi key bindings |
+| `history_limit` | string | `10000` | Scrollback history |
 
-## What is Tmux?
+## Usage
 
-Tmux is a terminal multiplexer that lets you:
-- Run multiple terminal sessions in one window
-- Split your terminal into panes
-- Detach and reattach to sessions
-- Keep programs running when you disconnect
-- Share sessions with others
-
-Perfect for:
-- Remote server work (SSH sessions)
-- Development workflows
-- System administration
-- Pair programming
-
-## Configuration Features
-
-The generated `~/.tmux.conf` includes:
-
-### Key Bindings
-- **Prefix**: `C-a` (Ctrl+a) instead of default `C-b`
-- **Split panes**: `C-a |` (vertical), `C-a -` (horizontal)
-- **Navigate panes**: `C-a h/j/k/l` (Vim-style)
-- **Resize panes**: `C-a H/J/K/L`
-- **New window**: `C-a c`
-- **Switch windows**: `C-a 0-9`
-- **Reload config**: `C-a r`
-
-### Features
-- ✅ Mouse support (scroll, select, resize)
-- ✅ Vi key bindings for copy mode
-- ✅ 256 color support
-- ✅ 50,000 line scrollback buffer
-- ✅ Window numbering starts at 1
-- ✅ Auto-renumber windows
-- ✅ Fast escape time (no delay)
-- ✅ Status bar with date/time
-- ✅ Colored pane borders
-
-## Quick Start Guide
-
-### Basic Usage
-```bash
-# Start tmux
-tmux
-
-# Create new window
-C-a c
-
-# Split pane vertically
-C-a |
-
-# Split pane horizontally
-C-a -
-
-# Navigate between panes
-C-a h  # left
-C-a j  # down
-C-a k  # up
-C-a l  # right
-
-# Detach from session
-C-a d
-
-# List sessions
-tmux ls
-
-# Attach to session
-tmux attach
-
-# Attach to specific session
-tmux attach -t mysession
+### Basic Installation
+```yaml
+- preset: tmux
 ```
 
-### Session Management
-```bash
-# Create named session
-tmux new -s development
-
-# Create session with window name
-tmux new -s work -n editor
-
-# Kill session
-tmux kill-session -t development
-
-# Rename session
-C-a $
-
-# Switch between sessions
-C-a (  # previous session
-C-a )  # next session
-C-a s  # list sessions
+### Custom Prefix (like GNU Screen)
+```yaml
+- preset: tmux
+  with:
+    prefix_key: "C-a"
 ```
 
-### Window Management
-```bash
-# Create new window
-C-a c
-
-# Rename window
-C-a ,
-
-# Close window
-C-a &
-
-# Switch to window
-C-a 0-9  # by number
-C-a n    # next window
-C-a p    # previous window
-C-a l    # last window
-
-# Move window
-C-a .
-
-# Find window
-C-a f
+### Minimal Setup
+```yaml
+- preset: tmux
+  with:
+    install_tpm: false
+    mouse_mode: false
 ```
 
-### Pane Management
+## Quick Reference
+
+### Sessions
 ```bash
-# Split panes
-C-a |  # vertical split
-C-a -  # horizontal split
-
-# Navigate panes
-C-a h/j/k/l  # vim-style
-
-# Resize panes
-C-a H/J/K/L  # vim-style (hold and repeat)
-
-# Toggle pane zoom
-C-a z
-
-# Close pane
-C-a x
-
-# Show pane numbers
-C-a q
-
-# Swap panes
-C-a {  # swap with previous
-C-a }  # swap with next
+tmux                    # Start new session
+tmux new -s mysession   # Start named session
+tmux ls                 # List sessions
+tmux attach             # Attach to last session
+tmux attach -t mysession # Attach to named session
+tmux kill-session -t mysession # Kill session
 ```
 
-### Copy Mode (Vi-style)
-```bash
-# Enter copy mode
-C-a [
+### Key Bindings (with default C-b prefix)
 
-# Navigate (vi keys)
-h/j/k/l  # move cursor
-w/b      # word forward/back
-gg/G     # top/bottom
+**Windows:**
+- `C-b c` - Create new window
+- `C-b n` - Next window
+- `C-b p` - Previous window
+- `C-b 0-9` - Switch to window number
+- `C-b w` - List windows
+- `C-b ,` - Rename window
+- `C-b &` - Kill window
 
-# Select and copy
-v        # start selection
-y        # yank (copy)
+**Panes:**
+- `C-b |` - Split horizontally
+- `C-b -` - Split vertically
+- `C-b arrow` - Navigate panes
+- `Alt-arrow` - Navigate without prefix
+- `C-b x` - Kill pane
+- `C-b z` - Toggle pane zoom
 
-# Paste
-C-a ]
+**Other:**
+- `C-b d` - Detach session
+- `C-b r` - Reload config
+- `C-b [` - Enter copy mode (scroll)
+- `C-b ]` - Paste buffer
 
-# Search
-/        # search forward
-?        # search backward
-n        # next match
-N        # previous match
+## Copy Mode (Vi-style)
+
+1. Enter copy mode: `C-b [`
+2. Navigate with Vi keys: `h j k l`
+3. Start selection: `Space`
+4. Copy selection: `Enter`
+5. Paste: `C-b ]`
+
+## Plugin Manager (TPM)
+
+Included plugins:
+- `tmux-sensible` - Sensible defaults
+- `tmux-resurrect` - Save/restore sessions
+- `tmux-continuum` - Auto-save sessions
+
+### Commands:
+- `C-b I` - Install plugins
+- `C-b U` - Update plugins
+- `C-b alt-u` - Uninstall plugins
+
+### Add More Plugins:
+
+Edit `~/.tmux.conf`:
+```tmux
+set -g @plugin 'tmux-plugins/tmux-yank'
+set -g @plugin 'tmux-plugins/tmux-copycat'
 ```
 
-## Common Workflows
+Then press `C-b I` to install.
 
-### Remote Development
+## Popular Plugins
+
+```tmux
+# Better mouse support
+set -g @plugin 'nhdaly/tmux-better-mouse-mode'
+
+# Copy to system clipboard
+set -g @plugin 'tmux-plugins/tmux-yank'
+
+# Search and highlight
+set -g @plugin 'tmux-plugins/tmux-copycat'
+
+# Status bar theme
+set -g @plugin 'jimeh/tmux-themepack'
+set -g @themepack 'powerline/default/cyan'
+
+# Sidebar file tree
+set -g @plugin 'tmux-plugins/tmux-sidebar'
+```
+
+## Session Management
+
 ```bash
-# On remote server
+# Save session (manual)
+C-b C-s
+
+# Restore session
+C-b C-r
+
+# Auto-restore (with tmux-continuum)
+# Sessions automatically saved every 15 minutes
+```
+
+## Configuration Tips
+
+Edit `~/.tmux.conf`:
+
+```tmux
+# Use 256 colors
+set -g default-terminal "screen-256color"
+
+# No delay for escape key
+set -sg escape-time 0
+
+# Aggressive resize
+setw -g aggressive-resize on
+
+# Custom status bar
+set -g status-right '#[fg=yellow]#(uptime | cut -d "," -f 3-)'
+```
+
+## Workflow Example
+
+```bash
+# Start development session
 tmux new -s dev
 
-# ... work in tmux ...
+# Create windows
+C-b c  # Editor window
+C-b c  # Server window
+C-b c  # Database window
 
-# Detach when done
-C-a d
+# Split panes for monitoring
+C-b |  # Split for logs
+C-b -  # Split for system monitor
 
-# Later, reconnect and resume
-ssh server
+# Detach and continue later
+C-b d
+
+# Reattach
 tmux attach -t dev
 ```
 
-### Multi-pane Development
-```bash
-# Start session
-tmux new -s project
+## Uninstall
 
-# Split into 3 panes:
-# - Editor (top)
-# - Server (bottom-left)
-# - Shell (bottom-right)
-
-C-a -      # Horizontal split
-C-a j      # Move to bottom
-C-a |      # Vertical split
+```yaml
+- preset: tmux
+  with:
+    state: absent
 ```
-
-### Pair Programming
-```bash
-# Person 1: Start shared session
-tmux new -s pair
-
-# Person 2: Attach to same session
-tmux attach -t pair
-
-# Both see and control same terminal
-```
-
-## Platform Support
-
-- ✅ Linux (all distributions)
-- ✅ macOS
-- ❌ Windows (use WSL)
-
-## Learn More
-
-- [Tmux GitHub](https://github.com/tmux/tmux)
-- [Tmux Cheat Sheet](https://tmuxcheatsheet.com/)
-- [Tmux Book](https://pragprog.com/titles/bhtmux2/tmux-2/)
-- [Oh My Tmux](https://github.com/gpakosz/.tmux) - Advanced config

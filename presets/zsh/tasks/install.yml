@@ -1,0 +1,105 @@
+# Zsh Installation Tasks
+
+- name: Check if Zsh is already installed
+  shell: command -v zsh
+  register: zsh_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Zsh via Homebrew (macOS)
+  shell: brew install zsh
+  when: os == "darwin" and zsh_check.rc != 0
+
+# Linux Installation
+- name: Install Zsh (Debian/Ubuntu)
+  package:
+    name: zsh
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and zsh_check.rc != 0
+
+- name: Install Zsh (RHEL/Fedora)
+  package:
+    name: zsh
+    state: present
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and zsh_check.rc != 0
+
+- name: Install Zsh (Arch)
+  package:
+    name: zsh
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "pacman" and zsh_check.rc != 0
+
+# Verify Zsh installation
+- name: Verify Zsh installation
+  shell: zsh --version
+  register: zsh_version
+
+- name: Display Zsh version
+  print: "Zsh installed: {{ zsh_version.stdout }}"
+
+# Install Oh My Zsh
+- name: Check if Oh My Zsh is already installed
+  shell: test -d ~/.oh-my-zsh && echo "installed" || echo "not installed"
+  register: ohmyzsh_check
+  when: parameters.install_ohmyzsh
+
+- name: Install Oh My Zsh
+  shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  when: parameters.install_ohmyzsh and ohmyzsh_check.stdout == "not installed"
+
+# Configure theme
+- name: Set Oh My Zsh theme
+  shell: sed -i.bak 's/^ZSH_THEME=.*/ZSH_THEME="{{ parameters.theme }}"/' ~/.zshrc
+  when: parameters.install_ohmyzsh
+  failed_when: false
+
+# Configure plugins
+- name: Set Oh My Zsh plugins
+  shell: |
+    PLUGINS="{{ parameters.plugins | join(' ') }}"
+    sed -i.bak "s/^plugins=(.*)/plugins=($PLUGINS)/" ~/.zshrc
+  when: parameters.install_ohmyzsh and parameters.plugins | length > 0
+  failed_when: false
+
+# Install Powerlevel10k theme if selected
+- name: Install Powerlevel10k theme
+  shell: |
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+  when: parameters.install_ohmyzsh and parameters.theme == "powerlevel10k"
+  failed_when: false
+
+# Set as default shell
+- name: Get Zsh path
+  shell: which zsh
+  register: zsh_path
+  when: parameters.set_default_shell
+
+- name: Add Zsh to valid shells
+  shell: |
+    if ! grep -q "{{ zsh_path.stdout }}" /etc/shells; then
+      echo "{{ zsh_path.stdout }}" | sudo tee -a /etc/shells
+    fi
+  become: true
+  when: parameters.set_default_shell and os == "linux"
+  failed_when: false
+
+- name: Set Zsh as default shell
+  shell: chsh -s {{ zsh_path.stdout }}
+  when: parameters.set_default_shell
+  failed_when: false
+
+- name: Display installation summary
+  print: |
+    Zsh installed successfully!
+    {{ "Oh My Zsh framework installed" if parameters.install_ohmyzsh else "" }}
+    {{ "Theme: " + parameters.theme if parameters.install_ohmyzsh else "" }}
+    {{ "Plugins: " + (parameters.plugins | join(", ")) if parameters.install_ohmyzsh and parameters.plugins | length > 0 else "" }}
+
+    To start using Zsh:
+      {{ "Restart your terminal or run: zsh" if not parameters.set_default_shell else "Restart your terminal" }}
+
+    Customize your config:
+      {{ "nano ~/.zshrc" if parameters.install_ohmyzsh else "Create ~/.zshrc" }}

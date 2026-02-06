@@ -1,0 +1,60 @@
+name: rabbitmq
+description: Install and configure RabbitMQ message broker
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether RabbitMQ should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start RabbitMQ service after installation
+
+  enable_management:
+    type: bool
+    required: false
+    default: true
+    description: Enable management plugin (web UI)
+
+  admin_user:
+    type: string
+    required: false
+    default: "admin"
+    description: Admin username
+
+  admin_password:
+    type: string
+    required: false
+    default: "admin"
+    description: Admin password
+
+  port:
+    type: string
+    required: false
+    default: "5672"
+    description: AMQP port
+
+  management_port:
+    type: string
+    required: false
+    default: "15672"
+    description: Management UI port
+
+steps:
+  - name: Install RabbitMQ
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure RabbitMQ
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall RabbitMQ
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

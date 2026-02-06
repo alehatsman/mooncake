@@ -1,0 +1,75 @@
+name: consul
+description: Install HashiCorp Consul - service mesh, service discovery, and configuration
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: true
+    default: "present"
+    enum: ["present", "absent"]
+    description: "Whether to install or uninstall Consul"
+
+  version:
+    type: string
+    required: false
+    default: "latest"
+    description: "Consul version to install (e.g., '1.17.0' or 'latest')"
+
+  mode:
+    type: string
+    required: false
+    default: "server"
+    enum: ["server", "client", "dev"]
+    description: "Consul mode: server, client, or dev"
+
+  bootstrap_expect:
+    type: string
+    required: false
+    default: "1"
+    description: "Number of server nodes to wait for before bootstrapping"
+
+  data_dir:
+    type: string
+    required: false
+    default: "/opt/consul/data"
+    description: "Data directory for Consul"
+
+  bind_addr:
+    type: string
+    required: false
+    default: "0.0.0.0"
+    description: "Address to bind to for cluster communication"
+
+  client_addr:
+    type: string
+    required: false
+    default: "127.0.0.1"
+    description: "Address to bind for client access"
+
+  ui:
+    type: bool
+    required: false
+    default: true
+    description: "Enable Consul UI"
+
+  datacenter:
+    type: string
+    required: false
+    default: "dc1"
+    description: "Datacenter name"
+
+  start_service:
+    type: bool
+    required: false
+    default: false
+    description: "Start Consul service after installation"
+
+steps:
+  - name: Install Consul
+    include_vars: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Consul
+    include_vars: tasks/uninstall.yml
+    when: parameters.state == "absent"

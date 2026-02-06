@@ -1,0 +1,207 @@
+# Consul Installation Tasks
+
+- name: Check if Consul is already installed
+  shell: command -v consul
+  register: consul_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Consul via Homebrew (macOS)
+  shell: brew install consul
+  when: os == "darwin" and consul_check.rc != 0
+
+# Linux Installation
+- name: Download and install Consul (Linux)
+  shell: |
+    CONSUL_VERSION="{{ parameters.version }}"
+    if [ "$CONSUL_VERSION" = "latest" ]; then
+      CONSUL_VERSION=$(curl -s https://api.github.com/repos/hashicorp/consul/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+    fi
+
+    wget "https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip" -O /tmp/consul.zip
+    unzip -o /tmp/consul.zip -d /tmp/
+    sudo mv /tmp/consul /usr/local/bin/
+    sudo chmod +x /usr/local/bin/consul
+    rm /tmp/consul.zip
+  when: os == "linux" and consul_check.rc != 0
+
+# Verify installation
+- name: Verify Consul installation
+  shell: consul version
+  register: consul_version
+
+- name: Display Consul version
+  print: "Consul installed: {{ consul_version.stdout }}"
+
+# Create data directory
+- name: Create Consul data directory
+  file:
+    path: "{{ parameters.data_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+  when: parameters.mode != "dev"
+
+# Create configuration directory
+- name: Create Consul config directory
+  file:
+    path: /etc/consul.d
+    state: directory
+    mode: "0755"
+  become: true
+  when: parameters.mode != "dev"
+
+# Server mode configuration
+- name: Create Consul server configuration
+  file:
+    path: /etc/consul.d/consul.hcl
+    content: |
+      datacenter = "{{ parameters.datacenter }}"
+      data_dir = "{{ parameters.data_dir }}"
+
+      server = true
+      bootstrap_expect = {{ parameters.bootstrap_expect }}
+
+      bind_addr = "{{ parameters.bind_addr }}"
+      client_addr = "{{ parameters.client_addr }}"
+
+      ui_config {
+        enabled = {{ parameters.ui | lower }}
+      }
+
+      ports {
+        http = 8500
+        dns = 8600
+        server = 8300
+        serf_lan = 8301
+        serf_wan = 8302
+      }
+
+      performance {
+        raft_multiplier = 1
+      }
+    mode: "0644"
+  become: true
+  when: parameters.mode == "server"
+
+# Client mode configuration
+- name: Create Consul client configuration
+  file:
+    path: /etc/consul.d/consul.hcl
+    content: |
+      datacenter = "{{ parameters.datacenter }}"
+      data_dir = "{{ parameters.data_dir }}"
+
+      server = false
+
+      bind_addr = "{{ parameters.bind_addr }}"
+      client_addr = "{{ parameters.client_addr }}"
+
+      ports {
+        http = 8500
+        dns = 8600
+      }
+    mode: "0644"
+  become: true
+  when: parameters.mode == "client"
+
+# Create systemd service (Linux)
+- name: Create Consul systemd service
+  file:
+    path: /etc/systemd/system/consul.service
+    content: |
+      [Unit]
+      Description=HashiCorp Consul
+      Documentation=https://www.consul.io/
+      Requires=network-online.target
+      After=network-online.target
+      ConditionFileNotEmpty=/etc/consul.d/consul.hcl
+
+      [Service]
+      Type=notify
+      User=consul
+      Group=consul
+      ExecStart=/usr/local/bin/consul agent -config-dir=/etc/consul.d/
+      ExecReload=/bin/kill --signal HUP $MAINPID
+      KillMode=process
+      KillSignal=SIGTERM
+      Restart=on-failure
+      LimitNOFILE=65536
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+  become: true
+  when: os == "linux" and parameters.mode != "dev"
+
+# Create consul user (Linux)
+- name: Create consul user
+  shell: |
+    if ! id consul >/dev/null 2>&1; then
+      sudo useradd --system --home /etc/consul.d --shell /bin/false consul
+      sudo chown -R consul:consul /etc/consul.d {{ parameters.data_dir }}
+    fi
+  when: os == "linux" and parameters.mode != "dev"
+
+# Reload systemd
+- name: Reload systemd daemon
+  shell: sudo systemctl daemon-reload
+  when: os == "linux" and parameters.mode != "dev"
+
+# Start service
+- name: Start Consul service
+  service:
+    name: consul
+    state: started
+    enabled: true
+  become: true
+  when: parameters.start_service and parameters.mode != "dev" and os == "linux"
+
+# Dev mode instructions
+- name: Display dev mode instructions
+  print: |
+    Consul installed successfully!
+
+    Dev Mode (single-node, in-memory):
+      consul agent -dev
+
+    The dev agent:
+      - Server mode with single node
+      - In-memory storage
+      - UI enabled at http://127.0.0.1:8500/ui
+      - Logs to stdout
+
+    Useful dev commands:
+      consul members              # List cluster members
+      consul catalog services     # List registered services
+      consul kv put mykey myvalue # Store key-value
+      consul kv get mykey         # Retrieve value
+  when: parameters.mode == "dev"
+
+# Production mode instructions
+- name: Display production mode instructions
+  print: |
+    Consul installed successfully!
+
+    Configuration: /etc/consul.d/consul.hcl
+    Data directory: {{ parameters.data_dir }}
+    Mode: {{ parameters.mode }}
+
+    Start Consul:
+      sudo systemctl start consul
+      sudo systemctl status consul
+
+    Access UI: http://{{ parameters.client_addr }}:8500/ui
+
+    Basic commands:
+      consul members              # List cluster members
+      consul catalog services     # List services
+      consul kv put key value     # Store data
+      consul kv get key           # Retrieve data
+
+    {% if parameters.mode == "server" %}
+    Cluster setup:
+      - Bootstrap expect: {{ parameters.bootstrap_expect }} servers
+      - To join cluster: consul join <server-ip>
+    {% endif %}
+  when: parameters.mode != "dev"

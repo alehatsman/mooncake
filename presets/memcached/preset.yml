@@ -1,0 +1,44 @@
+name: memcached
+description: Install Memcached high-performance distributed memory caching system
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Memcached should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Memcached service after installation
+
+  port:
+    type: string
+    required: false
+    default: "11211"
+    description: Memcached port
+
+  memory_limit:
+    type: string
+    required: false
+    default: "64"
+    description: Memory limit in MB
+
+  max_connections:
+    type: string
+    required: false
+    default: "1024"
+    description: Maximum connections
+
+steps:
+  - name: Install Memcached
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Memcached
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

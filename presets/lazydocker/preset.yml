@@ -1,0 +1,20 @@
+name: lazydocker
+description: Install lazydocker - terminal UI for Docker and Docker Compose
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: true
+    default: "present"
+    enum: ["present", "absent"]
+    description: "Whether to install or uninstall lazydocker"
+
+steps:
+  - name: Install lazydocker
+    include_vars: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall lazydocker
+    include_vars: tasks/uninstall.yml
+    when: parameters.state == "absent"

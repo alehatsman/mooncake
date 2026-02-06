@@ -1,0 +1,118 @@
+# Traefik Installation Tasks
+
+- name: Check if Traefik is already installed
+  shell: command -v traefik
+  register: traefik_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Traefik via Homebrew (macOS)
+  shell: brew install traefik
+  when: os == "darwin" and traefik_check.rc != 0
+
+# Linux Installation
+- name: Download Traefik (Linux)
+  shell: |
+    ARCH=$(uname -m)
+    if [ "$ARCH" = "x86_64" ]; then
+      ARCH="amd64"
+    elif [ "$ARCH" = "aarch64" ]; then
+      ARCH="arm64"
+    fi
+    sudo curl -L "https://github.com/traefik/traefik/releases/download/{{ parameters.version }}/traefik_{{ parameters.version }}_linux_${ARCH}.tar.gz" -o /tmp/traefik.tar.gz
+    sudo tar -xzf /tmp/traefik.tar.gz -C /usr/local/bin traefik
+    sudo chmod +x /usr/local/bin/traefik
+    rm /tmp/traefik.tar.gz
+  become: true
+  when: os == "linux" and traefik_check.rc != 0
+
+# Verify installation
+- name: Verify Traefik installation
+  shell: traefik version
+  register: traefik_version
+
+- name: Display Traefik version
+  print: "Traefik installed: {{ traefik_version.stdout }}"
+
+# Create configuration directory
+- name: Create Traefik config directory
+  file:
+    path: ~/traefik
+    state: directory
+    mode: "0755"
+
+# Create configuration file
+- name: Create Traefik configuration
+  file:
+    path: ~/traefik/traefik.yml
+    content: |
+      # Traefik Configuration
+      
+      ## API and Dashboard
+      api:
+        dashboard: {{ "true" if parameters.enable_dashboard else "false" }}
+        insecure: true
+      
+      ## Entry Points
+      entryPoints:
+        web:
+          address: ":{{ parameters.http_port }}"
+        websecure:
+          address: ":{{ parameters.https_port }}"
+        traefik:
+          address: ":{{ parameters.dashboard_port }}"
+      
+      ## Providers
+      providers:
+        docker:
+          exposedByDefault: false
+        file:
+          directory: /etc/traefik/dynamic
+          watch: true
+      
+      ## Logs
+      log:
+        level: INFO
+      
+      accessLog: {}
+    mode: "0644"
+
+# Create dynamic config directory
+- name: Create dynamic config directory
+  file:
+    path: ~/traefik/dynamic
+    state: directory
+    mode: "0755"
+
+# Create example dynamic config
+- name: Create example dynamic configuration
+  file:
+    path: ~/traefik/dynamic/example.yml
+    content: |
+      # Example dynamic configuration
+      http:
+        routers:
+          example:
+            rule: "Host(`example.localhost`)"
+            service: example
+        services:
+          example:
+            loadBalancer:
+              servers:
+                - url: "http://localhost:3000"
+    mode: "0644"
+
+- name: Display installation summary
+  print: |
+    Traefik installed successfully!
+    
+    Configuration: ~/traefik/traefik.yml
+    
+    Start Traefik:
+      cd ~/traefik && traefik --configFile=traefik.yml
+    
+    {{ "Dashboard: http://localhost:" + parameters.dashboard_port if parameters.enable_dashboard else "" }}
+    
+    Entry points:
+      - HTTP: {{ parameters.http_port }}
+      - HTTPS: {{ parameters.https_port }}

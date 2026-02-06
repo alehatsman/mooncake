@@ -1,0 +1,42 @@
+name: ruby
+description: Install Ruby via rbenv (Ruby version manager)
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or remove Ruby/rbenv
+
+  version:
+    type: string
+    required: false
+    default: "3.3.0"
+    description: Ruby version to install (e.g., "3.2.2", "3.3.0")
+
+  set_global:
+    type: bool
+    required: false
+    default: true
+    description: Set this version as the global Ruby version
+
+  additional_versions:
+    type: array
+    required: false
+    default: []
+    description: Additional Ruby versions to install
+
+  install_bundler:
+    type: bool
+    required: false
+    default: true
+    description: Install Bundler gem
+
+steps:
+  - include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - include: tasks/uninstall.yml
+    when: parameters.state == "absent"

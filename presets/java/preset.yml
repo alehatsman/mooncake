@@ -1,0 +1,32 @@
+name: java
+description: Install OpenJDK Java Development Kit
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Java should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "21"
+    description: Java version (11, 17, 21, or latest)
+
+  set_java_home:
+    type: bool
+    required: false
+    default: true
+    description: Set JAVA_HOME environment variable
+
+steps:
+  - name: Install Java
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Java
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,207 @@
+# MkDocs Installation Tasks
+
+- name: Check if Python is installed
+  shell: command -v python3
+  register: python_check
+  failed_when: false
+
+- name: Display Python requirement message
+  print: "Python 3 is required for MkDocs. Please install Python first."
+  when: python_check.rc != 0
+  failed_when: python_check.rc != 0
+
+- name: Check if MkDocs is already installed
+  shell: command -v mkdocs
+  register: mkdocs_check
+  failed_when: false
+
+# Install MkDocs
+- name: Install MkDocs via pip
+  shell: pip3 install mkdocs
+  when: mkdocs_check.rc != 0
+
+# Install Material theme
+- name: Install Material for MkDocs
+  shell: pip3 install mkdocs-material
+  when: parameters.install_material
+
+# Install popular plugins
+- name: Install MkDocs plugins
+  shell: |
+    pip3 install mkdocs-minify-plugin
+    pip3 install mkdocs-git-revision-date-localized-plugin
+    pip3 install mkdocs-awesome-pages-plugin
+    pip3 install mkdocs-redirects
+  when: parameters.install_plugins
+
+# Verify installation
+- name: Verify MkDocs installation
+  shell: mkdocs --version
+  register: mkdocs_version
+
+- name: Display MkDocs version
+  print: "MkDocs installed: {{ mkdocs_version.stdout }}"
+
+# Create project if requested
+- name: Create MkDocs project directory
+  file:
+    path: "{{ parameters.project_dir }}"
+    state: directory
+    mode: "0755"
+  when: parameters.create_project
+
+- name: Initialize MkDocs project
+  shell: cd "{{ parameters.project_dir }}" && mkdocs new .
+  when: parameters.create_project
+
+- name: Create MkDocs configuration with Material
+  file:
+    path: "{{ parameters.project_dir }}/mkdocs.yml"
+    content: |
+      site_name: {{ parameters.site_name }}
+      site_description: Project documentation
+      site_author: Your Name
+      
+      theme:
+        name: material
+        palette:
+          scheme: default
+          primary: indigo
+          accent: indigo
+        features:
+          - navigation.tabs
+          - navigation.sections
+          - navigation.expand
+          - search.suggest
+          - search.highlight
+      
+      nav:
+        - Home: index.md
+        - Getting Started: getting-started.md
+        - User Guide: user-guide.md
+        - API Reference: api.md
+      
+      markdown_extensions:
+        - admonition
+        - codehilite
+        - toc:
+            permalink: true
+        - pymdownx.superfences
+        - pymdownx.tabbed
+        - pymdownx.highlight
+        - pymdownx.inlinehilite
+      
+      plugins:
+        - search
+        - minify:
+            minify_html: true
+        - git-revision-date-localized:
+            enable_creation_date: true
+    mode: "0644"
+  when: parameters.create_project and parameters.install_material
+
+- name: Create MkDocs configuration without Material
+  file:
+    path: "{{ parameters.project_dir }}/mkdocs.yml"
+    content: |
+      site_name: {{ parameters.site_name }}
+      site_description: Project documentation
+      site_author: Your Name
+      
+      theme:
+        name: readthedocs
+      
+      nav:
+        - Home: index.md
+        - Getting Started: getting-started.md
+        - User Guide: user-guide.md
+        - API Reference: api.md
+      
+      markdown_extensions:
+        - admonition
+        - codehilite
+        - toc:
+            permalink: true
+    mode: "0644"
+  when: parameters.create_project and not parameters.install_material
+
+- name: Create example documentation pages
+  shell: |
+    cd "{{ parameters.project_dir }}/docs"
+    
+    cat > getting-started.md <<'MDEOF'
+    # Getting Started
+    
+    Welcome to the documentation!
+    
+    ## Installation
+    
+    ```bash
+    pip install your-package
+    ```
+    
+    ## Quick Example
+    
+    ```python
+    import your_package
+    
+    result = your_package.do_something()
+    print(result)
+    ```
+    MDEOF
+    
+    cat > user-guide.md <<'MDEOF'
+    # User Guide
+    
+    ## Configuration
+    
+    Configuration options...
+    
+    ## Usage
+    
+    How to use the software...
+    
+    !!! note
+        This is an informational note.
+    
+    !!! warning
+        This is a warning message.
+    MDEOF
+    
+    cat > api.md <<'MDEOF'
+    # API Reference
+    
+    ## Classes
+    
+    ### YourClass
+    
+    ```python
+    class YourClass:
+        """Main class for your package."""
+        
+        def method(self, param):
+            """Method description."""
+            pass
+    ```
+    
+    ## Functions
+    
+    ### your_function()
+    
+    ```python
+    def your_function(arg1, arg2):
+        """Function description."""
+        return result
+    ```
+    MDEOF
+  when: parameters.create_project
+
+- name: Display installation summary
+  print: |
+    MkDocs installed successfully!
+    
+    Common commands:
+      mkdocs new project-name    # Create new project
+      mkdocs serve               # Start dev server (http://127.0.0.1:8000)
+      mkdocs build               # Build static site
+      mkdocs gh-deploy           # Deploy to GitHub Pages

@@ -1,0 +1,34 @@
+# Zsh Uninstallation Tasks
+
+- name: Reset to bash shell
+  shell: chsh -s /bin/bash
+  failed_when: false
+
+- name: Remove Oh My Zsh
+  shell: rm -rf ~/.oh-my-zsh
+  when: parameters.install_ohmyzsh
+
+- name: Remove Zsh config
+  shell: rm -f ~/.zshrc ~/.zshrc.bak ~/.zsh_history
+
+- name: Uninstall Zsh (macOS)
+  shell: brew uninstall zsh
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall Zsh (Debian/Ubuntu)
+  package:
+    name: zsh
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall Zsh (RHEL/Fedora)
+  package:
+    name: zsh
+    state: absent
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+- name: Display uninstall confirmation
+  print: "Zsh uninstalled. Shell reset to bash."

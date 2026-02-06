@@ -1,0 +1,50 @@
+name: traefik
+description: Install Traefik modern reverse proxy and load balancer
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Traefik should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "v3.0"
+    description: Traefik version
+
+  http_port:
+    type: string
+    required: false
+    default: "80"
+    description: HTTP port
+
+  https_port:
+    type: string
+    required: false
+    default: "443"
+    description: HTTPS port
+
+  dashboard_port:
+    type: string
+    required: false
+    default: "8080"
+    description: Dashboard port
+
+  enable_dashboard:
+    type: bool
+    required: false
+    default: true
+    description: Enable dashboard
+
+steps:
+  - name: Install Traefik
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Traefik
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

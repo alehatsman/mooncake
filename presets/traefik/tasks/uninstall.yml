@@ -1,0 +1,15 @@
+# Traefik Uninstallation Tasks
+
+- name: Uninstall Traefik (macOS)
+  shell: brew uninstall traefik
+  when: os == "darwin"
+
+- name: Remove Traefik binary (Linux)
+  file:
+    path: /usr/local/bin/traefik
+    state: absent
+  become: true
+  when: os == "linux"
+
+- name: Display uninstall confirmation
+  print: "Traefik uninstalled. Configuration preserved at ~/traefik/"

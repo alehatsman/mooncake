@@ -1,0 +1,29 @@
+# PHP Uninstallation Tasks
+
+- name: Uninstall PHP (macOS)
+  shell: brew uninstall php@{{ parameters.version }}
+  when: os == "darwin"
+
+- name: Uninstall PHP (Debian/Ubuntu)
+  package:
+    name: "php{{ parameters.version }}"
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall PHP (RHEL/Fedora)
+  package:
+    name: php
+    state: absent
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+- name: Remove Composer
+  file:
+    path: /usr/local/bin/composer
+    state: absent
+  become: true
+  when: parameters.install_composer
+
+- name: Display uninstall confirmation
+  print: "PHP uninstalled."

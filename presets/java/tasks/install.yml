@@ -1,0 +1,75 @@
+# Java Installation Tasks
+
+- name: Check if Java is already installed
+  shell: command -v java
+  register: java_check
+  failed_when: false
+
+# macOS Installation
+- name: Install OpenJDK via Homebrew (macOS)
+  shell: brew install openjdk@{{ parameters.version }}
+  when: os == "darwin" and java_check.rc != 0
+
+- name: Link Java (macOS)
+  shell: |
+    sudo ln -sfn /opt/homebrew/opt/openjdk@{{ parameters.version }}/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-{{ parameters.version }}.jdk
+  become: true
+  when: os == "darwin" and java_check.rc != 0
+  failed_when: false
+
+# Linux - Debian/Ubuntu
+- name: Install OpenJDK (Debian/Ubuntu)
+  package:
+    name: "openjdk-{{ parameters.version }}-jdk"
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and java_check.rc != 0
+
+# Linux - RHEL/Fedora
+- name: Install OpenJDK (RHEL/Fedora)
+  package:
+    name: "java-{{ parameters.version }}-openjdk-devel"
+    state: present
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and java_check.rc != 0
+
+# Set JAVA_HOME
+- name: Create Java environment file
+  file:
+    path: "~/.java_env"
+    content: |
+      # Java environment
+      export JAVA_HOME="{{ java_home.stdout }}"
+      export PATH="$JAVA_HOME/bin:$PATH"
+    mode: "0644"
+  when: parameters.set_java_home
+
+- name: Add Java env to shell profiles
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ] && ! grep -q '.java_env' "$profile"; then
+        echo '[ -f "$HOME/.java_env" ] && source "$HOME/.java_env"' >> "$profile"
+      fi
+    done
+  when: parameters.set_java_home
+
+# Verify installation
+- name: Get JAVA_HOME path
+  shell: |
+    if [ "{{ os }}" = "darwin" ]; then
+      /usr/libexec/java_home -v {{ parameters.version }} 2>/dev/null || echo "/opt/homebrew/opt/openjdk@{{ parameters.version }}"
+    else
+      dirname $(dirname $(readlink -f $(which java)))
+    fi
+  register: java_home
+
+- name: Verify Java installation
+  shell: java -version 2>&1 | head -1
+  register: java_version
+
+- name: Display Java version
+  print: "Java installed: {{ java_version.stdout }}"
+
+- name: Display JAVA_HOME
+  print: "JAVA_HOME: {{ java_home.stdout }}"
+  when: parameters.set_java_home

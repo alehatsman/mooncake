@@ -1,0 +1,36 @@
+# Memcached Uninstallation Tasks
+
+- name: Stop Memcached service (Linux)
+  service:
+    name: memcached
+    state: stopped
+    enabled: false
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Stop Memcached service (macOS)
+  shell: brew services stop memcached
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall Memcached (macOS)
+  shell: brew uninstall memcached
+  when: os == "darwin"
+
+- name: Uninstall Memcached (Debian/Ubuntu)
+  package:
+    name: memcached
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Uninstall Memcached (RHEL/Fedora)
+  package:
+    name: memcached
+    state: absent
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+- name: Display uninstall confirmation
+  print: "Memcached uninstalled."

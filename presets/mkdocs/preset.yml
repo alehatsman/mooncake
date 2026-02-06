@@ -1,0 +1,50 @@
+name: mkdocs
+description: Install MkDocs static site generator for project documentation
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether MkDocs should be installed or removed
+
+  install_material:
+    type: bool
+    required: false
+    default: true
+    description: Install Material for MkDocs theme
+
+  install_plugins:
+    type: bool
+    required: false
+    default: true
+    description: Install popular plugins (search, minify, git-revision-date)
+
+  create_project:
+    type: bool
+    required: false
+    default: false
+    description: Create a new MkDocs project
+
+  project_dir:
+    type: string
+    required: false
+    default: "~/mkdocs-project"
+    description: Directory for new project
+
+  site_name:
+    type: string
+    required: false
+    default: "My Documentation"
+    description: Site name for new project
+
+steps:
+  - name: Install MkDocs
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall MkDocs
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

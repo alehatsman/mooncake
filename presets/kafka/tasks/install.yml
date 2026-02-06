@@ -1,0 +1,47 @@
+# Kafka Installation Tasks
+
+- name: Check if Kafka is already installed
+  shell: command -v kafka-server-start 2>/dev/null || command -v kafka-server-start.sh
+  register: kafka_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Kafka via Homebrew (macOS)
+  shell: brew install kafka
+  when: os == "darwin" and kafka_check.rc != 0
+
+# Linux - Download binary
+- name: Download Kafka (Linux)
+  shell: |
+    cd /opt
+    sudo curl -O https://downloads.apache.org/kafka/3.6.1/kafka_2.13-3.6.1.tgz
+    sudo tar -xzf kafka_2.13-3.6.1.tgz
+    sudo mv kafka_2.13-3.6.1 /opt/kafka
+    sudo rm kafka_2.13-3.6.1.tgz
+  become: true
+  when: os == "linux" and kafka_check.rc != 0
+
+- name: Create Kafka user (Linux)
+  shell: sudo useradd -r -s /bin/false kafka || true
+  become: true
+  when: os == "linux" and kafka_check.rc != 0
+
+- name: Set Kafka ownership (Linux)
+  shell: sudo chown -R kafka:kafka /opt/kafka
+  become: true
+  when: os == "linux" and kafka_check.rc != 0
+
+- name: Add Kafka to PATH (Linux)
+  shell: |
+    echo 'export PATH="/opt/kafka/bin:$PATH"' >> ~/.bashrc
+    echo 'export PATH="/opt/kafka/bin:$PATH"' >> ~/.zshrc
+  when: os == "linux" and kafka_check.rc != 0
+  failed_when: false
+
+# Verify installation
+- name: Verify Kafka installation
+  shell: kafka-topics.sh --version 2>&1 || kafka-topics --version 2>&1 || echo "Kafka installed"
+  register: kafka_version
+
+- name: Display Kafka version
+  print: "Kafka installed: {{ kafka_version.stdout }}"

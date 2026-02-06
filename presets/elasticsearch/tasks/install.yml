@@ -1,0 +1,67 @@
+# Elasticsearch Installation Tasks
+
+- name: Check if Elasticsearch is already installed
+  shell: command -v elasticsearch
+  register: elasticsearch_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Elasticsearch via Homebrew (macOS)
+  shell: brew tap elastic/tap && brew install elastic/tap/elasticsearch-full
+  when: os == "darwin" and elasticsearch_check.rc != 0
+
+# Linux - Debian/Ubuntu
+- name: Add Elasticsearch GPG key (Debian/Ubuntu)
+  shell: |
+    wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+  become: true
+  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+
+- name: Add Elasticsearch repository (Debian/Ubuntu)
+  shell: |
+    echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/{{ parameters.version }}/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-{{ parameters.version }}.list
+  become: true
+  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+
+- name: Update apt cache (Debian/Ubuntu)
+  shell: apt-get update
+  become: true
+  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+
+- name: Install Elasticsearch (Debian/Ubuntu)
+  package:
+    name: elasticsearch
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and elasticsearch_check.rc != 0
+
+# Linux - RHEL/Fedora
+- name: Add Elasticsearch repository (RHEL/Fedora)
+  shell: |
+    cat > /etc/yum.repos.d/elasticsearch.repo <<EOF
+    [elasticsearch]
+    name=Elasticsearch repository for {{ parameters.version }} packages
+    baseurl=https://artifacts.elastic.co/packages/{{ parameters.version }}/yum
+    gpgcheck=1
+    gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    enabled=1
+    autorefresh=1
+    type=rpm-md
+    EOF
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and elasticsearch_check.rc != 0
+
+- name: Install Elasticsearch (RHEL/Fedora)
+  package:
+    name: elasticsearch
+    state: present
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and elasticsearch_check.rc != 0
+
+# Verify installation
+- name: Verify Elasticsearch installation
+  shell: elasticsearch --version
+  register: elasticsearch_version
+
+- name: Display Elasticsearch version
+  print: "Elasticsearch installed: {{ elasticsearch_version.stdout }}"

@@ -1,5 +1,5 @@
 name: tmux
-description: Install and configure tmux (terminal multiplexer)
+description: Install and configure Tmux terminal multiplexer
 version: 1.0.0
 
 parameters:
@@ -8,25 +8,19 @@ parameters:
     required: false
     default: present
     enum: [present, absent]
-    description: Whether to install or remove tmux
+    description: Whether Tmux should be installed or removed
 
-  configure:
+  install_tpm:
     type: bool
     required: false
     default: true
-    description: Install sensible tmux configuration
-
-  config_path:
-    type: string
-    required: false
-    default: "~/.tmux.conf"
-    description: Path to tmux configuration file
+    description: Install Tmux Plugin Manager
 
   prefix_key:
     type: string
     required: false
-    default: "C-a"
-    description: "Tmux prefix key (default: C-a instead of C-b)"
+    default: "C-b"
+    description: Prefix key (C-b or C-a)
 
   mouse_mode:
     type: bool
@@ -34,15 +28,17 @@ parameters:
     default: true
     description: Enable mouse support
 
-  vi_mode:
-    type: bool
+  history_limit:
+    type: string
     required: false
-    default: true
-    description: Use vi key bindings in copy mode
+    default: "10000"
+    description: Scrollback history limit
 
 steps:
-  - include: tasks/install.yml
+  - name: Install Tmux
+    include: tasks/install.yml
     when: parameters.state == "present"
 
-  - include: tasks/uninstall.yml
+  - name: Uninstall Tmux
+    include: tasks/uninstall.yml
     when: parameters.state == "absent"

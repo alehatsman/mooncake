@@ -1,0 +1,142 @@
+# Ruby/rbenv Installation
+
+# Install build dependencies for Ruby compilation
+- name: Install Ruby build dependencies (macOS)
+  package:
+    names:
+      - openssl
+      - readline
+      - libyaml
+      - gmp
+    state: present
+  when: package_manager == "brew"
+
+- name: Install Ruby build dependencies (Debian/Ubuntu)
+  package:
+    names:
+      - build-essential
+      - libssl-dev
+      - libreadline-dev
+      - zlib1g-dev
+      - libyaml-dev
+      - libffi-dev
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt"
+
+- name: Install Ruby build dependencies (RHEL/Fedora)
+  package:
+    names:
+      - gcc
+      - openssl-devel
+      - readline-devel
+      - zlib-devel
+      - libyaml-devel
+      - libffi-devel
+    state: present
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"]
+
+# Check if rbenv is installed
+- name: Check if rbenv is installed
+  assert:
+    file:
+      path: "~/.rbenv/bin/rbenv"
+      exists: true
+  register: rbenv_installed
+  failed_when: false
+
+# Install rbenv
+- name: Install rbenv
+  shell: curl -fsSL https://github.com/rbenv/rbenv-installer/raw/main/bin/rbenv-installer | bash
+  when: rbenv_installed.failed
+
+# Create rbenv initialization file
+- name: Create rbenv init file
+  file:
+    path: "~/.rbenv_init"
+    content: |
+      # rbenv configuration
+      export PATH="$HOME/.rbenv/bin:$PATH"
+      eval "$(rbenv init -)"
+    mode: "0644"
+  when: rbenv_installed.failed
+
+# Add rbenv init to shell profiles
+- name: Add rbenv to shell profile
+  shell: |
+    for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+      if [ -f "$profile" ] && ! grep -q '.rbenv_init' "$profile"; then
+        echo '[ -f "$HOME/.rbenv_init" ] && source "$HOME/.rbenv_init"' >> "$profile"
+      fi
+    done
+  when: rbenv_installed.failed
+
+# Install Ruby version
+- name: Install Ruby {{ parameters.version }}
+  shell: |
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    rbenv install -s {{ parameters.version }}
+  creates: "~/.rbenv/versions/{{ parameters.version }}"
+
+# Set global version
+- name: Set Ruby {{ parameters.version }} as global version
+  shell: |
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    rbenv global {{ parameters.version }}
+  when: parameters.set_global
+
+# Install additional versions
+- name: Install additional Ruby version {{ item }}
+  shell: |
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    rbenv install -s {{ item }}
+  with_items: parameters.additional_versions
+  when: parameters.additional_versions | length > 0
+
+# Install Bundler
+- name: Install Bundler
+  shell: |
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    gem install bundler
+  when: parameters.install_bundler
+
+# Verify installation
+- name: Verify Ruby installation
+  shell: |
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    ruby --version
+  register: ruby_version
+
+- name: List installed Ruby versions
+  shell: |
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    eval "$(rbenv init -)"
+    rbenv versions
+  register: rbenv_versions
+
+- name: Print installation summary
+  print: |
+    Ruby installed successfully via rbenv!
+
+    Current Ruby: {{ ruby_version.stdout }}
+
+    Installed versions:
+    {{ rbenv_versions.stdout }}
+
+    To use Ruby in new shells, restart your terminal or run:
+      source ~/.bashrc  # or ~/.zshrc
+
+    Available commands:
+      ruby              # Ruby interpreter
+      gem               # Package manager
+      bundle            # Bundler for dependencies
+      rbenv versions    # List installed versions
+      rbenv install X   # Install Ruby version X
+      rbenv global X    # Set global version
+      rbenv local X     # Set version for current directory

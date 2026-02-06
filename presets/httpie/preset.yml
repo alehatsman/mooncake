@@ -1,0 +1,20 @@
+name: httpie
+description: Install HTTPie - modern, user-friendly HTTP client for APIs
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether HTTPie should be installed or removed
+
+steps:
+  - name: Install HTTPie
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall HTTPie
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

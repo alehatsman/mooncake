@@ -1,0 +1,54 @@
+name: kafka
+description: Install and configure Apache Kafka distributed streaming platform
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Kafka should be installed or removed
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Kafka service after installation
+
+  kraft_mode:
+    type: bool
+    required: false
+    default: true
+    description: Use KRaft mode (without Zookeeper)
+
+  broker_id:
+    type: string
+    required: false
+    default: "1"
+    description: Broker ID
+
+  port:
+    type: string
+    required: false
+    default: "9092"
+    description: Kafka port
+
+  data_dir:
+    type: string
+    required: false
+    default: "/tmp/kafka-logs"
+    description: Data directory for logs
+
+steps:
+  - name: Install Kafka
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Kafka
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Kafka
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

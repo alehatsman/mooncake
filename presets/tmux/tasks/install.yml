@@ -1,49 +1,148 @@
-# Tmux Installation
+# Tmux Installation Tasks
 
-- name: Install tmux via {{ package_manager }}
+- name: Check if Tmux is already installed
+  shell: command -v tmux
+  register: tmux_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Tmux via Homebrew (macOS)
+  shell: brew install tmux
+  when: os == "darwin" and tmux_check.rc != 0
+
+# Linux Installation
+- name: Install Tmux (Debian/Ubuntu)
   package:
     name: tmux
     state: present
   become: true
-  when: package_manager != "brew"
+  when: os == "linux" and package_manager == "apt" and tmux_check.rc != 0
 
-- name: Install tmux via {{ package_manager }}
+- name: Install Tmux (RHEL/Fedora)
   package:
     name: tmux
     state: present
-  when: package_manager == "brew"
+  become: true
+  when: os == "linux" and package_manager in ["dnf", "yum"] and tmux_check.rc != 0
 
-- name: Deploy tmux configuration
-  template:
-    src: templates/tmux.conf.j2
-    dest: "{{ parameters.config_path }}"
-    mode: "0644"
-  when: parameters.configure
+- name: Install Tmux (Arch)
+  package:
+    name: tmux
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "pacman" and tmux_check.rc != 0
 
-- name: Verify tmux installation
+# Verify installation
+- name: Verify Tmux installation
   shell: tmux -V
   register: tmux_version
 
-- name: Print installation summary
+- name: Display Tmux version
+  print: "Tmux installed: {{ tmux_version.stdout }}"
+
+# Create Tmux configuration
+- name: Create Tmux configuration
+  file:
+    path: "~/.tmux.conf"
+    content: |
+      # Tmux configuration
+
+      # Change prefix key
+      unbind C-b
+      set-option -g prefix {{ parameters.prefix_key }}
+      bind-key {{ parameters.prefix_key }} send-prefix
+
+      # Enable mouse mode
+      set -g mouse {{ "on" if parameters.mouse_mode else "off" }}
+
+      # Increase scrollback history
+      set-option -g history-limit {{ parameters.history_limit }}
+
+      # Start windows and panes at 1, not 0
+      set -g base-index 1
+      setw -g pane-base-index 1
+
+      # Renumber windows when a window is closed
+      set -g renumber-windows on
+
+      # Enable true color
+      set -g default-terminal "screen-256color"
+      set -ga terminal-overrides ",xterm-256color:Tc"
+
+      # Vi mode
+      setw -g mode-keys vi
+
+      # Split panes using | and -
+      bind | split-window -h
+      bind - split-window -v
+      unbind '"'
+      unbind %
+
+      # Reload config
+      bind r source-file ~/.tmux.conf \; display "Config reloaded!"
+
+      # Switch panes using Alt-arrow without prefix
+      bind -n M-Left select-pane -L
+      bind -n M-Right select-pane -R
+      bind -n M-Up select-pane -U
+      bind -n M-Down select-pane -D
+
+      # Status bar
+      set -g status-position bottom
+      set -g status-bg colour234
+      set -g status-fg colour137
+      set -g status-left ''
+      set -g status-right '#[fg=colour233,bg=colour241,bold] %d/%m #[fg=colour233,bg=colour245,bold] %H:%M:%S '
+    mode: "0644"
+
+# Install Tmux Plugin Manager
+- name: Check if TPM is already installed
+  shell: test -d ~/.tmux/plugins/tpm && echo "installed" || echo "not installed"
+  register: tpm_check
+  when: parameters.install_tpm
+
+- name: Install Tmux Plugin Manager
+  shell: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+  when: parameters.install_tpm and tpm_check.stdout == "not installed"
+
+- name: Add TPM to Tmux config
+  shell: |
+    if ! grep -q "tmux-plugins/tpm" ~/.tmux.conf; then
+      cat >> ~/.tmux.conf <<'EOL'
+
+      # TPM - Tmux Plugin Manager
+      set -g @plugin 'tmux-plugins/tpm'
+      set -g @plugin 'tmux-plugins/tmux-sensible'
+      set -g @plugin 'tmux-plugins/tmux-resurrect'
+      set -g @plugin 'tmux-plugins/tmux-continuum'
+
+      # Initialize TPM (keep this line at the very bottom)
+      run '~/.tmux/plugins/tpm/tpm'
+      EOL
+    fi
+  when: parameters.install_tpm
+
+- name: Display installation summary
   print: |
     Tmux installed successfully!
 
-    Version: {{ tmux_version.stdout }}
-    {% if parameters.configure %}Configuration: {{ parameters.config_path }}
-    Prefix key: {{ parameters.prefix_key }}
-    Mouse mode: {{ parameters.mouse_mode }}
-    Vi mode: {{ parameters.vi_mode }}
-    {% endif %}
+    Configuration:
+      - Prefix key: {{ parameters.prefix_key }}
+      - Mouse mode: {{ "enabled" if parameters.mouse_mode else "disabled" }}
+      - History limit: {{ parameters.history_limit }}
+      {{ "- TPM (Plugin Manager) installed" if parameters.install_tpm else "" }}
 
     Quick start:
-      tmux                  # Start new session
-      tmux ls               # List sessions
-      tmux attach           # Attach to session
-      {{ parameters.prefix_key }} c         # Create window
-      {{ parameters.prefix_key }} |         # Split vertically
-      {{ parameters.prefix_key }} -         # Split horizontally
-      {{ parameters.prefix_key }} h/j/k/l   # Navigate panes
-      {{ parameters.prefix_key }} d         # Detach session
-      {{ parameters.prefix_key }} ?         # Show all key bindings
+      tmux          # Start new session
+      tmux ls       # List sessions
+      tmux attach   # Attach to last session
 
-    Learn more: https://github.com/tmux/tmux/wiki
+    Key bindings:
+      {{ parameters.prefix_key }} | # Split horizontally
+      {{ parameters.prefix_key }} - # Split vertically
+      {{ parameters.prefix_key }} c # Create window
+      {{ parameters.prefix_key }} n # Next window
+      {{ parameters.prefix_key }} d # Detach session
+      {{ parameters.prefix_key }} r # Reload config
+
+    {{ "Install plugins: " + parameters.prefix_key + " + I (capital i)" if parameters.install_tpm else "" }}

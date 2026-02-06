@@ -1,0 +1,67 @@
+# Kafka Configuration Tasks
+
+- name: Ensure data directory exists
+  file:
+    path: "{{ parameters.data_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Generate cluster ID (KRaft mode)
+  shell: |
+    if [ "{{ os }}" = "darwin" ]; then
+      kafka-storage random-uuid
+    else
+      /opt/kafka/bin/kafka-storage.sh random-uuid
+    fi
+  register: cluster_id
+  when: parameters.kraft_mode
+
+- name: Format storage (KRaft mode)
+  shell: |
+    if [ "{{ os }}" = "darwin" ]; then
+      kafka-storage format -t {{ cluster_id.stdout }} -c /opt/homebrew/etc/kafka/kraft/server.properties
+    else
+      /opt/kafka/bin/kafka-storage.sh format -t {{ cluster_id.stdout }} -c /opt/kafka/config/kraft/server.properties
+    fi
+  when: parameters.kraft_mode and cluster_id.rc == 0
+
+- name: Start Kafka service (macOS)
+  shell: brew services start kafka
+  when: os == "darwin" and parameters.start_service
+
+- name: Start Kafka service (Linux KRaft)
+  shell: |
+    nohup /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties > /tmp/kafka.log 2>&1 &
+  when: os == "linux" and parameters.start_service and parameters.kraft_mode
+
+- name: Start Kafka service (Linux with Zookeeper)
+  shell: |
+    nohup /opt/kafka/bin/zookeeper-server-start.sh /opt/kafka/config/zookeeper.properties > /tmp/zookeeper.log 2>&1 &
+    sleep 5
+    nohup /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties > /tmp/kafka.log 2>&1 &
+  when: os == "linux" and parameters.start_service and not parameters.kraft_mode
+
+- name: Wait for Kafka to be ready
+  shell: |
+    if [ "{{ os }}" = "darwin" ]; then
+      kafka-broker-api-versions --bootstrap-server localhost:{{ parameters.port }}
+    else
+      /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:{{ parameters.port }}
+    fi
+  register: kafka_ready
+  until: kafka_ready.rc == 0
+  retries: 10
+  delay: 3
+  failed_when: false
+  when: parameters.start_service
+
+- name: Display Kafka information
+  print: |
+    Kafka is running:
+    - Bootstrap server: localhost:{{ parameters.port }}
+    - Data directory: {{ parameters.data_dir }}
+    - Mode: {{ "KRaft (no Zookeeper)" if parameters.kraft_mode else "With Zookeeper" }}
+
+    Test connection:
+      kafka-topics --bootstrap-server localhost:{{ parameters.port }} --list
+  when: parameters.start_service and kafka_ready.rc == 0

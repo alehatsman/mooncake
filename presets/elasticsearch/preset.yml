@@ -1,0 +1,71 @@
+name: elasticsearch
+description: Install and configure Elasticsearch search and analytics engine
+version: 1.0.0
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether Elasticsearch should be installed or removed
+
+  version:
+    type: string
+    required: false
+    default: "8.x"
+    description: Elasticsearch version (7.x, 8.x, or specific like 8.11.0)
+
+  start_service:
+    type: bool
+    required: false
+    default: true
+    description: Start Elasticsearch service after installation
+
+  cluster_name:
+    type: string
+    required: false
+    default: "elasticsearch"
+    description: Cluster name
+
+  node_name:
+    type: string
+    required: false
+    description: Node name (defaults to hostname)
+
+  http_port:
+    type: string
+    required: false
+    default: "9200"
+    description: HTTP API port
+
+  transport_port:
+    type: string
+    required: false
+    default: "9300"
+    description: Transport port for cluster communication
+
+  data_dir:
+    type: string
+    required: false
+    default: "/var/lib/elasticsearch"
+    description: Data directory path
+
+  heap_size:
+    type: string
+    required: false
+    default: "1g"
+    description: JVM heap size (e.g., 1g, 2g, 4g)
+
+steps:
+  - name: Install Elasticsearch
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Configure Elasticsearch
+    include: tasks/configure.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Elasticsearch
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"
