@@ -1,0 +1,34 @@
+# Multi-architecture Ubuntu test image for Mooncake
+# Supports linux/amd64 and linux/arm64
+
+ARG TARGETARCH
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install minimal runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        sudo && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy architecture-specific binary
+ARG ARCH
+COPY mooncake-linux-${ARCH} /usr/local/bin/mooncake
+RUN chmod +x /usr/local/bin/mooncake
+
+# Verify binary works
+RUN mooncake help > /dev/null || (echo "ERROR: mooncake binary failed to execute" && exit 1)
+
+# Copy presets
+COPY presets /mooncake/presets
+
+# Create artifacts directory
+RUN mkdir -p /artifacts
+
+WORKDIR /mooncake
+
+ENTRYPOINT ["/bin/bash"]

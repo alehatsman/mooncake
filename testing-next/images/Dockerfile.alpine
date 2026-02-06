@@ -1,0 +1,30 @@
+# Multi-architecture Alpine test image for Mooncake
+# Supports linux/amd64 and linux/arm64
+
+ARG TARGETARCH
+FROM alpine:3.19
+
+# Install minimal runtime dependencies
+RUN apk add --no-cache \
+        ca-certificates \
+        bash \
+        sudo \
+        curl
+
+# Copy architecture-specific binary
+ARG ARCH
+COPY mooncake-linux-${ARCH} /usr/local/bin/mooncake
+RUN chmod +x /usr/local/bin/mooncake
+
+# Verify binary works
+RUN mooncake help > /dev/null || (echo "ERROR: mooncake binary failed to execute" && exit 1)
+
+# Copy presets
+COPY presets /mooncake/presets
+
+# Create artifacts directory
+RUN mkdir -p /artifacts
+
+WORKDIR /mooncake
+
+ENTRYPOINT ["/bin/sh"]
