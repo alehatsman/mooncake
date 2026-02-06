@@ -3,9 +3,11 @@
   register: keydb_check
   failed_when: false
 
-- name: Install keydb (macOS)
-  shell: brew install keydb
-  when: os == "darwin" and keydb_check.rc != 0
+- name: Install keydb
+  package:
+    name: keydb
+    state: present
+  when: keydb_check.rc != 0
 
 - name: Verify installation
   shell: keydb --version 2>&1 || keydb -v 2>&1 || echo "installed"

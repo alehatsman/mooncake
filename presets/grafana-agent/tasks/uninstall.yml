@@ -1,6 +1,7 @@
-- name: Uninstall grafana-agent (macOS)
-  shell: brew uninstall grafana-agent
-  when: os == "darwin"
+- name: Uninstall grafana-agent
+  package:
+    name: grafana-agent
+    state: absent
   failed_when: false
 
 - name: Display confirmation

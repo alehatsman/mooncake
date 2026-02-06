@@ -1,6 +1,7 @@
-- name: Uninstall httpx (macOS)
-  shell: brew uninstall httpx
-  when: os == "darwin"
+- name: Uninstall httpx
+  package:
+    name: httpx
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: goreleaser_check
   failed_when: false
 
-- name: Install goreleaser (macOS)
-  shell: brew install goreleaser
-  when: os == "darwin" and goreleaser_check.rc != 0
+- name: Install goreleaser
+  package:
+    name: goreleaser
+    state: present
+  when: goreleaser_check.rc != 0
 
 - name: Verify installation
   shell: goreleaser --version 2>&1 || goreleaser -v 2>&1 || echo "installed"

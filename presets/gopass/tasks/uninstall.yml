@@ -1,6 +1,7 @@
-- name: Uninstall gopass (macOS)
-  shell: brew uninstall gopass
-  when: os == "darwin"
+- name: Uninstall gopass
+  package:
+    name: gopass
+    state: absent
   failed_when: false
 
 - name: Display confirmation

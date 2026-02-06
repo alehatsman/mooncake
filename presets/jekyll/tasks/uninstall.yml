@@ -1,6 +1,7 @@
-- name: Uninstall jekyll (macOS)
-  shell: brew uninstall jekyll
-  when: os == "darwin"
+- name: Uninstall jekyll
+  package:
+    name: jekyll
+    state: absent
   failed_when: false
 
 - name: Display confirmation

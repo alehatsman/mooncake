@@ -1,6 +1,7 @@
-- name: Uninstall goreleaser (macOS)
-  shell: brew uninstall goreleaser
-  when: os == "darwin"
+- name: Uninstall goreleaser
+  package:
+    name: goreleaser
+    state: absent
   failed_when: false
 
 - name: Display confirmation

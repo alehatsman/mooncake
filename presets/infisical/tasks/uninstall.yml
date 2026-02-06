@@ -1,6 +1,7 @@
-- name: Uninstall infisical (macOS)
-  shell: brew uninstall infisical
-  when: os == "darwin"
+- name: Uninstall infisical
+  package:
+    name: infisical
+    state: absent
   failed_when: false
 
 - name: Display confirmation

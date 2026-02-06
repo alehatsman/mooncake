@@ -3,9 +3,11 @@
   register: helm_check
   failed_when: false
 
-- name: Install helm (macOS)
-  shell: brew install helm
-  when: os == "darwin" and helm_check.rc != 0
+- name: Install helm
+  package:
+    name: helm
+    state: present
+  when: helm_check.rc != 0
 
 - name: Verify installation
   shell: helm --version 2>&1 || helm -v 2>&1 || echo "installed"

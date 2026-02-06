@@ -1,6 +1,7 @@
-- name: Uninstall ignite (macOS)
-  shell: brew uninstall ignite
-  when: os == "darwin"
+- name: Uninstall ignite
+  package:
+    name: ignite
+    state: absent
   failed_when: false
 
 - name: Display confirmation

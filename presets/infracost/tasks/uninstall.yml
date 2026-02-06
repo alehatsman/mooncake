@@ -1,6 +1,7 @@
-- name: Uninstall infracost (macOS)
-  shell: brew uninstall infracost
-  when: os == "darwin"
+- name: Uninstall infracost
+  package:
+    name: infracost
+    state: absent
   failed_when: false
 
 - name: Display confirmation

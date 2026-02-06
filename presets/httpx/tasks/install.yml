@@ -3,9 +3,11 @@
   register: httpx_check
   failed_when: false
 
-- name: Install httpx (macOS)
-  shell: brew install httpx
-  when: os == "darwin" and httpx_check.rc != 0
+- name: Install httpx
+  package:
+    name: httpx
+    state: present
+  when: httpx_check.rc != 0
 
 - name: Verify installation
   shell: httpx --version 2>&1 || httpx -v 2>&1 || echo "installed"

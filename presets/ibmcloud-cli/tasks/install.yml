@@ -1,15 +1,17 @@
 - name: Check if ibmcloud is installed
   shell: command -v ibmcloud
-  register: ibmcloud-cli_check
+  register: ibmcloud_cli_check
   failed_when: false
 
-- name: Install ibmcloud (macOS)
-  shell: brew install ibmcloud
-  when: os == "darwin" and ibmcloud-cli_check.rc != 0
+- name: Install ibmcloud-cli
+  package:
+    name: ibmcloud-cli
+    state: present
+  when: ibmcloud_cli_check.rc != 0
 
 - name: Verify installation
   shell: ibmcloud --version 2>&1 || ibmcloud -v 2>&1 || echo "installed"
-  register: ibmcloud-cli_version
+  register: ibmcloud_cli_version
 
 - name: Display version
-  print: "ibmcloud installed"
+  print: "ibmcloud-cli installed"

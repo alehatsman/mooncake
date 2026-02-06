@@ -3,13 +3,15 @@
   register: kakoune_check
   failed_when: false
 
-- name: Install kak (macOS)
-  shell: brew install kak
-  when: os == "darwin" and kakoune_check.rc != 0
+- name: Install kakoune
+  package:
+    name: kakoune
+    state: present
+  when: kakoune_check.rc != 0
 
 - name: Verify installation
   shell: kak --version 2>&1 || kak -v 2>&1 || echo "installed"
   register: kakoune_version
 
 - name: Display version
-  print: "kak installed"
+  print: "kakoune installed"

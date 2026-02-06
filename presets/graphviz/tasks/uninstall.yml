@@ -1,7 +1,8 @@
-- name: Uninstall dot (macOS)
-  shell: brew uninstall dot
-  when: os == "darwin"
+- name: Uninstall graphviz
+  package:
+    name: graphviz
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "dot uninstalled"
+  print: "graphviz uninstalled"

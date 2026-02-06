@@ -3,9 +3,11 @@
   register: ko_check
   failed_when: false
 
-- name: Install ko (macOS)
-  shell: brew install ko
-  when: os == "darwin" and ko_check.rc != 0
+- name: Install ko
+  package:
+    name: ko
+    state: present
+  when: ko_check.rc != 0
 
 - name: Verify installation
   shell: ko --version 2>&1 || ko -v 2>&1 || echo "installed"

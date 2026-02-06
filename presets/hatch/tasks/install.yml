@@ -3,9 +3,11 @@
   register: hatch_check
   failed_when: false
 
-- name: Install hatch (macOS)
-  shell: brew install hatch
-  when: os == "darwin" and hatch_check.rc != 0
+- name: Install hatch
+  package:
+    name: hatch
+    state: present
+  when: hatch_check.rc != 0
 
 - name: Verify installation
   shell: hatch --version 2>&1 || hatch -v 2>&1 || echo "installed"

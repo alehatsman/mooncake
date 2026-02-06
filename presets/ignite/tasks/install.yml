@@ -3,9 +3,11 @@
   register: ignite_check
   failed_when: false
 
-- name: Install ignite (macOS)
-  shell: brew install ignite
-  when: os == "darwin" and ignite_check.rc != 0
+- name: Install ignite
+  package:
+    name: ignite
+    state: present
+  when: ignite_check.rc != 0
 
 - name: Verify installation
   shell: ignite --version 2>&1 || ignite -v 2>&1 || echo "installed"

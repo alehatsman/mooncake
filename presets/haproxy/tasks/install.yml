@@ -3,9 +3,11 @@
   register: haproxy_check
   failed_when: false
 
-- name: Install haproxy (macOS)
-  shell: brew install haproxy
-  when: os == "darwin" and haproxy_check.rc != 0
+- name: Install haproxy
+  package:
+    name: haproxy
+    state: present
+  when: haproxy_check.rc != 0
 
 - name: Verify installation
   shell: haproxy --version 2>&1 || haproxy -v 2>&1 || echo "installed"

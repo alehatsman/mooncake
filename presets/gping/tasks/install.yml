@@ -3,9 +3,11 @@
   register: gping_check
   failed_when: false
 
-- name: Install gping (macOS)
-  shell: brew install gping
-  when: os == "darwin" and gping_check.rc != 0
+- name: Install gping
+  package:
+    name: gping
+    state: present
+  when: gping_check.rc != 0
 
 - name: Verify installation
   shell: gping --version 2>&1 || gping -v 2>&1 || echo "installed"

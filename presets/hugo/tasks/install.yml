@@ -3,9 +3,11 @@
   register: hugo_check
   failed_when: false
 
-- name: Install hugo (macOS)
-  shell: brew install hugo
-  when: os == "darwin" and hugo_check.rc != 0
+- name: Install hugo
+  package:
+    name: hugo
+    state: present
+  when: hugo_check.rc != 0
 
 - name: Verify installation
   shell: hugo --version 2>&1 || hugo -v 2>&1 || echo "installed"

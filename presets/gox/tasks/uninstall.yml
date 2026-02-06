@@ -1,6 +1,7 @@
-- name: Uninstall gox (macOS)
-  shell: brew uninstall gox
-  when: os == "darwin"
+- name: Uninstall gox
+  package:
+    name: gox
+    state: absent
   failed_when: false
 
 - name: Display confirmation

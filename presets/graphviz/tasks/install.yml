@@ -3,13 +3,15 @@
   register: graphviz_check
   failed_when: false
 
-- name: Install dot (macOS)
-  shell: brew install dot
-  when: os == "darwin" and graphviz_check.rc != 0
+- name: Install graphviz
+  package:
+    name: graphviz
+    state: present
+  when: graphviz_check.rc != 0
 
 - name: Verify installation
   shell: dot --version 2>&1 || dot -v 2>&1 || echo "installed"
   register: graphviz_version
 
 - name: Display version
-  print: "dot installed"
+  print: "graphviz installed"

@@ -1,6 +1,7 @@
-- name: Uninstall kitty (macOS)
-  shell: brew uninstall kitty
-  when: os == "darwin"
+- name: Uninstall kitty
+  package:
+    name: kitty
+    state: absent
   failed_when: false
 
 - name: Display confirmation

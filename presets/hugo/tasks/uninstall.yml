@@ -1,6 +1,7 @@
-- name: Uninstall hugo (macOS)
-  shell: brew uninstall hugo
-  when: os == "darwin"
+- name: Uninstall hugo
+  package:
+    name: hugo
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -1,6 +1,7 @@
-- name: Uninstall keydb (macOS)
-  shell: brew uninstall keydb
-  when: os == "darwin"
+- name: Uninstall keydb
+  package:
+    name: keydb
+    state: absent
   failed_when: false
 
 - name: Display confirmation

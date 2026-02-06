@@ -3,9 +3,11 @@
   register: gox_check
   failed_when: false
 
-- name: Install gox (macOS)
-  shell: brew install gox
-  when: os == "darwin" and gox_check.rc != 0
+- name: Install gox
+  package:
+    name: gox
+    state: present
+  when: gox_check.rc != 0
 
 - name: Verify installation
   shell: gox --version 2>&1 || gox -v 2>&1 || echo "installed"

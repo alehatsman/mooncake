@@ -1,6 +1,7 @@
-- name: Uninstall influxdb3 (macOS)
-  shell: brew uninstall influxdb3
-  when: os == "darwin"
+- name: Uninstall influxdb3
+  package:
+    name: influxdb3
+    state: absent
   failed_when: false
 
 - name: Display confirmation

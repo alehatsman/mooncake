@@ -1,6 +1,7 @@
-- name: Uninstall harness (macOS)
-  shell: brew uninstall harness
-  when: os == "darwin"
+- name: Uninstall harness
+  package:
+    name: harness
+    state: absent
   failed_when: false
 
 - name: Display confirmation

@@ -3,9 +3,11 @@
   register: gcloud_check
   failed_when: false
 
-- name: Install gcloud (macOS)
-  shell: brew install gcloud
-  when: os == "darwin" and gcloud_check.rc != 0
+- name: Install gcloud
+  package:
+    name: gcloud
+    state: present
+  when: gcloud_check.rc != 0
 
 - name: Verify installation
   shell: gcloud --version 2>&1 || gcloud -v 2>&1 || echo "installed"

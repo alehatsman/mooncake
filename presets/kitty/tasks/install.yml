@@ -3,9 +3,11 @@
   register: kitty_check
   failed_when: false
 
-- name: Install kitty (macOS)
-  shell: brew install kitty
-  when: os == "darwin" and kitty_check.rc != 0
+- name: Install kitty
+  package:
+    name: kitty
+    state: present
+  when: kitty_check.rc != 0
 
 - name: Verify installation
   shell: kitty --version 2>&1 || kitty -v 2>&1 || echo "installed"

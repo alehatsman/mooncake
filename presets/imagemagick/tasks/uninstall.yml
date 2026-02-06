@@ -1,7 +1,8 @@
-- name: Uninstall convert (macOS)
-  shell: brew uninstall convert
-  when: os == "darwin"
+- name: Uninstall imagemagick
+  package:
+    name: imagemagick
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "convert uninstalled"
+  print: "imagemagick uninstalled"

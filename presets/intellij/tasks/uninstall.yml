@@ -1,7 +1,8 @@
-- name: Uninstall idea (macOS)
-  shell: brew uninstall idea
-  when: os == "darwin"
+- name: Uninstall intellij
+  package:
+    name: intellij
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "idea uninstalled"
+  print: "intellij uninstalled"

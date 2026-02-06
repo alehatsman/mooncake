@@ -1,7 +1,8 @@
-- name: Uninstall kak (macOS)
-  shell: brew uninstall kak
-  when: os == "darwin"
+- name: Uninstall kakoune
+  package:
+    name: kakoune
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "kak uninstalled"
+  print: "kakoune uninstalled"

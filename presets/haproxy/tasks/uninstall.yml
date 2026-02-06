@@ -1,6 +1,7 @@
-- name: Uninstall haproxy (macOS)
-  shell: brew uninstall haproxy
-  when: os == "darwin"
+- name: Uninstall haproxy
+  package:
+    name: haproxy
+    state: absent
   failed_when: false
 
 - name: Display confirmation

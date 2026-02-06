@@ -1,7 +1,8 @@
-- name: Uninstall hx (macOS)
-  shell: brew uninstall hx
-  when: os == "darwin"
+- name: Uninstall helix
+  package:
+    name: helix
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "hx uninstalled"
+  print: "helix uninstalled"

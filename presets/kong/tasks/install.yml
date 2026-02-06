@@ -3,9 +3,11 @@
   register: kong_check
   failed_when: false
 
-- name: Install kong (macOS)
-  shell: brew install kong
-  when: os == "darwin" and kong_check.rc != 0
+- name: Install kong
+  package:
+    name: kong
+    state: present
+  when: kong_check.rc != 0
 
 - name: Verify installation
   shell: kong --version 2>&1 || kong -v 2>&1 || echo "installed"

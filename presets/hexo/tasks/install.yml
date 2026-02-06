@@ -3,9 +3,11 @@
   register: hexo_check
   failed_when: false
 
-- name: Install hexo (macOS)
-  shell: brew install hexo
-  when: os == "darwin" and hexo_check.rc != 0
+- name: Install hexo
+  package:
+    name: hexo
+    state: present
+  when: hexo_check.rc != 0
 
 - name: Verify installation
   shell: hexo --version 2>&1 || hexo -v 2>&1 || echo "installed"

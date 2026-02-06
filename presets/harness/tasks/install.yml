@@ -3,9 +3,11 @@
   register: harness_check
   failed_when: false
 
-- name: Install harness (macOS)
-  shell: brew install harness
-  when: os == "darwin" and harness_check.rc != 0
+- name: Install harness
+  package:
+    name: harness
+    state: present
+  when: harness_check.rc != 0
 
 - name: Verify installation
   shell: harness --version 2>&1 || harness -v 2>&1 || echo "installed"

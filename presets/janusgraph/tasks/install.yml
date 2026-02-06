@@ -3,9 +3,11 @@
   register: janusgraph_check
   failed_when: false
 
-- name: Install janusgraph (macOS)
-  shell: brew install janusgraph
-  when: os == "darwin" and janusgraph_check.rc != 0
+- name: Install janusgraph
+  package:
+    name: janusgraph
+    state: present
+  when: janusgraph_check.rc != 0
 
 - name: Verify installation
   shell: janusgraph --version 2>&1 || janusgraph -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: krakend_check
   failed_when: false
 
-- name: Install krakend (macOS)
-  shell: brew install krakend
-  when: os == "darwin" and krakend_check.rc != 0
+- name: Install krakend
+  package:
+    name: krakend
+    state: present
+  when: krakend_check.rc != 0
 
 - name: Verify installation
   shell: krakend --version 2>&1 || krakend -v 2>&1 || echo "installed"

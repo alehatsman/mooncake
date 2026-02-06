@@ -3,9 +3,11 @@
   register: hazelcast_check
   failed_when: false
 
-- name: Install hazelcast (macOS)
-  shell: brew install hazelcast
-  when: os == "darwin" and hazelcast_check.rc != 0
+- name: Install hazelcast
+  package:
+    name: hazelcast
+    state: present
+  when: hazelcast_check.rc != 0
 
 - name: Verify installation
   shell: hazelcast --version 2>&1 || hazelcast -v 2>&1 || echo "installed"

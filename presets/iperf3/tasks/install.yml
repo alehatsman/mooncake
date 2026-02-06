@@ -3,9 +3,11 @@
   register: iperf3_check
   failed_when: false
 
-- name: Install iperf3 (macOS)
-  shell: brew install iperf3
-  when: os == "darwin" and iperf3_check.rc != 0
+- name: Install iperf3
+  package:
+    name: iperf3
+    state: present
+  when: iperf3_check.rc != 0
 
 - name: Verify installation
   shell: iperf3 --version 2>&1 || iperf3 -v 2>&1 || echo "installed"

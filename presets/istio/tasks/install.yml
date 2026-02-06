@@ -3,13 +3,15 @@
   register: istio_check
   failed_when: false
 
-- name: Install istioctl (macOS)
-  shell: brew install istioctl
-  when: os == "darwin" and istio_check.rc != 0
+- name: Install istio
+  package:
+    name: istio
+    state: present
+  when: istio_check.rc != 0
 
 - name: Verify installation
   shell: istioctl --version 2>&1 || istioctl -v 2>&1 || echo "installed"
   register: istio_version
 
 - name: Display version
-  print: "istioctl installed"
+  print: "istio installed"

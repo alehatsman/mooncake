@@ -1,7 +1,8 @@
-- name: Uninstall ibmcloud (macOS)
-  shell: brew uninstall ibmcloud
-  when: os == "darwin"
+- name: Uninstall ibmcloud-cli
+  package:
+    name: ibmcloud-cli
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "ibmcloud uninstalled"
+  print: "ibmcloud-cli uninstalled"

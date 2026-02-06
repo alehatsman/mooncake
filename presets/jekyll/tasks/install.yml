@@ -3,9 +3,11 @@
   register: jekyll_check
   failed_when: false
 
-- name: Install jekyll (macOS)
-  shell: brew install jekyll
-  when: os == "darwin" and jekyll_check.rc != 0
+- name: Install jekyll
+  package:
+    name: jekyll
+    state: present
+  when: jekyll_check.rc != 0
 
 - name: Verify installation
   shell: jekyll --version 2>&1 || jekyll -v 2>&1 || echo "installed"

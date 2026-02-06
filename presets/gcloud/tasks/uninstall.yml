@@ -1,6 +1,7 @@
-- name: Uninstall gcloud (macOS)
-  shell: brew uninstall gcloud
-  when: os == "darwin"
+- name: Uninstall gcloud
+  package:
+    name: gcloud
+    state: absent
   failed_when: false
 
 - name: Display confirmation

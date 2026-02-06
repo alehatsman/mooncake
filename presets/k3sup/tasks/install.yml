@@ -3,9 +3,11 @@
   register: k3sup_check
   failed_when: false
 
-- name: Install k3sup (macOS)
-  shell: brew install k3sup
-  when: os == "darwin" and k3sup_check.rc != 0
+- name: Install k3sup
+  package:
+    name: k3sup
+    state: present
+  when: k3sup_check.rc != 0
 
 - name: Verify installation
   shell: k3sup --version 2>&1 || k3sup -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: groovy_check
   failed_when: false
 
-- name: Install groovy (macOS)
-  shell: brew install groovy
-  when: os == "darwin" and groovy_check.rc != 0
+- name: Install groovy
+  package:
+    name: groovy
+    state: present
+  when: groovy_check.rc != 0
 
 - name: Verify installation
   shell: groovy --version 2>&1 || groovy -v 2>&1 || echo "installed"

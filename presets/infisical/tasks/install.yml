@@ -3,9 +3,11 @@
   register: infisical_check
   failed_when: false
 
-- name: Install infisical (macOS)
-  shell: brew install infisical
-  when: os == "darwin" and infisical_check.rc != 0
+- name: Install infisical
+  package:
+    name: infisical
+    state: present
+  when: infisical_check.rc != 0
 
 - name: Verify installation
   shell: infisical --version 2>&1 || infisical -v 2>&1 || echo "installed"

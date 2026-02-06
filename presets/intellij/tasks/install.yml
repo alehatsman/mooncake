@@ -3,13 +3,15 @@
   register: intellij_check
   failed_when: false
 
-- name: Install idea (macOS)
-  shell: brew install idea
-  when: os == "darwin" and intellij_check.rc != 0
+- name: Install intellij
+  package:
+    name: intellij
+    state: present
+  when: intellij_check.rc != 0
 
 - name: Verify installation
   shell: idea --version 2>&1 || idea -v 2>&1 || echo "installed"
   register: intellij_version
 
 - name: Display version
-  print: "idea installed"
+  print: "intellij installed"

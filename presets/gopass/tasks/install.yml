@@ -3,9 +3,11 @@
   register: gopass_check
   failed_when: false
 
-- name: Install gopass (macOS)
-  shell: brew install gopass
-  when: os == "darwin" and gopass_check.rc != 0
+- name: Install gopass
+  package:
+    name: gopass
+    state: present
+  when: gopass_check.rc != 0
 
 - name: Verify installation
   shell: gopass --version 2>&1 || gopass -v 2>&1 || echo "installed"

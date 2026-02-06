@@ -3,9 +3,11 @@
   register: infracost_check
   failed_when: false
 
-- name: Install infracost (macOS)
-  shell: brew install infracost
-  when: os == "darwin" and infracost_check.rc != 0
+- name: Install infracost
+  package:
+    name: infracost
+    state: present
+  when: infracost_check.rc != 0
 
 - name: Verify installation
   shell: infracost --version 2>&1 || infracost -v 2>&1 || echo "installed"

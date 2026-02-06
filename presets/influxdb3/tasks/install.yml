@@ -3,9 +3,11 @@
   register: influxdb3_check
   failed_when: false
 
-- name: Install influxdb3 (macOS)
-  shell: brew install influxdb3
-  when: os == "darwin" and influxdb3_check.rc != 0
+- name: Install influxdb3
+  package:
+    name: influxdb3
+    state: present
+  when: influxdb3_check.rc != 0
 
 - name: Verify installation
   shell: influxdb3 --version 2>&1 || influxdb3 -v 2>&1 || echo "installed"

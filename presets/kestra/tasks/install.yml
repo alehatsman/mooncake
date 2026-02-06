@@ -3,9 +3,11 @@
   register: kestra_check
   failed_when: false
 
-- name: Install kestra (macOS)
-  shell: brew install kestra
-  when: os == "darwin" and kestra_check.rc != 0
+- name: Install kestra
+  package:
+    name: kestra
+    state: present
+  when: kestra_check.rc != 0
 
 - name: Verify installation
   shell: kestra --version 2>&1 || kestra -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall gotty (macOS)
-  shell: brew uninstall gotty
-  when: os == "darwin"
+- name: Uninstall gotty
+  package:
+    name: gotty
+    state: absent
   failed_when: false
 
 - name: Display confirmation

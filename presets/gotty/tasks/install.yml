@@ -3,9 +3,11 @@
   register: gotty_check
   failed_when: false
 
-- name: Install gotty (macOS)
-  shell: brew install gotty
-  when: os == "darwin" and gotty_check.rc != 0
+- name: Install gotty
+  package:
+    name: gotty
+    state: present
+  when: gotty_check.rc != 0
 
 - name: Verify installation
   shell: gotty --version 2>&1 || gotty -v 2>&1 || echo "installed"

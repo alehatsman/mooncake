@@ -3,9 +3,11 @@
   register: gradle_check
   failed_when: false
 
-- name: Install gradle (macOS)
-  shell: brew install gradle
-  when: os == "darwin" and gradle_check.rc != 0
+- name: Install gradle
+  package:
+    name: gradle
+    state: present
+  when: gradle_check.rc != 0
 
 - name: Verify installation
   shell: gradle --version 2>&1 || gradle -v 2>&1 || echo "installed"
