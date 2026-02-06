@@ -3,15 +3,21 @@
   register: usql_check
   failed_when: false
 
-- name: Install usql
+- name: Install usql (macOS)
   package:
     name: usql
     state: present
-  when: usql_check.rc != 0
+  when: os == "darwin" and usql_check.rc != 0
 
-- name: Verify installation
-  shell: usql --version 2>&1 || usql -v 2>&1 || echo "installed"
-  register: usql_version
+- name: Install usql (Linux)
+  shell: go install github.com/xo/usql@latest
+  when: os == "linux" and usql_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v usql
+      exit_code: 0
+
+- name: Display confirmation
   print: "usql installed"

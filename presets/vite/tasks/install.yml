@@ -3,15 +3,21 @@
   register: vite_check
   failed_when: false
 
-- name: Install vite
+- name: Install vite (macOS)
   package:
     name: vite
     state: present
-  when: vite_check.rc != 0
+  when: os == "darwin" and vite_check.rc != 0
 
-- name: Verify installation
-  shell: vite --version 2>&1 || vite -v 2>&1 || echo "installed"
-  register: vite_version
+- name: Install vite (Linux)
+  shell: npm install -g vite
+  when: os == "linux" and vite_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v vite
+      exit_code: 0
+
+- name: Display confirmation
   print: "vite installed"

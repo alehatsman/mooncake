@@ -3,15 +3,24 @@
   register: task_check
   failed_when: false
 
-- name: Install task
+- name: Install task (macOS)
   package:
     name: task
     state: present
-  when: task_check.rc != 0
+  when: os == "darwin" and task_check.rc != 0
 
-- name: Verify installation
-  shell: task --version 2>&1 || task -v 2>&1 || echo "installed"
-  register: task_version
+- name: Install task (Linux)
+  package:
+    name: task
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and task_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v task
+      exit_code: 0
+
+- name: Display confirmation
   print: "task installed"

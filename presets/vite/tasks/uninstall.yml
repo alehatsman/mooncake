@@ -1,8 +1,20 @@
-- name: Uninstall vite
+- name: Uninstall vite (macOS)
   package:
     name: vite
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall vite (Linux)
+  shell: npm uninstall -g vite
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v vite
+      exit_code: 1
 
 - name: Display confirmation
   print: "vite uninstalled"

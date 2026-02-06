@@ -3,15 +3,24 @@
   register: tmate_check
   failed_when: false
 
-- name: Install tmate
+- name: Install tmate (macOS)
   package:
     name: tmate
     state: present
-  when: tmate_check.rc != 0
+  when: os == "darwin" and tmate_check.rc != 0
 
-- name: Verify installation
-  shell: tmate --version 2>&1 || tmate -v 2>&1 || echo "installed"
-  register: tmate_version
+- name: Install tmate (Linux)
+  package:
+    name: tmate
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and tmate_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tmate
+      exit_code: 0
+
+- name: Display confirmation
   print: "tmate installed"

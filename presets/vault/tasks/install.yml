@@ -64,9 +64,11 @@
   when: os == "linux" and package_manager == "dnf" and vault_check.rc != 0
 
 # Verify installation
-- name: Verify Vault installation
-  shell: vault version
-  register: vault_version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v vault
+      exit_code: 0
 
-- name: Display Vault version
-  print: "Vault installed: {{ vault_version.stdout }}"
+- name: Display confirmation
+  print: "Vault installed"

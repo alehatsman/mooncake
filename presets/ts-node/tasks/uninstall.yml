@@ -1,8 +1,20 @@
-- name: Uninstall ts-node
+- name: Uninstall ts-node (macOS)
   package:
     name: ts-node
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall ts-node (Linux)
+  shell: npm uninstall -g ts-node
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v ts-node
+      exit_code: 1
 
 - name: Display confirmation
   print: "ts-node uninstalled"

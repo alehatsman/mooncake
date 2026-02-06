@@ -3,15 +3,21 @@
   register: ts_node_check
   failed_when: false
 
-- name: Install ts-node
+- name: Install ts-node (macOS)
   package:
     name: ts-node
     state: present
-  when: ts_node_check.rc != 0
+  when: os == "darwin" and ts_node_check.rc != 0
 
-- name: Verify installation
-  shell: ts-node --version 2>&1 || ts-node -v 2>&1 || echo "installed"
-  register: ts_node_version
+- name: Install ts-node (Linux)
+  shell: npm install -g ts-node
+  when: os == "linux" and ts_node_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ts-node
+      exit_code: 0
+
+- name: Display confirmation
   print: "ts-node installed"

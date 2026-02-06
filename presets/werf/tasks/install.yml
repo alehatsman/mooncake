@@ -3,15 +3,21 @@
   register: werf_check
   failed_when: false
 
-- name: Install werf
+- name: Install werf (macOS)
   package:
     name: werf
     state: present
-  when: werf_check.rc != 0
+  when: os == "darwin" and werf_check.rc != 0
 
-- name: Verify installation
-  shell: werf --version 2>&1 || werf -v 2>&1 || echo "installed"
-  register: werf_version
+- name: Install werf (Linux)
+  shell: curl -sSL https://werf.io/install.sh | bash -s -- --ci
+  when: os == "linux" and werf_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v werf
+      exit_code: 0
+
+- name: Display confirmation
   print: "werf installed"

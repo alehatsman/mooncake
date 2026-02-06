@@ -1,8 +1,22 @@
-- name: Uninstall uv
+- name: Uninstall uv (macOS)
   package:
     name: uv
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall uv (Linux)
+  file:
+    path: "{{ lookup('env', 'HOME') }}/.cargo/bin/uv"
+    state: absent
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v uv
+      exit_code: 1
 
 - name: Display confirmation
   print: "uv uninstalled"

@@ -3,15 +3,25 @@
   register: terrascan_check
   failed_when: false
 
-- name: Install terrascan
+- name: Install terrascan (macOS)
   package:
     name: terrascan
     state: present
-  when: terrascan_check.rc != 0
+  when: os == "darwin" and terrascan_check.rc != 0
 
-- name: Verify installation
-  shell: terrascan --version 2>&1 || terrascan -v 2>&1 || echo "installed"
-  register: terrascan_version
+- name: Install terrascan (Linux)
+  shell: |
+    curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | grep -o -E "https://.+?_Linux_x86_64.tar.gz")" -o terrascan.tar.gz
+    tar -xf terrascan.tar.gz terrascan
+    sudo install terrascan /usr/local/bin
+    rm terrascan terrascan.tar.gz
+  when: os == "linux" and terrascan_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v terrascan
+      exit_code: 0
+
+- name: Display confirmation
   print: "terrascan installed"

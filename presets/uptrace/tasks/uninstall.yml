@@ -1,8 +1,24 @@
-- name: Uninstall uptrace
-  package:
-    name: uptrace
+- name: Uninstall uptrace (macOS)
+  file:
+    path: /usr/local/bin/uptrace
     state: absent
+  become: true
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall uptrace (Linux)
+  file:
+    path: /usr/local/bin/uptrace
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v uptrace
+      exit_code: 1
 
 - name: Display confirmation
   print: "uptrace uninstalled"

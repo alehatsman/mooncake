@@ -1,8 +1,23 @@
-- name: Uninstall tflint
+- name: Uninstall tflint (macOS)
   package:
     name: tflint
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall tflint (Linux)
+  file:
+    path: /usr/local/bin/tflint
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v tflint
+      exit_code: 1
 
 - name: Display confirmation
   print: "tflint uninstalled"

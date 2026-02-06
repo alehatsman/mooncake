@@ -3,15 +3,21 @@
   register: vuepress_check
   failed_when: false
 
-- name: Install vuepress
+- name: Install vuepress (macOS)
   package:
     name: vuepress
     state: present
-  when: vuepress_check.rc != 0
+  when: os == "darwin" and vuepress_check.rc != 0
 
-- name: Verify installation
-  shell: vuepress --version 2>&1 || vuepress -v 2>&1 || echo "installed"
-  register: vuepress_version
+- name: Install vuepress (Linux)
+  shell: npm install -g vuepress
+  when: os == "linux" and vuepress_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v vuepress
+      exit_code: 0
+
+- name: Display confirmation
   print: "vuepress installed"

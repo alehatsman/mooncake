@@ -3,15 +3,24 @@
   register: trivy_check
   failed_when: false
 
-- name: Install trivy
+- name: Install trivy (macOS)
   package:
     name: trivy
     state: present
-  when: trivy_check.rc != 0
+  when: os == "darwin" and trivy_check.rc != 0
 
-- name: Verify installation
-  shell: trivy --version 2>&1 || trivy -v 2>&1 || echo "installed"
-  register: trivy_version
+- name: Install trivy (Linux)
+  shell: |
+    wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+    echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+    sudo apt-get update && sudo apt-get install -y trivy
+  when: os == "linux" and package_manager == "apt" and trivy_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v trivy
+      exit_code: 0
+
+- name: Display confirmation
   print: "trivy installed"

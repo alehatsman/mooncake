@@ -3,15 +3,21 @@
   register: tsx_check
   failed_when: false
 
-- name: Install tsx
+- name: Install tsx (macOS)
   package:
     name: tsx
     state: present
-  when: tsx_check.rc != 0
+  when: os == "darwin" and tsx_check.rc != 0
 
-- name: Verify installation
-  shell: tsx --version 2>&1 || tsx -v 2>&1 || echo "installed"
-  register: tsx_version
+- name: Install tsx (Linux)
+  shell: npm install -g tsx
+  when: os == "linux" and tsx_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tsx
+      exit_code: 0
+
+- name: Display confirmation
   print: "tsx installed"

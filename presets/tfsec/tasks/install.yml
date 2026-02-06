@@ -3,15 +3,22 @@
   register: tfsec_check
   failed_when: false
 
-- name: Install tfsec
+- name: Install tfsec (macOS)
   package:
     name: tfsec
     state: present
-  when: tfsec_check.rc != 0
+  when: os == "darwin" and tfsec_check.rc != 0
 
-- name: Verify installation
-  shell: tfsec --version 2>&1 || tfsec -v 2>&1 || echo "installed"
-  register: tfsec_version
+- name: Install tfsec (Linux)
+  shell: |
+    curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+  when: os == "linux" and tfsec_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tfsec
+      exit_code: 0
+
+- name: Display confirmation
   print: "tfsec installed"

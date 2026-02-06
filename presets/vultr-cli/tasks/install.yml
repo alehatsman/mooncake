@@ -3,15 +3,26 @@
   register: vultr_cli_check
   failed_when: false
 
-- name: Install vultr-cli
+- name: Install vultr-cli (macOS)
   package:
     name: vultr-cli
     state: present
-  when: vultr_cli_check.rc != 0
+  when: os == "darwin" and vultr_cli_check.rc != 0
 
-- name: Verify installation
-  shell: vultr --version 2>&1 || vultr -v 2>&1 || echo "installed"
-  register: vultr_cli_version
+- name: Install vultr-cli (Linux)
+  shell: |
+    LATEST=$(curl -s https://api.github.com/repos/vultr/vultr-cli/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo /tmp/vultr-cli.tar.gz "https://github.com/vultr/vultr-cli/releases/download/${LATEST}/vultr-cli_${LATEST}_linux_64-bit.tar.gz"
+    tar -xzf /tmp/vultr-cli.tar.gz -C /tmp
+    sudo mv /tmp/vultr-cli /usr/local/bin/vultr
+    rm /tmp/vultr-cli.tar.gz
+  when: os == "linux" and vultr_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v vultr
+      exit_code: 0
+
+- name: Display confirmation
   print: "vultr-cli installed"

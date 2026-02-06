@@ -1,8 +1,20 @@
-- name: Uninstall volta
+- name: Uninstall volta (macOS)
   package:
     name: volta
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall volta (Linux)
+  shell: rm -rf ~/.volta
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v volta
+      exit_code: 1
 
 - name: Display confirmation
   print: "volta uninstalled"

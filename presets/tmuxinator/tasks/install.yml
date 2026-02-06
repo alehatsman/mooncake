@@ -3,15 +3,21 @@
   register: tmuxinator_check
   failed_when: false
 
-- name: Install tmuxinator
+- name: Install tmuxinator (macOS)
   package:
     name: tmuxinator
     state: present
-  when: tmuxinator_check.rc != 0
+  when: os == "darwin" and tmuxinator_check.rc != 0
 
-- name: Verify installation
-  shell: tmuxinator --version 2>&1 || tmuxinator -v 2>&1 || echo "installed"
-  register: tmuxinator_version
+- name: Install tmuxinator (Linux)
+  shell: gem install --user-install tmuxinator
+  when: os == "linux" and tmuxinator_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tmuxinator
+      exit_code: 0
+
+- name: Display confirmation
   print: "tmuxinator installed"

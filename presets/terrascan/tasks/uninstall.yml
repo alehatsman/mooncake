@@ -1,8 +1,23 @@
-- name: Uninstall terrascan
+- name: Uninstall terrascan (macOS)
   package:
     name: terrascan
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall terrascan (Linux)
+  file:
+    path: /usr/local/bin/terrascan
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v terrascan
+      exit_code: 1
 
 - name: Display confirmation
   print: "terrascan uninstalled"

@@ -3,15 +3,25 @@
   register: terragrunt_check
   failed_when: false
 
-- name: Install terragrunt
+- name: Install terragrunt (macOS)
   package:
     name: terragrunt
     state: present
-  when: terragrunt_check.rc != 0
+  when: os == "darwin" and terragrunt_check.rc != 0
 
-- name: Verify installation
-  shell: terragrunt --version 2>&1 || terragrunt -v 2>&1 || echo "installed"
-  register: terragrunt_version
+- name: Install terragrunt (Linux)
+  shell: |
+    LATEST=$(curl -s https://api.github.com/repos/gruntwork-io/terragrunt/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo /tmp/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/${LATEST}/terragrunt_linux_amd64"
+    chmod +x /tmp/terragrunt
+    sudo mv /tmp/terragrunt /usr/local/bin/
+  when: os == "linux" and terragrunt_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v terragrunt
+      exit_code: 0
+
+- name: Display confirmation
   print: "terragrunt installed"

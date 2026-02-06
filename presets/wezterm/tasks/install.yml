@@ -3,15 +3,24 @@
   register: wezterm_check
   failed_when: false
 
-- name: Install wezterm
+- name: Install wezterm (macOS)
   package:
     name: wezterm
     state: present
-  when: wezterm_check.rc != 0
+  when: os == "darwin" and wezterm_check.rc != 0
 
-- name: Verify installation
-  shell: wezterm --version 2>&1 || wezterm -v 2>&1 || echo "installed"
-  register: wezterm_version
+- name: Install wezterm (Linux)
+  shell: |
+    curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/wezterm-fury.gpg
+    echo 'deb [signed-by=/etc/apt/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
+    sudo apt update && sudo apt install -y wezterm
+  when: os == "linux" and package_manager == "apt" and wezterm_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v wezterm
+      exit_code: 0
+
+- name: Display confirmation
   print: "wezterm installed"

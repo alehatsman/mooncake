@@ -3,15 +3,21 @@
   register: volta_check
   failed_when: false
 
-- name: Install volta
+- name: Install volta (macOS)
   package:
     name: volta
     state: present
-  when: volta_check.rc != 0
+  when: os == "darwin" and volta_check.rc != 0
 
-- name: Verify installation
-  shell: volta --version 2>&1 || volta -v 2>&1 || echo "installed"
-  register: volta_version
+- name: Install volta (Linux)
+  shell: curl https://get.volta.sh | bash
+  when: os == "linux" and volta_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v volta
+      exit_code: 0
+
+- name: Display confirmation
   print: "volta installed"

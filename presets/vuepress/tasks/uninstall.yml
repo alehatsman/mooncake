@@ -1,8 +1,20 @@
-- name: Uninstall vuepress
+- name: Uninstall vuepress (macOS)
   package:
     name: vuepress
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall vuepress (Linux)
+  shell: npm uninstall -g vuepress
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v vuepress
+      exit_code: 1
 
 - name: Display confirmation
   print: "vuepress uninstalled"

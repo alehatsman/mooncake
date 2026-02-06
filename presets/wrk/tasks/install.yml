@@ -3,15 +3,24 @@
   register: wrk_check
   failed_when: false
 
-- name: Install wrk
+- name: Install wrk (macOS)
   package:
     name: wrk
     state: present
-  when: wrk_check.rc != 0
+  when: os == "darwin" and wrk_check.rc != 0
 
-- name: Verify installation
-  shell: wrk --version 2>&1 || wrk -v 2>&1 || echo "installed"
-  register: wrk_version
+- name: Install wrk (Linux)
+  package:
+    name: wrk
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and wrk_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v wrk
+      exit_code: 0
+
+- name: Display confirmation
   print: "wrk installed"

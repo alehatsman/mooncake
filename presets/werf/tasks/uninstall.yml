@@ -1,8 +1,23 @@
-- name: Uninstall werf
+- name: Uninstall werf (macOS)
   package:
     name: werf
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall werf (Linux)
+  file:
+    path: /usr/local/bin/werf
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v werf
+      exit_code: 1
 
 - name: Display confirmation
   print: "werf uninstalled"

@@ -1,8 +1,23 @@
-- name: Uninstall wrk
+- name: Uninstall wrk (macOS)
   package:
     name: wrk
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall wrk (Linux)
+  package:
+    name: wrk
+    state: absent
+  become: true
+  when: os == "linux" and package_manager == "apt"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v wrk
+      exit_code: 1
 
 - name: Display confirmation
   print: "wrk uninstalled"

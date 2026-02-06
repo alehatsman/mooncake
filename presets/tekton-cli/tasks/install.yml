@@ -3,15 +3,25 @@
   register: tekton_cli_check
   failed_when: false
 
-- name: Install tekton-cli
+- name: Install tekton-cli (macOS)
   package:
     name: tekton-cli
     state: present
-  when: tekton_cli_check.rc != 0
+  when: os == "darwin" and tekton_cli_check.rc != 0
 
-- name: Verify installation
-  shell: tkn --version 2>&1 || tkn -v 2>&1 || echo "installed"
-  register: tekton_cli_version
+- name: Install tekton-cli (Linux)
+  shell: |
+    curl -LO https://github.com/tektoncd/cli/releases/latest/download/tkn_$(uname -s)_$(uname -m).tar.gz
+    tar xvzf tkn_$(uname -s)_$(uname -m).tar.gz -C /tmp
+    sudo mv /tmp/tkn /usr/local/bin/
+    rm tkn_$(uname -s)_$(uname -m).tar.gz
+  when: os == "linux" and tekton_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tkn
+      exit_code: 0
+
+- name: Display confirmation
   print: "tekton-cli installed"

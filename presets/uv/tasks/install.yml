@@ -3,15 +3,21 @@
   register: uv_check
   failed_when: false
 
-- name: Install uv
+- name: Install uv (macOS)
   package:
     name: uv
     state: present
-  when: uv_check.rc != 0
+  when: os == "darwin" and uv_check.rc != 0
 
-- name: Verify installation
-  shell: uv --version 2>&1 || uv -v 2>&1 || echo "installed"
-  register: uv_version
+- name: Install uv (Linux)
+  shell: curl -LsSf https://astral.sh/uv/install.sh | sh
+  when: os == "linux" and uv_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v uv
+      exit_code: 0
+
+- name: Display confirmation
   print: "uv installed"

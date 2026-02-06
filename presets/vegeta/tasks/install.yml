@@ -3,15 +3,26 @@
   register: vegeta_check
   failed_when: false
 
-- name: Install vegeta
+- name: Install vegeta (macOS)
   package:
     name: vegeta
     state: present
-  when: vegeta_check.rc != 0
+  when: os == "darwin" and vegeta_check.rc != 0
 
-- name: Verify installation
-  shell: vegeta --version 2>&1 || vegeta -v 2>&1 || echo "installed"
-  register: vegeta_version
+- name: Install vegeta (Linux)
+  shell: |
+    LATEST=$(curl -s https://api.github.com/repos/tsenart/vegeta/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo /tmp/vegeta.tar.gz "https://github.com/tsenart/vegeta/releases/download/${LATEST}/vegeta_${LATEST}_linux_amd64.tar.gz"
+    tar -xzf /tmp/vegeta.tar.gz -C /tmp
+    sudo mv /tmp/vegeta /usr/local/bin/
+    rm /tmp/vegeta.tar.gz
+  when: os == "linux" and vegeta_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v vegeta
+      exit_code: 0
+
+- name: Display confirmation
   print: "vegeta installed"

@@ -3,15 +3,25 @@
   register: woodpecker_cli_check
   failed_when: false
 
-- name: Install woodpecker-cli
+- name: Install woodpecker-cli (macOS)
   package:
     name: woodpecker-cli
     state: present
-  when: woodpecker_cli_check.rc != 0
+  when: os == "darwin" and woodpecker_cli_check.rc != 0
 
-- name: Verify installation
-  shell: woodpecker-cli --version 2>&1 || woodpecker-cli -v 2>&1 || echo "installed"
-  register: woodpecker_cli_version
+- name: Install woodpecker-cli (Linux)
+  shell: |
+    LATEST=$(curl -s https://api.github.com/repos/woodpecker-ci/woodpecker/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo /tmp/woodpecker-cli "https://github.com/woodpecker-ci/woodpecker/releases/download/${LATEST}/woodpecker-cli_linux_amd64"
+    chmod +x /tmp/woodpecker-cli
+    sudo mv /tmp/woodpecker-cli /usr/local/bin/
+  when: os == "linux" and woodpecker_cli_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v woodpecker-cli
+      exit_code: 0
+
+- name: Display confirmation
   print: "woodpecker-cli installed"

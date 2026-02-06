@@ -3,15 +3,24 @@
   register: ttyd_check
   failed_when: false
 
-- name: Install ttyd
+- name: Install ttyd (macOS)
   package:
     name: ttyd
     state: present
-  when: ttyd_check.rc != 0
+  when: os == "darwin" and ttyd_check.rc != 0
 
-- name: Verify installation
-  shell: ttyd --version 2>&1 || ttyd -v 2>&1 || echo "installed"
-  register: ttyd_version
+- name: Install ttyd (Linux)
+  package:
+    name: ttyd
+    state: present
+  become: true
+  when: os == "linux" and package_manager == "apt" and ttyd_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v ttyd
+      exit_code: 0
+
+- name: Display confirmation
   print: "ttyd installed"

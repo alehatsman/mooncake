@@ -1,8 +1,23 @@
-- name: Uninstall woodpecker-cli
+- name: Uninstall woodpecker-cli (macOS)
   package:
     name: woodpecker-cli
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall woodpecker-cli (Linux)
+  file:
+    path: /usr/local/bin/woodpecker-cli
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v woodpecker-cli
+      exit_code: 1
 
 - name: Display confirmation
   print: "woodpecker-cli uninstalled"

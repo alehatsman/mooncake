@@ -1,8 +1,23 @@
-- name: Uninstall vultr-cli
+- name: Uninstall vultr-cli (macOS)
   package:
     name: vultr-cli
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall vultr-cli (Linux)
+  file:
+    path: /usr/local/bin/vultr
+    state: absent
+  become: true
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v vultr
+      exit_code: 1
 
 - name: Display confirmation
   print: "vultr-cli uninstalled"

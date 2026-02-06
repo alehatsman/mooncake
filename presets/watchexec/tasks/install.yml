@@ -3,15 +3,21 @@
   register: watchexec_check
   failed_when: false
 
-- name: Install watchexec
+- name: Install watchexec (macOS)
   package:
     name: watchexec
     state: present
-  when: watchexec_check.rc != 0
+  when: os == "darwin" and watchexec_check.rc != 0
 
-- name: Verify installation
-  shell: watchexec --version 2>&1 || watchexec -v 2>&1 || echo "installed"
-  register: watchexec_version
+- name: Install watchexec (Linux)
+  shell: cargo install watchexec-cli
+  when: os == "linux" and watchexec_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v watchexec
+      exit_code: 0
+
+- name: Display confirmation
   print: "watchexec installed"

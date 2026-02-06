@@ -33,12 +33,11 @@
   when: os == "linux" and package_manager == "pacman" and tmux_check.rc != 0
 
 # Verify installation
-- name: Verify Tmux installation
-  shell: tmux -V
-  register: tmux_version
-
-- name: Display Tmux version
-  print: "Tmux installed: {{ tmux_version.stdout }}"
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tmux
+      exit_code: 0
 
 # Create Tmux configuration
 - name: Create Tmux configuration

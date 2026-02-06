@@ -3,15 +3,22 @@
   register: tflint_check
   failed_when: false
 
-- name: Install tflint
+- name: Install tflint (macOS)
   package:
     name: tflint
     state: present
-  when: tflint_check.rc != 0
+  when: os == "darwin" and tflint_check.rc != 0
 
-- name: Verify installation
-  shell: tflint --version 2>&1 || tflint -v 2>&1 || echo "installed"
-  register: tflint_version
+- name: Install tflint (Linux)
+  shell: |
+    curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+  when: os == "linux" and tflint_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v tflint
+      exit_code: 0
+
+- name: Display confirmation
   print: "tflint installed"

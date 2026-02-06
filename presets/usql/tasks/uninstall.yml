@@ -1,8 +1,22 @@
-- name: Uninstall usql
+- name: Uninstall usql (macOS)
   package:
     name: usql
     state: absent
+  when: os == "darwin"
   failed_when: false
+
+- name: Uninstall usql (Linux)
+  file:
+    path: "{{ lookup('env', 'HOME') }}/go/bin/usql"
+    state: absent
+  when: os == "linux"
+  failed_when: false
+
+- name: Verify uninstallation with assert
+  assert:
+    command:
+      cmd: command -v usql
+      exit_code: 1
 
 - name: Display confirmation
   print: "usql uninstalled"

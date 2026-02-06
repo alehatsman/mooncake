@@ -3,15 +3,29 @@
   register: uptrace_check
   failed_when: false
 
-- name: Install uptrace
-  package:
-    name: uptrace
-    state: present
-  when: uptrace_check.rc != 0
+- name: Install uptrace (macOS)
+  shell: |
+    LATEST=$(curl -s https://api.github.com/repos/uptrace/uptrace/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo /tmp/uptrace.tar.gz "https://github.com/uptrace/uptrace/releases/download/${LATEST}/uptrace_darwin_amd64.tar.gz"
+    tar -xzf /tmp/uptrace.tar.gz -C /tmp
+    sudo mv /tmp/uptrace /usr/local/bin/
+    rm /tmp/uptrace.tar.gz
+  when: os == "darwin" and uptrace_check.rc != 0
 
-- name: Verify installation
-  shell: uptrace --version 2>&1 || uptrace -v 2>&1 || echo "installed"
-  register: uptrace_version
+- name: Install uptrace (Linux)
+  shell: |
+    LATEST=$(curl -s https://api.github.com/repos/uptrace/uptrace/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo /tmp/uptrace.tar.gz "https://github.com/uptrace/uptrace/releases/download/${LATEST}/uptrace_linux_amd64.tar.gz"
+    tar -xzf /tmp/uptrace.tar.gz -C /tmp
+    sudo mv /tmp/uptrace /usr/local/bin/
+    rm /tmp/uptrace.tar.gz
+  when: os == "linux" and uptrace_check.rc != 0
 
-- name: Display version
+- name: Verify installation with assert
+  assert:
+    command:
+      cmd: command -v uptrace
+      exit_code: 0
+
+- name: Display confirmation
   print: "uptrace installed"
