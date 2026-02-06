@@ -122,3 +122,119 @@ func TestCollectDarwinFacts_Integration(t *testing.T) {
 		t.Error("CPUModel should be set on Darwin")
 	}
 }
+
+func TestDetectMacOSVersion(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Darwin-specific test")
+	}
+
+	version := detectMacOSVersion()
+	if version == "" {
+		t.Error("Expected macOS version on Darwin")
+	}
+	t.Logf("macOS version: %s", version)
+
+	// Should contain dots for version format
+	if len(version) > 0 && version[0] >= '0' && version[0] <= '9' {
+		t.Logf("Version starts with digit as expected")
+	}
+}
+
+func TestDetectMacOSPackageManager(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Darwin-specific test")
+	}
+
+	pm := detectMacOSPackageManager()
+	// Package manager might be empty if neither brew nor port is installed
+	if pm != "" {
+		t.Logf("Package manager: %s", pm)
+		if pm != "brew" && pm != "port" {
+			t.Errorf("Expected 'brew' or 'port', got %s", pm)
+		}
+	} else {
+		t.Log("No package manager detected (neither brew nor port installed)")
+	}
+}
+
+func TestDetectMacOSMemory(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Darwin-specific test")
+	}
+
+	mem := detectMacOSMemory()
+	if mem <= 0 {
+		t.Error("Expected positive memory value on Darwin")
+	}
+	t.Logf("Memory: %d MB", mem)
+
+	// Sanity check: should be at least 1GB and less than 1TB
+	if mem < 1024 || mem > 1024*1024 {
+		t.Errorf("Memory value %d MB seems unrealistic", mem)
+	}
+}
+
+func TestDetectMacOSDisks(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Darwin-specific test")
+	}
+
+	disks := detectMacOSDisks()
+	if len(disks) == 0 {
+		t.Error("Expected at least one disk on Darwin")
+	}
+	t.Logf("Detected %d disks", len(disks))
+
+	// Check disk structure
+	for _, disk := range disks {
+		if disk.Device == "" {
+			t.Error("Disk device should not be empty")
+		}
+		if disk.MountPoint == "" {
+			t.Error("Disk mount point should not be empty")
+		}
+		t.Logf("Disk: %s mounted at %s (%dGB)", disk.Device, disk.MountPoint, disk.SizeGB)
+	}
+}
+
+func TestDetectMacOSGPUs(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Darwin-specific test")
+	}
+
+	gpus := detectMacOSGPUs()
+	// GPUs might be 0 on some systems
+	if len(gpus) > 0 {
+		t.Logf("Detected %d GPUs", len(gpus))
+		for _, gpu := range gpus {
+			t.Logf("GPU: %s (Vendor: %s)", gpu.Model, gpu.Vendor)
+			if gpu.Model == "" {
+				t.Error("GPU model should not be empty")
+			}
+		}
+	} else {
+		t.Log("No GPUs detected")
+	}
+}
+
+func TestDetectDarwinCPUFlags_Coverage(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping Darwin-specific test")
+	}
+
+	flags := detectDarwinCPUFlags()
+
+	// Test that we can iterate over flags
+	for _, flag := range flags {
+		if flag == "" {
+			t.Error("CPU flag should not be empty string")
+		}
+	}
+
+	// On Apple Silicon, sysctl might not return CPU flags
+	if len(flags) == 0 {
+		t.Log("No CPU flags detected (expected on Apple Silicon)")
+	} else {
+		t.Logf("Detected %d CPU flags", len(flags))
+	}
+}

@@ -57,6 +57,11 @@ type ExecutionContext struct {
 	// Used for resolving relative paths in include, template src, etc.
 	CurrentDir string
 
+	// PresetBaseDir is the root directory of the currently executing preset.
+	// When set, template paths are resolved relative to this directory instead of CurrentDir.
+	// This ensures templates in presets work correctly even when included from task subdirectories.
+	PresetBaseDir string
+
 	// CurrentFile is the absolute path to the current config file being executed.
 	// Used for error messages and debugging.
 	CurrentFile string
@@ -134,16 +139,17 @@ func (ec *ExecutionContext) Clone() ExecutionContext {
 	}
 
 	return ExecutionContext{
-		Variables:    newVariables,
-		CurrentDir:   ec.CurrentDir,
-		CurrentFile:  ec.CurrentFile,
-		Level:        ec.Level,
-		CurrentIndex: ec.CurrentIndex,
-		TotalSteps:   ec.TotalSteps,
-		Logger:       ec.Logger,
-		SudoPass:     ec.SudoPass,
-		Tags:         ec.Tags,
-		DryRun:       ec.DryRun,
+		Variables:     newVariables,
+		CurrentDir:    ec.CurrentDir,
+		PresetBaseDir: ec.PresetBaseDir,
+		CurrentFile:   ec.CurrentFile,
+		Level:         ec.Level,
+		CurrentIndex:  ec.CurrentIndex,
+		TotalSteps:    ec.TotalSteps,
+		Logger:        ec.Logger,
+		SudoPass:      ec.SudoPass,
+		Tags:          ec.Tags,
+		DryRun:        ec.DryRun,
 
 		// Share the same statistics pointer
 		Stats: ec.Stats,

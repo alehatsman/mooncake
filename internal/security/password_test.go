@@ -180,3 +180,143 @@ func TestResolvePassword_FileMethod(t *testing.T) {
 		t.Errorf("Expected password '%s', got '%s'", expectedPassword, password)
 	}
 }
+
+// TestFilePasswordProvider_Source tests the Source method
+func TestFilePasswordProvider_Source(t *testing.T) {
+	filePath := "/path/to/password"
+	provider := &FilePasswordProvider{FilePath: filePath}
+
+	source := provider.Source()
+	expected := "file:/path/to/password"
+
+	if source != expected {
+		t.Errorf("Expected source '%s', got '%s'", expected, source)
+	}
+}
+
+// TestCLIPasswordProvider_Source tests the Source method
+func TestCLIPasswordProvider_Source(t *testing.T) {
+	provider := &CLIPasswordProvider{Password: "test"}
+
+	source := provider.Source()
+	expected := "cli:--sudo-pass"
+
+	if source != expected {
+		t.Errorf("Expected source '%s', got '%s'", expected, source)
+	}
+}
+
+// TestEnvPasswordProvider_Source tests the Source method
+func TestEnvPasswordProvider_Source(t *testing.T) {
+	programPath := "/usr/bin/askpass"
+	provider := &EnvPasswordProvider{ProgramPath: programPath}
+
+	source := provider.Source()
+	expected := "env:SUDO_ASKPASS=/usr/bin/askpass"
+
+	if source != expected {
+		t.Errorf("Expected source '%s', got '%s'", expected, source)
+	}
+}
+
+// TestEnvPasswordProvider_Success tests successful password retrieval from SUDO_ASKPASS
+func TestEnvPasswordProvider_Success(t *testing.T) {
+	// Create a temporary askpass script
+	tmpDir := t.TempDir()
+	askpassScript := filepath.Join(tmpDir, "askpass.sh")
+
+	// Write a simple script that outputs a password
+	scriptContent := "#!/bin/sh\necho 'mypassword'\n"
+	err := os.WriteFile(askpassScript, []byte(scriptContent), 0700)
+	if err != nil {
+		t.Fatalf("Failed to create askpass script: %v", err)
+	}
+
+	provider := &EnvPasswordProvider{ProgramPath: askpassScript}
+	password, err := provider.GetPassword()
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if password != "mypassword" {
+		t.Errorf("Expected password 'mypassword', got '%s'", password)
+	}
+}
+
+// TestEnvPasswordProvider_NonExistent tests error for non-existent program
+func TestEnvPasswordProvider_NonExistent(t *testing.T) {
+	provider := &EnvPasswordProvider{ProgramPath: "/nonexistent/askpass"}
+	_, err := provider.GetPassword()
+
+	if err == nil {
+		t.Fatal("Expected error for non-existent program, got nil")
+	}
+}
+
+// TestEnvPasswordProvider_NotExecutable tests error for non-executable program
+func TestEnvPasswordProvider_NotExecutable(t *testing.T) {
+	tmpDir := t.TempDir()
+	nonExecFile := filepath.Join(tmpDir, "not-executable")
+
+	// Create file without execute permissions
+	err := os.WriteFile(nonExecFile, []byte("#!/bin/sh\necho test"), 0600)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	provider := &EnvPasswordProvider{ProgramPath: nonExecFile}
+	_, err = provider.GetPassword()
+
+	if err == nil {
+		t.Fatal("Expected error for non-executable program, got nil")
+	}
+}
+
+// TestEnvPasswordProvider_EmptyOutput tests error for empty password output
+func TestEnvPasswordProvider_EmptyOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	askpassScript := filepath.Join(tmpDir, "empty-askpass.sh")
+
+	// Script that outputs nothing
+	scriptContent := "#!/bin/sh\necho ''\n"
+	err := os.WriteFile(askpassScript, []byte(scriptContent), 0700)
+	if err != nil {
+		t.Fatalf("Failed to create askpass script: %v", err)
+	}
+
+	provider := &EnvPasswordProvider{ProgramPath: askpassScript}
+	_, err = provider.GetPassword()
+
+	if err == nil {
+		t.Fatal("Expected error for empty password output, got nil")
+	}
+}
+
+// TestEnvPasswordProvider_ProgramFails tests error when program fails
+func TestEnvPasswordProvider_ProgramFails(t *testing.T) {
+	tmpDir := t.TempDir()
+	askpassScript := filepath.Join(tmpDir, "failing-askpass.sh")
+
+	// Script that exits with error
+	scriptContent := "#!/bin/sh\nexit 1\n"
+	err := os.WriteFile(askpassScript, []byte(scriptContent), 0700)
+	if err != nil {
+		t.Fatalf("Failed to create askpass script: %v", err)
+	}
+
+	provider := &EnvPasswordProvider{ProgramPath: askpassScript}
+	_, err = provider.GetPassword()
+
+	if err == nil {
+		t.Fatal("Expected error for failing program, got nil")
+	}
+}
+
+// Note: SUDO_ASKPASS fallback is currently unreachable in ResolvePassword
+// because the function returns early when no method is specified.
+// This test is commented out until that code path is either fixed or removed.
+//
+// func TestResolvePassword_SudoAskpassEnv(t *testing.T) {
+//   // Test would go here
+// }

@@ -207,3 +207,4 @@ func TestResult_Status_Priority(t *testing.T) {
 		t.Errorf("With skipped and changed, Status() = %v, want 'skipped'", status)
 	}
 }
+

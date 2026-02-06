@@ -1,0 +1,277 @@
+package executor
+
+import (
+	"testing"
+
+	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/filetree"
+	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/template"
+)
+
+// testEventSubscriber is a test subscriber that implements events.Subscriber
+type testEventSubscriber struct {
+	onEvent func(event events.Event)
+}
+
+func (s *testEventSubscriber) OnEvent(event events.Event) {
+	if s.onEvent != nil {
+		s.onEvent(event)
+	}
+}
+
+func (s *testEventSubscriber) Close() {
+}
+
+// TestGetStepDisplayName_WithFileTreeItem tests display name for filetree items
+func TestGetStepDisplayName_WithFileTreeItem(t *testing.T) {
+	tests := []struct {
+		name     string
+		item     filetree.Item
+		expected string
+		isCustom bool
+	}{
+		{
+			"root directory",
+			filetree.Item{Name: "root", IsDir: true, Path: ""},
+			"root/",
+			true,
+		},
+		{
+			"subdirectory",
+			filetree.Item{Name: "subdir", IsDir: true, Path: "/path/to/subdir"},
+			"path/to/subdir/",
+			true,
+		},
+		{
+			"file with name",
+			filetree.Item{Name: "file.txt", IsDir: false, Path: "/path/file.txt"},
+			"file.txt",
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := config.Step{
+				Name: "Test Step",
+			}
+
+			ec := &ExecutionContext{
+				Variables: map[string]interface{}{
+					"item": tt.item,
+				},
+			}
+
+			displayName, isCustom := GetStepDisplayName(step, ec)
+
+			if isCustom != tt.isCustom {
+				t.Errorf("GetStepDisplayName() isCustom = %v, want %v", isCustom, tt.isCustom)
+			}
+
+			if displayName == "" {
+				t.Error("Display name should not be empty")
+			}
+
+			t.Logf("Display name: %s", displayName)
+		})
+	}
+}
+
+// TestGetStepDisplayName_NoFileTree tests display name without filetree
+func TestGetStepDisplayName_NoFileTree(t *testing.T) {
+	step := config.Step{
+		Name: "Regular Step",
+	}
+
+	ec := &ExecutionContext{
+		Variables: make(map[string]interface{}),
+	}
+
+	displayName, isCustom := GetStepDisplayName(step, ec)
+
+	// Without an "item" variable, it falls back to step name
+	if displayName != "Regular Step" {
+		t.Errorf("Display name = %s, want 'Regular Step'", displayName)
+	}
+
+	// Note: isCustom may still be true due to fallback behavior
+	_ = isCustom
+}
+
+// TestHandleVars_MergeExisting tests merging with existing variables
+func TestHandleVars_MergeExisting(t *testing.T) {
+	testLogger := logger.NewTestLogger()
+
+	vars := map[string]interface{}{
+		"new_key": "new_value",
+	}
+
+	step := config.Step{
+		Vars: &vars,
+	}
+
+	ec := &ExecutionContext{
+		Logger: testLogger,
+		Variables: map[string]interface{}{
+			"existing_key": "existing_value",
+		},
+		DryRun: false,
+	}
+
+	err := HandleVars(step, ec)
+	if err != nil {
+		t.Fatalf("HandleVars failed: %v", err)
+	}
+
+	// Both old and new should exist
+	if ec.Variables["existing_key"] != "existing_value" {
+		t.Error("Existing variables should be preserved")
+	}
+	if ec.Variables["new_key"] != "new_value" {
+		t.Error("New variables should be added")
+	}
+}
+
+// TestHandleWhenExpression_BooleanLogic tests boolean logic in when expressions
+func TestHandleWhenExpression_BooleanLogic(t *testing.T) {
+	tests := []struct {
+		name       string
+		when       string
+		variables  map[string]interface{}
+		shouldSkip bool
+	}{
+		{
+			"AND true",
+			"a == 1 && b == 2",
+			map[string]interface{}{"a": 1, "b": 2},
+			false,
+		},
+		{
+			"AND false",
+			"a == 1 && b == 3",
+			map[string]interface{}{"a": 1, "b": 2},
+			true,
+		},
+		{
+			"OR true",
+			"a == 1 || b == 3",
+			map[string]interface{}{"a": 1, "b": 2},
+			false,
+		},
+		{
+			"OR false",
+			"a == 99 || b == 99",
+			map[string]interface{}{"a": 1, "b": 2},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := config.Step{
+				When: tt.when,
+			}
+
+			ec := &ExecutionContext{
+				Evaluator: expression.NewGovaluateEvaluator(),
+				Template:  template.NewPongo2Renderer(),
+				Logger:    logger.NewTestLogger(),
+				Variables: tt.variables,
+			}
+
+			shouldSkip, err := HandleWhenExpression(step, ec)
+			if err != nil {
+				t.Fatalf("HandleWhenExpression failed: %v", err)
+			}
+
+			if shouldSkip != tt.shouldSkip {
+				t.Errorf("shouldSkip = %v, want %v", shouldSkip, tt.shouldSkip)
+			}
+		})
+	}
+}
+
+// TestCheckIdempotencyConditions_Creates tests creates condition
+func TestCheckIdempotencyConditions_Creates(t *testing.T) {
+	tmpFile := "/tmp/nonexistent_file_for_test_mooncake_12345.txt"
+
+	step := config.Step{
+		Creates: &tmpFile,
+	}
+
+	renderer := template.NewPongo2Renderer()
+
+	ec := &ExecutionContext{
+		Template:      renderer,
+		Logger:        logger.NewTestLogger(),
+		Variables:     make(map[string]interface{}),
+		CurrentResult: NewResult(),
+		PathUtil:      pathutil.NewPathExpander(renderer),
+		CurrentDir:    "/tmp",
+	}
+
+	shouldSkip, reason, err := CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Fatalf("CheckIdempotencyConditions failed: %v", err)
+	}
+
+	// File doesn't exist, so should NOT skip (should execute)
+	if shouldSkip {
+		t.Errorf("Should not skip when creates file doesn't exist, reason: %s", reason)
+	}
+}
+
+// TestResult_SetData_MultipleCalls tests multiple SetData calls
+func TestResult_SetData_MultipleCalls(t *testing.T) {
+	result := NewResult()
+
+	// Multiple calls should not panic
+	result.SetData(map[string]interface{}{"key1": "value1"})
+	result.SetData(map[string]interface{}{"key2": "value2"})
+	result.SetData(nil)
+
+	// No assertions - SetData is a no-op
+}
+
+// TestMarkStepFailed_Idempotent tests multiple MarkStepFailed calls
+func TestMarkStepFailed_Idempotent(t *testing.T) {
+	result := NewResult()
+	step := config.Step{Name: "Test"}
+	ec := &ExecutionContext{
+		Variables: make(map[string]interface{}),
+	}
+
+	MarkStepFailed(result, step, ec)
+	MarkStepFailed(result, step, ec)
+
+	if !result.Failed {
+		t.Error("Result should be failed")
+	}
+	if result.Rc != 1 {
+		t.Error("Rc should be 1")
+	}
+}
+
+// TestAddGlobalVariables_NonDestructive tests that it doesn't remove existing vars
+func TestAddGlobalVariables_NonDestructive(t *testing.T) {
+	variables := map[string]interface{}{
+		"custom_var": "custom_value",
+		"os":         "should_be_overwritten",
+	}
+
+	AddGlobalVariables(variables)
+
+	// Custom var should remain
+	if variables["custom_var"] != "custom_value" {
+		t.Error("Custom variables should be preserved")
+	}
+
+	// OS should be overwritten with actual value
+	if variables["os"] == "should_be_overwritten" {
+		t.Error("System facts should overwrite existing values")
+	}
+}

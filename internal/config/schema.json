@@ -82,6 +82,9 @@
         "download": {
           "$ref": "#/definitions/download"
         },
+        "package": {
+          "$ref": "#/definitions/package"
+        },
         "service": {
           "$ref": "#/definitions/service"
         },
@@ -271,6 +274,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -341,6 +349,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -419,6 +432,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -489,6 +507,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -567,6 +590,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -641,6 +669,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -711,6 +744,90 @@
               {
                 "required": [
                   "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "package"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "download"
                 ]
               },
               {
@@ -868,6 +985,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -928,6 +1050,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -1006,6 +1133,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -1076,6 +1208,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -1154,6 +1291,11 @@
               },
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -1224,6 +1366,11 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -1531,6 +1678,67 @@
           "maximum": 100
         }
       },
+      "additionalProperties": false
+    },
+    "package": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Package name (single package)"
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Multiple packages to install/remove"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "present",
+            "absent",
+            "latest"
+          ],
+          "default": "present",
+          "description": "Desired package state: present (install), absent (remove), latest (install/upgrade to latest)"
+        },
+        "manager": {
+          "type": "string",
+          "description": "Package manager to use (auto-detected if empty: apt, dnf, yum, pacman, zypper, apk, brew, port, choco, scoop)"
+        },
+        "update_cache": {
+          "type": "boolean",
+          "description": "Update package cache before operation (apt update, dnf check-update, etc.)"
+        },
+        "allow_downgrade": {
+          "type": "boolean",
+          "description": "Allow package downgrade (dnf/yum only)"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "name"
+          ],
+          "not": {
+            "required": [
+              "names"
+            ]
+          }
+        },
+        {
+          "required": [
+            "names"
+          ],
+          "not": {
+            "required": [
+              "name"
+            ]
+          }
+        }
+      ],
       "additionalProperties": false
     },
     "service": {

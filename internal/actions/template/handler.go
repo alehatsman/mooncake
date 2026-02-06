@@ -74,7 +74,14 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Expand paths
-	src, err := ec.PathUtil.ExpandPath(tmpl.Src, ec.CurrentDir, ctx.GetVariables())
+	// Use PresetBaseDir for template src if set (resolves relative to preset root)
+	// Otherwise use CurrentDir (resolves relative to current file)
+	baseDir := ec.CurrentDir
+	if ec.PresetBaseDir != "" {
+		baseDir = ec.PresetBaseDir
+	}
+
+	src, err := ec.PathUtil.ExpandPath(tmpl.Src, baseDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
@@ -174,7 +181,13 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Expand paths
-	src, err := ec.PathUtil.ExpandPath(tmpl.Src, ec.CurrentDir, ctx.GetVariables())
+	// Use PresetBaseDir for template src if set (resolves relative to preset root)
+	baseDir := ec.CurrentDir
+	if ec.PresetBaseDir != "" {
+		baseDir = ec.PresetBaseDir
+	}
+
+	src, err := ec.PathUtil.ExpandPath(tmpl.Src, baseDir, ctx.GetVariables())
 	if err != nil {
 		src = tmpl.Src
 	}
