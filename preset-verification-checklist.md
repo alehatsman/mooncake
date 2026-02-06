@@ -8,7 +8,7 @@ Legend:
 - [T] Tested and works
 - [✓] All verified
 
-## Presets (30/396 complete)
+## Presets (40/396 complete)
 
 - [✓] **1password-cli**
   - [✓] Install (Linux/macOS)
@@ -827,11 +827,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **gron**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **gron**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **groovy**
   - [ ] Install (Linux/macOS)
@@ -839,17 +840,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **grype**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **grype**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **hadolint**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **hadolint**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **haproxy**
   - [ ] Install (Linux/macOS)
@@ -893,11 +896,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **helmfile**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **helmfile**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **hexo**
   - [ ] Install (Linux/macOS)
@@ -912,11 +916,12 @@ Legend:
   - [✓] Tested working
 
 
-- [ ] **httpstat**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **httpstat**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **httpx**
   - [ ] Install (Linux/macOS)
@@ -1008,17 +1013,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **jenv**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **jenv**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **jless**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **jless**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [✓] **jq**
   - [✓] Install (Linux/macOS)
@@ -1033,11 +1040,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **just**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **just**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **k3sup**
   - [ ] Install (Linux/macOS)
@@ -1045,11 +1053,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **k8s-tools**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **k8s-tools**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **k9s**
   - [ ] Install (Linux/macOS)
@@ -1282,11 +1291,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **memcached**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **memcached**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **meson**
   - [ ] Install (Linux/macOS)
