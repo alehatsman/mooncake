@@ -3,9 +3,11 @@
   register: arangodb_check
   failed_when: false
 
-- name: Install arangodb (macOS)
-  shell: brew install arangodb
-  when: os == "darwin" and arangodb_check.rc != 0
+- name: Install arangodb
+  package:
+    name: arangodb
+    state: present
+  when: arangodb_check.rc != 0
 
 - name: Verify installation
   shell: arangodb --version 2>&1 || arangodb -v 2>&1 || echo "installed"

@@ -3,9 +3,11 @@
   register: atlantis_check
   failed_when: false
 
-- name: Install atlantis (macOS)
-  shell: brew install atlantis
-  when: os == "darwin" and atlantis_check.rc != 0
+- name: Install atlantis
+  package:
+    name: atlantis
+    state: present
+  when: atlantis_check.rc != 0
 
 - name: Verify installation
   shell: atlantis --version 2>&1 || atlantis -v 2>&1 || echo "installed"

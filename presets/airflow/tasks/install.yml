@@ -3,9 +3,11 @@
   register: airflow_check
   failed_when: false
 
-- name: Install airflow (macOS)
-  shell: brew install airflow
-  when: os == "darwin" and airflow_check.rc != 0
+- name: Install airflow
+  package:
+    name: airflow
+    state: present
+  when: airflow_check.rc != 0
 
 - name: Verify installation
   shell: airflow --version 2>&1 || airflow -v 2>&1 || echo "installed"

@@ -1,6 +1,7 @@
-- name: Uninstall atlantis (macOS)
-  shell: brew uninstall atlantis
-  when: os == "darwin"
+- name: Uninstall atlantis
+  package:
+    name: atlantis
+    state: absent
   failed_when: false
 
 - name: Display confirmation

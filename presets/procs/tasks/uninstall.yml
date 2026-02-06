@@ -1,6 +1,7 @@
-- name: Uninstall procs (macOS)
-  shell: brew uninstall procs
-  when: os == "darwin"
+- name: Uninstall procs
+  package:
+    name: procs
+    state: absent
   failed_when: false
 
 - name: Display confirmation

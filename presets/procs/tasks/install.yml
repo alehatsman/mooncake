@@ -3,9 +3,11 @@
   register: procs_check
   failed_when: false
 
-- name: Install procs (macOS)
-  shell: brew install procs
-  when: os == "darwin" and procs_check.rc != 0
+- name: Install procs
+  package:
+    name: procs
+    state: present
+  when: procs_check.rc != 0
 
 - name: Verify installation
   shell: procs --version 2>&1 || procs -v 2>&1 || echo "installed"

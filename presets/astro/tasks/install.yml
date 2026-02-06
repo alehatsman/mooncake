@@ -3,9 +3,11 @@
   register: astro_check
   failed_when: false
 
-- name: Install astro (macOS)
-  shell: brew install astro
-  when: os == "darwin" and astro_check.rc != 0
+- name: Install astro
+  package:
+    name: astro
+    state: present
+  when: astro_check.rc != 0
 
 - name: Verify installation
   shell: astro --version 2>&1 || astro -v 2>&1 || echo "installed"

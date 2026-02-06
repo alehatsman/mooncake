@@ -1,6 +1,7 @@
-- name: Uninstall astro (macOS)
-  shell: brew uninstall astro
-  when: os == "darwin"
+- name: Uninstall astro
+  package:
+    name: astro
+    state: absent
   failed_when: false
 
 - name: Display confirmation

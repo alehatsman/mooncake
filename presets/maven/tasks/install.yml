@@ -3,13 +3,15 @@
   register: maven_check
   failed_when: false
 
-- name: Install mvn (macOS)
-  shell: brew install mvn
-  when: os == "darwin" and maven_check.rc != 0
+- name: Install maven
+  package:
+    name: maven
+    state: present
+  when: maven_check.rc != 0
 
 - name: Verify installation
   shell: mvn --version 2>&1 || mvn -v 2>&1 || echo "installed"
   register: maven_version
 
 - name: Display version
-  print: "mvn installed"
+  print: "maven installed"

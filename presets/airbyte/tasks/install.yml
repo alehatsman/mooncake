@@ -3,9 +3,11 @@
   register: airbyte_check
   failed_when: false
 
-- name: Install airbyte (macOS)
-  shell: brew install airbyte
-  when: os == "darwin" and airbyte_check.rc != 0
+- name: Install airbyte
+  package:
+    name: airbyte
+    state: present
+  when: airbyte_check.rc != 0
 
 - name: Verify installation
   shell: airbyte --version 2>&1 || airbyte -v 2>&1 || echo "installed"

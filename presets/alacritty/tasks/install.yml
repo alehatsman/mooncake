@@ -3,9 +3,11 @@
   register: alacritty_check
   failed_when: false
 
-- name: Install alacritty (macOS)
-  shell: brew install alacritty
-  when: os == "darwin" and alacritty_check.rc != 0
+- name: Install alacritty
+  package:
+    name: alacritty
+    state: present
+  when: alacritty_check.rc != 0
 
 - name: Verify installation
   shell: alacritty --version 2>&1 || alacritty -v 2>&1 || echo "installed"

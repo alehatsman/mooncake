@@ -3,9 +3,11 @@
   register: kotlin_check
   failed_when: false
 
-- name: Install kotlin (macOS)
-  shell: brew install kotlin
-  when: os == "darwin" and kotlin_check.rc != 0
+- name: Install kotlin
+  package:
+    name: kotlin
+    state: present
+  when: kotlin_check.rc != 0
 
 - name: Verify installation
   shell: kotlin --version 2>&1 || kotlin -v 2>&1 || echo "installed"

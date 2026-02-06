@@ -1,6 +1,7 @@
-- name: Uninstall arangodb (macOS)
-  shell: brew uninstall arangodb
-  when: os == "darwin"
+- name: Uninstall arangodb
+  package:
+    name: arangodb
+    state: absent
   failed_when: false
 
 - name: Display confirmation

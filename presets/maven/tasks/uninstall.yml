@@ -1,7 +1,8 @@
-- name: Uninstall mvn (macOS)
-  shell: brew uninstall mvn
-  when: os == "darwin"
+- name: Uninstall maven
+  package:
+    name: maven
+    state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "mvn uninstalled"
+  print: "maven uninstalled"

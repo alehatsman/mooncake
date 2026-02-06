@@ -3,9 +3,11 @@
   register: ant_check
   failed_when: false
 
-- name: Install ant (macOS)
-  shell: brew install ant
-  when: os == "darwin" and ant_check.rc != 0
+- name: Install ant
+  package:
+    name: ant
+    state: present
+  when: ant_check.rc != 0
 
 - name: Verify installation
   shell: ant --version 2>&1 || ant -v 2>&1 || echo "installed"
