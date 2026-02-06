@@ -2,6 +2,7 @@ package facts
 
 import (
 	"os"
+	"runtime"
 	"testing"
 )
 
@@ -101,6 +102,9 @@ func TestDetectDarwinCPUFlags_ErrorHandling(t *testing.T) {
 
 // TestDetectMacOSMemory_NonZero tests memory detection returns reasonable value
 func TestDetectMacOSMemory_NonZero(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping macOS-specific test on non-Darwin platform")
+	}
 	memory := detectMacOSMemory()
 
 	// Memory should be > 0 on any real Mac
@@ -117,6 +121,9 @@ func TestDetectMacOSMemory_NonZero(t *testing.T) {
 
 // TestDetectMacOSVersion_Format tests version string format
 func TestDetectMacOSVersion_Format(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping macOS-specific test on non-Darwin platform")
+	}
 	version := detectMacOSVersion()
 
 	if version == "" {
@@ -142,6 +149,9 @@ func TestDetectDarwinKernel_Format(t *testing.T) {
 
 // TestDetectDarwinCPUModel_NonEmpty tests CPU model detection
 func TestDetectDarwinCPUModel_NonEmpty(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping macOS-specific test on non-Darwin platform")
+	}
 	model := detectDarwinCPUModel()
 
 	if model == "" {
@@ -153,6 +163,9 @@ func TestDetectDarwinCPUModel_NonEmpty(t *testing.T) {
 
 // TestDetectMacOSDisks_HasRoot tests disk detection includes root
 func TestDetectMacOSDisks_HasRoot(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("Skipping macOS-specific test on non-Darwin platform")
+	}
 	disks := detectMacOSDisks()
 
 	// Should have at least one disk (root filesystem)

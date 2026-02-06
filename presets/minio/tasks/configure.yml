@@ -5,7 +5,6 @@
     path: "{{ parameters.data_dir }}"
     state: directory
     mode: "0755"
-  become: true
 
 - name: Create MinIO systemd service (Linux)
   shell: |
