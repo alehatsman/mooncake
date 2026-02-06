@@ -1,0 +1,93 @@
+# GitHub CLI Installation Tasks
+
+- name: Check if gh is already installed
+  shell: command -v gh
+  register: gh_check
+  failed_when: false
+
+# macOS Installation
+- name: Install GitHub CLI via Homebrew (macOS)
+  shell: brew install gh
+  when: os == "darwin" and gh_check.rc != 0
+
+# Linux Installation - Debian/Ubuntu
+- name: Add GitHub CLI repository (Debian/Ubuntu)
+  shell: |
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    sudo apt-get update
+  when: os == "linux" and apt_available and gh_check.rc != 0
+
+- name: Install GitHub CLI (Debian/Ubuntu)
+  shell: sudo apt-get install -y gh
+  when: os == "linux" and apt_available and gh_check.rc != 0
+
+# Linux Installation - Fedora/RHEL
+- name: Install GitHub CLI (Fedora/RHEL)
+  shell: sudo dnf install -y gh
+  when: os == "linux" and dnf_available and gh_check.rc != 0
+
+# Verify installation
+- name: Verify GitHub CLI installation
+  shell: gh --version
+  register: gh_version
+
+- name: Display GitHub CLI version
+  print: "GitHub CLI installed: {{ gh_version.stdout }}"
+
+# Configure authentication if requested
+- name: Configure GitHub authentication
+  shell: gh auth login --web
+  when: parameters.configure_auth
+
+- name: Display GitHub CLI usage
+  print: |
+    GitHub CLI installed successfully!
+
+    {% if not parameters.configure_auth %}
+    First, authenticate with GitHub:
+      gh auth login
+    {% endif %}
+
+    Common commands:
+      # Repository operations
+      gh repo create myproject --public
+      gh repo clone owner/repo
+      gh repo view
+
+      # Pull requests
+      gh pr create --title "Fix bug" --body "Description"
+      gh pr list
+      gh pr view 123
+      gh pr checkout 123
+      gh pr merge 123
+
+      # Issues
+      gh issue create --title "Bug report"
+      gh issue list
+      gh issue view 456
+      gh issue close 456
+
+      # Workflows (GitHub Actions)
+      gh workflow list
+      gh workflow run workflow-name
+      gh run list
+      gh run view
+      gh run watch
+
+      # Releases
+      gh release create v1.0.0
+      gh release list
+      gh release download v1.0.0
+
+      # Gists
+      gh gist create file.txt
+      gh gist list
+
+    Configuration:
+      gh config set editor vim
+      gh config set git_protocol ssh
+      gh alias set pv 'pr view'
+
+    More info: https://cli.github.com/manual/

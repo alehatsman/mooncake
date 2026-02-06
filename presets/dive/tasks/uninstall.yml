@@ -1,0 +1,7 @@
+- name: Uninstall dive (macOS)
+  shell: brew uninstall dive
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "dive uninstalled"

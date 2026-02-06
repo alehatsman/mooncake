@@ -1,0 +1,7 @@
+- name: Uninstall skopeo (macOS)
+  shell: brew uninstall skopeo
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "skopeo uninstalled"

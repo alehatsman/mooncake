@@ -1,0 +1,7 @@
+- name: Uninstall vultr (macOS)
+  shell: brew uninstall vultr
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "vultr uninstalled"

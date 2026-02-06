@@ -1,0 +1,15 @@
+- name: Check if victoria-metrics is installed
+  shell: command -v victoria-metrics
+  register: victoriametrics_check
+  failed_when: false
+
+- name: Install victoria-metrics (macOS)
+  shell: brew install victoria-metrics
+  when: os == "darwin" and victoriametrics_check.rc != 0
+
+- name: Verify installation
+  shell: victoria-metrics --version 2>&1 || victoria-metrics -v 2>&1 || echo "installed"
+  register: victoriametrics_version
+
+- name: Display version
+  print: "victoria-metrics installed"

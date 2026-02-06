@@ -1,0 +1,7 @@
+- name: Uninstall pgcli (macOS)
+  shell: brew uninstall pgcli
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "pgcli uninstalled"

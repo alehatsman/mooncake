@@ -1,0 +1,7 @@
+- name: Uninstall yq (macOS)
+  shell: brew uninstall yq
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "yq uninstalled"

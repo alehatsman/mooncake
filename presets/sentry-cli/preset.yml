@@ -1,0 +1,16 @@
+name: sentry-cli  
+description: Sentry command-line client
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install sentry-cli
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall sentry-cli
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

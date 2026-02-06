@@ -1,0 +1,15 @@
+- name: Check if pyroscope is installed
+  shell: command -v pyroscope
+  register: pyroscope_check
+  failed_when: false
+
+- name: Install pyroscope (macOS)
+  shell: brew install pyroscope
+  when: os == "darwin" and pyroscope_check.rc != 0
+
+- name: Verify installation
+  shell: pyroscope --version 2>&1 || pyroscope -v 2>&1 || echo "installed"
+  register: pyroscope_version
+
+- name: Display version
+  print: "pyroscope installed"

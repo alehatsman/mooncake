@@ -1,0 +1,33 @@
+name: starship
+description: Install Starship - minimal, fast, and customizable cross-shell prompt
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall Starship
+
+  configure_shell:
+    type: bool
+    required: false
+    default: true
+    description: Configure shell to use Starship
+
+  preset:
+    type: string
+    required: false
+    default: default
+    enum: [default, nerd-font-symbols, bracketed-segments, plain-text-symbols, no-runtime-versions, pure-preset, pastel-powerline]
+    description: Starship preset to use
+
+steps:
+  - name: Install Starship
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall Starship
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

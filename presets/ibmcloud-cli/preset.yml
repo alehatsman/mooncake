@@ -1,0 +1,16 @@
+name: ibmcloud-cli
+description: IBM Cloud CLI
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install ibmcloud-cli
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall ibmcloud-cli
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

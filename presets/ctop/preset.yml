@@ -1,0 +1,16 @@
+name: ctop
+description: Container metrics and monitoring
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install ctop
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall ctop
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

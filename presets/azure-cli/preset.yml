@@ -1,0 +1,16 @@
+name: azure-cli
+description: Microsoft Azure CLI
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install azure-cli
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall azure-cli
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

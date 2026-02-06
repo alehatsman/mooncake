@@ -1,0 +1,16 @@
+name: oci-cli
+description: Oracle Cloud CLI
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install oci-cli
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall oci-cli
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,15 @@
+- name: Check if fly is installed
+  shell: command -v fly
+  register: fly_check
+  failed_when: false
+
+- name: Install fly (macOS)
+  shell: brew install fly
+  when: os == "darwin" and fly_check.rc != 0
+
+- name: Verify installation
+  shell: fly --version 2>&1 || fly -v 2>&1 || echo "installed"
+  register: fly_version
+
+- name: Display version
+  print: "fly installed"

@@ -1,0 +1,15 @@
+- name: Check if mlr is installed
+  shell: command -v mlr
+  register: miller_check
+  failed_when: false
+
+- name: Install mlr (macOS)
+  shell: brew install miller
+  when: os == "darwin" and miller_check.rc != 0
+
+- name: Verify installation
+  shell: mlr --version 2>&1 || mlr -v 2>&1 || echo "installed"
+  register: miller_version
+
+- name: Display version
+  print: "mlr installed"

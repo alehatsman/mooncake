@@ -1,0 +1,16 @@
+name: cosign
+description: Container signing and verification
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install cosign
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall cosign
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

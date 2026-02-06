@@ -1,0 +1,23 @@
+# GitHub CLI Uninstallation Tasks
+
+- name: Uninstall GitHub CLI (macOS)
+  shell: brew uninstall gh
+  when: os == "darwin"
+  failed_when: false
+
+- name: Uninstall GitHub CLI (Linux)
+  shell: |
+    if command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get remove -y gh
+    elif command -v dnf >/dev/null 2>&1; then
+      sudo dnf remove -y gh
+    fi
+  when: os == "linux"
+  failed_when: false
+
+- name: Display uninstall confirmation
+  print: |
+    GitHub CLI uninstalled.
+
+    Note: Authentication tokens and configuration preserved.
+    To remove: rm -rf ~/.config/gh

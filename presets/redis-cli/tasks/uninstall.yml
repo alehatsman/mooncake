@@ -1,0 +1,7 @@
+- name: Uninstall redis-cli (macOS)
+  shell: brew uninstall redis-cli
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "redis-cli uninstalled"

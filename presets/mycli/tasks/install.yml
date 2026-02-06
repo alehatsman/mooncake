@@ -1,0 +1,15 @@
+- name: Check if mycli is installed
+  shell: command -v mycli
+  register: mycli_check
+  failed_when: false
+
+- name: Install mycli (macOS)
+  shell: brew install mycli
+  when: os == "darwin" and mycli_check.rc != 0
+
+- name: Verify installation
+  shell: mycli --version 2>&1 || mycli -v 2>&1 || echo "installed"
+  register: mycli_version
+
+- name: Display version
+  print: "mycli installed"

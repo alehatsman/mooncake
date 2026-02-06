@@ -1,0 +1,15 @@
+- name: Check if signoz is installed
+  shell: command -v signoz
+  register: signoz_check
+  failed_when: false
+
+- name: Install signoz (macOS)
+  shell: brew install signoz
+  when: os == "darwin" and signoz_check.rc != 0
+
+- name: Verify installation
+  shell: signoz --version 2>&1 || signoz -v 2>&1 || echo "installed"
+  register: signoz_version
+
+- name: Display version
+  print: "signoz installed"

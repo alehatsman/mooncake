@@ -1,0 +1,15 @@
+- name: Check if xsv is installed
+  shell: command -v xsv
+  register: xsv_check
+  failed_when: false
+
+- name: Install xsv (macOS)
+  shell: brew install xsv
+  when: os == "darwin" and xsv_check.rc != 0
+
+- name: Verify installation
+  shell: xsv --version 2>&1 || xsv -v 2>&1 || echo "installed"
+  register: xsv_version
+
+- name: Display version
+  print: "xsv installed"

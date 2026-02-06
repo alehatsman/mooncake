@@ -1,0 +1,7 @@
+- name: Uninstall vegeta (macOS)
+  shell: brew uninstall vegeta
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "vegeta uninstalled"

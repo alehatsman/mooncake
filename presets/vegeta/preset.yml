@@ -1,0 +1,16 @@
+name: vegeta
+description: HTTP load testing tool and library
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install vegeta
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall vegeta
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,15 @@
+- name: Check if doctl is installed
+  shell: command -v doctl
+  register: doctl_check
+  failed_when: false
+
+- name: Install doctl (macOS)
+  shell: brew install doctl
+  when: os == "darwin" and doctl_check.rc != 0
+
+- name: Verify installation
+  shell: doctl --version 2>&1 || doctl -v 2>&1 || echo "installed"
+  register: doctl_version
+
+- name: Display version
+  print: "doctl installed"

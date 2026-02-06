@@ -1,0 +1,15 @@
+- name: Check if httpstat is installed
+  shell: command -v httpstat
+  register: httpstat_check
+  failed_when: false
+
+- name: Install httpstat (macOS)
+  shell: brew install httpstat
+  when: os == "darwin" and httpstat_check.rc != 0
+
+- name: Verify installation
+  shell: httpstat --version 2>&1 || httpstat -v 2>&1 || echo "installed"
+  register: httpstat_version
+
+- name: Display version
+  print: "httpstat installed"

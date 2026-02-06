@@ -1,0 +1,7 @@
+- name: Uninstall helm (macOS)
+  shell: brew uninstall helm
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "helm uninstalled"

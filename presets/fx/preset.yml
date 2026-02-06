@@ -1,0 +1,16 @@
+name: fx
+description: Terminal JSON viewer with interactive exploration
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install fx
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall fx
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

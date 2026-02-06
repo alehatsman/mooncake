@@ -1,0 +1,16 @@
+name: pgcli
+description: PostgreSQL CLI with autocomplete
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install pgcli
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall pgcli
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

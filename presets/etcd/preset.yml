@@ -1,0 +1,50 @@
+name: etcd
+description: Install etcd - distributed reliable key-value store
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall etcd
+
+  version:
+    type: string
+    required: false
+    default: latest
+    description: etcd version to install
+
+  data_dir:
+    type: string
+    required: false
+    default: /var/lib/etcd
+    description: Data directory for etcd
+
+  client_port:
+    type: string
+    required: false
+    default: "2379"
+    description: Client communication port
+
+  peer_port:
+    type: string
+    required: false
+    default: "2380"
+    description: Peer communication port
+
+  start_service:
+    type: bool
+    required: false
+    default: false
+    description: Start etcd service after installation
+
+steps:
+  - name: Install etcd
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall etcd
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

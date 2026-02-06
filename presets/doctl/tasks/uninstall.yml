@@ -1,0 +1,7 @@
+- name: Uninstall doctl (macOS)
+  shell: brew uninstall doctl
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "doctl uninstalled"

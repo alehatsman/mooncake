@@ -1,0 +1,16 @@
+name: hcloud
+description: Hetzner Cloud CLI
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install hcloud
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall hcloud
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

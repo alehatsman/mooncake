@@ -1,0 +1,16 @@
+name: httpstat
+description: Visualize curl statistics in a beautiful way
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install httpstat
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall httpstat
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

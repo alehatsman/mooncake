@@ -1,0 +1,156 @@
+# k9s Installation Tasks
+
+- name: Check if k9s is already installed
+  shell: command -v k9s
+  register: k9s_check
+  failed_when: false
+
+# macOS Installation
+- name: Install k9s via Homebrew (macOS)
+  shell: brew install derailed/k9s/k9s
+  when: os == "darwin" and k9s_check.rc != 0
+
+# Linux Installation
+- name: Download and install k9s (Linux)
+  shell: |
+    K9S_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | grep tag_name | cut -d '"' -f 4)
+    wget "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" -O /tmp/k9s.tar.gz
+    tar -xzf /tmp/k9s.tar.gz -C /tmp/
+    sudo mv /tmp/k9s /usr/local/bin/
+    sudo chmod +x /usr/local/bin/k9s
+    rm /tmp/k9s.tar.gz /tmp/README.md /tmp/LICENSE
+  when: os == "linux" and k9s_check.rc != 0
+
+# Verify installation
+- name: Verify k9s installation
+  shell: k9s version
+  register: k9s_version
+
+- name: Display k9s version
+  print: "k9s installed: {{ k9s_version.stdout }}"
+
+# Check for kubectl
+- name: Check if kubectl is installed
+  shell: command -v kubectl
+  register: kubectl_check
+  failed_when: false
+
+# Create config directory
+- name: Create k9s config directory
+  file:
+    path: ~/.config/k9s
+    state: directory
+    mode: "0755"
+  when: parameters.create_config
+
+# Create default configuration
+- name: Create k9s configuration
+  file:
+    path: ~/.config/k9s/config.yaml
+    content: |
+      k9s:
+        # Refresh rate (milliseconds)
+        refreshRate: 2000
+        # Max number of log lines
+        maxConnRetry: 5
+        # Enable mouse support
+        enableMouse: false
+        # Header color
+        headless: false
+        # Logo
+        logoless: false
+        # Crumbsless
+        crumbsless: false
+        # Read only mode
+        readOnly: false
+        # No exit on Ctrl-c
+        noExitOnCtrlC: false
+        # UI settings
+        ui:
+          enableMouse: true
+          headless: false
+          logoless: false
+          crumbsless: false
+          noIcons: false
+        # Skip latest revision check
+        skipLatestRevCheck: false
+        # Disable pod metrics
+        disablePodCounting: false
+        # Shell pod command
+        shellPod:
+          image: busybox:1.35.0
+          namespace: default
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        # Image scan
+        imageScans:
+          enable: false
+        # Logger settings
+        logger:
+          tail: 100
+          buffer: 5000
+          sinceSeconds: -1
+          fullScreenLogs: false
+          textWrap: false
+          showTime: false
+        # Thresholds
+        thresholds:
+          cpu:
+            critical: 90
+            warn: 70
+          memory:
+            critical: 90
+            warn: 70
+    mode: "0644"
+  when: parameters.create_config
+
+- name: Display k9s usage
+  print: |
+    k9s installed successfully!
+
+    {% if kubectl_check.rc != 0 %}
+    WARNING: kubectl is not installed. Install kubectl first:
+      - preset: k8s-tools
+    {% endif %}
+
+    Launch k9s:
+      k9s                    # Default context
+      k9s -n namespace       # Specific namespace
+      k9s --context prod     # Specific context
+      k9s --readonly         # Read-only mode
+
+    Key bindings:
+      ?           - Help
+      :           - Command mode
+      /           - Filter mode
+      Ctrl-A      - Show all resources
+      Ctrl-S      - Save screenshot
+      Ctrl-W      - Toggle wide columns
+      Ctrl-Z      - Toggle error
+      Ctrl-C      - Quit
+
+    Navigation:
+      :pod        - View pods
+      :svc        - View services
+      :deploy     - View deployments
+      :ns         - View namespaces
+      :no         - View nodes
+      :pv         - View persistent volumes
+      :pvc        - View persistent volume claims
+      :cm         - View config maps
+      :sec        - View secrets
+
+    Actions (select resource first):
+      d           - Describe
+      y           - YAML
+      e           - Edit
+      l           - Logs
+      s           - Shell
+      f           - Port-forward
+      Ctrl-D      - Delete
+      Ctrl-K      - Kill
+
+    Configuration: ~/.config/k9s/config.yaml
+
+    More info: https://k9scli.io/

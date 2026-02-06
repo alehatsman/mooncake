@@ -5,23 +5,23 @@ version: "1.0.0"
 parameters:
   state:
     type: string
-    required: true
-    default: "present"
-    enum: ["present", "absent"]
-    description: "Whether to install or uninstall Consul"
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall Consul
 
   version:
     type: string
     required: false
-    default: "latest"
+    default: latest
     description: "Consul version to install (e.g., '1.17.0' or 'latest')"
 
   mode:
     type: string
     required: false
-    default: "server"
-    enum: ["server", "client", "dev"]
-    description: "Consul mode: server, client, or dev"
+    default: server
+    enum: [server, client, dev]
+    description: Consul mode - server, client, or dev
 
   bootstrap_expect:
     type: string
@@ -67,9 +67,9 @@ parameters:
 
 steps:
   - name: Install Consul
-    include_vars: tasks/install.yml
+    include: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall Consul
-    include_vars: tasks/uninstall.yml
+    include: tasks/uninstall.yml
     when: parameters.state == "absent"

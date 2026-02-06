@@ -1,0 +1,7 @@
+- name: Uninstall hcloud (macOS)
+  shell: brew uninstall hcloud
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "hcloud uninstalled"

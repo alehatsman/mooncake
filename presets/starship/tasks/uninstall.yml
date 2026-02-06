@@ -1,0 +1,43 @@
+# Starship Uninstallation Tasks
+
+- name: Remove Starship from bash config
+  shell: |
+    if [ -f ~/.bashrc ]; then
+      sed -i.bak '/starship init bash/d' ~/.bashrc
+    fi
+  failed_when: false
+
+- name: Remove Starship from zsh config
+  shell: |
+    if [ -f ~/.zshrc ]; then
+      sed -i.bak '/starship init zsh/d' ~/.zshrc
+    fi
+  failed_when: false
+
+- name: Remove Starship from fish config
+  shell: |
+    if [ -f ~/.config/fish/config.fish ]; then
+      sed -i.bak '/starship init fish/d' ~/.config/fish/config.fish
+    fi
+  failed_when: false
+
+- name: Uninstall Starship (macOS)
+  shell: brew uninstall starship
+  when: os == "darwin"
+  failed_when: false
+
+- name: Remove Starship binary (Linux)
+  file:
+    path: /usr/local/bin/starship
+    state: absent
+  become: true
+  when: os == "linux"
+
+- name: Display uninstall confirmation
+  print: |
+    Starship uninstalled.
+
+    Note: Configuration preserved at ~/.config/starship.toml
+    To remove config: rm ~/.config/starship.toml
+
+    Restart your shell for changes to take effect.

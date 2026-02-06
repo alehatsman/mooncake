@@ -1,0 +1,7 @@
+- name: Uninstall az (macOS)
+  shell: brew uninstall az
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "az uninstalled"

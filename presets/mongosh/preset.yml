@@ -1,0 +1,16 @@
+name: mongosh
+description: MongoDB Shell
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install mongosh
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall mongosh
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

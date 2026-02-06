@@ -1,0 +1,16 @@
+name: victoriametrics  
+description: Time-series database and monitoring
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install victoriametrics
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall victoriametrics
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,7 @@
+- name: Uninstall syft (macOS)
+  shell: brew uninstall syft
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "syft uninstalled"

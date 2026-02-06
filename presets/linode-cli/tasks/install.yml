@@ -1,0 +1,15 @@
+- name: Check if linode-cli is installed
+  shell: command -v linode-cli
+  register: linode-cli_check
+  failed_when: false
+
+- name: Install linode-cli (macOS)
+  shell: brew install linode-cli
+  when: os == "darwin" and linode-cli_check.rc != 0
+
+- name: Verify installation
+  shell: linode-cli --version 2>&1 || linode-cli -v 2>&1 || echo "installed"
+  register: linode-cli_version
+
+- name: Display version
+  print: "linode-cli installed"

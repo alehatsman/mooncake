@@ -5,10 +5,10 @@ version: "1.0.0"
 parameters:
   state:
     type: string
-    required: true
-    default: "present"
-    enum: ["present", "absent"]
-    description: "Whether to install or uninstall delta"
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall delta
 
   configure_git:
     type: bool
@@ -36,9 +36,9 @@ parameters:
 
 steps:
   - name: Install delta
-    include_vars: tasks/install.yml
+    include: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall delta
-    include_vars: tasks/uninstall.yml
+    include: tasks/uninstall.yml
     when: parameters.state == "absent"

@@ -1,0 +1,20 @@
+# k9s Uninstallation Tasks
+
+- name: Uninstall k9s (macOS)
+  shell: brew uninstall derailed/k9s/k9s
+  when: os == "darwin"
+  failed_when: false
+
+- name: Remove k9s binary (Linux)
+  file:
+    path: /usr/local/bin/k9s
+    state: absent
+  become: true
+  when: os == "linux"
+
+- name: Display uninstall confirmation
+  print: |
+    k9s uninstalled.
+
+    Note: Configuration preserved at ~/.config/k9s/
+    To remove config: rm -rf ~/.config/k9s

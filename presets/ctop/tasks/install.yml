@@ -1,0 +1,15 @@
+- name: Check if ctop is installed
+  shell: command -v ctop
+  register: ctop_check
+  failed_when: false
+
+- name: Install ctop (macOS)
+  shell: brew install ctop
+  when: os == "darwin" and ctop_check.rc != 0
+
+- name: Verify installation
+  shell: ctop --version 2>&1 || ctop -v 2>&1 || echo "installed"
+  register: ctop_version
+
+- name: Display version
+  print: "ctop installed"

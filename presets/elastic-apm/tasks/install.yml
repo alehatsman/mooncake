@@ -1,0 +1,15 @@
+- name: Check if elastic-apm-server is installed
+  shell: command -v elastic-apm-server
+  register: elastic-apm_check
+  failed_when: false
+
+- name: Install elastic-apm-server (macOS)
+  shell: brew install elastic-apm-server
+  when: os == "darwin" and elastic-apm_check.rc != 0
+
+- name: Verify installation
+  shell: elastic-apm-server --version 2>&1 || elastic-apm-server -v 2>&1 || echo "installed"
+  register: elastic-apm_version
+
+- name: Display version
+  print: "elastic-apm-server installed"

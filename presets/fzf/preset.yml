@@ -5,10 +5,10 @@ version: "1.0.0"
 parameters:
   state:
     type: string
-    required: true
-    default: "present"
-    enum: ["present", "absent"]
-    description: "Whether to install or uninstall fzf"
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall fzf
 
   install_shell_extensions:
     type: bool
@@ -24,9 +24,9 @@ parameters:
 
 steps:
   - name: Install fzf
-    include_vars: tasks/install.yml
+    include: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall fzf
-    include_vars: tasks/uninstall.yml
+    include: tasks/uninstall.yml
     when: parameters.state == "absent"

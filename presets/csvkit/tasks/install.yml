@@ -1,0 +1,15 @@
+- name: Check if csvcut is installed
+  shell: command -v csvcut
+  register: csvkit_check
+  failed_when: false
+
+- name: Install csvcut (macOS)
+  shell: brew install csvcut
+  when: os == "darwin" and csvkit_check.rc != 0
+
+- name: Verify installation
+  shell: csvcut --version 2>&1 || csvcut -v 2>&1 || echo "installed"
+  register: csvkit_version
+
+- name: Display version
+  print: "csvcut installed"

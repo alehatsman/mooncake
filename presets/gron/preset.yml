@@ -1,0 +1,16 @@
+name: gron
+description: Make JSON greppable - transform JSON into discrete assignments
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install gron
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall gron
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

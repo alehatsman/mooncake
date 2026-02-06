@@ -1,0 +1,133 @@
+# Starship Installation Tasks
+
+- name: Check if Starship is already installed
+  shell: command -v starship
+  register: starship_check
+  failed_when: false
+
+# macOS Installation
+- name: Install Starship via Homebrew (macOS)
+  shell: brew install starship
+  when: os == "darwin" and starship_check.rc != 0
+
+# Linux Installation
+- name: Install Starship via script (Linux)
+  shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
+  when: os == "linux" and starship_check.rc != 0
+
+# Verify installation
+- name: Verify Starship installation
+  shell: starship --version
+  register: starship_version
+
+- name: Display Starship version
+  print: "Starship installed: {{ starship_version.stdout }}"
+
+# Create config directory
+- name: Create Starship config directory
+  file:
+    path: ~/.config
+    state: directory
+    mode: "0755"
+
+# Apply preset if not default
+- name: Apply Starship preset
+  shell: starship preset {{ parameters.preset }} > ~/.config/starship.toml
+  when: parameters.preset != "default"
+
+# Configure bash
+- name: Configure bash to use Starship
+  shell: |
+    if ! grep -q 'eval "$(starship init bash)"' ~/.bashrc 2>/dev/null; then
+      echo 'eval "$(starship init bash)"' >> ~/.bashrc
+    fi
+  when: parameters.configure_shell
+
+# Configure zsh
+- name: Configure zsh to use Starship
+  shell: |
+    if ! grep -q 'eval "$(starship init zsh)"' ~/.zshrc 2>/dev/null; then
+      echo 'eval "$(starship init zsh)"' >> ~/.zshrc
+    fi
+  when: parameters.configure_shell
+  failed_when: false
+
+# Configure fish
+- name: Configure fish to use Starship
+  shell: |
+    mkdir -p ~/.config/fish
+    if ! grep -q 'starship init fish' ~/.config/fish/config.fish 2>/dev/null; then
+      echo 'starship init fish | source' >> ~/.config/fish/config.fish
+    fi
+  when: parameters.configure_shell
+  failed_when: false
+
+- name: Display Starship usage
+  print: |
+    Starship installed successfully!
+
+    {% if parameters.configure_shell %}
+    Shell configured! Restart your shell or run:
+      # Bash
+      source ~/.bashrc
+
+      # Zsh
+      source ~/.zshrc
+
+      # Fish
+      source ~/.config/fish/config.fish
+    {% else %}
+    To enable Starship, add to your shell config:
+
+      # Bash (~/.bashrc)
+      eval "$(starship init bash)"
+
+      # Zsh (~/.zshrc)
+      eval "$(starship init zsh)"
+
+      # Fish (~/.config/fish/config.fish)
+      starship init fish | source
+    {% endif %}
+
+    Configuration: ~/.config/starship.toml
+    {% if parameters.preset != "default" %}
+    Preset applied: {{ parameters.preset }}
+    {% endif %}
+
+    Available presets:
+      starship preset nerd-font-symbols
+      starship preset bracketed-segments
+      starship preset plain-text-symbols
+      starship preset no-runtime-versions
+      starship preset pure-preset
+      starship preset pastel-powerline
+
+    Customize your prompt:
+      # Edit config
+      nano ~/.config/starship.toml
+
+      # Test config
+      starship config
+
+      # Print config
+      starship print-config
+
+    Example customizations:
+      # Minimal prompt
+      [line_break]
+      disabled = true
+
+      # Change prompt character
+      [character]
+      success_symbol = "[➜](bold green)"
+      error_symbol = "[✗](bold red)"
+
+      # Show command duration
+      [cmd_duration]
+      min_time = 500
+
+      # Git branch in blue
+      [git_branch]
+      style = "bold blue"
+
+    More info: https://starship.rs/

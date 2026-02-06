@@ -1,0 +1,26 @@
+name: k9s
+description: Install k9s - Kubernetes TUI for managing clusters
+version: "1.0.0"
+
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+    description: Whether to install or uninstall k9s
+
+  create_config:
+    type: bool
+    required: false
+    default: false
+    description: Create default configuration file
+
+steps:
+  - name: Install k9s
+    include: tasks/install.yml
+    when: parameters.state == "present"
+
+  - name: Uninstall k9s
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

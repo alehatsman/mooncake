@@ -1,0 +1,7 @@
+- name: Uninstall mycli (macOS)
+  shell: brew uninstall mycli
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "mycli uninstalled"

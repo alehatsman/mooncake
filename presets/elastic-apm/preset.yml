@@ -1,0 +1,16 @@
+name: elastic-apm  
+description: Elastic APM Server
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install elastic-apm
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall elastic-apm
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

@@ -1,0 +1,16 @@
+name: skopeo
+description: Work with container images and registries
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install skopeo
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall skopeo
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"

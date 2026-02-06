@@ -1,0 +1,7 @@
+- name: Uninstall crane (macOS)
+  shell: brew uninstall crane
+  when: os == "darwin"
+  failed_when: false
+
+- name: Display confirmation
+  print: "crane uninstalled"

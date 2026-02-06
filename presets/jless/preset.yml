@@ -1,0 +1,16 @@
+name: jless
+description: Command-line JSON viewer with collapsing and search
+version: "1.0.0"
+parameters:
+  state:
+    type: string
+    required: false
+    default: present
+    enum: [present, absent]
+steps:
+  - name: Install jless
+    include: tasks/install.yml
+    when: parameters.state == "present"
+  - name: Uninstall jless
+    include: tasks/uninstall.yml
+    when: parameters.state == "absent"
