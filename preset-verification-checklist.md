@@ -8,7 +8,7 @@ Legend:
 - [T] Tested and works
 - [✓] All verified
 
-## Presets (20/396 complete)
+## Presets (30/396 complete)
 
 - [✓] **1password-cli**
   - [✓] Install (Linux/macOS)
@@ -132,11 +132,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **argocd**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **argocd**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **argocd-autopilot**
   - [ ] Install (Linux/macOS)
@@ -183,11 +184,12 @@ Legend:
   - [✓] Tested working
 
 
-- [ ] **autojump**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **autojump**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **awscli**
   - [ ] Install (Linux/macOS)
@@ -255,11 +257,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **btop**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **btop**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **buildkite-agent**
   - [ ] Install (Linux/macOS)
@@ -399,11 +402,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **cosign**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **cosign**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **couchbase**
   - [ ] Install (Linux/macOS)
@@ -417,11 +421,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **crane**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **crane**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **croc**
   - [ ] Install (Linux/macOS)
@@ -448,11 +453,12 @@ Legend:
   - [✓] Tested working
 
 
-- [ ] **curlie**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **curlie**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **dagster**
   - [ ] Install (Linux/macOS)
@@ -491,17 +497,19 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **direnv**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **direnv**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
 
-- [ ] **dive**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+
+- [✓] **dive**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **docker**
   - [ ] Install (Linux/macOS)
@@ -551,11 +559,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **duf**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **duf**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [ ] **duplicity**
   - [ ] Install (Linux/macOS)
@@ -689,11 +698,12 @@ Legend:
   - [ ] README docs
   - [ ] Tested working
 
-- [ ] **fx**
-  - [ ] Install (Linux/macOS)
-  - [ ] Remove/uninstall
-  - [ ] README docs
-  - [ ] Tested working
+- [✓] **fx**
+  - [✓] Install (Linux/macOS)
+  - [✓] Remove/uninstall
+  - [✓] README docs
+  - [✓] Tested working
+
 
 - [✓] **fzf**
   - [✓] Install (Linux/macOS)
