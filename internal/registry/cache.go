@@ -32,7 +32,7 @@ func UserPresetsDir() (string, error) {
 // It copies (or symlinks on Unix) the preset files to make them available for use.
 func InstallToUserDir(name string, cacheDir string, userDir string) error {
 	// Ensure user presets directory exists
-	if err := os.MkdirAll(userDir, 0755); err != nil {
+	if err := os.MkdirAll(userDir, 0750); err != nil {
 		return fmt.Errorf("failed to create user presets directory: %w", err)
 	}
 
@@ -119,8 +119,8 @@ func copyDir(src, dst string) error {
 	}
 
 	// Create destination directory
-	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
-		return err
+	if mkdirErr := os.MkdirAll(dst, srcInfo.Mode()); mkdirErr != nil {
+		return mkdirErr
 	}
 
 	// Read source directory

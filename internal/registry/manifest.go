@@ -33,7 +33,7 @@ func LoadManifest(cacheDir string) (*Manifest, error) {
 	manifestPath := filepath.Join(cacheDir, "manifest.json")
 
 	// Create cache directory if it doesn't exist
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0750); err != nil { // #nosec G301 -- cache directory needs group read for shared systems
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -67,7 +67,7 @@ func (m *Manifest) Save() error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(m.path, data, 0644); err != nil { // #nosec G306 -- manifest is not sensitive
+	if err := os.WriteFile(m.path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
@@ -110,7 +110,11 @@ func CalculateSHA256(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		// Explicitly ignore close error for read-only file descriptor
+		// Error is not actionable in deferred cleanup
+		_ = file.Close()
+	}()
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {

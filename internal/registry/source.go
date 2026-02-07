@@ -40,7 +40,7 @@ func DetectSourceType(source string) SourceType {
 // Returns the path to the cached preset directory.
 func FetchSource(source string, sourceType SourceType, cacheDir string, sha256hash string) (string, error) {
 	targetDir := filepath.Join(cacheDir, sha256hash)
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := os.MkdirAll(targetDir, 0750); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -63,7 +63,11 @@ func fetchFromURL(url string, targetDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to download from URL: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Explicitly ignore close error for response body
+		// Error is not actionable in deferred cleanup
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to download: HTTP %d", resp.StatusCode)
@@ -82,7 +86,11 @@ func fetchFromURL(url string, targetDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create target file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() {
+		// Explicitly ignore close error for write-only file descriptor
+		// Error is not actionable in deferred cleanup
+		_ = outFile.Close()
+	}()
 
 	// Copy content
 	if _, err := io.Copy(outFile, resp.Body); err != nil {
@@ -93,7 +101,7 @@ func fetchFromURL(url string, targetDir string) (string, error) {
 }
 
 // fetchFromGit clones a git repository (currently a stub - requires git executable).
-func fetchFromGit(gitURL string, targetDir string) (string, error) {
+func fetchFromGit(_ string, _ string) (string, error) {
 	// TODO: Implement git clone functionality
 	// For v1, this can shell out to git command
 	// Example: git clone --depth 1 <gitURL> <targetDir>
@@ -128,7 +136,7 @@ func fetchFromPath(source string, targetDir string) (string, error) {
 		return "", fmt.Errorf("failed to read source file: %w", err)
 	}
 
-	if err := os.WriteFile(targetPath, data, 0644); err != nil { // #nosec G306 -- preset files are not sensitive
+	if err := os.WriteFile(targetPath, data, 0600); err != nil {
 		return "", fmt.Errorf("failed to write target file: %w", err)
 	}
 
@@ -148,7 +156,7 @@ func copyDirContents(src, dst string) error {
 
 		if entry.IsDir() {
 			// Create subdirectory
-			if err := os.MkdirAll(dstPath, 0755); err != nil {
+			if err := os.MkdirAll(dstPath, 0750); err != nil {
 				return fmt.Errorf("failed to create subdirectory: %w", err)
 			}
 			// Recursively copy contents
@@ -161,7 +169,7 @@ func copyDirContents(src, dst string) error {
 			if err != nil {
 				return fmt.Errorf("failed to read file: %w", err)
 			}
-			if err := os.WriteFile(dstPath, data, 0644); err != nil { // #nosec G306 -- preset files are not sensitive
+			if err := os.WriteFile(dstPath, data, 0600); err != nil {
 				return fmt.Errorf("failed to write file: %w", err)
 			}
 		}
