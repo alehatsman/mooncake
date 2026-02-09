@@ -500,6 +500,7 @@ func createApp() *cli.App {
 		Commands: []*cli.Command{
 			presetsCommand(),
 			docsCommand(),
+			schemaCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",

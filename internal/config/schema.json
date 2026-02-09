@@ -8,39 +8,719 @@
     "$ref": "#/definitions/step"
   },
   "definitions": {
+    "assert": {
+      "type": "object",
+      "description": "Verify conditions without changing system state",
+      "properties": {
+        "command": {
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string"
+            },
+            "exit_code": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "cmd"
+          ],
+          "additionalProperties": false
+        },
+        "file": {
+          "type": "object",
+          "properties": {
+            "contains": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "exists": {
+              "type": "boolean"
+            },
+            "group": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string",
+              "pattern": "^[0-7]{3,4}$"
+            },
+            "owner": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        "http": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "string"
+            },
+            "body_equals": {
+              "type": "string"
+            },
+            "contains": {
+              "type": "string"
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "jsonpath": {
+              "type": "string"
+            },
+            "jsonpath_value": {},
+            "method": {
+              "type": "string"
+            },
+            "status": {
+              "type": "integer"
+            },
+            "timeout": {
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "command": {
+      "type": "object",
+      "description": "Execute commands directly without shell interpolation",
+      "properties": {
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "capture": {
+          "type": "boolean"
+        },
+        "stdin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "argv"
+      ],
+      "additionalProperties": false,
+      "x-category": "command",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0"
+    },
+    "command_action": {
+      "type": "object",
+      "description": "Execute commands directly without shell interpolation",
+      "properties": {
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "capture": {
+          "type": "boolean"
+        },
+        "stdin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "argv"
+      ],
+      "additionalProperties": false,
+      "x-category": "command",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0"
+    },
+    "copy": {
+      "type": "object",
+      "description": "Copy files with checksum verification and atomic writes",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "checksum": {
+          "type": "string"
+        },
+        "dest": {
+          "type": "string"
+        },
+        "force": {
+          "type": "boolean"
+        },
+        "group": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "src": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "src",
+        "dest"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.copied"
+      ]
+    },
+    "download": {
+      "type": "object",
+      "description": "Download files from URLs with checksum verification",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "checksum": {
+          "type": "string"
+        },
+        "dest": {
+          "type": "string"
+        },
+        "force": {
+          "type": "boolean"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "dest"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "network",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.downloaded"
+      ]
+    },
+    "file": {
+      "type": "object",
+      "description": "Manage files, directories, links, and permissions",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "content": {
+          "type": "string"
+        },
+        "force": {
+          "type": "boolean"
+        },
+        "group": {
+          "type": "string",
+          "description": "File group (groupname or GID)"
+        },
+        "mode": {
+          "type": "string",
+          "description": "File permissions (e.g., '0644', '0755')",
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "owner": {
+          "type": "string",
+          "description": "File owner (username or UID)"
+        },
+        "path": {
+          "type": "string",
+          "description": "File, directory, or symlink path (required)"
+        },
+        "recurse": {
+          "type": "boolean"
+        },
+        "src": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "description": "Desired file state (present: file exists, absent: removed, directory: dir exists, link: symlink, touch: update timestamp)",
+          "enum": [
+            "present",
+            "absent",
+            "directory",
+            "link",
+            "touch"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.created",
+        "file.updated",
+        "file.removed",
+        "directory.created",
+        "directory.removed",
+        "link.created",
+        "permissions.changed"
+      ]
+    },
+    "include_vars": {
+      "type": "string",
+      "description": "Load variables from a YAML file",
+      "additionalProperties": false,
+      "x-category": "data",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "variables.loaded"
+      ]
+    },
+    "package": {
+      "type": "object",
+      "description": "Manage system packages (install/remove/update)",
+      "properties": {
+        "extra": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "manager": {
+          "type": "string",
+          "description": "Package manager (auto-detected if empty: apt, dnf, yum, pacman, zypper, apk, brew, port, choco, scoop)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Package name (single package)"
+        },
+        "names": {
+          "type": "array",
+          "description": "Multiple packages to install/remove",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string",
+          "description": "Package state (present: installed, absent: removed, latest: install or upgrade)",
+          "enum": [
+            "present",
+            "absent",
+            "latest"
+          ]
+        },
+        "update_cache": {
+          "type": "boolean",
+          "description": "Update package cache before operation (e.g., apt-get update)"
+        },
+        "upgrade": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin",
+        "windows",
+        "freebsd"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "package.managed"
+      ]
+    },
+    "preset": {
+      "type": "object",
+      "description": "Execute a preset by expanding it into steps",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "with": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "print": {
+      "type": "object",
+      "description": "Display messages to the user",
+      "properties": {
+        "msg": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "output",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "print.message"
+      ]
+    },
+    "service": {
+      "type": "object",
+      "description": "Manage services across platforms (systemd, launchd, Windows)",
+      "properties": {
+        "daemon_reload": {
+          "type": "boolean",
+          "description": "Run 'systemctl daemon-reload' after unit file changes (systemd only)"
+        },
+        "dropin": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "src_template": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Service name (systemd: nginx, launchd: com.example.app)"
+        },
+        "state": {
+          "type": "string",
+          "description": "Desired service state",
+          "enum": [
+            "started",
+            "stopped",
+            "restarted",
+            "reloaded"
+          ]
+        },
+        "unit": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "dest": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string",
+              "pattern": "^[0-7]{3,4}$"
+            },
+            "src_template": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "shell": {
+      "type": "object",
+      "description": "Execute shell commands",
+      "properties": {
+        "capture": {
+          "type": "boolean",
+          "description": "Capture command output (default: true). When false, output is only streamed"
+        },
+        "cmd": {
+          "type": "string",
+          "description": "Shell command to execute (required)"
+        },
+        "interpreter": {
+          "type": "string",
+          "description": "Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh on Windows",
+          "enum": [
+            "bash",
+            "sh",
+            "pwsh",
+            "cmd"
+          ]
+        },
+        "stdin": {
+          "type": "string",
+          "description": "Input to provide to the command via stdin"
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "command",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "step.stdout",
+        "step.stderr"
+      ]
+    },
+    "shell_action": {
+      "type": "object",
+      "description": "Execute shell commands",
+      "properties": {
+        "capture": {
+          "type": "boolean",
+          "description": "Capture command output (default: true). When false, output is only streamed"
+        },
+        "cmd": {
+          "type": "string",
+          "description": "Shell command to execute (required)"
+        },
+        "interpreter": {
+          "type": "string",
+          "description": "Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh on Windows",
+          "enum": [
+            "bash",
+            "sh",
+            "pwsh",
+            "cmd"
+          ]
+        },
+        "stdin": {
+          "type": "string",
+          "description": "Input to provide to the command via stdin"
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "command",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "step.stdout",
+        "step.stderr"
+      ]
+    },
     "step": {
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name of the step (universal)"
-        },
-        "when": {
-          "type": "string",
-          "description": "Conditional expression for step execution (universal)"
-        },
-        "creates": {
-          "type": "string",
-          "description": "Skip step if this file path exists. Useful for idempotency (universal)"
-        },
-        "unless": {
-          "type": "string",
-          "description": "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)"
+        "assert": {
+          "description": "Verify conditions without changing system state",
+          "$ref": "#/definitions/assert"
         },
         "become": {
           "type": "boolean",
           "description": "Execute with sudo privileges. Works with: shell, command, file, template"
         },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Tags for filtering step execution (universal)"
+        "become_user": {
+          "type": "string",
+          "description": "⚠️ SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
+        },
+        "changed_when": {
+          "type": "string",
+          "description": "Expression to override changed result"
+        },
+        "command": {
+          "description": "Execute commands directly without shell interpolation",
+          "$ref": "#/definitions/command"
+        },
+        "copy": {
+          "description": "Copy files with checksum verification and atomic writes",
+          "$ref": "#/definitions/copy"
+        },
+        "creates": {
+          "type": "string",
+          "description": "Skip step if this file path exists. Useful for idempotency (universal)"
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory for the step"
+        },
+        "download": {
+          "description": "Download files from URLs with checksum verification",
+          "$ref": "#/definitions/download"
+        },
+        "env": {
+          "type": "object",
+          "description": "Environment variables for the step",
+          "additionalProperties": true
+        },
+        "failed_when": {
+          "type": "string",
+          "description": "Expression to override failure condition"
+        },
+        "file": {
+          "description": "Manage files, directories, links, and permissions",
+          "$ref": "#/definitions/file"
+        },
+        "include": {
+          "type": "string",
+          "description": "Path to YAML file with steps to include"
+        },
+        "include_vars": {
+          "description": "Load variables from YAML files",
+          "$ref": "#/definitions/include_vars"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the step (universal)"
+        },
+        "package": {
+          "description": "Manage system packages (install/remove/update)",
+          "$ref": "#/definitions/package"
+        },
+        "preset": {
+          "description": "Execute a preset by expanding it into steps",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "preset (simple string format)"
+            },
+            {
+              "description": "preset (structured object format)",
+              "$ref": "#/definitions/preset"
+            }
+          ]
+        },
+        "print": {
+          "description": "Display messages to the user",
+          "$ref": "#/definitions/print"
         },
         "register": {
           "type": "string",
           "description": "Variable name to store step execution result (universal)"
+        },
+        "retries": {
+          "type": "integer",
+          "description": "⚠️ SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "retry_delay": {
+          "type": "string",
+          "description": "⚠️ SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "service": {
+          "description": "Manage services across platforms (systemd, launchd, Windows)",
+          "$ref": "#/definitions/service"
+        },
+        "shell": {
+          "description": "Execute shell commands",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "shell (simple string format)"
+            },
+            {
+              "description": "shell (structured object format)",
+              "$ref": "#/definitions/shell"
+            }
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags for filtering step execution (universal)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "template": {
+          "description": "Render template files and write to destination",
+          "$ref": "#/definitions/template"
+        },
+        "timeout": {
+          "type": "string",
+          "description": "⚠️ SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "unarchive": {
+          "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
+          "$ref": "#/definitions/unarchive"
+        },
+        "unless": {
+          "type": "string",
+          "description": "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)"
+        },
+        "vars": {
+          "description": "Set variables for use in subsequent steps",
+          "$ref": "#/definitions/vars"
+        },
+        "when": {
+          "type": "string",
+          "description": "Conditional expression for step execution (universal)"
         },
         "with_filetree": {
           "type": "string",
@@ -49,825 +729,9 @@
         "with_items": {
           "type": "string",
           "description": "Variable expression for iterating over items (universal)"
-        },
-        "shell": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "Shell command to execute (simple string format)"
-            },
-            {
-              "$ref": "#/definitions/shell_action",
-              "description": "Shell command with structured options"
-            }
-          ],
-          "description": "Shell command to execute. Supports both simple string and structured object formats."
-        },
-        "command": {
-          "$ref": "#/definitions/command_action",
-          "description": "Direct command execution without shell (safer alternative to shell)"
-        },
-        "template": {
-          "$ref": "#/definitions/template"
-        },
-        "file": {
-          "$ref": "#/definitions/file"
-        },
-        "copy": {
-          "$ref": "#/definitions/copy"
-        },
-        "unarchive": {
-          "$ref": "#/definitions/unarchive"
-        },
-        "download": {
-          "$ref": "#/definitions/download"
-        },
-        "package": {
-          "$ref": "#/definitions/package"
-        },
-        "service": {
-          "$ref": "#/definitions/service"
-        },
-        "assert": {
-          "$ref": "#/definitions/assert"
-        },
-        "preset": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "Preset name (simple string format)"
-            },
-            {
-              "$ref": "#/definitions/preset",
-              "description": "Preset invocation with parameters"
-            }
-          ],
-          "description": "Invoke a preset with optional parameters"
-        },
-        "print": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "Message to print (simple string format)"
-            },
-            {
-              "$ref": "#/definitions/print",
-              "description": "Print action with message"
-            }
-          ],
-          "description": "Print a message (supports template variables)"
-        },
-        "include": {
-          "type": "string",
-          "description": "Path to YAML file with steps to include"
-        },
-        "include_vars": {
-          "type": "string",
-          "description": "Path to YAML file with variables to load"
-        },
-        "vars": {
-          "type": "object",
-          "description": "Inline variables to set",
-          "additionalProperties": true
-        },
-        "become_user": {
-          "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
-        },
-        "env": {
-          "type": "object",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Environment variables for shell command execution. Ignored for file/template/include.",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "cwd": {
-          "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Working directory for shell command execution. Ignored for file/template/include."
-        },
-        "timeout": {
-          "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
-        },
-        "retries": {
-          "type": "integer",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "minimum": 0,
-          "maximum": 100
-        },
-        "retry_delay": {
-          "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
-        },
-        "changed_when": {
-          "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Expression to override 'changed' status (e.g., 'result.rc == 0'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
-        },
-        "failed_when": {
-          "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Expression to override 'failed' status (e.g., 'result.rc != 0'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
         }
       },
-      "allOf": [
-        {
-          "if": {
-            "not": {
-              "anyOf": [
-                {
-                  "required": [
-                    "shell"
-                  ]
-                },
-                {
-                  "required": [
-                    "command"
-                  ]
-                }
-              ]
-            },
-            "anyOf": [
-              {
-                "required": [
-                  "become_user"
-                ]
-              },
-              {
-                "required": [
-                  "env"
-                ]
-              },
-              {
-                "required": [
-                  "cwd"
-                ]
-              },
-              {
-                "required": [
-                  "timeout"
-                ]
-              },
-              {
-                "required": [
-                  "retries"
-                ]
-              },
-              {
-                "required": [
-                  "retry_delay"
-                ]
-              },
-              {
-                "required": [
-                  "changed_when"
-                ]
-              },
-              {
-                "required": [
-                  "failed_when"
-                ]
-              }
-            ]
-          },
-          "then": {
-            "description": "Warning: Shell-specific fields (become_user, env, cwd, timeout, retries, retry_delay, changed_when, failed_when) are only supported for 'shell' actions and will be ignored for file/template/include operations."
-          }
-        }
-      ],
       "oneOf": [
-        {
-          "required": [
-            "shell"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "command"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "template"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "copy"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "unarchive"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "download"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "package"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
         {
           "required": [
             "service"
@@ -886,17 +750,17 @@
               },
               {
                 "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
                   "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
                 ]
               },
               {
@@ -906,12 +770,27 @@
               },
               {
                 "required": [
-                  "download"
+                  "vars"
                 ]
               },
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -923,10 +802,29 @@
                 "required": [
                   "print"
                 ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "shell"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
               },
               {
                 "required": [
-                  "include"
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
                 ]
               },
               {
@@ -936,7 +834,47 @@
               },
               {
                 "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               }
             ]
@@ -944,10 +882,89 @@
         },
         {
           "required": [
-            "include"
+            "command"
           ],
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "copy"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
               {
                 "required": [
                   "shell"
@@ -960,17 +977,12 @@
               },
               {
                 "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
                   "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
                 ]
               },
               {
@@ -980,17 +992,7 @@
               },
               {
                 "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "vars"
                 ]
               },
               {
@@ -1000,12 +1002,27 @@
               },
               {
                 "required": [
-                  "include_vars"
+                  "download"
                 ]
               },
               {
                 "required": [
-                  "vars"
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               }
             ]
@@ -1019,6 +1036,11 @@
             "anyOf": [
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "shell"
                 ]
               },
@@ -1029,17 +1051,12 @@
               },
               {
                 "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
                   "copy"
+                ]
+              },
+              {
+                "required": [
+                  "template"
                 ]
               },
               {
@@ -1049,22 +1066,27 @@
               },
               {
                 "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "vars"
                 ]
               },
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -1076,15 +1098,153 @@
                 "required": [
                   "print"
                 ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "template"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
               },
               {
                 "required": [
-                  "include"
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "unarchive"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               }
             ]
@@ -1098,6 +1258,11 @@
             "anyOf": [
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "shell"
                 ]
               },
@@ -1108,17 +1273,17 @@
               },
               {
                 "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
                   "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
                 ]
               },
               {
@@ -1128,22 +1293,22 @@
               },
               {
                 "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
                   "download"
                 ]
               },
               {
                 "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
                   "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
                 ]
               },
               {
@@ -1154,16 +1319,6 @@
               {
                 "required": [
                   "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
                 ]
               }
             ]
@@ -1177,6 +1332,11 @@
             "anyOf": [
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
                   "shell"
                 ]
               },
@@ -1187,17 +1347,17 @@
               },
               {
                 "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
                   "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
                 ]
               },
               {
@@ -1207,17 +1367,22 @@
               },
               {
                 "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
                   "download"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "file"
                 ]
               },
               {
                 "required": [
-                  "service"
+                  "package"
                 ]
               },
               {
@@ -1229,31 +1394,21 @@
                 "required": [
                   "print"
                 ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
               }
             ]
           }
         },
         {
           "required": [
-            "preset"
+            "download"
           ],
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
               {
                 "required": [
                   "shell"
@@ -1266,52 +1421,7 @@
               },
               {
                 "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
                   "copy"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "include"
                 ]
               },
               {
@@ -1321,41 +1431,7 @@
               },
               {
                 "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "print"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
                   "template"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
                 ]
               },
               {
@@ -1365,22 +1441,22 @@
               },
               {
                 "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "vars"
                 ]
               },
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
                 ]
               },
               {
@@ -1390,449 +1466,7 @@
               },
               {
                 "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "additionalProperties": false
-    },
-    "shell_action": {
-      "type": "object",
-      "required": [
-        "cmd"
-      ],
-      "properties": {
-        "cmd": {
-          "type": "string",
-          "description": "Shell command to execute"
-        },
-        "interpreter": {
-          "type": "string",
-          "enum": [
-            "bash",
-            "sh",
-            "pwsh",
-            "cmd"
-          ],
-          "description": "Shell interpreter to use (default: bash on Unix, pwsh on Windows)"
-        },
-        "stdin": {
-          "type": "string",
-          "description": "Input to pipe into the command"
-        },
-        "capture": {
-          "type": "boolean",
-          "description": "Whether to capture command output (default: true)"
-        }
-      },
-      "additionalProperties": false
-    },
-    "command_action": {
-      "type": "object",
-      "required": [
-        "argv"
-      ],
-      "properties": {
-        "argv": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "description": "Command and arguments as array (e.g., ['git', 'clone', 'url'])"
-        },
-        "stdin": {
-          "type": "string",
-          "description": "Input to pipe into the command"
-        },
-        "capture": {
-          "type": "boolean",
-          "description": "Whether to capture command output (default: true)"
-        }
-      },
-      "additionalProperties": false
-    },
-    "template": {
-      "type": "object",
-      "required": [
-        "src",
-        "dest"
-      ],
-      "properties": {
-        "src": {
-          "type": "string",
-          "description": "Source template file path"
-        },
-        "dest": {
-          "type": "string",
-          "description": "Destination file path for rendered template"
-        },
-        "vars": {
-          "type": "object",
-          "description": "Variables for template rendering",
-          "additionalProperties": true
-        },
-        "mode": {
-          "type": "string",
-          "pattern": "^0[0-7]{3}$",
-          "description": "File mode in octal format (e.g., 0644)"
-        }
-      },
-      "additionalProperties": false
-    },
-    "file": {
-      "type": "object",
-      "required": [
-        "path"
-      ],
-      "properties": {
-        "path": {
-          "type": "string",
-          "description": "File or directory path"
-        },
-        "state": {
-          "type": "string",
-          "enum": [
-            "file",
-            "directory",
-            "absent",
-            "link",
-            "hardlink",
-            "touch",
-            "perms"
-          ],
-          "description": "Desired state: file (create/update), directory (create), absent (remove), link (symlink), hardlink, touch (update timestamp), perms (change permissions only)"
-        },
-        "content": {
-          "type": "string",
-          "description": "Content to write to the file (for state: file)"
-        },
-        "mode": {
-          "type": "string",
-          "pattern": "^0[0-7]{3}$",
-          "description": "File mode in octal format (e.g., 0644)"
-        },
-        "owner": {
-          "type": "string",
-          "description": "File owner username or UID"
-        },
-        "group": {
-          "type": "string",
-          "description": "File group name or GID"
-        },
-        "src": {
-          "type": "string",
-          "description": "Source path for link/hardlink operations"
-        },
-        "force": {
-          "type": "boolean",
-          "description": "Force overwrite existing files or remove non-empty directories"
-        },
-        "recurse": {
-          "type": "boolean",
-          "description": "Apply permissions recursively for directories (with state: perms)"
-        },
-        "backup": {
-          "type": "boolean",
-          "description": "Create .bak backup before overwriting files"
-        }
-      },
-      "additionalProperties": false
-    },
-    "copy": {
-      "type": "object",
-      "required": [
-        "src",
-        "dest"
-      ],
-      "properties": {
-        "src": {
-          "type": "string",
-          "description": "Source file path"
-        },
-        "dest": {
-          "type": "string",
-          "description": "Destination file path"
-        },
-        "mode": {
-          "type": "string",
-          "pattern": "^0[0-7]{3}$",
-          "description": "File mode in octal format (e.g., 0644)"
-        },
-        "owner": {
-          "type": "string",
-          "description": "File owner username or UID"
-        },
-        "group": {
-          "type": "string",
-          "description": "File group name or GID"
-        },
-        "backup": {
-          "type": "boolean",
-          "description": "Create .bak backup before overwriting"
-        },
-        "force": {
-          "type": "boolean",
-          "description": "Force overwrite if destination exists"
-        },
-        "checksum": {
-          "type": "string",
-          "description": "Expected SHA256 or MD5 checksum for verification"
-        }
-      },
-      "additionalProperties": false
-    },
-    "unarchive": {
-      "type": "object",
-      "required": [
-        "src",
-        "dest"
-      ],
-      "properties": {
-        "src": {
-          "type": "string",
-          "description": "Source archive path (.tar.gz, .zip, etc.)"
-        },
-        "dest": {
-          "type": "string",
-          "description": "Destination directory for extraction"
-        },
-        "strip_components": {
-          "type": "integer",
-          "description": "Number of leading path components to strip during extraction",
-          "minimum": 0
-        },
-        "creates": {
-          "type": "string",
-          "description": "Skip extraction if this path exists (idempotency marker)"
-        },
-        "mode": {
-          "type": "string",
-          "pattern": "^0[0-7]{3}$",
-          "description": "Directory mode in octal format (e.g., 0755)"
-        }
-      },
-      "additionalProperties": false
-    },
-    "download": {
-      "type": "object",
-      "required": [
-        "url",
-        "dest"
-      ],
-      "properties": {
-        "url": {
-          "type": "string",
-          "description": "Remote URL to download from"
-        },
-        "dest": {
-          "type": "string",
-          "description": "Destination file path"
-        },
-        "checksum": {
-          "type": "string",
-          "description": "Expected SHA256 (64 chars) or MD5 (32 chars) checksum for verification and idempotency"
-        },
-        "mode": {
-          "type": "string",
-          "pattern": "^0[0-7]{3}$",
-          "description": "File mode in octal format (e.g., 0644)"
-        },
-        "timeout": {
-          "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
-          "description": "Maximum download time (e.g., '30s', '5m', '1h')"
-        },
-        "force": {
-          "type": "boolean",
-          "description": "Force re-download even if destination exists"
-        },
-        "backup": {
-          "type": "boolean",
-          "description": "Create .bak backup before overwriting"
-        },
-        "headers": {
-          "type": "object",
-          "description": "Custom HTTP headers (e.g., Authorization, User-Agent)",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "retries": {
-          "type": "integer",
-          "description": "Number of retry attempts on download failure",
-          "minimum": 0,
-          "maximum": 100
-        }
-      },
-      "additionalProperties": false
-    },
-    "package": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Package name (single package)"
-        },
-        "names": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Multiple packages to install/remove"
-        },
-        "state": {
-          "type": "string",
-          "enum": [
-            "present",
-            "absent",
-            "latest"
-          ],
-          "default": "present",
-          "description": "Desired package state: present (install), absent (remove), latest (install/upgrade to latest)"
-        },
-        "manager": {
-          "type": "string",
-          "description": "Package manager to use (auto-detected if empty: apt, dnf, yum, pacman, zypper, apk, brew, port, choco, scoop)"
-        },
-        "update_cache": {
-          "type": "boolean",
-          "description": "Update package cache before operation (apt update, dnf check-update, etc.)"
-        },
-        "allow_downgrade": {
-          "type": "boolean",
-          "description": "Allow package downgrade (dnf/yum only)"
-        }
-      },
-      "oneOf": [
-        {
-          "required": [
-            "name"
-          ],
-          "not": {
-            "required": [
-              "names"
-            ]
-          }
-        },
-        {
-          "required": [
-            "names"
-          ],
-          "not": {
-            "required": [
-              "name"
-            ]
-          }
-        }
-      ],
-      "additionalProperties": false
-    },
-    "service": {
-      "type": "object",
-      "required": [
-        "name"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Service name (systemd: nginx, launchd: com.example.app)"
-        },
-        "state": {
-          "type": "string",
-          "enum": [
-            "started",
-            "stopped",
-            "restarted",
-            "reloaded"
-          ],
-          "description": "Desired service state"
-        },
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)"
-        },
-        "daemon_reload": {
-          "type": "boolean",
-          "description": "Run 'systemctl daemon-reload' after unit file changes (systemd only)"
-        },
-        "unit": {
-          "type": "object",
-          "properties": {
-            "dest": {
-              "type": "string",
-              "description": "Destination path for unit/plist file (default: /etc/systemd/system/<name>.service or ~/Library/LaunchAgents/<name>.plist)"
-            },
-            "content": {
-              "type": "string",
-              "description": "Inline unit/plist file content (supports templates)"
-            },
-            "src_template": {
-              "type": "string",
-              "description": "Path to unit/plist template file"
-            },
-            "mode": {
-              "type": "string",
-              "pattern": "^[0-7]{3,4}$",
-              "description": "File permissions (e.g., '0644')"
-            }
-          },
-          "additionalProperties": false
-        },
-        "dropin": {
-          "type": "object",
-          "required": [
-            "name"
-          ],
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Drop-in file name (e.g., '10-override.conf') - systemd only"
-            },
-            "content": {
-              "type": "string",
-              "description": "Inline drop-in content (supports templates)"
-            },
-            "src_template": {
-              "type": "string",
-              "description": "Path to drop-in template file"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "assert": {
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "command"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "http"
+                  "print"
                 ]
               }
             ]
@@ -1846,12 +1480,67 @@
             "anyOf": [
               {
                 "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
                   "command"
                 ]
               },
               {
                 "required": [
-                  "http"
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               }
             ]
@@ -1859,10 +1548,20 @@
         },
         {
           "required": [
-            "http"
+            "package"
           ],
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
               {
                 "required": [
                   "command"
@@ -1870,168 +1569,285 @@
               },
               {
                 "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "preset"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "print"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
                 ]
               }
             ]
           }
         }
       ],
-      "properties": {
-        "command": {
-          "type": "object",
-          "required": [
-            "cmd"
-          ],
-          "properties": {
-            "cmd": {
-              "type": "string",
-              "description": "Command to execute (assertion fails if exit code doesn't match expected)"
-            },
-            "exit_code": {
-              "type": "integer",
-              "description": "Expected exit code (default: 0)",
-              "minimum": 0,
-              "maximum": 255
-            }
-          },
-          "additionalProperties": false
-        },
-        "file": {
-          "type": "object",
-          "required": [
-            "path"
-          ],
-          "properties": {
-            "path": {
-              "type": "string",
-              "description": "File path to check"
-            },
-            "exists": {
-              "type": "boolean",
-              "description": "Verify file exists (true) or doesn't exist (false)"
-            },
-            "content": {
-              "type": "string",
-              "description": "Expected exact file content"
-            },
-            "contains": {
-              "type": "string",
-              "description": "Expected substring in file content"
-            },
-            "mode": {
-              "type": "string",
-              "pattern": "^[0-7]{3,4}$",
-              "description": "Expected file permissions (e.g., '0644')"
-            },
-            "owner": {
-              "type": "string",
-              "description": "Expected file owner (username or UID)"
-            },
-            "group": {
-              "type": "string",
-              "description": "Expected file group (groupname or GID)"
-            }
-          },
-          "additionalProperties": false
-        },
-        "http": {
-          "type": "object",
-          "required": [
-            "url"
-          ],
-          "properties": {
-            "url": {
-              "type": "string",
-              "format": "uri",
-              "description": "URL to request"
-            },
-            "method": {
-              "type": "string",
-              "enum": [
-                "GET",
-                "POST",
-                "PUT",
-                "DELETE",
-                "PATCH",
-                "HEAD",
-                "OPTIONS"
-              ],
-              "description": "HTTP method (default: GET)"
-            },
-            "status": {
-              "type": "integer",
-              "description": "Expected status code (default: 200)",
-              "minimum": 100,
-              "maximum": 599
-            },
-            "headers": {
-              "type": "object",
-              "description": "Request headers",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "body": {
-              "type": "string",
-              "description": "Request body"
-            },
-            "contains": {
-              "type": "string",
-              "description": "Expected substring in response body"
-            },
-            "body_equals": {
-              "type": "string",
-              "description": "Expected exact response body"
-            },
-            "jsonpath": {
-              "type": "string",
-              "description": "JSONPath expression to extract value from response"
-            },
-            "jsonpath_value": {
-              "description": "Expected value at JSONPath location"
-            },
-            "timeout": {
-              "type": "string",
-              "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
-              "description": "Request timeout (e.g., '30s', '5m')"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
       "additionalProperties": false
     },
-    "preset": {
+    "template": {
       "type": "object",
-      "required": [
-        "name"
-      ],
+      "description": "Render template files and write to destination",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "Preset name (required)"
+        "dest": {
+          "type": "string"
         },
-        "with": {
+        "mode": {
+          "type": "string",
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "src": {
+          "type": "string"
+        },
+        "vars": {
           "type": "object",
-          "description": "Parameters to pass to the preset",
           "additionalProperties": true
         }
       },
-      "additionalProperties": false
-    },
-    "print": {
-      "type": "object",
       "required": [
-        "msg"
+        "src",
+        "dest"
       ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "template.rendered"
+      ]
+    },
+    "unarchive": {
+      "type": "object",
+      "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
       "properties": {
-        "msg": {
+        "creates": {
+          "type": "string"
+        },
+        "dest": {
+          "type": "string"
+        },
+        "mode": {
           "type": "string",
-          "description": "Message to print (supports template variables)"
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "src": {
+          "type": "string"
+        },
+        "strip_components": {
+          "type": "integer"
         }
       },
-      "additionalProperties": false
+      "required": [
+        "src",
+        "dest"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "archive.extracted"
+      ]
+    },
+    "vars": {
+      "type": "object",
+      "description": "Define or update variables",
+      "additionalProperties": false,
+      "x-category": "data",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "variables.set"
+      ]
     }
   }
 }

@@ -365,3 +365,134 @@ steps:
 ```
 
 See [Variables](config/variables.md) for complete list of available facts.
+
+## mooncake schema
+
+Generate JSON Schema and OpenAPI specifications from action metadata for IDE autocomplete and validation.
+
+### Usage
+
+```bash
+mooncake schema generate [options]
+mooncake schema validate --schema <file>
+```
+
+### Subcommands
+
+#### `schema generate`
+
+Generate JSON Schema from action metadata and Go struct definitions.
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--format, -f` | Output format: json, yaml (default: json) |
+| `--output, -o` | Output file (default: stdout) |
+| `--extensions` | Include custom x- extensions (default: true) |
+| `--strict` | Generate strict validation rules (default: true) |
+
+**Examples:**
+
+```bash
+# Generate schema to stdout
+mooncake schema generate
+
+# Generate to file
+mooncake schema generate --output schema.json
+
+# Generate in YAML format
+mooncake schema generate --format yaml --output schema.yml
+
+# Generate without strict validation
+mooncake schema generate --strict=false
+```
+
+#### `schema validate`
+
+Validate existing schema against current code to detect drift.
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--schema, -s` | Schema file to validate (required) |
+
+**Examples:**
+
+```bash
+# Validate schema
+mooncake schema validate --schema schema.json
+```
+
+### Generated Schema Features
+
+The generated schema includes:
+
+**1. Action Mutual Exclusion (oneOf)**
+- Enforces only ONE action per step
+- Prevents invalid configs like `{shell: "cmd", file: {path: "/tmp"}}`
+
+**2. Validation Rules**
+- **Enum constraints**: `state: ["started", "stopped", "restarted", "reloaded"]`
+- **Pattern validation**: `timeout: "^[0-9]+(ns|us|µs|ms|s|m|h)$"`
+- **Range validation**: `retries: min=0, max=100`
+- **Additional properties**: `false` (prevents typos)
+
+**3. Custom Extensions**
+- `x-platforms`: Supported operating systems
+- `x-requires-sudo`: Privilege requirements
+- `x-implements-check`: Idempotency support
+- `x-category`: Action grouping
+- `x-supports-dry-run`: Dry-run capability
+
+### IDE Integration
+
+#### VSCode
+
+Configure `.vscode/settings.json`:
+
+```json
+{
+  "yaml.schemas": {
+    "./schema.json": "*.yml"
+  }
+}
+```
+
+Now you get:
+- ✅ Autocomplete for actions and properties
+- ✅ Real-time validation
+- ✅ Hover documentation
+- ✅ Enum value suggestions
+
+Example validation:
+
+```yaml
+steps:
+  - name: Start service
+    service:
+      name: nginx
+      state: invalid  # ❌ Error: Must be one of: started, stopped, restarted, reloaded
+
+  - name: Invalid
+    shell: echo hello
+    file: {path: /tmp}  # ❌ Error: Only one action allowed per step
+```
+
+### Regenerating Schema
+
+The schema is automatically generated from code, so it's always in sync:
+
+```bash
+# After adding new actions or changing structs
+mooncake schema generate --output internal/config/schema.json
+```
+
+### Benefits
+
+- ✅ **Always in sync** - Generated from code, no manual maintenance
+- ✅ **IDE support** - Autocomplete and validation in VSCode/IntelliJ
+- ✅ **Type safety** - Catch errors before running
+- ✅ **Documentation** - Hover to see action descriptions
+- ✅ **Zero drift** - Schema can never be out of date
