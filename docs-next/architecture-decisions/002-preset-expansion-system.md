@@ -48,26 +48,25 @@ Presets are YAML files defining:
 
 Example:
 ```yaml
-preset:
-  name: ollama
-  description: Install and configure Ollama AI runtime
-  version: 1.0.0
-  parameters:
-    - name: state
-      type: string
-      default: present
-      enum: [present, absent, running, stopped]
-    - name: models
-      type: array
-      required: false
-  steps:
-    - name: Install Ollama
-      shell: curl -fsSL https://ollama.com/install.sh | sh
-      when: "{{ parameters.state != 'absent' }}"
-    - name: Configure service
-      service:
-        name: ollama
-        state: "{{ parameters.state }}"
+name: ollama
+description: Install and configure Ollama AI runtime
+version: 1.0.0
+parameters:
+  - name: state
+    type: string
+    default: present
+    enum: [present, absent, running, stopped]
+  - name: models
+    type: array
+    required: false
+steps:
+  - name: Install Ollama
+    shell: curl -fsSL https://ollama.com/install.sh | sh
+    when: "{{ parameters.state != 'absent' }}"
+  - name: Configure service
+    service:
+      name: ollama
+      state: "{{ parameters.state }}"
 ```
 
 ### 2. Key Architectural Decisions
@@ -81,9 +80,9 @@ preset:
 
 ```yaml
 #  NOT ALLOWED
-preset:
-  steps:
-    - preset: base-setup  # Would fail validation
+name: my-preset
+steps:
+  - preset: base-setup  # Would fail validation - presets cannot call other presets
 ```
 
 #### Parameters Namespace

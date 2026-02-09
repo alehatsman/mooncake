@@ -9,31 +9,30 @@ This guide shows you how to create your own mooncake presets for sharing complex
 A preset is a YAML file with this structure:
 
 ```yaml
-preset:
-  name: my-preset
-  description: What this preset does
-  version: 1.0.0
+name: my-preset
+description: What this preset does
+version: 1.0.0
 
-  parameters:
-    param1:
-      type: string
-      required: true
-      description: Description of param1
+parameters:
+  param1:
+    type: string
+    required: true
+    description: Description of param1
 
-    param2:
-      type: bool
-      default: false
-      description: Description of param2
+  param2:
+    type: bool
+    default: false
+    description: Description of param2
 
-  steps:
-    - name: First step
-      shell: echo "{{ parameters.param1 }}"
+steps:
+  - name: First step
+    shell: echo "{{ parameters.param1 }}"
 
-    - name: Second step
-      file:
-        path: /tmp/flag
-        state: file
-      when: parameters.param2
+  - name: Second step
+    file:
+      path: /tmp/flag
+      state: file
+    when: parameters.param2
 ```
 
 ### Directory Structure (Advanced)
@@ -58,28 +57,27 @@ The main preset file uses `include` to organize steps:
 
 ```yaml
 # presets/my-preset/preset.yml
-preset:
-  name: my-preset
-  description: Modular preset with includes
-  version: 1.0.0
+name: my-preset
+description: Modular preset with includes
+version: 1.0.0
 
-  parameters:
-    state:
-      type: string
-      enum: [present, absent]
+parameters:
+  state:
+    type: string
+    enum: [present, absent]
 
-  steps:
-    - name: Install
-      include: tasks/install.yml
-      when: parameters.state == "present"
+steps:
+  - name: Install
+    include: tasks/install.yml
+    when: parameters.state == "present"
 
-    - name: Configure
-      include: tasks/configure.yml
-      when: parameters.state == "present"
+  - name: Configure
+    include: tasks/configure.yml
+    when: parameters.state == "present"
 
-    - name: Cleanup
-      include: tasks/cleanup.yml
-      when: parameters.state == "absent"
+  - name: Cleanup
+    include: tasks/cleanup.yml
+    when: parameters.state == "absent"
 ```
 
 ## Minimal Example
@@ -87,14 +85,13 @@ preset:
 The simplest preset:
 
 ```yaml
-preset:
-  name: hello
-  description: Print hello message
-  version: 1.0.0
+name: hello
+description: Print hello message
+version: 1.0.0
 
-  steps:
-    - name: Say hello
-      shell: echo "Hello from preset!"
+steps:
+  - name: Say hello
+    shell: echo "Hello from preset!"
 ```
 
 Usage:
@@ -522,146 +519,145 @@ steps:
 ## Complete Example: Custom Application Preset
 
 ```yaml
-preset:
-  name: deploy-webapp
-  description: Deploy a web application with service management
-  version: 1.0.0
+name: deploy-webapp
+description: Deploy a web application with service management
+version: 1.0.0
 
-  parameters:
-    app_name:
-      type: string
-      required: true
-      description: Application name
+parameters:
+  app_name:
+    type: string
+    required: true
+    description: Application name
 
-    version:
-      type: string
-      required: true
-      description: Version to deploy (e.g., v1.2.3)
+  version:
+    type: string
+    required: true
+    description: Version to deploy (e.g., v1.2.3)
 
-    port:
-      type: number
-      default: 8080
-      description: Application port
+  port:
+    type: number
+    default: 8080
+    description: Application port
 
-    environment:
-      type: string
-      default: production
-      enum: [development, staging, production]
-      description: Deployment environment
+  environment:
+    type: string
+    default: production
+    enum: [development, staging, production]
+    description: Deployment environment
 
-    enable_service:
-      type: bool
-      default: true
-      description: Configure and start systemd/launchd service
+  enable_service:
+    type: bool
+    default: true
+    description: Configure and start systemd/launchd service
 
-  steps:
-    # Step 1: Create application directory
-    - name: Create app directory
-      file:
-        path: "/opt/{{ parameters.app_name }}"
-        state: directory
-        mode: "0755"
-      become: true
+steps:
+  # Step 1: Create application directory
+  - name: Create app directory
+    file:
+      path: "/opt/{{ parameters.app_name }}"
+      state: directory
+      mode: "0755"
+    become: true
 
-    # Step 2: Download application binary
-    - name: Download application
-      shell: |
-        curl -L -o /opt/{{ parameters.app_name }}/app \
-          https://releases.example.com/{{ parameters.app_name }}/{{ parameters.version }}/app
-        chmod +x /opt/{{ parameters.app_name }}/app
-      become: true
-      creates: "/opt/{{ parameters.app_name }}/app"
+  # Step 2: Download application binary
+  - name: Download application
+    shell: |
+      curl -L -o /opt/{{ parameters.app_name }}/app \
+        https://releases.example.com/{{ parameters.app_name }}/{{ parameters.version }}/app
+      chmod +x /opt/{{ parameters.app_name }}/app
+    become: true
+    creates: "/opt/{{ parameters.app_name }}/app"
 
-    # Step 3: Create configuration file
-    - name: Create config file
-      file:
-        path: "/etc/{{ parameters.app_name }}/config.yml"
-        state: file
-        mode: "0644"
+  # Step 3: Create configuration file
+  - name: Create config file
+    file:
+      path: "/etc/{{ parameters.app_name }}/config.yml"
+      state: file
+      mode: "0644"
+      content: |
+        app_name: {{ parameters.app_name }}
+        version: {{ parameters.version }}
+        port: {{ parameters.port }}
+        environment: {{ parameters.environment }}
+    become: true
+
+  # Step 4: Configure systemd service (Linux)
+  - name: Configure systemd service
+    service:
+      name: "{{ parameters.app_name }}"
+      state: started
+      enabled: true
+      unit:
         content: |
-          app_name: {{ parameters.app_name }}
-          version: {{ parameters.version }}
-          port: {{ parameters.port }}
-          environment: {{ parameters.environment }}
-      become: true
+          [Unit]
+          Description={{ parameters.app_name }} service
+          After=network.target
 
-    # Step 4: Configure systemd service (Linux)
-    - name: Configure systemd service
-      service:
-        name: "{{ parameters.app_name }}"
-        state: started
-        enabled: true
-        unit:
-          content: |
-            [Unit]
-            Description={{ parameters.app_name }} service
-            After=network.target
+          [Service]
+          Type=simple
+          User=www-data
+          WorkingDirectory=/opt/{{ parameters.app_name }}
+          ExecStart=/opt/{{ parameters.app_name }}/app
+          Restart=always
+          RestartSec=10
+          Environment="PORT={{ parameters.port }}"
+          Environment="ENV={{ parameters.environment }}"
 
-            [Service]
-            Type=simple
-            User=www-data
-            WorkingDirectory=/opt/{{ parameters.app_name }}
-            ExecStart=/opt/{{ parameters.app_name }}/app
-            Restart=always
-            RestartSec=10
-            Environment="PORT={{ parameters.port }}"
-            Environment="ENV={{ parameters.environment }}"
+          [Install]
+          WantedBy=multi-user.target
+    become: true
+    when: parameters.enable_service and os == "linux"
 
-            [Install]
-            WantedBy=multi-user.target
-      become: true
-      when: parameters.enable_service and os == "linux"
-
-    # Step 5: Configure launchd service (macOS)
-    - name: Configure launchd service
-      service:
-        name: "com.example.{{ parameters.app_name }}"
-        state: started
-        enabled: true
-        unit:
-          content: |
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
+  # Step 5: Configure launchd service (macOS)
+  - name: Configure launchd service
+    service:
+      name: "com.example.{{ parameters.app_name }}"
+      state: started
+      enabled: true
+      unit:
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.example.{{ parameters.app_name }}</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/opt/{{ parameters.app_name }}/app</string>
+            </array>
+            <key>WorkingDirectory</key>
+            <string>/opt/{{ parameters.app_name }}</string>
+            <key>EnvironmentVariables</key>
             <dict>
-              <key>Label</key>
-              <string>com.example.{{ parameters.app_name }}</string>
-              <key>ProgramArguments</key>
-              <array>
-                <string>/opt/{{ parameters.app_name }}/app</string>
-              </array>
-              <key>WorkingDirectory</key>
-              <string>/opt/{{ parameters.app_name }}</string>
-              <key>EnvironmentVariables</key>
-              <dict>
-                <key>PORT</key>
-                <string>{{ parameters.port }}</string>
-                <key>ENV</key>
-                <string>{{ parameters.environment }}</string>
-              </dict>
-              <key>RunAtLoad</key>
-              <true/>
-              <key>KeepAlive</key>
-              <true/>
-              <key>StandardOutPath</key>
-              <string>/var/log/{{ parameters.app_name }}.log</string>
-              <key>StandardErrorPath</key>
-              <string>/var/log/{{ parameters.app_name }}-error.log</string>
+              <key>PORT</key>
+              <string>{{ parameters.port }}</string>
+              <key>ENV</key>
+              <string>{{ parameters.environment }}</string>
             </dict>
-            </plist>
-      become: true
-      when: parameters.enable_service and os == "darwin"
+            <key>RunAtLoad</key>
+            <true/>
+            <key>KeepAlive</key>
+            <true/>
+            <key>StandardOutPath</key>
+            <string>/var/log/{{ parameters.app_name }}.log</string>
+            <key>StandardErrorPath</key>
+            <string>/var/log/{{ parameters.app_name }}-error.log</string>
+          </dict>
+          </plist>
+    become: true
+    when: parameters.enable_service and os == "darwin"
 
-    # Step 6: Wait for service to be ready
-    - name: Wait for service
-      assert:
-        http:
-          url: "http://localhost:{{ parameters.port }}/health"
-          status: 200
-          timeout: "5s"
-      retries: 10
-      retry_delay: "3s"
-      when: parameters.enable_service
+  # Step 6: Wait for service to be ready
+  - name: Wait for service
+    assert:
+      http:
+        url: "http://localhost:{{ parameters.port }}/health"
+        status: 200
+        timeout: "5s"
+    retries: 10
+    retry_delay: "3s"
+    when: parameters.enable_service
 ```
 
 Usage:
@@ -757,8 +753,7 @@ Every step should be safe to run multiple times:
 Use semantic versioning:
 
 ```yaml
-preset:
-  version: 1.2.3  # Breaking.Feature.Fix
+version: 1.2.3  # Breaking.Feature.Fix
 ```
 
 ## Testing Presets

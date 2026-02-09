@@ -2357,25 +2357,24 @@ Place preset files in:
 
 Example preset (`presets/hello.yml`):
 ```yaml
-preset:
-  name: hello
-  description: Print a greeting
-  version: 1.0.0
+name: hello
+description: Print a greeting
+version: 1.0.0
 
-  parameters:
-    name:
-      type: string
-      required: true
-      description: Name to greet
+parameters:
+  name:
+    type: string
+    required: true
+    description: Name to greet
 
-    excited:
-      type: bool
-      default: false
-      description: Use exclamation mark
+  excited:
+    type: bool
+    default: false
+    description: Use exclamation mark
 
-  steps:
-    - name: Print greeting
-      shell: echo "Hello, {{ parameters.name }}{% if parameters.excited %}!{% endif %}"
+steps:
+  - name: Print greeting
+    shell: echo "Hello, {{ parameters.name }}{% if parameters.excited %}!{% endif %}"
 ```
 
 Usage:
