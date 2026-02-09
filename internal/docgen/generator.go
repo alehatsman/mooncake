@@ -1,0 +1,108 @@
+// Package docgen provides automated documentation generation from action metadata.
+package docgen
+
+import (
+	"fmt"
+	"io"
+	"sort"
+	"time"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+)
+
+// Generator generates documentation from action metadata.
+type Generator struct {
+	Version   string
+	Timestamp time.Time
+}
+
+// NewGenerator creates a new documentation generator.
+func NewGenerator(version string) *Generator {
+	return &Generator{
+		Version:   version,
+		Timestamp: time.Now(),
+	}
+}
+
+// GenerateSection generates a specific documentation section.
+// presetsDir is optional and only used for preset-examples section.
+func (g *Generator) GenerateSection(section string, w io.Writer, presetsDir string) error {
+	switch section {
+	case "platform-matrix":
+		return g.generatePlatformMatrix(w)
+	case "capabilities":
+		return g.generateCapabilities(w)
+	case "action-summary":
+		return g.generateActionSummary(w)
+	case "preset-examples":
+		if presetsDir == "" {
+			presetsDir = "presets"
+		}
+		return g.generatePresetExamples(w, presetsDir)
+	case "schema":
+		return g.generateSchemaDoc(w)
+	case "all":
+		return g.generateAll(w)
+	default:
+		return fmt.Errorf("unknown section: %s (valid: platform-matrix, capabilities, action-summary, preset-examples, schema, all)", section)
+	}
+}
+
+// generateAll generates all documentation sections.
+func (g *Generator) generateAll(w io.Writer) error {
+	sections := []struct {
+		name      string
+		title     string
+		generator func(io.Writer) error
+	}{
+		{"platform-matrix", "Platform Support Matrix", g.generatePlatformMatrix},
+		{"capabilities", "Action Capabilities", g.generateCapabilities},
+		{"action-summary", "Action Summary", g.generateActionSummary},
+		{"schema", "Schema Documentation", g.generateSchemaDoc},
+	}
+
+	for i, section := range sections {
+		if i > 0 {
+			write(w, "\n\n---\n\n")
+		}
+		write(w, "# %s\n\n", section.title)
+		if err := section.generator(w); err != nil {
+			return fmt.Errorf("failed to generate %s: %w", section.name, err)
+		}
+	}
+
+	return nil
+}
+
+// getActions returns sorted list of all registered actions.
+func (g *Generator) getActions() []actions.ActionMetadata {
+	actionList := actions.List()
+
+	// Sort by name for consistent output
+	sort.Slice(actionList, func(i, j int) bool {
+		return actionList[i].Name < actionList[j].Name
+	})
+
+	return actionList
+}
+
+// platformSupported checks if an action supports a given platform.
+// Empty SupportedPlatforms means all platforms are supported.
+func platformSupported(metadata actions.ActionMetadata, platform string) bool {
+	if len(metadata.SupportedPlatforms) == 0 {
+		return true // No restrictions = all platforms supported
+	}
+
+	for _, p := range metadata.SupportedPlatforms {
+		if p == platform {
+			return true
+		}
+	}
+	return false
+}
+
+// write is a helper that writes to w and ignores errors.
+// This is safe for documentation generation where write errors are non-critical.
+func write(w io.Writer, format string, args ...interface{}) {
+	_, _ = fmt.Fprintf(w, format, args...)
+}

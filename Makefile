@@ -98,7 +98,7 @@ scan: lint ## Run security scans (gosec + govulncheck)
 # ==============================================================================
 
 .PHONY: ci
-ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
+ci: lint test-race scan docs-check ## Run full CI suite (lint + test-race + scan + docs-check)
 	@echo ""
 	@echo "✓ All CI checks passed!"
 
@@ -107,10 +107,43 @@ ci: lint test-race scan ## Run full CI suite (lint + test-race + scan)
 # ==============================================================================
 
 .PHONY: docs
-docs:
+docs: ## Build and serve documentation site
 	@echo "Documentation built in site/ directory"
 	pipenv run mkdocs build
 	pipenv run mkdocs serve
+
+.PHONY: docs-generate
+docs-generate: build ## Generate documentation from code (actions, presets, schema)
+	@echo "Generating documentation from code..."
+	@mkdir -p docs-next/generated
+	@./out/mooncake docs generate --section all --output docs-next/generated/actions.md
+	@./out/mooncake docs generate --section preset-examples --presets-dir presets --output docs-next/generated/presets.md
+	@./out/mooncake docs generate --section schema --output docs-next/generated/schema.md
+	@echo "✓ Generated documentation:"
+	@echo "  - docs-next/generated/actions.md  (platform matrix, capabilities, action summaries)"
+	@echo "  - docs-next/generated/presets.md  (all preset examples)"
+	@echo "  - docs-next/generated/schema.md   (YAML schema reference)"
+
+.PHONY: docs-check
+docs-check: docs-generate ## Check if generated docs are up to date
+	@echo "Checking if generated documentation is up to date..."
+	@if git diff --quiet docs-next/generated/; then \
+		echo "✓ Documentation is up to date"; \
+	else \
+		echo "✗ Documentation is out of sync!"; \
+		echo ""; \
+		echo "The following files have changed:"; \
+		git diff --name-only docs-next/generated/; \
+		echo ""; \
+		echo "Run 'make docs-generate' to update documentation."; \
+		exit 1; \
+	fi
+
+.PHONY: docs-clean
+docs-clean: ## Remove generated documentation
+	@echo "Cleaning generated documentation..."
+	@rm -rf docs-next/generated/
+	@echo "✓ Cleaned generated docs"
 
 # ==============================================================================
 # Release

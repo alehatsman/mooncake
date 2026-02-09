@@ -499,6 +499,7 @@ func createApp() *cli.App {
 
 		Commands: []*cli.Command{
 			presetsCommand(),
+			docsCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",
