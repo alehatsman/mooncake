@@ -130,13 +130,13 @@ func (d *TUIDisplay) renderProgressBar(current, total int) string {
 
 	barWidth := 30
 	percentage := 0
+	filled := 0
 	if total > 0 {
 		percentage = (current * 100) / total
-	}
-
-	filled := (current * barWidth) / total
-	if filled > barWidth {
-		filled = barWidth
+		filled = (current * barWidth) / total
+		if filled > barWidth {
+			filled = barWidth
+		}
 	}
 
 	bar := strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled)

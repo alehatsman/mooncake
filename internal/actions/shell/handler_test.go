@@ -20,7 +20,10 @@ import (
 
 // newMockExecutionContext creates a mock ExecutionContext for shell tests
 func newMockExecutionContext() *executor.ExecutionContext {
-	tmpl := template.NewPongo2Renderer()
+	tmpl, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	return &executor.ExecutionContext{
 		Variables:      make(map[string]interface{}),
 		Template:       tmpl,

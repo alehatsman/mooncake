@@ -7,7 +7,11 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 )
+
+// regexCache caches compiled regex patterns for performance
+var regexCache sync.Map
 
 // StringFunctions returns string manipulation functions
 //
@@ -149,11 +153,25 @@ func StringFunctions() map[string]interface{} {
 			if !ok1 || !ok2 {
 				return false, fmt.Errorf("regex_match requires string arguments")
 			}
-			matched, err := regexp.MatchString(pattern, str)
-			if err != nil {
-				return false, fmt.Errorf("invalid regex pattern: %w", err)
+
+			// Try to get compiled regex from cache
+			var re *regexp.Regexp
+			if cached, ok := regexCache.Load(pattern); ok {
+				re, ok = cached.(*regexp.Regexp)
+				if !ok {
+					return false, fmt.Errorf("invalid cached regex pattern")
+				}
+			} else {
+				// Compile and cache the pattern
+				compiled, err := regexp.Compile(pattern)
+				if err != nil {
+					return false, fmt.Errorf("invalid regex pattern: %w", err)
+				}
+				re = compiled
+				regexCache.Store(pattern, re)
 			}
-			return matched, nil
+
+			return re.MatchString(str), nil
 		},
 	}
 }

@@ -22,7 +22,10 @@ import (
 // mockExecutionContext creates a minimal ExecutionContext for testing
 func mockExecutionContext() *executor.ExecutionContext {
 	ctx := testutil.NewMockContext()
-	tmpl := template.NewPongo2Renderer()
+	tmpl, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	return &executor.ExecutionContext{
 		Variables:      ctx.Variables,
 		Template:       tmpl,

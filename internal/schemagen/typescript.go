@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+// TypeScript type constants
+const (
+	tsTypeNumber  = "number"
+	tsTypeBoolean = "boolean"
+)
+
 // TypeScriptGenerator generates TypeScript definitions from schema.
 type TypeScriptGenerator struct {
 	schema *Schema
@@ -187,10 +193,10 @@ func (g *TypeScriptGenerator) propertyToTypeScript(prop *Property) string {
 	switch prop.Type { //nolint:goconst // JSON Schema type constants
 	case "string":
 		return "string"
-	case "number", "integer":
-		return "number"
-	case "boolean":
-		return "boolean"
+	case tsTypeNumber, "integer":
+		return tsTypeNumber
+	case tsTypeBoolean:
+		return tsTypeBoolean
 	case "array":
 		if prop.Items != nil {
 			itemType := g.propertyToTypeScript(prop.Items)

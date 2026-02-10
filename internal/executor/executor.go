@@ -167,6 +167,10 @@ func AddGlobalVariables(variables map[string]interface{}) {
 func HandleVars(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling vars: %+v", step.Vars)
 
+	if step.Vars == nil {
+		return fmt.Errorf("vars is nil in step")
+	}
+
 	vars := step.Vars
 
 	for k, v := range *vars {
@@ -705,7 +709,10 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	}
 
 	// Create path expander for resolving paths
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		return &SetupError{Component: "template renderer", Issue: "failed to create renderer", Cause: err}
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 
 	currentDir, err := os.Getwd()
@@ -741,7 +748,10 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	log.Debugf("Building plan from configuration: %v", configFilePath)
 
 	// ALWAYS build plan first (expands loops, includes, vars)
-	planner := plan.NewPlanner()
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		return &SetupError{Component: "planner", Issue: "failed to create planner", Cause: err}
+	}
 	planData, err := planner.BuildPlan(plan.PlannerConfig{
 		ConfigPath: configFilePath,
 		Variables:  variables,
@@ -818,7 +828,10 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 	})
 
 	// Create dependencies
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		return &SetupError{Component: "template renderer", Issue: "failed to create renderer", Cause: err}
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)

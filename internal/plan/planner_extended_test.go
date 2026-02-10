@@ -14,7 +14,7 @@ import (
 // TestExpandVars tests variable expansion at plan time
 func TestExpandVars(t *testing.T) {
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	vars := map[string]interface{}{
@@ -46,7 +46,7 @@ func TestExpandVars(t *testing.T) {
 // TestExpandVars_WithTemplate tests variable expansion with template rendering
 func TestExpandVars_WithTemplate(t *testing.T) {
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	vars := map[string]interface{}{
@@ -77,7 +77,7 @@ func TestExpandVars_WithTemplate(t *testing.T) {
 // TestExpandVars_NilVars tests error handling for nil vars
 func TestExpandVars_NilVars(t *testing.T) {
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	step := config.Step{
@@ -110,7 +110,7 @@ number_var: 42
 	}
 
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	step := config.Step{
@@ -146,7 +146,7 @@ environment: production
 	}
 
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	// Use template in path
@@ -175,7 +175,7 @@ environment: production
 // TestExpandIncludeVars_NilIncludeVars tests error handling for nil include_vars
 func TestExpandIncludeVars_NilIncludeVars(t *testing.T) {
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	step := config.Step{
@@ -195,7 +195,7 @@ func TestExpandIncludeVars_NilIncludeVars(t *testing.T) {
 // TestExpandIncludeVars_FileNotFound tests error handling for missing file
 func TestExpandIncludeVars_FileNotFound(t *testing.T) {
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: mustNewRenderer(),
 	}
 
 	nonexistentFile := "/nonexistent/vars.yml"
@@ -216,8 +216,9 @@ func TestExpandIncludeVars_FileNotFound(t *testing.T) {
 
 // TestShouldProcessAtPlanTime tests plan-time condition evaluation
 func TestShouldProcessAtPlanTime(t *testing.T) {
+	renderer := mustNewRenderer()
 	planner := &Planner{
-		template: template.NewPongo2Renderer(),
+		template: renderer,
 	}
 
 	tests := []struct {
@@ -278,7 +279,10 @@ func TestShouldProcessAtPlanTime(t *testing.T) {
 
 // TestExpandStepsWithContext_EmptySteps tests expansion with empty steps
 func TestExpandStepsWithContext_EmptySteps(t *testing.T) {
-	tmpl := template.NewPongo2Renderer()
+	tmpl, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExp := pathutil.NewPathExpander(tmpl)
 	planner := &Planner{
 		template: tmpl,

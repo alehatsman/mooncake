@@ -50,8 +50,9 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		return nil, nil, err
 	}
 	defer func() {
-		if err = f.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to close config file %s: %v\n", path, err)
+		closeErr := f.Close()
+		if closeErr != nil {
+			fmt.Fprintf(os.Stderr, "failed to close config file %s: %v\n", path, closeErr)
 		}
 	}()
 
@@ -148,8 +149,9 @@ func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, e
 		return nil, err
 	}
 	defer func() {
-		if err = file.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to close variables file %s: %v\n", path, err)
+		closeErr := file.Close()
+		if closeErr != nil {
+			fmt.Fprintf(os.Stderr, "failed to close variables file %s: %v\n", path, closeErr)
 		}
 	}()
 
@@ -179,7 +181,7 @@ func ReadConfig(path string) (*ParsedConfig, error) {
 func ReadConfigWithValidation(path string) (*ParsedConfig, []Diagnostic, error) {
 	reader, ok := defaultReader.(*YAMLConfigReader)
 	if !ok {
-		panic("defaultReader is not a YAMLConfigReader")
+		return nil, nil, fmt.Errorf("internal error: defaultReader is not a YAMLConfigReader")
 	}
 	return reader.ReadConfigWithValidation(path)
 }

@@ -10,6 +10,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
+// mustNewRenderer creates a renderer or panics
+func mustNewRenderer() template.Renderer {
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return r
+}
+
+
 func TestWalker_GetFileTree(t *testing.T) {
 	// Create temporary directory structure for testing
 	tmpDir := t.TempDir()
@@ -34,7 +44,7 @@ func TestWalker_GetFileTree(t *testing.T) {
 		}
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	walker := NewWalker(pathExpander)
 
@@ -108,13 +118,13 @@ func TestWalker_GetFileTree(t *testing.T) {
 }
 
 func TestWalker_GetFileTreeErrors(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	walker := NewWalker(pathExpander)
 
 	t.Run("nonexistent directory", func(t *testing.T) {
 		_, err := walker.GetFileTree("/nonexistent/path", "/tmp", nil)
-		if err == nil {
+		if err == nil{
 			t.Error("GetFileTree() should return error for nonexistent directory")
 		}
 	})
@@ -142,7 +152,7 @@ func TestWalker_GetFileTreeStructure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	walker := NewWalker(pathExpander)
 
@@ -169,7 +179,7 @@ func TestWalker_GetFileTreeStructure(t *testing.T) {
 }
 
 func TestNewWalker(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	walker := NewWalker(pathExpander)
 
@@ -194,7 +204,7 @@ func TestWalker_GetFileTreeWithContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	walker := NewWalker(pathExpander)
 
@@ -252,7 +262,7 @@ func TestWalker_GetFileTreeFileProperties(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	walker := NewWalker(pathExpander)
 

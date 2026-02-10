@@ -25,7 +25,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -82,7 +85,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -156,7 +162,10 @@ func TestPlanner_CycleDetection(t *testing.T) {
 	}
 
 	// Build plan - should detect cycle
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: configA,
 		Variables:  nil,
@@ -197,7 +206,10 @@ steps:
 	}
 
 	// Build plan with tag filter
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -247,7 +259,10 @@ steps:
 	}
 
 	// Build plan multiple times
-	planner1 := NewPlanner()
+	planner1, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan1, err := planner1.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -257,7 +272,10 @@ steps:
 		t.Fatalf("Failed to build plan 1: %v", err)
 	}
 
-	planner2 := NewPlanner()
+	planner2, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan2, err := planner2.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -316,7 +334,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -393,7 +414,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: mainConfig,
 		Variables:  nil,
@@ -454,7 +478,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: mainConfig,
 		Variables:  nil,
@@ -499,7 +526,10 @@ steps:
 	}
 
 	// Build plan - should fail
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -532,7 +562,10 @@ steps:
 	}
 
 	// Build plan - should fail or handle gracefully
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -563,7 +596,10 @@ steps:
 	}
 
 	// Build plan - should fail
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -604,7 +640,10 @@ steps:
 	}
 
 	// Build plan - should fail with validation error
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: mainConfig,
 		Variables:  nil,
@@ -640,7 +679,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -677,7 +719,10 @@ steps:
 	}
 
 	// Build plan - should fail with type error
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -721,7 +766,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: mainConfig,
 		Variables:  nil,
@@ -802,7 +850,10 @@ steps:
 	}
 
 	// Build plan
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,

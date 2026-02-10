@@ -12,6 +12,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
+// mustNewRenderer creates a renderer or panics
+func mustNewRenderer() template.Renderer {
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return r
+}
+
+
 // TestGetStepDisplayName_WithFileTreeItem tests display name for filetree items
 func TestGetStepDisplayName_WithFileTreeItem(t *testing.T) {
 	tests := []struct {
@@ -164,7 +174,7 @@ func TestHandleWhenExpression_BooleanLogic(t *testing.T) {
 
 			ec := &ExecutionContext{
 				Evaluator: expression.NewGovaluateEvaluator(),
-				Template:  template.NewPongo2Renderer(),
+				Template:  mustNewRenderer(),
 				Logger:    logger.NewTestLogger(),
 				Variables: tt.variables,
 			}
@@ -189,7 +199,7 @@ func TestCheckIdempotencyConditions_Creates(t *testing.T) {
 		Creates: &tmpFile,
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 
 	ec := &ExecutionContext{
 		Template:      renderer,
@@ -282,7 +292,7 @@ func TestCheckIdempotencyConditions_UnlessSuccess(t *testing.T) {
 		Unless: &unlessCmd,
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	ec := &ExecutionContext{
 		Template:      renderer,
 		Logger:        logger.NewTestLogger(),
@@ -313,7 +323,7 @@ func TestCheckIdempotencyConditions_UnlessFail(t *testing.T) {
 		Unless: &unlessCmd,
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	ec := &ExecutionContext{
 		Template:      renderer,
 		Logger:        logger.NewTestLogger(),
@@ -407,7 +417,7 @@ func TestHandleWhenExpression_NilResult(t *testing.T) {
 
 	ec := &ExecutionContext{
 		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  template.NewPongo2Renderer(),
+		Template:  mustNewRenderer(),
 		Logger:    logger.NewTestLogger(),
 		Variables: make(map[string]interface{}),
 	}
@@ -431,7 +441,7 @@ func TestHandleWhenExpression_NonBool(t *testing.T) {
 
 	ec := &ExecutionContext{
 		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  template.NewPongo2Renderer(),
+		Template:  mustNewRenderer(),
 		Logger:    logger.NewTestLogger(),
 		Variables: make(map[string]interface{}),
 	}
@@ -448,7 +458,7 @@ func TestCheckSkipConditions_WhenFalse(t *testing.T) {
 		When: "false",
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer := mustNewRenderer()
 	ec := &ExecutionContext{
 		Evaluator: expression.NewGovaluateEvaluator(),
 		Template:  renderer,

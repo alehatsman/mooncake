@@ -6,17 +6,31 @@ import (
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/template"
 )
+
+// mustNewRenderer creates a renderer or panics
+func mustNewRenderer() template.Renderer {
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return r
+}
+
 
 // TestRenderActionTemplates_AllActionTypes tests the renderActionTemplates function
 // for all action types to improve coverage from 26.2% to 80%+
 func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 	tmpDir := t.TempDir()
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 
 	// Create a test file for template/copy/unarchive actions
 	testFile := filepath.Join(tmpDir, "test.txt")
-	err := os.WriteFile(testFile, []byte("test content"), 0644)
+	err = os.WriteFile(testFile, []byte("test content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -283,7 +297,10 @@ steps:
 		t.Fatalf("Failed to write config: %v", err)
 	}
 
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -333,7 +350,10 @@ steps:
 		t.Fatalf("Failed to write config: %v", err)
 	}
 
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	plan, err := planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  nil,
@@ -365,8 +385,11 @@ func TestSavePlanToFile_ErrorCases(t *testing.T) {
 
 // TestReadRunConfig_MissingFile tests error handling when config file is missing
 func TestReadRunConfig_MissingFile(t *testing.T) {
-	planner := NewPlanner()
-	_, err := planner.readRunConfig("/nonexistent/config.yml")
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
+	_, err = planner.readRunConfig("/nonexistent/config.yml")
 	if err == nil {
 		t.Fatal("Expected error for missing config file, got nil")
 	}
@@ -390,7 +413,10 @@ steps:
 		t.Fatalf("Failed to write invalid config: %v", err)
 	}
 
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.readRunConfig(configPath)
 	if err == nil {
 		t.Fatal("Expected error for invalid YAML, got nil")
@@ -412,7 +438,10 @@ steps:
 		t.Fatalf("Failed to write config: %v", err)
 	}
 
-	planner := NewPlanner()
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
 	_, err = planner.BuildPlan(PlannerConfig{
 		ConfigPath: configPath,
 	})

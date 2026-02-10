@@ -220,7 +220,10 @@ func TestHandler_Execute(t *testing.T) {
 			tmpFile.Close()
 
 			// Create ExecutionContext (include_vars needs PathUtil)
-			renderer := template.NewPongo2Renderer()
+			renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.existingVars
@@ -355,7 +358,10 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			tmpFile.Close()
 
 			// Create ExecutionContext
-			renderer := template.NewPongo2Renderer()
+			renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.setupVars
@@ -414,7 +420,10 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 func TestHandler_Execute_FileNotFound(t *testing.T) {
 	h := &Handler{}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
 
@@ -431,7 +440,7 @@ func TestHandler_Execute_FileNotFound(t *testing.T) {
 		IncludeVars: stringPtr("/nonexistent/vars.yml"),
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err = h.Execute(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when file doesn't exist")
 	}
@@ -451,7 +460,10 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 	tmpFile.WriteString("invalid: yaml: content: [")
 	tmpFile.Close()
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
 
@@ -477,7 +489,10 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 func TestHandler_Execute_NilIncludeVars(t *testing.T) {
 	h := &Handler{}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
 
@@ -521,7 +536,10 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	tmpFile.Close()
 
 	// Create context without publisher
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
 
@@ -651,7 +669,10 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			// Create ExecutionContext
-			renderer := template.NewPongo2Renderer()
+			renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.existingVars
@@ -671,7 +692,7 @@ func TestHandler_DryRun(t *testing.T) {
 				IncludeVars: stringPtr(tmpFilePath),
 			}
 
-			err := h.DryRun(ctx, step)
+			err = h.DryRun(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -706,7 +727,10 @@ func TestHandler_DryRun(t *testing.T) {
 func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 	h := &Handler{}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
 	mockCtx.DryRun = true
@@ -756,7 +780,10 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 	h := &Handler{}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
 	mockCtx.DryRun = true
@@ -777,7 +804,7 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 	}
 
 	// Should not error, just use original path
-	err := h.DryRun(ctx, step)
+	err = h.DryRun(ctx, step)
 	if err != nil {
 		t.Errorf("DryRun() should not error on path expansion failure, got: %v", err)
 	}

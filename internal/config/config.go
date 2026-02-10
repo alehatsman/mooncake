@@ -689,7 +689,7 @@ func (s *Step) Clone() *Step {
 		FailedWhen:   s.FailedWhen,
 		WithFileTree: s.WithFileTree,
 		WithItems:    s.WithItems,
-		Tags:         s.Tags,
+		Tags:         append([]string(nil), s.Tags...),
 		Register:     s.Register,
 		ID:           s.ID,
 		ActionType:   s.ActionType,

@@ -29,7 +29,10 @@ import (
 )
 
 func TestExecutionContext_Copy(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 	fileTreeWalker := filetree.NewWalker(pathExpander)
@@ -155,7 +158,10 @@ func TestHandleVars(t *testing.T) {
 }
 
 func TestHandleWhenExpression(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	testLogger := logger.NewTestLogger()
 
@@ -428,7 +434,10 @@ func TestMarkStepFailed(t *testing.T) {
 }
 
 func TestCheckSkipConditions(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	testLogger := logger.NewTestLogger()
 
@@ -511,7 +520,10 @@ func TestGetStepDisplayName(t *testing.T) {
 
 func TestExecuteStep_WithShell(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
@@ -532,7 +544,7 @@ func TestExecuteStep_WithShell(t *testing.T) {
 		Shell: &config.ShellAction{Cmd: shellCmd},
 	}
 
-	err := executor.ExecuteStep(step, ec)
+	err = executor.ExecuteStep(step, ec)
 	if err != nil {
 		t.Errorf("executor.ExecuteStep() error = %v", err)
 	}
@@ -547,7 +559,10 @@ func TestExecuteStep_WithShell(t *testing.T) {
 
 func TestExecuteStep_Skipped(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
@@ -568,7 +583,7 @@ func TestExecuteStep_Skipped(t *testing.T) {
 		When:  "false",
 	}
 
-	err := executor.ExecuteStep(step, ec)
+	err = executor.ExecuteStep(step, ec)
 	if err != nil {
 		t.Errorf("executor.ExecuteStep() error = %v", err)
 	}
@@ -583,7 +598,10 @@ func TestExecuteStep_Skipped(t *testing.T) {
 
 func TestExecuteSteps(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
@@ -606,7 +624,7 @@ func TestExecuteSteps(t *testing.T) {
 		{Name: "step 2", Shell: &config.ShellAction{Cmd: shellCmd2}},
 	}
 
-	err := executor.ExecuteSteps(steps, ec)
+	err = executor.ExecuteSteps(steps, ec)
 	if err != nil {
 		t.Errorf("executor.ExecuteSteps() error = %v", err)
 	}
@@ -623,7 +641,10 @@ func TestExecuteSteps(t *testing.T) {
 
 func TestDispatchStepAction(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	evaluator := expression.NewGovaluateEvaluator()
 	pathExpander := pathutil.NewPathExpander(renderer)
 
@@ -663,7 +684,7 @@ func TestDispatchStepAction(t *testing.T) {
 				Redactor:   security.NewRedactor(),
 			}
 
-			err := executor.DispatchStepAction(tt.step, ec)
+			err = executor.DispatchStepAction(tt.step, ec)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("executor.DispatchStepAction() error = %v, wantErr %v", err, tt.wantErr)
 			}

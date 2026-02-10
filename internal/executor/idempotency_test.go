@@ -41,7 +41,10 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 		Creates: strPtr(tmpFile.Name()),
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
@@ -71,7 +74,10 @@ func TestCheckIdempotencyConditions_Creates_FileNotExists(t *testing.T) {
 		Creates: strPtr(creates),
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
@@ -102,7 +108,10 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 		Creates: strPtr("{{ output_file }}"),
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template: renderer,
 		PathUtil: pathutil.NewPathExpander(renderer),
@@ -131,7 +140,10 @@ func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 		Unless: &unless,
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		Variables: make(map[string]interface{}),
@@ -160,7 +172,10 @@ func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 		Unless: &unless,
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		Variables: make(map[string]interface{}),
@@ -190,7 +205,10 @@ func TestCheckIdempotencyConditions_Unless_WithTemplateVariable(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 	tmpFile.Close()
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template: renderer,
 		Variables: map[string]interface{}{
@@ -227,7 +245,10 @@ func TestCheckIdempotencyConditions_BothConditions(t *testing.T) {
 		Unless:  strPtr("true"),
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
@@ -253,7 +274,10 @@ func TestCheckIdempotencyConditions_NoConditions(t *testing.T) {
 		Shell: &config.ShellAction{Cmd: *strPtr("echo test")},
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ec := &executor.ExecutionContext{
 		Template:  renderer,
 		PathUtil:  pathutil.NewPathExpander(renderer),
@@ -285,7 +309,10 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 		Creates: strPtr(tmpFile.Name()),
 	}
 
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	ec := &executor.ExecutionContext{
 		Template:            renderer,

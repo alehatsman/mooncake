@@ -1,6 +1,7 @@
 package events
 
 import (
+	"log"
 	"sync"
 )
 
@@ -58,7 +59,8 @@ func (p *ChannelPublisher) Publish(event Event) {
 		case ch <- event:
 			p.pending++
 		default:
-			// Channel full, drop event
+			// Channel full, drop event - log warning for visibility
+			log.Printf("Warning: event dropped for subscriber (channel full): type=%s", event.Type)
 		}
 	}
 	p.pendingMu.Unlock()

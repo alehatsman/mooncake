@@ -10,7 +10,10 @@ import (
 )
 
 func TestPathExpander_ExpandPath(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	expander := NewPathExpander(renderer)
 
 	home := os.Getenv("HOME")
@@ -173,7 +176,10 @@ func TestValidatePathWithinBase(t *testing.T) {
 }
 
 func TestPathExpander_SafeExpandPath(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	expander := NewPathExpander(renderer)
 
 	tests := []struct {
@@ -293,7 +299,10 @@ func TestGetDirectoryOfFile(t *testing.T) {
 }
 
 func TestNewPathExpander(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	expander := NewPathExpander(renderer)
 
 	if expander == nil {
@@ -311,22 +320,28 @@ func TestNewPathExpander(t *testing.T) {
 }
 
 func TestPathExpander_ExpandPathWithInvalidTemplate(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	expander := NewPathExpander(renderer)
 
 	// Test with invalid template syntax
-	_, err := expander.ExpandPath("/tmp/{{ unclosed", "/work", nil)
+	_, err = expander.ExpandPath("/tmp/{{ unclosed", "/work", nil)
 	if err == nil {
 		t.Error("ExpandPath() should return error for invalid template")
 	}
 }
 
 func TestPathExpander_SafeExpandPathWithInvalidTemplate(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	expander := NewPathExpander(renderer)
 
 	// Test with invalid template syntax in SafeExpandPath
-	_, err := expander.SafeExpandPath("/tmp/{{ unclosed", "/work", nil, "/work")
+	_, err = expander.SafeExpandPath("/tmp/{{ unclosed", "/work", nil, "/work")
 	if err == nil {
 		t.Error("SafeExpandPath() should return error for invalid template")
 	}
@@ -374,7 +389,10 @@ func TestValidatePathWithinBase_RelativePaths(t *testing.T) {
 }
 
 func TestPathExpander_ExpandPathEdgeCases(t *testing.T) {
-	renderer := template.NewPongo2Renderer()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	expander := NewPathExpander(renderer)
 
 	// Test with nil context

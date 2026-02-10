@@ -14,6 +14,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
+// mustNewRenderer creates a renderer or panics
+func mustNewRenderer() template.Renderer {
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return r
+}
+
+
 // setupTestPresets creates temporary preset files for testing
 func setupTestPresets(t *testing.T) (cleanup func()) {
 	t.Helper()
@@ -131,7 +141,7 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 
 	return &executor.ExecutionContext{
 		Variables:      variables,
-		Template:       template.NewPongo2Renderer(),
+		Template:       mustNewRenderer(),
 		EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
 		Logger:         &testutil.MockLogger{Logs: []string{}},
 		Evaluator:      expression.NewExprEvaluator(),

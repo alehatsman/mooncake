@@ -47,18 +47,19 @@ func NewRegistry() *Registry {
 
 // Register adds a handler to the registry.
 // This is typically called from init() functions in action packages.
-// Panics if a handler with the same name is already registered.
-func (r *Registry) Register(handler Handler) {
+// Returns an error if a handler with the same name is already registered.
+func (r *Registry) Register(handler Handler) error {
 	meta := handler.Metadata()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.handlers[meta.Name]; exists {
-		panic(fmt.Sprintf("action handler already registered: %s", meta.Name))
+		return fmt.Errorf("action handler already registered: %s", meta.Name)
 	}
 
 	r.handlers[meta.Name] = handler
+	return nil
 }
 
 // Get retrieves a handler by action type name.
@@ -106,6 +107,7 @@ var globalRegistry = NewRegistry()
 
 // Register registers a handler in the global registry.
 // This is the most common way to register handlers from init() functions.
+// Panics if registration fails (e.g., duplicate handler name).
 //
 // Example:
 //
@@ -113,7 +115,9 @@ var globalRegistry = NewRegistry()
 //	    actions.Register(&MyHandler{})
 //	}
 func Register(handler Handler) {
-	globalRegistry.Register(handler)
+	if err := globalRegistry.Register(handler); err != nil {
+		panic(err)
+	}
 }
 
 // Get retrieves a handler from the global registry.

@@ -143,7 +143,10 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Use planner to expand includes, loops, and other plan-time directives
 	// This ensures includes within preset steps are properly expanded
-	planner := plan.NewPlanner()
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create planner: %w", err)
+	}
 	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.Variables, presetBaseDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
@@ -221,7 +224,13 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Use planner to get final step count
-	planner := plan.NewPlanner()
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		// Show initial count if planner creation fails
+		ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, planner creation failed)",
+			invocation.Name, len(expandedSteps))
+		return nil
+	}
 	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, variables, presetBaseDir)
 	if err != nil {
 		// Show initial count if full expansion fails

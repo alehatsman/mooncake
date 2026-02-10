@@ -336,7 +336,10 @@ func planCommand(c *cli.Context) error {
 	}
 
 	// Build plan (planner will inject system facts automatically)
-	planner := plan.NewPlanner()
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		return err
+	}
 	planData, err := planner.BuildPlan(plan.PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  variables,

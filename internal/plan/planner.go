@@ -94,16 +94,22 @@ type PlannerConfig struct {
 	Tags       []string
 }
 
-// NewPlanner creates a new Planner instance
-func NewPlanner() *Planner {
-	pathExpander := pathutil.NewPathExpander(template.NewPongo2Renderer())
+// NewPlanner creates a new Planner instance.
+// Returns an error if template renderer initialization fails.
+func NewPlanner() (*Planner, error) {
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create template renderer: %w", err)
+	}
+
+	pathExpander := pathutil.NewPathExpander(renderer)
 	return &Planner{
-		template:     template.NewPongo2Renderer(),
+		template:     renderer,
 		pathUtil:     pathExpander,
 		fileTree:     filetree.NewWalker(pathExpander),
 		seenFiles:    make(map[string]bool),
 		locationMap:  make(map[int]*IncludeFrame),
-	}
+	}, nil
 }
 
 // ExpandStepsWithContext expands a list of steps with the given context.
@@ -353,12 +359,9 @@ func (p *Planner) expandWithItems(step config.Step, ctx *ExpansionContext, plan 
 		return fmt.Errorf("failed to render with_items expression: %w", err)
 	}
 
-	// For now, we'll need to evaluate the expression to get the items
-	// This requires the expression evaluator
-	// TODO: Implement proper expression evaluation
-	// For now, assume it's a simple list variable reference like "{{ packages }}"
-
-	// Extract variable name from template (simplified)
+	// Evaluate the expression to get the items
+	// Supports both simple variable references (e.g., "packages") and
+	// complex expressions with dot notation (e.g., "parameters.items")
 	items, err := p.evaluateItemsExpression(itemsExpr, ctx.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate with_items: %w", err)

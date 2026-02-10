@@ -13,6 +13,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
+// mustNewRenderer creates a renderer or panics
+func mustNewRenderer() template.Renderer {
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return r
+}
+
+
 // mockContext implements actions.Context for testing
 type mockContext struct {
 	variables map[string]interface{}
@@ -275,7 +285,7 @@ func TestHandler_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpl := template.NewPongo2Renderer()
+			tmpl := mustNewRenderer()
 			pub := &mockPublisher{events: []events.Event{}}
 			log := &mockLogger{logs: []string{}}
 
@@ -344,7 +354,7 @@ func TestHandler_Execute(t *testing.T) {
 func TestHandler_Execute_NoPublisher(t *testing.T) {
 	h := &Handler{}
 
-	tmpl := template.NewPongo2Renderer()
+	tmpl := mustNewRenderer()
 	log := &mockLogger{logs: []string{}}
 
 	ctx := &mockContext{
@@ -420,7 +430,7 @@ func TestHandler_DryRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpl := template.NewPongo2Renderer()
+			tmpl := mustNewRenderer()
 			log := &mockLogger{logs: []string{}}
 
 			ctx := &mockContext{

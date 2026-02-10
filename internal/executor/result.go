@@ -58,6 +58,11 @@ type Result struct {
 	// Currently not set by any step type.
 	Skipped bool `json:"skipped"`
 
+	// Data holds custom result data set by actions via SetData.
+	// This allows actions to provide additional structured information
+	// that can be accessed in templates and registered results.
+	Data map[string]interface{} `json:"data,omitempty"`
+
 	// Timing information
 	StartTime time.Time     `json:"start_time,omitempty"`
 	EndTime   time.Time     `json:"end_time,omitempty"`
@@ -92,7 +97,7 @@ func (r *Result) Status() string {
 
 // ToMap converts Result to a map for use in template variables.
 func (r *Result) ToMap() map[string]interface{} {
-	return map[string]interface{}{
+	m := map[string]interface{}{
 		"stdout":      r.Stdout,
 		"stderr":      r.Stderr,
 		"rc":          r.Rc,
@@ -102,6 +107,15 @@ func (r *Result) ToMap() map[string]interface{} {
 		"duration_ms": r.Duration.Milliseconds(),
 		"status":      r.Status(),
 	}
+
+	// Merge custom data fields into the map
+	if r.Data != nil {
+		for k, v := range r.Data {
+			m[k] = v
+		}
+	}
+
+	return m
 }
 
 // RegisterTo registers this result to the variables map under the given name.
@@ -138,10 +152,13 @@ func (r *Result) SetFailed(failed bool) {
 }
 
 // SetData sets custom result data.
-// This merges the provided data into the result's ToMap output.
-func (r *Result) SetData(_ map[string]interface{}) {
-	// Store data in result for later inclusion in ToMap
-	// We'll need to add a Data field to Result struct
-	// For now, we can extend ToMap to include this data
-	// This is a TODO for later refinement
+// This merges the provided data into the result's ToMap output,
+// allowing actions to provide additional structured information.
+func (r *Result) SetData(data map[string]interface{}) {
+	if r.Data == nil {
+		r.Data = make(map[string]interface{})
+	}
+	for k, v := range data {
+		r.Data[k] = v
+	}
 }

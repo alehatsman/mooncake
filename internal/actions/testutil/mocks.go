@@ -126,9 +126,13 @@ func (m *MockLogger) SetRedactor(_ logger.Redactor) {}
 
 // NewMockContext creates a new mock context with sensible defaults
 func NewMockContext() *MockContext {
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create mock renderer: " + err.Error())
+	}
 	return &MockContext{
 		Variables: make(map[string]interface{}),
-		Tmpl:      template.NewPongo2Renderer(),
+		Tmpl:      renderer,
 		Publisher: &MockPublisher{Events: []events.Event{}},
 		Log:       &MockLogger{Logs: []string{}},
 		StepID:    "step-1",

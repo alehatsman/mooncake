@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -100,12 +101,30 @@ func fetchFromURL(url string, targetDir string) (string, error) {
 	return targetDir, nil
 }
 
-// fetchFromGit clones a git repository (currently a stub - requires git executable).
-func fetchFromGit(_ string, _ string) (string, error) {
-	// TODO: Implement git clone functionality
-	// For v1, this can shell out to git command
-	// Example: git clone --depth 1 <gitURL> <targetDir>
-	return "", fmt.Errorf("git sources not yet implemented (coming in registry v2)")
+// fetchFromGit clones a git repository using the git command.
+func fetchFromGit(gitURL string, targetDir string) (string, error) {
+	// Check if git is available
+	if _, err := exec.LookPath("git"); err != nil {
+		return "", fmt.Errorf("git executable not found in PATH: %w", err)
+	}
+
+	// Create target directory if it doesn't exist
+	// #nosec G301 -- 0755 is appropriate for temp directories
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create target directory: %w", err)
+	}
+
+	// Clone repository with shallow clone (depth 1) for faster downloads
+	// #nosec G204 -- gitURL is validated by URL parsing in Fetch(), targetDir is a temp dir
+	cmd := exec.Command("git", "clone", "--depth", "1", gitURL, targetDir)
+
+	// Capture output for debugging
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("git clone failed: %w (output: %s)", err, string(output))
+	}
+
+	return targetDir, nil
 }
 
 // fetchFromPath copies a preset from a local file system path.

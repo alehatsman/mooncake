@@ -5,7 +5,10 @@ import (
 )
 
 func TestPongo2Renderer_Render(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 
 	tests := []struct {
 		name     string
@@ -122,7 +125,10 @@ func TestPongo2Renderer_Render(t *testing.T) {
 }
 
 func TestPongo2Renderer_RenderComplex(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 
 	template := `
 Name: {{ user.name }}
@@ -156,7 +162,10 @@ Items:
 }
 
 func TestPongo2Renderer_Concurrent(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 
 	// Test that renderer is safe for concurrent use
 	done := make(chan bool)
@@ -179,7 +188,10 @@ func TestPongo2Renderer_Concurrent(t *testing.T) {
 }
 
 func TestNewPongo2Renderer(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 	if renderer == nil {
 		t.Error("NewPongo2Renderer() returned nil")
 	}
@@ -205,7 +217,10 @@ func containsMiddle(s, substr string) bool {
 }
 
 func TestPongo2Renderer_ExpandUserFilter(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 
 	tests := []struct {
 		name     string
@@ -238,7 +253,10 @@ func TestPongo2Renderer_ExpandUserFilter(t *testing.T) {
 }
 
 func TestPongo2Renderer_ErrorHandling(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 
 	tests := []struct {
 		name     string
@@ -277,7 +295,10 @@ func TestPongo2Renderer_ErrorHandling(t *testing.T) {
 }
 
 func TestPongo2Renderer_ExecuteErrors(t *testing.T) {
-	renderer := NewPongo2Renderer()
+renderer, err := NewPongo2Renderer()
+if err != nil {
+	panic("Failed to create renderer: " + err.Error())
+}
 
 	tests := []struct {
 		name     string

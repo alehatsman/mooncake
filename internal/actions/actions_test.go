@@ -65,7 +65,11 @@ func (m *mockContext) GetVariables() map[string]interface{} {
 
 func (m *mockContext) GetTemplate() template.Renderer {
 	if m.tmpl == nil {
-		return template.NewPongo2Renderer()
+		renderer, err := template.NewPongo2Renderer()
+		if err != nil {
+			panic("Failed to create renderer in mock: " + err.Error())
+		}
+		return renderer
 	}
 	return m.tmpl
 }
@@ -215,7 +219,9 @@ func TestRegistry_Register(t *testing.T) {
 		},
 	}
 
-	reg.Register(handler)
+	if err := reg.Register(handler); err != nil {
+		t.Fatalf("Register failed: %v", err)
+	}
 
 	if reg.Count() != 1 {
 		t.Errorf("Expected 1 handler, got %d", reg.Count())
@@ -231,7 +237,7 @@ func TestRegistry_Register(t *testing.T) {
 	}
 }
 
-// TestRegistry_Register_Duplicate tests duplicate registration panics
+// TestRegistry_Register_Duplicate tests duplicate registration returns error
 func TestRegistry_Register_Duplicate(t *testing.T) {
 	reg := NewRegistry()
 
@@ -242,20 +248,19 @@ func TestRegistry_Register_Duplicate(t *testing.T) {
 		metadata: ActionMetadata{Name: "duplicate"},
 	}
 
-	reg.Register(handler1)
+	if err := reg.Register(handler1); err != nil {
+		t.Fatalf("First registration failed: %v", err)
+	}
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected panic on duplicate registration")
-		} else {
-			expected := "action handler already registered: duplicate"
-			if r != expected {
-				t.Errorf("Expected panic message %q, got %q", expected, r)
-			}
+	err := reg.Register(handler2)
+	if err == nil {
+		t.Error("Expected error on duplicate registration")
+	} else {
+		expected := "action handler already registered: duplicate"
+		if err.Error() != expected {
+			t.Errorf("Expected error message %q, got %q", expected, err.Error())
 		}
-	}()
-
-	reg.Register(handler2)
+	}
 }
 
 // TestRegistry_Get tests handler retrieval
@@ -266,8 +271,13 @@ func TestRegistry_Get(t *testing.T) {
 		metadata: ActionMetadata{Name: "get_test"},
 	}
 
-	reg.Register(handler)
+	if err := reg.Register(handler); err != nil {
 
+
+		t.Fatalf("Register failed: %v", err)
+
+
+	}
 	// Test successful retrieval
 	retrieved, ok := reg.Get("get_test")
 	if !ok {
@@ -295,7 +305,11 @@ func TestRegistry_List(t *testing.T) {
 	}
 
 	for _, h := range handlers {
-		reg.Register(h)
+		if err := reg.Register(h); err != nil {
+
+			t.Fatalf("Register failed: %v", err)
+
+		}
 	}
 
 	list := reg.List()
@@ -325,8 +339,13 @@ func TestRegistry_Has(t *testing.T) {
 		metadata: ActionMetadata{Name: "exists"},
 	}
 
-	reg.Register(handler)
+	if err := reg.Register(handler); err != nil {
 
+
+		t.Fatalf("Register failed: %v", err)
+
+
+	}
 	if !reg.Has("exists") {
 		t.Error("Has should return true for registered handler")
 	}
@@ -344,12 +363,24 @@ func TestRegistry_Count(t *testing.T) {
 		t.Errorf("Empty registry should have count 0, got %d", reg.Count())
 	}
 
-	reg.Register(&mockHandler{metadata: ActionMetadata{Name: "h1"}})
+	if err := reg.Register(&mockHandler{metadata: ActionMetadata{Name: "h1"}}); err != nil {
+
+
+		t.Fatalf("Register failed: %v", err)
+
+
+	}
 	if reg.Count() != 1 {
 		t.Errorf("Expected count 1, got %d", reg.Count())
 	}
 
-	reg.Register(&mockHandler{metadata: ActionMetadata{Name: "h2"}})
+	if err := reg.Register(&mockHandler{metadata: ActionMetadata{Name: "h2"}}); err != nil {
+
+
+		t.Fatalf("Register failed: %v", err)
+
+
+	}
 	if reg.Count() != 2 {
 		t.Errorf("Expected count 2, got %d", reg.Count())
 	}
@@ -360,8 +391,11 @@ func TestRegistry_ThreadSafety(t *testing.T) {
 	reg := NewRegistry()
 
 	// Pre-register one handler for Get operations
-	reg.Register(&mockHandler{metadata: ActionMetadata{Name: "existing"}})
+	if err := reg.Register(&mockHandler{metadata: ActionMetadata{Name: "existing"}}); err != nil {
 
+		t.Fatalf("Register failed: %v", err)
+
+	}
 	var wg sync.WaitGroup
 
 	// Concurrent reads
@@ -384,7 +418,11 @@ func TestRegistry_ThreadSafety(t *testing.T) {
 			handler := &mockHandler{
 				metadata: ActionMetadata{Name: fmt.Sprintf("concurrent_%d", idx)},
 			}
-			reg.Register(handler)
+			if err := reg.Register(handler); err != nil {
+
+				t.Fatalf("Register failed: %v", err)
+
+			}
 		}(i)
 	}
 
@@ -693,7 +731,11 @@ func TestRegistry_MultipleCategories(t *testing.T) {
 				Category: cat,
 			},
 		}
-		reg.Register(handler)
+		if err := reg.Register(handler); err != nil {
+
+			t.Fatalf("Register failed: %v", err)
+
+		}
 	}
 
 	if reg.Count() != len(categories) {
@@ -773,7 +815,11 @@ func TestRegistry_StressTest(t *testing.T) {
 				Category: CategoryCommand,
 			},
 		}
-		reg.Register(handler)
+		if err := reg.Register(handler); err != nil {
+
+			t.Fatalf("Register failed: %v", err)
+
+		}
 	}
 
 	if reg.Count() != numHandlers {

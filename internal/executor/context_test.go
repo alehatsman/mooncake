@@ -35,7 +35,10 @@ func TestExecutionContext_GetEvaluator_Nil(t *testing.T) {
 
 // TestExecutionContext_GetTemplate tests GetTemplate method
 func TestExecutionContext_GetTemplate(t *testing.T) {
-	tmpl := template.NewPongo2Renderer()
+	tmpl, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	ctx := &ExecutionContext{
 		Template: tmpl,
 	}
@@ -126,7 +129,10 @@ func TestExecutionContext_HandleDryRun_MultipleOperations(t *testing.T) {
 // TestNewExecutionContext tests context creation
 func TestNewExecutionContext(t *testing.T) {
 	testLogger := logger.NewTestLogger()
-	tmpl := template.NewPongo2Renderer()
+	tmpl, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	eval := expression.NewGovaluateEvaluator()
 
 	ctx := &ExecutionContext{

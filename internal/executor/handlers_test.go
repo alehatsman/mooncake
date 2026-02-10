@@ -6,7 +6,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
-	"github.com/alehatsman/mooncake/internal/template"
 )
 
 // TestHandleVars tests variable handling
@@ -146,7 +145,7 @@ func TestHandleWhenExpression(t *testing.T) {
 
 			ec := &ExecutionContext{
 				Evaluator: expression.NewGovaluateEvaluator(),
-				Template:  template.NewPongo2Renderer(),
+				Template:  mustNewRenderer(),
 				Logger:    logger.NewTestLogger(),
 				Variables: tt.variables,
 			}
@@ -178,7 +177,7 @@ func TestHandleWhenExpression_WithTemplate(t *testing.T) {
 
 	ec := &ExecutionContext{
 		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  template.NewPongo2Renderer(),
+		Template:  mustNewRenderer(),
 		Logger:    logger.NewTestLogger(),
 		Variables: map[string]interface{}{
 			"deploy": true,
@@ -231,7 +230,7 @@ func TestCheckIdempotencyConditions(t *testing.T) {
 
 			ec := &ExecutionContext{
 				Evaluator:     expression.NewGovaluateEvaluator(),
-				Template:      template.NewPongo2Renderer(),
+				Template:      mustNewRenderer(),
 				Logger:        logger.NewTestLogger(),
 				Variables:     make(map[string]interface{}),
 				CurrentResult: tt.result,
@@ -279,7 +278,7 @@ func TestCheckSkipConditions(t *testing.T) {
 
 			ec := &ExecutionContext{
 				Evaluator:     expression.NewGovaluateEvaluator(),
-				Template:      template.NewPongo2Renderer(),
+				Template:      mustNewRenderer(),
 				Logger:        logger.NewTestLogger(),
 				Variables:     make(map[string]interface{}),
 				CurrentResult: tt.result,
