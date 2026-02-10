@@ -115,7 +115,7 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		}, nil
 	}
 
-	diagnostics := validator.Validate(parsedConfig.Steps, locationMap, path)
+	diagnostics := validator.Validate(parsedConfig, locationMap, path)
 
 	// Validate template syntax in all templatable fields
 	templateValidator := NewTemplateValidator()

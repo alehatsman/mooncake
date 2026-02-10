@@ -84,7 +84,7 @@ func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
 func setPropertyType(prop *Property, t reflect.Type) {
 	switch t.Kind() {
 	case reflect.String:
-		prop.Type = "string"
+		prop.Type = "string" //nolint:goconst // JSON Schema type
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		prop.Type = "integer"
@@ -99,13 +99,13 @@ func setPropertyType(prop *Property, t reflect.Type) {
 		prop.Items = &Property{}
 		setPropertyType(prop.Items, elemType)
 	case reflect.Map:
-		prop.Type = "object"
+		prop.Type = "object" //nolint:goconst // JSON Schema type
 		// Maps are typically string -> interface{} in config
 		// Allow additional properties for maps
 		trueVal := true
 		prop.AdditionalProps = &trueVal
 	case reflect.Struct:
-		prop.Type = "object"
+		prop.Type = "object" //nolint:goconst // JSON Schema type
 		// For nested structs, extract properties recursively
 		nestedProps, nestedRequired := extractStructProperties(t)
 		prop.Properties = nestedProps

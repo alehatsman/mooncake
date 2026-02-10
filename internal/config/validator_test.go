@@ -143,7 +143,8 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
 			}
 
 			// Validate
-			diagnostics := validator.Validate(steps, locationMap, "test.yml")
+			parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 			// Should have no errors
 			if len(diagnostics) > 0 {
@@ -180,7 +181,8 @@ func TestSchemaValidator_MultipleActions(t *testing.T) {
 		t.Fatalf("Failed to decode steps: %v", err)
 	}
 
-	diagnostics := validator.Validate(steps, locationMap, "test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 	// Should have validation errors (multiple actions)
 	if len(diagnostics) == 0 {
@@ -211,7 +213,8 @@ func TestSchemaValidator_NoAction(t *testing.T) {
 		t.Fatalf("Failed to decode steps: %v", err)
 	}
 
-	diagnostics := validator.Validate(steps, locationMap, "test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 	// Should have validation errors (no action)
 	if len(diagnostics) == 0 {
@@ -271,7 +274,8 @@ func TestSchemaValidator_MissingRequiredField(t *testing.T) {
 				t.Fatalf("Failed to decode steps: %v", err)
 			}
 
-			diagnostics := validator.Validate(steps, locationMap, "test.yml")
+			parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 			// Should have validation errors
 			if len(diagnostics) == 0 {
@@ -319,7 +323,8 @@ func TestSchemaValidator_InvalidFieldType(t *testing.T) {
 	// Note: This might fail at decode time depending on Go's strictness
 	// If it decodes, validation should catch type mismatches
 
-	diagnostics := validator.Validate(steps, locationMap, "test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 	// Should have some kind of error (either from decode or validation)
 	if err == nil && len(diagnostics) == 0 {
@@ -353,7 +358,8 @@ func TestSchemaValidator_UnknownField(t *testing.T) {
 		t.Fatalf("Failed to decode steps: %v", err)
 	}
 
-	diagnostics := validator.Validate(steps, locationMap, "test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 	// Should have validation errors (unknown field)
 	if len(diagnostics) == 0 {
@@ -418,7 +424,8 @@ func TestSchemaValidator_InvalidFileMode(t *testing.T) {
 				return
 			}
 
-			diagnostics := validator.Validate(steps, locationMap, "test.yml")
+			parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 			// Should have validation errors
 			if len(diagnostics) == 0 {
@@ -453,7 +460,8 @@ func TestSchemaValidator_InvalidFileState(t *testing.T) {
 		t.Fatalf("Failed to decode steps: %v", err)
 	}
 
-	diagnostics := validator.Validate(steps, locationMap, "test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 	// Should have validation errors (invalid enum value)
 	if len(diagnostics) == 0 {
@@ -488,7 +496,8 @@ func TestSchemaValidator_DiagnosticHasLocation(t *testing.T) {
 		t.Fatalf("Failed to decode steps: %v", err)
 	}
 
-	diagnostics := validator.Validate(steps, locationMap, "/path/to/test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "/path/to/test.yml")
 
 	if len(diagnostics) == 0 {
 		t.Fatal("Expected validation errors, got none")
@@ -555,11 +564,65 @@ func TestValidate_RealWorldExample(t *testing.T) {
 		t.Fatalf("Failed to decode steps: %v", err)
 	}
 
-	diagnostics := validator.Validate(steps, locationMap, "test.yml")
+	parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 	// Should have no errors for valid config
 	if len(diagnostics) > 0 {
 		t.Errorf("Expected no validation errors for valid config, got %d:\n%s",
 			len(diagnostics), FormatDiagnostics(diagnostics))
+	}
+}
+
+func TestSchemaValidator_RunConfigFormat(t *testing.T) {
+	validator, err := NewSchemaValidator()
+	if err != nil {
+		t.Fatalf("Failed to create validator: %v", err)
+	}
+
+	yamlConfig := `version: "1.0"
+vars:
+  os_name: darwin
+steps:
+  - name: test step
+    shell: echo hello`
+
+	// Parse YAML
+	var rootNode yaml.Node
+	err = yaml.Unmarshal([]byte(yamlConfig), &rootNode)
+	if err != nil {
+		t.Fatalf("Failed to parse YAML: %v", err)
+	}
+
+	// Build location map
+	locationMap := buildLocationMap(&rootNode)
+
+	// Unmarshal to RunConfig
+	var runConfig RunConfig
+	err = rootNode.Decode(&runConfig)
+	if err != nil {
+		t.Fatalf("Failed to decode RunConfig: %v", err)
+	}
+
+	// Create ParsedConfig
+	parsedConfig := &ParsedConfig{
+		Version:    runConfig.Version,
+		GlobalVars: runConfig.Vars,
+		Steps:      runConfig.Steps,
+	}
+
+	t.Logf("Version: %q", parsedConfig.Version)
+	t.Logf("GlobalVars: %v", parsedConfig.GlobalVars)
+	t.Logf("Steps count: %d", len(parsedConfig.Steps))
+
+	// Validate
+	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
+
+	// Should have no errors
+	if len(diagnostics) > 0 {
+		for _, d := range diagnostics {
+			t.Errorf("Validation error at line %d: %s", d.Line, d.Message)
+		}
+		t.Fatalf("Expected no validation errors, got %d", len(diagnostics))
 	}
 }

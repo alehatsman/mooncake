@@ -98,7 +98,7 @@ scan: lint ## Run security scans (gosec + govulncheck)
 # ==============================================================================
 
 .PHONY: ci
-ci: lint test-race scan docs-check ## Run full CI suite (lint + test-race + scan + docs-check)
+ci: lint test-race scan docs-check schema-check ## Run full CI suite (lint + test-race + scan + docs-check + schema-check)
 	@echo ""
 	@echo "✓ All CI checks passed!"
 
@@ -159,6 +159,33 @@ docs-clean: ## Remove generated documentation
 	@echo "Cleaning generated documentation..."
 	@rm -rf docs-next/generated/
 	@echo "✓ Cleaned generated docs"
+
+# ==============================================================================
+# Schema
+# ==============================================================================
+
+.PHONY: schema-generate
+schema-generate: build ## Generate JSON Schema from code (internal/config/schema.json)
+	@echo "Generating JSON Schema from action metadata..."
+	@./out/mooncake schema generate --format json --output internal/config/schema.json --strict
+	@echo "✓ Generated internal/config/schema.json"
+	@echo "  Schema is embedded in binary for runtime validation"
+
+.PHONY: schema-check
+schema-check: build ## Check if generated schema is up to date
+	@echo "Checking if JSON Schema is up to date..."
+	@mkdir -p .tmp/schema-check
+	@./out/mooncake schema generate --format json --output .tmp/schema-check/schema.json --strict >/dev/null 2>&1
+	@if diff -q internal/config/schema.json .tmp/schema-check/schema.json >/dev/null 2>&1; then \
+		rm -rf .tmp/schema-check; \
+		echo "✓ Schema is up to date"; \
+	else \
+		rm -rf .tmp/schema-check; \
+		echo "✗ Schema is out of sync!"; \
+		echo ""; \
+		echo "Run 'make schema-generate' to update schema."; \
+		exit 1; \
+	fi
 
 # ==============================================================================
 # Release

@@ -38,10 +38,25 @@ func NewSchemaValidator() (*SchemaValidator, error) {
 	}, nil
 }
 
-// Validate validates steps against the JSON Schema and returns diagnostics
-func (v *SchemaValidator) Validate(steps []Step, locationMap *LocationMap, filePath string) []Diagnostic {
-	// Convert steps to JSON for validation
-	data, err := json.Marshal(steps)
+// Validate validates configuration against the JSON Schema and returns diagnostics.
+// It accepts a ParsedConfig which contains the complete configuration structure.
+func (v *SchemaValidator) Validate(parsedConfig *ParsedConfig, locationMap *LocationMap, filePath string) []Diagnostic {
+	// Determine which format to validate based on whether we have version/vars
+	var dataToValidate interface{}
+	if parsedConfig.Version != "" || len(parsedConfig.GlobalVars) > 0 {
+		// New format: validate as RunConfig
+		dataToValidate = RunConfig{
+			Version: parsedConfig.Version,
+			Vars:    parsedConfig.GlobalVars,
+			Steps:   parsedConfig.Steps,
+		}
+	} else {
+		// Old format: validate as array of steps
+		dataToValidate = parsedConfig.Steps
+	}
+
+	// Convert to JSON for validation
+	data, err := json.Marshal(dataToValidate)
 	if err != nil {
 		return []Diagnostic{
 			{

@@ -12,20 +12,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
-// testEventSubscriber is a test subscriber that implements events.Subscriber
-type testEventSubscriber struct {
-	onEvent func(event events.Event)
-}
-
-func (s *testEventSubscriber) OnEvent(event events.Event) {
-	if s.onEvent != nil {
-		s.onEvent(event)
-	}
-}
-
-func (s *testEventSubscriber) Close() {
-}
-
 // TestGetStepDisplayName_WithFileTreeItem tests display name for filetree items
 func TestGetStepDisplayName_WithFileTreeItem(t *testing.T) {
 	tests := []struct {

@@ -611,7 +611,11 @@ func TestHandler_Execute_FileAssertion_InvalidMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_OwnerNotImplemented(t *testing.T) {
+func TestHandler_Execute_FileAssertion_Owner(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Owner assertions not supported on Windows")
+	}
+
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -621,23 +625,73 @@ func TestHandler_Execute_FileAssertion_OwnerNotImplemented(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	owner := "root"
-	step := &config.Step{
-		Assert: &config.Assert{
-			File: &config.AssertFile{
-				Path:  testFile,
-				Owner: &owner,
-			},
+	// Get current user
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Failed to get current user: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		owner       string
+		shouldPass  bool
+		description string
+	}{
+		{
+			name:        "correct owner by username",
+			owner:       currentUser.Username,
+			shouldPass:  true,
+			description: "file owned by current user should pass",
+		},
+		{
+			name:        "correct owner by UID",
+			owner:       currentUser.Uid,
+			shouldPass:  true,
+			description: "file owned by current UID should pass",
+		},
+		{
+			name:        "incorrect owner",
+			owner:       "nonexistentuser99999",
+			shouldPass:  false,
+			description: "file with wrong owner should fail",
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
-	if err == nil {
-		t.Error("Execute() should error for owner assertion (not implemented)")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := &config.Step{
+				Assert: &config.Assert{
+					File: &config.AssertFile{
+						Path:  testFile,
+						Owner: &tt.owner,
+					},
+				},
+			}
+
+			_, err := h.Execute(ctx, step)
+
+			if tt.shouldPass {
+				if err != nil {
+					t.Errorf("Expected assertion to pass but got error: %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Error("Expected assertion to fail but it passed")
+				}
+				var assertErr *executor.AssertionError
+				if !errors.As(err, &assertErr) {
+					t.Errorf("Expected AssertionError, got: %T", err)
+				}
+			}
+		})
 	}
 }
 
-func TestHandler_Execute_FileAssertion_GroupNotImplemented(t *testing.T) {
+func TestHandler_Execute_FileAssertion_Group(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Group assertions not supported on Windows")
+	}
+
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -647,19 +701,71 @@ func TestHandler_Execute_FileAssertion_GroupNotImplemented(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	group := "wheel"
-	step := &config.Step{
-		Assert: &config.Assert{
-			File: &config.AssertFile{
-				Path:  testFile,
-				Group: &group,
-			},
+	// Get current user to find their primary group
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Fatalf("Failed to get current user: %v", err)
+	}
+
+	// Get primary group
+	primaryGroup, err := user.LookupGroupId(currentUser.Gid)
+	if err != nil {
+		t.Fatalf("Failed to lookup primary group: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		group       string
+		shouldPass  bool
+		description string
+	}{
+		{
+			name:        "correct group by name",
+			group:       primaryGroup.Name,
+			shouldPass:  true,
+			description: "file with current user's group should pass",
+		},
+		{
+			name:        "correct group by GID",
+			group:       currentUser.Gid,
+			shouldPass:  true,
+			description: "file with current user's GID should pass",
+		},
+		{
+			name:        "incorrect group",
+			group:       "nonexistentgroup99999",
+			shouldPass:  false,
+			description: "file with wrong group should fail",
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
-	if err == nil {
-		t.Error("Execute() should error for group assertion (not implemented)")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := &config.Step{
+				Assert: &config.Assert{
+					File: &config.AssertFile{
+						Path:  testFile,
+						Group: &tt.group,
+					},
+				},
+			}
+
+			_, err := h.Execute(ctx, step)
+
+			if tt.shouldPass {
+				if err != nil {
+					t.Errorf("Expected assertion to pass but got error: %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Error("Expected assertion to fail but it passed")
+				}
+				var assertErr *executor.AssertionError
+				if !errors.As(err, &assertErr) {
+					t.Errorf("Expected AssertionError, got: %T", err)
+				}
+			}
+		})
 	}
 }
 

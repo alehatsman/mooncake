@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -26,10 +27,6 @@ func (g *Generator) Generate() (*Schema, error) {
 		ID:          "https://mooncake.dev/schemas/config.json",
 		Title:       "Mooncake Configuration Schema",
 		Description: "JSON Schema for Mooncake configuration files",
-		Type:        "array",
-		Items: &SchemaRef{
-			Ref: "#/definitions/step",
-		},
 		Definitions: make(map[string]*Definition),
 	}
 
@@ -39,6 +36,10 @@ func (g *Generator) Generate() (*Schema, error) {
 		return nil, fmt.Errorf("failed to generate step definition: %w", err)
 	}
 	schema.Definitions["step"] = stepDef
+
+	// Add RunConfig definition (new structured format with version/vars/steps)
+	runConfigDef := g.generateRunConfigDefinition()
+	schema.Definitions["runConfig"] = runConfigDef
 
 	// Generate definitions for each action
 	for _, meta := range actions.List() {
@@ -53,6 +54,21 @@ func (g *Generator) Generate() (*Schema, error) {
 			// Special case: shell can be string or object
 			schema.Definitions[meta.Name+"_action"] = def
 		}
+	}
+
+	// Support both formats at root level using oneOf:
+	// 1. Array of steps (old format for backward compatibility)
+	// 2. RunConfig object (new format with version/vars/steps)
+	schema.OneOf = []*OneOfConstraint{
+		{
+			Type: "array",
+			Items: &SchemaRef{
+				Ref: "#/definitions/step",
+			},
+		},
+		{
+			Ref: "#/definitions/runConfig",
+		},
 	}
 
 	return schema, nil
@@ -195,12 +211,57 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 		def.Properties[meta.Name] = actionProp
 	}
 
+	// Add "include" to action names for oneOf generation
+	// (include is a special string field, not a registered action)
+	actionNames = append(actionNames, "include")
+
+	// Sort action names for deterministic schema generation
+	sort.Strings(actionNames)
+
 	// Generate oneOf constraints to ensure only one action per step
 	if g.opts.StrictValidation {
 		def.OneOf = g.generateOneOfConstraints(actionNames)
 	}
 
 	return def, nil
+}
+
+// generateRunConfigDefinition creates the RunConfig definition for structured configs.
+func (g *Generator) generateRunConfigDefinition() *Definition {
+	trueVal := true
+
+	def := &Definition{
+		Type:        "object", //nolint:goconst // JSON Schema type
+		Description: "Structured configuration with version, global variables, and steps",
+		Properties: map[string]*Property{
+			"version": {
+				Type:        "string", //nolint:goconst // JSON Schema type
+				Description: "Configuration schema version (e.g., '1.0')",
+			},
+			"vars": {
+				Type:            "object", //nolint:goconst // JSON Schema type
+				Description:     "Global variables available to all steps",
+				Properties:      map[string]*Property{},
+				AdditionalProps: &trueVal,
+			},
+			"steps": {
+				Type: "array",
+				Items: &Property{
+					Ref: "#/definitions/step",
+				},
+				Description: "Configuration steps to execute",
+			},
+		},
+		Required: []string{"steps"},
+	}
+
+	// Set additionalProperties to false if strict validation is enabled
+	if g.opts.StrictValidation {
+		falseVal := false
+		def.AdditionalProperties = &falseVal
+	}
+
+	return def
 }
 
 // generateOneOfConstraints creates oneOf constraints to enforce mutual exclusion of actions.

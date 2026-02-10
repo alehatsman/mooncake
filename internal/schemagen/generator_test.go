@@ -27,12 +27,22 @@ func TestGenerate(t *testing.T) {
 		t.Errorf("Expected schema URI, got %s", schema.SchemaURI)
 	}
 
-	if schema.Type != "array" {
-		t.Errorf("Expected type 'array', got %s", schema.Type)
+	// Schema should have oneOf for both array and RunConfig formats
+	if len(schema.OneOf) != 2 {
+		t.Fatalf("Expected 2 oneOf alternatives, got %d", len(schema.OneOf))
 	}
 
-	if schema.Items == nil || schema.Items.Ref != "#/definitions/step" {
-		t.Error("Expected items to reference #/definitions/step")
+	// First alternative should be array of steps
+	if schema.OneOf[0].Type != "array" {
+		t.Errorf("Expected first oneOf type 'array', got %s", schema.OneOf[0].Type)
+	}
+	if schema.OneOf[0].Items == nil || schema.OneOf[0].Items.Ref != "#/definitions/step" {
+		t.Error("Expected first oneOf items to reference #/definitions/step")
+	}
+
+	// Second alternative should be RunConfig
+	if schema.OneOf[1].Ref != "#/definitions/runConfig" {
+		t.Errorf("Expected second oneOf to reference runConfig, got %s", schema.OneOf[1].Ref)
 	}
 
 	// Verify step definition exists
@@ -162,8 +172,9 @@ func TestMarshalJSON(t *testing.T) {
 		t.Error("Schema URI not found in marshaled JSON")
 	}
 
-	if result["type"] != "array" {
-		t.Error("Type not found in marshaled JSON")
+	// Should have oneOf instead of type
+	if _, ok := result["oneOf"]; !ok {
+		t.Error("oneOf not found in marshaled JSON")
 	}
 }
 

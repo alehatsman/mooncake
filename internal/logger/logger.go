@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"time"
 )
 
@@ -76,10 +75,4 @@ type Logger interface {
 	LogStep(info StepInfo)
 	Complete(stats ExecutionStats)
 	SetRedactor(redactor Redactor)
-}
-
-// Fatalf logs an error and exits the program.
-func Fatalf(logger Logger, format string, v ...interface{}) {
-	logger.Errorf(format, v...)
-	os.Exit(1)
 }

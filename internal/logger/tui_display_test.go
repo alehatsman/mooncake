@@ -608,11 +608,3 @@ func TestTUIDisplay_RenderWithCompletion(t *testing.T) {
 		t.Error("Render() with completion should contain duration")
 	}
 }
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

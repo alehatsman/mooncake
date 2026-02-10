@@ -154,13 +154,37 @@ func (s *Schema) ConvertToOpenAPI() *OpenAPISpec {
 		spec.Components.Schemas[name] = convertDefinitionToOpenAPISchema(def)
 	}
 
-	// Add root schema for the config array
-	spec.Components.Schemas["config"] = &OpenAPISchema{
-		Type:        s.Type,
-		Description: "Array of configuration steps",
-		Items: &OpenAPISchema{
-			Ref: convertRef(s.Items.Ref),
-		},
+	// Add root schema for the config (supports both array and RunConfig formats)
+	if len(s.OneOf) > 0 {
+		// Schema uses oneOf for multiple formats
+		oneOfSchemas := make([]*OpenAPISchema, 0, len(s.OneOf))
+		for _, constraint := range s.OneOf {
+			schema := &OpenAPISchema{}
+			if constraint.Type != "" {
+				schema.Type = constraint.Type
+				if constraint.Items != nil {
+					schema.Items = &OpenAPISchema{
+						Ref: convertRef(constraint.Items.Ref),
+					}
+				}
+			} else if constraint.Ref != "" {
+				schema.Ref = convertRef(constraint.Ref)
+			}
+			oneOfSchemas = append(oneOfSchemas, schema)
+		}
+		spec.Components.Schemas["config"] = &OpenAPISchema{
+			Description: "Configuration can be either an array of steps (old format) or a RunConfig object (new format)",
+			OneOf:       oneOfSchemas,
+		}
+	} else if s.Type != "" {
+		// Legacy: schema has a single type
+		spec.Components.Schemas["config"] = &OpenAPISchema{
+			Type:        s.Type,
+			Description: "Array of configuration steps",
+			Items: &OpenAPISchema{
+				Ref: convertRef(s.Items.Ref),
+			},
+		}
 	}
 
 	return spec

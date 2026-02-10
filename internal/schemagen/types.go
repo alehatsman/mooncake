@@ -20,8 +20,9 @@ type Schema struct {
 	ID          string                 `json:"$id,omitempty" yaml:"$id,omitempty"`
 	Title       string                 `json:"title" yaml:"title"`
 	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
-	Type        string                 `json:"type" yaml:"type"`
+	Type        string                 `json:"type,omitempty" yaml:"type,omitempty"`
 	Items       *SchemaRef             `json:"items,omitempty" yaml:"items,omitempty"`
+	OneOf       []*OneOfConstraint     `json:"oneOf,omitempty" yaml:"oneOf,omitempty"`
 	Definitions map[string]*Definition `json:"definitions,omitempty" yaml:"definitions,omitempty"`
 }
 
@@ -50,9 +51,17 @@ type Definition struct {
 }
 
 // OneOfConstraint represents a oneOf constraint with required and not clauses.
+// It can also represent complete schema alternatives (for root-level oneOf).
 type OneOfConstraint struct {
-	Required []string               `json:"required,omitempty" yaml:"required,omitempty"`
-	Not      *NotConstraint         `json:"not,omitempty" yaml:"not,omitempty"`
+	// For mutual exclusion constraints at step level
+	Required []string       `json:"required,omitempty" yaml:"required,omitempty"`
+	Not      *NotConstraint `json:"not,omitempty" yaml:"not,omitempty"`
+
+	// For root-level oneOf alternatives (complete schemas)
+	Type        string      `json:"type,omitempty" yaml:"type,omitempty"`
+	Items       *SchemaRef  `json:"items,omitempty" yaml:"items,omitempty"`
+	Ref         string      `json:"$ref,omitempty" yaml:"$ref,omitempty"`
+	Description string      `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
 // NotConstraint represents a "not" constraint with anyOf clauses.
