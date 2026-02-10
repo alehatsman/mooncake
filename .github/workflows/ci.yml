@@ -159,27 +159,8 @@ jobs:
           go-version: '1.25.7'
           cache: true
 
-      - name: Build mooncake
-        run: make build
-
-      - name: Generate documentation
-        run: make docs-generate
-
-      - name: Check for uncommitted changes
-        run: |
-          if ! git diff --quiet docs-next/generated/; then
-            echo "❌ Generated documentation is out of sync!"
-            echo ""
-            echo "The following files have uncommitted changes:"
-            git diff --name-only docs-next/generated/
-            echo ""
-            echo "Changes detected:"
-            git diff docs-next/generated/
-            echo ""
-            echo "Please run 'make docs-generate' locally and commit the changes."
-            exit 1
-          fi
-          echo "✅ Documentation is up to date"
+      - name: Check documentation is up to date
+        run: make docs-check
 
       - name: Upload generated docs as artifact
         if: failure()
@@ -188,4 +169,21 @@ jobs:
           name: generated-docs
           path: docs-next/generated/
           retention-days: 7
+
+  schema-check:
+    name: Schema Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.7'
+          cache: true
+
+      - name: Check schema is up to date
+        run: make schema-check
 
