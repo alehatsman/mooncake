@@ -89,9 +89,9 @@ func setPropertyType(prop *Property, t reflect.Type) {
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		prop.Type = "integer"
 	case reflect.Float32, reflect.Float64:
-		prop.Type = "number"
+		prop.Type = "number" //nolint:goconst // JSON Schema type
 	case reflect.Bool:
-		prop.Type = "boolean"
+		prop.Type = "boolean" //nolint:goconst // JSON Schema type
 	case reflect.Slice, reflect.Array:
 		prop.Type = "array"
 		// Extract element type
@@ -174,28 +174,8 @@ func parseSchemaTag(prop *Property, tag string) {
 			continue
 		}
 
-		if strings.HasPrefix(part, "minLength=") {
-			// Parse int
-			// Note: simplified for now, could add proper parsing
-			continue
-		}
-
-		if strings.HasPrefix(part, "maxLength=") {
-			// Parse int
-			continue
-		}
+		// minLength and maxLength parsing could be added here if needed
 	}
 }
 
 // inferDescription attempts to infer a description from field name.
-func inferDescription(fieldName string) string {
-	// Convert camelCase to Title Case with spaces
-	var result []rune
-	for i, r := range fieldName {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result = append(result, ' ')
-		}
-		result = append(result, r)
-	}
-	return string(result)
-}

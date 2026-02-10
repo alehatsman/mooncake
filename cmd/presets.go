@@ -384,6 +384,7 @@ func installPresetAction(c *cli.Context) error {
 
 // collectParameters prompts the user for preset parameters interactively.
 // Returns a map of parameter values ready for validation.
+//nolint:gocyclo // Complex user interaction logic is unavoidable
 func collectParameters(preset *config.PresetDefinition) (map[string]interface{}, error) {
 	if len(preset.Parameters) == 0 {
 		return map[string]interface{}{}, nil
@@ -467,11 +468,12 @@ func collectParameters(preset *config.PresetDefinition) (map[string]interface{},
 			value = input
 		case "bool":
 			lower := strings.ToLower(input)
-			if lower == "true" || lower == "t" || lower == "yes" || lower == "y" || lower == "1" {
+			switch lower {
+			case "true", "t", "yes", "y", "1": //nolint:goconst // Boolean parsing values
 				value = true
-			} else if lower == "false" || lower == "f" || lower == "no" || lower == "n" || lower == "0" {
+			case "false", "f", "no", "n", "0":
 				value = false
-			} else {
+			default:
 				fmt.Printf("  Error: Invalid boolean value '%s' (use: true/false, yes/no, y/n)\n", input)
 				return nil, fmt.Errorf("invalid boolean value for parameter '%s'", paramName)
 			}
@@ -582,9 +584,9 @@ func executePresetInstall(c *cli.Context, name string) error {
 	} else {
 		// Interactive: collect from user, but CLI params take precedence
 		if len(preset.Parameters) > 0 {
-			collected, err := collectParameters(preset)
-			if err != nil {
-				return fmt.Errorf("failed to collect parameters: %w", err)
+			collected, collectErr := collectParameters(preset)
+			if collectErr != nil {
+				return fmt.Errorf("failed to collect parameters: %w", collectErr)
 			}
 			userParams = collected
 			// Override with CLI params

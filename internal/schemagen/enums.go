@@ -59,7 +59,7 @@ func applyKnownValidation(actionName, fieldName string, prop *Property) {
 	}
 }
 
-// enhanceDescriptions adds detailed descriptions to properties.
+// EnhancedDescriptions adds detailed descriptions to properties.
 var EnhancedDescriptions = map[string]map[string]string{
 	"service": {
 		"name":          "Service name (systemd: nginx, launchd: com.example.app)",

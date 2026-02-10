@@ -284,7 +284,7 @@ func displayActionsTable(actionsList []actions.ActionMetadata) {
 		// Format sudo requirement
 		sudo := "no"
 		if meta.RequiresSudo {
-			sudo = "yes"
+			sudo = "yes" //nolint:goconst // Simple display string
 		}
 
 		// Format check implementation

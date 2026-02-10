@@ -49,7 +49,7 @@ func (g *Generator) Generate() (*Schema, error) {
 
 		// Store as both the action name and action_action for consistency
 		schema.Definitions[meta.Name] = def
-		if meta.Name == "shell" || meta.Name == "command" {
+		if meta.Name == "shell" || meta.Name == "command" { //nolint:goconst // Action name checks
 			// Special case: shell can be string or object
 			schema.Definitions[meta.Name+"_action"] = def
 		}
@@ -59,6 +59,7 @@ func (g *Generator) Generate() (*Schema, error) {
 }
 
 // generateStepDefinition creates the step definition with universal fields.
+//nolint:unparam // Error return kept for future error handling
 func (g *Generator) generateStepDefinition() (*Definition, error) {
 	def := &Definition{
 		Type:       "object",
@@ -165,7 +166,7 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 
 	// Get all action names for oneOf generation
 	actionMetas := actions.List()
-	var actionNames []string
+	var actionNames []string //nolint:prealloc // Size unknown at compile time
 
 	// Add action fields (will be populated by generateActionDefinition)
 	// These are added as properties that reference action definitions
@@ -205,7 +206,7 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 // generateOneOfConstraints creates oneOf constraints to enforce mutual exclusion of actions.
 // Each constraint says: "if this action is required, then none of the other actions can be present"
 func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConstraint {
-	var constraints []*OneOfConstraint
+	var constraints []*OneOfConstraint //nolint:prealloc // Size depends on actionNames length
 
 	for i, actionName := range actionNames {
 		// Create a constraint for this action
@@ -232,6 +233,7 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 }
 
 // generateActionDefinition creates a definition for a specific action.
+//nolint:unparam // Error return kept for future error handling
 func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Definition, error) {
 	def := &Definition{
 		Type:        "object",
@@ -262,7 +264,7 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 	// Handle special cases for actions that don't have dedicated structs
 	if meta.Name == "vars" {
 		// vars is a map[string]interface{}
-		def.Type = "object"
+		def.Type = "object" //nolint:goconst // JSON Schema type
 		def.Description = "Define or update variables"
 		// Properties can be any key-value pairs - allow additional properties
 		trueVal := true
@@ -272,7 +274,7 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 
 	if meta.Name == "include_vars" {
 		// include_vars is a string (file path)
-		def.Type = "string"
+		def.Type = "string" //nolint:goconst // JSON Schema type
 		def.Description = "Load variables from a YAML file"
 		return def, nil
 	}

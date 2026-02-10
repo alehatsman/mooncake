@@ -131,7 +131,8 @@ func generateSchemaAction(c *cli.Context) error {
 	}
 
 	// Generate and write based on format
-	if format == "openapi" {
+	switch format {
+	case "openapi":
 		// Generate OpenAPI spec
 		spec, err := generator.GenerateOpenAPI()
 		if err != nil {
@@ -149,7 +150,7 @@ func generateSchemaAction(c *cli.Context) error {
 			fmt.Fprintf(os.Stderr, "✓ Generated OpenAPI 3.0 spec to %s\n", output)
 			fmt.Fprintf(os.Stderr, "  Use with Swagger UI, ReDoc, or openapi-generator\n")
 		}
-	} else if format == "typescript" {
+	case "typescript":
 		// Generate TypeScript definitions
 		tsContent, err := generator.GenerateTypeScript()
 		if err != nil {
@@ -167,7 +168,7 @@ func generateSchemaAction(c *cli.Context) error {
 			fmt.Fprintf(os.Stderr, "✓ Generated TypeScript definitions to %s\n", output)
 			fmt.Fprintf(os.Stderr, "  Use with TypeScript editors for autocomplete and type checking\n")
 		}
-	} else {
+	default:
 		// Generate JSON Schema
 		schema, err := generator.Generate()
 		if err != nil {

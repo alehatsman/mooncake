@@ -60,7 +60,9 @@ func (w *Writer) writeJSON(schema *Schema, out io.Writer) error {
 func (w *Writer) writeYAML(schema *Schema, out io.Writer) error {
 	encoder := yaml.NewEncoder(out)
 	encoder.SetIndent(2)
-	defer encoder.Close()
+	defer func() {
+		_ = encoder.Close() // Ignore close error as we're already returning encode error
+	}()
 	return encoder.Encode(schema)
 }
 
@@ -76,13 +78,8 @@ func (w *Writer) writeOpenAPIJSON(spec *OpenAPISpec, out io.Writer) error {
 func (w *Writer) writeOpenAPIYAML(spec *OpenAPISpec, out io.Writer) error {
 	encoder := yaml.NewEncoder(out)
 	encoder.SetIndent(2)
-	defer encoder.Close()
+	defer func() {
+		_ = encoder.Close() // Ignore close error as we're already returning encode error
+	}()
 	return encoder.Encode(spec)
-}
-
-// WriteToFile writes the schema to a file.
-func (w *Writer) WriteToFile(schema *Schema, filename string) error {
-	// This will be used by the CLI command
-	// For now, we'll implement it in the cmd package
-	return fmt.Errorf("not implemented: use CLI command instead")
 }

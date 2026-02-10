@@ -360,18 +360,32 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 		return fmt.Sprintf("mode %04o", expectedMode), fmt.Sprintf("mode %04o", actualMode), nil
 	}
 
-	// Assert owner/group would require syscall.Stat_t - not implemented here
+	// Check owner if specified
 	if assertFile.Owner != nil {
-		return "", "", &executor.SetupError{
-			Component: "owner check",
-			Issue:     "owner assertion not yet implemented",
+		expected, actual, err := checkFileOwner(fileInfo, *assertFile.Owner)
+		if err != nil {
+			return expected, actual, &executor.AssertionError{
+				Type:     "file.owner",
+				Expected: expected,
+				Actual:   actual,
+				Details:  path,
+			}
 		}
+		return fmt.Sprintf("owner: %s", expected), fmt.Sprintf("owner: %s", actual), nil
 	}
+
+	// Check group if specified
 	if assertFile.Group != nil {
-		return "", "", &executor.SetupError{
-			Component: "group check",
-			Issue:     "group assertion not yet implemented",
+		expected, actual, err := checkFileGroup(fileInfo, *assertFile.Group)
+		if err != nil {
+			return expected, actual, &executor.AssertionError{
+				Type:     "file.group",
+				Expected: expected,
+				Actual:   actual,
+				Details:  path,
+			}
 		}
+		return fmt.Sprintf("group: %s", expected), fmt.Sprintf("group: %s", actual), nil
 	}
 
 	// No specific assertion, just check file exists

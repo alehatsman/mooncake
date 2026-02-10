@@ -84,7 +84,7 @@ func (g *TypeScriptGenerator) generateInterface(b *strings.Builder, name string,
 	b.WriteString(" */\n")
 
 	// Interface declaration
-	b.WriteString(fmt.Sprintf("export interface %s {\n", interfaceName))
+	fmt.Fprintf(b, "export interface %s {\n", interfaceName)
 
 	// Sort properties for consistent output
 	propNames := make([]string, 0, len(def.Properties))
@@ -129,7 +129,7 @@ func (g *TypeScriptGenerator) generateProperty(b *strings.Builder, name string, 
 			b.WriteString("   * @values " + strings.Join(enumStrs, " | ") + "\n")
 		}
 		if prop.Default != nil {
-			b.WriteString(fmt.Sprintf("   * @default %v\n", prop.Default))
+			fmt.Fprintf(b, "   * @default %v\n", prop.Default)
 		}
 		b.WriteString("   */\n")
 	}
@@ -141,7 +141,7 @@ func (g *TypeScriptGenerator) generateProperty(b *strings.Builder, name string, 
 	}
 
 	tsType := g.propertyToTypeScript(prop)
-	b.WriteString(fmt.Sprintf("  %s%s: %s;\n", name, optional, tsType))
+	fmt.Fprintf(b, "  %s%s: %s;\n", name, optional, tsType)
 }
 
 // propertyToTypeScript converts a Property to TypeScript type string.
@@ -184,7 +184,7 @@ func (g *TypeScriptGenerator) propertyToTypeScript(prop *Property) string {
 	}
 
 	// Handle basic types
-	switch prop.Type {
+	switch prop.Type { //nolint:goconst // JSON Schema type constants
 	case "string":
 		return "string"
 	case "number", "integer":
