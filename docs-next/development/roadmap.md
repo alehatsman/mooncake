@@ -1,22 +1,70 @@
 # Roadmap
 
-## Current Version: v0.3 (Production-Ready) ✅
+## Current Version: v0.4 (Production-Ready) ✅
 
-**Status**: All core features complete, production-ready
+**Status**: Schema ecosystem & polish complete, production-ready
 
 - ✅ 14 actions fully implemented
 - ✅ Cross-platform support (Linux, macOS, Windows basic)
-- ✅ Preset system with parameterization
+- ✅ Preset system with interactive parameter collection
 - ✅ Deterministic plan compiler
 - ✅ Facts system (comprehensive)
 - ✅ Event system & artifacts
-- ✅ Schema auto-generation
+- ✅ Schema auto-generation (JSON, OpenAPI, TypeScript)
 - ✅ Handler-based architecture
-- ✅ Comprehensive documentation
+- ✅ Expression evaluation (40+ functions)
+- ✅ Global variables support
+- ✅ TUI ANSI code handling
+- ✅ Comprehensive documentation (auto-generated)
+
+---
+
+## v0.4 Release Summary
+
+**Release Date**: February 10, 2026
+**Development Time**: 8 days (Feb 2-10)
+**Total Commits**: 11 commits
+**Tests Added**: 165+ new tests (all passing)
+**Lines Added**: ~3,500 lines (code + tests + docs)
+
+**Major Features**:
+1. ✅ Expression Evaluation (40+ functions)
+2. ✅ TUI ANSI Code Handling
+3. ✅ TypeScript Definitions Generation
+4. ✅ OpenAPI 3.0 Generation
+5. ✅ Preset Parameter Collection
+6. ✅ Global Variables Support
+7. ✅ Schema Validation Improvements
+
+**Quality Metrics**:
+- Test Coverage: 300+ tests, 100% passing
+- Code Quality: All linters passing
+- Race Detector: Clean
+- Security Scan: No vulnerabilities
 
 ---
 
 ## Recently Completed (February 2026)
+
+### Global Variables & Schema Fixes ✅ (2026-02-10)
+**Commits**: df58242, 48e14a0, b3ec45a, efcbf0b, 7af820b
+
+**Global Variables**:
+- ParsedConfig struct for structured configuration
+- Global variables at config level (`vars:` field)
+- Backward compatibility with array format
+- Full template and condition support
+- CLI variable override support
+- Comprehensive tests and examples
+
+**Schema Validation Fixes**:
+- vars action now accepts additional properties
+- include directive added to oneOf validation
+- All test suites passing (100%)
+
+**Impact**: Cleaner configurations with reusable variables, robust schema validation
+
+---
 
 ### Schema Generation System ✅ (2026-02-09)
 **Commit**: 51232f3
@@ -32,9 +80,9 @@
 
 ---
 
-## Next Up: v0.4 Planning
+## Completed Features (v0.4)
 
-### High Priority (Next Sprint)
+### Core Features
 
 #### 1. Preset Parameter Collection 🎯
 **Status**: ✅ Complete (2026-02-09)
@@ -122,7 +170,7 @@ Installing ollama with parameters:
 
 ---
 
-### Medium Priority (Next Month)
+### Schema Generation Features
 
 #### 3. OpenAPI 3.0 Generation 🔌
 **Status**: ✅ Complete (2026-02-09)
@@ -259,7 +307,7 @@ TruncateANSI("\x1b[31mLong Red Text\x1b[0m", 8)
 
 ---
 
-### Low Priority / Future Enhancements
+### Configuration Features
 
 #### 7. Global Variables ✅
 **Status**: Complete (2026-02-10) - Phase 1
@@ -427,30 +475,40 @@ None currently
 
 ## Version Planning
 
-### v0.4 (Planned - Q2 2026)
+### v0.4 ✅ (Released - Q1 2026)
 **Theme**: Schema Ecosystem & Polish
 
-- ✅ Preset parameter collection (~1 week)
-- ✅ OpenAPI 3.0 generation (~2 weeks)
-- ✅ TypeScript definitions (~1-2 weeks)
-- ✅ TUI improvements (~1 week)
-- ✅ Expression evaluation enhancements (~2 weeks)
-- 🔧 Custom template support for docs (optional, ~2-3 days)
+**Completed Features**:
+- ✅ Preset parameter collection
+- ✅ OpenAPI 3.0 generation
+- ✅ TypeScript definitions
+- ✅ TUI ANSI code handling
+- ✅ Expression evaluation enhancements (40+ functions)
+- ✅ Global variables support
+- ✅ Schema validation improvements
 
-**Timeline**: 3-4 weeks (revised down from 4-6 weeks)
+**Not Included** (deferred to v0.5):
+- Custom template support for docs (optional)
+
+**Actual Timeline**: February 2-10, 2026 (8 days)
 
 ---
 
-### v0.5 (Planned - Q3 2026)
-**Theme**: Advanced Features
+### v0.5 (Planned - Q2 2026)
+**Theme**: Advanced Features & Polish
 
-- ✅ Web-based config validator
-- ✅ Schema marketplace integration
-- ✅ Global variables support
-- ✅ Preset library expansion
-- ✅ Performance optimizations
+**Planned Features**:
+- Custom template support for documentation
+- Schema marketplace integration (schemastore.org)
+- Config versioning validation
+- Web-based config validator
+- Performance optimizations
+- Preset library expansion (ongoing)
+- Windows platform completion (optional)
 
-**Timeline**: 4-6 weeks
+**Timeline**: 3-4 weeks
+
+**Focus**: Production hardening, ecosystem integration, performance
 
 ---
 
@@ -481,22 +539,28 @@ Want to contribute? Here's how:
 - ✅ Preset parameter collection (complete)
 - ✅ Documentation automation (complete)
 - ✅ OpenAPI/TypeScript generation (complete)
-- Expression evaluation enhancements
-- TUI improvements
+- ✅ Expression evaluation enhancements (complete)
+- ✅ TUI ANSI handling (complete)
+- ✅ Global variables (complete)
+- Schema marketplace integration
+- Config versioning validation
 - Platform-specific validation
-- Preset library expansion
+- Preset library expansion (ongoing)
 
 ---
 
 ## Project Health
 
-**Current State**: Production-ready v0.3
+**Current State**: Production-ready v0.4 ✅
 - Core features: 100% complete
+- Schema ecosystem: Complete (JSON, OpenAPI 3.0, TypeScript)
+- Expression evaluation: 40+ functions
+- Global variables: Full support
 - Primary platforms: Linux ✅, macOS ✅ (Windows: basic support)
 - Documentation: Up-to-date (auto-generated)
-- Testing: Comprehensive (300+ tests)
+- Testing: Comprehensive (300+ tests, all passing)
 - Maintenance: Minimal (auto-generated schema/docs)
 
-**Next Milestone**: v0.4 - Schema Ecosystem & Polish (4-6 weeks)
+**Next Milestone**: v0.5 - Advanced Features & Polish (3-4 weeks)
 
-**Focus**: Linux/macOS production use cases, schema ecosystem expansion
+**Focus**: Ecosystem integration, performance optimization, production hardening
