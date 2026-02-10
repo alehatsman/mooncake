@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
