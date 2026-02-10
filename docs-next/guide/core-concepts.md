@@ -50,9 +50,11 @@ Available actions:
 - **download** - Download files from URLs with checksums and retry
 - **unarchive** - Extract tar.gz, zip archives with security protections
 - **template** - Render configuration templates
+- **package** - Install, remove, and update system packages
 - **service** - Manage system services (systemd on Linux, launchd on macOS)
 - **assert** - Verify state (command results, file properties, HTTP responses)
 - **preset** - Invoke reusable, parameterized workflows (e.g., ollama preset)
+- **print** - Display messages to the user
 - **include** - Load other configuration files
 - **include_vars** - Load variables from files
 - **vars** - Define variables

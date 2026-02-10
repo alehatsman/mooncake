@@ -2081,6 +2081,361 @@ Usage:
 - [Preset Authoring Guide](../preset-authoring.md) - Creating presets
 - [Ollama Examples](../../examples/ollama/) - Real-world preset usage
 
+## Print
+
+Display messages to the user during execution. Useful for debugging, progress updates, and providing feedback.
+
+### Basic Usage
+
+Simple string form:
+```yaml
+- name: Show welcome message
+  print: "Hello, World!"
+```
+
+Structured form:
+```yaml
+- name: Display information
+  print:
+    msg: "Installation complete!"
+```
+
+### Print Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `print` | string or object | Message to display (string) or print configuration (object) |
+| `print.msg` | string | Message to display (when using object form) |
+
+Plus [universal fields](#universal-fields): `name`, `when`, `tags`
+
+**Note:** Print does NOT support `become`, `register`, `retries`, or shell-specific fields.
+
+### Multi-line Messages
+
+```yaml
+- name: Show summary
+  print:
+    msg: |
+      Deployment complete!
+
+      Application: {{app_name}}
+      Version: {{version}}
+      Status: Running
+```
+
+### With Variables
+
+```yaml
+- vars:
+    app_name: MyApp
+    version: v1.0.0
+
+- name: Display version info
+  print: "Deploying {{app_name}} version {{version}}"
+```
+
+### Using Registered Variables
+
+```yaml
+- name: Get current user
+  shell: whoami
+  register: current_user
+
+- name: Show user
+  print: "Running as: {{current_user.stdout}}"
+```
+
+### Conditional Printing
+
+```yaml
+- name: Show macOS message
+  print: "Running on macOS"
+  when: os == "darwin"
+
+- name: Show Linux message
+  print: "Running on Linux"
+  when: os == "linux"
+```
+
+### In Loops
+
+```yaml
+- vars:
+    packages: [git, vim, curl]
+
+- name: List packages
+  print: "Will install: {{item}}"
+  with_items: "{{packages}}"
+```
+
+### Key Behaviors
+
+- **Always Changed: false** - Print never reports as "changed"
+- **No Side Effects** - Only displays output, doesn't modify system
+- **Template Rendering** - Full variable interpolation support
+- **Dry-Run Safe** - Works identically in dry-run mode
+- **No Failure** - Print operations cannot fail (unless template rendering fails)
+
+### Use Cases
+
+**Progress Updates:**
+```yaml
+- print: "Starting deployment process..."
+
+- name: Deploy application
+  shell: ./deploy.sh
+
+- print: "Deployment complete!"
+```
+
+**Debugging:**
+```yaml
+- name: Show current facts
+  print: |
+    OS: {{os}}
+    Architecture: {{arch}}
+    Hostname: {{hostname}}
+```
+
+**User Feedback:**
+```yaml
+- name: Welcome message
+  print:
+    msg: |
+      ═══════════════════════════════════════
+      Welcome to {{app_name}} Setup
+      ═══════════════════════════════════════
+```
+
+## Vars
+
+Define or update variables for use in subsequent steps. Variables are available to all following steps in the same configuration.
+
+### Basic Usage
+
+Simple form (inline):
+```yaml
+- vars:
+    app_name: MyApp
+    version: v1.0.0
+    debug: true
+```
+
+### Vars Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `vars` | object | Key-value pairs of variables to set |
+
+Variables can be any valid YAML type:
+- Strings: `name: "value"`
+- Numbers: `port: 8080`
+- Booleans: `debug: true`
+- Arrays: `packages: [git, vim]`
+- Objects: `config: {host: localhost, port: 80}`
+
+Plus [universal fields](#universal-fields): `name`, `when`, `tags`
+
+**Note:** Vars does NOT support `become`, `register`, `retries`, or shell-specific fields.
+
+### Complex Data Types
+
+**Arrays:**
+```yaml
+- vars:
+    packages:
+      - git
+      - vim
+      - curl
+    ports: [80, 443, 8080]
+```
+
+**Objects:**
+```yaml
+- vars:
+    database:
+      host: localhost
+      port: 5432
+      name: myapp
+      user: postgres
+```
+
+**Mixed:**
+```yaml
+- vars:
+    app_name: MyApp
+    environments:
+      - name: development
+        debug: true
+        port: 3000
+      - name: production
+        debug: false
+        port: 80
+```
+
+### Template Rendering in Vars
+
+Variables support template rendering:
+```yaml
+- vars:
+    base_dir: /opt/myapp
+    config_dir: "{{base_dir}}/config"
+    log_dir: "{{base_dir}}/logs"
+```
+
+### Platform-Specific Variables
+
+```yaml
+- name: Set package manager for Linux
+  vars:
+    pkg_manager: apt
+  when: os == "linux" and apt_available
+
+- name: Set package manager for macOS
+  vars:
+    pkg_manager: brew
+  when: os == "darwin"
+```
+
+### Conditional Variables
+
+```yaml
+- name: Set debug mode for development
+  vars:
+    debug: true
+    log_level: debug
+  when: environment == "development"
+
+- name: Set production settings
+  vars:
+    debug: false
+    log_level: info
+  when: environment == "production"
+```
+
+### Variable Precedence
+
+Variables are set in order of execution:
+
+```yaml
+- vars:
+    port: 8080  # Initial value
+
+- vars:
+    port: 3000  # Overwrites previous value
+
+- shell: echo "Port: {{port}}"  # Uses 3000
+```
+
+### Using System Facts
+
+Combine system facts with custom variables:
+```yaml
+- vars:
+    install_dir: /opt/{{app_name}}
+    config_path: "{{install_dir}}/config"
+    os_family: "{{os}}"
+    is_macos: "{{os == 'darwin'}}"
+```
+
+### Environment-Specific Configuration
+
+```yaml
+- name: Load base configuration
+  vars:
+    app_name: MyApp
+    base_port: 8080
+
+- name: Override for production
+  vars:
+    base_port: 80
+    replicas: 3
+  when: environment == "production"
+
+- name: Override for development
+  vars:
+    base_port: 3000
+    replicas: 1
+  when: environment == "development"
+```
+
+### Key Behaviors
+
+- **Always Changed: false** - Setting vars never reports as "changed"
+- **Scope** - Variables are available to all subsequent steps
+- **Overwrite** - Setting a variable again overwrites the previous value
+- **Template Support** - Values can reference other variables
+- **Dry-Run Safe** - Works identically in dry-run mode
+
+### Use Cases
+
+**Application Configuration:**
+```yaml
+- vars:
+    app_name: web-api
+    version: v2.1.0
+    port: 8080
+    workers: 4
+
+- name: Create config file
+  template:
+    src: app-config.yml.j2
+    dest: /etc/{{app_name}}/config.yml
+```
+
+**Multi-Environment Setup:**
+```yaml
+- vars:
+    env: production
+    domain: example.com
+    ssl_enabled: true
+
+- name: Deploy to {{env}}
+  shell: ./deploy.sh --env={{env}} --domain={{domain}}
+```
+
+**Dynamic Path Construction:**
+```yaml
+- vars:
+    app_name: myapp
+    base_dir: /opt/{{app_name}}
+    bin_dir: "{{base_dir}}/bin"
+    config_dir: "{{base_dir}}/config"
+    log_dir: /var/log/{{app_name}}
+
+- name: Create directories
+  file:
+    path: "{{item}}"
+    state: directory
+  with_items:
+    - "{{bin_dir}}"
+    - "{{config_dir}}"
+    - "{{log_dir}}"
+```
+
+**Feature Flags:**
+```yaml
+- vars:
+    enable_monitoring: true
+    enable_caching: false
+    enable_debug: "{{environment == 'development'}}"
+
+- name: Configure monitoring
+  shell: ./setup-monitoring.sh
+  when: enable_monitoring
+
+- name: Enable debug logging
+  shell: ./enable-debug.sh
+  when: enable_debug
+```
+
+### See Also
+
+- [Variables Guide](../variables.md) - Complete variable documentation
+- [include_vars](#include-vars) - Load variables from files
+- [System Facts](../variables.md#system-facts) - Built-in system variables
+
 ## See Also
 
 - [Control Flow](control-flow.md) - Conditionals, loops, tags
