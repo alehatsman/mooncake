@@ -217,7 +217,7 @@ func TestCreateApp(t *testing.T) {
 	}
 
 	// Test commands exist
-	expectedCommands := []string{"presets", "docs", "run", "plan", "facts", "actions", "validate"}
+	expectedCommands := []string{"presets", "docs", "schema", "run", "plan", "facts", "actions", "validate"}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}
