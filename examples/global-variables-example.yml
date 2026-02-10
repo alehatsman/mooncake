@@ -1,0 +1,50 @@
+# Global Variables Example
+#
+# This example demonstrates the use of global variables defined at the config level.
+# Global variables are available to all steps and can be used in templates and conditions.
+
+version: "1.0"
+
+# Global variables - available to all steps
+vars:
+  app_name: "myapp"
+  environment: "production"
+  port: 8080
+  enable_monitoring: true
+  admin_email: "admin@example.com"
+
+steps:
+  # Step 1: Use global vars in templates
+  - name: Display configuration
+    shell: |
+      echo "Application: {{app_name}}"
+      echo "Environment: {{environment}}"
+      echo "Port: {{port}}"
+      echo "Admin: {{admin_email}}"
+
+  # Step 2: Use global vars in conditionals
+  - name: Enable monitoring (production only)
+    shell: echo "Monitoring enabled for {{app_name}}"
+    when: environment == "production" and enable_monitoring
+
+  # Step 3: Global vars can be used in file operations
+  - name: Create config file
+    file:
+      path: "/tmp/{{app_name}}.conf"
+      content: |
+        APP_NAME={{app_name}}
+        ENVIRONMENT={{environment}}
+        PORT={{port}}
+      state: present
+
+  # Step 4: Global vars are merged with system facts
+  - name: Display system info
+    shell: |
+      echo "App {{app_name}} on {{os}} ({{distribution}})"
+      echo "CPU cores: {{cpu_cores}}"
+
+  # Step 5: CLI variables override global vars
+  # Try running: mooncake run -c global-variables-example.yml -v environment=dev
+  - name: Check if dev environment
+    shell: echo "Running in development mode"
+    when: environment == "dev"
