@@ -476,16 +476,39 @@ func TestTUIDisplay_Truncate(t *testing.T) {
 			maxWidth: 3,
 			want:     "tex",
 		},
+		{
+			name:     "with ANSI color codes",
+			input:    "\x1b[32m✓\x1b[0m Step: Install nginx",
+			maxWidth: 15,
+			want:     "\x1b[32m✓\x1b[0m Step: Inst...",
+		},
+		{
+			name:     "multiple ANSI codes",
+			input:    "\x1b[1m\x1b[31mBold Red Long Text Here\x1b[0m",
+			maxWidth: 12,
+			want:     "\x1b[1m\x1b[31mBold Red ...",
+		},
+		{
+			name:     "ANSI codes preserved when no truncation",
+			input:    "\x1b[33mShort\x1b[0m",
+			maxWidth: 20,
+			want:     "\x1b[33mShort\x1b[0m",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := display.truncate(tt.input, tt.maxWidth)
-			if len(got) > tt.maxWidth {
-				t.Errorf("truncate() length = %d, should be <= %d", len(got), tt.maxWidth)
+
+			// Check visible length (not byte length, since ANSI codes don't count)
+			visibleLen := VisibleLength(got)
+			if visibleLen > tt.maxWidth {
+				t.Errorf("truncate() visible length = %d, should be <= %d", visibleLen, tt.maxWidth)
 			}
-			if !strings.HasPrefix(got, tt.want[:min(len(tt.want), len(got))]) {
-				t.Errorf("truncate() = %q, want prefix %q", got, tt.want)
+
+			// Check expected output
+			if got != tt.want {
+				t.Errorf("truncate() = %q, want %q", got, tt.want)
 			}
 		})
 	}

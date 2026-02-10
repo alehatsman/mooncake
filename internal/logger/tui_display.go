@@ -217,21 +217,10 @@ func (d *TUIDisplay) getStatusIndicator(status string) string {
 	}
 }
 
-// truncate truncates a string to fit within the specified width
+// truncate truncates a string to fit within the specified width while
+// preserving ANSI escape codes (colors, styles, etc.)
 func (d *TUIDisplay) truncate(s string, maxWidth int) string {
-	// Account for ANSI color codes by checking visible length
-	// For simplicity, we'll use a basic truncation
-	// TODO: Improve to handle ANSI codes properly
-	if len(s) <= maxWidth {
-		return s
-	}
-
-	// Leave room for ellipsis
-	if maxWidth < 4 {
-		return s[:maxWidth]
-	}
-
-	return s[:maxWidth-3] + "..."
+	return TruncateANSI(s, maxWidth)
 }
 
 // renderCompletion renders execution completion statistics
