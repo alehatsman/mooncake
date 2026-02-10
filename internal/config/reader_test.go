@@ -19,15 +19,16 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 - name: create file
   file:
     path: /tmp/test.txt
-    state: file
+    state: present
 `)
 		defer os.Remove(tmpFile)
 
-		steps, err := reader.ReadConfig(tmpFile)
+		parsedConfig, err := reader.ReadConfig(tmpFile)
 		if err != nil {
 			t.Fatalf("ReadConfig() error = %v", err)
 		}
 
+		steps := parsedConfig.Steps
 		if len(steps) != 2 {
 			t.Errorf("ReadConfig() got %d steps, want 2", len(steps))
 		}
@@ -53,13 +54,13 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 		tmpFile := createTempYAML(t, "[]")
 		defer os.Remove(tmpFile)
 
-		steps, err := reader.ReadConfig(tmpFile)
+		parsedConfig, err := reader.ReadConfig(tmpFile)
 		if err != nil {
 			t.Fatalf("ReadConfig() error = %v", err)
 		}
 
-		if len(steps) != 0 {
-			t.Errorf("ReadConfig() got %d steps, want 0", len(steps))
+		if len(parsedConfig.Steps) != 0 {
+			t.Errorf("ReadConfig() got %d steps, want 0", len(parsedConfig.Steps))
 		}
 	})
 
@@ -89,11 +90,12 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		steps, err := reader.ReadConfig(tmpFile)
+		parsedConfig, err := reader.ReadConfig(tmpFile)
 		if err != nil {
 			t.Fatalf("ReadConfig() error = %v", err)
 		}
 
+		steps := parsedConfig.Steps
 		if len(steps) != 1 {
 			t.Errorf("ReadConfig() got %d steps, want 1", len(steps))
 		}
@@ -111,11 +113,12 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		steps, err := reader.ReadConfig(tmpFile)
+		parsedConfig, err := reader.ReadConfig(tmpFile)
 		if err != nil {
 			t.Fatalf("ReadConfig() error = %v", err)
 		}
 
+		steps := parsedConfig.Steps
 		if steps[0].When != "os == 'linux'" {
 			t.Errorf("step[0].When = %q, want \"os == 'linux'\"", steps[0].When)
 		}
@@ -240,13 +243,13 @@ func TestPackageLevelFunctions(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		steps, err := ReadConfig(tmpFile)
+		parsedConfig, err := ReadConfig(tmpFile)
 		if err != nil {
 			t.Fatalf("ReadConfig() error = %v", err)
 		}
 
-		if len(steps) != 1 {
-			t.Errorf("ReadConfig() got %d steps, want 1", len(steps))
+		if len(parsedConfig.Steps) != 1 {
+			t.Errorf("ReadConfig() got %d steps, want 1", len(parsedConfig.Steps))
 		}
 	})
 
@@ -271,13 +274,13 @@ func TestPackageLevelFunctions(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		steps, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		parsedConfig, diagnostics, err := ReadConfigWithValidation(tmpFile)
 		if err != nil {
 			t.Fatalf("ReadConfigWithValidation() error = %v", err)
 		}
 
-		if len(steps) != 1 {
-			t.Errorf("ReadConfigWithValidation() got %d steps, want 1", len(steps))
+		if len(parsedConfig.Steps) != 1 {
+			t.Errorf("ReadConfigWithValidation() got %d steps, want 1", len(parsedConfig.Steps))
 		}
 
 		if len(diagnostics) != 0 {
@@ -352,7 +355,7 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 - name: loop over files
   file:
     path: "{{ item.path }}"
-    state: file
+    state: present
   with_filetree: /tmp/files
 
 - name: set variables
@@ -362,11 +365,12 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 `)
 	defer os.Remove(tmpFile)
 
-	steps, err := reader.ReadConfig(tmpFile)
+	parsedConfig, err := reader.ReadConfig(tmpFile)
 	if err != nil {
 		t.Fatalf("ReadConfig() error = %v", err)
 	}
 
+	steps := parsedConfig.Steps
 	if len(steps) != 6 {
 		t.Errorf("ReadConfig() got %d steps, want 6", len(steps))
 	}
@@ -470,7 +474,7 @@ steps:
 
 			// Read config
 			reader := NewYAMLConfigReader()
-			steps, err := reader.ReadConfig(tmpFile.Name())
+			parsedConfig, err := reader.ReadConfig(tmpFile.Name())
 
 			if tt.expectError {
 				if err == nil {
@@ -484,11 +488,111 @@ steps:
 				return
 			}
 
-			if len(steps) != tt.expectSteps {
-				t.Errorf("Expected %d steps, got %d", tt.expectSteps, len(steps))
+			if len(parsedConfig.Steps) != tt.expectSteps {
+				t.Errorf("Expected %d steps, got %d", tt.expectSteps, len(parsedConfig.Steps))
 			}
 		})
 	}
+}
+
+func TestParsedConfig_GlobalVars(t *testing.T) {
+	reader := NewYAMLConfigReader()
+
+	t.Run("new format with global vars", func(t *testing.T) {
+		tmpFile := createTempYAML(t, `version: "1.0"
+vars:
+  app_name: "myapp"
+  port: 8080
+  debug: true
+steps:
+  - name: Test step
+    shell: echo "{{app_name}}"`)
+		defer os.Remove(tmpFile)
+
+		parsedConfig, err := reader.ReadConfig(tmpFile)
+		if err != nil {
+			t.Fatalf("ReadConfig() error = %v", err)
+		}
+
+		// Verify global vars
+		if parsedConfig.GlobalVars == nil {
+			t.Fatal("GlobalVars should not be nil")
+		}
+		if parsedConfig.GlobalVars["app_name"] != "myapp" {
+			t.Errorf("GlobalVars[app_name] = %v, want 'myapp'", parsedConfig.GlobalVars["app_name"])
+		}
+		if parsedConfig.GlobalVars["port"] != 8080 {
+			t.Errorf("GlobalVars[port] = %v, want 8080", parsedConfig.GlobalVars["port"])
+		}
+		if parsedConfig.GlobalVars["debug"] != true {
+			t.Errorf("GlobalVars[debug] = %v, want true", parsedConfig.GlobalVars["debug"])
+		}
+
+		// Verify version
+		if parsedConfig.Version != "1.0" {
+			t.Errorf("Version = %q, want '1.0'", parsedConfig.Version)
+		}
+
+		// Verify steps
+		if len(parsedConfig.Steps) != 1 {
+			t.Errorf("got %d steps, want 1", len(parsedConfig.Steps))
+		}
+	})
+
+	t.Run("old format without global vars", func(t *testing.T) {
+		tmpFile := createTempYAML(t, `- name: Test step
+  shell: echo test`)
+		defer os.Remove(tmpFile)
+
+		parsedConfig, err := reader.ReadConfig(tmpFile)
+		if err != nil {
+			t.Fatalf("ReadConfig() error = %v", err)
+		}
+
+		// Verify global vars is empty
+		if parsedConfig.GlobalVars == nil {
+			t.Fatal("GlobalVars should not be nil, should be empty map")
+		}
+		if len(parsedConfig.GlobalVars) != 0 {
+			t.Errorf("GlobalVars should be empty, got %d entries", len(parsedConfig.GlobalVars))
+		}
+
+		// Verify version is empty
+		if parsedConfig.Version != "" {
+			t.Errorf("Version = %q, want empty string", parsedConfig.Version)
+		}
+
+		// Verify steps
+		if len(parsedConfig.Steps) != 1 {
+			t.Errorf("got %d steps, want 1", len(parsedConfig.Steps))
+		}
+	})
+
+	t.Run("new format without vars", func(t *testing.T) {
+		tmpFile := createTempYAML(t, `version: "1.0"
+steps:
+  - name: Test step
+    shell: echo test`)
+		defer os.Remove(tmpFile)
+
+		parsedConfig, err := reader.ReadConfig(tmpFile)
+		if err != nil {
+			t.Fatalf("ReadConfig() error = %v", err)
+		}
+
+		// Verify global vars is empty (but not nil)
+		if parsedConfig.GlobalVars == nil {
+			t.Fatal("GlobalVars should not be nil, should be empty map")
+		}
+		if len(parsedConfig.GlobalVars) != 0 {
+			t.Errorf("GlobalVars should be empty, got %d entries", len(parsedConfig.GlobalVars))
+		}
+
+		// Verify version
+		if parsedConfig.Version != "1.0" {
+			t.Errorf("Version = %q, want '1.0'", parsedConfig.Version)
+		}
+	})
 }
 
 func TestIsArrayFormat(t *testing.T) {
