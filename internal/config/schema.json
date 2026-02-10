@@ -734,826 +734,32 @@
       "oneOf": [
         {
           "required": [
-            "service"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "shell"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "command"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "copy"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "include_vars"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "template"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "unarchive"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "vars"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "assert"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "download"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
             "package"
           ],
           "not": {
             "anyOf": [
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -1564,27 +770,7 @@
               },
               {
                 "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
                   "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
                 ]
               },
               {
@@ -1599,22 +785,22 @@
               },
               {
                 "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
                   "download"
                 ]
               },
               {
                 "required": [
                   "file"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
                 ]
               }
             ]
@@ -1628,6 +814,26 @@
             "anyOf": [
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -1638,27 +844,7 @@
               },
               {
                 "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
                   "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
                 ]
               },
               {
@@ -1673,6 +859,16 @@
               },
               {
                 "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
                   "download"
                 ]
               },
@@ -1680,7 +876,16 @@
                 "required": [
                   "file"
                 ]
-              },
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "unarchive"
+          ],
+          "not": {
+            "anyOf": [
               {
                 "required": [
                   "package"
@@ -1688,7 +893,136 @@
               },
               {
                 "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "include_vars"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
                 ]
               }
             ]
@@ -1702,6 +1036,26 @@
             "anyOf": [
               {
                 "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
                   "service"
                 ]
               },
@@ -1712,27 +1066,7 @@
               },
               {
                 "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
                   "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
                 ]
               },
               {
@@ -1747,6 +1081,16 @@
               },
               {
                 "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
                   "download"
                 ]
               },
@@ -1754,7 +1098,16 @@
                 "required": [
                   "file"
                 ]
-              },
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "service"
+          ],
+          "not": {
+            "anyOf": [
               {
                 "required": [
                   "package"
@@ -1763,6 +1116,732 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "shell"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "template"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "vars"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "assert"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "command"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "copy"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "download"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "include"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
                 ]
               }
             ]
@@ -1841,7 +1920,7 @@
     "vars": {
       "type": "object",
       "description": "Define or update variables",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "x-category": "data",
       "x-supports-dry-run": true,
       "x-version": "1.0.0",

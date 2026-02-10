@@ -264,7 +264,9 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 		// vars is a map[string]interface{}
 		def.Type = "object"
 		def.Description = "Define or update variables"
-		// Properties can be any key-value pairs
+		// Properties can be any key-value pairs - allow additional properties
+		trueVal := true
+		def.AdditionalProperties = &trueVal
 		return def, nil
 	}
 
@@ -356,4 +358,32 @@ func (s *Schema) MarshalPrettyJSON() ([]byte, error) {
 	// Create an alias type to avoid infinite recursion
 	type SchemaAlias Schema
 	return json.MarshalIndent((*SchemaAlias)(s), "", "  ")
+}
+
+// GenerateOpenAPI generates an OpenAPI 3.0 specification.
+func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error) {
+	// First generate JSON Schema
+	schema, err := g.Generate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate base schema: %w", err)
+	}
+
+	// Convert to OpenAPI format
+	spec := schema.ConvertToOpenAPI()
+
+	return spec, nil
+}
+
+// GenerateTypeScript generates TypeScript definitions.
+func (g *Generator) GenerateTypeScript() (string, error) {
+	// First generate JSON Schema
+	schema, err := g.Generate()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate base schema: %w", err)
+	}
+
+	// Convert to TypeScript
+	ts := schema.GenerateTypeScript()
+
+	return ts, nil
 }
