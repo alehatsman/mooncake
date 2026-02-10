@@ -387,7 +387,7 @@ Generate JSON Schema from action metadata and Go struct definitions.
 
 | Flag | Description |
 |------|-------------|
-| `--format, -f` | Output format: json, yaml (default: json) |
+| `--format, -f` | Output format: json, yaml, openapi, typescript (default: json) |
 | `--output, -o` | Output file (default: stdout) |
 | `--extensions` | Include custom x- extensions (default: true) |
 | `--strict` | Generate strict validation rules (default: true) |
@@ -395,7 +395,7 @@ Generate JSON Schema from action metadata and Go struct definitions.
 **Examples:**
 
 ```bash
-# Generate schema to stdout
+# Generate JSON Schema to stdout
 mooncake schema generate
 
 # Generate to file
@@ -403,6 +403,12 @@ mooncake schema generate --output schema.json
 
 # Generate in YAML format
 mooncake schema generate --format yaml --output schema.yml
+
+# Generate OpenAPI 3.0 specification
+mooncake schema generate --format openapi --output openapi.json
+
+# Generate TypeScript definitions
+mooncake schema generate --format typescript --output mooncake.d.ts
 
 # Generate without strict validation
 mooncake schema generate --strict=false
@@ -445,6 +451,138 @@ The generated schema includes:
 - `x-implements-check`: Idempotency support
 - `x-category`: Action grouping
 - `x-supports-dry-run`: Dry-run capability
+
+### OpenAPI 3.0 Support
+
+Generate OpenAPI 3.0 specifications for API documentation and client SDK generation:
+
+```bash
+mooncake schema generate --format openapi --output openapi.json
+```
+
+**Use Cases:**
+
+**1. API Documentation**
+- Swagger UI integration
+- ReDoc integration
+- Documentation hosting (SwaggerHub, Stoplight)
+
+**2. Client SDK Generation**
+```bash
+# Generate Go client
+openapi-generator generate -i openapi.json -g go -o ./client
+
+# Generate TypeScript client
+openapi-generator generate -i openapi.json -g typescript-axios -o ./client
+
+# Generate Python client
+openapi-generator generate -i openapi.json -g python -o ./client
+```
+
+**3. API Gateway Integration**
+- Kong, Tyk, AWS API Gateway
+- Automated validation and routing
+
+**4. Testing Tools**
+- Postman collection import
+- Insomnia workspace sync
+- Automated API testing
+
+The OpenAPI spec includes:
+- All action schemas with validation rules
+- Custom x- extensions for mooncake metadata
+- Complete property documentation
+- Examples and constraints
+
+### TypeScript Definitions
+
+Generate TypeScript `.d.ts` files for type-safe configuration editing:
+
+```bash
+mooncake schema generate --format typescript --output mooncake.d.ts
+```
+
+**Use Cases:**
+
+**1. Web-based Config Editors**
+- Build web UIs for mooncake configuration
+- Get full TypeScript autocomplete and type checking
+- Prevent invalid configurations at compile time
+
+**2. TypeScript Projects**
+- Type-safe configuration generation in TypeScript
+- IDE autocomplete for all actions and properties
+- Compile-time validation
+
+**3. VSCode Extension Development**
+- Use types for extension development
+- Language server integration
+- Enhanced validation and completions
+
+**Example TypeScript Output:**
+
+```typescript
+/**
+ * Execute shell commands
+ * @category command
+ * @platforms linux, darwin, windows
+ */
+export interface ShellAction {
+  /** Shell command to execute (required) */
+  cmd?: string;
+  /** Capture output (default: true) */
+  capture?: boolean;
+  /** Shell interpreter
+   * @values bash | sh | pwsh | cmd
+   */
+  interpreter?: "bash" | "sh" | "pwsh" | "cmd";
+}
+
+export interface Step {
+  name?: string;
+  when?: string;
+  // Universal fields...
+
+  // Action fields (exactly one must be specified)
+  shell?: string | ShellAction;
+  command?: CommandAction;
+  file?: FileAction;
+  service?: ServiceAction;
+  // ... all other actions
+}
+
+export type MooncakeConfig = Step[];
+```
+
+**TypeScript Usage Example:**
+
+```typescript
+import type { MooncakeConfig } from './mooncake.d.ts';
+
+const config: MooncakeConfig = [
+  {
+    name: "Install nginx",
+    package: {
+      name: "nginx",
+      state: "present"  // ✅ Type-checked
+    }
+  },
+  {
+    name: "Start nginx",
+    service: {
+      name: "nginx",
+      state: "invalid"  // ❌ TypeScript error: invalid state
+    }
+  }
+];
+```
+
+The TypeScript definitions include:
+- PascalCase interface names (e.g., `ShellAction`, `ServiceAction`)
+- JSDoc comments with `@platforms`, `@category`, `@values` tags
+- Union types for enums (e.g., `"present" | "absent"`)
+- Optional fields marked with `?`
+- Complete type coverage for all actions
 
 ### IDE Integration
 

@@ -79,6 +79,104 @@ Is equivalent to:
     name: my-preset
 ```
 
+## Interactive Installation
+
+Mooncake supports interactive parameter collection when installing presets via the CLI. This makes it easy to install presets without manually editing YAML files.
+
+### Interactive Mode (Default)
+
+Run a preset installation and mooncake will prompt you for parameters:
+
+```bash
+$ mooncake presets install ollama
+
+Preset: ollama (v1.0.0)
+Install and manage Ollama LLM runtime
+
+Parameters:
+
+? state (optional) [string]
+  Whether Ollama should be installed or removed
+  Options: [present, absent]
+  Default: present
+  > [Enter to use default]
+
+? pull (optional) [array]
+  List of models to pull (e.g., ['llama3.1:8b', 'mistral'])
+  Default: []
+  > llama3.1:8b,mistral
+
+? service (optional) [bool]
+  Enable and start Ollama service
+  Default: true
+  > yes
+
+Installing ollama with parameters:
+  - state: present
+  - pull: [llama3.1:8b mistral]
+  - service: true
+  - method: auto
+```
+
+**Features**:
+- Shows parameter descriptions and types
+- Displays default values
+- Lists enum options if available
+- Validates input in real-time
+- Allows empty input to use defaults
+
+### Non-Interactive Mode
+
+For automation and CI/CD:
+
+```bash
+# Use all defaults
+mooncake presets install ollama --non-interactive
+
+# With specific parameters
+mooncake presets install ollama --non-interactive \
+  --param state=present \
+  --param pull=[llama3.1:8b,mistral] \
+  --param service=true
+```
+
+### CLI Parameter Override
+
+Override specific parameters while keeping interactive prompts for others:
+
+```bash
+# Pre-set some parameters, prompt for the rest
+mooncake presets install ollama \
+  --param state=present \
+  --param service=true
+```
+
+**Parameter Precedence** (highest to lowest):
+1. `--param` flags (CLI)
+2. Interactive input
+3. Default values
+
+### Parameter Format
+
+**String**:
+```bash
+--param name=value
+--param host=localhost:11434
+```
+
+**Boolean**:
+```bash
+--param service=true
+--param enabled=false
+```
+
+**Array**:
+```bash
+--param pull=[model1,model2,model3]
+--param tags=[latest,stable]
+--param empty=[]
+```
+
 ## Parameters
 
 ### Accessing Parameters in Presets

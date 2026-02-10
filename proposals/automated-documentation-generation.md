@@ -1,9 +1,31 @@
 # Proposal: Automated Documentation Generation from Action Metadata
 
-**Status**: Draft
+**Status**: ✅ Implemented (Phases 1-3 complete, pre-2026-02-09)
 **Author**: Platform Support Implementation
 **Date**: 2026-02-07
+**Implementation**: `internal/docgen/`, `cmd/docs.go`, CI integration in `.github/workflows/ci.yml`
 **Related**: Platform Support Matrix (#1)
+
+## Implementation Summary
+
+**Completed**: All Phase 1-3 features implemented, only custom templates deferred
+
+- ✅ Full CLI command: `mooncake docs generate`
+- ✅ All sections: platform-matrix, capabilities, action-summary, preset-examples, schema, all
+- ✅ Makefile integration: `make docs-generate`, `make docs-check`
+- ✅ CI integration: Drift detection in GitHub Actions
+- ✅ Generated docs: `docs-next/generated/` (actions.md, presets.md, schema.md)
+- ✅ Comprehensive tests: 10 tests in `generator_test.go`
+- ❌ Custom templates: Not implemented (optional, can be added in future)
+
+**Location**:
+- `internal/docgen/generator.go` - Core generator
+- `internal/docgen/markdown.go` - Markdown formatting
+- `internal/docgen/presets.go` - Preset examples
+- `internal/docgen/schema.go` - Schema documentation
+- `cmd/docs.go` - CLI command
+
+**Remaining**: Custom template support (~2-3 days) - deferred to v0.5
 
 ## Summary
 

@@ -1,9 +1,35 @@
 # Proposal: Schema Generation from Action Metadata
 
-**Status**: Draft
+**Status**: ✅ Phases 1-3 Implemented (2026-02-09)
 **Author**: Automation Discussion
 **Date**: 2026-02-07
+**Implementation**: commits 51232f3 (schema), [current] (openapi)
 **Related**: Automated Documentation Generation, Platform Support
+
+## Implementation Summary
+
+**Phase 1-2: JSON Schema** ✅ Complete (2026-02-09)
+- ✅ JSON Schema generation from action metadata
+- ✅ Full validation support (oneOf, enums, patterns, ranges)
+- ✅ Custom x- extensions (platforms, capabilities)
+- ✅ CLI command: `mooncake schema generate`
+- ✅ Auto-generated schema (1,853 lines vs 2,036 manual)
+- ✅ 10 passing tests with 64.9% coverage
+- ✅ Documentation updated
+
+**Phase 3: OpenAPI 3.0** ✅ Complete (2026-02-09)
+- ✅ OpenAPI 3.0.3 specification generation
+- ✅ Conversion from JSON Schema to OpenAPI format
+- ✅ Custom x- extensions preserved
+- ✅ CLI: `mooncake schema generate --format openapi`
+- ✅ 6 comprehensive tests for OpenAPI
+- ✅ Documentation updated with use cases
+
+**Location**:
+- `internal/schemagen/` package (generator.go, types.go, openapi.go)
+- `cmd/schema.go` (CLI command)
+
+**Remaining**: Phase 4+ (TypeScript definitions) deferred to future
 
 ## Summary
 
