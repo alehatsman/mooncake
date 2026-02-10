@@ -22,13 +22,15 @@ IDE autocomplete, validation, and API documentation.
 Formats:
   - json:       JSON Schema for YAML validation (default)
   - yaml:       JSON Schema in YAML format
-  - openapi:    OpenAPI 3.0 specification (future)
-  - typescript: TypeScript definitions (future)
+  - openapi:    OpenAPI 3.0 specification
+  - typescript: TypeScript definitions (.d.ts)
 
 Examples:
   mooncake schema generate
   mooncake schema generate --output schema.json
   mooncake schema generate --format yaml --output schema.yml
+  mooncake schema generate --format openapi --output openapi.json
+  mooncake schema generate --format typescript --output mooncake.d.ts
   mooncake schema validate --schema schema.json --config config.yml`,
 		Subcommands: []*cli.Command{
 			{
@@ -92,12 +94,12 @@ func generateSchemaAction(c *cli.Context) error {
 	validFormats := map[string]bool{
 		"json":       true,
 		"yaml":       true,
-		"openapi":    false, // Not yet implemented
-		"typescript": false, // Not yet implemented
+		"openapi":    true,
+		"typescript": true,
 	}
 
 	if supported, ok := validFormats[format]; !ok {
-		return fmt.Errorf("unknown format: %s (supported: json, yaml)", format)
+		return fmt.Errorf("unknown format: %s (supported: json, yaml, openapi)", format)
 	} else if !supported {
 		return fmt.Errorf("format %s is not yet implemented (coming soon)", format)
 	}
@@ -111,14 +113,9 @@ func generateSchemaAction(c *cli.Context) error {
 	}
 	generator := schemagen.NewGenerator(opts)
 
-	// Generate schema
-	schema, err := generator.Generate()
-	if err != nil {
-		return fmt.Errorf("failed to generate schema: %w", err)
-	}
-
 	// Determine output writer
 	var writer *os.File
+	var err error
 	if output == "" {
 		writer = os.Stdout
 	} else {
@@ -133,16 +130,61 @@ func generateSchemaAction(c *cli.Context) error {
 		}()
 	}
 
-	// Write schema
-	schemaWriter := schemagen.NewWriter(format)
-	if err := schemaWriter.Write(schema, writer); err != nil {
-		return fmt.Errorf("failed to write schema: %w", err)
-	}
+	// Generate and write based on format
+	if format == "openapi" {
+		// Generate OpenAPI spec
+		spec, err := generator.GenerateOpenAPI()
+		if err != nil {
+			return fmt.Errorf("failed to generate OpenAPI spec: %w", err)
+		}
 
-	// Print success message if writing to file
-	if output != "" {
-		fmt.Fprintf(os.Stderr, "✓ Generated %s schema to %s\n", format, output)
-		fmt.Fprintf(os.Stderr, "  Configure your editor to use this schema for YAML validation\n")
+		// Write OpenAPI
+		schemaWriter := schemagen.NewWriter("json") // OpenAPI defaults to JSON
+		if err := schemaWriter.WriteOpenAPI(spec, writer); err != nil {
+			return fmt.Errorf("failed to write OpenAPI spec: %w", err)
+		}
+
+		// Print success message if writing to file
+		if output != "" {
+			fmt.Fprintf(os.Stderr, "✓ Generated OpenAPI 3.0 spec to %s\n", output)
+			fmt.Fprintf(os.Stderr, "  Use with Swagger UI, ReDoc, or openapi-generator\n")
+		}
+	} else if format == "typescript" {
+		// Generate TypeScript definitions
+		tsContent, err := generator.GenerateTypeScript()
+		if err != nil {
+			return fmt.Errorf("failed to generate TypeScript definitions: %w", err)
+		}
+
+		// Write TypeScript
+		schemaWriter := schemagen.NewWriter("typescript")
+		if err := schemaWriter.WriteTypeScript(tsContent, writer); err != nil {
+			return fmt.Errorf("failed to write TypeScript definitions: %w", err)
+		}
+
+		// Print success message if writing to file
+		if output != "" {
+			fmt.Fprintf(os.Stderr, "✓ Generated TypeScript definitions to %s\n", output)
+			fmt.Fprintf(os.Stderr, "  Use with TypeScript editors for autocomplete and type checking\n")
+		}
+	} else {
+		// Generate JSON Schema
+		schema, err := generator.Generate()
+		if err != nil {
+			return fmt.Errorf("failed to generate schema: %w", err)
+		}
+
+		// Write schema
+		schemaWriter := schemagen.NewWriter(format)
+		if err := schemaWriter.Write(schema, writer); err != nil {
+			return fmt.Errorf("failed to write schema: %w", err)
+		}
+
+		// Print success message if writing to file
+		if output != "" {
+			fmt.Fprintf(os.Stderr, "✓ Generated %s schema to %s\n", format, output)
+			fmt.Fprintf(os.Stderr, "  Configure your editor to use this schema for YAML validation\n")
+		}
 	}
 
 	return nil

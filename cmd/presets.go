@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -112,6 +115,16 @@ Examples:
 					&cli.BoolFlag{
 						Name:  "insecure-sudo-pass",
 						Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
+					},
+					&cli.BoolFlag{
+						Name:    "non-interactive",
+						Aliases: []string{"n"},
+						Usage:   "Skip parameter prompts, use defaults only (fails if required param without default)",
+					},
+					&cli.StringSliceFlag{
+						Name:    "param",
+						Aliases: []string{"p"},
+						Usage:   "Set parameter value (format: key=value, can be used multiple times)",
 					},
 				},
 			},
@@ -369,6 +382,139 @@ func installPresetAction(c *cli.Context) error {
 	return executePresetInstall(c, name)
 }
 
+// collectParameters prompts the user for preset parameters interactively.
+// Returns a map of parameter values ready for validation.
+func collectParameters(preset *config.PresetDefinition) (map[string]interface{}, error) {
+	if len(preset.Parameters) == 0 {
+		return map[string]interface{}{}, nil
+	}
+
+	fmt.Printf("\nPreset: %s (v%s)\n", preset.Name, preset.Version)
+	if preset.Description != "" {
+		fmt.Printf("%s\n", preset.Description)
+	}
+	fmt.Println("\nParameters:")
+
+	params := make(map[string]interface{})
+	reader := bufio.NewReader(os.Stdin)
+
+	// Sort parameter names for consistent ordering
+	paramNames := make([]string, 0, len(preset.Parameters))
+	for name := range preset.Parameters {
+		paramNames = append(paramNames, name)
+	}
+	sort.Strings(paramNames)
+
+	for _, paramName := range paramNames {
+		paramDef := preset.Parameters[paramName]
+
+		// Skip if not required and has default
+		if !paramDef.Required && paramDef.Default != nil {
+			params[paramName] = paramDef.Default
+			continue
+		}
+
+		// Show parameter prompt
+		fmt.Printf("\n? %s", paramName)
+		if paramDef.Required {
+			fmt.Print(" (required)")
+		} else {
+			fmt.Print(" (optional)")
+		}
+		fmt.Printf(" [%s]", paramDef.Type)
+
+		if paramDef.Description != "" {
+			fmt.Printf("\n  %s", paramDef.Description)
+		}
+
+		if len(paramDef.Enum) > 0 {
+			enumStrs := make([]string, len(paramDef.Enum))
+			for i, v := range paramDef.Enum {
+				enumStrs[i] = fmt.Sprintf("%v", v)
+			}
+			fmt.Printf("\n  Options: [%s]", strings.Join(enumStrs, ", "))
+		}
+
+		if paramDef.Default != nil {
+			fmt.Printf("\n  Default: %v", paramDef.Default)
+		}
+
+		fmt.Print("\n  > ")
+
+		// Read input
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return nil, fmt.Errorf("failed to read input: %w", err)
+		}
+		input = strings.TrimSpace(input)
+
+		// Handle empty input
+		if input == "" {
+			if paramDef.Required {
+				fmt.Println("  Error: Required parameter cannot be empty")
+				return nil, fmt.Errorf("required parameter '%s' not provided", paramName)
+			}
+			if paramDef.Default != nil {
+				params[paramName] = paramDef.Default
+			}
+			continue
+		}
+
+		// Parse based on type
+		var value interface{}
+		switch paramDef.Type {
+		case "string":
+			value = input
+		case "bool":
+			lower := strings.ToLower(input)
+			if lower == "true" || lower == "t" || lower == "yes" || lower == "y" || lower == "1" {
+				value = true
+			} else if lower == "false" || lower == "f" || lower == "no" || lower == "n" || lower == "0" {
+				value = false
+			} else {
+				fmt.Printf("  Error: Invalid boolean value '%s' (use: true/false, yes/no, y/n)\n", input)
+				return nil, fmt.Errorf("invalid boolean value for parameter '%s'", paramName)
+			}
+		case "array":
+			if input == "[]" || input == "" {
+				value = []interface{}{}
+			} else {
+				parts := strings.Split(input, ",")
+				arr := make([]interface{}, len(parts))
+				for i, part := range parts {
+					arr[i] = strings.TrimSpace(part)
+				}
+				value = arr
+			}
+		case "object":
+			fmt.Println("  Warning: Object parameters not supported in interactive mode, skipping")
+			continue
+		default:
+			return nil, fmt.Errorf("unknown parameter type: %s", paramDef.Type)
+		}
+
+		// Validate enum constraint
+		if len(paramDef.Enum) > 0 {
+			valid := false
+			for _, allowed := range paramDef.Enum {
+				if fmt.Sprintf("%v", value) == fmt.Sprintf("%v", allowed) {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				fmt.Printf("  Error: Invalid value. Must be one of: %v\n", paramDef.Enum)
+				return nil, fmt.Errorf("invalid value for parameter '%s'", paramName)
+			}
+		}
+
+		params[paramName] = value
+	}
+
+	fmt.Println()
+	return params, nil
+}
+
 // executePresetInstall executes a preset by name
 func executePresetInstall(c *cli.Context, name string) error {
 	// Validate password input methods (mutual exclusion)
@@ -397,18 +543,90 @@ func executePresetInstall(c *cli.Context, name string) error {
 		return fmt.Errorf("failed to load preset '%s': %w", name, err)
 	}
 
-	fmt.Printf("Installing %s...\n", preset.Name)
+	// Parse CLI parameters if provided
+	cliParams := make(map[string]interface{})
+	for _, paramStr := range c.StringSlice("param") {
+		parts := strings.SplitN(paramStr, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid parameter format: %s (expected key=value)", paramStr)
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Try to parse as bool, then as array, then keep as string
+		if lower := strings.ToLower(value); lower == "true" || lower == "false" {
+			cliParams[key] = lower == "true"
+		} else if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+			// Simple array parsing: [a,b,c]
+			inner := strings.Trim(value, "[]")
+			if inner == "" {
+				cliParams[key] = []interface{}{}
+			} else {
+				parts := strings.Split(inner, ",")
+				arr := make([]interface{}, len(parts))
+				for i, part := range parts {
+					arr[i] = strings.TrimSpace(part)
+				}
+				cliParams[key] = arr
+			}
+		} else {
+			cliParams[key] = value
+		}
+	}
+
+	// Collect parameters based on mode
+	var userParams map[string]interface{}
+	if c.Bool("non-interactive") {
+		// Non-interactive: use CLI params + defaults only
+		userParams = cliParams
+	} else {
+		// Interactive: collect from user, but CLI params take precedence
+		if len(preset.Parameters) > 0 {
+			collected, err := collectParameters(preset)
+			if err != nil {
+				return fmt.Errorf("failed to collect parameters: %w", err)
+			}
+			userParams = collected
+			// Override with CLI params
+			for key, value := range cliParams {
+				userParams[key] = value
+			}
+		} else {
+			userParams = cliParams
+		}
+	}
+
+	// Validate parameters
+	validatedParams, err := presets.ValidateParameters(preset, userParams)
+	if err != nil {
+		return fmt.Errorf("invalid parameters: %w", err)
+	}
+
+	// Show what we're installing
+	fmt.Printf("\nInstalling %s", preset.Name)
+	if len(validatedParams) > 0 {
+		fmt.Printf(" with parameters:\n")
+		for key, value := range validatedParams {
+			fmt.Printf("  - %s: %v\n", key, value)
+		}
+	} else {
+		fmt.Println("...")
+	}
 
 	// Create temporary config file with preset invocation
+	presetInvocation := map[string]interface{}{
+		"name": name,
+	}
+	if len(validatedParams) > 0 {
+		presetInvocation["with"] = validatedParams
+	}
+
 	tmpConfig := struct {
 		Steps []map[string]interface{} `yaml:"steps"`
 	}{
 		Steps: []map[string]interface{}{
 			{
-				"preset": map[string]interface{}{
-					"name": name,
-					// TODO: Collect parameters from user
-				},
+				"preset": presetInvocation,
 			},
 		},
 	}
