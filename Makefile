@@ -125,18 +125,33 @@ docs-generate: build ## Generate documentation from code (actions, presets, sche
 	@echo "  - docs-next/generated/schema.md   (YAML schema reference)"
 
 .PHONY: docs-check
-docs-check: docs-generate ## Check if generated docs are up to date
+docs-check: build ## Check if generated docs are up to date
 	@echo "Checking if generated documentation is up to date..."
-	@if git diff --quiet docs-next/generated/; then \
-		echo "✓ Documentation is up to date"; \
-	else \
-		echo "✗ Documentation is out of sync!"; \
-		echo ""; \
-		echo "The following files have changed:"; \
-		git diff --name-only docs-next/generated/; \
+	@mkdir -p .tmp/docs-check
+	@./out/mooncake docs generate --section all --output .tmp/docs-check/actions.md >/dev/null 2>&1
+	@./out/mooncake docs generate --section preset-examples --presets-dir presets --output .tmp/docs-check/presets.md >/dev/null 2>&1
+	@./out/mooncake docs generate --section schema --output .tmp/docs-check/schema.md >/dev/null 2>&1
+	@failed=0; \
+	for file in actions.md presets.md schema.md; do \
+		grep -v "Generated: " docs-next/generated/$$file > .tmp/docs-check/current_$$file 2>/dev/null || true; \
+		grep -v "Generated: " .tmp/docs-check/$$file > .tmp/docs-check/new_$$file 2>/dev/null || true; \
+		if ! diff -q .tmp/docs-check/current_$$file .tmp/docs-check/new_$$file >/dev/null 2>&1; then \
+			if [ $$failed -eq 0 ]; then \
+				echo "✗ Documentation is out of sync!"; \
+				echo ""; \
+				echo "The following files have changed:"; \
+				failed=1; \
+			fi; \
+			echo "docs-next/generated/$$file"; \
+		fi; \
+	done; \
+	rm -rf .tmp/docs-check; \
+	if [ $$failed -eq 1 ]; then \
 		echo ""; \
 		echo "Run 'make docs-generate' to update documentation."; \
 		exit 1; \
+	else \
+		echo "✓ Documentation is up to date"; \
 	fi
 
 .PHONY: docs-clean
