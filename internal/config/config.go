@@ -147,6 +147,19 @@ type RunConfig struct {
 	Steps []Step `yaml:"steps" json:"steps"`
 }
 
+// ParsedConfig holds the result of parsing a configuration file.
+// It includes both the steps to execute and any global variables defined.
+type ParsedConfig struct {
+	// Steps are the configuration steps to execute
+	Steps []Step
+
+	// GlobalVars are variables defined at the config level, available to all steps
+	GlobalVars map[string]interface{}
+
+	// Version is the config schema version (e.g., "1.0")
+	Version string
+}
+
 // File represents a file or directory operation in a configuration step.
 type File struct {
 	Path    string `yaml:"path" json:"path"`

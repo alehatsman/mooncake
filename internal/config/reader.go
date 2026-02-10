@@ -10,7 +10,7 @@ import (
 
 // Reader defines the interface for reading configuration and variables
 type Reader interface {
-	ReadConfig(path string) ([]Step, error)
+	ReadConfig(path string) (*ParsedConfig, error)
 	ReadVariables(path string) (map[string]interface{}, error)
 }
 
@@ -27,23 +27,23 @@ func NewYAMLConfigReader() Reader {
 // ReadConfig reads configuration steps from a YAML file
 // For backward compatibility, this method validates the config and returns
 // an error if any validation errors are found
-func (r *YAMLConfigReader) ReadConfig(path string) ([]Step, error) {
-	steps, diagnostics, err := r.ReadConfigWithValidation(path)
+func (r *YAMLConfigReader) ReadConfig(path string) (*ParsedConfig, error) {
+	parsedConfig, diagnostics, err := r.ReadConfigWithValidation(path)
 	if err != nil {
 		return nil, err
 	}
 
 	// Convert diagnostics to error for backward compatibility
 	if len(diagnostics) > 0 && HasErrors(diagnostics) {
-		return steps, &ValidationError{Diagnostics: diagnostics}
+		return parsedConfig, &ValidationError{Diagnostics: diagnostics}
 	}
 
-	return steps, nil
+	return parsedConfig, nil
 }
 
 // ReadConfigWithValidation reads configuration steps from a YAML file with full validation
-// Returns steps, diagnostics (which may include warnings), and any parsing errors
-func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diagnostic, error) {
+// Returns parsed config (with steps, global vars, version), diagnostics (which may include warnings), and any parsing errors
+func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig, []Diagnostic, error) {
 	// #nosec G304 -- User-specified config file path is intentional and required functionality
 	f, err := os.Open(path)
 	if err != nil {
@@ -67,12 +67,18 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diag
 	locationMap := buildLocationMap(&rootNode)
 
 	// Parse config - supports both old format (array) and new format (object with steps)
-	var config []Step
+	var parsedConfig *ParsedConfig
 	if isArrayFormat(&rootNode) {
 		// Old format: plain array of steps
-		err = rootNode.Decode(&config)
+		var steps []Step
+		err = rootNode.Decode(&steps)
 		if err != nil {
 			return nil, nil, err
+		}
+		parsedConfig = &ParsedConfig{
+			Steps:      steps,
+			GlobalVars: make(map[string]interface{}),
+			Version:    "",
 		}
 	} else {
 		// New format: RunConfig structure with version, vars, and steps
@@ -81,8 +87,16 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diag
 		if err != nil {
 			return nil, nil, err
 		}
-		config = runConfig.Steps
-		// TODO: Handle runConfig.Vars and runConfig.Version in future
+		// Initialize GlobalVars to empty map if nil
+		globalVars := runConfig.Vars
+		if globalVars == nil {
+			globalVars = make(map[string]interface{})
+		}
+		parsedConfig = &ParsedConfig{
+			Steps:      runConfig.Steps,
+			GlobalVars: globalVars,
+			Version:    runConfig.Version,
+		}
 	}
 
 	// Run schema validation
@@ -90,7 +104,7 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diag
 	if err != nil {
 		// If schema validation setup fails, fall back to basic validation
 		// This ensures the system still works even if schema is broken
-		return config, []Diagnostic{
+		return parsedConfig, []Diagnostic{
 			{
 				FilePath: path,
 				Line:     1,
@@ -101,14 +115,14 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) ([]Step, []Diag
 		}, nil
 	}
 
-	diagnostics := validator.Validate(config, locationMap, path)
+	diagnostics := validator.Validate(parsedConfig.Steps, locationMap, path)
 
 	// Validate template syntax in all templatable fields
 	templateValidator := NewTemplateValidator()
-	templateDiagnostics := templateValidator.ValidateSteps(config, locationMap, path)
+	templateDiagnostics := templateValidator.ValidateSteps(parsedConfig.Steps, locationMap, path)
 	diagnostics = append(diagnostics, templateDiagnostics...)
 
-	return config, diagnostics, nil
+	return parsedConfig, diagnostics, nil
 }
 
 // isArrayFormat checks if the YAML root node represents an array (old format)
@@ -156,13 +170,13 @@ func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, e
 var defaultReader = NewYAMLConfigReader()
 
 // ReadConfig is a convenience function using the default YAML reader
-func ReadConfig(path string) ([]Step, error) {
+func ReadConfig(path string) (*ParsedConfig, error) {
 	return defaultReader.ReadConfig(path)
 }
 
 // ReadConfigWithValidation is a convenience function using the default YAML reader
-// Returns steps, diagnostics, and any parsing errors
-func ReadConfigWithValidation(path string) ([]Step, []Diagnostic, error) {
+// Returns parsed config (with steps, global vars, version), diagnostics, and any parsing errors
+func ReadConfigWithValidation(path string) (*ParsedConfig, []Diagnostic, error) {
 	reader, ok := defaultReader.(*YAMLConfigReader)
 	if !ok {
 		panic("defaultReader is not a YAMLConfigReader")

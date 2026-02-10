@@ -2,7 +2,6 @@ package plan
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -17,7 +16,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/alehatsman/mooncake/internal/utils"
-	"gopkg.in/yaml.v3"
 )
 
 // resolvePath converts a potentially relative path to an absolute path.
@@ -195,8 +193,8 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 
 // readRunConfig reads and parses a config file with validation
 func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
-	// Use ReadConfigWithValidation to get steps and diagnostics
-	steps, diagnostics, err := config.ReadConfigWithValidation(path)
+	// Use ReadConfigWithValidation to get parsed config with steps, vars, and version
+	parsedConfig, diagnostics, err := config.ReadConfigWithValidation(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
@@ -207,45 +205,14 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 		return nil, fmt.Errorf("configuration validation failed:\n%s", formatted)
 	}
 
-	// Read the file again to get vars (ReadConfigWithValidation doesn't return them)
-	data, err := os.ReadFile(path) // #nosec G304 -- path is from include directive in config
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+	// Convert ParsedConfig to RunConfig
+	runConfig := &config.RunConfig{
+		Version: parsedConfig.Version,
+		Vars:    parsedConfig.GlobalVars,
+		Steps:   parsedConfig.Steps,
 	}
 
-	// Try to parse as a yaml.Node first to detect format
-	var node yaml.Node
-	err = yaml.Unmarshal(data, &node)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
-
-	// Check if it's array format (old) or object format (new)
-	isArray := false
-	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
-		firstNode := node.Content[0]
-		isArray = firstNode.Kind == yaml.SequenceNode
-	}
-
-	if isArray {
-		// Old format: plain array of steps (no vars)
-		return &config.RunConfig{
-			Version: "1.0",
-			Steps:   steps,
-		}, nil
-	}
-
-	// New format: parse to get vars
-	var runConfig config.RunConfig
-	err = yaml.Unmarshal(data, &runConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
-
-	// Use validated steps from ReadConfigWithValidation
-	runConfig.Steps = steps
-
-	return &runConfig, nil
+	return runConfig, nil
 }
 
 // expandStep dispatches a single step to the appropriate expansion handler
