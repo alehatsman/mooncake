@@ -12,6 +12,12 @@ import (
 //go:embed schema.json
 var schemaData string
 
+// SchemaJSON returns the embedded JSON schema as a byte slice.
+// This is used by documentation generators to parse action properties.
+func SchemaJSON() []byte {
+	return []byte(schemaData)
+}
+
 // SchemaValidator validates configuration against JSON Schema
 type SchemaValidator struct {
 	schema *jsonschema.Schema

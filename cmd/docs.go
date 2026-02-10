@@ -16,16 +16,18 @@ func docsCommand() *cli.Command {
 		Description: `Generate documentation from action metadata to keep docs in sync with code.
 
 Supports multiple sections:
-  - platform-matrix:   Platform support table for all actions
-  - capabilities:      Action capabilities table (dry-run, become, etc.)
-  - action-summary:    Detailed action summaries grouped by category
-  - preset-examples:   Examples from actual preset files (validates syntax)
-  - schema:            YAML schema from Go struct definitions
-  - all:               Generate all sections (except preset-examples)
+  - platform-matrix:    Platform support table for all actions
+  - capabilities:       Action capabilities table (dry-run, become, etc.)
+  - action-summary:     Detailed action summaries grouped by category
+  - action-properties:  Properties tables from schema.json (auto-generated)
+  - preset-examples:    Examples from actual preset files (validates syntax)
+  - schema:             YAML schema from Go struct definitions
+  - all:                Generate all sections (except preset-examples and action-properties)
 
 Examples:
   mooncake docs generate --section platform-matrix
   mooncake docs generate --section all --output docs-next/generated/actions.md
+  mooncake docs generate --section action-properties --output docs-next/generated/properties.md
   mooncake docs generate --section preset-examples --presets-dir ./presets
   mooncake docs generate --section schema`,
 		Subcommands: []*cli.Command{
@@ -37,7 +39,7 @@ Examples:
 						Name:    "section",
 						Aliases: []string{"s"},
 						Value:   "all",
-						Usage:   "Section to generate (platform-matrix, capabilities, action-summary, preset-examples, schema, all)",
+						Usage:   "Section to generate (platform-matrix, capabilities, action-summary, action-properties, preset-examples, schema, all)",
 					},
 					&cli.StringFlag{
 						Name:    "output",

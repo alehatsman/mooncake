@@ -128,16 +128,18 @@ docs: ## Build and serve documentation site
 	pipenv run mkdocs serve
 
 .PHONY: docs-generate
-docs-generate: build ## Generate documentation from code (actions, presets, schema)
+docs-generate: build ## Generate documentation from code (actions, presets, schema, properties)
 	@echo "Generating documentation from code..."
 	@mkdir -p docs-next/generated
 	@./out/mooncake docs generate --section all --output docs-next/generated/actions.md
 	@./out/mooncake docs generate --section preset-examples --presets-dir presets --output docs-next/generated/presets.md
 	@./out/mooncake docs generate --section schema --output docs-next/generated/schema.md
+	@./out/mooncake docs generate --section action-properties --output docs-next/generated/properties.md
 	@echo "✓ Generated documentation:"
-	@echo "  - docs-next/generated/actions.md  (platform matrix, capabilities, action summaries)"
-	@echo "  - docs-next/generated/presets.md  (all preset examples)"
-	@echo "  - docs-next/generated/schema.md   (YAML schema reference)"
+	@echo "  - docs-next/generated/actions.md     (platform matrix, capabilities, action summaries)"
+	@echo "  - docs-next/generated/presets.md     (all preset examples)"
+	@echo "  - docs-next/generated/schema.md      (YAML schema reference)"
+	@echo "  - docs-next/generated/properties.md  (action properties from schema.json)"
 
 .PHONY: docs-check
 docs-check: build ## Check if generated docs are up to date
@@ -146,8 +148,9 @@ docs-check: build ## Check if generated docs are up to date
 	@./out/mooncake docs generate --section all --output .tmp/docs-check/actions.md >/dev/null 2>&1
 	@./out/mooncake docs generate --section preset-examples --presets-dir presets --output .tmp/docs-check/presets.md >/dev/null 2>&1
 	@./out/mooncake docs generate --section schema --output .tmp/docs-check/schema.md >/dev/null 2>&1
+	@./out/mooncake docs generate --section action-properties --output .tmp/docs-check/properties.md >/dev/null 2>&1
 	@failed=0; \
-	for file in actions.md presets.md schema.md; do \
+	for file in actions.md presets.md schema.md properties.md; do \
 		grep -v "Generated: " docs-next/generated/$$file > .tmp/docs-check/current_$$file 2>/dev/null || true; \
 		grep -v "Generated: " .tmp/docs-check/$$file > .tmp/docs-check/new_$$file 2>/dev/null || true; \
 		if ! diff -q .tmp/docs-check/current_$$file .tmp/docs-check/new_$$file >/dev/null 2>&1; then \
