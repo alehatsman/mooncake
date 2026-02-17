@@ -349,6 +349,19 @@
         "file.updated"
       ]
     },
+    "file_patch_apply": {
+      "type": "object",
+      "description": "Apply unified diff patches to files",
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "file_replace": {
       "type": "object",
       "description": "Replace text in files using literal or regex patterns",
@@ -810,6 +823,10 @@
           "description": "Insert text before or after anchor patterns in files",
           "$ref": "#/definitions/file_insert"
         },
+        "file_patch_apply": {
+          "description": "Apply unified diff patches to files",
+          "$ref": "#/definitions/file_patch_apply"
+        },
         "file_replace": {
           "description": "Replace text in files using literal or regex patterns",
           "$ref": "#/definitions/file_replace"
@@ -967,6 +984,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1067,6 +1089,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -1175,6 +1202,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1275,6 +1307,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -1383,6 +1420,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1487,6 +1529,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1587,6 +1634,120 @@
               {
                 "required": [
                   "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_patch_apply"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -1700,6 +1861,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1800,6 +1966,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -1908,6 +2079,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2008,6 +2184,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -2116,6 +2297,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2216,6 +2402,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -2324,6 +2515,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2424,6 +2620,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -2532,6 +2733,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2632,6 +2838,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {
@@ -2740,6 +2951,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2844,6 +3060,11 @@
               },
               {
                 "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2944,6 +3165,11 @@
               {
                 "required": [
                   "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
                 ]
               },
               {

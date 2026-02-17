@@ -1,0 +1,330 @@
+---
+# File Patch Apply Examples
+# The file_patch_apply action applies unified diff patches to files.
+# Supports inline patches, patch files, context validation, and strict mode.
+
+# ============================================================================
+# BASIC EXAMPLES
+# ============================================================================
+
+- name: "Apply simple inline patch"
+  file_patch_apply:
+    path: "./src/config.js"
+    patch: |
+      @@ -1,3 +1,3 @@
+       const PORT = 3000;
+      -const DEBUG = true;
+      +const DEBUG = false;
+       const HOST = 'localhost';
+  # Result: Changes DEBUG from true to false
+
+- name: "Apply patch from file"
+  file_patch_apply:
+    path: "./app.py"
+    patch_file: "./patches/fix-bug-123.patch"
+  # Result: Applies unified diff from external file
+
+- name: "Apply patch with backup"
+  file_patch_apply:
+    path: "./config.ini"
+    patch: |
+      @@ -5,3 +5,3 @@
+       [database]
+      -host=localhost
+      +host=db.production.com
+       port=5432
+    backup: true
+  # Result: Creates config.ini.bak before applying patch
+
+- name: "Apply patch in strict mode"
+  file_patch_apply:
+    path: "./main.go"
+    patch: |
+      @@ -10,4 +10,4 @@
+       func main() {
+      -	log.Println("Starting...")
+      +	log.Println("Application starting...")
+       	run()
+       }
+    strict: true
+  # Result: Fails if patch cannot be applied cleanly
+
+- name: "Apply patch with custom context lines"
+  file_patch_apply:
+    path: "./api.js"
+    patch: |
+      @@ -15,3 +15,3 @@
+       app.get('/api/users', (req, res) => {
+      -  return db.query('SELECT * FROM users');
+      +  return db.query('SELECT id, name FROM users');
+       });
+    context_lines: 1
+  # Result: Requires only 1 context line to match
+
+- name: "Apply multi-hunk patch"
+  file_patch_apply:
+    path: "./router.js"
+    patch: |
+      @@ -5,3 +5,3 @@
+       // User routes
+      -router.get('/users', getUsers);
+      +router.get('/api/v1/users', getUsers);
+       router.post('/users', createUser);
+      @@ -12,3 +12,3 @@
+       // Admin routes
+      -router.get('/admin', getAdmin);
+      +router.get('/api/v1/admin', getAdmin);
+       router.post('/admin', createAdmin);
+  # Result: Applies both hunks to the file
+
+- name: "Apply patch for line addition"
+  file_patch_apply:
+    path: "./package.json"
+    patch: |
+      @@ -3,6 +3,7 @@
+       "dependencies": {
+         "express": "^4.17.1",
+      +  "dotenv": "^10.0.0",
+         "mongoose": "^6.0.0"
+       }
+  # Result: Adds dotenv dependency
+
+- name: "Apply patch for line deletion"
+  file_patch_apply:
+    path: "./imports.py"
+    patch: |
+      @@ -1,4 +1,3 @@
+       import os
+       import sys
+      -import deprecated_module
+       import logging
+  # Result: Removes deprecated import
+
+# ============================================================================
+# PRACTICAL USE CASES
+# ============================================================================
+
+# Use Case 1: Apply security patch
+- name: "Apply security fix for CVE-2024-1234"
+  file_patch_apply:
+    path: "./auth/validator.js"
+    patch_file: "./patches/security/CVE-2024-1234.patch"
+    backup: true
+    strict: true
+  register: security_patch
+
+- name: "Verify security patch applied"
+  assert:
+    file:
+      path: "./auth/validator.js"
+      content_contains: "sanitizeInput"
+  when: security_patch.changed
+
+# Use Case 2: Update API version across multiple files
+- name: "Update API endpoints to v2"
+  file_patch_apply:
+    path: "{{ item }}"
+    patch: |
+      @@ -10,7 +10,7 @@
+       const API_CONFIG = {
+      -  version: 'v1',
+      -  baseURL: '/api/v1',
+      +  version: 'v2',
+      +  baseURL: '/api/v2',
+         timeout: 5000
+       };
+  loop:
+    - "./src/api/client.js"
+    - "./src/api/server.js"
+    - "./tests/api.test.js"
+
+# Use Case 3: Apply database migration patch
+- name: "Apply database schema patch"
+  file_patch_apply:
+    path: "./db/schema.sql"
+    patch_file: "./migrations/20240215-add-user-roles.patch"
+    backup: true
+  when: "{{ apply_migrations }}"
+
+# Use Case 4: Fix deprecation warnings
+- name: "Update deprecated function calls"
+  file_patch_apply:
+    path: "./{{ module }}.py"
+    patch: |
+      @@ -{{ line_number }},3 +{{ line_number }},3 @@
+       import asyncio
+      -asyncio.async(coroutine)
+      +asyncio.ensure_future(coroutine)
+  loop:
+    - { module: "worker", line_number: 45 }
+    - { module: "scheduler", line_number: 23 }
+    - { module: "tasks", line_number: 89 }
+  loop_var: item
+
+# Use Case 5: Apply hotfix in production
+- name: "Apply critical hotfix"
+  file_patch_apply:
+    path: "/opt/app/server.js"
+    patch_file: "{{ hotfix_dir }}/hotfix-{{ ticket_id }}.patch"
+    backup: true
+    strict: true
+  vars:
+    hotfix_dir: "/tmp/hotfixes"
+    ticket_id: "PROD-5678"
+  become: true
+
+# Use Case 6: Conditional patch application
+- name: "Apply Python 3.10 compatibility patch"
+  file_patch_apply:
+    path: "./utils.py"
+    patch_file: "./patches/python310-compat.patch"
+  when: "{{ python_version >= '3.10' }}"
+
+# Use Case 7: Batch patch application
+- name: "Apply code style patches"
+  file_patch_apply:
+    path: "{{ item.file }}"
+    patch_file: "{{ item.patch }}"
+  loop:
+    - { file: "./src/main.js", patch: "./patches/eslint-fix-main.patch" }
+    - { file: "./src/utils.js", patch: "./patches/eslint-fix-utils.patch" }
+    - { file: "./src/api.js", patch: "./patches/eslint-fix-api.patch" }
+
+# ============================================================================
+# ADVANCED PATTERNS
+# ============================================================================
+
+# Pattern 1: Progressive rollout with verification
+- name: "Apply patch to canary servers"
+  file_patch_apply:
+    path: "/opt/app/config.yml"
+    patch_file: "./patches/feature-flag-{{ feature_name }}.patch"
+    backup: true
+  when: "{{ inventory_hostname in groups['canary'] }}"
+
+- name: "Verify patch on canary"
+  assert:
+    command:
+      cmd: "/opt/app/bin/validate-config"
+      exit_code: 0
+  when: "{{ inventory_hostname in groups['canary'] }}"
+
+- name: "Apply patch to production servers"
+  file_patch_apply:
+    path: "/opt/app/config.yml"
+    patch_file: "./patches/feature-flag-{{ feature_name }}.patch"
+    backup: true
+  when: "{{ inventory_hostname in groups['production'] and canary_success }}"
+
+# Pattern 2: Conditional patching based on file state
+- name: "Check current file version"
+  shell:
+    cmd: "grep 'VERSION' config.h"
+  register: version_check
+
+- name: "Apply version 2.0 patch"
+  file_patch_apply:
+    path: "./config.h"
+    patch_file: "./patches/v1-to-v2.patch"
+  when: "'1.0' in version_check.stdout"
+
+- name: "Apply version 3.0 patch"
+  file_patch_apply:
+    path: "./config.h"
+    patch_file: "./patches/v2-to-v3.patch"
+  when: "'2.0' in version_check.stdout"
+
+# Pattern 3: Dry-run before actual application
+- name: "Test patch application (dry-run)"
+  file_patch_apply:
+    path: "./critical.conf"
+    patch_file: "./patches/production-update.patch"
+    dry_run: true
+  register: patch_test
+
+- name: "Apply patch if dry-run succeeded"
+  file_patch_apply:
+    path: "./critical.conf"
+    patch_file: "./patches/production-update.patch"
+    backup: true
+    strict: true
+  when: patch_test is succeeded
+
+# Pattern 4: Patch with environment-specific content
+- name: "Apply environment-specific database patch"
+  file_patch_apply:
+    path: "./config/database.yml"
+    patch: |
+      @@ -5,3 +5,3 @@
+       production:
+      -  host: {{ old_db_host }}
+      +  host: {{ new_db_host }}
+         port: 5432
+  vars:
+    old_db_host: "db1.old.com"
+    new_db_host: "{{ environment }}.db.new.com"
+
+# ============================================================================
+# ERROR HANDLING
+# ============================================================================
+
+# Idempotent: If patch already applied, reports changed: false
+- name: "Ensure patch is applied"
+  file_patch_apply:
+    path: "./app.js"
+    patch_file: "./patches/bugfix.patch"
+  # Safe to run multiple times
+
+# Lenient mode: Continue even if some hunks fail
+- name: "Apply best-effort patch"
+  file_patch_apply:
+    path: "./legacy.cpp"
+    patch_file: "./patches/modernize.patch"
+    strict: false
+  # Applies what it can, continues on failures
+
+# Strict mode: Fail if any hunk fails
+- name: "Apply critical patch"
+  file_patch_apply:
+    path: "./security.c"
+    patch_file: "./patches/security-fix.patch"
+    strict: true
+  # Fails if patch cannot be applied completely
+
+# ============================================================================
+# TEMPLATE VARIABLES
+# ============================================================================
+
+- name: "Apply patch with variables"
+  file_patch_apply:
+    path: "{{ config_file }}"
+    patch: |
+      @@ -{{ start_line }},3 +{{ start_line }},3 @@
+       server {
+      -  listen {{ old_port }};
+      +  listen {{ new_port }};
+         server_name {{ domain }};
+       }
+  vars:
+    config_file: "/etc/nginx/sites-available/default"
+    start_line: 15
+    old_port: 80
+    new_port: 8080
+    domain: "example.com"
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+# - Patch format: Unified diff format (diff -u or git diff)
+# - Supports multiple hunks in a single patch
+# - Context lines: Default 3, configurable via context_lines
+# - Strict mode (default): Fails if any hunk cannot be applied
+# - Lenient mode (strict: false): Applies successful hunks, continues on failures
+# - Idempotent: No change if patch already applied
+# - Backup: Creates .bak file before modification if backup: true
+# - Atomic writes: Uses temp file + rename for safety
+# - Template variables: Supports {{ }} in paths and patch content
+# - Events: Emits EventFileUpdated for observability
+# - Result data: applied_hunks, failed_hunks, total_hunks
+# - Path safety: Validates against path traversal attacks

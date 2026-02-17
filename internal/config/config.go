@@ -462,6 +462,18 @@ type FileDeleteRange struct {
 	Backup      bool   `yaml:"backup" json:"backup,omitempty"`         // Create .bak before modify
 }
 
+// FilePatchApply represents a unified diff patch application operation.
+// Applies a unified diff patch to a file with validation and safety checks.
+type FilePatchApply struct {
+	Path       string `yaml:"path" json:"path"`                           // Target file path (required)
+	Patch      string `yaml:"patch" json:"patch,omitempty"`               // Inline patch content (patch or patch_file required)
+	PatchFile  string `yaml:"patch_file" json:"patch_file,omitempty"`     // Path to patch file (patch or patch_file required)
+	Backup     bool   `yaml:"backup" json:"backup,omitempty"`             // Create .bak before modify
+	ContextLines *int  `yaml:"context_lines" json:"context_lines,omitempty"` // Required matching context lines (default: 3)
+	Strict     bool   `yaml:"strict" json:"strict,omitempty"`             // Strict mode: fail if any hunk fails (default: true)
+	DryRun     bool   `yaml:"dry_run" json:"dry_run,omitempty"`           // Test patch without applying
+}
+
 // RepoSearch represents a codebase search operation.
 // Searches files for patterns and outputs results in JSON format.
 type RepoSearch struct {
@@ -522,6 +534,7 @@ type Step struct {
 	FileReplace     *FileReplace     `yaml:"file_replace" json:"file_replace,omitempty"`
 	FileInsert      *FileInsert      `yaml:"file_insert" json:"file_insert,omitempty"`
 	FileDeleteRange *FileDeleteRange `yaml:"file_delete_range" json:"file_delete_range,omitempty"`
+	FilePatchApply  *FilePatchApply  `yaml:"file_patch_apply" json:"file_patch_apply,omitempty"`
 	Shell           *ShellAction     `yaml:"shell" json:"shell,omitempty"`
 	Command     *CommandAction     `yaml:"command" json:"command,omitempty"`
 	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
@@ -609,6 +622,9 @@ func (s *Step) countActions() int {
 	if s.FileDeleteRange != nil {
 		count++
 	}
+	if s.FilePatchApply != nil {
+		count++
+	}
 	if s.Shell != nil {
 		count++
 	}
@@ -676,6 +692,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.FileDeleteRange != nil {
 		return "file_delete_range"
+	}
+	if s.FilePatchApply != nil {
+		return "file_patch_apply"
 	}
 	if s.Template != nil {
 		return "template"
@@ -768,6 +787,7 @@ func (s *Step) Clone() *Step {
 		FileReplace:     s.FileReplace,
 		FileInsert:      s.FileInsert,
 		FileDeleteRange: s.FileDeleteRange,
+		FilePatchApply:  s.FilePatchApply,
 		Shell:           s.Shell,
 		Command:      s.Command,
 		Copy:         s.Copy,
