@@ -2,11 +2,16 @@
 package artifacts
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,13 +64,19 @@ type StepResult struct {
 	OutputBytes  int                    `json:"output_bytes,omitempty"`
 	Truncated    bool                   `json:"truncated,omitempty"`
 	Result       map[string]interface{} `json:"result,omitempty"`
+	FilesChanged []string               `json:"files_changed,omitempty"` // Paths of files modified in this step
+	DiffFiles    []string               `json:"diff_files,omitempty"`    // Paths to diff files for this step
 }
 
 // FileChange records a file that was created or modified.
 type FileChange struct {
-	Path      string `json:"path"`
-	Operation string `json:"operation"` // "created", "updated", "template"
-	SizeBytes int64  `json:"size_bytes"`
+	Path           string `json:"path"`
+	Operation      string `json:"operation"` // "created", "updated", "template"
+	SizeBytes      int64  `json:"size_bytes"`
+	ChecksumBefore string `json:"checksum_before,omitempty"` // SHA256 before modification
+	ChecksumAfter  string `json:"checksum_after,omitempty"`  // SHA256 after modification
+	DiffFile       string `json:"diff_file,omitempty"`       // Path to unified diff file
+	StepID         string `json:"step_id,omitempty"`         // Step that made the change
 }
 
 // RunSummary contains overall run information.
@@ -149,6 +160,7 @@ func NewWriter(cfg Config, planData *plan.Plan, systemFacts *facts.Facts) (*Writ
 }
 
 // OnEvent processes events and writes to artifacts.
+//nolint:gocyclo // Event dispatching naturally has high cyclomatic complexity
 func (w *Writer) OnEvent(event events.Event) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -222,29 +234,53 @@ func (w *Writer) OnEvent(event events.Event) {
 
 	case events.EventFileCreated:
 		if data, ok := event.Data.(events.FileOperationData); ok {
-			w.changedFiles = append(w.changedFiles, FileChange{
-				Path:      data.Path,
-				Operation: "created",
-				SizeBytes: data.SizeBytes,
-			})
+			change := FileChange{
+				Path:           data.Path,
+				Operation:      "created",
+				SizeBytes:      data.SizeBytes,
+				ChecksumBefore: data.ChecksumBefore,
+				ChecksumAfter:  data.ChecksumAfter,
+			}
+
+			// Generate diff if checksums are available
+			if data.ChecksumBefore != "" && data.ChecksumAfter != "" && data.ChecksumBefore != data.ChecksumAfter {
+				w.generateAndSaveDiff(&change, "")
+			}
+
+			w.changedFiles = append(w.changedFiles, change)
 		}
 
 	case events.EventFileUpdated:
 		if data, ok := event.Data.(events.FileOperationData); ok {
-			w.changedFiles = append(w.changedFiles, FileChange{
-				Path:      data.Path,
-				Operation: "updated",
-				SizeBytes: data.SizeBytes,
-			})
+			change := FileChange{
+				Path:           data.Path,
+				Operation:      "updated",
+				SizeBytes:      data.SizeBytes,
+				ChecksumBefore: data.ChecksumBefore,
+				ChecksumAfter:  data.ChecksumAfter,
+			}
+
+			// Generate diff if checksums are available
+			if data.ChecksumBefore != "" && data.ChecksumAfter != "" && data.ChecksumBefore != data.ChecksumAfter {
+				w.generateAndSaveDiff(&change, "")
+			}
+
+			w.changedFiles = append(w.changedFiles, change)
 		}
 
 	case events.EventTemplateRender:
 		if data, ok := event.Data.(events.TemplateRenderData); ok {
-			w.changedFiles = append(w.changedFiles, FileChange{
+			change := FileChange{
 				Path:      data.DestPath,
 				Operation: "template",
 				SizeBytes: data.SizeBytes,
-			})
+			}
+
+			// Calculate checksums for template operation
+			checksumAfter := calculateFileChecksum(data.DestPath)
+			change.ChecksumAfter = checksumAfter
+
+			w.changedFiles = append(w.changedFiles, change)
 		}
 
 	case events.EventRunCompleted:
@@ -408,4 +444,283 @@ func generateRunID(planData *plan.Plan, systemFacts *facts.Facts) string {
 	hash.Write([]byte(systemFacts.Hostname))
 	shortHash := fmt.Sprintf("%x", hash.Sum(nil))[:6]
 	return fmt.Sprintf("%s-%s", timestamp, shortHash)
+}
+
+// calculateFileChecksum computes SHA256 checksum of a file.
+// Returns empty string if file doesn't exist or on error.
+func calculateFileChecksum(path string) string {
+	// #nosec G304 -- Artifact file path is intentional functionality
+	file, err := os.Open(path)
+	if err != nil {
+		return "" // File doesn't exist yet (new file)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing file for checksum: %v\n", err)
+		}
+	}()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		fmt.Fprintf(os.Stderr, "Error calculating checksum for %s: %v\n", path, err)
+		return ""
+	}
+
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
+}
+
+// generateUnifiedDiff creates a unified diff between two file versions.
+// Returns the diff content as a string.
+func generateUnifiedDiff(path, beforeContent, afterContent string) string {
+	var buf bytes.Buffer
+
+	// Write unified diff header
+	fmt.Fprintf(&buf, "--- %s\n", path)
+	fmt.Fprintf(&buf, "+++ %s\n", path)
+
+	// Split content into lines
+	beforeLines := splitLines(beforeContent)
+	afterLines := splitLines(afterContent)
+
+	// Simple unified diff generation (context: 3 lines)
+	// This is a basic implementation - could be enhanced with proper diff algorithm
+	if beforeContent == afterContent {
+		return "" // No diff
+	}
+
+	// For simplicity, show full file diff with line numbers
+	maxLines := len(beforeLines)
+	if len(afterLines) > maxLines {
+		maxLines = len(afterLines)
+	}
+
+	if maxLines == 0 {
+		return buf.String()
+	}
+
+	// Write hunk header
+	fmt.Fprintf(&buf, "@@ -%d,%d +%d,%d @@\n", 1, len(beforeLines), 1, len(afterLines))
+
+	// Write diff lines
+	beforeIdx, afterIdx := 0, 0
+	for beforeIdx < len(beforeLines) || afterIdx < len(afterLines) {
+		if beforeIdx < len(beforeLines) && afterIdx < len(afterLines) {
+			if beforeLines[beforeIdx] == afterLines[afterIdx] {
+				// Context line (unchanged)
+				fmt.Fprintf(&buf, " %s\n", beforeLines[beforeIdx])
+				beforeIdx++
+				afterIdx++
+			} else {
+				// Changed line
+				fmt.Fprintf(&buf, "-%s\n", beforeLines[beforeIdx])
+				fmt.Fprintf(&buf, "+%s\n", afterLines[afterIdx])
+				beforeIdx++
+				afterIdx++
+			}
+		} else if beforeIdx < len(beforeLines) {
+			// Deleted line
+			fmt.Fprintf(&buf, "-%s\n", beforeLines[beforeIdx])
+			beforeIdx++
+		} else {
+			// Added line
+			fmt.Fprintf(&buf, "+%s\n", afterLines[afterIdx])
+			afterIdx++
+		}
+	}
+
+	return buf.String()
+}
+
+// splitLines splits content into lines, preserving line endings.
+func splitLines(content string) []string {
+	if content == "" {
+		return []string{}
+	}
+
+	var lines []string
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	return lines
+}
+
+// CaptureFileStateBefore captures file state before a modification.
+// Returns a snapshot that can be used with CaptureFileStateAfter.
+func (w *Writer) CaptureFileStateBefore(path string) *FileSnapshot {
+	snapshot := &FileSnapshot{
+		Path:     path,
+		Checksum: calculateFileChecksum(path),
+	}
+
+	// Read content for diff generation
+	// #nosec G304 -- Artifact file path is intentional functionality
+	if content, err := os.ReadFile(path); err == nil {
+		snapshot.Content = string(content)
+	}
+
+	return snapshot
+}
+
+// CaptureFileStateAfter captures file state after modification and generates diff.
+// Writes diff and checksum files to artifacts directory.
+func (w *Writer) CaptureFileStateAfter(before *FileSnapshot, stepID string, operation string) *FileChange {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.closed {
+		return nil
+	}
+
+	checksumAfter := calculateFileChecksum(before.Path)
+
+	// Read current content for diff
+	// #nosec G304 -- Artifact file path is intentional functionality
+	afterContent, err := os.ReadFile(before.Path)
+	var afterContentStr string
+	if err == nil {
+		afterContentStr = string(afterContent)
+	}
+
+	change := &FileChange{
+		Path:           before.Path,
+		Operation:      operation,
+		ChecksumBefore: before.Checksum,
+		ChecksumAfter:  checksumAfter,
+		StepID:         stepID,
+	}
+
+	// Get file size
+	if info, err := os.Stat(before.Path); err == nil {
+		change.SizeBytes = info.Size()
+	}
+
+	// Generate and save diff if content changed
+	if before.Content != afterContentStr && before.Checksum != checksumAfter {
+		diff := generateUnifiedDiff(before.Path, before.Content, afterContentStr)
+		if diff != "" {
+			// Create diffs directory
+			diffsDir := filepath.Join(w.runDir, "diffs")
+			// #nosec G301 -- Artifact directory permissions
+			if err := os.MkdirAll(diffsDir, 0750); err == nil {
+				// Write diff file
+				diffFileName := fmt.Sprintf("%s.diff", stepID)
+				diffPath := filepath.Join(diffsDir, diffFileName)
+				// #nosec G306 -- Artifact file permissions
+				if err := os.WriteFile(diffPath, []byte(diff), 0600); err == nil {
+					change.DiffFile = filepath.Join("diffs", diffFileName)
+				}
+			}
+		}
+	}
+
+	// Save checksum file
+	if checksumAfter != "" {
+		checksumsDir := filepath.Join(w.runDir, "checksums")
+		// #nosec G301 -- Artifact directory permissions
+		if err := os.MkdirAll(checksumsDir, 0750); err == nil {
+			checksumFileName := fmt.Sprintf("%s.sha256", stepID)
+			checksumPath := filepath.Join(checksumsDir, checksumFileName)
+			checksumContent := fmt.Sprintf("Before: %s\nAfter:  %s\nFile:   %s\n",
+				before.Checksum, checksumAfter, before.Path)
+			// #nosec G306 -- Artifact file permissions
+			if err := os.WriteFile(checksumPath, []byte(checksumContent), 0600); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing checksum file: %v\n", err)
+			}
+		}
+	}
+
+	return change
+}
+
+// FileSnapshot holds file state at a point in time.
+type FileSnapshot struct {
+	Path     string
+	Content  string
+	Checksum string
+}
+
+// generateAndSaveDiff generates a unified diff and saves it to the diffs directory.
+// This is called when we have checksums but need to generate the diff from current file state.
+func (w *Writer) generateAndSaveDiff(_ *FileChange, _ string) {
+	// Since we don't have the before content anymore (file already modified),
+	// we can't generate a diff here. Diffs need to be generated by the action
+	// handlers before they modify files.
+	// This method is kept for future enhancement where we might cache file states.
+}
+
+// RecordFileDiff records a file diff with before/after content.
+// This should be called by action handlers that want to provide diff information.
+// Returns the path to the generated diff file.
+func (w *Writer) RecordFileDiff(stepID, filePath, beforeContent, afterContent string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.closed {
+		return ""
+	}
+
+	// Generate diff
+	diff := generateUnifiedDiff(filePath, beforeContent, afterContent)
+	if diff == "" {
+		return "" // No diff (files are identical)
+	}
+
+	// Create diffs directory
+	diffsDir := filepath.Join(w.runDir, "diffs")
+	// #nosec G301 -- Artifact directory permissions
+	if err := os.MkdirAll(diffsDir, 0750); err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating diffs directory: %v\n", err)
+		return ""
+	}
+
+	// Write diff file - use file path to make filename unique
+	safePath := strings.ReplaceAll(filePath, "/", "_")
+	safePath = strings.ReplaceAll(safePath, "\\", "_")
+	diffFileName := fmt.Sprintf("%s_%s.diff", stepID, safePath)
+	diffPath := filepath.Join(diffsDir, diffFileName)
+
+	// #nosec G306 -- Artifact file permissions
+	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing diff file: %v\n", err)
+		return ""
+	}
+
+	return filepath.Join("diffs", diffFileName)
+}
+
+// RecordFileChecksums records before/after checksums for a file operation.
+// Returns the checksum file path.
+func (w *Writer) RecordFileChecksums(stepID, filePath, checksumBefore, checksumAfter string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.closed {
+		return ""
+	}
+
+	checksumsDir := filepath.Join(w.runDir, "checksums")
+	// #nosec G301 -- Artifact directory permissions
+	if err := os.MkdirAll(checksumsDir, 0750); err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating checksums directory: %v\n", err)
+		return ""
+	}
+
+	// Write checksum file
+	safePath := strings.ReplaceAll(filePath, "/", "_")
+	safePath = strings.ReplaceAll(safePath, "\\", "_")
+	checksumFileName := fmt.Sprintf("%s_%s.sha256", stepID, safePath)
+	checksumPath := filepath.Join(checksumsDir, checksumFileName)
+
+	checksumContent := fmt.Sprintf("File: %s\nBefore: %s\nAfter:  %s\n",
+		filePath, checksumBefore, checksumAfter)
+
+	// #nosec G306 -- Artifact file permissions
+	if err := os.WriteFile(checksumPath, []byte(checksumContent), 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing checksum file: %v\n", err)
+		return ""
+	}
+
+	return filepath.Join("checksums", checksumFileName)
 }

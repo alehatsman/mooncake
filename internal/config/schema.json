@@ -520,6 +520,19 @@
         "print.message"
       ]
     },
+    "repo_apply_patchset": {
+      "type": "object",
+      "description": "Apply multiple patches to multiple files atomically",
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "repo_search": {
       "type": "object",
       "description": "Search codebase for patterns and output results in JSON format",
@@ -868,6 +881,10 @@
           "type": "string",
           "description": "Variable name to store step execution result (universal)"
         },
+        "repo_apply_patchset": {
+          "description": "Apply multiple patches to multiple files atomically",
+          "$ref": "#/definitions/repo_apply_patchset"
+        },
         "repo_search": {
           "description": "Search codebase for patterns and output results in JSON format",
           "$ref": "#/definitions/repo_search"
@@ -1019,6 +1036,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -1124,6 +1146,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -1237,6 +1264,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -1342,6 +1374,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -1455,6 +1492,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -1560,6 +1602,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -1673,6 +1720,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -1778,6 +1830,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -1891,6 +1948,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -1996,6 +2058,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -2109,6 +2176,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -2214,6 +2286,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -2327,6 +2404,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -2432,6 +2514,125 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "repo_apply_patchset"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
                 ]
               },
               {
@@ -2550,6 +2751,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_tree"
                 ]
               },
@@ -2655,6 +2861,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -2768,6 +2979,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -2873,6 +3089,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {
@@ -2986,6 +3207,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -3095,6 +3321,11 @@
               },
               {
                 "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
                   "repo_search"
                 ]
               },
@@ -3200,6 +3431,11 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
                 ]
               },
               {

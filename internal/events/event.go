@@ -170,11 +170,13 @@ type StepOutputData struct {
 
 // FileOperationData contains data for file operation events
 type FileOperationData struct {
-	Path      string `json:"path"`
-	Mode      string `json:"mode,omitempty"`
-	SizeBytes int64  `json:"size_bytes,omitempty"`
-	Changed   bool   `json:"changed"`
-	DryRun    bool   `json:"dry_run"`
+	Path           string `json:"path"`
+	Mode           string `json:"mode,omitempty"`
+	SizeBytes      int64  `json:"size_bytes,omitempty"`
+	Changed        bool   `json:"changed"`
+	DryRun         bool   `json:"dry_run"`
+	ChecksumBefore string `json:"checksum_before,omitempty"` // SHA256 before modification
+	ChecksumAfter  string `json:"checksum_after,omitempty"`  // SHA256 after modification
 }
 
 // FileRemovedData contains data for file/directory removal events

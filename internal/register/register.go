@@ -23,6 +23,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/package"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"
 	_ "github.com/alehatsman/mooncake/internal/actions/print"
+	_ "github.com/alehatsman/mooncake/internal/actions/repo_apply_patchset"
 	_ "github.com/alehatsman/mooncake/internal/actions/repo_search"
 	_ "github.com/alehatsman/mooncake/internal/actions/repo_tree"
 	_ "github.com/alehatsman/mooncake/internal/actions/service"

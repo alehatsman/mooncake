@@ -496,6 +496,18 @@ type RepoTree struct {
 	IncludeFiles bool    `yaml:"include_files" json:"include_files,omitempty"`  // Include files in tree (default: true)
 }
 
+// RepoApplyPatchset represents a multi-file patch application operation.
+// Applies multiple patches to multiple files in a single atomic operation.
+type RepoApplyPatchset struct {
+	Patchset     string   `yaml:"patchset" json:"patchset,omitempty"`                 // Inline patchset content (patchset or patchset_file required)
+	PatchsetFile string   `yaml:"patchset_file" json:"patchset_file,omitempty"`       // Path to patchset file (patchset or patchset_file required)
+	BaseDir      string   `yaml:"base_dir" json:"base_dir,omitempty"`                 // Base directory for relative paths (default: current directory)
+	Backup       bool     `yaml:"backup" json:"backup,omitempty"`                     // Create .bak files before modifications
+	Strict       bool     `yaml:"strict" json:"strict,omitempty"`                     // Strict mode: rollback all if any file fails (default: true)
+	DryRun       bool     `yaml:"dry_run" json:"dry_run,omitempty"`                   // Test patchset without applying
+	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty"`           // Output JSON file with results
+}
+
 // UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
 // Supports: print: "message" AND print: { msg: "message" }
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -550,6 +562,7 @@ type Step struct {
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 	RepoSearch  *RepoSearch        `yaml:"repo_search" json:"repo_search,omitempty"`
 	RepoTree    *RepoTree          `yaml:"repo_tree" json:"repo_tree,omitempty"`
+	RepoApplyPatchset *RepoApplyPatchset `yaml:"repo_apply_patchset" json:"repo_apply_patchset,omitempty"`
 
 	// Privilege escalation
 	Become     bool   `yaml:"become" json:"become,omitempty"`
@@ -670,6 +683,9 @@ func (s *Step) countActions() int {
 	if s.RepoTree != nil {
 		count++
 	}
+	if s.RepoApplyPatchset != nil {
+		count++
+	}
 	return count
 }
 
@@ -738,6 +754,9 @@ func (s *Step) DetermineActionType() string {
 	if s.RepoTree != nil {
 		return "repo_tree"
 	}
+	if s.RepoApplyPatchset != nil {
+		return "repo_apply_patchset"
+	}
 	if s.WithItems != nil || s.WithFileTree != nil {
 		return "loop"
 	}
@@ -801,6 +820,9 @@ func (s *Step) Clone() *Step {
 		Include:      s.Include,
 		IncludeVars:  s.IncludeVars,
 		Vars:         s.Vars,
+		RepoSearch:   s.RepoSearch,
+		RepoTree:     s.RepoTree,
+		RepoApplyPatchset: s.RepoApplyPatchset,
 		Become:       s.Become,
 		BecomeUser:   s.BecomeUser,
 		Env:          s.Env,
