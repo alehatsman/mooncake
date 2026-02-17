@@ -82,6 +82,12 @@ const (
 	EventPresetCompleted EventType = "preset.completed"
 )
 
+// Event types for artifact capture
+const (
+	EventArtifactCaptureStart    EventType = "artifact_capture.start"
+	EventArtifactCaptureComplete EventType = "artifact_capture.complete"
+)
+
 // Event types for print
 const (
 	EventPrintMessage EventType = "print.message"
@@ -287,6 +293,15 @@ type PresetData struct {
 	Parameters map[string]interface{} `json:"parameters,omitempty"`  // Parameters passed to preset
 	StepsCount int                    `json:"steps_count"`           // Number of steps in preset
 	Changed    bool                   `json:"changed,omitempty"`     // Whether any step changed (only in completed event)
+}
+
+// ArtifactCaptureData contains data for artifact_capture events
+type ArtifactCaptureData struct {
+	Name         string `json:"name"`                    // Artifact name
+	OutputDir    string `json:"output_dir"`              // Output directory path
+	StepsCount   int    `json:"steps_count"`             // Number of steps executed
+	FilesChanged int    `json:"files_changed,omitempty"` // Number of files changed (only in complete event)
+	DurationMs   int64  `json:"duration_ms,omitempty"`   // Duration in milliseconds (only in complete event)
 }
 
 // PrintData contains data for print.message events

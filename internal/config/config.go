@@ -529,6 +529,48 @@ type RepoApplyPatchset struct {
 	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty"`           // Output JSON file with results
 }
 
+// ArtifactCapture wraps steps and captures all file changes with enhanced metadata.
+// Designed for LLM agent loops to provide structured output for decision-making.
+type ArtifactCapture struct {
+	Name             string   `yaml:"name" json:"name"`                                         // Artifact name (required)
+	OutputDir        string   `yaml:"output_dir" json:"output_dir,omitempty"`                   // Output directory (default: "./artifacts")
+	Format           string   `yaml:"format" json:"format,omitempty"`                           // Output format: "json", "markdown", "both" (default: "both")
+	CaptureContent   bool     `yaml:"capture_content" json:"capture_content,omitempty"`         // Include before/after file content (default: false)
+	MaxDiffSize      int      `yaml:"max_diff_size" json:"max_diff_size,omitempty"`             // Max diff size in bytes (default: 1MB)
+	IncludeChecksums bool     `yaml:"include_checksums" json:"include_checksums,omitempty"`     // Include file checksums (default: true)
+	Steps            []Step   `yaml:"steps" json:"steps"`                                       // Steps to execute and capture (required)
+}
+
+// WaitAction polls a condition until it becomes true or times out.
+// Useful for agent synchronization and waiting for external conditions.
+type WaitAction struct {
+	Condition string `yaml:"condition" json:"condition"` // Condition type: file_exists, file_absent, git_clean, command, http, port (required)
+	Timeout   string `yaml:"timeout" json:"timeout,omitempty"`   // Timeout duration (default: "30s")
+	Interval  string `yaml:"interval" json:"interval,omitempty"` // Poll interval (default: "1s")
+
+	// Condition-specific fields
+	Path           *string `yaml:"path" json:"path,omitempty"`                         // For file_exists, file_absent
+	AllowUntracked *bool   `yaml:"allow_untracked" json:"allow_untracked,omitempty"`   // For git_clean (default: false)
+	Cmd            *string `yaml:"cmd" json:"cmd,omitempty"`                           // For command
+	ExitCode       *int    `yaml:"exit_code" json:"exit_code,omitempty"`               // For command (default: 0)
+	URL            *string `yaml:"url" json:"url,omitempty"`                           // For http
+	Status         *int    `yaml:"status" json:"status,omitempty"`                     // For http (default: 200)
+	Port           *int    `yaml:"port" json:"port,omitempty"`                         // For port
+	Host           *string `yaml:"host" json:"host,omitempty"`                         // For port (default: "localhost")
+}
+
+// ArtifactValidate validates artifacts against constraints (change budgets).
+// Designed for LLM agent loops to enforce guardrails on file modifications.
+type ArtifactValidate struct {
+	ArtifactFile    string   `yaml:"artifact_file" json:"artifact_file"`                     // Path to artifact JSON file (required)
+	MaxFiles        *int     `yaml:"max_files" json:"max_files,omitempty"`                   // Maximum number of files changed
+	MaxLinesChanged *int     `yaml:"max_lines_changed" json:"max_lines_changed,omitempty"`   // Maximum total lines changed
+	MaxFileSize     *int     `yaml:"max_file_size" json:"max_file_size,omitempty"`           // Maximum individual file size in bytes
+	RequireTests    bool     `yaml:"require_tests" json:"require_tests,omitempty"`           // Require test file changes if code files changed
+	AllowedPaths    []string `yaml:"allowed_paths" json:"allowed_paths,omitempty"`           // Glob patterns for allowed paths
+	ForbiddenPaths  []string `yaml:"forbidden_paths" json:"forbidden_paths,omitempty"`       // Glob patterns for forbidden paths
+}
+
 // UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
 // Supports: print: "message" AND print: { msg: "message" }
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -584,6 +626,9 @@ type Step struct {
 	RepoSearch  *RepoSearch        `yaml:"repo_search" json:"repo_search,omitempty"`
 	RepoTree    *RepoTree          `yaml:"repo_tree" json:"repo_tree,omitempty"`
 	RepoApplyPatchset *RepoApplyPatchset `yaml:"repo_apply_patchset" json:"repo_apply_patchset,omitempty"`
+	Wait        *WaitAction        `yaml:"wait" json:"wait,omitempty"`
+	ArtifactCapture *ArtifactCapture `yaml:"artifact_capture" json:"artifact_capture,omitempty"`
+	ArtifactValidate *ArtifactValidate `yaml:"artifact_validate" json:"artifact_validate,omitempty"`
 
 	// Privilege escalation
 	Become     bool   `yaml:"become" json:"become,omitempty"`
@@ -707,6 +752,15 @@ func (s *Step) countActions() int {
 	if s.RepoApplyPatchset != nil {
 		count++
 	}
+	if s.Wait != nil {
+		count++
+	}
+	if s.ArtifactCapture != nil {
+		count++
+	}
+	if s.ArtifactValidate != nil {
+		count++
+	}
 	return count
 }
 
@@ -778,6 +832,15 @@ func (s *Step) DetermineActionType() string {
 	if s.RepoApplyPatchset != nil {
 		return "repo_apply_patchset"
 	}
+	if s.Wait != nil {
+		return "wait"
+	}
+	if s.ArtifactCapture != nil {
+		return "artifact_capture"
+	}
+	if s.ArtifactValidate != nil {
+		return "artifact_validate"
+	}
 	if s.WithItems != nil || s.WithFileTree != nil {
 		return "loop"
 	}
@@ -844,6 +907,9 @@ func (s *Step) Clone() *Step {
 		RepoSearch:   s.RepoSearch,
 		RepoTree:     s.RepoTree,
 		RepoApplyPatchset: s.RepoApplyPatchset,
+		Wait:            s.Wait,
+		ArtifactCapture: s.ArtifactCapture,
+		ArtifactValidate: s.ArtifactValidate,
 		Become:       s.Become,
 		BecomeUser:   s.BecomeUser,
 		Env:          s.Env,

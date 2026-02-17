@@ -724,3 +724,15 @@ func (w *Writer) RecordFileChecksums(stepID, filePath, checksumBefore, checksumA
 
 	return filepath.Join("checksums", checksumFileName)
 }
+
+// GetFileChanges returns a copy of all file changes tracked so far.
+// This is used by artifact_capture to collect changes from wrapped steps.
+func (w *Writer) GetFileChanges() []FileChange {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Return a copy to prevent external modification
+	changes := make([]FileChange, len(w.changedFiles))
+	copy(changes, w.changedFiles)
+	return changes
+}
