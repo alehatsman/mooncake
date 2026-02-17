@@ -188,6 +188,8 @@ schema-generate: build ## Generate JSON Schema from code (internal/config/schema
 	@./out/mooncake schema generate --format json --output internal/config/schema.json --strict
 	@echo "✓ Generated internal/config/schema.json"
 	@echo "  Schema is embedded in binary for runtime validation"
+	@echo "Generating Typescript types from JSON Schema..."
+	@./out/mooncake schema generate --format typescript --output internal/config/schema.d
 
 .PHONY: schema-check
 schema-check: build ## Check if generated schema is up to date

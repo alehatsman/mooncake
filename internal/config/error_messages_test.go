@@ -600,7 +600,7 @@ func TestFormatOneOfError(t *testing.T) {
 			err: &jsonschema.ValidationError{
 				Causes: []*jsonschema.ValidationError{},
 			},
-			expected: "Step must have exactly one action (shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree)",
+			expected: "Step must have exactly one action (shell, template, file, file_replace, copy, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, repo_search, or repo_tree)",
 		},
 	}
 

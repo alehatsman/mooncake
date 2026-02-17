@@ -15,6 +15,100 @@
     }
   ],
   "definitions": {
+    "artifact_capture": {
+      "type": "object",
+      "description": "Capture file changes with enhanced metadata for LLM agents",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the artifact (used for output directory)"
+        },
+        "output_dir": {
+          "type": "string",
+          "description": "Base directory for artifacts (default: './artifacts')"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "markdown", "both"],
+          "description": "Output format (json, markdown, or both)"
+        },
+        "capture_content": {
+          "type": "boolean",
+          "description": "Capture full file content before/after (default: false)"
+        },
+        "max_diff_size": {
+          "type": "integer",
+          "description": "Maximum diff size in bytes per file (default: 1MB)"
+        },
+        "include_checksums": {
+          "type": "boolean",
+          "description": "Include SHA256 checksums (default: true)"
+        },
+        "embed_plan": {
+          "type": "boolean",
+          "description": "Embed full plan in artifact for LLM context (default: true if <= max_plan_steps)"
+        },
+        "max_plan_steps": {
+          "type": "integer",
+          "description": "Don't embed plan if exceeds this many steps (default: 20)"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Steps to execute while capturing changes",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        }
+      },
+      "required": ["name", "steps"],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "artifact_validate": {
+      "type": "object",
+      "description": "Validate artifacts against constraints (change budgets)",
+      "properties": {
+        "artifact_file": {
+          "type": "string",
+          "description": "Path to artifact metadata JSON file"
+        },
+        "max_files": {
+          "type": "integer",
+          "description": "Maximum number of files allowed to change"
+        },
+        "max_lines_changed": {
+          "type": "integer",
+          "description": "Maximum total lines changed (added + removed)"
+        },
+        "max_file_size": {
+          "type": "integer",
+          "description": "Maximum file size in bytes after changes"
+        },
+        "require_tests": {
+          "type": "boolean",
+          "description": "Require test file changes when code files change"
+        },
+        "allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for allowed file paths"
+        },
+        "forbidden_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for forbidden file paths"
+        }
+      },
+      "required": ["artifact_file"],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
     "assert": {
       "type": "object",
       "description": "Verify conditions without changing system state",
@@ -136,7 +230,7 @@
             },
             "timeout": {
               "type": "string",
-              "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+              "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
             },
             "url": {
               "type": "string"
@@ -148,101 +242,6 @@
           "additionalProperties": false
         }
       },
-      "additionalProperties": false,
-      "x-category": "system",
-      "x-supports-dry-run": true
-    },
-    "artifact_capture": {
-      "type": "object",
-      "description": "Capture file changes with enhanced metadata for LLM agents",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name of the artifact (used for output directory)"
-        },
-        "output_dir": {
-          "type": "string",
-          "description": "Base directory for artifacts (default: './artifacts')"
-        },
-        "format": {
-          "type": "string",
-          "enum": [
-            "json",
-            "markdown",
-            "both"
-          ],
-          "description": "Output format (json, markdown, or both)"
-        },
-        "capture_content": {
-          "type": "boolean",
-          "description": "Capture full file content before/after (default: false)"
-        },
-        "max_diff_size": {
-          "type": "integer",
-          "description": "Maximum diff size in bytes per file (default: 1MB)"
-        },
-        "include_checksums": {
-          "type": "boolean",
-          "description": "Include SHA256 checksums (default: true)"
-        },
-        "steps": {
-          "type": "array",
-          "description": "Steps to execute while capturing changes",
-          "items": {
-            "$ref": "#/definitions/step"
-          }
-        }
-      },
-      "required": [
-        "name",
-        "steps"
-      ],
-      "additionalProperties": false,
-      "x-category": "system",
-      "x-supports-dry-run": true
-    },
-    "artifact_validate": {
-      "type": "object",
-      "description": "Validate artifacts against constraints (change budgets)",
-      "properties": {
-        "artifact_file": {
-          "type": "string",
-          "description": "Path to artifact metadata JSON file"
-        },
-        "max_files": {
-          "type": "integer",
-          "description": "Maximum number of files allowed to change"
-        },
-        "max_lines_changed": {
-          "type": "integer",
-          "description": "Maximum total lines changed (added + removed)"
-        },
-        "max_file_size": {
-          "type": "integer",
-          "description": "Maximum file size in bytes after changes"
-        },
-        "require_tests": {
-          "type": "boolean",
-          "description": "Require test file changes when code files change"
-        },
-        "allowed_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Glob patterns for allowed file paths"
-        },
-        "forbidden_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Glob patterns for forbidden file paths"
-        }
-      },
-      "required": [
-        "artifact_file"
-      ],
       "additionalProperties": false,
       "x-category": "system",
       "x-supports-dry-run": true
@@ -374,7 +373,7 @@
         },
         "timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
         "url": {
           "type": "string"
@@ -917,10 +916,6 @@
     "step": {
       "type": "object",
       "properties": {
-        "assert": {
-          "description": "Verify conditions without changing system state",
-          "$ref": "#/definitions/assert"
-        },
         "artifact_capture": {
           "description": "Capture file changes with enhanced metadata for LLM agents",
           "$ref": "#/definitions/artifact_capture"
@@ -929,13 +924,17 @@
           "description": "Validate artifacts against constraints (change budgets)",
           "$ref": "#/definitions/artifact_validate"
         },
+        "assert": {
+          "description": "Verify conditions without changing system state",
+          "$ref": "#/definitions/assert"
+        },
         "become": {
           "type": "boolean",
           "description": "Execute with sudo privileges. Works with: shell, command, file, template"
         },
         "become_user": {
           "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
+          "description": "⚠️ SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
         },
         "changed_when": {
           "type": "string",
@@ -1041,14 +1040,14 @@
         },
         "retries": {
           "type": "integer",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "description": "⚠️ SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
           "minimum": 0,
           "maximum": 100
         },
         "retry_delay": {
           "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+          "description": "⚠️ SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
         "service": {
           "description": "Manage services across platforms (systemd, launchd, Windows)",
@@ -1080,8 +1079,8 @@
         },
         "timeout": {
           "type": "string",
-          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+          "description": "⚠️ SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
         "unarchive": {
           "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
@@ -1115,2985 +1114,18 @@
       "oneOf": [
         {
           "required": [
-            "assert"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "command"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "copy"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "download"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file_delete_range"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file_insert"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file_patch_apply"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "file_replace"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "include"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "include_vars"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "package"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "preset"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "print"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo_apply_patchset"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo_search"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo_tree"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "service"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "shell"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "template"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "unarchive"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "vars"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "wait"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
             "artifact_capture"
           ],
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "assert"
+                  "artifact_validate"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "assert"
                 ]
               },
               {
@@ -4217,12 +1249,12 @@
             "anyOf": [
               {
                 "required": [
-                  "assert"
+                  "artifact_capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_capture"
+                  "assert"
                 ]
               },
               {
@@ -4333,6 +1365,2973 @@
               {
                 "required": [
                   "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "assert"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "command"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "copy"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "download"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_delete_range"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_insert"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_patch_apply"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_replace"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "include"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "include_vars"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "package"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "preset"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "print"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "repo_apply_patchset"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "repo_search"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "repo_tree"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "service"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "shell"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "template"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "unarchive"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "vars"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "wait"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
                 ]
               }
             ]
@@ -4452,7 +4451,7 @@
         },
         "timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
         "url": {
           "type": "string"

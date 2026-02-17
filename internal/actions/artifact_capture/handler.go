@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	defaultOutputDir   = "./artifacts"
-	defaultFormat      = "both"
-	defaultMaxDiffSize = 1 * 1024 * 1024 // 1MB
+	defaultOutputDir    = "./artifacts"
+	defaultFormat       = "both"
+	defaultMaxDiffSize  = 1 * 1024 * 1024 // 1MB
+	defaultMaxPlanSteps = 20               // Don't embed plans with more than 20 steps
 )
 
 // Handler implements the artifact_capture action handler.
@@ -172,6 +173,32 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		CaptureTime: time.Now().Format(time.RFC3339),
 		Summary:     aggregated,
 		Files:       detailedChanges,
+	}
+
+	// Embed plan if requested (for LLM agent context)
+	maxPlanSteps := capture.MaxPlanSteps
+	if maxPlanSteps == 0 {
+		maxPlanSteps = defaultMaxPlanSteps
+	}
+
+	shouldEmbedPlan := true
+	if capture.EmbedPlan != nil {
+		shouldEmbedPlan = *capture.EmbedPlan
+	} else {
+		// Auto-decide based on plan size
+		shouldEmbedPlan = len(capture.Steps) <= maxPlanSteps
+	}
+
+	if shouldEmbedPlan && len(capture.Steps) <= maxPlanSteps {
+		metadata.Plan = &artifacts.EmbeddedPlan{
+			StepCount:   len(capture.Steps),
+			Steps:       capture.Steps,
+			InitialVars: ec.Variables, // Capture initial variables for reproducibility
+		}
+		ec.Logger.Debugf("Embedded plan with %d steps in artifact", len(capture.Steps))
+	} else {
+		metadata.PlanSummary = fmt.Sprintf("%d steps executed", len(capture.Steps))
+		ec.Logger.Debugf("Plan summary: %d steps (not embedded, exceeds max %d)", len(capture.Steps), maxPlanSteps)
 	}
 
 	// Write output files based on format

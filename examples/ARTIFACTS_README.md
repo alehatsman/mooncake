@@ -84,6 +84,56 @@ mooncake run llm-agent-workflow.yml \
 - `./artifacts/my-changes/changes.json` - Structured metadata
 - `./artifacts/my-changes/SUMMARY.md` - Human-readable summary
 
+### Plan Embedding (New!)
+
+**Embed the execution plan in artifacts for complete LLM context:**
+
+```yaml
+- artifact_capture:
+    name: "llm-changes"
+    embed_plan: true  # Includes full plan in artifact
+    steps:
+      - file_replace:
+          path: "main.go"
+          regex: "v1"
+          replace: "v2"
+```
+
+**Benefits:**
+- ✅ **Single-file context** - LLM gets plan + results in one JSON
+- ✅ **Reproducibility** - Exact steps captured with initial variables
+- ✅ **Audit trail** - Know what was executed, not just what changed
+- ✅ **Debugging** - See plan and results together
+- ✅ **Iteration** - Compare what LLM tried across attempts
+
+**Artifact output with plan:**
+```json
+{
+  "name": "llm-changes",
+  "plan": {
+    "step_count": 1,
+    "steps": [
+      {
+        "name": "Update version",
+        "file_replace": {
+          "path": "main.go",
+          "regex": "v1",
+          "replace": "v2"
+        }
+      }
+    ],
+    "initial_vars": { ... }
+  },
+  "summary": { ... },
+  "files": [ ... ]
+}
+```
+
+**Configuration:**
+- `embed_plan: true` - Always embed plan (default for plans ≤ 20 steps)
+- `embed_plan: false` - Never embed (use `plan_summary` instead)
+- `max_plan_steps: 20` - Don't embed if plan exceeds this (default: 20)
+
 ### Basic Validation
 
 ```yaml

@@ -12,6 +12,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
+	"github.com/alehatsman/mooncake/internal/agent/interactive"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -449,6 +450,8 @@ func agentRunCommand(c *cli.Context) error {
 	provider := c.String("provider")
 	model := c.String("model")
 	maxIterations := c.Int("max-iterations")
+	isInteractive := c.Bool("interactive")
+	autoApply := c.Bool("auto-apply")
 
 	if goal == "" {
 		return fmt.Errorf("--goal is required")
@@ -459,6 +462,23 @@ func agentRunCommand(c *cli.Context) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	// Interactive mode
+	if isInteractive {
+		if provider == "" {
+			provider = "claude"
+		}
+
+		return interactive.Run(interactive.RunOptions{
+			Goal:          goal,
+			RepoRoot:      repoRoot,
+			Provider:      provider,
+			Model:         model,
+			MaxIterations: maxIterations,
+			AutoApply:     autoApply,
+		})
+	}
+
+	// Non-interactive mode
 	opts := agent.RunOptions{
 		Goal:          goal,
 		PlanPath:      planPath,
@@ -794,6 +814,14 @@ func createApp() *cli.App {
 								Name:  "max-iterations",
 								Value: 5,
 								Usage: "Maximum iterations for loop mode",
+							},
+							&cli.BoolFlag{
+								Name:  "interactive",
+								Usage: "Run in interactive TUI mode",
+							},
+							&cli.BoolFlag{
+								Name:  "auto-apply",
+								Usage: "Automatically apply changes without confirmation (only with --interactive)",
 							},
 						},
 						Action: agentRunCommand,

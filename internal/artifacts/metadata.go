@@ -4,6 +4,8 @@ package artifacts
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/config"
 )
 
 // DetailedFileChange represents comprehensive metadata about a file modification.
@@ -93,6 +95,10 @@ type ArtifactMetadata struct {
 	CaptureTime string `json:"capture_time"` // ISO8601 timestamp
 	RunID       string `json:"run_id,omitempty"`
 
+	// Executed plan (for LLM agent audit trail)
+	Plan        *EmbeddedPlan `json:"plan,omitempty"`         // Full plan for short plans
+	PlanSummary string        `json:"plan_summary,omitempty"` // Brief summary for large plans
+
 	// Aggregated statistics
 	Summary AggregatedChanges `json:"summary"`
 
@@ -106,6 +112,13 @@ type ArtifactMetadata struct {
 
 	// Additional metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// EmbeddedPlan represents the plan that was executed during artifact capture.
+type EmbeddedPlan struct {
+	StepCount   int           `json:"step_count"`
+	Steps       []config.Step `json:"steps"`
+	InitialVars map[string]interface{} `json:"initial_vars,omitempty"`
 }
 
 // ValidationViolation represents a validation constraint that was violated.

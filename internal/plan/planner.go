@@ -782,10 +782,13 @@ func (p *Planner) buildOriginForStep(step *config.Step) config.Origin {
 	}
 
 	// Build include chain
-	chain := make([]string, 0, len(p.includeStack)-1)
-	for i := 0; i < len(p.includeStack)-1; i++ {
-		frame := p.includeStack[i]
-		chain = append(chain, fmt.Sprintf("%s:%d", frame.FilePath, frame.Line))
+	var chain []string
+	if len(p.includeStack) > 1 {
+		chain = make([]string, 0, len(p.includeStack)-1)
+		for i := 0; i < len(p.includeStack)-1; i++ {
+			frame := p.includeStack[i]
+			chain = append(chain, fmt.Sprintf("%s:%d", frame.FilePath, frame.Line))
+		}
 	}
 
 	return config.Origin{

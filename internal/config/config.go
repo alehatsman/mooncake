@@ -538,6 +538,8 @@ type ArtifactCapture struct {
 	CaptureContent   bool     `yaml:"capture_content" json:"capture_content,omitempty"`         // Include before/after file content (default: false)
 	MaxDiffSize      int      `yaml:"max_diff_size" json:"max_diff_size,omitempty"`             // Max diff size in bytes (default: 1MB)
 	IncludeChecksums bool     `yaml:"include_checksums" json:"include_checksums,omitempty"`     // Include file checksums (default: true)
+	EmbedPlan        *bool    `yaml:"embed_plan" json:"embed_plan,omitempty"`                   // Embed full plan in artifact (default: true if steps <= max_plan_steps)
+	MaxPlanSteps     int      `yaml:"max_plan_steps" json:"max_plan_steps,omitempty"`           // Don't embed if plan exceeds this many steps (default: 20)
 	Steps            []Step   `yaml:"steps" json:"steps"`                                       // Steps to execute and capture (required)
 }
 

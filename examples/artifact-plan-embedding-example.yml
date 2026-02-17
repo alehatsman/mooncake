@@ -1,0 +1,240 @@
+# Artifact Plan Embedding Examples
+# Demonstrates embedding execution plans in artifacts for LLM agent context
+
+# Example 1: Basic plan embedding (automatic)
+# Plans with <= 20 steps are embedded automatically
+- name: "Short plan - auto embedded"
+  artifact_capture:
+    name: "auto-embed-example"
+    steps:
+      - name: "Update config"
+        file_replace:
+          path: "config.json"
+          regex: '"version": "[^"]+"'
+          replace: '"version": "2.0.0"'
+
+      - name: "Add timestamp"
+        file_replace:
+          path: "config.json"
+          regex: '"updated": "[^"]+"'
+          replace: '"updated": "{{ ansible_date_time.iso8601 }}"'
+
+# Artifact will contain:
+# {
+#   "name": "auto-embed-example",
+#   "plan": {
+#     "step_count": 2,
+#     "steps": [ ... ],
+#     "initial_vars": { ... }
+#   },
+#   "summary": { ... },
+#   "files": [ ... ]
+# }
+
+# Example 2: Explicit plan embedding
+- name: "Force embed even for large plans"
+  artifact_capture:
+    name: "force-embed"
+    embed_plan: true
+    max_plan_steps: 50  # Allow up to 50 steps
+    steps:
+      - shell: { cmd: "echo 'Step 1'" }
+      - shell: { cmd: "echo 'Step 2'" }
+      # ... many steps ...
+
+# Example 3: Disable plan embedding
+- name: "Don't embed plan (summary only)"
+  artifact_capture:
+    name: "no-embed"
+    embed_plan: false
+    steps:
+      - file_replace:
+          path: "large-file.txt"
+          regex: "old"
+          replace: "new"
+
+# Artifact will contain:
+# {
+#   "name": "no-embed",
+#   "plan_summary": "1 steps executed",
+#   "summary": { ... },
+#   "files": [ ... ]
+# }
+
+# Example 4: LLM Agent Iteration Loop
+# Complete context in a single artifact file
+- name: "LLM iteration {{ iteration | default(1) }}"
+  vars:
+    iteration: 1
+    max_files: 15
+    max_lines: 500
+
+- name: "Capture LLM attempt with full context"
+  artifact_capture:
+    name: "llm-attempt-{{ iteration }}"
+    embed_plan: true  # LLM can see what it tried
+    format: "json"
+    steps:
+      # LLM-generated changes
+      - name: "Apply LLM patch"
+        file_patch_apply:
+          path: "src/main.go"
+          patch: |
+            --- a/src/main.go
+            +++ b/src/main.go
+            @@ -10,3 +10,4 @@
+             func main() {
+               fmt.Println("Hello, World!")
+            +  fmt.Println("LLM added this")
+             }
+
+      - name: "Update tests"
+        file_insert:
+          path: "src/main_test.go"
+          position: "end"
+          content: |
+            func TestNewFeature(t *testing.T) {
+              // LLM-generated test
+            }
+
+- name: "Validate LLM changes"
+  artifact_validate:
+    artifact_file: "./artifacts/llm-attempt-{{ iteration }}/changes.json"
+    max_files: "{{ max_files }}"
+    max_lines_changed: "{{ max_lines }}"
+    require_tests: true
+  register: validation
+
+- name: "Run tests"
+  shell:
+    cmd: "go test ./..."
+  register: tests
+  when: validation is succeeded
+
+# Artifact now contains complete context for LLM feedback:
+# {
+#   "name": "llm-attempt-1",
+#   "plan": {
+#     "steps": [
+#       { "name": "Apply LLM patch", "file_patch_apply": { ... } },
+#       { "name": "Update tests", "file_insert": { ... } }
+#     ],
+#     "initial_vars": { "iteration": 1, "max_files": 15, "max_lines": 500 }
+#   },
+#   "summary": { "total_files": 2, "total_lines_changed": 15 },
+#   "files": [ ... ],
+#   "validated": true,
+#   "validation_pass": false,
+#   "violations": [
+#     { "constraint": "max_files", "expected": "15", "actual": "2" }
+#   ]
+# }
+
+# Example 5: Compare iterations with embedded plans
+- name: "Generate feedback for LLM"
+  shell:
+    cmd: |
+      cat << 'EOF' > llm-feedback.json
+      {
+        "iteration": {{ iteration }},
+        "artifact": $(cat ./artifacts/llm-attempt-{{ iteration }}/changes.json),
+        "status": "{{ 'success' if tests is succeeded else 'failed' }}",
+        "feedback": {
+          "what_you_tried": "See artifact.plan.steps",
+          "what_changed": "See artifact.summary and artifact.files",
+          "validation_result": "See artifact.validation_pass and artifact.violations",
+          "test_result": "{{ tests.rc }}"
+        }
+      }
+      EOF
+      cat llm-feedback.json
+
+# LLM receives complete context:
+# - Exact steps it executed (from embedded plan)
+# - Exact file changes that resulted
+# - Validation constraints it violated
+# - Test results
+# All in a single JSON file!
+
+# Example 6: Multi-iteration with full history
+- name: "Iteration 1"
+  artifact_capture:
+    name: "iter-1"
+    embed_plan: true
+    steps:
+      - file_replace: { path: "main.go", regex: "v1", replace: "v2" }
+
+- name: "Iteration 2 (learns from iteration 1)"
+  artifact_capture:
+    name: "iter-2"
+    embed_plan: true
+    steps:
+      - file_replace: { path: "main.go", regex: "v2", replace: "v3" }
+
+- name: "Compare what changed between iterations"
+  shell:
+    cmd: |
+      echo "Iteration 1 plan:"
+      jq '.plan.steps' ./artifacts/iter-1/changes.json
+
+      echo "Iteration 2 plan:"
+      jq '.plan.steps' ./artifacts/iter-2/changes.json
+
+      echo "Evolution:"
+      echo "  Iter 1 changed: $(jq '.summary.total_files' ./artifacts/iter-1/changes.json) files"
+      echo "  Iter 2 changed: $(jq '.summary.total_files' ./artifacts/iter-2/changes.json) files"
+
+# Example 7: Conditional plan embedding based on step count
+- name: "Smart embedding for variable-size plans"
+  vars:
+    step_count: "{{ dynamic_steps | length }}"
+
+- name: "Capture with smart embedding"
+  artifact_capture:
+    name: "smart-embed"
+    # embed_plan not specified - auto-decides based on step count
+    max_plan_steps: 10
+    steps: "{{ dynamic_steps }}"
+
+# If dynamic_steps has <= 10 steps: plan embedded
+# If dynamic_steps has > 10 steps: only summary
+
+# Example 8: Debugging with embedded plans
+- name: "Debug artifact with full plan"
+  artifact_capture:
+    name: "debug-run"
+    embed_plan: true
+    capture_content: true  # Also capture file content
+    steps:
+      - shell: { cmd: "ls -la" }
+      - shell: { cmd: "pwd" }
+      - file_replace: { path: "debug.log", regex: ".*", replace: "Debug info" }
+
+# Artifact contains:
+# - Full plan (what commands were run)
+# - File changes with before/after content
+# - Execution timestamp
+# Perfect for debugging failed runs!
+
+# Benefits of Plan Embedding:
+#
+# ✅ Single-file context - LLM gets everything in one JSON
+# ✅ Reproducibility - Exact steps captured with initial vars
+# ✅ Audit trail - Know what was executed, not just results
+# ✅ Debugging - See plan + results together
+# ✅ Iteration - Compare what LLM tried across attempts
+# ✅ Feedback loops - Complete context for next iteration
+#
+# Trade-offs:
+#
+# ⚖️ File size - Large plans increase artifact JSON size
+# ⚖️ Privacy - Embedded vars might contain sensitive data
+# ⚖️ Storage - More artifacts = more disk space
+#
+# Best practices:
+#
+# 1. Use embed_plan: true for LLM agent loops (< 20 steps)
+# 2. Use embed_plan: false for large batch operations
+# 3. Set max_plan_steps to limit artifact size
+# 4. Use .gitignore to exclude artifacts/ from version control
+# 5. Review embedded initial_vars for sensitive data

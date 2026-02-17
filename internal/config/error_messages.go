@@ -264,7 +264,7 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 	}
 
 	// Generic fallback
-	return "Step must have exactly one action (shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree)"
+	return "Step must have exactly one action (shell, template, file, file_replace, copy, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, repo_search, or repo_tree)"
 }
 
 // formatMinLengthError creates a friendly message for string too short errors
