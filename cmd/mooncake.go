@@ -453,8 +453,9 @@ func agentRunCommand(c *cli.Context) error {
 	isInteractive := c.Bool("interactive")
 	autoApply := c.Bool("auto-apply")
 
-	if goal == "" {
-		return fmt.Errorf("--goal is required")
+	// Goal is optional in interactive mode, required otherwise
+	if goal == "" && !isInteractive {
+		return fmt.Errorf("--goal is required (or use --interactive to enter goal in TUI)")
 	}
 
 	repoRoot, err := os.Getwd()
@@ -789,8 +790,8 @@ func createApp() *cli.App {
 							&cli.StringFlag{
 								Name:     "goal",
 								Aliases:  []string{"g"},
-								Required: true,
-								Usage:    "Goal description",
+								Required: false,
+								Usage:    "Goal description (optional in interactive mode)",
 							},
 							&cli.StringFlag{
 								Name:    "plan",

@@ -19,6 +19,35 @@
       "type": "object",
       "description": "Capture file changes with enhanced metadata for LLM agents",
       "properties": {
+        "capture_content": {
+          "type": "boolean",
+          "description": "Capture full file content before/after"
+        },
+        "embed_plan": {
+          "type": "boolean",
+          "description": "Embed full plan in artifact for LLM context"
+        },
+        "format": {
+          "type": "string",
+          "description": "Output format",
+          "enum": [
+            "json",
+            "markdown",
+            "both"
+          ]
+        },
+        "include_checksums": {
+          "type": "boolean",
+          "description": "Include SHA256 checksums"
+        },
+        "max_diff_size": {
+          "type": "integer",
+          "description": "Maximum diff size in bytes per file"
+        },
+        "max_plan_steps": {
+          "type": "integer",
+          "description": "Don't embed plan if exceeds this many steps"
+        },
         "name": {
           "type": "string",
           "description": "Name of the artifact (used for output directory)"
@@ -26,31 +55,6 @@
         "output_dir": {
           "type": "string",
           "description": "Base directory for artifacts (default: './artifacts')"
-        },
-        "format": {
-          "type": "string",
-          "enum": ["json", "markdown", "both"],
-          "description": "Output format (json, markdown, or both)"
-        },
-        "capture_content": {
-          "type": "boolean",
-          "description": "Capture full file content before/after (default: false)"
-        },
-        "max_diff_size": {
-          "type": "integer",
-          "description": "Maximum diff size in bytes per file (default: 1MB)"
-        },
-        "include_checksums": {
-          "type": "boolean",
-          "description": "Include SHA256 checksums (default: true)"
-        },
-        "embed_plan": {
-          "type": "boolean",
-          "description": "Embed full plan in artifact for LLM context (default: true if <= max_plan_steps)"
-        },
-        "max_plan_steps": {
-          "type": "integer",
-          "description": "Don't embed plan if exceeds this many steps (default: 20)"
         },
         "steps": {
           "type": "array",
@@ -60,7 +64,10 @@
           }
         }
       },
-      "required": ["name", "steps"],
+      "required": [
+        "name",
+        "steps"
+      ],
       "additionalProperties": false,
       "x-category": "system",
       "x-supports-dry-run": true
@@ -69,9 +76,27 @@
       "type": "object",
       "description": "Validate artifacts against constraints (change budgets)",
       "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "description": "Glob patterns for allowed file paths",
+          "items": {
+            "type": "string"
+          }
+        },
         "artifact_file": {
           "type": "string",
           "description": "Path to artifact metadata JSON file"
+        },
+        "forbidden_paths": {
+          "type": "array",
+          "description": "Glob patterns for forbidden file paths",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_file_size": {
+          "type": "integer",
+          "description": "Maximum file size in bytes after changes"
         },
         "max_files": {
           "type": "integer",
@@ -79,32 +104,16 @@
         },
         "max_lines_changed": {
           "type": "integer",
-          "description": "Maximum total lines changed (added + removed)"
-        },
-        "max_file_size": {
-          "type": "integer",
-          "description": "Maximum file size in bytes after changes"
+          "description": "Maximum total lines changed"
         },
         "require_tests": {
           "type": "boolean",
           "description": "Require test file changes when code files change"
-        },
-        "allowed_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Glob patterns for allowed file paths"
-        },
-        "forbidden_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Glob patterns for forbidden file paths"
         }
       },
-      "required": ["artifact_file"],
+      "required": [
+        "artifact_file"
+      ],
       "additionalProperties": false,
       "x-category": "system",
       "x-supports-dry-run": true

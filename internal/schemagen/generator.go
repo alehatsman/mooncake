@@ -340,6 +340,52 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 		return def, nil
 	}
 
+	// Handle artifact_capture specially (has circular reference via Steps)
+	if meta.Name == "artifact_capture" {
+		def.Properties = map[string]*Property{
+			"name":              {Type: "string", Description: "Name of the artifact (used for output directory)"},
+			"output_dir":        {Type: "string", Description: "Base directory for artifacts (default: './artifacts')"},
+			"format":            {Type: "string", Enum: []interface{}{"json", "markdown", "both"}, Description: "Output format"},
+			"capture_content":   {Type: "boolean", Description: "Capture full file content before/after"},
+			"max_diff_size":     {Type: "integer", Description: "Maximum diff size in bytes per file"},
+			"include_checksums": {Type: "boolean", Description: "Include SHA256 checksums"},
+			"embed_plan":        {Type: "boolean", Description: "Embed full plan in artifact for LLM context"},
+			"max_plan_steps":    {Type: "integer", Description: "Don't embed plan if exceeds this many steps"},
+			"steps": {
+				Type: "array",
+				Items: &Property{
+					Ref: "#/definitions/step",
+				},
+				Description: "Steps to execute while capturing changes",
+			},
+		}
+		def.Required = []string{"name", "steps"}
+		return def, nil
+	}
+
+	// Handle artifact_validate specially
+	if meta.Name == "artifact_validate" {
+		def.Properties = map[string]*Property{
+			"artifact_file":     {Type: "string", Description: "Path to artifact metadata JSON file"},
+			"max_files":         {Type: "integer", Description: "Maximum number of files allowed to change"},
+			"max_lines_changed": {Type: "integer", Description: "Maximum total lines changed"},
+			"max_file_size":     {Type: "integer", Description: "Maximum file size in bytes after changes"},
+			"require_tests":     {Type: "boolean", Description: "Require test file changes when code files change"},
+			"allowed_paths": {
+				Type:        "array",
+				Items:       &Property{Type: "string"},
+				Description: "Glob patterns for allowed file paths",
+			},
+			"forbidden_paths": {
+				Type:        "array",
+				Items:       &Property{Type: "string"},
+				Description: "Glob patterns for forbidden file paths",
+			},
+		}
+		def.Required = []string{"artifact_file"}
+		return def, nil
+	}
+
 	// Reflect on the corresponding config struct to extract properties
 	structType, err := getActionStruct(meta.Name)
 	if err != nil {
@@ -400,6 +446,12 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		actionStruct = &config.RepoTree{}
 	case "wait":
 		actionStruct = &config.WaitAction{}
+	case "artifact_capture":
+		// Handled as special case in generateActionDefinition
+		return nil, fmt.Errorf("artifact_capture uses custom definition (circular reference)")
+	case "artifact_validate":
+		// Handled as special case in generateActionDefinition
+		return nil, fmt.Errorf("artifact_validate uses custom definition")
 	case "vars":
 		// vars is a map[string]interface{} directly in Step
 		return nil, fmt.Errorf("vars action uses inline map definition")
