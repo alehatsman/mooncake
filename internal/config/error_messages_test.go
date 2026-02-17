@@ -583,7 +583,7 @@ func TestFormatOneOfError(t *testing.T) {
 					{Message: "missing required property 'file'"},
 				},
 			},
-			expected: "Step has no action. Each step must have exactly ONE of: shell, template, file, copy, service, assert, preset, print, include, include_vars, or vars",
+			expected: "Step has no action. Each step must have exactly ONE of: shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree",
 		},
 		{
 			name: "multiple actions present",
@@ -593,7 +593,7 @@ func TestFormatOneOfError(t *testing.T) {
 					{KeywordLocation: "#/oneOf/1/not"},
 				},
 			},
-			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, copy, service, assert, preset, print, include, include_vars, or vars",
+			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree",
 		},
 		{
 			name: "generic oneOf error",

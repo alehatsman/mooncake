@@ -451,6 +451,17 @@ type FileInsert struct {
 	Backup        bool   `yaml:"backup" json:"backup,omitempty"`                 // Create .bak before modify
 }
 
+// FileDeleteRange represents a range deletion operation between two anchor patterns.
+// Deletes all lines between (and optionally including) start and end anchors.
+type FileDeleteRange struct {
+	Path        string `yaml:"path" json:"path"`                       // Target file path (required)
+	StartAnchor string `yaml:"start_anchor" json:"start_anchor"`       // Start anchor pattern (required)
+	EndAnchor   string `yaml:"end_anchor" json:"end_anchor"`           // End anchor pattern (required)
+	Regex       bool   `yaml:"regex" json:"regex,omitempty"`           // Treat anchors as regex (default: false)
+	Inclusive   bool   `yaml:"inclusive" json:"inclusive,omitempty"`   // Include anchor lines in deletion (default: false)
+	Backup      bool   `yaml:"backup" json:"backup,omitempty"`         // Create .bak before modify
+}
+
 // RepoSearch represents a codebase search operation.
 // Searches files for patterns and outputs results in JSON format.
 type RepoSearch struct {
@@ -506,11 +517,12 @@ type Step struct {
 	Unless  *string `yaml:"unless" json:"unless,omitempty"`   // Skip if command succeeds
 
 	// Actions (exactly one required)
-	Template    *Template          `yaml:"template" json:"template,omitempty"`
-	File        *File              `yaml:"file" json:"file,omitempty"`
-	FileReplace *FileReplace       `yaml:"file_replace" json:"file_replace,omitempty"`
-	FileInsert  *FileInsert        `yaml:"file_insert" json:"file_insert,omitempty"`
-	Shell       *ShellAction       `yaml:"shell" json:"shell,omitempty"`
+	Template        *Template        `yaml:"template" json:"template,omitempty"`
+	File            *File            `yaml:"file" json:"file,omitempty"`
+	FileReplace     *FileReplace     `yaml:"file_replace" json:"file_replace,omitempty"`
+	FileInsert      *FileInsert      `yaml:"file_insert" json:"file_insert,omitempty"`
+	FileDeleteRange *FileDeleteRange `yaml:"file_delete_range" json:"file_delete_range,omitempty"`
+	Shell           *ShellAction     `yaml:"shell" json:"shell,omitempty"`
 	Command     *CommandAction     `yaml:"command" json:"command,omitempty"`
 	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
 	Unarchive   *Unarchive         `yaml:"unarchive" json:"unarchive,omitempty"`
@@ -594,6 +606,9 @@ func (s *Step) countActions() int {
 	if s.FileInsert != nil {
 		count++
 	}
+	if s.FileDeleteRange != nil {
+		count++
+	}
 	if s.Shell != nil {
 		count++
 	}
@@ -658,6 +673,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.FileInsert != nil {
 		return "file_insert"
+	}
+	if s.FileDeleteRange != nil {
+		return "file_delete_range"
 	}
 	if s.Template != nil {
 		return "template"
@@ -747,9 +765,10 @@ func (s *Step) Clone() *Step {
 		Unless:       s.Unless,
 		Template:     s.Template,
 		File:         s.File,
-		FileReplace:  s.FileReplace,
-		FileInsert:   s.FileInsert,
-		Shell:        s.Shell,
+		FileReplace:     s.FileReplace,
+		FileInsert:      s.FileInsert,
+		FileDeleteRange: s.FileDeleteRange,
+		Shell:           s.Shell,
 		Command:      s.Command,
 		Copy:         s.Copy,
 		Unarchive:    s.Unarchive,

@@ -15,6 +15,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/copy"
 	_ "github.com/alehatsman/mooncake/internal/actions/download"
 	_ "github.com/alehatsman/mooncake/internal/actions/file"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_delete_range"
 	_ "github.com/alehatsman/mooncake/internal/actions/file_insert"
 	_ "github.com/alehatsman/mooncake/internal/actions/file_replace"
 	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"

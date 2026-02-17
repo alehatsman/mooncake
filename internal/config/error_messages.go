@@ -255,7 +255,7 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 
 	// If all causes are "required" failures, it means no action is present
 	if hasRequiredFailure && !hasNotFailure {
-		return "Step has no action. Each step must have exactly ONE of: shell, template, file, copy, service, assert, preset, print, include, include_vars, or vars"
+		return "Step has no action. Each step must have exactly ONE of: shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree"
 	}
 
 	// If we have "not" failures, it means multiple actions are present

@@ -369,18 +369,16 @@ func (h *Handler) searchInFile(filePath, content, pattern string, re *regexp.Reg
 					Context: line,
 				})
 			}
-		} else {
+		} else if strings.Contains(line, pattern) {
 			// Literal search
-			if strings.Contains(line, pattern) {
-				col := strings.Index(line, pattern)
-				results = append(results, SearchResult{
-					File:    filePath,
-					Line:    lineNum + 1,
-					Column:  col + 1,
-					Match:   pattern,
-					Context: line,
-				})
-			}
+			col := strings.Index(line, pattern)
+			results = append(results, SearchResult{
+				File:    filePath,
+				Line:    lineNum + 1,
+				Column:  col + 1,
+				Match:   pattern,
+				Context: line,
+			})
 		}
 	}
 

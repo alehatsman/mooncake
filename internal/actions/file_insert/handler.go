@@ -283,11 +283,9 @@ func (h *Handler) performInsertion(content, anchor, insertion, position string, 
 				inserted = true
 
 				if position == positionBefore {
-					result = append(result, insertion)
-					result = append(result, line)
+					result = append(result, insertion, line)
 				} else { // after
-					result = append(result, line)
-					result = append(result, insertion)
+					result = append(result, line, insertion)
 				}
 			} else {
 				// Already inserted at first match and allowMultiple=false

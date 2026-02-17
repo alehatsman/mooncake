@@ -105,6 +105,10 @@ linters:
         linters: [revive]
         text: "var-naming: avoid meaningless package names"
 
+      - path: internal/actions/(file_replace|repo_search|repo_tree)/
+        linters: [revive, staticcheck]
+        text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names)"
+
       - path: internal/utils/checksum\.go
         linters: [dupl]
         text: "lines are duplicate"

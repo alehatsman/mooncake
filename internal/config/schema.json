@@ -323,6 +323,32 @@
         "permissions.changed"
       ]
     },
+    "file_delete_range": {
+      "type": "object",
+      "description": "Delete text between start and end anchor patterns in files",
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "file_insert": {
+      "type": "object",
+      "description": "Insert text before or after anchor patterns in files",
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "file_replace": {
       "type": "object",
       "description": "Replace text in files using literal or regex patterns",
@@ -776,6 +802,14 @@
           "description": "Manage files, directories, links, and permissions",
           "$ref": "#/definitions/file"
         },
+        "file_delete_range": {
+          "description": "Delete text between start and end anchor patterns in files",
+          "$ref": "#/definitions/file_delete_range"
+        },
+        "file_insert": {
+          "description": "Insert text before or after anchor patterns in files",
+          "$ref": "#/definitions/file_insert"
+        },
         "file_replace": {
           "description": "Replace text in files using literal or regex patterns",
           "$ref": "#/definitions/file_replace"
@@ -923,6 +957,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1013,6 +1057,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -1111,6 +1165,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1205,6 +1269,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1295,6 +1369,224 @@
               {
                 "required": [
                   "download"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_delete_range"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_insert"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
                 ]
               },
               {
@@ -1398,6 +1690,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1488,6 +1790,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -1586,6 +1898,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1676,6 +1998,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -1774,6 +2106,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -1864,6 +2206,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -1962,6 +2314,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2052,6 +2414,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -2150,6 +2522,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2240,6 +2622,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
@@ -2338,6 +2730,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2432,6 +2834,16 @@
               },
               {
                 "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
                   "file_replace"
                 ]
               },
@@ -2522,6 +2934,16 @@
               {
                 "required": [
                   "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
                 ]
               },
               {
