@@ -1,0 +1,139 @@
+# file.insert Action Examples
+# Demonstrates anchor-based text insertion
+
+- name: Example 1 - Insert import after existing imports
+  file_insert:
+    path: src/index.ts
+    anchor: "import React"
+    position: after
+    content: "import { useState } from 'react'"
+
+- name: Example 2 - Insert before anchor
+  file_insert:
+    path: src/app.ts
+    anchor: "export default"
+    position: before
+    content: "// Main application export"
+
+- name: Example 3 - Regex anchor matching
+  file_insert:
+    path: package.json
+    anchor: '^\s*"dependencies":\s*\{'
+    position: after
+    content: '    "axios": "^1.0.0",'
+    regex: true
+
+- name: Example 4 - Insert at all matches (allow_multiple)
+  file_insert:
+    path: tests/suite.ts
+    anchor: "describe("
+    position: before
+    content: "// Test suite"
+    allow_multiple: true
+
+- name: Example 5 - Single match only (default)
+  file_insert:
+    path: src/config.ts
+    anchor: "const config"
+    position: after
+    content: "// Configuration loaded"
+    allow_multiple: false
+
+- name: Example 6 - With backup
+  file_insert:
+    path: critical-config.json
+    anchor: '"settings":'
+    position: after
+    content: '  "newSetting": true,'
+    backup: true
+
+- name: Example 7 - Template variables in content
+  vars:
+    author_name: "John Doe"
+  file_insert:
+    path: src/header.ts
+    anchor: "// Header"
+    position: after
+    content: "// Author: {{ author_name }}"
+
+- name: Example 8 - Loop over files
+  file_insert:
+    path: "{{ item }}"
+    anchor: "^import"
+    position: after
+    content: "import { logger } from './logger'"
+    regex: true
+  with_items:
+    - src/module1.ts
+    - src/module2.ts
+    - src/module3.ts
+
+- name: Example 9 - Register result
+  file_insert:
+    path: README.md
+    anchor: "## Features"
+    position: after
+    content: "- New feature added"
+  register: readme_update
+
+- name: Show insertion count
+  print:
+    msg: "Inserted at {{ readme_update.insertions }} location(s)"
+  when: readme_update.changed
+
+# Practical Use Cases
+
+- name: Use Case 1 - Add import to TypeScript file
+  file_insert:
+    path: src/api/client.ts
+    anchor: '^import.*from'
+    position: after
+    content: "import { retry } from '../utils/retry'"
+    regex: true
+
+- name: Use Case 2 - Add middleware to Express app
+  file_insert:
+    path: server.js
+    anchor: "app.use(express.json())"
+    position: after
+    content: "app.use(cors())"
+
+- name: Use Case 3 - Add route to router
+  file_insert:
+    path: routes/api.ts
+    anchor: "router.get('/', home)"
+    position: after
+    content: "router.get('/status', status)"
+
+- name: Use Case 4 - Add dependency to package.json
+  file_insert:
+    path: package.json
+    anchor: '  "dependencies": {'
+    position: after
+    content: '    "dotenv": "^16.0.0",'
+
+- name: Use Case 5 - Add test case to test suite
+  file_insert:
+    path: tests/auth.test.ts
+    anchor: "describe('Authentication',"
+    position: after
+    content: |
+      it('should validate JWT tokens', async () => {
+        // Test implementation
+      })
+
+- name: Use Case 6 - Add environment variable
+  file_insert:
+    path: .env.example
+    anchor: "DATABASE_URL"
+    position: after
+    content: "REDIS_URL=redis://localhost:6379"
+
+- name: Use Case 7 - Add git hook
+  file_insert:
+    path: .git/hooks/pre-commit
+    anchor: "#!/bin/bash"
+    position: after
+    content: |
+      npm run lint
+      npm test

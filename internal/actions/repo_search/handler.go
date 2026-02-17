@@ -134,7 +134,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Validate path exists
-	if _, err := os.Stat(renderedPath); err != nil {
+	if _, statErr := os.Stat(renderedPath); statErr != nil {
 		return result, fmt.Errorf("search path does not exist: %s", renderedPath)
 	}
 
@@ -164,12 +164,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 		// Create directory if needed
 		if dir := filepath.Dir(outputPath); dir != "." {
-			if err := os.MkdirAll(dir, 0755); err != nil {
+			if err := os.MkdirAll(dir, 0750); err != nil { // #nosec G301 - output directory permissions
 				return result, fmt.Errorf("failed to create output directory: %w", err)
 			}
 		}
 
-		if err := os.WriteFile(outputPath, jsonData, 0644); err != nil {
+		if err := os.WriteFile(outputPath, jsonData, 0600); err != nil { // #nosec G306 - output file permissions
 			return result, fmt.Errorf("failed to write output file: %w", err)
 		}
 
@@ -296,9 +296,9 @@ func (h *Handler) performSearch(rootPath, pattern string, rs *config.RepoSearch,
 
 		// Apply glob filter if specified
 		if rs.Glob != "" {
-			matched, err := filepath.Match(rs.Glob, filepath.Base(path))
-			if err != nil {
-				return fmt.Errorf("invalid glob pattern: %w", err)
+			matched, matchErr := filepath.Match(rs.Glob, filepath.Base(path))
+			if matchErr != nil {
+				return fmt.Errorf("invalid glob pattern: %w", matchErr)
 			}
 			if !matched {
 				// Also try matching against relative path for patterns like "**/*.ts"
@@ -314,7 +314,7 @@ func (h *Handler) performSearch(rootPath, pattern string, rs *config.RepoSearch,
 		}
 
 		// Read file content
-		content, err := os.ReadFile(path)
+		content, err := os.ReadFile(path) // #nosec G304 - path is validated via filepath.Walk
 		if err != nil {
 			ctx.GetLogger().Debugf("  Warning: Failed to read %s: %v", path, err)
 			return nil

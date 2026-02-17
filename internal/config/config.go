@@ -439,6 +439,18 @@ type ReplaceFlags struct {
 	CaseInsensitive bool `yaml:"case_insensitive" json:"case_insensitive,omitempty"`   // Case-insensitive matching
 }
 
+// FileInsert represents an anchor-based text insertion operation in a file.
+// Inserts content before or after a matched anchor pattern.
+type FileInsert struct {
+	Path          string `yaml:"path" json:"path"`                               // Target file path (required)
+	Anchor        string `yaml:"anchor" json:"anchor"`                           // Anchor pattern to match (required)
+	Position      string `yaml:"position" json:"position"`                       // Insert position: "before" or "after" (required)
+	Content       string `yaml:"content" json:"content"`                         // Content to insert (required)
+	Regex         bool   `yaml:"regex" json:"regex,omitempty"`                   // Treat anchor as regex (default: false)
+	AllowMultiple bool   `yaml:"allow_multiple" json:"allow_multiple,omitempty"` // Insert at all matches (default: false)
+	Backup        bool   `yaml:"backup" json:"backup,omitempty"`                 // Create .bak before modify
+}
+
 // RepoSearch represents a codebase search operation.
 // Searches files for patterns and outputs results in JSON format.
 type RepoSearch struct {
@@ -497,6 +509,7 @@ type Step struct {
 	Template    *Template          `yaml:"template" json:"template,omitempty"`
 	File        *File              `yaml:"file" json:"file,omitempty"`
 	FileReplace *FileReplace       `yaml:"file_replace" json:"file_replace,omitempty"`
+	FileInsert  *FileInsert        `yaml:"file_insert" json:"file_insert,omitempty"`
 	Shell       *ShellAction       `yaml:"shell" json:"shell,omitempty"`
 	Command     *CommandAction     `yaml:"command" json:"command,omitempty"`
 	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
@@ -578,6 +591,9 @@ func (s *Step) countActions() int {
 	if s.FileReplace != nil {
 		count++
 	}
+	if s.FileInsert != nil {
+		count++
+	}
 	if s.Shell != nil {
 		count++
 	}
@@ -639,6 +655,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.FileReplace != nil {
 		return "file_replace"
+	}
+	if s.FileInsert != nil {
+		return "file_insert"
 	}
 	if s.Template != nil {
 		return "template"
@@ -729,6 +748,7 @@ func (s *Step) Clone() *Step {
 		Template:     s.Template,
 		File:         s.File,
 		FileReplace:  s.FileReplace,
+		FileInsert:   s.FileInsert,
 		Shell:        s.Shell,
 		Command:      s.Command,
 		Copy:         s.Copy,

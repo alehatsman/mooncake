@@ -1,0 +1,32 @@
+- name: Search for action handlers
+  repo_search:
+    pattern: 'func.*Handler.*Metadata'
+    regex: true
+    glob: '*.go'
+    path: internal/actions
+    output_file: testing-output/handler-metadata.json
+    max_results: 50
+
+- name: Generate internal actions tree
+  repo_tree:
+    path: internal/actions
+    max_depth: 2
+    exclude_dirs: ['.git', 'testutil']
+    output_file: testing-output/actions-tree.json
+    include_files: true
+
+- name: Search for TODO/FIXME in Go files
+  repo_search:
+    pattern: 'TODO|FIXME'
+    regex: true
+    glob: '*.go'
+    ignore_dirs: ['vendor', 'node_modules', '.git']
+    output_file: testing-output/todos.json
+
+- name: Generate project structure
+  repo_tree:
+    path: .
+    max_depth: 3
+    exclude_dirs: ['.git', 'vendor', 'node_modules', 'testing-output', 'out']
+    output_file: testing-output/project-tree.json
+    include_files: false

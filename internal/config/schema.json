@@ -323,6 +323,59 @@
         "permissions.changed"
       ]
     },
+    "file_replace": {
+      "type": "object",
+      "description": "Replace text in files using literal or regex patterns",
+      "properties": {
+        "allow_no_match": {
+          "type": "boolean"
+        },
+        "backup": {
+          "type": "boolean"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "flags": {
+          "type": "object",
+          "properties": {
+            "case_insensitive": {
+              "type": "boolean"
+            },
+            "multiline": {
+              "type": "boolean"
+            },
+            "regex": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "path": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "pattern",
+        "replace"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "include_vars": {
       "type": "string",
       "description": "Load variables from a YAML file",
@@ -427,6 +480,71 @@
       "x-emits-events": [
         "print.message"
       ]
+    },
+    "repo_search": {
+      "type": "object",
+      "description": "Search codebase for patterns and output results in JSON format",
+      "properties": {
+        "glob": {
+          "type": "string"
+        },
+        "ignore_dirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_results": {
+          "type": "integer"
+        },
+        "output_file": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "regex": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "additionalProperties": false,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
+    "repo_tree": {
+      "type": "object",
+      "description": "Generate a JSON representation of directory structure",
+      "properties": {
+        "exclude_dirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "include_files": {
+          "type": "boolean"
+        },
+        "max_depth": {
+          "type": "integer"
+        },
+        "output_file": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
     },
     "runConfig": {
       "type": "object",
@@ -658,6 +776,10 @@
           "description": "Manage files, directories, links, and permissions",
           "$ref": "#/definitions/file"
         },
+        "file_replace": {
+          "description": "Replace text in files using literal or regex patterns",
+          "$ref": "#/definitions/file_replace"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"
@@ -694,6 +816,14 @@
         "register": {
           "type": "string",
           "description": "Variable name to store step execution result (universal)"
+        },
+        "repo_search": {
+          "description": "Search codebase for patterns and output results in JSON format",
+          "$ref": "#/definitions/repo_search"
+        },
+        "repo_tree": {
+          "description": "Generate a JSON representation of directory structure",
+          "$ref": "#/definitions/repo_tree"
         },
         "retries": {
           "type": "integer",
@@ -793,6 +923,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -814,6 +949,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -872,6 +1017,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -893,6 +1043,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -951,6 +1111,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -972,6 +1137,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1030,6 +1205,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1051,6 +1231,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1109,6 +1299,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1130,6 +1325,110 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "file_replace"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1193,6 +1492,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include_vars"
                 ]
               },
@@ -1209,6 +1513,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1272,6 +1586,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1288,6 +1607,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1351,6 +1680,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1367,6 +1701,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1430,6 +1774,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1446,6 +1795,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1509,6 +1868,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1525,6 +1889,204 @@
               {
                 "required": [
                   "preset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "repo_search"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "repo_tree"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
                 ]
               },
               {
@@ -1588,6 +2150,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1609,6 +2176,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1667,6 +2244,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1688,6 +2270,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1746,6 +2338,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1767,6 +2364,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1825,6 +2432,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1846,6 +2458,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {
@@ -1904,6 +2526,11 @@
               },
               {
                 "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
                   "include"
                 ]
               },
@@ -1925,6 +2552,16 @@
               {
                 "required": [
                   "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
                 ]
               },
               {

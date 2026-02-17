@@ -392,6 +392,12 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		actionStruct = &config.PresetInvocation{}
 	case "print":
 		actionStruct = &config.PrintAction{}
+	case "file_replace":
+		actionStruct = &config.FileReplace{}
+	case "repo_search":
+		actionStruct = &config.RepoSearch{}
+	case "repo_tree":
+		actionStruct = &config.RepoTree{}
 	case "vars":
 		// vars is a map[string]interface{} directly in Step
 		return nil, fmt.Errorf("vars action uses inline map definition")
