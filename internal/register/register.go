@@ -10,6 +10,8 @@ package register
 
 import (
 	// Register all action handlers by importing their packages
+	_ "github.com/alehatsman/mooncake/internal/actions/artifact_capture"
+	_ "github.com/alehatsman/mooncake/internal/actions/artifact_validate"
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"
 	_ "github.com/alehatsman/mooncake/internal/actions/command"
 	_ "github.com/alehatsman/mooncake/internal/actions/copy"
@@ -31,6 +33,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/template"
 	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"
+	_ "github.com/alehatsman/mooncake/internal/actions/wait"
 
 	// All handlers migrated! 🎉
 )

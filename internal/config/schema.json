@@ -136,7 +136,7 @@
             },
             "timeout": {
               "type": "string",
-              "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+              "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
             },
             "url": {
               "type": "string"
@@ -148,6 +148,101 @@
           "additionalProperties": false
         }
       },
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "artifact_capture": {
+      "type": "object",
+      "description": "Capture file changes with enhanced metadata for LLM agents",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the artifact (used for output directory)"
+        },
+        "output_dir": {
+          "type": "string",
+          "description": "Base directory for artifacts (default: './artifacts')"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "json",
+            "markdown",
+            "both"
+          ],
+          "description": "Output format (json, markdown, or both)"
+        },
+        "capture_content": {
+          "type": "boolean",
+          "description": "Capture full file content before/after (default: false)"
+        },
+        "max_diff_size": {
+          "type": "integer",
+          "description": "Maximum diff size in bytes per file (default: 1MB)"
+        },
+        "include_checksums": {
+          "type": "boolean",
+          "description": "Include SHA256 checksums (default: true)"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Steps to execute while capturing changes",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "artifact_validate": {
+      "type": "object",
+      "description": "Validate artifacts against constraints (change budgets)",
+      "properties": {
+        "artifact_file": {
+          "type": "string",
+          "description": "Path to artifact metadata JSON file"
+        },
+        "max_files": {
+          "type": "integer",
+          "description": "Maximum number of files allowed to change"
+        },
+        "max_lines_changed": {
+          "type": "integer",
+          "description": "Maximum total lines changed (added + removed)"
+        },
+        "max_file_size": {
+          "type": "integer",
+          "description": "Maximum file size in bytes after changes"
+        },
+        "require_tests": {
+          "type": "boolean",
+          "description": "Require test file changes when code files change"
+        },
+        "allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for allowed file paths"
+        },
+        "forbidden_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for forbidden file paths"
+        }
+      },
+      "required": [
+        "artifact_file"
+      ],
       "additionalProperties": false,
       "x-category": "system",
       "x-supports-dry-run": true
@@ -279,7 +374,7 @@
         },
         "timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
         },
         "url": {
           "type": "string"
@@ -826,13 +921,21 @@
           "description": "Verify conditions without changing system state",
           "$ref": "#/definitions/assert"
         },
+        "artifact_capture": {
+          "description": "Capture file changes with enhanced metadata for LLM agents",
+          "$ref": "#/definitions/artifact_capture"
+        },
+        "artifact_validate": {
+          "description": "Validate artifacts against constraints (change budgets)",
+          "$ref": "#/definitions/artifact_validate"
+        },
         "become": {
           "type": "boolean",
           "description": "Execute with sudo privileges. Works with: shell, command, file, template"
         },
         "become_user": {
           "type": "string",
-          "description": "⚠️ SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
         },
         "changed_when": {
           "type": "string",
@@ -938,14 +1041,14 @@
         },
         "retries": {
           "type": "integer",
-          "description": "⚠️ SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
           "minimum": 0,
           "maximum": 100
         },
         "retry_delay": {
           "type": "string",
-          "description": "⚠️ SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
         },
         "service": {
           "description": "Manage services across platforms (systemd, launchd, Windows)",
@@ -977,8 +1080,8 @@
         },
         "timeout": {
           "type": "string",
-          "description": "⚠️ SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+          "description": "\u26a0\ufe0f SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
         },
         "unarchive": {
           "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
@@ -991,6 +1094,10 @@
         "vars": {
           "description": "Set variables for use in subsequent steps",
           "$ref": "#/definitions/vars"
+        },
+        "wait": {
+          "description": "Poll a condition until it becomes true or times out",
+          "$ref": "#/definitions/wait"
         },
         "when": {
           "type": "string",
@@ -1116,6 +1223,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -1229,6 +1351,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -1344,6 +1481,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -1457,6 +1609,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -1572,6 +1739,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -1685,6 +1867,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -1800,6 +1997,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -1913,6 +2125,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -2028,6 +2255,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -2141,6 +2383,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -2256,6 +2513,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -2369,6 +2641,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -2484,6 +2771,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -2597,6 +2899,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -2712,6 +3029,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -2825,6 +3157,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -2940,6 +3287,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -3053,6 +3415,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -3168,6 +3545,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -3281,6 +3673,21 @@
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
                 ]
               }
             ]
@@ -3396,6 +3803,21 @@
                 "required": [
                   "vars"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
               }
             ]
           }
@@ -3510,6 +3932,408 @@
                 "required": [
                   "unarchive"
                 ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "wait"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "artifact_capture"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_validate"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "artifact_validate"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "artifact_capture"
+                ]
+              },
+              {
+                "required": [
+                  "command"
+                ]
+              },
+              {
+                "required": [
+                  "copy"
+                ]
+              },
+              {
+                "required": [
+                  "download"
+                ]
+              },
+              {
+                "required": [
+                  "file"
+                ]
+              },
+              {
+                "required": [
+                  "file_delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "file_insert"
+                ]
+              },
+              {
+                "required": [
+                  "file_patch_apply"
+                ]
+              },
+              {
+                "required": [
+                  "file_replace"
+                ]
+              },
+              {
+                "required": [
+                  "include"
+                ]
+              },
+              {
+                "required": [
+                  "include_vars"
+                ]
+              },
+              {
+                "required": [
+                  "package"
+                ]
+              },
+              {
+                "required": [
+                  "preset"
+                ]
+              },
+              {
+                "required": [
+                  "print"
+                ]
+              },
+              {
+                "required": [
+                  "repo_apply_patchset"
+                ]
+              },
+              {
+                "required": [
+                  "repo_search"
+                ]
+              },
+              {
+                "required": [
+                  "repo_tree"
+                ]
+              },
+              {
+                "required": [
+                  "service"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              },
+              {
+                "required": [
+                  "unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
               }
             ]
           }
@@ -3594,6 +4418,52 @@
       "x-emits-events": [
         "variables.set"
       ]
+    },
+    "wait": {
+      "type": "object",
+      "description": "Poll a condition until it becomes true or times out",
+      "properties": {
+        "allow_untracked": {
+          "type": "boolean"
+        },
+        "cmd": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "host": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "integer"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "condition"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
     }
   }
 }

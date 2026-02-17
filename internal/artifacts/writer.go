@@ -22,22 +22,22 @@ import (
 
 // Config holds configuration for artifact writer.
 type Config struct {
-	BaseDir           string // Base directory for artifacts (e.g., ".mooncake")
-	CaptureStdout     bool   // Whether to capture full stdout
-	CaptureStderr     bool   // Whether to capture full stderr
-	MaxOutputBytes    int    // Max bytes per step in results.json
-	MaxOutputLines    int    // Max lines per step in results.json
-	MaxStdoutBytes    int    // Max bytes for stdout.log
-	MaxStderrBytes    int    // Max bytes for stderr.log
+	BaseDir        string // Base directory for artifacts (e.g., ".mooncake")
+	CaptureStdout  bool   // Whether to capture full stdout
+	CaptureStderr  bool   // Whether to capture full stderr
+	MaxOutputBytes int    // Max bytes per step in results.json
+	MaxOutputLines int    // Max lines per step in results.json
+	MaxStdoutBytes int    // Max bytes for stdout.log
+	MaxStderrBytes int    // Max bytes for stderr.log
 }
 
 // Writer writes execution artifacts to disk.
 type Writer struct {
-	config  Config
-	runID   string
-	runDir  string
-	mu      sync.Mutex
-	closed  bool
+	config Config
+	runID  string
+	runDir string
+	mu     sync.Mutex
+	closed bool
 
 	// File handles
 	eventsFile *os.File
@@ -160,6 +160,7 @@ func NewWriter(cfg Config, planData *plan.Plan, systemFacts *facts.Facts) (*Writ
 }
 
 // OnEvent processes events and writes to artifacts.
+//
 //nolint:gocyclo // Event dispatching naturally has high cyclomatic complexity
 func (w *Writer) OnEvent(event events.Event) {
 	w.mu.Lock()

@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/agent"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -440,6 +442,97 @@ func formatPlanText(p *plan.Plan, showOrigins bool) error {
 	return nil
 }
 
+func agentRunCommand(c *cli.Context) error {
+	goal := c.String("goal")
+	planPath := c.String("plan")
+	useStdin := c.Bool("stdin")
+	provider := c.String("provider")
+	model := c.String("model")
+	maxIterations := c.Int("max-iterations")
+
+	if goal == "" {
+		return fmt.Errorf("--goal is required")
+	}
+
+	repoRoot, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	opts := agent.RunOptions{
+		Goal:          goal,
+		PlanPath:      planPath,
+		UseStdin:      useStdin,
+		RepoRoot:      repoRoot,
+		Provider:      provider,
+		Model:         model,
+		MaxIterations: maxIterations,
+	}
+
+	if provider == "claude" {
+		result, err := agent.RunLoop(opts)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Agent loop failed: %v\n", err)
+			if result != nil && result.FinalLog != nil {
+				printAgentSummary(result.FinalLog)
+			}
+			return err
+		}
+
+		fmt.Printf("Agent completed: %d iterations\n", len(result.Iterations))
+		fmt.Printf("Stop reason: %s\n", result.StopReason)
+		if result.FinalLog != nil {
+			fmt.Println()
+			printAgentSummary(result.FinalLog)
+		}
+		return nil
+	}
+
+	if planPath == "" && !useStdin {
+		return fmt.Errorf("either --plan or --stdin must be specified (or use --provider=claude for loop mode)")
+	}
+
+	if planPath != "" && useStdin {
+		return fmt.Errorf("cannot specify both --plan and --stdin")
+	}
+
+	if planPath != "" && !filepath.IsAbs(planPath) {
+		planPath = filepath.Join(repoRoot, planPath)
+	}
+
+	opts.PlanPath = planPath
+
+	log, err := agent.Run(opts)
+	if err != nil {
+		return err
+	}
+
+	printAgentSummary(log)
+	return nil
+}
+
+func printAgentSummary(log *agent.IterationLog) {
+	fmt.Printf("Iteration: %d\n", log.Iteration)
+	fmt.Printf("Status: %s\n", log.Status)
+	fmt.Printf("Files touched: %d\n", log.DiffStat.Files)
+	fmt.Printf("Insertions: +%d\n", log.DiffStat.Insertions)
+	fmt.Printf("Deletions: -%d\n", log.DiffStat.Deletions)
+
+	if len(log.ChangedFiles) > 0 {
+		fmt.Println("\nChanged files:")
+		for _, file := range log.ChangedFiles {
+			fmt.Printf("  %s\n", file)
+		}
+	}
+
+	if len(log.Artifacts) > 0 {
+		fmt.Println("\nArtifacts:")
+		for _, artifact := range log.Artifacts {
+			fmt.Printf("  %s\n", artifact)
+		}
+	}
+}
+
 func validateCommand(c *cli.Context) error {
 	configPath := c.String("config")
 	format := c.String("format")
@@ -662,6 +755,48 @@ func createApp() *cli.App {
 							},
 						},
 						Action: actionsListCommand,
+					},
+				},
+			},
+			{
+				Name:  "agent",
+				Usage: "Agent operations",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "run",
+						Usage: "Execute agent iteration",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "goal",
+								Aliases:  []string{"g"},
+								Required: true,
+								Usage:    "Goal description",
+							},
+							&cli.StringFlag{
+								Name:    "plan",
+								Aliases: []string{"p"},
+								Usage:   "Path to plan YAML file",
+							},
+							&cli.BoolFlag{
+								Name:  "stdin",
+								Usage: "Read plan from stdin",
+							},
+							&cli.StringFlag{
+								Name:  "provider",
+								Usage: "LLM provider (claude for loop mode)",
+							},
+							&cli.StringFlag{
+								Name:  "model",
+								Value: "sonnet",
+								Usage: "Model name (when using --provider)",
+							},
+							&cli.IntFlag{
+								Name:  "max-iterations",
+								Value: 5,
+								Usage: "Maximum iterations for loop mode",
+							},
+						},
+						Action: agentRunCommand,
 					},
 				},
 			},

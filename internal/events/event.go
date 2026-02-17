@@ -82,6 +82,18 @@ const (
 	EventPresetCompleted EventType = "preset.completed"
 )
 
+// Event types for agent loop
+const (
+	EventAgentIterationStarted EventType = "agent.iteration.started"
+	EventAgentPlanGenerated    EventType = "agent.plan.generated"
+	EventAgentPlanValidating   EventType = "agent.plan.validating"
+	EventAgentPlanValid        EventType = "agent.plan.valid"
+	EventAgentPlanInvalid      EventType = "agent.plan.invalid"
+	EventAgentPlanExecuting    EventType = "agent.plan.executing"
+	EventAgentIterationDone    EventType = "agent.iteration.done"
+	EventAgentLoopComplete     EventType = "agent.loop.complete"
+)
+
 // Event types for artifact capture
 const (
 	EventArtifactCaptureStart    EventType = "artifact_capture.start"

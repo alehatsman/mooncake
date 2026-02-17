@@ -39,8 +39,8 @@ type DetailedFileChange struct {
 	HunkSummary []string `json:"hunk_summary,omitempty"` // Brief description of each hunk
 
 	// Language/file type detection
-	Language   string `json:"language,omitempty"`   // Detected language (e.g., "go", "python", "javascript")
-	FileType   string `json:"file_type,omitempty"`  // Category (e.g., "code", "test", "config", "docs")
+	Language   string `json:"language,omitempty"`  // Detected language (e.g., "go", "python", "javascript")
+	FileType   string `json:"file_type,omitempty"` // Category (e.g., "code", "test", "config", "docs")
 	IsTestFile bool   `json:"is_test_file"`
 
 	// Content (optional, can be large)
@@ -283,9 +283,9 @@ func CalculateLineStats(beforeContent, afterContent string) (added, removed, mod
 // AggregateChanges creates aggregated statistics from detailed file changes.
 func AggregateChanges(files []DetailedFileChange) AggregatedChanges {
 	agg := AggregatedChanges{
-		FilesByLanguage:    make(map[string]int),
-		FilesByType:        make(map[string]int),
-		ChangesByDirectory: make(map[string]int),
+		FilesByLanguage:     make(map[string]int),
+		FilesByType:         make(map[string]int),
+		ChangesByDirectory:  make(map[string]int),
 		DirectoriesAffected: []string{},
 	}
 

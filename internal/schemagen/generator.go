@@ -398,6 +398,8 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		actionStruct = &config.RepoSearch{}
 	case "repo_tree":
 		actionStruct = &config.RepoTree{}
+	case "wait":
+		actionStruct = &config.WaitAction{}
 	case "vars":
 		// vars is a map[string]interface{} directly in Step
 		return nil, fmt.Errorf("vars action uses inline map definition")

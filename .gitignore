@@ -63,3 +63,5 @@ testing-output/
 .claude_temp/
 site/
 artifacts/
+
+.mooncake/
