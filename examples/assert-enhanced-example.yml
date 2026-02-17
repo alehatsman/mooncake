@@ -1,0 +1,251 @@
+# Enhanced Assertions Example
+# Demonstrates file_sha256, git_clean, and git_diff assertion types
+#
+# Usage:
+#   mooncake run --config examples/assert-enhanced-example.yml
+
+####################
+# 1. FILE SHA256 ASSERTIONS
+####################
+
+- name: Verify config file integrity (SHA256)
+  assert:
+    file_sha256:
+      path: ./mooncake.yml
+      checksum: "abc123def456..."  # Replace with actual checksum
+  tags: [checksum]
+
+- name: Verify binary checksum (with sha256: prefix)
+  assert:
+    file_sha256:
+      path: /usr/local/bin/mooncake
+      checksum: "sha256:fedcba987654..."
+  tags: [checksum]
+
+- name: Verify template file checksum (using variables)
+  vars:
+    expected_hash: "1234567890abcdef"
+    config_file: "./config.yml"
+  assert:
+    file_sha256:
+      path: "{{ config_file }}"
+      checksum: "{{ expected_hash }}"
+  tags: [checksum, vars]
+
+####################
+# 2. GIT CLEAN ASSERTIONS
+####################
+
+- name: Verify git working tree is clean (strict)
+  assert:
+    git_clean:
+      allow_untracked: false
+  tags: [git]
+
+- name: Verify git working tree is clean (allow untracked files)
+  assert:
+    git_clean:
+      allow_untracked: true
+  tags: [git]
+
+####################
+# 3. GIT DIFF ASSERTIONS
+####################
+
+- name: Verify no unstaged changes in working tree
+  assert:
+    git_diff:
+      expected_diff: ""
+      cached: false
+  tags: [git]
+
+- name: Verify no staged changes
+  assert:
+    git_diff:
+      expected_diff: ""
+      cached: true
+  tags: [git]
+
+- name: Verify specific file has expected diff
+  assert:
+    git_diff:
+      expected_diff: |
+        diff --git a/README.md b/README.md
+        index abc123..def456 100644
+        --- a/README.md
+        +++ b/README.md
+        @@ -1,3 +1,4 @@
+         # Mooncake
+
+         Configuration management tool
+        +New feature added
+      files: "README.md"
+      cached: false
+  tags: [git, diff]
+
+- name: Verify multiple files have expected diff
+  assert:
+    git_diff:
+      expected_diff: |
+        diff --git a/src/main.go b/src/main.go
+        index abc123..def456 100644
+        --- a/src/main.go
+        +++ b/src/main.go
+        @@ -10,5 +10,6 @@ func main() {
+           fmt.Println("Hello")
+        +  fmt.Println("World")
+         }
+      files: "src/*.go"
+      cached: true
+  tags: [git, diff]
+
+####################
+# 4. COMBINED EXAMPLES
+####################
+
+- name: Comprehensive pre-commit check
+  block:
+    - name: Verify no uncommitted changes
+      assert:
+        git_clean:
+          allow_untracked: false
+
+    - name: Verify build artifact checksum
+      assert:
+        file_sha256:
+          path: ./dist/mooncake
+          checksum: "{{ build_checksum }}"
+
+    - name: Verify staged changes match expected
+      assert:
+        git_diff:
+          expected_diff: "{{ expected_staged_diff }}"
+          cached: true
+  tags: [precommit]
+
+####################
+# 5. PRACTICAL USE CASES
+####################
+
+# Use case: Verify deployment package integrity
+- name: Verify deployment artifacts
+  block:
+    - name: Check tarball checksum
+      assert:
+        file_sha256:
+          path: ./release/mooncake-v1.0.0.tar.gz
+          checksum: "sha256:{{ release_checksum }}"
+
+    - name: Verify git repository is clean (tagged release)
+      assert:
+        git_clean:
+          allow_untracked: false
+  tags: [deployment]
+
+# Use case: Ensure no uncommitted code in CI
+- name: CI build sanity check
+  assert:
+    git_clean:
+      allow_untracked: true  # CI may generate artifacts
+  tags: [ci]
+
+# Use case: Verify hotfix patch matches expected changes
+- name: Verify security patch matches approved diff
+  vars:
+    approved_patch: |
+      diff --git a/src/auth.go b/src/auth.go
+      index old..new 100644
+      --- a/src/auth.go
+      +++ b/src/auth.go
+      @@ -42,7 +42,7 @@ func validateToken(token string) error {
+         // Fix: Add length check to prevent overflow
+      -  if len(token) > 0 {
+      +  if len(token) > 0 && len(token) < maxTokenLen {
+           return verifySignature(token)
+         }
+  assert:
+    git_diff:
+      expected_diff: "{{ approved_patch }}"
+      files: "src/auth.go"
+      cached: true
+  tags: [security, review]
+
+####################
+# 6. ERROR HANDLING EXAMPLES
+####################
+
+# This will fail if file doesn't exist
+- name: Assert checksum (will fail if file missing)
+  assert:
+    file_sha256:
+      path: ./nonexistent.txt
+      checksum: "abc123"
+  ignore_errors: true
+  tags: [error]
+
+# This will fail if working tree has uncommitted changes
+- name: Assert clean working tree (strict)
+  assert:
+    git_clean:
+      allow_untracked: false
+  ignore_errors: true
+  tags: [error]
+
+# This will fail if diff doesn't match
+- name: Assert diff matches (will fail on mismatch)
+  assert:
+    git_diff:
+      expected_diff: "some expected diff"
+      cached: false
+  ignore_errors: true
+  tags: [error]
+
+####################
+# 7. CONDITIONAL ASSERTIONS
+####################
+
+- name: Assert clean working tree (only in CI)
+  assert:
+    git_clean:
+      allow_untracked: false
+  when: "env.CI == 'true'"
+  tags: [conditional]
+
+- name: Verify checksum (only for release builds)
+  assert:
+    file_sha256:
+      path: ./dist/mooncake
+      checksum: "{{ release_checksum }}"
+  when: "build_type == 'release'"
+  tags: [conditional]
+
+####################
+# 8. RESULT REGISTRATION
+####################
+
+- name: Capture git clean status
+  assert:
+    git_clean:
+      allow_untracked: true
+  register: git_status
+  ignore_errors: true
+  tags: [register]
+
+- name: Show git status result
+  print:
+    msg: "Git clean check: {{ git_status.changed }}"
+  tags: [register]
+
+- name: Capture checksum verification
+  assert:
+    file_sha256:
+      path: ./config.yml
+      checksum: "abc123"
+  register: checksum_result
+  ignore_errors: true
+  tags: [register]
+
+- name: Show checksum result
+  print:
+    msg: "Checksum valid: {{ checksum_result.failed }}"
+  tags: [register]

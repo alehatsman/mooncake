@@ -191,8 +191,8 @@ func (g *TypeScriptGenerator) propertyToTypeScript(prop *Property) string {
 
 	// Handle basic types
 	switch prop.Type { //nolint:goconst // JSON Schema type constants
-	case "string":
-		return "string"
+	case "string": //nolint:goconst // JSON Schema type
+		return "string" //nolint:goconst // JSON Schema type
 	case tsTypeNumber, "integer":
 		return tsTypeNumber
 	case tsTypeBoolean:

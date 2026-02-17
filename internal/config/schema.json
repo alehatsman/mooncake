@@ -65,6 +65,49 @@
           ],
           "additionalProperties": false
         },
+        "file_sha256": {
+          "type": "object",
+          "properties": {
+            "checksum": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "checksum"
+          ],
+          "additionalProperties": false
+        },
+        "git_clean": {
+          "type": "object",
+          "properties": {
+            "allow_untracked": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "git_diff": {
+          "type": "object",
+          "properties": {
+            "cached": {
+              "type": "boolean"
+            },
+            "expected_diff": {
+              "type": "string"
+            },
+            "files": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "expected_diff"
+          ],
+          "additionalProperties": false
+        },
         "http": {
           "type": "object",
           "properties": {

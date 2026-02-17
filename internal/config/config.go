@@ -333,9 +333,12 @@ type ServiceDropin struct {
 // Assertions always have changed: false and fail if the assertion doesn't pass.
 // Supports three types: command (exit code), file (content/existence), and http (response).
 type Assert struct {
-	Command *AssertCommand `yaml:"command" json:"command,omitempty"` // Command assertion
-	File    *AssertFile    `yaml:"file" json:"file,omitempty"`       // File assertion
-	HTTP    *AssertHTTP    `yaml:"http" json:"http,omitempty"`       // HTTP assertion
+	Command    *AssertCommand    `yaml:"command" json:"command,omitempty"`         // Command assertion
+	File       *AssertFile       `yaml:"file" json:"file,omitempty"`               // File assertion
+	HTTP       *AssertHTTP       `yaml:"http" json:"http,omitempty"`               // HTTP assertion
+	FileSHA256 *AssertFileSHA256 `yaml:"file_sha256" json:"file_sha256,omitempty"` // File checksum assertion
+	GitClean   *AssertGitClean   `yaml:"git_clean" json:"git_clean,omitempty"`     // Git clean working tree assertion
+	GitDiff    *AssertGitDiff    `yaml:"git_diff" json:"git_diff,omitempty"`       // Git diff assertion
 }
 
 // AssertCommand verifies a command exits with the expected code.
@@ -367,6 +370,24 @@ type AssertHTTP struct {
 	JSONPath   *string           `yaml:"jsonpath" json:"jsonpath,omitempty"`           // JSONPath expression for response body
 	JSONValue  interface{}       `yaml:"jsonpath_value" json:"jsonpath_value,omitempty"` // Expected value at JSONPath
 	Timeout    string            `yaml:"timeout" json:"timeout,omitempty"`             // Request timeout (e.g., "30s")
+}
+
+// AssertFileSHA256 verifies a file's SHA256 checksum matches the expected value.
+type AssertFileSHA256 struct {
+	Path     string `yaml:"path" json:"path"`         // File path (required)
+	Checksum string `yaml:"checksum" json:"checksum"` // Expected SHA256 checksum (required)
+}
+
+// AssertGitClean verifies the git working tree is clean (no uncommitted changes).
+type AssertGitClean struct {
+	AllowUntracked bool `yaml:"allow_untracked" json:"allow_untracked,omitempty"` // Allow untracked files (default: false)
+}
+
+// AssertGitDiff verifies the git diff matches the expected unified diff.
+type AssertGitDiff struct {
+	ExpectedDiff string  `yaml:"expected_diff" json:"expected_diff"`     // Expected diff content (required)
+	Cached       bool    `yaml:"cached" json:"cached,omitempty"`         // Check staged changes (default: false, checks working tree)
+	Files        *string `yaml:"files" json:"files,omitempty"`           // Limit diff to specific files/paths (optional)
 }
 
 // PresetDefinition represents a reusable preset loaded from a YAML file.

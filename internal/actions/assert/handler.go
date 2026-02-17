@@ -3,6 +3,8 @@
 package assert
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,6 +23,7 @@ import (
 const (
 	msgFileDoesNotExist = "file does not exist"
 	msgFileExists       = "file exists"
+	msgGitClean         = "clean working tree"
 )
 
 // Handler implements the assert action handler.
@@ -60,12 +63,21 @@ func (h *Handler) Validate(step *config.Step) error {
 	if assert.HTTP != nil {
 		actionCount++
 	}
+	if assert.FileSHA256 != nil {
+		actionCount++
+	}
+	if assert.GitClean != nil {
+		actionCount++
+	}
+	if assert.GitDiff != nil {
+		actionCount++
+	}
 
 	if actionCount == 0 {
-		return fmt.Errorf("assert requires one of: command, file, or http")
+		return fmt.Errorf("assert requires one of: command, file, http, file_sha256, git_clean, or git_diff")
 	}
 	if actionCount > 1 {
-		return fmt.Errorf("assert can only specify one of: command, file, or http")
+		return fmt.Errorf("assert can only specify one of: command, file, http, file_sha256, git_clean, or git_diff")
 	}
 
 	return nil
@@ -90,6 +102,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		expected, actual, err = h.executeAssertFile(assert.File, ec)
 	} else if assert.HTTP != nil {
 		expected, actual, err = h.executeAssertHTTP(assert.HTTP, ec)
+	} else if assert.FileSHA256 != nil {
+		expected, actual, err = h.executeAssertFileSHA256(assert.FileSHA256, ec)
+	} else if assert.GitClean != nil {
+		expected, actual, err = h.executeAssertGitClean(assert.GitClean, ec)
+	} else if assert.GitDiff != nil {
+		expected, actual, err = h.executeAssertGitDiff(assert.GitDiff, ec)
 	}
 
 	// Create result
@@ -162,6 +180,22 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 			status = 200
 		}
 		ec.Logger.Infof("  [DRY-RUN] Would assert HTTP %s %s (expected status: %d)", method, url, status)
+	} else if assert.FileSHA256 != nil {
+		path := assert.FileSHA256.Path
+		checksum := assert.FileSHA256.Checksum
+		ec.Logger.Infof("  [DRY-RUN] Would assert file SHA256: %s (expected: %s)", path, checksum)
+	} else if assert.GitClean != nil {
+		if assert.GitClean.AllowUntracked {
+			ec.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (untracked files allowed)")
+		} else {
+			ec.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (no untracked files)")
+		}
+	} else if assert.GitDiff != nil {
+		if assert.GitDiff.Cached {
+			ec.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (cached/staged changes)")
+		} else {
+			ec.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (working tree)")
+		}
 	}
 
 	return nil
@@ -551,4 +585,207 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 	// Just status code check
 	return fmt.Sprintf("HTTP %d", expectedStatus),
 		fmt.Sprintf("HTTP %d", resp.StatusCode), nil
+}
+
+// executeAssertFileSHA256 verifies a file's SHA256 checksum.
+func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec *executor.ExecutionContext) (string, string, error) {
+	// Render path with variables
+	path, err := ec.Template.Render(assertSHA.Path, ec.Variables)
+	if err != nil {
+		return "", "", &executor.RenderError{Field: "assert.file_sha256.path", Cause: err}
+	}
+
+	// Expand path (handle ~ and relative paths)
+	expandedPath, expandErr := ec.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
+	if expandErr != nil {
+		return "", "", &executor.FileOperationError{
+			Operation: "expand path",
+			Path:      path,
+			Cause:     expandErr,
+		}
+	}
+
+	// Render expected checksum with variables
+	expectedChecksum, err := ec.Template.Render(assertSHA.Checksum, ec.Variables)
+	if err != nil {
+		return "", "", &executor.RenderError{Field: "assert.file_sha256.checksum", Cause: err}
+	}
+
+	// Normalize checksum (remove "sha256:" prefix if present)
+	expectedChecksum = strings.TrimPrefix(strings.ToLower(expectedChecksum), "sha256:")
+
+	ec.Logger.Debugf("Asserting file SHA256: %s (expected: %s)", path, expectedChecksum)
+
+	// Read file content
+	content, readErr := os.ReadFile(expandedPath) // #nosec G304 -- Path from user config is intentional
+	if readErr != nil {
+		return "", "", &executor.FileOperationError{
+			Operation: "read file",
+			Path:      path,
+			Cause:     readErr,
+		}
+	}
+
+	// Calculate SHA256 checksum
+	hash := sha256.Sum256(content)
+	actualChecksum := hex.EncodeToString(hash[:])
+
+	// Compare checksums
+	if actualChecksum != expectedChecksum {
+		expected := fmt.Sprintf("sha256:%s", expectedChecksum)
+		actual := fmt.Sprintf("sha256:%s", actualChecksum)
+		return expected, actual, &executor.AssertionError{
+			Type:     "file_sha256",
+			Expected: expected,
+			Actual:   actual,
+			Details:  fmt.Sprintf("file: %s", path),
+		}
+	}
+
+	expected := fmt.Sprintf("sha256:%s", expectedChecksum)
+	actual := fmt.Sprintf("sha256:%s", actualChecksum)
+	return expected, actual, nil
+}
+
+// executeAssertGitClean verifies the git working tree is clean.
+func (h *Handler) executeAssertGitClean(assertGit *config.AssertGitClean, ec *executor.ExecutionContext) (string, string, error) {
+	ec.Logger.Debugf("Asserting git working tree is clean (allow_untracked: %v)", assertGit.AllowUntracked)
+
+	// Check if we're in a git repository
+	// #nosec G204 -- Git command is controlled and safe
+	checkCmd := exec.Command("git", "rev-parse", "--git-dir")
+	checkCmd.Dir = ec.CurrentDir
+	if err := checkCmd.Run(); err != nil {
+		return "", "", &executor.AssertionError{
+			Type:     "git_clean",
+			Expected: "git repository",
+			Actual:   "not a git repository",
+			Details:  ec.CurrentDir,
+			Cause:    err,
+		}
+	}
+
+	// Get git status
+	// #nosec G204 -- Git command is controlled and safe
+	statusCmd := exec.Command("git", "status", "--porcelain")
+	statusCmd.Dir = ec.CurrentDir
+	output, err := statusCmd.CombinedOutput()
+	if err != nil {
+		return "", "", &executor.AssertionError{
+			Type:     "git_clean",
+			Expected: "git status success",
+			Actual:   fmt.Sprintf("git status failed: %s", string(output)),
+			Details:  ec.CurrentDir,
+			Cause:    err,
+		}
+	}
+
+	statusOutput := strings.TrimSpace(string(output))
+
+	// If allow_untracked is true, filter out untracked files
+	if assertGit.AllowUntracked && statusOutput != "" {
+		lines := strings.Split(statusOutput, "\n")
+		var trackedChanges []string
+		for _, line := range lines {
+			if len(line) >= 2 && line[0:2] != "??" {
+				trackedChanges = append(trackedChanges, line)
+			}
+		}
+		statusOutput = strings.Join(trackedChanges, "\n")
+	}
+
+	// Check if clean
+	if statusOutput != "" {
+		expected := msgGitClean
+		actual := fmt.Sprintf("uncommitted changes:\n%s", statusOutput)
+		return expected, actual, &executor.AssertionError{
+			Type:     "git_clean",
+			Expected: expected,
+			Actual:   actual,
+			Details:  ec.CurrentDir,
+		}
+	}
+
+	return msgGitClean, msgGitClean, nil
+}
+
+// executeAssertGitDiff verifies the git diff matches expected output.
+func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *executor.ExecutionContext) (string, string, error) {
+	// Render expected diff with variables
+	expectedDiff, err := ec.Template.Render(assertDiff.ExpectedDiff, ec.Variables)
+	if err != nil {
+		return "", "", &executor.RenderError{Field: "assert.git_diff.expected_diff", Cause: err}
+	}
+
+	// Normalize expected diff (trim whitespace)
+	expectedDiff = strings.TrimSpace(expectedDiff)
+
+	ec.Logger.Debugf("Asserting git diff matches expected (cached: %v)", assertDiff.Cached)
+
+	// Check if we're in a git repository
+	// #nosec G204 -- Git command is controlled and safe
+	checkCmd := exec.Command("git", "rev-parse", "--git-dir")
+	checkCmd.Dir = ec.CurrentDir
+	if err := checkCmd.Run(); err != nil {
+		return "", "", &executor.AssertionError{
+			Type:     "git_diff",
+			Expected: "git repository",
+			Actual:   "not a git repository",
+			Details:  ec.CurrentDir,
+			Cause:    err,
+		}
+	}
+
+	// Build git diff command
+	var diffArgs []string
+	if assertDiff.Cached {
+		diffArgs = []string{"diff", "--cached"}
+	} else {
+		diffArgs = []string{"diff"}
+	}
+
+	// Add file filter if specified
+	if assertDiff.Files != nil {
+		files, renderErr := ec.Template.Render(*assertDiff.Files, ec.Variables)
+		if renderErr != nil {
+			return "", "", &executor.RenderError{Field: "assert.git_diff.files", Cause: renderErr}
+		}
+		diffArgs = append(diffArgs, "--", files)
+	}
+
+	// Execute git diff
+	// #nosec G204 -- Git command with controlled arguments
+	diffCmd := exec.Command("git", diffArgs...)
+	diffCmd.Dir = ec.CurrentDir
+	output, diffErr := diffCmd.CombinedOutput()
+
+	// git diff returns exit code 0 whether there are differences or not
+	// Only check for command execution errors
+	if diffErr != nil {
+		if exitError, ok := diffErr.(*exec.ExitError); ok {
+			if exitError.ExitCode() != 0 {
+				return "", "", &executor.AssertionError{
+					Type:     "git_diff",
+					Expected: "git diff success",
+					Actual:   fmt.Sprintf("git diff failed (exit %d): %s", exitError.ExitCode(), string(output)),
+					Details:  ec.CurrentDir,
+					Cause:    diffErr,
+				}
+			}
+		}
+	}
+
+	actualDiff := strings.TrimSpace(string(output))
+
+	// Compare diffs
+	if actualDiff != expectedDiff {
+		return expectedDiff, actualDiff, &executor.AssertionError{
+			Type:     "git_diff",
+			Expected: expectedDiff,
+			Actual:   actualDiff,
+			Details:  ec.CurrentDir,
+		}
+	}
+
+	return expectedDiff, actualDiff, nil
 }
