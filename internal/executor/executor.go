@@ -314,12 +314,12 @@ func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 // CheckSkipConditions evaluates whether a step should be skipped based on conditional
 // expressions and tag filters.
 //
-// It first evaluates the step's "when" condition (if present), which is an expression
+// It first checks if the step was marked as skipped during planning (via step.Skipped field).
+// This happens when tag filtering is applied during the planning phase.
+//
+// Next, it evaluates the step's "when" condition (if present), which is an expression
 // that must evaluate to true for the step to execute. If the condition evaluates to false,
 // the step is skipped with reason "when".
-//
-// Next, it checks if the step should be skipped based on tag filtering. If the execution
-// context has a tags filter and the step's tags don't match, it's skipped with reason "tags".
 //
 // Returns:
 //   - shouldSkip: true if the step should be skipped
@@ -329,6 +329,13 @@ func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 // INTERNAL: This function is exported for testing purposes only and is not part of
 // the public API. It may change or be removed in future versions without notice.
 func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+	// Check if step was marked as skipped during planning (tag filtering)
+	// The planner already evaluated tags and set step.Skipped - we trust that decision.
+	// No need to recalculate at runtime (performance and single-source-of-truth).
+	if step.Skipped {
+		return true, "tags", nil
+	}
+
 	// Check when condition
 	if step.When != "" {
 		shouldSkip, err := HandleWhenExpression(step, ec)
@@ -340,10 +347,9 @@ func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 		}
 	}
 
-	// Check tags filter
-	if ShouldSkipByTags(step, ec) {
-		return true, "tags", nil
-	}
+	// NOTE: Removed redundant ShouldSkipByTags() check.
+	// Tag filtering is handled during planning phase (step.Skipped is set there).
+	// The executor trusts the planner's decision for cleaner separation of concerns.
 
 	return false, "", nil
 }
@@ -869,7 +875,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 		TotalSteps:   len(steps),
 		Logger:       log.WithPadLevel(0),
 		SudoPass:     sudoPass,
-		Tags:         []string{},
+		Tags:         []string{}, // Not used - tag filtering done by planner (step.Skipped)
 		DryRun:       dryRun,
 
 		// Statistics tracking

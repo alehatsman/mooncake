@@ -442,31 +442,31 @@ func TestCheckSkipConditions(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 
 	tests := []struct {
-		name       string
-		when       string
-		stepTags   []string
-		filterTags []string
-		wantSkip   bool
-		wantReason string
+		name        string
+		when        string
+		stepSkipped bool // Set by planner during plan compilation
+		wantSkip    bool
+		wantReason  string
 	}{
 		{
-			name:       "no conditions",
-			when:       "",
-			wantSkip:   false,
-			wantReason: "",
+			name:        "no conditions",
+			when:        "",
+			stepSkipped: false,
+			wantSkip:    false,
+			wantReason:  "",
 		},
 		{
-			name:       "when false",
-			when:       "false",
-			wantSkip:   true,
-			wantReason: "when",
+			name:        "when false",
+			when:        "false",
+			stepSkipped: false,
+			wantSkip:    true,
+			wantReason:  "when",
 		},
 		{
-			name:       "tags mismatch",
-			stepTags:   []string{"prod"},
-			filterTags: []string{"dev"},
-			wantSkip:   true,
-			wantReason: "tags",
+			name:        "tags mismatch - marked skipped by planner",
+			stepSkipped: true, // Planner already evaluated tags and marked as skipped
+			wantSkip:    true,
+			wantReason:  "tags",
 		},
 	}
 
@@ -474,14 +474,13 @@ func TestCheckSkipConditions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ec := &executor.ExecutionContext{
 				Variables: make(map[string]interface{}),
-				Tags:      tt.filterTags,
 				Logger:    testLogger,
 				Template:  renderer,
 				Evaluator: evaluator,
 			}
 			step := config.Step{
-				When: tt.when,
-				Tags: tt.stepTags,
+				When:    tt.when,
+				Skipped: tt.stepSkipped, // Trust planner's decision
 			}
 
 			skip, reason, _ := executor.CheckSkipConditions(step, ec)
