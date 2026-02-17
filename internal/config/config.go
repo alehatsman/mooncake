@@ -420,6 +420,47 @@ type PrintAction struct {
 	Msg string `yaml:"msg,omitempty" json:"msg,omitempty"` // Message to print (supports templates)
 }
 
+// FileReplace represents an in-place text replacement operation in a file.
+// Supports both literal and regex-based search-and-replace patterns.
+type FileReplace struct {
+	Path         string        `yaml:"path" json:"path"`                                 // Target file path (required)
+	Pattern      string        `yaml:"pattern" json:"pattern"`                           // Search pattern (required)
+	Replace      string        `yaml:"replace" json:"replace"`                           // Replacement text (required)
+	Count        *int          `yaml:"count" json:"count,omitempty"`                     // Max replacements (null = all)
+	Flags        *ReplaceFlags `yaml:"flags" json:"flags,omitempty"`                     // Regex flags
+	AllowNoMatch bool          `yaml:"allow_no_match" json:"allow_no_match,omitempty"`   // Don't fail if no matches found
+	Backup       bool          `yaml:"backup" json:"backup,omitempty"`                   // Create .bak before modify
+}
+
+// ReplaceFlags configures text replacement behavior.
+type ReplaceFlags struct {
+	Regex           bool `yaml:"regex" json:"regex,omitempty"`                         // Enable regex mode (default: true)
+	Multiline       bool `yaml:"multiline" json:"multiline,omitempty"`                 // ^ and $ match line boundaries
+	CaseInsensitive bool `yaml:"case_insensitive" json:"case_insensitive,omitempty"`   // Case-insensitive matching
+}
+
+// RepoSearch represents a codebase search operation.
+// Searches files for patterns and outputs results in JSON format.
+type RepoSearch struct {
+	Pattern    string   `yaml:"pattern" json:"pattern"`                         // Search pattern (required)
+	Regex      bool     `yaml:"regex" json:"regex,omitempty"`                   // Use regex mode (default: true)
+	Glob       string   `yaml:"glob" json:"glob,omitempty"`                     // File glob pattern (e.g., "**/*.{ts,js}")
+	Path       string   `yaml:"path" json:"path,omitempty"`                     // Search path (default: current directory)
+	OutputFile string   `yaml:"output_file" json:"output_file,omitempty"`       // Output JSON file path
+	MaxResults *int     `yaml:"max_results" json:"max_results,omitempty"`       // Maximum number of results (null = unlimited)
+	IgnoreDirs []string `yaml:"ignore_dirs" json:"ignore_dirs,omitempty"`       // Directories to ignore (e.g., [".git", "node_modules"])
+}
+
+// RepoTree represents a repository tree generation operation.
+// Generates a JSON representation of the directory structure.
+type RepoTree struct {
+	Path       string   `yaml:"path" json:"path,omitempty"`                     // Root path (default: current directory)
+	MaxDepth   *int     `yaml:"max_depth" json:"max_depth,omitempty"`           // Maximum directory depth (null = unlimited)
+	ExcludeDirs []string `yaml:"exclude_dirs" json:"exclude_dirs,omitempty"`    // Directories to exclude (e.g., ["node_modules", ".git"])
+	OutputFile string   `yaml:"output_file" json:"output_file,omitempty"`       // Output JSON file path
+	IncludeFiles bool    `yaml:"include_files" json:"include_files,omitempty"`  // Include files in tree (default: true)
+}
+
 // UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
 // Supports: print: "message" AND print: { msg: "message" }
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -455,6 +496,7 @@ type Step struct {
 	// Actions (exactly one required)
 	Template    *Template          `yaml:"template" json:"template,omitempty"`
 	File        *File              `yaml:"file" json:"file,omitempty"`
+	FileReplace *FileReplace       `yaml:"file_replace" json:"file_replace,omitempty"`
 	Shell       *ShellAction       `yaml:"shell" json:"shell,omitempty"`
 	Command     *CommandAction     `yaml:"command" json:"command,omitempty"`
 	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
@@ -468,6 +510,8 @@ type Step struct {
 	Include     *string            `yaml:"include" json:"include,omitempty"`
 	IncludeVars *string            `yaml:"include_vars" json:"include_vars,omitempty"`
 	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
+	RepoSearch  *RepoSearch        `yaml:"repo_search" json:"repo_search,omitempty"`
+	RepoTree    *RepoTree          `yaml:"repo_tree" json:"repo_tree,omitempty"`
 
 	// Privilege escalation
 	Become     bool   `yaml:"become" json:"become,omitempty"`
@@ -531,6 +575,9 @@ func (s *Step) countActions() int {
 	if s.File != nil {
 		count++
 	}
+	if s.FileReplace != nil {
+		count++
+	}
 	if s.Shell != nil {
 		count++
 	}
@@ -570,6 +617,12 @@ func (s *Step) countActions() int {
 	if s.Vars != nil {
 		count++
 	}
+	if s.RepoSearch != nil {
+		count++
+	}
+	if s.RepoTree != nil {
+		count++
+	}
 	return count
 }
 
@@ -583,6 +636,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.File != nil {
 		return "file"
+	}
+	if s.FileReplace != nil {
+		return "file_replace"
 	}
 	if s.Template != nil {
 		return "template"
@@ -619,6 +675,12 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Include != nil {
 		return "include"
+	}
+	if s.RepoSearch != nil {
+		return "repo_search"
+	}
+	if s.RepoTree != nil {
+		return "repo_tree"
 	}
 	if s.WithItems != nil || s.WithFileTree != nil {
 		return "loop"
@@ -666,6 +728,7 @@ func (s *Step) Clone() *Step {
 		Unless:       s.Unless,
 		Template:     s.Template,
 		File:         s.File,
+		FileReplace:  s.FileReplace,
 		Shell:        s.Shell,
 		Command:      s.Command,
 		Copy:         s.Copy,

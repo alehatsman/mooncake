@@ -1,0 +1,135 @@
+# file.replace Action Examples
+# Demonstrates in-place text replacement with regex and literal patterns
+
+- name: Example 1 - Simple literal replacement
+  file_replace:
+    path: /tmp/test1.txt
+    pattern: "old"
+    replace: "new"
+    flags:
+      regex: false  # Literal text matching
+
+- name: Example 2 - Regex replacement
+  file_replace:
+    path: /tmp/test2.txt
+    pattern: 'oldapi\.com'
+    replace: 'newapi.com'
+    flags:
+      regex: true
+
+- name: Example 3 - Limited replacements (count)
+  file_replace:
+    path: /tmp/test3.txt
+    pattern: "foo"
+    replace: "bar"
+    count: 2  # Only replace first 2 occurrences
+    flags:
+      regex: false
+
+- name: Example 4 - Case-insensitive replacement
+  file_replace:
+    path: /tmp/test4.txt
+    pattern: "error"
+    replace: "warning"
+    flags:
+      regex: true
+      case_insensitive: true
+
+- name: Example 5 - Multiline regex
+  file_replace:
+    path: /tmp/test5.txt
+    pattern: '^import.*old_module.*$'
+    replace: 'import new_module'
+    flags:
+      regex: true
+      multiline: true
+
+- name: Example 6 - With backup
+  file_replace:
+    path: /tmp/test6.txt
+    pattern: "critical_value"
+    replace: "new_value"
+    backup: true  # Creates .bak file before modification
+
+- name: Example 7 - Allow no match (idempotent)
+  file_replace:
+    path: /tmp/test7.txt
+    pattern: "might_not_exist"
+    replace: "replacement"
+    allow_no_match: true  # Don't fail if pattern not found
+
+- name: Example 8 - Update API endpoint across codebase
+  file_replace:
+    path: "{{ item }}"
+    pattern: 'https://old-api\.example\.com'
+    replace: 'https://new-api.example.com'
+    flags:
+      regex: true
+  with_items:
+    - src/client.ts
+    - tests/integration.ts
+    - docs/api.md
+
+- name: Example 9 - Replace with template variable
+  vars:
+    api_version: v2
+  file_replace:
+    path: config/settings.json
+    pattern: '"version":\s*"v1"'
+    replace: '"version": "{{ api_version }}"'
+    flags:
+      regex: true
+
+- name: Example 10 - Register result for later use
+  file_replace:
+    path: /tmp/test10.txt
+    pattern: "DEBUG"
+    replace: "INFO"
+  register: log_update
+
+- name: Show replacement count
+  print:
+    msg: "Replaced {{ log_update.replacements }} occurrence(s)"
+  when: log_update.changed
+
+# Practical Use Cases
+
+- name: Use Case 1 - Update dependencies in package.json
+  file_replace:
+    path: package.json
+    pattern: '"react":\s*"\^17\.\d+\.\d+"'
+    replace: '"react": "^18.0.0"'
+    flags:
+      regex: true
+    backup: true
+
+- name: Use Case 2 - Fix deprecated API calls
+  file_replace:
+    path: src/app.ts
+    pattern: '\.getElementById\('
+    replace: '.querySelector("#'
+    flags:
+      regex: true
+
+- name: Use Case 3 - Update environment variable references
+  file_replace:
+    path: .env.production
+    pattern: "^DATABASE_URL=.*$"
+    replace: "DATABASE_URL={{ production_db_url }}"
+    flags:
+      regex: true
+      multiline: true
+
+- name: Use Case 4 - Remove sensitive comments before deployment
+  file_replace:
+    path: "{{ item }}"
+    pattern: '//\s*TODO:.*$'
+    replace: ''
+    flags:
+      regex: true
+      multiline: true
+    allow_no_match: true
+  with_items:
+    - src/auth.ts
+    - src/database.ts
+    - src/api.ts

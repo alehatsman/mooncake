@@ -260,11 +260,11 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 
 	// If we have "not" failures, it means multiple actions are present
 	if hasNotFailure {
-		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, copy, service, assert, preset, print, include, include_vars, or vars"
+		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree"
 	}
 
 	// Generic fallback
-	return "Step must have exactly one action (shell, template, file, copy, service, assert, preset, print, include, include_vars, or vars)"
+	return "Step must have exactly one action (shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree)"
 }
 
 // formatMinLengthError creates a friendly message for string too short errors
