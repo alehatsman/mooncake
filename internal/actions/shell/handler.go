@@ -64,7 +64,8 @@ func (h *Handler) Validate(step *config.Step) error {
 	}
 
 	if shellAction.Cmd == "" {
-		return fmt.Errorf("shell command is empty")
+		hint := actions.GetActionHint("shell", "cmd")
+		return fmt.Errorf("shell command is empty%s", hint)
 	}
 
 	// Validate timeout if specified

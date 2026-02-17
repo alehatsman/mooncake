@@ -56,11 +56,13 @@ func (h *Handler) Validate(step *config.Step) error {
 
 	tmpl := step.Template
 	if tmpl.Src == "" {
-		return fmt.Errorf("template src is required")
+		hint := actions.GetActionHint("template", "src")
+		return fmt.Errorf("template src is required%s", hint)
 	}
 
 	if tmpl.Dest == "" {
-		return fmt.Errorf("template dest is required")
+		hint := actions.GetActionHint("template", "dest")
+		return fmt.Errorf("template dest is required%s", hint)
 	}
 
 	return nil

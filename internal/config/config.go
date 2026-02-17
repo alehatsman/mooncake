@@ -495,11 +495,12 @@ type Step struct {
 	Register string   `yaml:"register" json:"register,omitempty"`
 
 	// Plan metadata (populated during plan expansion, omitted in config files)
-	ID          string        `yaml:"id,omitempty" json:"id,omitempty"`
-	ActionType  string        `yaml:"action_type,omitempty" json:"action_type,omitempty"`
-	Origin      *Origin       `yaml:"origin,omitempty" json:"origin,omitempty"`
-	Skipped     bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
-	LoopContext *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
+	ID             string        `yaml:"id,omitempty" json:"id,omitempty"`
+	ActionType     string        `yaml:"action_type,omitempty" json:"action_type,omitempty"`
+	Origin         *Origin       `yaml:"origin,omitempty" json:"origin,omitempty"`
+	Skipped        bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
+	LoopContext    *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
+	SourceLocation *Position     `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
 }
 
 // Origin tracks source location and include chain for plan traceability

@@ -148,3 +148,52 @@ func extractStepName(lines []string, errorLine int) string {
 
 	return ""
 }
+
+// FormatStepExcerpt extracts and formats the YAML code for a step from its source file.
+// Returns a formatted multi-line string showing the step's YAML, or empty string if unavailable.
+func FormatStepExcerpt(step *Step) string {
+	if step.Origin == nil || step.Origin.FilePath == "" || step.Origin.Line <= 0 {
+		return ""
+	}
+
+	lines := loadFileLines(step.Origin.FilePath)
+	if len(lines) == 0 {
+		return ""
+	}
+
+	// Start from the step's line (1-indexed, so subtract 1)
+	startLine := step.Origin.Line - 1
+	if startLine < 0 || startLine >= len(lines) {
+		return ""
+	}
+
+	var result strings.Builder
+
+	// Collect lines until we hit the next step or end of relevant section
+	for i := startLine; i < len(lines) && i < startLine+15; i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+
+		// Stop if we hit the next step (starts with "- " at beginning, but not the first line)
+		if i > startLine && strings.HasPrefix(trimmed, "- ") && !strings.HasPrefix(trimmed, "- name:") {
+			break
+		}
+
+		// Stop if we hit a blank line after we've collected some content
+		if i > startLine && trimmed == "" && result.Len() > 0 {
+			// Check if next line looks like it continues the step
+			if i+1 < len(lines) {
+				nextTrimmed := strings.TrimSpace(lines[i+1])
+				if nextTrimmed == "" || strings.HasPrefix(nextTrimmed, "- ") || strings.HasPrefix(nextTrimmed, "#") {
+					break
+				}
+			} else {
+				break
+			}
+		}
+
+		result.WriteString(fmt.Sprintf("  %s\n", line))
+	}
+
+	return result.String()
+}

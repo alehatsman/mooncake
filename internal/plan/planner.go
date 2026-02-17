@@ -550,8 +550,8 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 	p.stepIDCounter++
 	stepID := fmt.Sprintf("step-%04d", p.stepIDCounter)
 
-	// Build origin
-	origin := p.buildOrigin()
+	// Build origin using step's SourceLocation if available
+	origin := p.buildOriginForStep(&step)
 
 	// Render step name
 	if step.Name != "" {
@@ -757,12 +757,24 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 }
 
 // buildOrigin creates an Origin from the current include stack
-func (p *Planner) buildOrigin() config.Origin {
-	// Get location from the current frame
+// buildOriginForStep builds origin using step's SourceLocation if available
+func (p *Planner) buildOriginForStep(step *config.Step) config.Origin {
 	var filePath string
 	var line, column int
 
-	if len(p.includeStack) > 0 {
+	// Use step's SourceLocation if available (from Reader)
+	if step.SourceLocation != nil {
+		// Get file path from current include frame
+		if len(p.includeStack) > 0 {
+			currentFrame := p.includeStack[len(p.includeStack)-1]
+			filePath = currentFrame.FilePath
+		}
+
+		// Use the actual source location from YAML parsing
+		line = step.SourceLocation.Line
+		column = step.SourceLocation.Column
+	} else if len(p.includeStack) > 0 {
+		// Fallback to old behavior (for backward compatibility)
 		currentFrame := p.includeStack[len(p.includeStack)-1]
 		filePath = currentFrame.FilePath
 		line = currentFrame.Line

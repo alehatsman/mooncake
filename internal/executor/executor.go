@@ -421,7 +421,20 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	if handler, ok := actions.Get(actionType); ok {
 		// Validate step configuration
 		if err := handler.Validate(&step); err != nil {
-			return fmt.Errorf("validation failed for %s action: %w", actionType, err)
+			// Enhance error with step code context if available
+			var errMsg string
+			if step.Origin != nil && step.Origin.FilePath != "" {
+				excerpt := config.FormatStepExcerpt(&step)
+				if excerpt != "" {
+					errMsg = fmt.Sprintf("validation failed for %s action: %v\n\nStep code (%s:%d):\n%s",
+						actionType, err, step.Origin.FilePath, step.Origin.Line, excerpt)
+				} else {
+					errMsg = fmt.Sprintf("validation failed for %s action: %v", actionType, err)
+				}
+			} else {
+				errMsg = fmt.Sprintf("validation failed for %s action: %v", actionType, err)
+			}
+			return fmt.Errorf("%s", errMsg)
 		}
 
 		// Handle dry-run mode

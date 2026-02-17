@@ -58,11 +58,13 @@ func (h *Handler) Validate(step *config.Step) error {
 
 	copyAction := step.Copy
 	if copyAction.Src == "" {
-		return fmt.Errorf("src is required")
+		hint := actions.GetActionHint("copy", "src")
+		return fmt.Errorf("src is required%s", hint)
 	}
 
 	if copyAction.Dest == "" {
-		return fmt.Errorf("dest is required")
+		hint := actions.GetActionHint("copy", "dest")
+		return fmt.Errorf("dest is required%s", hint)
 	}
 
 	return nil

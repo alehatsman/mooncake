@@ -76,6 +76,10 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// Attach source locations from locationMap
+		attachSourceLocations(steps, locationMap, "")
+
 		parsedConfig = &ParsedConfig{
 			Steps:      steps,
 			GlobalVars: make(map[string]interface{}),
@@ -93,6 +97,10 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		if globalVars == nil {
 			globalVars = make(map[string]interface{})
 		}
+
+		// Attach source locations from locationMap
+		attachSourceLocations(runConfig.Steps, locationMap, "/steps")
+
 		parsedConfig = &ParsedConfig{
 			Steps:      runConfig.Steps,
 			GlobalVars: globalVars,
@@ -135,6 +143,28 @@ func isArrayFormat(node *yaml.Node) bool {
 		return firstNode.Kind == yaml.SequenceNode
 	}
 	return node.Kind == yaml.SequenceNode
+}
+
+// attachSourceLocations populates SourceLocation for each step from the locationMap.
+// This captures the exact line number where each step is defined in the YAML source.
+// The basePath parameter is the JSON pointer prefix:
+//   - "" for old format (plain array)
+//   - "/steps" for new format (RunConfig with steps field)
+func attachSourceLocations(steps []Step, locationMap *LocationMap, basePath string) {
+	for i := range steps {
+		// Build JSON pointer path for this step
+		// e.g., "/0", "/1" for old format or "/steps/0", "/steps/1" for new format
+		stepPath := formatArrayPath(basePath, i)
+
+		// Get position from locationMap
+		pos := locationMap.Get(stepPath)
+		if pos.Line > 0 {
+			steps[i].SourceLocation = &Position{
+				Line:   pos.Line,
+				Column: pos.Column,
+			}
+		}
+	}
 }
 
 // ReadVariables reads variables from a YAML file

@@ -74,7 +74,16 @@ func (h *Handler) Validate(step *config.Step) error {
 
 	file := step.File
 	if file.Path == "" {
-		return fmt.Errorf("file path is empty")
+		// Generate hint from schema
+		hint := actions.GetActionHint("file", "path")
+
+		// Add context-aware note if user used 'src' instead of 'path'
+		note := ""
+		if file.Src != "" {
+			note = "\nNote: You provided 'src' but 'path' is required. The 'src' parameter is only used with state='link' or state='hardlink'.\n"
+		}
+
+		return fmt.Errorf("file path is empty%s%s", note, hint)
 	}
 
 	// Validate state
@@ -83,12 +92,14 @@ func (h *Handler) Validate(step *config.Step) error {
 		"touch": true, stateLink: true, stateHardlink: true, "perms": true,
 	}
 	if file.State != "" && !validStates[file.State] {
-		return fmt.Errorf("invalid state: %s", file.State)
+		hint := actions.GetActionHint("file", "state")
+		return fmt.Errorf("invalid state: %s%s", file.State, hint)
 	}
 
 	// Validate link operations require src
 	if (file.State == stateLink || file.State == stateHardlink) && file.Src == "" {
-		return fmt.Errorf("state %s requires src parameter", file.State)
+		hint := actions.GetActionHint("file", "src")
+		return fmt.Errorf("state %s requires src parameter%s", file.State, hint)
 	}
 
 	return nil

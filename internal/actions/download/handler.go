@@ -63,11 +63,13 @@ func (h *Handler) Validate(step *config.Step) error {
 
 	downloadAction := step.Download
 	if downloadAction.URL == "" {
-		return fmt.Errorf("url is required")
+		hint := actions.GetActionHint("download", "url")
+		return fmt.Errorf("url is required%s", hint)
 	}
 
 	if downloadAction.Dest == "" {
-		return fmt.Errorf("dest is required")
+		hint := actions.GetActionHint("download", "dest")
+		return fmt.Errorf("dest is required%s", hint)
 	}
 
 	return nil
