@@ -1,0 +1,305 @@
+# Complete LLM Agent Workflow
+# Demonstrates a production-ready LLM agent loop with safety guardrails
+
+# This workflow shows how to use Mooncake as a safe execution runtime
+# for LLM-driven code modifications with validation and rollback.
+
+# Phase 1: Environment Setup
+- name: "Set workflow variables"
+  vars:
+    agent_name: "code-refactor-agent"
+    task_id: "{{ ansible_date_time.epoch }}"
+    workspace: "/tmp/llm-workspace-{{ task_id }}"
+    artifact_dir: "./llm-artifacts"
+    max_files: 15
+    max_lines: 500
+
+- name: "Display agent configuration"
+  print:
+    msg: |
+      🤖 LLM Agent: {{ agent_name }}
+      📋 Task ID: {{ task_id }}
+      📁 Workspace: {{ workspace }}
+
+      Safety Constraints:
+      - Max files: {{ max_files }}
+      - Max lines changed: {{ max_lines }}
+      - Test coverage required: Yes
+      - Forbidden paths: node_modules/, dist/, .env
+
+# Phase 2: Pre-flight Checks
+- name: "Verify git repository is clean"
+  assert:
+    git_clean:
+      allow_untracked: true
+  ignore_errors: false
+
+- name: "Verify test suite passes before changes"
+  shell:
+    cmd: "npm test"
+  register: baseline_tests
+
+- name: "Abort if baseline tests fail"
+  assert:
+    command:
+      cmd: "npm test"
+      exit_code: 0
+  failed_when: true
+  when: baseline_tests.rc != 0
+
+- name: "Create workspace"
+  shell:
+    cmd: "mkdir -p {{ workspace }}"
+
+# Phase 3: LLM Agent Execution with Artifact Capture
+- name: "Capture LLM agent changes"
+  artifact_capture:
+    name: "{{ agent_name }}-{{ task_id }}"
+    output_dir: "{{ artifact_dir }}"
+    format: "both"
+    capture_content: false  # Don't capture full content (large files)
+    max_diff_size: 1048576  # 1MB max diff per file
+    include_checksums: true
+    steps:
+      # Step 1: LLM generates a patchset
+      - name: "Apply LLM-generated patchset"
+        repo_apply_patchset:
+          patchset_file: "{{ workspace }}/llm-changes.patch"
+          strict: true  # Rollback all if any file fails
+          backup: true  # Create .bak files
+        register: patch_result
+
+      # Step 2: Additional file operations from LLM
+      - name: "Update package dependencies (if needed)"
+        file_replace:
+          path: "package.json"
+          regex: '"version": "[^"]+"'
+          replace: '"version": "{{ new_version }}"'
+        when: new_version is defined
+
+      # Step 3: Apply template changes
+      - name: "Update configuration files"
+        template:
+          src: "{{ workspace }}/generated-config.j2"
+          dest: "config/app.yml"
+        when: workspace + '/generated-config.j2' is file
+
+- name: "Display capture summary"
+  shell:
+    cmd: "cat {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/SUMMARY.md"
+  register: summary
+
+- name: "Show summary to user"
+  print:
+    msg: "{{ summary.stdout }}"
+
+# Phase 4: Validation (Change Budget Enforcement)
+- name: "Validate change budget"
+  artifact_validate:
+    artifact_file: "{{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/changes.json"
+    max_files: "{{ max_files }}"
+    max_lines_changed: "{{ max_lines }}"
+    require_tests: true
+    forbidden_paths:
+      - "node_modules/**"
+      - "dist/**"
+      - "build/**"
+      - ".env*"
+      - "secrets/**"
+      - "config/production.yml"
+    allowed_paths:
+      - "src/**/*.js"
+      - "src/**/*.ts"
+      - "tests/**/*.js"
+      - "tests/**/*.ts"
+      - "config/dev.yml"
+      - "config/staging.yml"
+  register: validation
+
+# Phase 5: Automated Testing
+- name: "Run linter"
+  shell:
+    cmd: "npm run lint"
+  register: lint_result
+  when: validation is succeeded
+
+- name: "Run unit tests"
+  shell:
+    cmd: "npm test"
+  register: test_result
+  when: validation is succeeded and lint_result is succeeded
+
+- name: "Run integration tests"
+  shell:
+    cmd: "npm run test:integration"
+  register: integration_result
+  when: test_result is succeeded
+
+- name: "Check test coverage"
+  shell:
+    cmd: "npm run coverage -- --min-coverage=80"
+  register: coverage_result
+  when: integration_result is succeeded
+
+# Phase 6: Security Checks
+- name: "Run security audit"
+  shell:
+    cmd: "npm audit --audit-level=moderate"
+  register: audit_result
+  when: coverage_result is succeeded
+
+- name: "Check for secrets in changed files"
+  shell:
+    cmd: |
+      FILES=$(jq -r '.files[].path' {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/changes.json)
+      if echo "$FILES" | xargs grep -E '(API_KEY|SECRET|PASSWORD|TOKEN)' 2>/dev/null; then
+        exit 1
+      fi
+  register: secrets_check
+  when: audit_result is succeeded
+
+# Phase 7: Decision Point
+- name: "Aggregate test results"
+  vars:
+    all_passed: "{{
+      validation is succeeded and
+      lint_result is succeeded and
+      test_result is succeeded and
+      integration_result is succeeded and
+      coverage_result is succeeded and
+      audit_result is succeeded and
+      secrets_check is succeeded
+    }}"
+
+- name: "Display validation results"
+  print:
+    msg: |
+      📊 Validation Results:
+
+      ✅ Change Budget: {{ 'PASS' if validation is succeeded else 'FAIL' }}
+      ✅ Linter: {{ 'PASS' if lint_result is succeeded else 'FAIL' }}
+      ✅ Unit Tests: {{ 'PASS' if test_result is succeeded else 'FAIL' }}
+      ✅ Integration Tests: {{ 'PASS' if integration_result is succeeded else 'FAIL' }}
+      ✅ Coverage: {{ 'PASS' if coverage_result is succeeded else 'FAIL' }}
+      ✅ Security Audit: {{ 'PASS' if audit_result is succeeded else 'FAIL' }}
+      ✅ Secrets Check: {{ 'PASS' if secrets_check is succeeded else 'FAIL' }}
+
+      Overall: {{ 'APPROVED ✅' if all_passed else 'REJECTED ❌' }}
+
+# Phase 8: Rollback on Failure
+- name: "Rollback changes (restore .bak files)"
+  shell:
+    cmd: |
+      for bak in $(find . -name "*.bak"); do
+        original="${bak%.bak}"
+        mv "$bak" "$original"
+        echo "Restored: $original"
+      done
+  when: all_passed == false
+
+- name: "Clean up backup files on success"
+  shell:
+    cmd: "find . -name '*.bak' -delete"
+  when: all_passed == true
+
+# Phase 9: Generate LLM Feedback
+- name: "Generate feedback for LLM (on failure)"
+  shell:
+    cmd: |
+      cat << EOF > {{ workspace }}/feedback.json
+      {
+        "status": "rejected",
+        "reason": "Quality gates failed",
+        "failures": {
+          "validation": "{{ 'failed' if validation is failed else 'passed' }}",
+          "lint": "{{ 'failed' if lint_result is failed else 'passed' }}",
+          "tests": "{{ 'failed' if test_result is failed else 'passed' }}"
+        },
+        "artifact_summary": $(cat {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/changes.json | jq .summary),
+        "suggestions": [
+          "Reduce number of files changed (current: $(jq -r .summary.total_files {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/changes.json))",
+          "Ensure all tests pass before submitting",
+          "Add test coverage for new code"
+        ]
+      }
+      EOF
+      cat {{ workspace }}/feedback.json
+  register: feedback
+  when: all_passed == false
+
+- name: "Generate success report for LLM"
+  shell:
+    cmd: |
+      cat << EOF > {{ workspace }}/success.json
+      {
+        "status": "approved",
+        "changes_summary": $(cat {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/changes.json | jq .summary),
+        "quality_metrics": {
+          "lint_passed": true,
+          "tests_passed": true,
+          "coverage_ok": true,
+          "security_ok": true
+        },
+        "next_steps": [
+          "Review the changes in: {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/SUMMARY.md",
+          "Create a commit with: git add . && git commit -m 'LLM agent changes'",
+          "Push to feature branch for code review"
+        ]
+      }
+      EOF
+      cat {{ workspace }}/success.json
+  register: success_report
+  when: all_passed == true
+
+# Phase 10: Finalization
+- name: "Archive artifacts for audit trail"
+  shell:
+    cmd: |
+      tar -czf {{ workspace }}/artifacts-{{ task_id }}.tar.gz \
+        {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/
+  when: all_passed == true
+
+- name: "Display final status"
+  print:
+    msg: |
+
+      🎯 LLM Agent Workflow Complete
+
+      Status: {{ 'SUCCESS ✅' if all_passed else 'FAILED ❌' }}
+      Task ID: {{ task_id }}
+      Artifacts: {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/
+
+      {{ success_report.stdout if all_passed else feedback.stdout }}
+
+# Optional: Git Integration
+- name: "Create feature branch with changes"
+  shell:
+    cmd: |
+      git checkout -b llm-agent/{{ task_id }}
+      git add .
+      git commit -m "feat: LLM agent changes (task {{ task_id }})"
+  when: all_passed == true and auto_commit is defined
+
+- name: "Cleanup workspace"
+  shell:
+    cmd: "rm -rf {{ workspace }}"
+  when: cleanup is not defined or cleanup == true
+
+# Notes for LLM Integration:
+#
+# 1. Pre-execution: LLM generates llm-changes.patch and places it in workspace
+# 2. Execution: Mooncake runs this workflow with safety guardrails
+# 3. Post-execution: LLM receives feedback.json or success.json
+# 4. Iteration: LLM can retry with adjustments based on feedback
+#
+# Example LLM Prompt:
+# "Generate a patchset to refactor the authentication module.
+#  Constraints: max 15 files, max 500 lines changed, tests required.
+#  Write patchset to /tmp/llm-workspace-XXX/llm-changes.patch"
+#
+# Integration Points:
+# - workspace/llm-changes.patch: LLM writes patchset here
+# - workspace/feedback.json: Mooncake writes failure feedback here
+# - workspace/success.json: Mooncake writes success report here
+# - artifact_dir/*/changes.json: Full metadata for LLM analysis
+# - artifact_dir/*/SUMMARY.md: Human-readable summary
