@@ -54,8 +54,9 @@ type Definition struct {
 // It can also represent complete schema alternatives (for root-level oneOf).
 type OneOfConstraint struct {
 	// For mutual exclusion constraints at step level
-	Required []string       `json:"required,omitempty" yaml:"required,omitempty"`
-	Not      *NotConstraint `json:"not,omitempty" yaml:"not,omitempty"`
+	Required   []string              `json:"required,omitempty" yaml:"required,omitempty"`
+	Properties map[string]*Property  `json:"properties,omitempty" yaml:"properties,omitempty"`
+	Not        *NotConstraint        `json:"not,omitempty" yaml:"not,omitempty"`
 
 	// For root-level oneOf alternatives (complete schemas)
 	Type        string      `json:"type,omitempty" yaml:"type,omitempty"`

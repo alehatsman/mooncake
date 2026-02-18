@@ -255,16 +255,16 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 
 	// If all causes are "required" failures, it means no action is present
 	if hasRequiredFailure && !hasNotFailure {
-		return "Step has no action. Each step must have exactly ONE of: shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree"
+		return "Step has no action. Each step must have exactly ONE of: shell, command, template, file, file_replace, file_insert, file_delete_range, file_patch_apply, copy, download, unarchive, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, package, repo_search, repo_tree, repo_apply_patchset, or wait"
 	}
 
 	// If we have "not" failures, it means multiple actions are present
 	if hasNotFailure {
-		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, template, file, file_replace, copy, service, assert, preset, print, include, include_vars, vars, repo_search, or repo_tree"
+		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, command, template, file, file_replace, file_insert, file_delete_range, file_patch_apply, copy, download, unarchive, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, package, repo_search, repo_tree, repo_apply_patchset, or wait"
 	}
 
 	// Generic fallback
-	return "Step must have exactly one action (shell, template, file, file_replace, copy, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, repo_search, or repo_tree)"
+	return "Step must have exactly one action (shell, command, template, file, file_replace, file_insert, file_delete_range, file_patch_apply, copy, download, unarchive, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, package, repo_search, repo_tree, repo_apply_patchset, or wait)"
 }
 
 // formatMinLengthError creates a friendly message for string too short errors

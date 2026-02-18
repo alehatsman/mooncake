@@ -56,6 +56,12 @@ func (g *Generator) Generate() (*Schema, error) {
 		}
 	}
 
+	// Add include definition (not a registered action, but needs a definition for schema)
+	schema.Definitions["include"] = &Definition{
+		Type:        "string", //nolint:goconst // JSON Schema type
+		Description: "Include steps from another file",
+	}
+
 	// Support both formats at root level using oneOf:
 	// 1. Array of steps (old format for backward compatibility)
 	// 2. RunConfig object (new format with version/vars/steps)
@@ -273,6 +279,11 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 		// Create a constraint for this action
 		constraint := &OneOfConstraint{
 			Required: []string{actionName},
+			Properties: map[string]*Property{
+				actionName: {
+					Ref: fmt.Sprintf("#/definitions/%s", actionName),
+				},
+			},
 			Not: &NotConstraint{
 				AnyOf: make([]*RequiredConstraint, 0),
 			},
@@ -337,6 +348,13 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 		// include_vars is a string (file path)
 		def.Type = "string" //nolint:goconst // JSON Schema type
 		def.Description = "Load variables from a YAML file"
+		return def, nil
+	}
+
+	if meta.Name == "include" {
+		// include is a string (file path)
+		def.Type = "string" //nolint:goconst // JSON Schema type
+		def.Description = "Include steps from another file"
 		return def, nil
 	}
 
@@ -440,10 +458,18 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		actionStruct = &config.PrintAction{}
 	case "file_replace":
 		actionStruct = &config.FileReplace{}
+	case "file_insert":
+		actionStruct = &config.FileInsert{}
+	case "file_delete_range":
+		actionStruct = &config.FileDeleteRange{}
+	case "file_patch_apply":
+		actionStruct = &config.FilePatchApply{}
 	case "repo_search":
 		actionStruct = &config.RepoSearch{}
 	case "repo_tree":
 		actionStruct = &config.RepoTree{}
+	case "repo_apply_patchset":
+		actionStruct = &config.RepoApplyPatchset{}
 	case "wait":
 		actionStruct = &config.WaitAction{}
 	case "artifact_capture":
@@ -458,6 +484,9 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 	case "include_vars":
 		// include_vars is a string directly in Step
 		return nil, fmt.Errorf("include_vars action uses inline string definition")
+	case "include":
+		// include is a string directly in Step
+		return nil, fmt.Errorf("include action uses inline string definition")
 	default:
 		return nil, fmt.Errorf("unknown action: %s", actionName)
 	}

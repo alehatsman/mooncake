@@ -126,7 +126,8 @@
           "type": "object",
           "properties": {
             "cmd": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "exit_code": {
               "type": "integer"
@@ -160,7 +161,8 @@
               "type": "string"
             },
             "path": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
@@ -172,10 +174,12 @@
           "type": "object",
           "properties": {
             "checksum": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "path": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
@@ -200,7 +204,8 @@
               "type": "boolean"
             },
             "expected_diff": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "files": {
               "type": "string"
@@ -242,7 +247,8 @@
               "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
             },
             "url": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
@@ -318,7 +324,8 @@
           "type": "string"
         },
         "dest": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "force": {
           "type": "boolean"
@@ -334,7 +341,8 @@
           "type": "string"
         },
         "src": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -362,7 +370,8 @@
           "type": "string"
         },
         "dest": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "force": {
           "type": "boolean"
@@ -385,7 +394,8 @@
           "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
         "url": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -430,7 +440,8 @@
         },
         "path": {
           "type": "string",
-          "description": "File, directory, or symlink path (required)"
+          "description": "File, directory, or symlink path (required)",
+          "minLength": 1
         },
         "recurse": {
           "type": "boolean"
@@ -472,6 +483,34 @@
     "file_delete_range": {
       "type": "object",
       "description": "Delete text between start and end anchor patterns in files",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "end_anchor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inclusive": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regex": {
+          "type": "boolean"
+        },
+        "start_anchor": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "start_anchor",
+        "end_anchor"
+      ],
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",
@@ -485,6 +524,39 @@
     "file_insert": {
       "type": "object",
       "description": "Insert text before or after anchor patterns in files",
+      "properties": {
+        "allow_multiple": {
+          "type": "boolean"
+        },
+        "anchor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "backup": {
+          "type": "boolean"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "position": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regex": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "anchor",
+        "position",
+        "content"
+      ],
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",
@@ -498,6 +570,33 @@
     "file_patch_apply": {
       "type": "object",
       "description": "Apply unified diff patches to files",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "context_lines": {
+          "type": "integer"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "patch": {
+          "type": "string"
+        },
+        "patch_file": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strict": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",
@@ -537,13 +636,16 @@
           "additionalProperties": false
         },
         "path": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "pattern": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "replace": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -560,6 +662,10 @@
       "x-emits-events": [
         "file.updated"
       ]
+    },
+    "include": {
+      "type": "string",
+      "description": "Include steps from another file"
     },
     "include_vars": {
       "type": "string",
@@ -636,7 +742,8 @@
       "description": "Execute a preset by expanding it into steps",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "with": {
           "type": "object",
@@ -669,6 +776,29 @@
     "repo_apply_patchset": {
       "type": "object",
       "description": "Apply multiple patches to multiple files atomically",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "base_dir": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "output_file": {
+          "type": "string"
+        },
+        "patchset": {
+          "type": "string"
+        },
+        "patchset_file": {
+          "type": "string"
+        },
+        "strict": {
+          "type": "boolean"
+        }
+      },
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",
@@ -702,7 +832,8 @@
           "type": "string"
         },
         "pattern": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "regex": {
           "type": "boolean"
@@ -785,7 +916,8 @@
               "type": "string"
             },
             "name": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "src_template": {
               "type": "string"
@@ -802,7 +934,8 @@
         },
         "name": {
           "type": "string",
-          "description": "Service name (systemd: nginx, launchd: com.example.app)"
+          "description": "Service name (systemd: nginx, launchd: com.example.app)",
+          "minLength": 1
         },
         "state": {
           "type": "string",
@@ -1125,6 +1258,11 @@
           "required": [
             "artifact_capture"
           ],
+          "properties": {
+            "artifact_capture": {
+              "$ref": "#/definitions/artifact_capture"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -1254,6 +1392,11 @@
           "required": [
             "artifact_validate"
           ],
+          "properties": {
+            "artifact_validate": {
+              "$ref": "#/definitions/artifact_validate"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -1383,6 +1526,11 @@
           "required": [
             "assert"
           ],
+          "properties": {
+            "assert": {
+              "$ref": "#/definitions/assert"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -1512,6 +1660,11 @@
           "required": [
             "command"
           ],
+          "properties": {
+            "command": {
+              "$ref": "#/definitions/command"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -1641,6 +1794,11 @@
           "required": [
             "copy"
           ],
+          "properties": {
+            "copy": {
+              "$ref": "#/definitions/copy"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -1770,6 +1928,11 @@
           "required": [
             "download"
           ],
+          "properties": {
+            "download": {
+              "$ref": "#/definitions/download"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -1899,6 +2062,11 @@
           "required": [
             "file"
           ],
+          "properties": {
+            "file": {
+              "$ref": "#/definitions/file"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2028,6 +2196,11 @@
           "required": [
             "file_delete_range"
           ],
+          "properties": {
+            "file_delete_range": {
+              "$ref": "#/definitions/file_delete_range"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2157,6 +2330,11 @@
           "required": [
             "file_insert"
           ],
+          "properties": {
+            "file_insert": {
+              "$ref": "#/definitions/file_insert"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2286,6 +2464,11 @@
           "required": [
             "file_patch_apply"
           ],
+          "properties": {
+            "file_patch_apply": {
+              "$ref": "#/definitions/file_patch_apply"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2415,6 +2598,11 @@
           "required": [
             "file_replace"
           ],
+          "properties": {
+            "file_replace": {
+              "$ref": "#/definitions/file_replace"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2544,6 +2732,11 @@
           "required": [
             "include"
           ],
+          "properties": {
+            "include": {
+              "$ref": "#/definitions/include"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2673,6 +2866,11 @@
           "required": [
             "include_vars"
           ],
+          "properties": {
+            "include_vars": {
+              "$ref": "#/definitions/include_vars"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2802,6 +3000,11 @@
           "required": [
             "package"
           ],
+          "properties": {
+            "package": {
+              "$ref": "#/definitions/package"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -2931,6 +3134,11 @@
           "required": [
             "preset"
           ],
+          "properties": {
+            "preset": {
+              "$ref": "#/definitions/preset"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3060,6 +3268,11 @@
           "required": [
             "print"
           ],
+          "properties": {
+            "print": {
+              "$ref": "#/definitions/print"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3189,6 +3402,11 @@
           "required": [
             "repo_apply_patchset"
           ],
+          "properties": {
+            "repo_apply_patchset": {
+              "$ref": "#/definitions/repo_apply_patchset"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3318,6 +3536,11 @@
           "required": [
             "repo_search"
           ],
+          "properties": {
+            "repo_search": {
+              "$ref": "#/definitions/repo_search"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3447,6 +3670,11 @@
           "required": [
             "repo_tree"
           ],
+          "properties": {
+            "repo_tree": {
+              "$ref": "#/definitions/repo_tree"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3576,6 +3804,11 @@
           "required": [
             "service"
           ],
+          "properties": {
+            "service": {
+              "$ref": "#/definitions/service"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3705,6 +3938,11 @@
           "required": [
             "shell"
           ],
+          "properties": {
+            "shell": {
+              "$ref": "#/definitions/shell"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3834,6 +4072,11 @@
           "required": [
             "template"
           ],
+          "properties": {
+            "template": {
+              "$ref": "#/definitions/template"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -3963,6 +4206,11 @@
           "required": [
             "unarchive"
           ],
+          "properties": {
+            "unarchive": {
+              "$ref": "#/definitions/unarchive"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -4092,6 +4340,11 @@
           "required": [
             "vars"
           ],
+          "properties": {
+            "vars": {
+              "$ref": "#/definitions/vars"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -4221,6 +4474,11 @@
           "required": [
             "wait"
           ],
+          "properties": {
+            "wait": {
+              "$ref": "#/definitions/wait"
+            }
+          },
           "not": {
             "anyOf": [
               {
@@ -4354,14 +4612,16 @@
       "description": "Render template files and write to destination",
       "properties": {
         "dest": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "mode": {
           "type": "string",
           "pattern": "^[0-7]{3,4}$"
         },
         "src": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "vars": {
           "type": "object",
@@ -4390,14 +4650,16 @@
           "type": "string"
         },
         "dest": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "mode": {
           "type": "string",
           "pattern": "^[0-7]{3,4}$"
         },
         "src": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "strip_components": {
           "type": "integer"
@@ -4438,7 +4700,8 @@
           "type": "string"
         },
         "condition": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "exit_code": {
           "type": "integer"

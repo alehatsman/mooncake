@@ -72,8 +72,15 @@ func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
 		properties[fieldName] = prop
 
 		// Track required fields
-		if !isOptional && !strings.Contains(schemaTag, "optional") {
+		isRequired := !isOptional && !strings.Contains(schemaTag, "optional")
+		if isRequired {
 			required = append(required, fieldName)
+
+			// For required string fields, add minLength: 1 to ensure they're not empty
+			if prop.Type == "string" {
+				minLen := 1
+				prop.MinLength = &minLen
+			}
 		}
 	}
 
