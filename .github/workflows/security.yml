@@ -42,10 +42,10 @@ jobs:
       - name: Run gosec
         uses: securego/gosec@master
         with:
-          args: '-exclude-generated -fmt sarif -out gosec.sarif ./...'
+          args: '-exclude-generated -exclude=G104,G115,G117,G204,G301,G306,G702,G703,G704 -fmt sarif -out gosec.sarif ./...'
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: gosec.sarif

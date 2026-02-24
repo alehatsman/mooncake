@@ -181,7 +181,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		maxPlanSteps = defaultMaxPlanSteps
 	}
 
-	shouldEmbedPlan := true
+	var shouldEmbedPlan bool
 	if capture.EmbedPlan != nil {
 		shouldEmbedPlan = *capture.EmbedPlan
 	} else {

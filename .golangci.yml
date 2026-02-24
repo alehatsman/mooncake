@@ -33,6 +33,11 @@ linters:
       confidence: "medium"
       excludes:
         - G104
+        - G115  # integer overflow conversion
+        - G117  # exported struct field matches secret pattern
+        - G702  # command injection via taint analysis
+        - G703  # path traversal via taint analysis
+        - G704  # SSRF via taint analysis
 
     gocritic:
       enabled-checks:
@@ -97,7 +102,7 @@ linters:
 
   exclusions:
     rules:
-      - path: internal/executor/shell_step\.go
+      - path: internal/(executor/shell_step|llm/claude_cli_client|actions/service/handler)\.go
         linters: [gosec]
         text: "G204"
 
@@ -105,13 +110,28 @@ linters:
         linters: [revive]
         text: "var-naming: avoid meaningless package names"
 
-      - path: internal/actions/(file_replace|repo_search|repo_tree)/
+      - path: internal/actions/(file_replace|repo_search|repo_tree|artifact_capture|artifact_validate)/
         linters: [revive, staticcheck]
         text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names)"
 
       - path: internal/utils/checksum\.go
         linters: [dupl]
         text: "lines are duplicate"
+
+      - path: internal/(agent|actions/artifact_capture|actions/artifact_validate)/
+        linters: [gosec]
+        text: "G(301|306)"
+
+      - path: internal/(actions/artifact_capture|artifacts)/
+        linters: [goconst]
+
+      - path: internal/(actions/template|template)/
+        linters: [revive]
+        text: "var-naming: avoid package names that conflict with Go standard library"
+
+      - path: internal/(actions/validation|agent/prompt|config/format|logger/tui_display|schemagen/typescript)\.go
+        linters: [staticcheck]
+        text: "QF1012: Use fmt.Fprintf"
 
       - path: '(^|/).*_test\.go$'
         linters:

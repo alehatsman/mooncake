@@ -1,0 +1,416 @@
+# Wait Action Examples
+# Demonstrates polling conditions for agent synchronization
+#
+# Usage:
+#   mooncake run --config examples/wait-example.yml
+
+####################
+# 1. FILE-BASED WAITING
+####################
+
+- name: Wait for lock file to be removed
+  wait:
+    condition: file_absent
+    path: /tmp/agent.lock
+    timeout: 5m
+    interval: 2s
+  tags: [file]
+
+- name: Wait for ready marker file
+  wait:
+    condition: file_exists
+    path: /tmp/ready.txt
+    timeout: 2m
+    interval: 1s
+  tags: [file]
+
+- name: Wait for build artifact
+  wait:
+    condition: file_exists
+    path: ./dist/mooncake
+    timeout: 10m
+    interval: 5s
+  tags: [file, build]
+
+####################
+# 2. GIT SYNCHRONIZATION
+####################
+
+- name: Wait for clean git repository (strict)
+  wait:
+    condition: git_clean
+    allow_untracked: false
+    timeout: 5m
+    interval: 2s
+  tags: [git]
+
+- name: Wait for clean git repository (allow untracked)
+  wait:
+    condition: git_clean
+    allow_untracked: true
+    timeout: 10m
+    interval: 5s
+  tags: [git]
+
+####################
+# 3. COMMAND-BASED WAITING
+####################
+
+- name: Wait for service to be active
+  wait:
+    condition: command
+    cmd: systemctl is-active nginx
+    exit_code: 0
+    timeout: 30s
+    interval: 1s
+  tags: [command, service]
+
+- name: Wait for process to exist
+  wait:
+    condition: command
+    cmd: pgrep -f "my-app"
+    exit_code: 0
+    timeout: 1m
+    interval: 2s
+  tags: [command, process]
+
+- name: Wait for file count
+  wait:
+    condition: command
+    cmd: "[ $(ls /tmp/*.done | wc -l) -ge 5 ]"
+    exit_code: 0
+    timeout: 2m
+    interval: 5s
+  tags: [command]
+
+####################
+# 4. HTTP ENDPOINT WAITING
+####################
+
+- name: Wait for API to be healthy
+  wait:
+    condition: http
+    url: http://localhost:8080/health
+    status: 200
+    timeout: 2m
+    interval: 5s
+  tags: [http]
+
+- name: Wait for service discovery
+  wait:
+    condition: http
+    url: http://consul:8500/v1/health/service/myservice
+    status: 200
+    timeout: 3m
+    interval: 10s
+  tags: [http, consul]
+
+- name: Wait for deployment complete
+  wait:
+    condition: http
+    url: https://api.example.com/status
+    status: 200
+    timeout: 10m
+    interval: 30s
+  tags: [http, deployment]
+
+####################
+# 5. PORT CONNECTIVITY WAITING
+####################
+
+- name: Wait for database port
+  wait:
+    condition: port
+    host: localhost
+    port: 5432
+    timeout: 60s
+    interval: 2s
+  tags: [port, database]
+
+- name: Wait for Redis
+  wait:
+    condition: port
+    host: redis
+    port: 6379
+    timeout: 30s
+    interval: 1s
+  tags: [port, redis]
+
+- name: Wait for SSH
+  wait:
+    condition: port
+    host: 192.168.1.100
+    port: 22
+    timeout: 5m
+    interval: 5s
+  tags: [port, ssh]
+
+####################
+# 6. PRACTICAL USE CASES
+####################
+
+# Use case: Multi-agent coordination
+- name: Agent 1 signals completion
+  file:
+    path: /tmp/agent1-done
+    state: touch
+  tags: [coordination]
+
+- name: Agent 2 waits for Agent 1
+  wait:
+    condition: file_exists
+    path: /tmp/agent1-done
+    timeout: 10m
+    interval: 2s
+  tags: [coordination]
+
+- name: Agent 2 proceeds with work
+  shell: ./process-data.sh
+  tags: [coordination]
+
+# Use case: Service dependency chain
+- name: Start database
+  service:
+    name: postgresql
+    state: started
+  become: true
+  tags: [services]
+
+- name: Wait for database to accept connections
+  wait:
+    condition: port
+    host: localhost
+    port: 5432
+    timeout: 60s
+    interval: 2s
+  tags: [services]
+
+- name: Run database migrations
+  shell: ./migrate.sh
+  tags: [services]
+
+- name: Start application server
+  service:
+    name: myapp
+    state: started
+  become: true
+  tags: [services]
+
+- name: Wait for application health check
+  wait:
+    condition: http
+    url: http://localhost:8080/health
+    status: 200
+    timeout: 2m
+    interval: 5s
+  tags: [services]
+
+# Use case: Wait for git before operations
+- name: Wait for other agents to finish commits
+  wait:
+    condition: git_clean
+    allow_untracked: true
+    timeout: 5m
+    interval: 3s
+  tags: [git, coordination]
+
+- name: Pull latest changes
+  shell: git pull
+  tags: [git]
+
+- name: Perform code modifications
+  file_replace:
+    path: src/config.ts
+    pattern: 'version: "1.0.0"'
+    replace: 'version: "1.1.0"'
+  tags: [git]
+
+# Use case: Build artifact waiting
+- name: Trigger remote build
+  shell: curl -X POST https://ci.example.com/build
+  tags: [build]
+
+- name: Wait for build artifact
+  wait:
+    condition: file_exists
+    path: ./artifacts/app-v1.0.tar.gz
+    timeout: 15m
+    interval: 10s
+  tags: [build]
+
+- name: Verify artifact checksum
+  assert:
+    file_sha256:
+      path: ./artifacts/app-v1.0.tar.gz
+      checksum: "{{ expected_checksum }}"
+  tags: [build]
+
+####################
+# 7. TEMPLATE VARIABLES
+####################
+
+- name: Wait for service (using variables)
+  vars:
+    service_url: "http://localhost:8080/health"
+    expected_status: 200
+    wait_timeout: "2m"
+  wait:
+    condition: http
+    url: "{{ service_url }}"
+    status: "{{ expected_status }}"
+    timeout: "{{ wait_timeout }}"
+    interval: 5s
+  tags: [variables]
+
+- name: Wait for file (using variables)
+  vars:
+    marker_file: "/tmp/deployment-{{ env }}.done"
+    max_wait: "10m"
+  wait:
+    condition: file_exists
+    path: "{{ marker_file }}"
+    timeout: "{{ max_wait }}"
+    interval: 2s
+  tags: [variables]
+
+####################
+# 8. RESULT REGISTRATION
+####################
+
+- name: Wait and capture result
+  wait:
+    condition: port
+    host: localhost
+    port: 5432
+    timeout: 60s
+    interval: 2s
+  register: wait_result
+  tags: [register]
+
+- name: Show wait results
+  print:
+    msg: |
+      Wait completed: {{ wait_result.success }}
+      Elapsed: {{ wait_result.elapsed_ms }}ms
+      Iterations: {{ wait_result.iterations }}
+  tags: [register]
+
+####################
+# 9. CONDITIONAL WAITING
+####################
+
+- name: Wait for database (only in production)
+  wait:
+    condition: port
+    host: db.prod.example.com
+    port: 5432
+    timeout: 60s
+  when: "env == 'production'"
+  tags: [conditional]
+
+- name: Wait for service (only if enabled)
+  wait:
+    condition: http
+    url: http://localhost:8080/health
+    status: 200
+    timeout: 2m
+  when: "wait_for_health_check"
+  tags: [conditional]
+
+####################
+# 10. ERROR HANDLING
+####################
+
+- name: Wait with timeout (will timeout)
+  wait:
+    condition: file_exists
+    path: /nonexistent/file.txt
+    timeout: 5s
+    interval: 1s
+  ignore_errors: true
+  tags: [error]
+
+- name: Continue after timeout
+  print:
+    msg: "Timeout occurred, but continuing anyway"
+  tags: [error]
+
+####################
+# 11. COMPLEX WORKFLOWS
+####################
+
+# Blue-green deployment pattern
+- name: Deploy new version
+  shell: kubectl apply -f deployment-v2.yaml
+  tags: [deployment]
+
+- name: Wait for new pods to be ready
+  wait:
+    condition: command
+    cmd: kubectl get pods -l version=v2 -o json | jq -r '.items[].status.phase' | grep -v Running
+    exit_code: 1  # Exit code 1 means grep found nothing (all Running)
+    timeout: 5m
+    interval: 10s
+  tags: [deployment]
+
+- name: Wait for health checks
+  wait:
+    condition: http
+    url: http://new-service:8080/health
+    status: 200
+    timeout: 2m
+    interval: 5s
+  tags: [deployment]
+
+- name: Switch traffic
+  shell: kubectl patch service myapp -p '{"spec":{"selector":{"version":"v2"}}}'
+  tags: [deployment]
+
+# Database migration with coordination
+- name: Create migration lock file
+  file:
+    path: /tmp/db-migration.lock
+    state: touch
+    mode: "0644"
+  tags: [migration]
+
+- name: Other agents wait for lock
+  wait:
+    condition: file_absent
+    path: /tmp/db-migration.lock
+    timeout: 30m
+    interval: 5s
+  tags: [migration]
+
+- name: Run migrations
+  shell: ./db-migrate.sh
+  tags: [migration]
+
+- name: Remove lock file
+  file:
+    path: /tmp/db-migration.lock
+    state: absent
+  tags: [migration]
+
+####################
+# 12. PERFORMANCE NOTES
+####################
+
+# Short timeout, fast polling (responsive)
+- name: Wait for fast condition
+  wait:
+    condition: file_exists
+    path: /tmp/quick.txt
+    timeout: 10s
+    interval: 100ms  # Minimum interval
+  tags: [performance]
+
+# Long timeout, slow polling (resource-efficient)
+- name: Wait for slow condition
+  wait:
+    condition: http
+    url: http://slow-service/health
+    status: 200
+    timeout: 30m
+    interval: 30s
+  tags: [performance]

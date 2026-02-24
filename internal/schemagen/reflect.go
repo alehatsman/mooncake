@@ -77,7 +77,7 @@ func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
 			required = append(required, fieldName)
 
 			// For required string fields, add minLength: 1 to ensure they're not empty
-			if prop.Type == "string" {
+			if prop.Type == "string" { //nolint:goconst // JSON Schema type
 				minLen := 1
 				prop.MinLength = &minLen
 			}

@@ -12,7 +12,6 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
-	"github.com/alehatsman/mooncake/internal/agent/interactive"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -450,12 +449,9 @@ func agentRunCommand(c *cli.Context) error {
 	provider := c.String("provider")
 	model := c.String("model")
 	maxIterations := c.Int("max-iterations")
-	isInteractive := c.Bool("interactive")
-	autoApply := c.Bool("auto-apply")
 
-	// Goal is optional in interactive mode, required otherwise
-	if goal == "" && !isInteractive {
-		return fmt.Errorf("--goal is required (or use --interactive to enter goal in TUI)")
+	if goal == "" {
+		return fmt.Errorf("--goal is required")
 	}
 
 	repoRoot, err := os.Getwd()
@@ -463,23 +459,6 @@ func agentRunCommand(c *cli.Context) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	// Interactive mode
-	if isInteractive {
-		if provider == "" {
-			provider = "claude"
-		}
-
-		return interactive.Run(interactive.RunOptions{
-			Goal:          goal,
-			RepoRoot:      repoRoot,
-			Provider:      provider,
-			Model:         model,
-			MaxIterations: maxIterations,
-			AutoApply:     autoApply,
-		})
-	}
-
-	// Non-interactive mode
 	opts := agent.RunOptions{
 		Goal:          goal,
 		PlanPath:      planPath,
@@ -491,13 +470,13 @@ func agentRunCommand(c *cli.Context) error {
 	}
 
 	if provider == "claude" {
-		result, err := agent.RunLoop(opts)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Agent loop failed: %v\n", err)
+		result, loopErr := agent.RunLoop(opts)
+		if loopErr != nil {
+			fmt.Fprintf(os.Stderr, "Agent loop failed: %v\n", loopErr)
 			if result != nil && result.FinalLog != nil {
 				printAgentSummary(result.FinalLog)
 			}
-			return err
+			return loopErr
 		}
 
 		fmt.Printf("Agent completed: %d iterations\n", len(result.Iterations))
@@ -790,8 +769,8 @@ func createApp() *cli.App {
 							&cli.StringFlag{
 								Name:     "goal",
 								Aliases:  []string{"g"},
-								Required: false,
-								Usage:    "Goal description (optional in interactive mode)",
+								Required: true,
+								Usage:    "Goal description",
 							},
 							&cli.StringFlag{
 								Name:    "plan",
@@ -815,14 +794,6 @@ func createApp() *cli.App {
 								Name:  "max-iterations",
 								Value: 5,
 								Usage: "Maximum iterations for loop mode",
-							},
-							&cli.BoolFlag{
-								Name:  "interactive",
-								Usage: "Run in interactive TUI mode",
-							},
-							&cli.BoolFlag{
-								Name:  "auto-apply",
-								Usage: "Automatically apply changes without confirmation (only with --interactive)",
 							},
 						},
 						Action: agentRunCommand,
