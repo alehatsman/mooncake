@@ -825,10 +825,10 @@ This ADR complies with:
 
 ## References
 
-- [Planner Implementation](../../../internal/plan/planner.go) - Planning logic
-- [Executor Implementation](../../../internal/executor/executor.go) - Execution logic
-- [Plan Data Structure](../../../internal/plan/plan.go) - Plan format
-- [Path Utilities](../../../internal/pathutil/pathutil.go) - Path resolution
+- [Planner Implementation](https://github.com/alehatsman/mooncake/blob/master/internal/plan/planner.go) - Planning logic
+- [Executor Implementation](https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go) - Execution logic
+- [Plan Data Structure](https://github.com/alehatsman/mooncake/blob/master/internal/plan/plan.go) - Plan format
+- [Path Utilities](https://github.com/alehatsman/mooncake/blob/master/internal/pathutil/pathutil.go) - Path resolution
 
 ## Related Decisions
 

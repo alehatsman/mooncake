@@ -426,6 +426,6 @@ mooncake run -c playbook.yml
 
 ## See Also
 
-- [Configuration Reference](../guide/config/reference.md) - Full field documentation
+- [Configuration Reference](../guide/config/actions.md) - Full field documentation
 - [Control Flow](../guide/config/control-flow.md) - Conditionals and when expressions
 - [Variables](../guide/config/variables.md) - Template syntax and variables

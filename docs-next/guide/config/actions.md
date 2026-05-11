@@ -21,7 +21,7 @@ Actions are the operations Mooncake performs. Each step in your configuration us
 | **include_vars** | Load variables | [↓](#include-vars) |
 | **vars** | Define variables | [↓](#vars) |
 
-📋 **[Complete Properties Reference →](reference.md)** - All properties organized by type
+📋 **[Complete Properties Reference →](variables.md)** - All properties organized by type
 
 ---
 
@@ -2432,9 +2432,9 @@ Combine system facts with custom variables:
 
 ### See Also
 
-- [Variables Guide](../variables.md) - Complete variable documentation
+- [Variables Guide](variables.md) - Complete variable documentation
 - [include_vars](#include-vars) - Load variables from files
-- [System Facts](../variables.md#system-facts) - Built-in system variables
+- [System Facts](variables.md#system-facts) - Built-in system variables
 
 ## See Also
 

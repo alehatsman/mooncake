@@ -285,6 +285,6 @@ If you encounter platform-specific issues:
 ## See Also
 
 - [Actions Reference](./config/actions.md) - Detailed action documentation
-- [Facts System](./facts.md) - Using system facts for platform detection
+- [Facts System](../api/facts.md) - Using system facts for platform detection
 - [Presets Guide](./presets.md) - Cross-platform presets
-- [Conditionals](./conditionals.md) - Using `when` conditions for platform-specific logic
+- [Conditionals](./config/control-flow.md) - Using `when` conditions for platform-specific logic

@@ -432,15 +432,15 @@ This ADR complies with:
 
 ## References
 
-- [Preset User Guide](../../guide/presets.md) - How to use presets
-- [Preset Authoring Guide](../../guide/preset-authoring.md) - How to create presets
-- [Preset Loader](../../../internal/presets/loader.go) - Discovery and loading
-- [Preset Handler](../../../internal/actions/preset/handler.go) - Execution
-- [Ollama Preset](../../../presets/ollama.yml) - Real-world example
+- [Preset User Guide](../guide/presets.md) - How to use presets
+- [Preset Authoring Guide](../guide/preset-authoring.md) - How to create presets
+- [Preset Loader](https://github.com/alehatsman/mooncake/blob/master/internal/presets/loader.go) - Discovery and loading
+- [Preset Handler](https://github.com/alehatsman/mooncake/blob/master/internal/actions/preset/handler.go) - Execution
+- [Ollama Preset](https://github.com/alehatsman/mooncake/blob/master/presets/ollama.yml) - Real-world example
 
 ## Related Decisions
 
-- [ADR-000: Planner and Execution Model](003-planner-execution-model.md) - How presets integrate with planner expansion
+- ADR-000: Planner and Execution Model - How presets integrate with planner expansion
 - [ADR-001: Handler-Based Action Architecture](001-handler-based-action-architecture.md) - Preset is implemented as an action handler
 
 ## Future Considerations

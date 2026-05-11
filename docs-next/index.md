@@ -699,7 +699,7 @@ Set up new machines automatically:
 
 - [:fontawesome-brands-github: GitHub Issues](https://github.com/alehatsman/mooncake/issues) - Report bugs and request features
 - [:material-star: Star the project](https://github.com/alehatsman/mooncake) if you find it useful!
-- [:material-book-open: Contributing Guide](development/contributing.md) - Help make Mooncake better
+- [:material-book-open: Contributing Guide](https://github.com/alehatsman/mooncake/blob/master/CONTRIBUTING.md) - Help make Mooncake better
 - [:material-map: Roadmap](development/roadmap.md) - Planned features
 - [:material-history: Changelog](about/changelog.md) - What's new
 

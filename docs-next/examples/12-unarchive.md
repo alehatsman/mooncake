@@ -384,4 +384,4 @@ steps:
 - [Loops](06-loops.md) - Iterating over multiple items
 - [Sudo](09-sudo.md) - Privilege escalation
 - [Actions Reference](../guide/config/actions.md#unarchive) - Complete action documentation
-- [Configuration Reference](../guide/config/reference.md#unarchive) - Property reference
+- [Configuration Reference](../guide/config/actions.md#unarchive) - Property reference

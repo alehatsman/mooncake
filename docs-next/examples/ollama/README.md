@@ -130,8 +130,8 @@ Fast introduction to Ollama preset with minimal configuration:
 
 For complete documentation, see:
 
-- [Preset Reference](../../docs/guide/presets.md) - Full preset documentation
-- [Configuration Reference](../../docs/guide/config/reference.md) - Property tables
-- [Core Concepts](../../docs/guide/core-concepts.md) - Overview
+- [Preset Reference](../../guide/presets.md) - Full preset documentation
+- [Configuration Reference](../../guide/config/actions.md) - Property tables
+- [Core Concepts](../../guide/core-concepts.md) - Overview
 
-For questions or issues, see the main [Mooncake documentation](../../docs/).
+For questions or issues, see the main [Mooncake documentation](https://mooncake.alehatsman.com).

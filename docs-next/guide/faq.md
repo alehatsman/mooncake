@@ -80,7 +80,7 @@ It has comprehensive test coverage, runs on multiple platforms, and follows sema
 
 ### Can I migrate from Ansible to Mooncake?
 
-Yes! Mooncake uses similar YAML syntax. See the [Migration Guide](guide/migration.md) for details.
+Yes! Mooncake uses similar YAML syntax. See the migration notes below for details.
 
 Common migrations:
 
@@ -119,7 +119,7 @@ Yes! Mooncake was designed specifically for AI agents:
 
 ### How do AI models generate Mooncake configs?
 
-1. **Use the AI Specification**: See [AI Specification](ai-specification.md) for a complete guide LLMs can follow
+1. **Use the AI Specification**: See the AI Specification for a complete guide LLMs can follow
 
 2. **Provide system context**:
 ```bash
@@ -365,7 +365,7 @@ EOF
     state: present
 ```
 
-See [Preset Authoring Guide](guide/preset-authoring.md) for details.
+See [Preset Authoring Guide](preset-authoring.md) for details.
 
 ---
 
@@ -633,13 +633,13 @@ Contributions are welcome!
 
 1. **Report bugs**: [GitHub Issues](https://github.com/alehatsman/mooncake/issues)
 2. **Request features**: [GitHub Issues](https://github.com/alehatsman/mooncake/issues)
-3. **Submit PRs**: See [Contributing Guide](development/contributing.md)
+3. **Submit PRs**: See [Contributing Guide](https://github.com/alehatsman/mooncake/blob/master/CONTRIBUTING.md)
 4. **Share presets**: Submit to the presets repository
 5. **Improve docs**: Documentation PRs always welcome!
 
 ### What's the roadmap?
 
-See the [Roadmap](development/roadmap.md) for planned features:
+See the [Roadmap](../development/roadmap.md) for planned features:
 
 - Remote host execution
 - Parallel step execution
@@ -652,6 +652,6 @@ See the [Roadmap](development/roadmap.md) for planned features:
 ## See Also
 
 - [Quick Reference](quick-reference.md) - One-page cheat sheet
-- [Troubleshooting](guide/troubleshooting.md) - Common issues and solutions
+- [Troubleshooting](troubleshooting.md) - Common issues and solutions
 - [Full Documentation](https://mooncake.alehatsman.com) - Complete guide
 - [GitHub Issues](https://github.com/alehatsman/mooncake/issues) - Ask questions

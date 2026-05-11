@@ -293,10 +293,10 @@ This ADR complies with:
 
 ## References
 
-- [Adding Actions Guide](../adding-actions.md) - Developer guide for implementing new actions
+- Adding Actions Guide - Developer guide for implementing new actions
 - [Action Migration Summary](/.claude/projects/-Users-alehatsman-Projects-mooncake/memory/MEMORY.md) - Complete migration history
-- [Handler Interface](../../../internal/actions/handler.go) - Source code
-- [Registry Implementation](../../../internal/actions/registry.go) - Source code
+- [Handler Interface](https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go) - Source code
+- [Registry Implementation](https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go) - Source code
 
 ## Related Decisions
 

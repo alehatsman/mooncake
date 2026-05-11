@@ -431,10 +431,10 @@ Common tags used across examples:
 
 For complete action documentation, see:
 
-- [Actions Reference](../../docs/guide/config/actions.md)
-- [Control Flow](../../docs/guide/config/control-flow.md)
-- [Variables](../../docs/guide/config/variables.md)
-- [Complete Reference](../../docs/guide/config/reference.md)
+- [Actions Reference](../../guide/config/actions.md)
+- [Control Flow](../../guide/config/control-flow.md)
+- [Variables](../../guide/config/variables.md)
+- [Complete Reference](../../guide/config/actions.md)
 
 ## Structure
 

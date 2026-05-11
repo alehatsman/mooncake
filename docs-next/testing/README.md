@@ -104,8 +104,8 @@ make test-all-platforms    # Native + Docker (15 min)
 
 ## 🔗 External Links
 
-- [Main README](../../README.md)
-- [GitHub Actions Workflow](../../.github/workflows/ci.yml)
+- [Main README](https://github.com/alehatsman/mooncake#readme)
+- [GitHub Actions Workflow](https://github.com/alehatsman/mooncake/blob/master/.github/workflows/ci.yml)
 - [Test Fixtures](../../testing/fixtures/)
 - [Test Scripts](../../scripts/)
 

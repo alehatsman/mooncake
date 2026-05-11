@@ -53,6 +53,6 @@ Have a great real-world example? Consider contributing it! Real-world examples s
 ## Getting Help
 
 - Review individual feature examples (01-10)
-- Check the [main README](../../README.md)
+- Check the [main README](https://github.com/alehatsman/mooncake#readme)
 - Use `--dry-run` to preview safely
 - Use `--log-level debug` to troubleshoot

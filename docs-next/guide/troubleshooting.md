@@ -624,10 +624,10 @@ mooncake facts --format json > facts.json
 
 ### Check documentation
 
-- [Quick Reference](../quick-reference.md)
+- [Quick Reference](quick-reference.md)
 - [Actions Guide](config/actions.md)
-- [Complete Reference](config/reference.md)
-- [FAQ](../faq.md)
+- [Complete Reference](config/actions.md)
+- [FAQ](faq.md)
 
 ### Validate configuration
 
@@ -712,7 +712,7 @@ mooncake --version
 
 ## See Also
 
-- [Quick Reference](../quick-reference.md) - Common commands and patterns
-- [FAQ](../faq.md) - Frequently asked questions
+- [Quick Reference](quick-reference.md) - Common commands and patterns
+- [FAQ](faq.md) - Frequently asked questions
 - [Examples](../../examples/) - Working examples
 - [GitHub Issues](https://github.com/alehatsman/mooncake/issues) - Report bugs

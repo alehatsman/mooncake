@@ -3,7 +3,7 @@
 **Status**: ✅ **COMPLETE**
 **Date**: 2026-02-09
 **Previous**: [Phase 1](./automated-docs-phase1.md)
-**Related Proposal**: [proposals/automated-documentation-generation.md](../../proposals/automated-documentation-generation.md)
+**Related Proposal**: proposals/automated-documentation-generation.md
 
 ## Summary
 

@@ -89,6 +89,6 @@ To use `become_user` in your own configs:
 
 ## See Also
 
-- [Execution Control Documentation](../../docs/examples/11-execution-control.md)
-- [Actions Reference](../../docs/guide/config/actions.md#common-fields)
+- [Execution Control Documentation](../11-execution-control.md)
+- [Actions Reference](../../guide/config/actions.md#common-fields)
 - [Register Example](../07-register/) - Capturing command output
