@@ -1,9 +1,11 @@
 package facts
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // detectToolchains probes for common development tools.
@@ -53,24 +55,23 @@ func detectOllamaVersion() string {
 		return ""
 	}
 
-	// Parse output format: "Warning: client version is 0.15.2"
-	// or "ollama version 0.1.47" (older format)
+	// Output formats:
+	//   "ollama version is 0.15.2"   (current)
+	//   "Warning: client version is 0.15.2"  (older)
+	//   "ollama version 0.1.47"      (oldest)
 	output := strings.TrimSpace(string(out))
 
-	// Try new format first: "Warning: client version is X.Y.Z"
-	if strings.Contains(output, "client version is") {
-		parts := strings.Split(output, "client version is")
-		if len(parts) >= 2 {
-			version := strings.TrimSpace(parts[1])
-			fields := strings.Fields(version)
-			if len(fields) > 0 {
-				return fields[0]
-			}
+	// Match "version is X.Y.Z" (covers both "ollama version is" and "client version is")
+	if idx := strings.Index(output, "version is "); idx >= 0 {
+		rest := output[idx+len("version is "):]
+		fields := strings.Fields(rest)
+		if len(fields) > 0 {
+			return fields[0]
 		}
 	}
 
-	// Try older format: "ollama version X.Y.Z"
-	if strings.HasPrefix(output, "ollama version") {
+	// Try oldest format: "ollama version X.Y.Z"
+	if strings.HasPrefix(output, "ollama version ") {
 		version := strings.TrimPrefix(output, "ollama version ")
 		fields := strings.Fields(version)
 		if len(fields) > 0 {
@@ -144,4 +145,118 @@ func detectOllamaEndpoint() string {
 
 	// Default endpoint
 	return "http://localhost:11434"
+}
+
+// toolSpec describes one tool to probe.
+type toolSpec struct {
+	cmd    string // binary name
+	args   []string
+	prefix string // strip this prefix from first line
+}
+
+// extendedToolSpecs lists tools to probe in detectExtendedTools.
+var extendedToolSpecs = []toolSpec{
+	{"nvim", []string{"--version"}, "NVIM v"},
+	{"vim", []string{"--version"}, "VIM - Vi IMproved "},
+	{"tmux", []string{"-V"}, "tmux "},
+	{"zsh", []string{"--version"}, "zsh "},
+	{"bash", []string{"--version"}, "GNU bash, version "},
+	{"fish", []string{"--version"}, "fish, version "},
+	{"node", []string{"--version"}, "v"},
+	{"npm", []string{"--version"}, ""},
+	{"rustc", []string{"--version"}, "rustc "},
+	{"cargo", []string{"--version"}, "cargo "},
+	{"fzf", []string{"--version"}, ""},
+	{"rg", []string{"--version"}, "ripgrep "},
+	{"fd", []string{"--version"}, "fd "},
+	{"bat", []string{"--version"}, "bat "},
+	{"eza", []string{"--version"}, "eza v"},
+	{"kubectl", []string{"version", "--client", "-o", "json"}, ""},
+	{"helm", []string{"version", "--short"}, "v"},
+	{"terraform", []string{"version", "-json"}, ""},
+	{"curl", []string{"--version"}, "curl "},
+	{"wget", []string{"--version"}, "GNU Wget "},
+}
+
+// detectExtendedTools probes for an extended set of dev tools, each with a 2s
+// timeout. Returns a map of tool name → version (absent if not found).
+func detectExtendedTools() map[string]string {
+	tools := make(map[string]string)
+	for _, spec := range extendedToolSpecs {
+		v := probeToolVersion(spec)
+		if v != "" {
+			tools[spec.cmd] = v
+		}
+	}
+	// Keep legacy fields in sync for any tool already tracked
+	return tools
+}
+
+// probeToolVersion runs a single tool probe with a 2s timeout.
+func probeToolVersion(spec toolSpec) string {
+	path, err := exec.LookPath(spec.cmd)
+	if err != nil {
+		return ""
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// #nosec G204 -- path validated via exec.LookPath
+	cmd := exec.CommandContext(ctx, path, spec.args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil && len(out) == 0 {
+		return ""
+	}
+
+	raw := strings.TrimSpace(string(out))
+
+	// kubectl --client -o json: {"clientVersion":{"gitVersion": "v1.28.0",...}}
+	if spec.cmd == "kubectl" {
+		// Handle both compact and pretty-printed JSON
+		v := parseJSONField(raw, `"gitVersion": "`)
+		if v == "" {
+			v = parseJSONField(raw, `"gitVersion":"`)
+		}
+		return v
+	}
+	// terraform -json: {"terraform_version": "1.5.7",...}
+	if spec.cmd == "terraform" {
+		v := parseJSONField(raw, `"terraform_version": "`)
+		if v == "" {
+			v = parseJSONField(raw, `"terraform_version":"`)
+		}
+		return v
+	}
+
+	line := strings.SplitN(raw, "\n", 2)[0]
+	line = strings.TrimPrefix(line, spec.prefix)
+
+	// Take first whitespace-separated token as the version
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return ""
+	}
+	v := strings.TrimSuffix(fields[0], ",")
+	// Drop the trailing bracket-version suffix like "5.3.9(1)-release" → "5.3.9"
+	if idx := strings.IndexAny(v, "-("); idx > 0 && idx < len(v)-1 {
+		v = v[:idx]
+	}
+	return v
+}
+
+// parseJSONField extracts a quoted value after key from a JSON blob.
+// This avoids importing encoding/json for a simple lookup.
+func parseJSONField(s, key string) string {
+	idx := strings.Index(s, key)
+	if idx < 0 {
+		return ""
+	}
+	rest := s[idx+len(key):]
+	end := strings.IndexByte(rest, '"')
+	if end < 0 {
+		return ""
+	}
+	v := rest[:end]
+	return strings.TrimPrefix(v, "v")
 }

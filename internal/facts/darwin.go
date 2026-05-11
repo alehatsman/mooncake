@@ -2,9 +2,11 @@
 package facts
 
 import (
+	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // collectDarwinFacts gathers macOS-specific system information
@@ -356,4 +358,38 @@ func detectDarwinDNS() []string {
 	}
 
 	return servers
+}
+
+// detectDarwinUptime returns seconds since boot using sysctl kern.boottime.
+func detectDarwinUptime() int64 {
+	out, err := exec.Command("sysctl", "-n", "kern.boottime").Output()
+	if err != nil {
+		return 0
+	}
+	// Output: "{ sec = 1715000000, usec = 0 } Mon May ..."
+	s := strings.TrimSpace(string(out))
+	for _, field := range strings.Fields(s) {
+		if !strings.HasPrefix(field, "sec") {
+			continue
+		}
+		// field may be "sec" and next token is "=", then the number
+		// or the format varies; try to find the number after "sec ="
+		break
+	}
+	// Robust parse: find "sec = <N>"
+	idx := strings.Index(s, "sec = ")
+	if idx < 0 {
+		return 0
+	}
+	rest := s[idx+len("sec = "):]
+	numStr := strings.FieldsFunc(rest, func(r rune) bool { return r == ',' || r == ' ' || r == '}' })[0]
+	var bootSec int64
+	if _, err := fmt.Sscanf(numStr, "%d", &bootSec); err != nil {
+		return 0
+	}
+	now := time.Now().Unix()
+	if now <= bootSec {
+		return 0
+	}
+	return now - bootSec
 }

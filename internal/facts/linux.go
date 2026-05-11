@@ -1,6 +1,7 @@
 package facts
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -520,4 +521,21 @@ func detectCUDAVersion() string {
 	}
 
 	return strings.TrimSpace(string(out))
+}
+
+// detectLinuxUptime reads /proc/uptime for seconds since boot.
+func detectLinuxUptime() int64 {
+	data, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return 0
+	}
+	var secs float64
+	if _, err := fmt.Sscanf(fields[0], "%f", &secs); err != nil {
+		return 0
+	}
+	return int64(secs)
 }

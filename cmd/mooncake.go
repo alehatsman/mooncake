@@ -651,6 +651,7 @@ func createApp() *cli.App {
 			presetsCommand(),
 			docsCommand(),
 			schemaCommand(),
+			snapshotCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",

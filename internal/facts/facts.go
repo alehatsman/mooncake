@@ -68,10 +68,20 @@ type Facts struct {
 	GitVersion    string // "2.43.0"
 	GoVersion     string // "1.21.5"
 
+	// Extended toolchains (name → version string, empty if not found)
+	Tools map[string]string
+
 	// Ollama (optional)
 	OllamaVersion  string        // "0.1.47"
 	OllamaModels   []OllamaModel // List of installed models
 	OllamaEndpoint string        // "http://localhost:11434"
+
+	// Uptime
+	UptimeSeconds int64 // seconds since boot
+
+	// Services
+	FailedServices  []string // services in failed state
+	StoppedServices []string // key services that are stopped/inactive
 }
 
 // NetworkInterface represents a network interface.
@@ -143,11 +153,30 @@ func collectUncached() *Facts {
 	// Toolchains (cross-platform)
 	f.DockerVersion, f.GitVersion, f.GoVersion = detectToolchains()
 
+	// Extended toolchains
+	f.Tools = detectExtendedTools()
+
 	// Ollama (cross-platform, optional)
 	f.OllamaVersion = detectOllamaVersion()
 	if f.OllamaVersion != "" {
 		f.OllamaModels = detectOllamaModels()
 		f.OllamaEndpoint = detectOllamaEndpoint()
+	}
+
+	// Uptime (platform-specific)
+	switch runtime.GOOS {
+	case osLinux:
+		f.UptimeSeconds = detectLinuxUptime()
+	case osDarwin:
+		f.UptimeSeconds = detectDarwinUptime()
+	}
+
+	// Service state (platform-specific)
+	switch runtime.GOOS {
+	case osLinux:
+		f.FailedServices, f.StoppedServices = detectLinuxServices()
+	case osDarwin:
+		f.FailedServices, f.StoppedServices = detectDarwinServices()
 	}
 
 	return f
@@ -221,11 +250,19 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"docker_version": f.DockerVersion,
 		"git_version":    f.GitVersion,
 		"go_version":     f.GoVersion,
+		"tools":          f.Tools,
 
 		// Ollama
 		"ollama_version":  f.OllamaVersion,
 		"ollama_models":   f.OllamaModels,  // Array for template iteration
 		"ollama_endpoint": f.OllamaEndpoint,
+
+		// Uptime
+		"uptime_seconds": f.UptimeSeconds,
+
+		// Services
+		"failed_services":  f.FailedServices,
+		"stopped_services": f.StoppedServices,
 	}
 }
 
