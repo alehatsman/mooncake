@@ -24,6 +24,8 @@ type ExecutionStats struct {
 	Skipped *int
 	// Failed counts steps that failed with errors
 	Failed *int
+	// Changed counts steps that resulted in a system change
+	Changed *int
 }
 
 // NewExecutionStats creates a new ExecutionStats with all counters initialized to zero
@@ -33,6 +35,7 @@ func NewExecutionStats() *ExecutionStats {
 		Executed: new(int),
 		Skipped:  new(int),
 		Failed:   new(int),
+		Changed:  new(int),
 	}
 }
 

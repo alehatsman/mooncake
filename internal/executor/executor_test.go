@@ -460,7 +460,7 @@ func TestCheckSkipConditions(t *testing.T) {
 			when:        "false",
 			stepSkipped: false,
 			wantSkip:    true,
-			wantReason:  "when",
+			wantReason:  "when: false",
 		},
 		{
 			name:        "tags mismatch - marked skipped by planner",

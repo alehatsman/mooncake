@@ -147,57 +147,62 @@ func (c *ConsoleSubscriber) renderStepSkipped(data events.StepSkippedData) {
 
 		// Skip showing the root directory (templates/)
 		if dirDepth == 0 && dirName != "" {
-			// Root template directory - don't show it
 			return
 		}
 
 		// For subdirectories (after/, ftplugin/), show as headers
-		// Show directory as a header without icon
 		indent := strings.Repeat("  ", data.Level)
 		fmt.Printf("%s%s\n", indent, color.New(color.Faint).Sprint(data.Name))
 		return
 	}
 
-	// For regular files, use depth from event data
 	indent := strings.Repeat("  ", data.Level+data.Depth)
-	icon := color.YellowString("⊘")
+	icon := color.New(color.Faint).Sprint("─")
 	reasonText := ""
 	if data.Reason != "" {
-		reasonText = color.New(color.Faint).Sprintf(" (%s)", data.Reason)
+		reasonText = color.New(color.Faint).Sprintf(" [%s]", data.Reason)
 	}
-	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, reasonText)
+	fmt.Printf("%s%s %s%s\n", indent, icon, color.New(color.Faint).Sprint(data.Name), reasonText)
 }
 
-// renderRunCompleted renders a run.completed event with summary statistics
+// renderRunCompleted renders a run.completed event as a single compact recap line.
 func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
-	fmt.Println()
-	fmt.Println(strings.Repeat("─", 50))
+	ok := data.SuccessSteps - data.ChangedSteps
+	if ok < 0 {
+		ok = 0
+	}
 
+	line := fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %s",
+		ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
+		formatDuration(data.DurationMs))
+
+	if !data.Success && data.ErrorMessage != "" {
+		line += "  " + color.RedString("✗ %s", data.ErrorMessage)
+	}
+
+	fmt.Println()
 	if data.Success {
-		fmt.Println(color.GreenString("✓ Execution completed successfully"))
+		fmt.Println(color.GreenString(line))
 	} else {
-		fmt.Println(color.RedString("✗ Execution failed"))
-		if data.ErrorMessage != "" {
-			fmt.Printf("  Error: %s\n", data.ErrorMessage)
-		}
+		fmt.Println(color.RedString(line))
 	}
+}
 
-	fmt.Println()
-	fmt.Printf("  Duration: %dms\n", data.DurationMs)
-	fmt.Printf("  Total steps: %d\n", data.TotalSteps)
-
-	if data.SuccessSteps > 0 {
-		fmt.Printf("  %s Successful: %d\n", color.GreenString("✓"), data.SuccessSteps)
+// formatDuration converts milliseconds to a human-readable duration string.
+func formatDuration(ms int64) string {
+	if ms < 1000 {
+		return fmt.Sprintf("%dms", ms)
 	}
-	if data.FailedSteps > 0 {
-		fmt.Printf("  %s Failed: %d\n", color.RedString("✗"), data.FailedSteps)
+	s := ms / 1000
+	if s < 60 {
+		return fmt.Sprintf("%ds", s)
 	}
-	if data.SkippedSteps > 0 {
-		fmt.Printf("  %s Skipped: %d\n", color.YellowString("⊘"), data.SkippedSteps)
+	m := s / 60
+	s %= 60
+	if m < 60 {
+		return fmt.Sprintf("%dm%ds", m, s)
 	}
-	if data.ChangedSteps > 0 {
-		fmt.Printf("  Changed: %d\n", data.ChangedSteps)
-	}
-
-	fmt.Println(strings.Repeat("─", 50))
+	h := m / 60
+	m %= 60
+	return fmt.Sprintf("%dh%dm%ds", h, m, s)
 }

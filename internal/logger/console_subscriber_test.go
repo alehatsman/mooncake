@@ -379,8 +379,8 @@ func TestConsoleSubscriber_OnEvent_Text_StepSkipped(t *testing.T) {
 			}
 
 			// Verify icon is present for files
-			if !strings.HasSuffix(tt.data.Name, "/") && !strings.Contains(output, "⊘") {
-				t.Error("output missing ⊘ icon for file")
+			if !strings.HasSuffix(tt.data.Name, "/") && !strings.Contains(output, "─") {
+				t.Error("output missing ─ icon for file")
 			}
 
 			// Verify reason if provided (only for files, not directories)
@@ -402,64 +402,65 @@ func TestConsoleSubscriber_OnEvent_Text_RunCompleted(t *testing.T) {
 		{
 			name: "successful run",
 			data: events.RunCompletedData{
-				TotalSteps:    10,
-				SuccessSteps:  8,
-				FailedSteps:   0,
-				SkippedSteps:  2,
-				ChangedSteps:  5,
-				DurationMs:    1234,
-				Success:       true,
-				ErrorMessage:  "",
+				TotalSteps:   10,
+				SuccessSteps: 8,
+				FailedSteps:  0,
+				SkippedSteps: 2,
+				ChangedSteps: 5,
+				DurationMs:   1234,
+				Success:      true,
+				ErrorMessage: "",
 			},
 			wantOutput: []string{
-				"Execution completed successfully",
-				"Duration: 1234ms",
-				"Total steps: 10",
-				"Successful: 8",
-				"Skipped: 2",
-				"Changed: 5",
+				"RECAP",
+				"ok=3",
+				"changed=5",
+				"skipped=2",
+				"failed=0",
+				"1s",
 			},
 		},
 		{
 			name: "failed run",
 			data: events.RunCompletedData{
-				TotalSteps:    5,
-				SuccessSteps:  3,
-				FailedSteps:   1,
-				SkippedSteps:  1,
-				ChangedSteps:  2,
-				DurationMs:    500,
-				Success:       false,
-				ErrorMessage:  "step failed: command not found",
+				TotalSteps:   5,
+				SuccessSteps: 3,
+				FailedSteps:  1,
+				SkippedSteps: 1,
+				ChangedSteps: 2,
+				DurationMs:   500,
+				Success:      false,
+				ErrorMessage: "step failed: command not found",
 			},
 			wantOutput: []string{
-				"Execution failed",
-				"Error: step failed: command not found",
-				"Duration: 500ms",
-				"Total steps: 5",
-				"Successful: 3",
-				"Failed: 1",
-				"Skipped: 1",
-				"Changed: 2",
+				"RECAP",
+				"ok=1",
+				"changed=2",
+				"skipped=1",
+				"failed=1",
+				"500ms",
+				"step failed: command not found",
 			},
 		},
 		{
 			name: "run with no changes",
 			data: events.RunCompletedData{
-				TotalSteps:    3,
-				SuccessSteps:  3,
-				FailedSteps:   0,
-				SkippedSteps:  0,
-				ChangedSteps:  0,
-				DurationMs:    200,
-				Success:       true,
-				ErrorMessage:  "",
+				TotalSteps:   3,
+				SuccessSteps: 3,
+				FailedSteps:  0,
+				SkippedSteps: 0,
+				ChangedSteps: 0,
+				DurationMs:   200,
+				Success:      true,
+				ErrorMessage: "",
 			},
 			wantOutput: []string{
-				"Execution completed successfully",
-				"Duration: 200ms",
-				"Total steps: 3",
-				"Successful: 3",
+				"RECAP",
+				"ok=3",
+				"changed=0",
+				"skipped=0",
+				"failed=0",
+				"200ms",
 			},
 		},
 	}
@@ -482,9 +483,9 @@ func TestConsoleSubscriber_OnEvent_Text_RunCompleted(t *testing.T) {
 				}
 			}
 
-			// Verify separator lines
-			if !strings.Contains(output, strings.Repeat("─", 50)) {
-				t.Error("output missing separator lines")
+			// Verify RECAP prefix is present
+			if !strings.Contains(output, "RECAP") {
+				t.Error("output missing RECAP prefix")
 			}
 		})
 	}

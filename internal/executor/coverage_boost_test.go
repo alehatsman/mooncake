@@ -474,8 +474,8 @@ func TestCheckSkipConditions_WhenFalse(t *testing.T) {
 	if !shouldSkip {
 		t.Error("Should skip when when is false")
 	}
-	if reason != "when" {
-		t.Errorf("Reason = %s, want 'when'", reason)
+	if reason != "when: false" {
+		t.Errorf("Reason = %s, want 'when: false'", reason)
 	}
 }
 

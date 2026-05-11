@@ -343,7 +343,7 @@ func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 			return false, "", err
 		}
 		if shouldSkip {
-			return true, "when", nil
+			return true, "when: " + strings.TrimSpace(step.When), nil
 		}
 	}
 
@@ -508,7 +508,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		}
 		if idempotencySkip {
 			shouldSkip = true
-			skipReason = "idempotency:" + idempotencyReason
+			skipReason = idempotencyReason
 		}
 	}
 
@@ -637,6 +637,9 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	if ec.CurrentResult != nil {
 		changed = ec.CurrentResult.Changed
 		resultData = ec.CurrentResult.ToMap()
+	}
+	if changed && ec.Stats.Changed != nil {
+		*ec.Stats.Changed++
 	}
 
 	// Emit step.completed event
@@ -889,6 +892,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 	statsExecuted := 0
 	statsSkipped := 0
 	statsFailed := 0
+	statsChanged := 0
 
 	executionContext := ExecutionContext{
 		Variables:    variables,
@@ -908,6 +912,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 			Executed: &statsExecuted,
 			Skipped:  &statsSkipped,
 			Failed:   &statsFailed,
+			Changed:  &statsChanged,
 		},
 
 		// Inject dependencies
@@ -927,14 +932,6 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 	// Calculate duration
 	duration := time.Since(startTime)
 
-	// Emit run.completed event (console subscriber handles display)
-	changedSteps := 0
-	// Count changed steps (steps that were executed and not failed)
-	// Changed status is tracked elsewhere, for now use simplified logic
-	if execErr == nil {
-		changedSteps = statsExecuted
-	}
-
 	publisher.Publish(events.Event{
 		Type:      events.EventRunCompleted,
 		Timestamp: time.Now(),
@@ -943,7 +940,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 			SuccessSteps: statsExecuted,
 			FailedSteps:  statsFailed,
 			SkippedSteps: statsSkipped,
-			ChangedSteps: changedSteps,
+			ChangedSteps: statsChanged,
 			DurationMs:   duration.Milliseconds(),
 			Success:      execErr == nil,
 			ErrorMessage: func() string {
