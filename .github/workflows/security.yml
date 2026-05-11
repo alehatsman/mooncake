@@ -39,10 +39,11 @@ jobs:
           go-version: '1.26.3'
           cache: true
 
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
       - name: Run gosec
-        uses: securego/gosec@master
-        with:
-          args: '-exclude-generated -exclude=G104,G115,G117,G204,G301,G306,G702,G703,G704 -fmt sarif -out gosec.sarif ./...'
+        run: gosec -exclude-generated -exclude=G104,G115,G117,G204,G301,G306,G702,G703,G704 -fmt sarif -out gosec.sarif ./...
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4

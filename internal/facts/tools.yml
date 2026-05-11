@@ -1,0 +1,107 @@
+# Tool probe definitions for mooncake snapshot.
+# Each entry describes how to detect one CLI tool's version.
+#
+# Fields:
+#   cmd     - binary name (looked up via PATH)
+#   args    - arguments to pass to the binary
+#   prefix  - string to strip from the first line of output before extracting version
+#   parser  - optional: "json_field" to extract from JSON output (requires json_key)
+#   json_key - JSON key prefix to extract value from (e.g. '"gitVersion": "')
+#   strip_suffix - if true, strip -(date) and (build) suffixes from version token
+#
+# User overrides: place additional entries in ~/.config/mooncake/tools.yml
+# Entries with the same cmd override the default.
+
+tools:
+  # Editors
+  - cmd: nvim
+    args: ["--version"]
+    prefix: "NVIM v"
+
+  - cmd: vim
+    args: ["--version"]
+    prefix: "VIM - Vi IMproved "
+
+  # Multiplexers / shells
+  - cmd: tmux
+    args: ["-V"]
+    prefix: "tmux "
+
+  - cmd: zsh
+    args: ["--version"]
+    prefix: "zsh "
+
+  - cmd: bash
+    args: ["--version"]
+    prefix: "GNU bash, version "
+    strip_suffix: true
+
+  - cmd: fish
+    args: ["--version"]
+    prefix: "fish, version "
+
+  # JavaScript
+  - cmd: node
+    args: ["--version"]
+    prefix: "v"
+
+  - cmd: npm
+    args: ["--version"]
+
+  # Rust
+  - cmd: rustc
+    args: ["--version"]
+    prefix: "rustc "
+    strip_suffix: true
+
+  - cmd: cargo
+    args: ["--version"]
+    prefix: "cargo "
+    strip_suffix: true
+
+  # Fuzzy finders / file tools
+  - cmd: fzf
+    args: ["--version"]
+    strip_suffix: true
+
+  - cmd: rg
+    args: ["--version"]
+    prefix: "ripgrep "
+
+  - cmd: fd
+    args: ["--version"]
+    prefix: "fd "
+
+  - cmd: bat
+    args: ["--version"]
+    prefix: "bat "
+
+  - cmd: eza
+    args: ["--version"]
+    prefix: "eza v"
+
+  # Kubernetes / cloud
+  - cmd: kubectl
+    args: ["version", "--client", "-o", "json"]
+    parser: json_field
+    json_key: '"gitVersion": "'
+
+  - cmd: helm
+    args: ["version", "--short"]
+    prefix: "v"
+
+  - cmd: terraform
+    args: ["version", "-json"]
+    parser: json_field
+    json_key: '"terraform_version": "'
+
+  # Network tools
+  - cmd: curl
+    args: ["--version"]
+    prefix: "curl "
+    strip_suffix: true
+
+  - cmd: wget
+    args: ["--version"]
+    prefix: "GNU Wget "
+    strip_suffix: true

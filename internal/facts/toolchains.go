@@ -2,11 +2,19 @@ package facts
 
 import (
 	"context"
+	_ "embed"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
+
+//go:embed tools.yml
+var defaultToolsYAML []byte
 
 // detectToolchains probes for common development tools.
 func detectToolchains() (docker, git, golang string) {
@@ -147,54 +155,111 @@ func detectOllamaEndpoint() string {
 	return "http://localhost:11434"
 }
 
-// toolSpec describes one tool to probe.
-type toolSpec struct {
-	cmd    string // binary name
-	args   []string
-	prefix string // strip this prefix from first line
+// ToolSpec describes how to probe one CLI tool for its version.
+// This is the public form used in YAML and by callers.
+type ToolSpec struct {
+	Cmd         string   `yaml:"cmd"`
+	Args        []string `yaml:"args"`
+	Prefix      string   `yaml:"prefix,omitempty"`
+	Parser      string   `yaml:"parser,omitempty"`       // "" or "json_field"
+	JSONKey     string   `yaml:"json_key,omitempty"`     // key for json_field parser
+	StripSuffix bool     `yaml:"strip_suffix,omitempty"` // strip -(build) suffixes
 }
 
-// extendedToolSpecs lists tools to probe in detectExtendedTools.
-var extendedToolSpecs = []toolSpec{
-	{"nvim", []string{"--version"}, "NVIM v"},
-	{"vim", []string{"--version"}, "VIM - Vi IMproved "},
-	{"tmux", []string{"-V"}, "tmux "},
-	{"zsh", []string{"--version"}, "zsh "},
-	{"bash", []string{"--version"}, "GNU bash, version "},
-	{"fish", []string{"--version"}, "fish, version "},
-	{"node", []string{"--version"}, "v"},
-	{"npm", []string{"--version"}, ""},
-	{"rustc", []string{"--version"}, "rustc "},
-	{"cargo", []string{"--version"}, "cargo "},
-	{"fzf", []string{"--version"}, ""},
-	{"rg", []string{"--version"}, "ripgrep "},
-	{"fd", []string{"--version"}, "fd "},
-	{"bat", []string{"--version"}, "bat "},
-	{"eza", []string{"--version"}, "eza v"},
-	{"kubectl", []string{"version", "--client", "-o", "json"}, ""},
-	{"helm", []string{"version", "--short"}, "v"},
-	{"terraform", []string{"version", "-json"}, ""},
-	{"curl", []string{"--version"}, "curl "},
-	{"wget", []string{"--version"}, "GNU Wget "},
+// toolsFile is the top-level structure of tools.yml.
+type toolsFile struct {
+	Tools []ToolSpec `yaml:"tools"`
+}
+
+// loadedSpecs caches the merged tool list after first load.
+var (
+	loadedSpecs     []ToolSpec
+	loadedSpecsOnce sync.Once
+)
+
+// loadToolSpecs loads the embedded default tools.yml, then merges any entries
+// from ~/.config/mooncake/tools.yml. User entries override defaults by cmd.
+func loadToolSpecs() []ToolSpec {
+	loadedSpecsOnce.Do(func() {
+		// Parse embedded defaults
+		var def toolsFile
+		if err := yaml.Unmarshal(defaultToolsYAML, &def); err == nil {
+			loadedSpecs = def.Tools
+		}
+
+		// Attempt user override file
+		userFile := userToolsFile()
+		// #nosec G304 -- userFile is constructed from os.UserHomeDir/os.UserConfigDir, not user input
+		if data, err := os.ReadFile(userFile); err == nil {
+			var user toolsFile
+			if err := yaml.Unmarshal(data, &user); err == nil {
+				loadedSpecs = mergeToolSpecs(loadedSpecs, user.Tools)
+			}
+		}
+	})
+	return loadedSpecs
+}
+
+// userToolsFile returns the path to the user's tools override file.
+// Checks XDG_CONFIG_HOME first, then ~/.config/mooncake, then the OS default.
+func userToolsFile() string {
+	// XDG / Linux convention (also set on macOS by some setups)
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "mooncake", "tools.yml")
+	}
+
+	// Fallback: ~/.config/mooncake/tools.yml (works everywhere)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	dotConfig := filepath.Join(home, ".config", "mooncake", "tools.yml")
+	if _, statErr := os.Stat(dotConfig); statErr == nil {
+		return dotConfig
+	}
+
+	// OS-native config dir (~/Library/Application Support on macOS)
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(configDir, "mooncake", "tools.yml")
+}
+
+// mergeToolSpecs merges user entries into defaults: same cmd → user wins; new cmds appended.
+func mergeToolSpecs(defaults, overrides []ToolSpec) []ToolSpec {
+	index := make(map[string]int, len(defaults))
+	merged := make([]ToolSpec, len(defaults))
+	copy(merged, defaults)
+	for i, s := range merged {
+		index[s.Cmd] = i
+	}
+	for _, u := range overrides {
+		if i, ok := index[u.Cmd]; ok {
+			merged[i] = u
+		} else {
+			merged = append(merged, u)
+		}
+	}
+	return merged
 }
 
 // detectExtendedTools probes for an extended set of dev tools, each with a 2s
 // timeout. Returns a map of tool name → version (absent if not found).
 func detectExtendedTools() map[string]string {
 	tools := make(map[string]string)
-	for _, spec := range extendedToolSpecs {
+	for _, spec := range loadToolSpecs() {
 		v := probeToolVersion(spec)
 		if v != "" {
-			tools[spec.cmd] = v
+			tools[spec.Cmd] = v
 		}
 	}
-	// Keep legacy fields in sync for any tool already tracked
 	return tools
 }
 
 // probeToolVersion runs a single tool probe with a 2s timeout.
-func probeToolVersion(spec toolSpec) string {
-	path, err := exec.LookPath(spec.cmd)
+func probeToolVersion(spec ToolSpec) string {
+	path, err := exec.LookPath(spec.Cmd)
 	if err != nil {
 		return ""
 	}
@@ -203,7 +268,7 @@ func probeToolVersion(spec toolSpec) string {
 	defer cancel()
 
 	// #nosec G204 -- path validated via exec.LookPath
-	cmd := exec.CommandContext(ctx, path, spec.args...)
+	cmd := exec.CommandContext(ctx, path, spec.Args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil && len(out) == 0 {
 		return ""
@@ -211,26 +276,20 @@ func probeToolVersion(spec toolSpec) string {
 
 	raw := strings.TrimSpace(string(out))
 
-	// kubectl --client -o json: {"clientVersion":{"gitVersion": "v1.28.0",...}}
-	if spec.cmd == "kubectl" {
-		// Handle both compact and pretty-printed JSON
-		v := parseJSONField(raw, `"gitVersion": "`)
+	// json_field parser: extract a quoted value from JSON output
+	if spec.Parser == "json_field" && spec.JSONKey != "" {
+		// Try with and without space after colon (compact vs pretty JSON)
+		v := parseJSONField(raw, spec.JSONKey)
 		if v == "" {
-			v = parseJSONField(raw, `"gitVersion":"`)
-		}
-		return v
-	}
-	// terraform -json: {"terraform_version": "1.5.7",...}
-	if spec.cmd == "terraform" {
-		v := parseJSONField(raw, `"terraform_version": "`)
-		if v == "" {
-			v = parseJSONField(raw, `"terraform_version":"`)
+			// Try compact variant (remove spaces around colon)
+			compactKey := strings.ReplaceAll(spec.JSONKey, ": ", ":")
+			v = parseJSONField(raw, compactKey)
 		}
 		return v
 	}
 
 	line := strings.SplitN(raw, "\n", 2)[0]
-	line = strings.TrimPrefix(line, spec.prefix)
+	line = strings.TrimPrefix(line, spec.Prefix)
 
 	// Take first whitespace-separated token as the version
 	fields := strings.Fields(line)
@@ -238,9 +297,12 @@ func probeToolVersion(spec toolSpec) string {
 		return ""
 	}
 	v := strings.TrimSuffix(fields[0], ",")
-	// Drop the trailing bracket-version suffix like "5.3.9(1)-release" → "5.3.9"
-	if idx := strings.IndexAny(v, "-("); idx > 0 && idx < len(v)-1 {
-		v = v[:idx]
+
+	// strip_suffix: drop -(build) and (N)-suffix patterns
+	if spec.StripSuffix {
+		if idx := strings.IndexAny(v, "-("); idx > 0 {
+			v = v[:idx]
+		}
 	}
 	return v
 }
