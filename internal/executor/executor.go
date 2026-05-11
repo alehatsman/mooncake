@@ -104,6 +104,7 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -601,15 +602,26 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		}
 
 		// Emit step.failed event
-		ec.EmitEvent(events.EventStepFailed, events.StepFailedData{
+		failedData := events.StepFailedData{
 			StepID:       stepID,
 			Name:         stepName,
+			Action:       step.ActionType,
 			Level:        ec.Level,
 			ErrorMessage: stepErr.Error(),
+			ExitCode:     -1,
 			DurationMs:   stepDuration.Milliseconds(),
 			Depth:        depth,
 			DryRun:       ec.DryRun,
-		})
+		}
+		var cmdErr *CommandError
+		if errors.As(stepErr, &cmdErr) {
+			failedData.ExitCode = cmdErr.ExitCode
+		}
+		if ec.CurrentResult != nil {
+			failedData.Stdout = truncate(ec.CurrentResult.Stdout, 2000)
+			failedData.Stderr = truncate(ec.CurrentResult.Stderr, 2000)
+		}
+		ec.EmitEvent(events.EventStepFailed, failedData)
 
 		if step.IgnoreErrors {
 			ec.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
@@ -958,6 +970,13 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 // formatMode formats an os.FileMode as an octal string (e.g., "0644").
 func formatMode(mode os.FileMode) string {
 	return fmt.Sprintf("%#o", mode)
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen]
 }
 
 // ParseFileMode parses a mode string (e.g., "0644") into os.FileMode.

@@ -135,6 +135,9 @@ func run(c *cli.Context) error {
 		level = logger.ErrorLevel
 	}
 
+	// Always emit structured JSON errors to stderr on step failures.
+	publisher.Subscribe(logger.NewStderrErrorSubscriber())
+
 	// Create appropriate subscriber based on mode
 	if outputFormat == outputFormatAgent {
 		publisher.Subscribe(logger.NewAgentSubscriber())

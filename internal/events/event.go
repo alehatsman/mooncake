@@ -171,8 +171,12 @@ type StepSkippedData struct {
 type StepFailedData struct {
 	StepID       string `json:"step_id"`
 	Name         string `json:"name"`
+	Action       string `json:"action,omitempty"`
 	Level        int    `json:"level"`
 	ErrorMessage string `json:"error_message"`
+	ExitCode     int    `json:"exit_code"`
+	Stdout       string `json:"stdout,omitempty"`
+	Stderr       string `json:"stderr,omitempty"`
 	DurationMs   int64  `json:"duration_ms"`
 	Depth        int    `json:"depth,omitempty"` // Directory depth for filetree items
 	DryRun       bool   `json:"dry_run"`
