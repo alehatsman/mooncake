@@ -239,8 +239,11 @@ mooncake becomes the system sense organ for any AI agent running on a machine.
 - spec-05 — S6.3 Fact Query ✅
 
 ### Batch 2 (selected)
-- spec-06 — S2.1 Quiet Mode
+- spec-06 — S2.1 Quiet Mode ✅
 - spec-07 — S1.3 Step Timing + S1.5 Changed/OK Distinction
 - spec-08 — S5.1 Run Log + S5.2 Last Run Summary
 - spec-09 — S6.5 Structured Error Messages
 - spec-10 — S6.1 MCP Server Mode
+
+### Preset Registry
+- spec-11 — Community preset registry with remote fetch and multiple sources

@@ -247,7 +247,7 @@ func TestPresetsCommand(t *testing.T) {
 	}
 
 	// Test subcommands exist
-	expectedSubcommands := []string{"add", "list", "info", "install", "status", "uninstall"}
+	expectedSubcommands := []string{"search", "update", "registry", "add", "list", "info", "install", "status", "uninstall"}
 	if len(cmd.Subcommands) != len(expectedSubcommands) {
 		t.Errorf("cmd.Subcommands length = %d, expected %d", len(cmd.Subcommands), len(expectedSubcommands))
 	}
@@ -1873,6 +1873,9 @@ func TestPresetsSubcommandActions(t *testing.T) {
 	cmd := presetsCommand()
 
 	expectedSubcommands := map[string]bool{
+		"search":    true,
+		"update":    true,
+		"registry":  true,
 		"add":       true,
 		"list":      true,
 		"info":      true,
@@ -1887,7 +1890,8 @@ func TestPresetsSubcommandActions(t *testing.T) {
 			continue
 		}
 
-		if subcmd.Action == nil {
+		// "registry" uses Subcommands instead of Action
+		if subcmd.Name != "registry" && subcmd.Action == nil {
 			t.Errorf("subcommand %s should have an action", subcmd.Name)
 		}
 

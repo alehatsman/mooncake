@@ -51,6 +51,74 @@ Use subcommands for non-interactive operations.`,
 		},
 		Subcommands: []*cli.Command{
 			{
+				Name:      "search",
+				Usage:     "Search for presets in configured registries",
+				ArgsUsage: "<query>",
+				Action:    searchPresetsAction,
+				Description: `Search for presets by name or description substring (case-insensitive).
+
+Indexes are loaded from cache; run 'mooncake presets update' to refresh.
+
+Examples:
+  mooncake presets search neovim
+  mooncake presets search editor`,
+			},
+			{
+				Name:   "update",
+				Usage:  "Update preset index from configured registries",
+				Action: updateRegistriesAction,
+				Description: `Re-fetch index.yml from all (or one) configured registries and update the local cache.
+
+Examples:
+  mooncake presets update
+  mooncake presets update --registry official`,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "registry",
+						Usage: "Update only this named registry",
+					},
+				},
+			},
+			{
+				Name:  "registry",
+				Usage: "Manage remote preset registries",
+				Subcommands: []*cli.Command{
+					{
+						Name:      "add",
+						Usage:     "Add a remote registry",
+						ArgsUsage: "<repo>",
+						Action:    registryAddAction,
+						Description: `Add a GitHub repository as a preset registry.
+
+Examples:
+  mooncake presets registry add myorg/mypresets
+  mooncake presets registry add myorg/mypresets --name myrepo --ref dev`,
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "name",
+								Usage: "Alias for the registry (default: repo name part)",
+							},
+							&cli.StringFlag{
+								Name:  "ref",
+								Usage: "Branch or tag to use (default: main)",
+								Value: "main",
+							},
+						},
+					},
+					{
+						Name:   "list",
+						Usage:  "List configured registries",
+						Action: registryListAction,
+					},
+					{
+						Name:      "remove",
+						Usage:     "Remove a configured registry",
+						ArgsUsage: "<name>",
+						Action:    registryRemoveAction,
+					},
+				},
+			},
+			{
 				Name:      "add",
 				Usage:     "Add a preset from URL, git repository, or local path",
 				ArgsUsage: "<source>",
@@ -372,14 +440,76 @@ func presetInfoAction(c *cli.Context) error {
 	return nil
 }
 
-// installPresetAction installs a preset
+// installPresetAction installs a preset, falling back to remote registries if not found locally
 func installPresetAction(c *cli.Context) error {
 	if c.NArg() == 0 {
 		return fmt.Errorf("preset name required\n\nUsage: mooncake preset install <preset-name>")
 	}
 
 	name := c.Args().First()
+
+	// Try to find preset locally first
+	if _, err := presets.LoadPreset(name); err != nil {
+		// Not found locally — try remote registries
+		if fetchErr := fetchPresetFromRegistry(name); fetchErr != nil {
+			// Return the original not-found error so the message is clear
+			return fmt.Errorf("failed to load preset '%s': %w", name, err)
+		}
+	}
+
 	return executePresetInstall(c, name)
+}
+
+// fetchPresetFromRegistry attempts to download a preset from configured registries.
+// It searches cached indexes (fetching if needed) and downloads the preset to
+// ~/.mooncake/presets/<name>/ so that LoadPreset can find it.
+func fetchPresetFromRegistry(name string) error {
+	cfg, err := registry.LoadRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load registries config: %w", err)
+	}
+
+	userDir, err := registry.UserPresetsDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user presets directory: %w", err)
+	}
+
+	for _, reg := range cfg.Registries {
+		// Load cached index, fetching if not yet cached
+		index, cacheErr := registry.LoadCachedIndex(reg.Name)
+		if cacheErr != nil {
+			// Not cached yet — try to fetch it now
+			index, cacheErr = registry.CacheRemoteIndex(reg)
+			if cacheErr != nil {
+				// Can't reach this registry, skip silently and try next
+				continue
+			}
+		}
+
+		// Check if this registry knows about the preset
+		found := false
+		for _, meta := range index.Presets {
+			if meta.Name == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+
+		// Download the preset from GitHub
+		destDir := filepath.Join(userDir, name)
+		fmt.Printf("Fetching %s from %s...\n", name, reg.Name)
+
+		if dlErr := registry.DownloadPreset(reg, name, destDir); dlErr != nil {
+			return fmt.Errorf("failed to download preset '%s' from registry '%s': %w", name, reg.Name, dlErr)
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("preset '%s' not found in any configured registry", name)
 }
 
 // collectParameters prompts the user for preset parameters interactively.
@@ -1027,3 +1157,197 @@ func getSourceLabel(source string) string {
 }
 
 // truncate truncates a string to maxLen, adding "..." if truncated
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// searchPresetsAction searches for presets in configured registries
+func searchPresetsAction(c *cli.Context) error {
+	query := strings.ToLower(c.Args().First())
+
+	cfg, err := registry.LoadRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load registries config: %w", err)
+	}
+
+	type result struct {
+		name     string
+		regName  string
+		desc     string
+	}
+
+	var results []result
+
+	for _, reg := range cfg.Registries {
+		index, cacheErr := registry.LoadCachedIndex(reg.Name)
+		if cacheErr != nil {
+			// Try to fetch if not cached
+			index, cacheErr = registry.CacheRemoteIndex(reg)
+			if cacheErr != nil {
+				fmt.Printf("Warning: could not load index for registry '%s': %v\n", reg.Name, cacheErr)
+				continue
+			}
+		}
+
+		for _, meta := range index.Presets {
+			if query == "" ||
+				strings.Contains(strings.ToLower(meta.Name), query) ||
+				strings.Contains(strings.ToLower(meta.Description), query) {
+				results = append(results, result{
+					name:    meta.Name,
+					regName: reg.Name,
+					desc:    meta.Description,
+				})
+			}
+		}
+	}
+
+	if len(results) == 0 {
+		if query != "" {
+			fmt.Printf("No presets found matching %q.\n", query)
+		} else {
+			fmt.Println("No presets found in any registry.")
+		}
+		return nil
+	}
+
+	fmt.Printf("%-30s  %-12s  %s\n", "NAME", "REGISTRY", "DESCRIPTION")
+	fmt.Printf("%-30s  %-12s  %s\n", strings.Repeat("-", 30), strings.Repeat("-", 12), strings.Repeat("-", 40))
+	for _, r := range results {
+		fmt.Printf("%-30s  %-12s  %s\n", r.name, r.regName, truncate(r.desc, 60))
+	}
+
+	return nil
+}
+
+// updateRegistriesAction re-fetches indexes from configured registries
+func updateRegistriesAction(c *cli.Context) error {
+	cfg, err := registry.LoadRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load registries config: %w", err)
+	}
+
+	filterName := c.String("registry")
+
+	for _, reg := range cfg.Registries {
+		if filterName != "" && reg.Name != filterName {
+			continue
+		}
+
+		fmt.Printf("Updating index for registry '%s' (%s@%s)...\n", reg.Name, reg.Repo, reg.Ref)
+		index, fetchErr := registry.CacheRemoteIndex(reg)
+		if fetchErr != nil {
+			fmt.Printf("  Error: %v\n", fetchErr)
+			continue
+		}
+		fmt.Printf("  Done. %d presets indexed.\n", len(index.Presets))
+	}
+
+	return nil
+}
+
+// registryAddAction adds a new registry
+func registryAddAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return fmt.Errorf("repo required\n\nUsage: mooncake presets registry add <repo> [--name <alias>] [--ref <branch>]")
+	}
+
+	repo := c.Args().First()
+	ref := c.String("ref")
+	if ref == "" {
+		ref = "main"
+	}
+
+	// Derive name from repo if not provided
+	name := c.String("name")
+	if name == "" {
+		parts := strings.Split(repo, "/")
+		name = parts[len(parts)-1]
+	}
+
+	cfg, err := registry.LoadRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load registries config: %w", err)
+	}
+
+	// Check for duplicates
+	for _, reg := range cfg.Registries {
+		if reg.Name == name {
+			return fmt.Errorf("registry with name '%s' already exists", name)
+		}
+	}
+
+	cfg.Registries = append(cfg.Registries, registry.RemoteRegistry{
+		Name: name,
+		Repo: repo,
+		Ref:  ref,
+	})
+
+	if err := registry.SaveRegistriesConfig(cfg); err != nil {
+		return fmt.Errorf("failed to save registries config: %w", err)
+	}
+
+	fmt.Printf("Registry '%s' added (%s@%s).\n", name, repo, ref)
+	return nil
+}
+
+// registryListAction lists configured registries
+func registryListAction(_ *cli.Context) error {
+	cfg, err := registry.LoadRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load registries config: %w", err)
+	}
+
+	if len(cfg.Registries) == 0 {
+		fmt.Println("No registries configured.")
+		return nil
+	}
+
+	fmt.Printf("%-15s  %-30s  %s\n", "NAME", "REPO", "REF")
+	fmt.Printf("%-15s  %-30s  %s\n", strings.Repeat("-", 15), strings.Repeat("-", 30), strings.Repeat("-", 10))
+	for _, reg := range cfg.Registries {
+		fmt.Printf("%-15s  %-30s  %s\n", reg.Name, reg.Repo, reg.Ref)
+	}
+
+	return nil
+}
+
+// registryRemoveAction removes a registry by name
+func registryRemoveAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return fmt.Errorf("registry name required\n\nUsage: mooncake presets registry remove <name>")
+	}
+
+	name := c.Args().First()
+
+	cfg, err := registry.LoadRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load registries config: %w", err)
+	}
+
+	filtered := cfg.Registries[:0]
+	removed := false
+	for _, reg := range cfg.Registries {
+		if reg.Name == name {
+			removed = true
+			continue
+		}
+		filtered = append(filtered, reg)
+	}
+
+	if !removed {
+		return fmt.Errorf("registry '%s' not found", name)
+	}
+
+	cfg.Registries = filtered
+
+	if err := registry.SaveRegistriesConfig(cfg); err != nil {
+		return fmt.Errorf("failed to save registries config: %w", err)
+	}
+
+	fmt.Printf("Registry '%s' removed.\n", name)
+	return nil
+}
