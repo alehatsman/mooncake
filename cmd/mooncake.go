@@ -210,17 +210,19 @@ func runFromPlan(c *cli.Context, planPath string) error {
 }
 
 func factsCommand(c *cli.Context) error {
-	format := c.String("format")
+	// Collect facts (cached)
+	f := facts.Collect()
 
-	// Validate format
+	// --query mode: print specific values and exit
+	if queries := c.StringSlice("query"); len(queries) > 0 {
+		return factsQuery(f.ToMap(), queries)
+	}
+
+	format := c.String("format")
 	if format != outputFormatText && format != outputFormatJSON {
 		return fmt.Errorf("invalid format: %s (use 'text' or 'json')", format)
 	}
 
-	// Collect facts
-	f := facts.Collect()
-
-	// Output based on format
 	switch format {
 	case outputFormatJSON:
 		encoder := json.NewEncoder(os.Stdout)
@@ -232,6 +234,54 @@ func factsCommand(c *cli.Context) error {
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
+}
+
+// factsQuery looks up one or more dot-path keys in the facts map and prints results.
+// Key normalization: dots are replaced with underscores to match ToMap() key names.
+// Exits with code 1 if any key is not found or has an empty value.
+func factsQuery(m map[string]interface{}, queries []string) error {
+	multi := len(queries) > 1
+	missing := false
+
+	for _, q := range queries {
+		key := strings.ReplaceAll(q, ".", "_")
+		val, ok := m[key]
+		if !ok || val == nil || val == "" || val == false {
+			if multi {
+				fmt.Printf("%s=\n", q)
+			}
+			missing = true
+			continue
+		}
+
+		var out string
+		switch v := val.(type) {
+		case string:
+			out = v
+		case bool:
+			out = "true" // false is caught by the early-exit condition above
+		case int, int64, float64:
+			out = fmt.Sprintf("%v", v)
+		default:
+			b, err := json.Marshal(v)
+			if err != nil {
+				out = fmt.Sprintf("%v", v)
+			} else {
+				out = string(b)
+			}
+		}
+
+		if multi {
+			fmt.Printf("%s=%s\n", q, out)
+		} else {
+			fmt.Println(out)
+		}
+	}
+
+	if missing {
+		return cli.Exit("", 1)
+	}
+	return nil
 }
 
 // actionsListCommand lists all registered actions with their platform support.
@@ -736,6 +786,11 @@ func createApp() *cli.App {
 						Aliases: []string{"f"},
 						Value:   "text",
 						Usage:   "Output format: text or json",
+					},
+					&cli.StringSliceFlag{
+						Name:    "query",
+						Aliases: []string{"q"},
+						Usage:   "Query a specific fact by dot-path key (e.g. go.version). Repeatable.",
 					},
 				},
 				Action: factsCommand,
