@@ -663,6 +663,7 @@ func createApp() *cli.App {
 			schemaCommand(),
 			snapshotCommand(),
 			lastCommand(),
+			mcpCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",
