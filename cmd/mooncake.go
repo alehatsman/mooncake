@@ -138,6 +138,9 @@ func run(c *cli.Context) error {
 	// Always emit structured JSON errors to stderr on step failures.
 	publisher.Subscribe(logger.NewStderrErrorSubscriber())
 
+	// Always record run history (best-effort).
+	publisher.Subscribe(logger.NewRunLogSubscriber(c.String("config")))
+
 	// Create appropriate subscriber based on mode
 	if outputFormat == outputFormatAgent {
 		publisher.Subscribe(logger.NewAgentSubscriber())
@@ -210,6 +213,7 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	// Create console subscriber for text output
 	subscriber := logger.NewConsoleSubscriber(level, outputFormatText)
 	publisher.Subscribe(subscriber)
+	publisher.Subscribe(logger.NewRunLogSubscriber(planPath))
 
 	// Create minimal logger for internal use
 	internalLog := logger.NewLogger(level)
@@ -658,6 +662,7 @@ func createApp() *cli.App {
 			docsCommand(),
 			schemaCommand(),
 			snapshotCommand(),
+			lastCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",
