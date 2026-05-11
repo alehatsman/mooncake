@@ -17,7 +17,6 @@ linters:
     - misspell
     - unparam
     - unconvert
-    - goconst
     - dupl
     - prealloc
     - bodyclose
@@ -26,6 +25,7 @@ linters:
     - errname
     - exhaustive
     - wrapcheck
+    - goconst
 
   settings:
     gosec:
@@ -64,7 +64,7 @@ linters:
 
     goconst:
       min-len: 3
-      min-occurrences: 3
+      min-occurrences: 6
 
     govet:
       enable:

@@ -16,6 +16,7 @@ import (
 	"os/user"
 	"runtime"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -351,8 +352,15 @@ func (h *Handler) copyFile(src, dest string, mode os.FileMode, step *config.Step
 			return fmt.Errorf("failed to move file with sudo: %w", err)
 		}
 	} else {
-		if err := os.Rename(tmpPath, dest); err != nil {
-			return fmt.Errorf("failed to move file: %w", err)
+		if renameErr := os.Rename(tmpPath, dest); renameErr != nil {
+			// Fallback for cross-device moves (e.g. btrfs subvolumes, tmpfs → home)
+			if linkErr, ok := renameErr.(*os.LinkError); ok && linkErr.Err == syscall.EXDEV {
+				if copyErr := crossDeviceCopy(tmpPath, dest, mode); copyErr != nil {
+					return fmt.Errorf("failed to move file: %w", copyErr)
+				}
+			} else {
+				return fmt.Errorf("failed to move file: %w", renameErr)
+			}
 		}
 	}
 
@@ -469,4 +477,30 @@ func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executo
 	}
 
 	return nil
+}
+
+// crossDeviceCopy copies src to dst when os.Rename fails with EXDEV
+// (source and destination are on different filesystems/subvolumes).
+func crossDeviceCopy(src, dst string, mode os.FileMode) error {
+	// #nosec G304 -- source path comes from validated config
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+
+	// #nosec G304 -- destination path comes from validated config
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = out.Close() }()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		return err
+	}
+	return os.Remove(src)
 }

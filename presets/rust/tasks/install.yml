@@ -89,9 +89,9 @@
 
 - name: Verify installation with assert
   assert:
-    command:
-      cmd: command -v rustc
-      exit_code: 0
+    file:
+      path: "~/.cargo/bin/rustc"
+      exists: true
 
 - name: Print installation summary
   print: |

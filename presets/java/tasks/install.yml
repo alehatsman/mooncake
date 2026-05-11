@@ -33,6 +33,14 @@
   become: true
   when: dnf_available or yum_available and java_check.rc != 0
 
+# Linux - Arch Linux
+- name: Install OpenJDK (Arch Linux)
+  package:
+    name: "jdk{{ parameters.version }}-openjdk"
+    state: present
+  become: true
+  when: pacman_available and java_check.rc != 0
+
 # Set JAVA_HOME
 - name: Create Java environment file
   file:
@@ -53,7 +61,7 @@
     done
   when: parameters.set_java_home
 
-# Verify installation
+# Verify installation — java is a system package so command -v works in non-interactive shells
 - name: Verify installation with assert
   assert:
     command:

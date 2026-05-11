@@ -314,7 +314,7 @@ func (h *Handler) performSearch(rootPath, pattern string, rs *config.RepoSearch,
 		}
 
 		// Read file content
-		content, err := os.ReadFile(path) // #nosec G304 - path is validated via filepath.Walk
+		content, err := os.ReadFile(path) // #nosec G304,G122 - path is validated via filepath.Walk
 		if err != nil {
 			ctx.GetLogger().Debugf("  Warning: Failed to read %s: %v", path, err)
 			return nil

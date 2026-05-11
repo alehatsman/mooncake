@@ -14,31 +14,31 @@ func TestConsoleLogger_LogLevels(t *testing.T) {
 		{
 			name:      "debug level logs debug",
 			logLevel:  DebugLevel,
-			logFunc:   func(l Logger, msg string) { l.Debugf(msg) },
+			logFunc:   func(l Logger, msg string) { l.Debugf("%s", msg) },
 			shouldLog: true,
 		},
 		{
 			name:      "info level skips debug",
 			logLevel:  InfoLevel,
-			logFunc:   func(l Logger, msg string) { l.Debugf(msg) },
+			logFunc:   func(l Logger, msg string) { l.Debugf("%s", msg) },
 			shouldLog: false,
 		},
 		{
 			name:      "info level logs info",
 			logLevel:  InfoLevel,
-			logFunc:   func(l Logger, msg string) { l.Infof(msg) },
+			logFunc:   func(l Logger, msg string) { l.Infof("%s", msg) },
 			shouldLog: true,
 		},
 		{
 			name:      "error level skips info",
 			logLevel:  ErrorLevel,
-			logFunc:   func(l Logger, msg string) { l.Infof(msg) },
+			logFunc:   func(l Logger, msg string) { l.Infof("%s", msg) },
 			shouldLog: false,
 		},
 		{
 			name:      "error level logs error",
 			logLevel:  ErrorLevel,
-			logFunc:   func(l Logger, msg string) { l.Errorf(msg) },
+			logFunc:   func(l Logger, msg string) { l.Errorf("%s", msg) },
 			shouldLog: true,
 		},
 	}

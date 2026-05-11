@@ -1131,6 +1131,10 @@
           "description": "Replace text in files using literal or regex patterns",
           "$ref": "#/definitions/file_replace"
         },
+        "ignore_errors": {
+          "type": "boolean",
+          "description": "Continue execution even if this step fails (universal)"
+        },
         "include": {
           "type": "string",
           "description": "Path to YAML file with steps to include"

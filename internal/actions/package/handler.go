@@ -10,6 +10,7 @@
 package package_handler
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -111,8 +112,15 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		state = "present"
 	}
 
-	// Build package list
+	// Build package list and render template variables in names.
+	// TODO: consider moving this into the plan phase so plan output shows expanded names.
 	packages := h.buildPackageList(pkg)
+	for i, name := range packages {
+		rendered, renderErr := ctx.GetTemplate().Render(name, ctx.GetVariables())
+		if renderErr == nil {
+			packages[i] = rendered
+		}
+	}
 
 	// Create result
 	result := executor.NewResult()
@@ -120,12 +128,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Handle upgrade operation
 	if pkg.Upgrade {
-		return h.executeUpgrade(ec, manager, pkg)
+		return h.executeUpgrade(ec, manager, pkg, step.Become)
 	}
 
 	// Update cache if requested
 	if pkg.UpdateCache {
-		if err := h.updateCache(ec, manager); err != nil {
+		if err := h.updateCache(ec, manager, step.Become); err != nil {
 			return nil, fmt.Errorf("failed to update package cache: %w", err)
 		}
 	}
@@ -133,9 +141,9 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Execute based on state
 	switch state {
 	case statePresent, "latest":
-		return h.installPackages(ec, manager, packages, state == "latest", pkg.Extra)
+		return h.installPackages(ec, manager, packages, state == "latest", pkg.Extra, step.Become)
 	case stateAbsent:
-		return h.removePackages(ec, manager, packages, pkg.Extra)
+		return h.removePackages(ec, manager, packages, pkg.Extra, step.Become)
 	default:
 		return nil, fmt.Errorf("unsupported state: %s", state)
 	}
@@ -261,7 +269,7 @@ func (h *Handler) buildPackageList(pkg *config.Package) []string {
 }
 
 // updateCache updates the package manager cache.
-func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string) error {
+func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, become bool) error {
 	var cmdArgs []string
 	switch manager {
 	case pmApt:
@@ -281,11 +289,7 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string) err
 
 	ec.Logger.Debugf("  Updating package cache: %s", strings.Join(cmdArgs, " "))
 
-	// Execute the update command
-	// #nosec G204 - Package manager commands are validated
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	output, err := cmd.CombinedOutput()
-
+	output, err := h.runCmd(ec, become, cmdArgs)
 	if err != nil {
 		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 		return fmt.Errorf("failed to update package cache: %w", err)
@@ -294,8 +298,22 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string) err
 	return nil
 }
 
+// runCmd executes a command, wrapping with sudo -S when become is true.
+func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []string) ([]byte, error) {
+	var cmd *exec.Cmd
+	if become {
+		// #nosec G204 - sudo wrapping for privilege escalation
+		cmd = exec.Command("sudo", append([]string{"-S"}, cmdArgs...)...)
+		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+	} else {
+		// #nosec G204 - Package manager commands are validated
+		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	}
+	return cmd.CombinedOutput()
+}
+
 // installPackages installs or upgrades packages.
-func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string, packages []string, upgrade bool, extra []string) (actions.Result, error) {
+func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string, packages []string, upgrade bool, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
 	for _, pkg := range packages {
@@ -315,11 +333,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 		ec.Logger.Infof("  Installing package: %s", pkg)
 		ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
-		// Execute the install command
-		// #nosec G204 - Package manager commands are validated
-		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-		output, execErr := cmd.CombinedOutput()
-
+		output, execErr := h.runCmd(ec, become, cmdArgs)
 		if execErr != nil {
 			ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 			return nil, fmt.Errorf("failed to install package %q: %w", pkg, execErr)
@@ -332,7 +346,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 }
 
 // removePackages removes packages.
-func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, packages []string, extra []string) (actions.Result, error) {
+func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, packages []string, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
 	for _, pkg := range packages {
@@ -352,11 +366,7 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 		ec.Logger.Infof("  Removing package: %s", pkg)
 		ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
-		// Execute the remove command
-		// #nosec G204 - Package manager commands are validated
-		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-		output, execErr := cmd.CombinedOutput()
-
+		output, execErr := h.runCmd(ec, become, cmdArgs)
 		if execErr != nil {
 			ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 			return nil, fmt.Errorf("failed to remove package %q: %w", pkg, execErr)
@@ -369,18 +379,14 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 }
 
 // executeUpgrade upgrades all packages.
-func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, pkg *config.Package) (actions.Result, error) {
+func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, pkg *config.Package, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
 	cmdArgs := h.buildUpgradeCommand(manager, pkg.Extra)
 	ec.Logger.Infof("  Upgrading all packages")
 	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
-	// Execute the upgrade command
-	// #nosec G204 - Package manager commands are validated
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	output, execErr := cmd.CombinedOutput()
-
+	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
 		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 		return nil, fmt.Errorf("failed to upgrade packages: %w", execErr)

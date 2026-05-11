@@ -595,7 +595,6 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Handle errors
 	if stepErr != nil {
-		ec.Logger.Errorf("%v", stepErr)
 		// Update failed statistics
 		if ec.Stats.Failed != nil {
 			*ec.Stats.Failed++
@@ -612,7 +611,19 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 			DryRun:       ec.DryRun,
 		})
 
-		return stepErr
+		if step.IgnoreErrors {
+			ec.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
+			// Register a failed result so step.register variables reflect the failure
+			if step.Register != "" {
+				failedResult := NewResult()
+				failedResult.Failed = true
+				failedResult.Rc = 1
+				failedResult.RegisterTo(ec.Variables, step.Register)
+			}
+		} else {
+			ec.Logger.Errorf("%v", stepErr)
+			return stepErr
+		}
 	}
 
 	// Update executed statistics

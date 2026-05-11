@@ -641,9 +641,10 @@ type Step struct {
 	Cwd string            `yaml:"cwd" json:"cwd,omitempty"`
 
 	// Execution control
-	Timeout    string `yaml:"timeout" json:"timeout,omitempty"`
-	Retries    int    `yaml:"retries" json:"retries,omitempty"`
-	RetryDelay string `yaml:"retry_delay" json:"retry_delay,omitempty"`
+	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`
+	Retries      int    `yaml:"retries" json:"retries,omitempty"`
+	RetryDelay   string `yaml:"retry_delay" json:"retry_delay,omitempty"`
+	IgnoreErrors bool   `yaml:"ignore_errors" json:"ignore_errors,omitempty"`
 
 	// Result overrides
 	ChangedWhen string `yaml:"changed_when" json:"changed_when,omitempty"`
@@ -919,6 +920,7 @@ func (s *Step) Clone() *Step {
 		Timeout:      s.Timeout,
 		Retries:      s.Retries,
 		RetryDelay:   s.RetryDelay,
+		IgnoreErrors: s.IgnoreErrors,
 		ChangedWhen:  s.ChangedWhen,
 		FailedWhen:   s.FailedWhen,
 		WithFileTree: s.WithFileTree,

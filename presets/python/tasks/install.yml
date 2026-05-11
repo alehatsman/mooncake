@@ -56,6 +56,22 @@
     state: present
   when: package_manager == "brew"
 
+- name: Install Python build dependencies via {{ package_manager }}
+  package:
+    names:
+      - base-devel
+      - openssl
+      - zlib
+      - readline
+      - sqlite
+      - xz
+      - tk
+      - libffi
+      - bzip2
+    state: present
+  become: true
+  when: pacman_available
+
 # Check if pyenv is installed
 - name: Check if pyenv is installed
   assert:
@@ -63,7 +79,7 @@
       path: "~/.pyenv/bin/pyenv"
       exists: true
   register: pyenv_installed
-  failed_when: false
+  ignore_errors: true
 
 # Install pyenv
 - name: Install pyenv

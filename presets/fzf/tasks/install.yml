@@ -7,6 +7,7 @@
   package:
     name: fzf
     state: present
+  become: true
   when: fzf_check.rc != 0
 
 - name: Verify installation with assert

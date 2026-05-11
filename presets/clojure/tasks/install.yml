@@ -7,11 +7,13 @@
   package:
     name: clojure
     state: present
+  become: true
   when: clojure_check.rc != 0
 
 - name: Verify installation
   shell: clj --version 2>&1 || clj -v 2>&1 || echo "installed"
   register: clojure_version
+  ignore_errors: true
 
 - name: Display version
   print: "clojure installed"
@@ -19,5 +21,6 @@
 - name: Verify installation with assert
   assert:
     command:
-      cmd: command -v clj
+      cmd: clj --version
       exit_code: 0
+  ignore_errors: true

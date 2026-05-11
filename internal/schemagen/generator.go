@@ -176,6 +176,10 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "Path to YAML file with steps to include",
 		},
+		"ignore_errors": {
+			Type:        "boolean",
+			Description: "Continue execution even if this step fails (universal)",
+		},
 	}
 
 	for name, prop := range universalFields {
@@ -492,7 +496,7 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 	}
 
 	t := reflect.TypeOf(actionStruct)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t, nil

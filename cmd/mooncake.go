@@ -591,6 +591,7 @@ func createApp() *cli.App {
 	app := &cli.App{
 		Name:                 "mooncake",
 		Usage:                "Space fighters provisioning tool, Chookity!",
+		Version:              "0.2.0",
 		EnableBashCompletion: true,
 
 		Commands: []*cli.Command{

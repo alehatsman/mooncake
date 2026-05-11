@@ -1217,7 +1217,7 @@ func TestHandler_UpdateCache_Apt(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	// Test update cache command building (won't actually execute in test)
-	err := h.updateCache(ctx, "apt")
+	err := h.updateCache(ctx, "apt", false)
 	// Will fail in test environment, but tests the code path
 	t.Logf("updateCache error (expected): %v", err)
 }
@@ -1229,7 +1229,7 @@ func TestHandler_RemovePackages(t *testing.T) {
 	packages := []string{"test-package"}
 
 	// Test remove packages (will fail but tests code path)
-	result, err := h.removePackages(ctx, "apt", packages, nil)
+	result, err := h.removePackages(ctx, "apt", packages, nil, false)
 	if result != nil {
 		t.Logf("removePackages result: changed=%v, err=%v", result.(*executor.Result).Changed, err)
 	} else {
@@ -1246,7 +1246,7 @@ func TestHandler_ExecuteUpgrade(t *testing.T) {
 	}
 
 	// Test upgrade execution (will fail but tests code path)
-	result, err := h.executeUpgrade(ctx, "apt", pkg)
+	result, err := h.executeUpgrade(ctx, "apt", pkg, false)
 	if result != nil {
 		t.Logf("executeUpgrade result: changed=%v, err=%v", result.(*executor.Result).Changed, err)
 	} else {
@@ -1315,7 +1315,7 @@ func TestHandler_InstallPackages(t *testing.T) {
 	packages := []string{"test-package"}
 
 	// Test install packages (will fail but tests code path)
-	result, err := h.installPackages(ctx, "apt", packages, false, nil)
+	result, err := h.installPackages(ctx, "apt", packages, false, nil, false)
 	if result != nil {
 		t.Logf("installPackages result: changed=%v, err=%v", result.(*executor.Result).Changed, err)
 	} else {

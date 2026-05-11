@@ -147,7 +147,7 @@ func (d *DryRunLogger) LogPermissionsChange(path, mode, owner, group string, rec
 	if len(details) > 0 {
 		msg += " (" + strings.Join(details, ", ") + ")"
 	}
-	d.logger.Infof(msg)
+	d.logger.Infof("%s", msg)
 }
 
 // LogPermissionsNoChange logs a dry-run message when permissions are already correct.

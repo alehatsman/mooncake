@@ -182,7 +182,7 @@ func formatFieldType(t reflect.Type) string {
 		keyType := formatFieldType(t.Key())
 		valueType := formatFieldType(t.Elem())
 		return fmt.Sprintf("map[%s]%s", keyType, valueType)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return "*" + formatFieldType(t.Elem())
 	case reflect.Struct:
 		return t.Name()

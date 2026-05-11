@@ -61,7 +61,7 @@ func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
 
 		// Determine type from Go field type
 		fieldType := field.Type
-		if fieldType.Kind() == reflect.Ptr {
+		if fieldType.Kind() == reflect.Pointer {
 			fieldType = fieldType.Elem()
 			isOptional = true // Pointer fields are optional
 		}
@@ -133,7 +133,7 @@ func setPropertyType(prop *Property, t reflect.Type) {
 	case reflect.Interface:
 		// interface{} can be anything
 		// Don't set type to allow any value
-	case reflect.Ptr:
+	case reflect.Pointer:
 		// Dereference and recurse
 		setPropertyType(prop, t.Elem())
 	}
