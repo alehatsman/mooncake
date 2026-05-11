@@ -226,3 +226,21 @@ Agents can act on `suggested_fix` directly without parsing prose.
 
 The E3 + E6 combination is the most differentiated thing in this space:
 mooncake becomes the system sense organ for any AI agent running on a machine.
+
+---
+
+## Implementation Status
+
+### Batch 1 (complete)
+- spec-01 — S1.1 Run Recap ✅
+- spec-02 — S1.2 Skip Reasons ✅
+- spec-03 — S2.2 Agent JSONL Output ✅
+- spec-04 — S3.1–S3.4 Snapshot Command ✅
+- spec-05 — S6.3 Fact Query ✅
+
+### Batch 2 (selected)
+- spec-06 — S2.1 Quiet Mode
+- spec-07 — S1.3 Step Timing + S1.5 Changed/OK Distinction
+- spec-08 — S5.1 Run Log + S5.2 Last Run Summary
+- spec-09 — S6.5 Structured Error Messages
+- spec-10 — S6.1 MCP Server Mode

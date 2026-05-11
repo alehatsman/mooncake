@@ -1,0 +1,24 @@
+# Hyprland Installation Tasks
+
+- name: Install Hyprland ecosystem packages
+  shell: |
+    pacman -S --noconfirm --needed \
+      hyprland waybar wofi dunst \
+      hyprpaper hyprlock hypridle \
+      xdg-desktop-portal-hyprland xdg-desktop-portal-gtk \
+      qt5-wayland qt6-wayland \
+      polkit-gnome \
+      grim slurp \
+      brightnessctl playerctl \
+      pavucontrol \
+      alacritty \
+      yazi \
+      ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
+  become: true
+  when: pacman_available
+  timeout: 10m
+
+- name: Create screenshots directory
+  file:
+    path: ~/Pictures/screenshots
+    state: directory
