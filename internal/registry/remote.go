@@ -15,14 +15,14 @@ import (
 const (
 	officialRegistryName = "official"
 	officialRegistryRepo = "alehatsman/mooncake"
-	officialRegistryRef  = "main"
+	officialRegistryRef  = "master"
 )
 
 // RemoteRegistry is a named GitHub preset source.
 type RemoteRegistry struct {
 	Name string `yaml:"name"`
 	Repo string `yaml:"repo"` // e.g. "alehatsman/mooncake"
-	Ref  string `yaml:"ref"`  // branch/tag, default "main"
+	Ref  string `yaml:"ref"`  // branch/tag, default "master"
 }
 
 // RegistriesConfig is stored at ~/.config/mooncake/registries.yml
@@ -147,7 +147,7 @@ func IndexCachePath(regName string) (string, error) {
 func FetchRemoteIndex(reg RemoteRegistry) (RemoteIndex, error) {
 	ref := reg.Ref
 	if ref == "" {
-		ref = "main"
+		ref = officialRegistryRef
 	}
 
 	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/index.yml", reg.Repo, ref)
@@ -333,7 +333,7 @@ func downloadContentsRecursive(repo, ref, remoteBasePath, localBasePath string) 
 func DownloadPreset(reg RemoteRegistry, name string, destDir string) error {
 	ref := reg.Ref
 	if ref == "" {
-		ref = "main"
+		ref = officialRegistryRef
 	}
 
 	remotePath := fmt.Sprintf("presets/%s", name)

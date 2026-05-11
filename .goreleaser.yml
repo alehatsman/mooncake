@@ -7,7 +7,7 @@ before:
 
 builds:
   - id: mooncake
-    main: ./cmd/mooncake.go
+    main: ./cmd
     binary: mooncake
     env:
       - CGO_ENABLED=0
@@ -36,7 +36,7 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -46,7 +46,7 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     files:
       - README.md
       - LICENSE*
