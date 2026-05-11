@@ -54,6 +54,41 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 
+sboms:
+  - artifacts: archive
+  - id: source
+    artifacts: source
+
+dockers:
+  - image_templates:
+      - "ghcr.io/alehatsman/mooncake:{{ .Tag }}-amd64"
+      - "ghcr.io/alehatsman/mooncake:latest-amd64"
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "ghcr.io/alehatsman/mooncake:{{ .Tag }}-arm64"
+      - "ghcr.io/alehatsman/mooncake:latest-arm64"
+    goos: linux
+    goarch: arm64
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - name_template: "ghcr.io/alehatsman/mooncake:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/alehatsman/mooncake:{{ .Tag }}-amd64"
+      - "ghcr.io/alehatsman/mooncake:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/alehatsman/mooncake:latest"
+    image_templates:
+      - "ghcr.io/alehatsman/mooncake:latest-amd64"
+      - "ghcr.io/alehatsman/mooncake:latest-arm64"
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
@@ -90,12 +125,16 @@ release:
   footer: |
     **Full Changelog**: https://github.com/alehatsman/mooncake/compare/{{ .PreviousTag }}...{{ .Tag }}
 
-# Optional: Homebrew tap
+# Homebrew tap — requires creating https://github.com/alehatsman/homebrew-tap first
 # brews:
 #   - repository:
 #       owner: alehatsman
 #       name: homebrew-tap
-#     homepage: https://github.com/alehatsman/mooncake
-#     description: "Space fighters provisioning tool"
+#     homepage: "https://github.com/alehatsman/mooncake"
+#     description: "Declarative config management runtime for AI agents"
 #     license: MIT
 #     folder: Formula
+#     install: |
+#       bin.install "mooncake"
+#     test: |
+#       system "#{bin}/mooncake", "--version"

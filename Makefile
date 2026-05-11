@@ -105,7 +105,7 @@ ci: lint test-race scan docs-check schema-check ## Run full CI suite (lint + tes
 .PHONY: ubuntu-ci
 ubuntu-ci: ## Run full CI suite in Ubuntu Docker container (cross-platform verification)
 	@echo "Running CI in Ubuntu Docker container..."
-	@docker run --rm -v "$$(pwd)":/workspace -w /workspace golang:1.25 bash -c " \
+	@docker run --rm -v "$$(pwd)":/workspace -w /workspace golang:1.26.3 bash -c " \
 		set -e && \
 		echo '==> Installing CI dependencies...' && \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin latest >/dev/null 2>&1 && \

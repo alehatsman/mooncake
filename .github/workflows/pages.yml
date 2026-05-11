@@ -1,0 +1,154 @@
+---
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'internal/config/schema.json'
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.26.3'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build mooncake binary
+        run: go build -o out/mooncake ./cmd
+
+      - name: Generate JSON Schema
+        run: ./out/mooncake schema generate --format json --output _site/schema.json --strict
+
+      - name: Create index.html
+        run: |
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Mooncake — Schema &amp; Resources</title>
+            <style>
+              *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #0d1117;
+                color: #e6edf3;
+                line-height: 1.6;
+                padding: 2rem 1rem;
+              }
+              .container { max-width: 680px; margin: 0 auto; }
+              h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+              .tagline { color: #8b949e; margin-bottom: 2rem; }
+              h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #58a6ff; }
+              a { color: #58a6ff; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .card {
+                background: #161b22;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                padding: 1.25rem 1.5rem;
+                margin-bottom: 1rem;
+              }
+              .card-title { font-weight: 600; margin-bottom: 0.35rem; }
+              .card-desc { color: #8b949e; font-size: 0.9rem; margin-bottom: 0.75rem; }
+              pre {
+                background: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+                overflow-x: auto;
+                color: #e6edf3;
+              }
+              code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+              footer { margin-top: 3rem; color: #8b949e; font-size: 0.85rem; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Mooncake</h1>
+              <p class="tagline">The Standard Runtime for AI System Configuration</p>
+
+              <h2>JSON Schema</h2>
+              <div class="card">
+                <div class="card-title"><a href="schema.json">schema.json</a></div>
+                <div class="card-desc">
+                  JSON Schema for mooncake playbook (YAML config) files. Use this with your editor
+                  for autocomplete and inline validation.
+                </div>
+                <pre><code>curl -sSL https://mooncake.dev/schemas/config.json -o schema.json</code></pre>
+              </div>
+
+              <h2>Editor Integration</h2>
+              <div class="card">
+                <div class="card-title">VS Code / yaml-language-server</div>
+                <div class="card-desc">Add to your VS Code <code>settings.json</code>:</div>
+                <pre><code>{
+            "yaml.schemas": {
+              "https://mooncake.dev/schemas/config.json": [
+                "*.mooncake.yml",
+                "config.yml"
+              ]
+            }
+          }</code></pre>
+              </div>
+
+              <h2>Install Mooncake</h2>
+              <div class="card">
+                <pre><code>curl -sSL https://raw.githubusercontent.com/alehatsman/mooncake/master/install.sh | sh</code></pre>
+              </div>
+
+              <footer>
+                <a href="https://github.com/alehatsman/mooncake">github.com/alehatsman/mooncake</a>
+                &nbsp;&mdash;&nbsp; Schema auto-generated from source on every release.
+              </footer>
+            </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,170 @@
+# Mooncake
+
+Mooncake is a declarative configuration management tool written in Go — "Docker for AI agents." It provides a safe, validated execution runtime with idempotency guarantees, dry-run support, and machine-readable output designed for AI agent consumption.
+
+GitHub: https://github.com/alehatsman/mooncake
+Schema: https://mooncake.dev/schemas/config.json
+
+## Install
+
+```sh
+curl -sSL https://raw.githubusercontent.com/alehatsman/mooncake/master/install.sh | sh
+# or
+go install github.com/alehatsman/mooncake@latest
+```
+
+## Basic Usage
+
+```sh
+# Run a playbook
+mooncake run --config config.yml
+
+# Dry run (safe preview — no changes applied)
+mooncake run --config config.yml --dry-run
+
+# Machine-readable output for AI agents (JSONL)
+mooncake run --config config.yml --output agent
+
+# Query system facts
+mooncake facts
+mooncake facts --format json
+mooncake facts --query os --query arch
+
+# Validate config without running
+mooncake validate --config config.yml
+
+# Generate a plan (without executing)
+mooncake plan --config config.yml --format json
+```
+
+## Key Concepts
+
+**Playbook** — A YAML file containing an ordered list of steps to execute.
+
+**Step** — A single unit of work. Each step has a name and exactly one action. Steps support conditionals (`when`), loops (`with_items`, `with_dict`, `with_filetree`), tags, sudo, retry, and change/failure conditions.
+
+**Preset** — A reusable, parameterized workflow (e.g., `preset: golang`, `preset: node`). Presets are expanded into steps at plan time. 330+ built-in presets ship with mooncake.
+
+**Facts** — Auto-detected system information injected as template variables: `{{os}}`, `{{arch}}`, `{{cpu_cores}}`, `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`, `{{home_dir}}`, `{{user}}`, `{{hostname}}`, and more.
+
+**Idempotency** — Actions check current state before making changes. Re-running a playbook is safe; steps that are already in the desired state are skipped.
+
+**Plan** — A serializable, pre-compiled execution plan. Generate with `mooncake plan`, execute with `mooncake run --from-plan plan.json`.
+
+## Action Types
+
+All actions are mutually exclusive within a step (use exactly one per step).
+
+| Action | Category | Description |
+|--------|----------|-------------|
+| `shell` | command | Run a shell command string |
+| `command` | command | Execute a binary directly (no shell, safer) |
+| `file` | file | Create/delete files, directories, symlinks; set content, mode, owner |
+| `template` | file | Render a Jinja2-style template to a destination file |
+| `copy` | file | Copy a file with checksum verification |
+| `download` | network | Download a file from a URL with checksum verification and retry |
+| `unarchive` | file | Extract tar/tar.gz/zip archives with path traversal protection |
+| `print` | output | Print a message to stdout |
+| `vars` | data | Set variables in the execution context |
+| `include_vars` | data | Load variables from an external YAML file |
+| `preset` | system | Expand a named preset into steps |
+| `service` | system | Manage services (systemd on Linux, launchd on macOS, Windows services) |
+| `assert` | system | Verify system state — command exit codes, file existence/content, HTTP responses |
+| `package` | system | Install/remove OS packages (apt, brew, dnf, pacman, etc.) |
+| `wait` | system | Wait for a condition (port, file, HTTP, command) |
+
+## Step Properties
+
+```yaml
+- name: Example step           # required
+  shell: echo "hello"          # the action (one of the types above)
+  when: "{{os}} == 'linux'"    # conditional — skip if false
+  with_items: [a, b, c]        # loop over list; item available as {{item}}
+  with_dict: {k: v}            # loop over dict; key/value as {{key}}/{{value}}
+  tags: [setup, dev]           # for targeted execution (--tags flag)
+  become: true                 # run with sudo
+  changed_when: "false"        # override change detection
+  failed_when: "false"         # override failure detection
+  ignore_errors: true          # continue even if step fails
+  register: result_var         # store result in variable
+  retry:
+    attempts: 3
+    delay: 5
+```
+
+## Output Modes
+
+| Flag | Description |
+|------|-------------|
+| (default) | Animated TUI with colored output for humans |
+| `--output agent` | JSONL stream — one JSON object per event, for AI consumption |
+| `--output json` | JSON-formatted console output |
+| `--output quiet` | Suppress all output |
+| `--dry-run` | Show what would change without applying anything |
+
+### JSONL Event Schema (agent mode)
+
+Each line is a JSON object with at minimum:
+```json
+{"event": "step.start", "step": "step-name", "timestamp": "..."}
+{"event": "step.done", "step": "step-name", "changed": true, "duration_ms": 42}
+{"event": "step.failed", "step": "step-name", "error": "...", "exit_code": 1}
+{"event": "run.summary", "total": 5, "changed": 2, "skipped": 1, "failed": 0}
+```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success — all steps completed |
+| 1 | Runtime failure — one or more steps failed |
+| 2 | Validation error — config is invalid |
+| 3 | Runtime error — unexpected internal error |
+
+## JSON Schema
+
+The schema for mooncake playbooks (YAML config files) is published at:
+
+```
+https://mooncake.dev/schemas/config.json
+```
+
+Use in VS Code (`settings.json`):
+```json
+{
+  "yaml.schemas": {
+    "https://mooncake.dev/schemas/config.json": ["*.mooncake.yml", "config.yml"]
+  }
+}
+```
+
+Generate locally:
+```sh
+mooncake schema generate --format json --output schema.json
+```
+
+## Template Variables
+
+Templates use `{{variable}}` syntax (Jinja2-compatible). Built-in facts:
+
+```
+{{os}}               linux | darwin | windows
+{{arch}}             amd64 | arm64 | armv7 | 386
+{{distribution}}     ubuntu | debian | fedora | macos | ...
+{{package_manager}}  apt | brew | dnf | pacman | ...
+{{home_dir}}         /home/user or /Users/user
+{{user}}             current username
+{{hostname}}         system hostname
+{{cpu_cores}}        integer
+{{memory_total_mb}}  integer
+{{kernel_version}}   string
+```
+
+## Further Reading
+
+- `README.md` — Quick start and feature overview
+- `LLM_GUIDE.md` — Architecture reference for AI assistants (canonical nav map)
+- `docs-next/` — Full documentation source
+- `examples/` — Working playbook examples for all features
+- `presets/` — 330+ built-in presets (install tools, configure services, etc.)
+- `internal/config/schema.json` — JSON Schema source of truth
