@@ -25,9 +25,10 @@ import (
 )
 
 const (
-	outputFormatJSON = "json"
-	outputFormatText = "text"
-	outputFormatYAML = "yaml"
+	outputFormatJSON  = "json"
+	outputFormatText  = "text"
+	outputFormatYAML  = "yaml"
+	outputFormatAgent = "agent"
 
 	// Artifact default limits
 	defaultMaxOutputBytes = 1048576 // 1MB
@@ -76,8 +77,8 @@ func run(c *cli.Context) error {
 	}
 
 	// Validate output format
-	if outputFormat != outputFormatText && outputFormat != outputFormatJSON {
-		return fmt.Errorf("invalid output-format: %s (must be 'text' or 'json')", outputFormat)
+	if outputFormat != outputFormatText && outputFormat != outputFormatJSON && outputFormat != outputFormatAgent {
+		return fmt.Errorf("invalid output-format: %s (must be 'text', 'json', or 'agent')", outputFormat)
 	}
 
 	// JSON format requires raw mode
@@ -134,7 +135,9 @@ func run(c *cli.Context) error {
 	}
 
 	// Create appropriate subscriber based on mode
-	if !raw && logger.IsTUISupported() {
+	if outputFormat == outputFormatAgent {
+		publisher.Subscribe(logger.NewAgentSubscriber())
+	} else if !raw && logger.IsTUISupported() {
 		// Use TUI subscriber for animated display
 		tuiSubscriber, err := logger.NewTUISubscriber(level)
 		if err != nil {
