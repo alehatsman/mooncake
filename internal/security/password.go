@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	"golang.org/x/term"
 )
@@ -22,7 +21,7 @@ type InteractivePasswordProvider struct{}
 
 func (p *InteractivePasswordProvider) GetPassword() (string, error) {
 	fmt.Fprint(os.Stderr, "BECOME password: ")
-	password, err := term.ReadPassword(syscall.Stdin)
+	password, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Fprintln(os.Stderr) // New line after password input
 	if err != nil {
 		return "", fmt.Errorf("failed to read password: %w", err)
@@ -47,14 +46,8 @@ func (p *FilePasswordProvider) GetPassword() (string, error) {
 	}
 
 	// Verify file is owned by current user
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return "", fmt.Errorf("cannot verify file ownership")
-	}
-
-	currentUID := os.Getuid()
-	if int(stat.Uid) != currentUID {
-		return "", fmt.Errorf("password file must be owned by current user (uid %d), found uid %d", currentUID, stat.Uid)
+	if ownerErr := checkFileOwnership(info); ownerErr != nil {
+		return "", ownerErr
 	}
 
 	// Verify file has 0600 permissions
