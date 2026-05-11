@@ -456,25 +456,20 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 		}
 
 		// Execute the action
-		actionResult, err := handler.Execute(ec, &step)
-		if err != nil {
-			return err
+		actionResult, execErr := handler.Execute(ec, &step)
+
+		// Capture result even on failure so callers can read stdout/stderr.
+		if actionResult != nil {
+			if concreteResult, ok := actionResult.(*Result); ok {
+				ec.CurrentResult = concreteResult
+			} else {
+				ec.CurrentResult = NewResult()
+			}
 		}
 
-		// Convert actions.Result interface back to *Result if needed
-		var result *Result
-		if concreteResult, ok := actionResult.(*Result); ok {
-			result = concreteResult
-		} else {
-			// Create a new Result from the interface
-			result = NewResult()
-			// The interface methods would have been called by the handler
-			// so we trust that the result is properly populated
-			// For now, we just use it as-is
+		if execErr != nil {
+			return execErr
 		}
-
-		// Store result in context
-		ec.CurrentResult = result
 
 		// Register result if requested
 		if step.Register != "" && actionResult != nil {

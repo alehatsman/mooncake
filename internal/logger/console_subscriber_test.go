@@ -257,9 +257,15 @@ func TestConsoleSubscriber_OnEvent_Text_StepCompleted(t *testing.T) {
 				t.Errorf("output does not contain %q\nGot: %s", tt.wantOutput, output)
 			}
 
-			// Verify icon is present
-			if !strings.Contains(output, "✓") {
-				t.Error("output missing ✓ icon")
+			// Verify icon is present (~ for changed, ✓ for unchanged)
+			if tt.data.Changed {
+				if !strings.Contains(output, "~") {
+					t.Error("output missing ~ icon for changed step")
+				}
+			} else {
+				if !strings.Contains(output, "✓") {
+					t.Error("output missing ✓ icon for unchanged step")
+				}
 			}
 		})
 	}
@@ -379,8 +385,8 @@ func TestConsoleSubscriber_OnEvent_Text_StepSkipped(t *testing.T) {
 			}
 
 			// Verify icon is present for files
-			if !strings.HasSuffix(tt.data.Name, "/") && !strings.Contains(output, "─") {
-				t.Error("output missing ─ icon for file")
+			if !strings.HasSuffix(tt.data.Name, "/") && !strings.Contains(output, "-") {
+				t.Error("output missing - icon for file")
 			}
 
 			// Verify reason if provided (only for files, not directories)

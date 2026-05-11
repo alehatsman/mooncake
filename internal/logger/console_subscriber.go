@@ -123,8 +123,24 @@ func (c *ConsoleSubscriber) renderStepCompleted(data events.StepCompletedData) {
 	}
 
 	indent := strings.Repeat("  ", data.Level+data.Depth)
-	icon := color.GreenString("✓")
-	fmt.Printf("%s%s %s\n", indent, icon, data.Name)
+	var icon string
+	if data.Changed {
+		icon = color.YellowString("~")
+	} else {
+		icon = color.GreenString("✓")
+	}
+
+	timing := ""
+	if data.DurationMs >= 2000 {
+		secs := data.DurationMs / 1000
+		if secs < 60 {
+			timing = fmt.Sprintf(" [%ds]", secs)
+		} else {
+			timing = fmt.Sprintf(" [%dm%02ds]", secs/60, secs%60)
+		}
+	}
+
+	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, timing)
 }
 
 // renderStepFailed renders a step.failed event
@@ -157,7 +173,7 @@ func (c *ConsoleSubscriber) renderStepSkipped(data events.StepSkippedData) {
 	}
 
 	indent := strings.Repeat("  ", data.Level+data.Depth)
-	icon := color.New(color.Faint).Sprint("─")
+	icon := color.New(color.Faint).Sprint("-")
 	reasonText := ""
 	if data.Reason != "" {
 		reasonText = color.New(color.Faint).Sprintf(" [%s]", data.Reason)
