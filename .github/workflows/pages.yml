@@ -2,14 +2,12 @@
 name: Deploy GitHub Pages
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'internal/config/schema.json'
-  release:
-    types:
-      - published
+  # Pages auto-deploy is disabled while the repository is private. GitHub
+  # Pages on free private repos isn't supported; the previous push trigger
+  # therefore failed at `Configure GitHub Pages` with "Get Pages site
+  # failed... Not Found". Re-enable the `push` / `release` triggers once
+  # Pages is configured in repository settings (Settings → Pages →
+  # GitHub Actions source).
   workflow_dispatch:
 
 env:
