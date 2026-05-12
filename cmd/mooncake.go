@@ -731,6 +731,7 @@ func createApp() *cli.App {
 			lastCommand(),
 			mcpCommand(),
 			stepCommand(),
+			toolCommand(),
 			{
 				Name:   "apply",
 				Usage:  "Apply a playbook or saved plan to the system",
