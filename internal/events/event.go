@@ -30,6 +30,7 @@ const (
 	EventStepCompleted EventType = "step.completed"
 	EventStepSkipped   EventType = "step.skipped"
 	EventStepFailed    EventType = "step.failed"
+	EventStepChecked   EventType = "step.checked"
 )
 
 // Event types for output streaming
@@ -130,6 +131,7 @@ type RunCompletedData struct {
 	DurationMs    int64  `json:"duration_ms"`
 	Success       bool   `json:"success"`
 	ErrorMessage  string `json:"error_message,omitempty"`
+	CheckMode     bool   `json:"check_mode,omitempty"`
 }
 
 // StepStartedData contains data for step.started events
@@ -323,4 +325,24 @@ type ArtifactCaptureData struct {
 // PrintData contains data for print.message events
 type PrintData struct {
 	Message string `json:"message"` // The message that was printed
+}
+
+// PackageManagedData contains data for package.managed events
+type PackageManagedData struct {
+	Manager        string   `json:"manager"`
+	Installed      []string `json:"installed,omitempty"`
+	AlreadyPresent []string `json:"already_present,omitempty"`
+	Removed        []string `json:"removed,omitempty"`
+}
+
+// StepCheckedData contains data for step.checked events (check mode)
+type StepCheckedData struct {
+	StepID      string `json:"step_id"`
+	Name        string `json:"name"`
+	Action      string `json:"action"`
+	WouldChange bool   `json:"would_change"`
+	Checkable   bool   `json:"checkable"`
+	Reason      string `json:"reason,omitempty"`
+	Level       int    `json:"level"`
+	Depth       int    `json:"depth,omitempty"`
 }

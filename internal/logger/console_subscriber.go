@@ -89,6 +89,16 @@ func (c *ConsoleSubscriber) renderText(event events.Event) {
 			c.renderRunCompleted(data)
 		}
 
+	case events.EventStepChecked:
+		if data, ok := event.Data.(events.StepCheckedData); ok {
+			c.renderStepChecked(data)
+		}
+
+	case events.EventPackageManaged:
+		if data, ok := event.Data.(events.PackageManagedData); ok {
+			c.renderPackageManaged(data)
+		}
+
 	case events.EventStepStdout, events.EventStepStderr:
 		// Output events are shown via debug logging, not in console subscriber
 		// to avoid duplication
@@ -188,9 +198,16 @@ func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
 		ok = 0
 	}
 
-	line := fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %s",
-		ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
-		formatDuration(data.DurationMs))
+	var line string
+	if data.CheckMode {
+		line = fmt.Sprintf("CHECK RECAP  would-change=%d  ok=%d  skipped=%d  %s",
+			data.ChangedSteps, ok, data.SkippedSteps,
+			formatDuration(data.DurationMs))
+	} else {
+		line = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %s",
+			ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
+			formatDuration(data.DurationMs))
+	}
 
 	if !data.Success && data.ErrorMessage != "" {
 		line += "  " + color.RedString("✗ %s", data.ErrorMessage)
@@ -202,6 +219,47 @@ func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
 	} else {
 		fmt.Println(color.RedString(line))
 	}
+}
+
+// renderStepChecked renders a step.checked event in check mode.
+func (c *ConsoleSubscriber) renderStepChecked(data events.StepCheckedData) {
+	indent := strings.Repeat("  ", data.Level+data.Depth)
+	var icon string
+	var reasonText string
+
+	switch {
+	case !data.Checkable:
+		icon = color.New(color.Faint).Sprint("?")
+		reasonText = color.New(color.Faint).Sprintf("  [not checkable]")
+	case data.WouldChange:
+		icon = color.YellowString("↑")
+		if data.Reason != "" {
+			reasonText = fmt.Sprintf("  [%s]", data.Reason)
+		}
+	default:
+		icon = color.GreenString("✓")
+	}
+
+	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, reasonText)
+}
+
+// renderPackageManaged renders a package.managed event as a compact summary line.
+func (c *ConsoleSubscriber) renderPackageManaged(data events.PackageManagedData) {
+	if len(data.Installed) == 0 && len(data.Removed) == 0 {
+		return
+	}
+	var parts []string
+	for _, p := range data.Installed {
+		parts = append(parts, "+"+p)
+	}
+	for _, p := range data.Removed {
+		parts = append(parts, "-"+p)
+	}
+	line := "  package  " + strings.Join(parts, " ")
+	if len(data.AlreadyPresent) > 0 {
+		line += "  (already: " + strings.Join(data.AlreadyPresent, " ") + ")"
+	}
+	fmt.Println(line)
 }
 
 // formatDuration converts milliseconds to a human-readable duration string.

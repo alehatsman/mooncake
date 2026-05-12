@@ -96,6 +96,10 @@ type ExecutionContext struct {
 	// Commands are not executed, files are not created, templates are not rendered.
 	DryRun bool
 
+	// CheckMode when true queries state without making changes.
+	// Handlers implementing actions.Checker report would-change/ok; others report not-checkable.
+	CheckMode bool
+
 	// Stats holds shared execution statistics counters.
 	// SHARED via pointer - all contexts update the same counters.
 	Stats *ExecutionStats
@@ -153,6 +157,7 @@ func (ec *ExecutionContext) Clone() ExecutionContext {
 		SudoPass:      ec.SudoPass,
 		Tags:          ec.Tags,
 		DryRun:        ec.DryRun,
+		CheckMode:     ec.CheckMode,
 
 		// Share the same statistics pointer
 		Stats: ec.Stats,

@@ -69,11 +69,12 @@ func run(c *cli.Context) error {
 
 	raw := c.Bool("raw")
 	dryRun := c.Bool("dry-run")
+	checkMode := c.Bool("check")
 	logLevel := c.String("log-level")
 	outputFormat := c.String("output-format")
 
-	// Force raw mode for dry-run
-	if dryRun {
+	// Force raw mode for dry-run and check mode
+	if dryRun || checkMode {
 		raw = true
 	}
 
@@ -177,6 +178,7 @@ func run(c *cli.Context) error {
 		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
 		Tags:             tags,
 		DryRun:           dryRun,
+		CheckMode:        checkMode,
 
 		// Artifact configuration
 		ArtifactsDir:      c.String("artifacts-dir"),
@@ -219,7 +221,7 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	internalLog := logger.NewLogger(level)
 
 	// Execute plan with event publisher
-	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, internalLog, publisher)
+	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, false, internalLog, publisher)
 }
 
 func factsCommand(c *cli.Context) error {
@@ -664,6 +666,7 @@ func createApp() *cli.App {
 			snapshotCommand(),
 			lastCommand(),
 			mcpCommand(),
+			stepCommand(),
 			{
 				Name:  "run",
 				Usage: "Run a space fighter",
@@ -717,6 +720,11 @@ func createApp() *cli.App {
 						Name:  "dry-run",
 						Value: false,
 						Usage: "Preview what would be executed without making changes",
+					},
+					&cli.BoolFlag{
+						Name:  "check",
+						Value: false,
+						Usage: "Query current state without making changes; exit 1 if anything would change",
 					},
 					&cli.StringFlag{
 						Name:  "output-format",

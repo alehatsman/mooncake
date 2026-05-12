@@ -438,6 +438,11 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 			return fmt.Errorf("%s", errMsg)
 		}
 
+		// Handle check mode — query without writing
+		if ec.CheckMode {
+			return dispatchCheck(step, ec, actionType, handler)
+		}
+
 		// Handle dry-run mode
 		if ec.DryRun {
 			// Create a result for dry-run
@@ -483,6 +488,63 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	return fmt.Errorf("no handler registered for action type: %s", actionType)
 }
 
+func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReason string) {
+	if ec.Stats.Skipped != nil {
+		*ec.Stats.Skipped++
+	}
+	stepID := generateStepID(step, ec)
+	depth := 0
+	if step.LoopContext != nil {
+		depth = step.LoopContext.Depth
+	}
+	ec.EmitEvent(events.EventStepSkipped, events.StepSkippedData{
+		StepID: stepID,
+		Name:   stepName,
+		Level:  ec.Level,
+		Reason: skipReason,
+		Depth:  depth,
+	})
+}
+
+func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
+	if ec.Stats.Failed != nil {
+		*ec.Stats.Failed++
+	}
+	failedData := events.StepFailedData{
+		StepID:       stepID,
+		Name:         stepName,
+		Action:       step.ActionType,
+		Level:        ec.Level,
+		ErrorMessage: stepErr.Error(),
+		ExitCode:     -1,
+		DurationMs:   stepDuration.Milliseconds(),
+		Depth:        depth,
+		DryRun:       ec.DryRun,
+	}
+	var cmdErr *CommandError
+	if errors.As(stepErr, &cmdErr) {
+		failedData.ExitCode = cmdErr.ExitCode
+	}
+	if ec.CurrentResult != nil {
+		failedData.Stdout = truncate(ec.CurrentResult.Stdout, 2000)
+		failedData.Stderr = truncate(ec.CurrentResult.Stderr, 2000)
+	}
+	ec.EmitEvent(events.EventStepFailed, failedData)
+
+	if step.IgnoreErrors {
+		ec.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
+		if step.Register != "" {
+			failedResult := NewResult()
+			failedResult.Failed = true
+			failedResult.Rc = 1
+			failedResult.RegisterTo(ec.Variables, step.Register)
+		}
+		return nil
+	}
+	ec.Logger.Errorf("%v", stepErr)
+	return stepErr
+}
+
 // ExecuteStep executes a single configuration step within the given execution context.
 func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// Validate step configuration
@@ -513,28 +575,31 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Handle skipped steps
 	if shouldSkip {
-		// Log skipped steps (only for named, non-include steps)
 		if hasStepName && step.Include == nil {
-			// Update skipped statistics
-			if ec.Stats.Skipped != nil {
-				*ec.Stats.Skipped++
-			}
-
-			// Emit step.skipped event
-			stepID := generateStepID(step, ec)
-			depth := 0
-			if step.LoopContext != nil {
-				depth = step.LoopContext.Depth
-			}
-			ec.EmitEvent(events.EventStepSkipped, events.StepSkippedData{
-				StepID: stepID,
-				Name:   stepName,
-				Level:  ec.Level,
-				Reason: skipReason,
-				Depth:  depth,
-			})
+			emitStepSkipped(step, ec, stepName, skipReason)
 		}
+		return nil
+	}
 
+	// In check mode, bypass started/completed events and go straight to Check()
+	if ec.CheckMode && hasStepName && step.Include == nil {
+		*ec.Stats.Global++
+		stepID := generateStepID(step, ec)
+		ec.CurrentStepID = stepID
+		actionType := step.DetermineActionType()
+		if handler, ok := actions.Get(actionType); ok {
+			return dispatchCheck(step, ec, actionType, handler)
+		}
+		// Unknown action — emit not-checkable
+		ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
+			StepID:    stepID,
+			Name:      stepName,
+			Action:    actionType,
+			Checkable: false,
+			Reason:    "unknown action",
+			Level:     ec.Level,
+		})
+		*ec.Stats.Executed++
 		return nil
 	}
 
@@ -591,45 +656,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Handle errors
 	if stepErr != nil {
-		// Update failed statistics
-		if ec.Stats.Failed != nil {
-			*ec.Stats.Failed++
-		}
-
-		// Emit step.failed event
-		failedData := events.StepFailedData{
-			StepID:       stepID,
-			Name:         stepName,
-			Action:       step.ActionType,
-			Level:        ec.Level,
-			ErrorMessage: stepErr.Error(),
-			ExitCode:     -1,
-			DurationMs:   stepDuration.Milliseconds(),
-			Depth:        depth,
-			DryRun:       ec.DryRun,
-		}
-		var cmdErr *CommandError
-		if errors.As(stepErr, &cmdErr) {
-			failedData.ExitCode = cmdErr.ExitCode
-		}
-		if ec.CurrentResult != nil {
-			failedData.Stdout = truncate(ec.CurrentResult.Stdout, 2000)
-			failedData.Stderr = truncate(ec.CurrentResult.Stderr, 2000)
-		}
-		ec.EmitEvent(events.EventStepFailed, failedData)
-
-		if step.IgnoreErrors {
-			ec.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
-			// Register a failed result so step.register variables reflect the failure
-			if step.Register != "" {
-				failedResult := NewResult()
-				failedResult.Failed = true
-				failedResult.Rc = 1
-				failedResult.RegisterTo(ec.Variables, step.Register)
-			}
-		} else {
-			ec.Logger.Errorf("%v", stepErr)
-			return stepErr
+		if err := handleStepError(step, ec, stepErr, stepID, stepName, depth, stepDuration); err != nil {
+			return err
 		}
 	}
 
@@ -717,6 +745,7 @@ type StartConfig struct {
 	InsecureSudoPass bool
 	Tags             []string
 	DryRun           bool
+	CheckMode        bool
 
 	// Artifact configuration
 	ArtifactsDir      string
@@ -832,12 +861,12 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	}
 
 	// Execute the plan with event publisher
-	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, log, publisher)
+	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, startConfig.CheckMode, log, publisher)
 }
 
 // ExecutePlan executes a pre-compiled plan.
 // Emits events through the provided publisher for all execution progress.
-func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, publisher events.Publisher) error {
+func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, checkMode bool, log logger.Logger, publisher events.Publisher) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -912,6 +941,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 		SudoPass:     sudoPass,
 		Tags:         []string{}, // Not used - tag filtering done by planner (step.Skipped)
 		DryRun:       dryRun,
+		CheckMode:    checkMode,
 
 		// Statistics tracking
 		Stats: &ExecutionStats{
@@ -950,6 +980,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, log logger.Logger, 
 			ChangedSteps: statsChanged,
 			DurationMs:   duration.Milliseconds(),
 			Success:      execErr == nil,
+			CheckMode:    checkMode,
 			ErrorMessage: func() string {
 				if execErr != nil {
 					return execErr.Error()
@@ -972,6 +1003,55 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+// dispatchCheck calls the handler's Check() method if it implements actions.Checker,
+// otherwise marks the step as not-checkable. Emits EventStepChecked.
+func dispatchCheck(step config.Step, ec *ExecutionContext, actionType string, handler actions.Handler) error {
+	var cr actions.CheckResult
+
+	// Validate before checking (same as Execute path)
+	if err := handler.Validate(&step); err != nil {
+		return fmt.Errorf("validation failed for %s action: %v", actionType, err)
+	}
+
+	if checker, ok := handler.(actions.Checker); ok {
+		var err error
+		cr, err = checker.Check(ec, &step)
+		if err != nil {
+			return err
+		}
+		// Checkable field is set by Check(); handlers that don't check specific states return Checkable: false
+	} else {
+		cr = actions.CheckResult{
+			Checkable:   false,
+			WouldChange: false,
+			Reason:      "not checkable",
+		}
+	}
+
+	name := step.Name
+	if name == "" {
+		name = actionType
+	}
+
+	ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
+		StepID:      ec.CurrentStepID,
+		Name:        name,
+		Action:      actionType,
+		WouldChange: cr.WouldChange,
+		Checkable:   cr.Checkable,
+		Reason:      cr.Reason,
+		Level:       ec.Level,
+	})
+
+	// Update stats: treat would-change as "changed", ok as "executed"
+	if cr.WouldChange {
+		*ec.Stats.Changed++
+	}
+	*ec.Stats.Executed++
+
+	return nil
 }
 
 // ParseFileMode parses a mode string (e.g., "0644") into os.FileMode.

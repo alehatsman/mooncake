@@ -211,6 +211,77 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	return nil
 }
 
+// Check implements actions.Checker — reports whether the file action would change state.
+func (h *Handler) Check(ctx actions.Context, step *config.Step) (actions.CheckResult, error) {
+	file := step.File
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return actions.CheckResult{Checkable: false, Reason: "not checkable (wrong context)"}, nil
+	}
+
+	renderedPath, err := ec.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
+	if err != nil {
+		renderedPath = file.Path
+	}
+
+	state := file.State
+	if state == "" {
+		state = actionTypeFile
+	}
+
+	switch state {
+	case actionTypeFile:
+		info, err := os.Stat(renderedPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "would create " + renderedPath}, nil
+			}
+			return actions.CheckResult{Checkable: true, Reason: "stat error"}, nil
+		}
+		if info.IsDir() {
+			return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "path is a directory, would replace"}, nil
+		}
+		if file.Content != "" {
+			existing, err := os.ReadFile(renderedPath) // #nosec G304 -- check mode read
+			if err != nil {
+				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "would update (unreadable)"}, nil
+			}
+			if string(existing) != file.Content {
+				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "content differs"}, nil
+			}
+		}
+		return actions.CheckResult{Checkable: true, WouldChange: false, Reason: "already matches"}, nil
+
+	case "directory":
+		if _, err := os.Stat(renderedPath); os.IsNotExist(err) {
+			return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "would create directory"}, nil
+		}
+		return actions.CheckResult{Checkable: true, WouldChange: false, Reason: "directory exists"}, nil
+
+	case "absent":
+		if _, err := os.Stat(renderedPath); err == nil {
+			return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "would remove " + renderedPath}, nil
+		}
+		return actions.CheckResult{Checkable: true, WouldChange: false, Reason: "already absent"}, nil
+
+	case stateLink:
+		target, err := os.Readlink(renderedPath)
+		if err != nil {
+			return actions.CheckResult{Checkable: true, WouldChange: true, Reason: "would create symlink"}, nil
+		}
+		if target != file.Src {
+			return actions.CheckResult{Checkable: true, WouldChange: true, Reason: fmt.Sprintf("symlink target differs: %s → %s", target, file.Src)}, nil
+		}
+		return actions.CheckResult{Checkable: true, WouldChange: false, Reason: "symlink already correct"}, nil
+
+	case "touch":
+		return actions.CheckResult{Checkable: false, Reason: "touch always updates mtime"}, nil
+
+	default:
+		return actions.CheckResult{Checkable: false, Reason: "not checkable for state: " + state}, nil
+	}
+}
+
 // Helper functions
 
 func (h *Handler) formatMode(mode os.FileMode) string {

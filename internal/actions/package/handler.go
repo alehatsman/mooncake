@@ -149,6 +149,46 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 }
 
+// Check implements actions.Checker — reports whether packages would be installed/removed.
+func (h *Handler) Check(ctx actions.Context, step *config.Step) (actions.CheckResult, error) {
+	pkg := step.Package
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return actions.CheckResult{Checkable: true, Reason: "not checkable (wrong context)"}, nil
+	}
+
+	manager, err := h.determinePackageManager(pkg.Manager, ctx.GetVariables())
+	if err != nil {
+		return actions.CheckResult{Checkable: true, Reason: "cannot determine package manager"}, nil
+	}
+
+	state := pkg.State
+	if state == "" {
+		state = statePresent
+	}
+
+	packages := h.buildPackageList(pkg)
+
+	for _, name := range packages {
+		installed, err := h.isPackageInstalled(ec, manager, name)
+		if err != nil {
+			return actions.CheckResult{Checkable: true, Reason: fmt.Sprintf("check error: %v", err)}, nil
+		}
+		switch state {
+		case statePresent, stateLatest:
+			if !installed {
+				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: fmt.Sprintf("would install %s", name)}, nil
+			}
+		case stateAbsent:
+			if installed {
+				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: fmt.Sprintf("would remove %s", name)}, nil
+			}
+		}
+	}
+
+	return actions.CheckResult{Checkable: true, WouldChange: false, Reason: "already in desired state"}, nil
+}
+
 // DryRun shows what would be done without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	pkg := step.Package
@@ -316,6 +356,8 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string, packages []string, upgrade bool, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
+	var newPkgs, existingPkgs []string
+
 	for _, pkg := range packages {
 		// Check if package is already installed
 		installed, err := h.isPackageInstalled(ec, manager, pkg)
@@ -325,6 +367,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 
 		if installed && !upgrade {
 			ec.Logger.Debugf("  Package %q is already installed", pkg)
+			existingPkgs = append(existingPkgs, pkg)
 			continue
 		}
 
@@ -339,8 +382,15 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 			return nil, fmt.Errorf("failed to install package %q: %w", pkg, execErr)
 		}
 
+		newPkgs = append(newPkgs, pkg)
 		result.SetChanged(true)
 	}
+
+	ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
+		Manager:        manager,
+		Installed:      newPkgs,
+		AlreadyPresent: existingPkgs,
+	})
 
 	return result, nil
 }
@@ -348,6 +398,8 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 // removePackages removes packages.
 func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, packages []string, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
+
+	var removed []string
 
 	for _, pkg := range packages {
 		// Check if package is installed
@@ -372,8 +424,14 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 			return nil, fmt.Errorf("failed to remove package %q: %w", pkg, execErr)
 		}
 
+		removed = append(removed, pkg)
 		result.SetChanged(true)
 	}
+
+	ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
+		Manager: manager,
+		Removed: removed,
+	})
 
 	return result, nil
 }

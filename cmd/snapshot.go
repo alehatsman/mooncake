@@ -24,6 +24,14 @@ func snapshotCommand() *cli.Command {
 				Value: 0,
 				Usage: "Approximate token budget for text output (0 = unlimited, 1 token ≈ 4 chars)",
 			},
+			&cli.StringFlag{
+				Name:  "diff",
+				Usage: "Path to previous snapshot JSON file to diff against",
+			},
+			&cli.StringFlag{
+				Name:  "save",
+				Usage: "Save current snapshot to this file",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			format := c.String("format")
@@ -32,17 +40,47 @@ func snapshotCommand() *cli.Command {
 			}
 
 			f := facts.Collect()
-			snap := snapshot.CollectSystem(f)
+			curr := snapshot.CollectSystem(f)
 
+			// Save current snapshot if requested
+			if savePath := c.String("save"); savePath != "" {
+				if err := snapshot.SaveSnapshot(savePath, curr); err != nil {
+					return fmt.Errorf("failed to save snapshot: %w", err)
+				}
+				fmt.Printf("snapshot saved to %s\n", savePath)
+				return nil
+			}
+
+			// Diff mode
+			if diffPath := c.String("diff"); diffPath != "" {
+				prev, err := snapshot.LoadSnapshot(diffPath)
+				if err != nil {
+					return err
+				}
+				d := snapshot.Diff(prev, curr)
+				switch format {
+				case outputFormatJSON:
+					data, err := snapshot.RenderDiffJSON(d)
+					if err != nil {
+						return err
+					}
+					fmt.Println(string(data))
+				default:
+					fmt.Println(snapshot.RenderDiffText(d))
+				}
+				return nil
+			}
+
+			// Normal snapshot output
 			switch format {
 			case outputFormatJSON:
-				data, err := snap.RenderJSON()
+				data, err := curr.RenderJSON()
 				if err != nil {
 					return err
 				}
 				fmt.Println(string(data))
 			default:
-				fmt.Println(snap.RenderText(c.Int("budget")))
+				fmt.Println(curr.RenderText(c.Int("budget")))
 			}
 
 			return nil

@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -226,4 +227,18 @@ type Result interface {
 	//
 	// Handlers typically don't call this directly.
 	RegisterTo(variables map[string]interface{}, name string)
+}
+
+// Checker is an optional interface handlers can implement for check mode.
+// When a handler implements Checker, mooncake --check calls Check() instead
+// of Execute(), making zero writes to the system.
+type Checker interface {
+	Check(ctx Context, step *config.Step) (CheckResult, error)
+}
+
+// CheckResult describes what a step would do without executing it.
+type CheckResult struct {
+	WouldChange bool   // true if the step would modify state
+	Checkable   bool   // false for actions that can't predict outcomes (shell)
+	Reason      string // short description: "would install", "already present", etc.
 }
