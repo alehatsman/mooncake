@@ -348,9 +348,9 @@ with `systemd-analyze verify` in CI if available, otherwise check by hand.
 In rough priority order. Spec numbers will be assigned when each is written
 (filenames track creation order across all epics, not E7-internal order):
 
-- **E7.2** Utilization facts (dynamic metrics tier) — turns `get_facts` into a
-  fleet observability surface; per-fact TTL caching replaces `sync.Once`. See
-  `spec-19-utilization-facts.md`.
+- **E7.2** System metrics (live utilization surface) — new `metrics` package
+  + `mooncake metrics` CLI + `get_metrics` MCP tool, separate from facts. See
+  `spec-20-metrics.md`.
 - **E7.3** Streaming execution events over SSE — need stable transport first;
   Spec 18 stubs the URL.
 - **E7.4** Preset bundling in `apply_yaml` payload — manual sync is fine for 2

@@ -1,0 +1,16 @@
+Machine model: Mac15,7
+OS version: 23A344
+Boot arguments:
+Boot time: Mon May 12 09:00:00 2026
+
+*** Sampled system activity (Mon May 12 21:00:00 2026 -0500) (100ms elapsed) ***
+
+
+**** Thermal pressure ****
+
+Current pressure level: Nominal
+
+
+**** SMC sensors ****
+
+Fan: not present

@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/metrics"
 	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/snapshot"
 )
@@ -72,6 +74,18 @@ func AllTools() []ToolDef {
 				"config": strProp("Path to mooncake config YAML file"),
 			}, []string{"config"}),
 		},
+		{
+			Name:        "get_metrics",
+			Description: "Return live system metrics (CPU/GPU/memory/load/network) as JSON. Cached per-metric with TTLs ~2-5s. Use fields=[...] to restrict the response; use refresh=true to force re-sample.",
+			InputSchema: objSchema(map[string]interface{}{
+				"fields": map[string]interface{}{
+					"type":        "array",
+					"items":       map[string]interface{}{"type": "string"},
+					"description": "Optional. Restrict the response to these keys (e.g. ['cpu_usage_pct', 'gpus_metrics']). Adds a _collected_at sibling map of key → RFC3339 timestamp.",
+				},
+				"refresh": boolProp("If true, force-refresh metrics (bypass TTL)."),
+			}, nil),
+		},
 	}
 }
 
@@ -105,6 +119,42 @@ func HandleGetSnapshot(_ context.Context, args json.RawMessage) (string, error) 
 		return string(b), nil
 	}
 	return snap.RenderText(0), nil
+}
+
+func HandleGetMetrics(_ context.Context, args json.RawMessage) (string, error) {
+	var params struct {
+		Fields  []string `json:"fields"`
+		Refresh bool     `json:"refresh"`
+	}
+	if args != nil {
+		_ = json.Unmarshal(args, &params)
+	}
+
+	if params.Refresh {
+		metrics.Refresh()
+	}
+
+	m, collectedAt, _ := metrics.Collect(params.Fields)
+	mm := m.ToMap()
+
+	payload := mm
+	if len(params.Fields) > 0 {
+		payload = make(map[string]interface{}, len(params.Fields)+1)
+		for _, k := range params.Fields {
+			payload[k] = mm[k]
+		}
+		ts := make(map[string]string, len(collectedAt))
+		for k, v := range collectedAt {
+			ts[k] = v.UTC().Format(time.RFC3339)
+		}
+		payload["_collected_at"] = ts
+	}
+
+	b, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal metrics: %w", err)
+	}
+	return string(b), nil
 }
 
 func HandleFactQuery(_ context.Context, args json.RawMessage) (string, error) {
