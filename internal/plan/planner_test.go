@@ -77,7 +77,7 @@ vars:
 steps:
   - name: "Process {{ item }}"
     shell: "echo \"{{ index }}: {{ item }} (first={{ first }}, last={{ last }})\""
-    with_items: items
+    for_each: items
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -144,11 +144,11 @@ func TestPlanner_CycleDetection(t *testing.T) {
 
 	contentA := `- name: Step A
   shell: echo "A"
-- include: b.yml
+- import: b.yml
 `
 	contentB := `- name: Step B
   shell: echo "B"
-- include: a.yml
+- import: a.yml
 `
 
 	err := os.WriteFile(configA, []byte(contentA), 0644)
@@ -251,7 +251,7 @@ vars:
 steps:
   - name: Process {{ item }}
     shell: echo "{{ item }}"
-    with_items: items
+    for_each: items
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -323,10 +323,10 @@ func TestPlanner_ExpandWithFileTree(t *testing.T) {
 	configContent := `version: "1.0"
 steps:
   - name: "Copy {{ item.Src }}"
-    template:
+    file.template:
       src: "{{ item.Src }}"
       dest: "/tmp/{{ item.Name }}"
-    with_filetree: ./templates
+    for_each_file: ./templates
 `
 	err = os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -393,7 +393,7 @@ func TestPlanner_ExpandInclude(t *testing.T) {
 steps:
   - name: Main step
     shell: echo "main"
-  - include: included.yml
+  - import: included.yml
   - name: After include
     shell: echo "after"
 `
@@ -460,7 +460,7 @@ func TestPlanner_IncludeWithWhen(t *testing.T) {
 vars:
   os: darwin
 steps:
-  - include: linux.yml
+  - import: linux.yml
     when: os == "linux"
 `
 	linuxContent := `- name: Linux step
@@ -515,10 +515,10 @@ func TestPlanner_WithFileTree_InvalidPath(t *testing.T) {
 	configContent := `version: "1.0"
 steps:
   - name: "Copy {{ item.Src }}"
-    template:
+    file.template:
       src: "{{ item.Src }}"
       dest: "/tmp/{{ item.Name }}"
-    with_filetree: /nonexistent/path
+    for_each_file: /nonexistent/path
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -554,7 +554,7 @@ func TestPlanner_WithItems_InvalidTemplate(t *testing.T) {
 steps:
   - name: "Process {{ item }}"
     shell: echo "{{ item }}"
-    with_items: "{{ undefined_variable }}"
+    for_each: "{{ undefined_variable }}"
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -588,7 +588,7 @@ func TestPlanner_Include_ReadError(t *testing.T) {
 
 	configContent := `version: "1.0"
 steps:
-  - include: nonexistent.yml
+  - import: nonexistent.yml
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -624,7 +624,7 @@ func TestPlanner_Include_ValidationError(t *testing.T) {
 
 	mainContent := `version: "1.0"
 steps:
-  - include: invalid.yml
+  - import: invalid.yml
 `
 	// Invalid YAML - not a list
 	invalidContent := `this is not valid step config`
@@ -668,10 +668,10 @@ func TestPlanner_WithFileTree_EmptyResults(t *testing.T) {
 	configContent := `version: "1.0"
 steps:
   - name: "Copy {{ item.Src }}"
-    template:
+    file.template:
       src: "{{ item.Src }}"
       dest: "/tmp/{{ item.Name }}"
-    with_filetree: ./empty
+    for_each_file: ./empty
 `
 	err = os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -711,7 +711,7 @@ vars:
 steps:
   - name: "Process {{ item }}"
     shell: echo "{{ item }}"
-    with_items: not_a_list
+    for_each: not_a_list
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -749,7 +749,7 @@ func TestPlanner_Include_PathExpansion(t *testing.T) {
 vars:
   os_name: darwin
 steps:
-  - include: "{{ os_name }}.yml"
+  - import: "{{ os_name }}.yml"
 `
 	darwinContent := `- name: Darwin step
   shell: echo "darwin"
@@ -838,10 +838,10 @@ vars:
 
 steps:
   - name: Deploy {{ item.Name }}
-    template:
+    file.template:
       src: "{{ item.Src }}"
       dest: "{{ output_dir }}/{{ item.Name }}"
-    with_filetree: "` + templatesDir + `"
+    for_each_file: "` + templatesDir + `"
     when: item.State == "file"
 `
 	err = os.WriteFile(configPath, []byte(configContent), 0644)

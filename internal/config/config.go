@@ -129,6 +129,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -764,6 +765,30 @@ func (f ForEachField) MarshalYAML() (interface{}, error) {
 		return f.Items, nil
 	}
 	return f.Expr, nil
+}
+
+// MarshalJSON ensures Validate's json.Marshal → unmarshal → schema-check
+// round-trip emits the scalar/sequence form rather than a struct shape.
+func (f ForEachField) MarshalJSON() ([]byte, error) {
+	if f.Items != nil {
+		return json.Marshal(f.Items)
+	}
+	return json.Marshal(f.Expr)
+}
+
+// UnmarshalJSON parses either a scalar (string) or sequence (array) form.
+func (f *ForEachField) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		f.Expr = s
+		return nil
+	}
+	var items []interface{}
+	if err := json.Unmarshal(data, &items); err == nil {
+		f.Items = items
+		return nil
+	}
+	return fmt.Errorf("for_each: expected JSON string or array")
 }
 
 // RetryPolicy controls per-step retry behavior (spec-21).

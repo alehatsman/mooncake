@@ -118,7 +118,7 @@ func TestStart_WithVarsFile(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "test.yml")
 	configContent := `
 - name: Test Step
-  print: "{{ test_var }}"
+  log: "{{ test_var }}"
 `
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
@@ -153,7 +153,7 @@ func TestStart_DryRun(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "test.yml")
 	configContent := `
 - name: Test Step
-  print: "test message"
+  log: "test message"
 `
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)

@@ -91,7 +91,7 @@ func TestRunIntegration(t *testing.T) {
 		t.Fatalf("Failed to git commit: %v", err)
 	}
 
-	plan := fmt.Sprintf(`- file:
+	plan := fmt.Sprintf(`- file.write:
     path: %s
     content: "modified"
 `, testFile)

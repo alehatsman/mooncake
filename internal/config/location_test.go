@@ -98,7 +98,7 @@ func TestBuildLocationMap_SimpleArray(t *testing.T) {
 
 func TestBuildLocationMap_NestedObject(t *testing.T) {
 	yamlContent := `- name: template step
-  template:
+  file.template:
     src: /path/to/template
     dest: /path/to/dest
     mode: "0644"`
@@ -112,24 +112,24 @@ func TestBuildLocationMap_NestedObject(t *testing.T) {
 	lm := buildLocationMap(&rootNode)
 
 	// Check nested template fields
-	templatePos := lm.Get("/0/template")
+	templatePos := lm.Get("/0/file.template")
 	if templatePos.Line == 0 {
-		t.Error("Expected location for /0/template, got zero position")
+		t.Error("Expected location for /0/file.template, got zero position")
 	}
 
-	srcPos := lm.Get("/0/template/src")
+	srcPos := lm.Get("/0/file.template/src")
 	if srcPos.Line == 0 {
-		t.Error("Expected location for /0/template/src, got zero position")
+		t.Error("Expected location for /0/file.template/src, got zero position")
 	}
 
-	destPos := lm.Get("/0/template/dest")
+	destPos := lm.Get("/0/file.template/dest")
 	if destPos.Line == 0 {
-		t.Error("Expected location for /0/template/dest, got zero position")
+		t.Error("Expected location for /0/file.template/dest, got zero position")
 	}
 
-	modePos := lm.Get("/0/template/mode")
+	modePos := lm.Get("/0/file.template/mode")
 	if modePos.Line == 0 {
-		t.Error("Expected location for /0/template/mode, got zero position")
+		t.Error("Expected location for /0/file.template/mode, got zero position")
 	}
 }
 
@@ -163,8 +163,8 @@ func TestFormatObjectPath(t *testing.T) {
 	}{
 		{"", "name", "/name"},
 		{"", "shell", "/shell"},
-		{"/0", "template", "/0/template"},
-		{"/0/template", "src", "/0/template/src"},
+		{"/0", "file.template", "/0/file.template"},
+		{"/0/file.template", "src", "/0/file.template/src"},
 	}
 
 	for _, tt := range tests {
@@ -202,7 +202,7 @@ func TestEscapeJSONPointer(t *testing.T) {
 // TestBuildLocationMap_RealWorldExample tests with a realistic configuration
 func TestBuildLocationMap_RealWorldExample(t *testing.T) {
 	yamlContent := `- name: Create directory
-  file:
+  file.write:
     path: /tmp/test
     state: directory
     mode: "0755"
@@ -215,7 +215,7 @@ func TestBuildLocationMap_RealWorldExample(t *testing.T) {
     - initial
 
 - name: Render template
-  template:
+  file.template:
     src: /path/to/template.j2
     dest: /path/to/output.txt`
 
@@ -231,10 +231,10 @@ func TestBuildLocationMap_RealWorldExample(t *testing.T) {
 	paths := []string{
 		"/0",
 		"/0/name",
-		"/0/file",
-		"/0/file/path",
-		"/0/file/state",
-		"/0/file/mode",
+		"/0/file.write",
+		"/0/file.write/path",
+		"/0/file.write/state",
+		"/0/file.write/mode",
 		"/1",
 		"/1/name",
 		"/1/shell",
@@ -243,9 +243,9 @@ func TestBuildLocationMap_RealWorldExample(t *testing.T) {
 		"/1/tags/0",
 		"/1/tags/1",
 		"/2",
-		"/2/template",
-		"/2/template/src",
-		"/2/template/dest",
+		"/2/file.template",
+		"/2/file.template/src",
+		"/2/file.template/dest",
 	}
 
 	for _, path := range paths {

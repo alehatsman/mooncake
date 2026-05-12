@@ -102,7 +102,7 @@ func TestExtractStepName(t *testing.T) {
 			lines: []string{
 				"steps:",
 				"  - shell: echo hello",
-				"    become: true",
+				"    as_user: root",
 			},
 			errorLine: 3,
 			expected:  "",

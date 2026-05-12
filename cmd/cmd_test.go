@@ -1640,7 +1640,7 @@ func TestFormatPlanTextAllActionTypes(t *testing.T) {
     shell: echo hello
 
   - name: file step
-    file:
+    file.write:
       path: /tmp/test
       state: touch
 
@@ -1649,7 +1649,7 @@ func TestFormatPlanTextAllActionTypes(t *testing.T) {
       my_var: value
 
   - name: print step
-    print: "test"
+    log: "test"
 `
 	if err := os.WriteFile(testConfig, []byte(configContent), 0600); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
@@ -1985,7 +1985,7 @@ func TestFormatPlanTextWithOriginAndChain(t *testing.T) {
 	mainContent := `steps:
   - name: main step
     shell: echo from main
-  - include: ` + includedConfig + `
+  - import: ` + includedConfig + `
 `
 	if err := os.WriteFile(mainConfig, []byte(mainContent), 0600); err != nil {
 		t.Fatalf("failed to write main config: %v", err)
@@ -2172,7 +2172,7 @@ func TestPlanCommandWithComplexConfig(t *testing.T) {
   - name: loop step
     shell: echo {{ item }}
     loop: "{{ my_items }}"
-    register: loop_result
+    as: loop_result
 
   - name: conditional step
     shell: echo conditional

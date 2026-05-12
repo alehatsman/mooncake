@@ -68,7 +68,7 @@ func TestMode_String(t *testing.T) {
 		mode actions.Mode
 		want string
 	}{
-		{actions.ModeApply, "execute"},
+		{actions.ModeApply, "apply"},
 		{actions.ModePlan, "plan"},
 		{actions.Mode(99), "unknown"},
 	} {

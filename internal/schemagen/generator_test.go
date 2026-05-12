@@ -56,7 +56,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	// Verify universal fields exist in step
-	universalFields := []string{"name", "when", "register", "tags", "become"}
+	universalFields := []string{"name", "when", "as", "tags", "as_user"}
 	for _, field := range universalFields {
 		if _, ok := stepDef.Properties[field]; !ok {
 			t.Errorf("Universal field %s not found in step definition", field)
@@ -232,12 +232,12 @@ func TestSpecificActionStructures(t *testing.T) {
 			propertyTypes:  map[string]string{"cmd": "string"},
 		},
 		{
-			action:         "service",
+			action:         "os.service",
 			requiredFields: []string{"name"},
 			propertyTypes:  map[string]string{"name": "string", "state": "string"},
 		},
 		{
-			action:         "file",
+			action:         "file.write",
 			requiredFields: []string{"path"},
 			propertyTypes:  map[string]string{"path": "string", "state": "string"},
 		},
@@ -301,12 +301,12 @@ func TestVarsAndIncludeVarsSpecialCases(t *testing.T) {
 		t.Errorf("vars should be object type, got %s", varsDef.Type)
 	}
 
-	// Test include_vars action (should be string type)
-	includeVarsDef, ok := schema.Definitions["include_vars"]
+	// Test vars.load action (should be string type)
+	varsLoadDef, ok := schema.Definitions["vars.load"]
 	if !ok {
-		t.Fatal("include_vars definition not found")
+		t.Fatal("vars.load definition not found")
 	}
-	if includeVarsDef.Type != "string" {
-		t.Errorf("include_vars should be string type, got %s", includeVarsDef.Type)
+	if varsLoadDef.Type != "string" {
+		t.Errorf("vars.load should be string type, got %s", varsLoadDef.Type)
 	}
 }

@@ -1,31 +1,26 @@
 package schemagen
 
 // KnownEnums maps action.field paths to their enum values.
-// These are extracted from the existing schema and validation logic.
+// Keys use spec-21 dot-namespaced action names.
 var KnownEnums = map[string][]string{
-	// Service action enums
-	"service.state": {"started", "stopped", "restarted", "reloaded"},
+	// os.service action enums
+	"os.service.state": {"started", "stopped", "restarted", "reloaded"},
 
-	// File action enums
-	"file.state": {"file", "present", "absent", "directory", "link", "hardlink", "touch", "perms"},
+	// file.write action enums
+	"file.write.state": {"file", "present", "absent", "directory", "link", "hardlink", "touch", "perms"},
 
-	// Package action enums
-	"package.state": {"present", "absent", "latest"},
+	// pkg action enums
+	"pkg.state": {"present", "absent", "latest"},
 
-	// Shell action enums
+	// shell action enums
 	"shell.interpreter": {"bash", "sh", "pwsh", "cmd"},
-
-	// Download/File/Copy mode validation (not enum, but common pattern)
-	// These will be handled as pattern validation
-
-	// Template action enums (none specific, uses file-like patterns)
 }
 
 // KnownPatterns maps field names to regex patterns for validation.
 var KnownPatterns = map[string]string{
 	// Duration fields
-	"timeout":     `^[0-9]+(ns|us|µs|ms|s|m|h)$`,
-	"retry_delay": `^[0-9]+(ns|us|µs|ms|s|m|h)$`,
+	"timeout": `^[0-9]+(ns|us|µs|ms|s|m|h)$`,
+	"delay":   `^[0-9]+(ns|us|µs|ms|s|m|h)$`, // retry.delay sub-field
 
 	// File permissions (octal)
 	"mode": `^[0-7]{3,4}$`,
@@ -33,7 +28,7 @@ var KnownPatterns = map[string]string{
 
 // KnownRanges maps field names to min/max constraints.
 var KnownRanges = map[string]struct{ Min, Max float64 }{
-	"retries": {Min: 0, Max: 100},
+	"attempts": {Min: 0, Max: 100}, // retry.attempts sub-field
 }
 
 // applyKnownValidation adds enum, pattern, and range validation to a property.

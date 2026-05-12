@@ -68,7 +68,7 @@ description: Test preset
 version: 1.0.0
 steps:
   - name: Step 1
-    print: "Hello from preset"
+    log: "Hello from preset"
 `
 
 	if err := os.WriteFile(presetPath, []byte(presetContent), 0644); err != nil {
@@ -120,7 +120,7 @@ func TestLoadPreset_DirectoryStructure(t *testing.T) {
 description: Directory preset
 steps:
   - name: Step 1
-    print: "Hello"
+    log: "Hello"
 `
 
 	presetFile := filepath.Join(presetDir, "preset.yml")
@@ -199,7 +199,7 @@ func TestLoadPreset_MissingName(t *testing.T) {
 	content := `description: Missing name
 steps:
   - name: Step 1
-    print: "test"
+    log: "test"
 `
 	os.WriteFile(presetPath, []byte(content), 0644)
 
@@ -222,7 +222,7 @@ func TestLoadPreset_NameMismatch(t *testing.T) {
 	content := `name: actual-name
 steps:
   - name: Step 1
-    print: "test"
+    log: "test"
 `
 	os.WriteFile(presetPath, []byte(content), 0644)
 
@@ -266,7 +266,7 @@ func TestLoadPreset_NestedPreset(t *testing.T) {
 	content := `name: nested
 steps:
   - name: Call other preset
-    preset: other-preset
+    use: other-preset
 `
 	os.WriteFile(presetPath, []byte(content), 0644)
 
@@ -495,7 +495,7 @@ parameters:
     required: true
 steps:
   - name: Print message
-    print: "{{ parameters.message }}"
+    log: "{{ parameters.message }}"
 `
 	os.WriteFile(presetPath, []byte(content), 0644)
 
@@ -574,7 +574,7 @@ parameters:
     required: true
 steps:
   - name: Step
-    print: "test"
+    log: "test"
 `
 	os.WriteFile(presetPath, []byte(content), 0644)
 
@@ -604,7 +604,7 @@ func TestExpandPreset_NilWith(t *testing.T) {
 	content := `name: no-params
 steps:
   - name: Step
-    print: "test"
+    log: "test"
 `
 	os.WriteFile(presetPath, []byte(content), 0644)
 
@@ -703,7 +703,7 @@ description: First preset
 version: 1.0.0
 steps:
   - name: Step 1
-    print: "test1"
+    log: "test1"
 `
 	os.WriteFile(preset1, []byte(preset1Content), 0644)
 
@@ -713,7 +713,7 @@ description: Second preset
 version: 2.0.0
 steps:
   - name: Step 1
-    print: "test2"
+    log: "test2"
 `
 	os.WriteFile(preset2, []byte(preset2Content), 0644)
 
@@ -775,7 +775,7 @@ description: Local version
 version: 1.0.0
 steps:
   - name: Step 1
-    print: "local"
+    log: "local"
 `
 	os.WriteFile(localPreset, []byte(localContent), 0644)
 
@@ -822,7 +822,7 @@ description: Valid preset
 version: 1.0.0
 steps:
   - name: Step 1
-    print: "test"
+    log: "test"
 `
 	os.WriteFile(validPreset, []byte(validContent), 0644)
 
@@ -830,7 +830,7 @@ steps:
 	invalidPreset := filepath.Join(presetsDir, "invalid.yml")
 	invalidContent := `steps:
   - name: Step 1
-    print: "test"
+    log: "test"
 `
 	os.WriteFile(invalidPreset, []byte(invalidContent), 0644)
 

@@ -38,21 +38,21 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
 		{
 			name: "file step",
 			yamlConfig: `- name: create file
-  file:
+  file.write:
     path: /tmp/test.txt
     state: present`,
 		},
 		{
 			name: "template step",
 			yamlConfig: `- name: render template
-  template:
+  file.template:
     src: /path/to/template.j2
     dest: /path/to/output.txt`,
 		},
 		{
 			name: "template with mode",
 			yamlConfig: `- name: render template
-  template:
+  file.template:
     src: /path/to/template.j2
     dest: /path/to/output.txt
     mode: "0644"`,
@@ -60,7 +60,7 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
 		{
 			name: "file with mode",
 			yamlConfig: `- name: create file
-  file:
+  file.write:
     path: /tmp/test.txt
     state: present
     mode: "0755"`,
@@ -68,12 +68,12 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
 		{
 			name: "include step",
 			yamlConfig: `- name: include tasks
-  include: ./tasks.yml`,
+  import: ./tasks.yml`,
 		},
 		{
 			name: "include_vars step",
 			yamlConfig: `- name: load vars
-  include_vars: ./vars.yml`,
+  vars.load: ./vars.yml`,
 		},
 		{
 			name: "vars step",
@@ -99,27 +99,27 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
 			name: "step with register",
 			yamlConfig: `- name: command with register
   shell: echo hello
-  register: result`,
+  as: result`,
 		},
 		{
 			name: "step with become",
 			yamlConfig: `- name: privileged command
   shell: apt-get update
-  become: true`,
+  as_user: root`,
 		},
 		{
 			name: "step with with_items",
 			yamlConfig: `- name: loop over items
   shell: echo "{{ item }}"
-  with_items: "{{ packages }}"`,
+  for_each: "{{ packages }}"`,
 		},
 		{
 			name: "step with with_filetree",
 			yamlConfig: `- name: loop over files
-  file:
+  file.write:
     path: "{{ item.path }}"
     state: present
-  with_filetree: /tmp/files`,
+  for_each_file: /tmp/files`,
 		},
 	}
 
@@ -163,7 +163,7 @@ func TestSchemaValidator_MultipleActions(t *testing.T) {
 
 	yamlConfig := `- name: invalid step
   shell: echo hello
-  file:
+  file.write:
     path: /tmp/test.txt
     state: present`
 
@@ -238,21 +238,21 @@ func TestSchemaValidator_MissingRequiredField(t *testing.T) {
 		{
 			name: "template missing src",
 			yamlConfig: `- name: invalid template
-  template:
+  file.template:
     dest: /path/to/output.txt`,
 			wantError: "src",
 		},
 		{
 			name: "template missing dest",
 			yamlConfig: `- name: invalid template
-  template:
+  file.template:
     src: /path/to/template.j2`,
 			wantError: "dest",
 		},
 		{
 			name: "file missing path",
 			yamlConfig: `- name: invalid file
-  file:
+  file.write:
     state: present`,
 			wantError: "path",
 		},
@@ -307,8 +307,8 @@ func TestSchemaValidator_InvalidFieldType(t *testing.T) {
 	}
 
 	yamlConfig := `- name: invalid step
-  shell: 123
-  become: "not a boolean"`
+  shell: echo ok
+  tags: "should be a list, not a string"`
 
 	var rootNode yaml.Node
 	err = yaml.Unmarshal([]byte(yamlConfig), &rootNode)
@@ -403,7 +403,7 @@ func TestSchemaValidator_InvalidFileMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			yamlConfig := `- name: file with invalid mode
-  file:
+  file.write:
     path: /tmp/test.txt
     state: present
     mode: ` + tt.mode
@@ -442,7 +442,7 @@ func TestSchemaValidator_InvalidFileState(t *testing.T) {
 	}
 
 	yamlConfig := `- name: file with invalid state
-  file:
+  file.write:
     path: /tmp/test.txt
     state: invalid_state`
 
@@ -478,7 +478,7 @@ func TestSchemaValidator_DiagnosticHasLocation(t *testing.T) {
 
 	yamlConfig := `- name: step1
   shell: echo hello
-  file:
+  file.write:
     path: /tmp/test.txt
     state: present`
 
@@ -523,32 +523,32 @@ func TestValidate_RealWorldExample(t *testing.T) {
 	}
 
 	yamlConfig := `- name: Create application directory
-  file:
+  file.write:
     path: /opt/myapp
     state: directory
     mode: "0755"
 
 - name: Install dependencies
   shell: apt-get install -y nginx
-  become: true
+  as_user: root
   when: os == "linux"
   tags:
     - setup
 
 - name: Render configuration
-  template:
+  file.template:
     src: ./templates/nginx.conf.j2
     dest: /etc/nginx/nginx.conf
     mode: "0644"
-  become: true
+  as_user: root
 
 - name: Load variables
-  include_vars: ./vars/production.yml
+  vars.load: ./vars/production.yml
 
 - name: Start service
   shell: systemctl start nginx
-  become: true
-  register: start_result`
+  as_user: root
+  as: start_result`
 
 	var rootNode yaml.Node
 	err = yaml.Unmarshal([]byte(yamlConfig), &rootNode)

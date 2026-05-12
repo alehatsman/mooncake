@@ -583,7 +583,7 @@ func TestFormatOneOfError(t *testing.T) {
 					{Message: "missing required property 'file'"},
 				},
 			},
-			expected: "Step has no action. Each step must have exactly ONE of: shell, command, template, file, file_replace, file_insert, file_delete_range, file_patch_apply, copy, download, unarchive, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, package, repo_search, repo_tree, repo_apply_patchset, or wait",
+			expected: "Step has no action. Each step must have exactly ONE of: shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait",
 		},
 		{
 			name: "multiple actions present",
@@ -593,14 +593,14 @@ func TestFormatOneOfError(t *testing.T) {
 					{KeywordLocation: "#/oneOf/1/not"},
 				},
 			},
-			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, command, template, file, file_replace, file_insert, file_delete_range, file_patch_apply, copy, download, unarchive, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, package, repo_search, repo_tree, repo_apply_patchset, or wait",
+			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait",
 		},
 		{
 			name: "generic oneOf error",
 			err: &jsonschema.ValidationError{
 				Causes: []*jsonschema.ValidationError{},
 			},
-			expected: "Step must have exactly one action (shell, command, template, file, file_replace, file_insert, file_delete_range, file_patch_apply, copy, download, unarchive, service, assert, artifact_capture, artifact_validate, preset, print, include, include_vars, vars, package, repo_search, repo_tree, repo_apply_patchset, or wait)",
+			expected: "Step must have exactly one action (shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait)",
 		},
 	}
 

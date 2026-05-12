@@ -20,7 +20,7 @@ func TestPackageNames_ScalarRoundTrip(t *testing.T) {
 			name: "list of names",
 			yaml: `
 - name: install
-  package:
+  pkg:
     manager: pacman
     names: [vim, git, curl]
     state: present
@@ -32,7 +32,7 @@ func TestPackageNames_ScalarRoundTrip(t *testing.T) {
 			name: "templated names",
 			yaml: `
 - name: install
-  package:
+  pkg:
     manager: pacman
     names: "{{ pacman_packages }}"
     state: present

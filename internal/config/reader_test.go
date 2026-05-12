@@ -17,7 +17,7 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
   shell: echo hello
 
 - name: create file
-  file:
+  file.write:
     path: /tmp/test.txt
     state: present
 `)
@@ -84,7 +84,7 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 	t.Run("config with template", func(t *testing.T) {
 		tmpFile := createTempYAML(t, `
 - name: render template
-  template:
+  file.template:
     src: /tmp/template.j2
     dest: /tmp/output.txt
 `)
@@ -292,7 +292,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 		tmpFile := createTempYAML(t, `
 - name: invalid step
   shell: echo hello
-  file:
+  file.write:
     path: /tmp/test
 `)
 		defer os.Remove(tmpFile)
@@ -332,13 +332,13 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 
 	tmpFile := createTempYAML(t, `
 - name: create directory
-  file:
+  file.write:
     path: /tmp/testdir
     state: directory
     mode: "0755"
 
 - name: template file
-  template:
+  file.template:
     src: template.j2
     dest: /tmp/output.txt
     mode: "0644"
@@ -347,16 +347,16 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 
 - name: run with sudo
   shell: apt-get update
-  become: true
+  as_user: root
 
 - name: include other file
-  include: other.yml
+  import: other.yml
 
 - name: loop over files
-  file:
+  file.write:
     path: "{{ item.path }}"
     state: present
-  with_filetree: /tmp/files
+  for_each_file: /tmp/files
 
 - name: set variables
   vars:

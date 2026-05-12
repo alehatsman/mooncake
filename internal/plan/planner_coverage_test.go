@@ -339,7 +339,7 @@ vars:
   load_vars: false
 
 steps:
-  - include_vars: vars.yml
+  - vars.load: vars.yml
     when: load_vars == true
 
   - name: Test step
@@ -431,7 +431,7 @@ func TestBuildPlan_ExpandStepsError(t *testing.T) {
 	// Config with include that references a non-existent file
 	configContent := `version: "1.0"
 steps:
-  - include: missing.yml
+  - import: missing.yml
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {

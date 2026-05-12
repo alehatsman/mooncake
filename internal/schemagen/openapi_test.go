@@ -204,7 +204,7 @@ func TestGenerateOpenAPI(t *testing.T) {
 	}
 
 	// Check for key schemas
-	requiredSchemas := []string{"step", "shell", "file", "service"}
+	requiredSchemas := []string{"step", "shell", "file.write", "os.service"}
 	for _, name := range requiredSchemas {
 		if _, ok := spec.Components.Schemas[name]; !ok {
 			t.Errorf("expected schema %s to exist", name)

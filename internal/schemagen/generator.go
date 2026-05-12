@@ -272,13 +272,28 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 	var constraints []*OneOfConstraint //nolint:prealloc // Size depends on actionNames length
 
 	for i, actionName := range actionNames {
-		// Create a constraint for this action
+		// Build the property constraint for this action. Most actions are a
+		// strict object reference. shell and use accept both string and
+		// object forms — preserve that here, otherwise the oneOf branch
+		// rejects valid `shell: echo hello` (scalar) input.
+		var actionProp *Property
+		if actionName == "shell" || actionName == "use" {
+			actionProp = &Property{
+				OneOf: []*Property{
+					{Type: "string"},
+					{Ref: fmt.Sprintf("#/definitions/%s", actionName)},
+				},
+			}
+		} else {
+			actionProp = &Property{
+				Ref: fmt.Sprintf("#/definitions/%s", actionName),
+			}
+		}
+
 		constraint := &OneOfConstraint{
 			Required: []string{actionName},
 			Properties: map[string]*Property{
-				actionName: {
-					Ref: fmt.Sprintf("#/definitions/%s", actionName),
-				},
+				actionName: actionProp,
 			},
 			Not: &NotConstraint{
 				AnyOf: make([]*RequiredConstraint, 0),

@@ -52,21 +52,22 @@ func TestGenerateTypeScriptActionInterfaces(t *testing.T) {
 		t.Fatalf("GenerateTypeScript() failed: %v", err)
 	}
 
-	// Check for key action interfaces (PascalCase)
+	// Check for key action interfaces (PascalCase). Spec-21 names map to
+	// dot-namespaced action keys: e.g. "file.write" → FileWriteAction.
 	expectedInterfaces := []string{
 		"ShellAction",
-		"CommandAction",
-		"FileAction",
-		"TemplateAction",
-		"CopyAction",
-		"DownloadAction",
-		"UnarchiveAction",
-		"ServiceAction",
+		"CmdAction",
+		"FileWriteAction",
+		"FileTemplateAction",
+		"FileCopyAction",
+		"FileDownloadAction",
+		"FileUnarchiveAction",
+		"OsServiceAction",
 		"AssertAction",
-		"PresetAction",
-		"PrintAction",
+		"UseAction",
+		"LogAction",
 		"VarsAction",
-		"IncludeVarsAction",
+		"VarsLoadAction",
 	}
 
 	for _, interfaceName := range expectedInterfaces {
@@ -97,22 +98,21 @@ func TestGenerateTypeScriptStepInterface(t *testing.T) {
 	universalFields := []string{
 		"name?:",
 		"when?:",
-		"creates?:",
-		"unless?:",
-		"become?:",
+		"unless_exists?:",
+		"unless_command?:",
+		"as_user?:",
 		"tags?:",
-		"register?:",
-		"with_filetree?:",
-		"with_items?:",
+		"as?:",
+		"for_each_file?:",
+		"for_each?:",
 		"env?:",
 		"cwd?:",
 		"timeout?:",
-		"retries?:",
-		"retry_delay?:",
+		"retry?:",
 		"changed_when?:",
 		"failed_when?:",
-		"become_user?:",
-		"include?:",
+		"import?:",
+		"continue_on_error?:",
 	}
 
 	for _, field := range universalFields {
@@ -124,11 +124,11 @@ func TestGenerateTypeScriptStepInterface(t *testing.T) {
 	// Check for action fields (optional)
 	actionFields := []string{
 		"shell?:",
-		"command?:",
-		"file?:",
-		"template?:",
-		"service?:",
-		"preset?:",
+		"cmd?:",
+		"\"file.write\"?:",
+		"\"file.template\"?:",
+		"\"os.service\"?:",
+		"use?:",
 	}
 
 	for _, field := range actionFields {
@@ -212,7 +212,7 @@ func TestToPascalCase(t *testing.T) {
 	}{
 		{"shell", "Shell"},
 		{"shell_action", "ShellAction"},
-		{"include_vars", "IncludeVars"},
+		{"vars.load", "VarsLoad"},
 		{"my_action_name", "MyActionName"},
 		{"", ""},
 		{"a", "A"},

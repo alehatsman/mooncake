@@ -233,8 +233,10 @@ export interface FileWriteAction {
    * Desired file state (file/present: file exists, absent: removed,
    * directory: dir exists, link: symlink, hardlink: hard link, touch:
    * update timestamp, perms: change permissions only)
+   * 
+   * @values file | present | absent | directory | link | hardlink | touch | perms
    */
-  state?: string;
+  state?: "file" | "present" | "absent" | "directory" | "link" | "hardlink" | "touch" | "perms";
 }
 
 /**
@@ -279,8 +281,10 @@ export interface OsServiceAction {
   name: string;
   /**
    * Desired service state
+   * 
+   * @values started | stopped | restarted | reloaded
    */
-  state?: string;
+  state?: "started" | "stopped" | "restarted" | "reloaded";
   unit?: {
     content: string;
     dest: string;
@@ -314,8 +318,10 @@ export interface PkgAction {
   /**
    * Package state (present: installed, absent: removed, latest: install or
    * upgrade)
+   * 
+   * @values present | absent | latest
    */
-  state?: string;
+  state?: "present" | "absent" | "latest";
   /**
    * Update package cache before operation (e.g., apt-get update)
    */
@@ -619,11 +625,11 @@ export interface Step {
   /**
    * Capture file changes with enhanced metadata for LLM agents
    */
-  artifact.capture?: ArtifactCaptureAction;
+  "artifact.capture"?: ArtifactCaptureAction;
   /**
    * Validate artifacts against constraints (change budgets)
    */
-  artifact.validate?: ArtifactValidateAction;
+  "artifact.validate"?: ArtifactValidateAction;
   /**
    * Verify conditions without changing system state
    */
@@ -635,24 +641,24 @@ export interface Step {
   /**
    * Copy files with checksum verification and atomic writes
    */
-  file.copy?: FileCopyAction;
+  "file.copy"?: FileCopyAction;
   /**
    * Download files from URLs with checksum verification
    */
-  file.download?: FileDownloadAction;
+  "file.download"?: FileDownloadAction;
   /**
    * Render template files and write to destination
    */
-  file.template?: FileTemplateAction;
+  "file.template"?: FileTemplateAction;
   /**
    * Extract archive files (tar, tar.gz, zip) with path traversal
    * protection
    */
-  file.unarchive?: FileUnarchiveAction;
+  "file.unarchive"?: FileUnarchiveAction;
   /**
    * Manage files, directories, links, and permissions
    */
-  file.write?: FileWriteAction;
+  "file.write"?: FileWriteAction;
   /**
    * Display messages to the user
    */
@@ -660,7 +666,7 @@ export interface Step {
   /**
    * Manage services across platforms (systemd, launchd, Windows)
    */
-  os.service?: OsServiceAction;
+  "os.service"?: OsServiceAction;
   /**
    * Manage system packages (install/remove/update)
    */
@@ -668,15 +674,15 @@ export interface Step {
   /**
    * Apply multiple patches to multiple files atomically
    */
-  repo.patch?: RepoPatchAction;
+  "repo.patch"?: RepoPatchAction;
   /**
    * Search codebase for patterns and output results in JSON format
    */
-  repo.search?: RepoSearchAction;
+  "repo.search"?: RepoSearchAction;
   /**
    * Generate a JSON representation of directory structure
    */
-  repo.tree?: RepoTreeAction;
+  "repo.tree"?: RepoTreeAction;
   /**
    * Execute shell commands
    */
@@ -684,19 +690,19 @@ export interface Step {
   /**
    * Delete text between start and end anchor patterns in files
    */
-  text.delete_range?: TextDeleteRangeAction;
+  "text.delete_range"?: TextDeleteRangeAction;
   /**
    * Insert text before or after anchor patterns in files
    */
-  text.insert?: TextInsertAction;
+  "text.insert"?: TextInsertAction;
   /**
    * Apply unified diff patches to files
    */
-  text.patch?: TextPatchAction;
+  "text.patch"?: TextPatchAction;
   /**
    * Replace text in files using literal or regex patterns
    */
-  text.replace?: TextReplaceAction;
+  "text.replace"?: TextReplaceAction;
   /**
    * Execute a preset by expanding it into steps
    */
@@ -708,7 +714,7 @@ export interface Step {
   /**
    * Load variables from YAML files
    */
-  vars.load?: VarsLoadAction;
+  "vars.load"?: VarsLoadAction;
   /**
    * Poll a condition until it becomes true or times out
    */

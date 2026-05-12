@@ -47,7 +47,7 @@ description: Simple test preset
 version: 1.0.0
 steps:
   - name: Print message
-    print:
+    log:
       msg: "Hello from preset"
 `
 	simpleFile := filepath.Join(presetsDir, "simple-test.yml")
@@ -71,10 +71,10 @@ parameters:
     description: Number of times to print
 steps:
   - name: Print with parameter
-    print:
+    log:
       msg: "{{ parameters.message }}"
   - name: Print count
-    print:
+    log:
       msg: "Count: {{ parameters.count }}"
 `
 	paramFile := filepath.Join(presetsDir, "param-test.yml")
@@ -94,7 +94,7 @@ parameters:
     description: Desired state
 steps:
   - name: Print state
-    print:
+    log:
       msg: "State: {{ parameters.state }}"
 `
 	enumFile := filepath.Join(presetsDir, "enum-test.yml")
@@ -108,13 +108,13 @@ description: Test preset with multiple steps
 version: 1.0.0
 steps:
   - name: Step 1
-    print:
+    log:
       msg: "Step 1"
   - name: Step 2
-    print:
+    log:
       msg: "Step 2"
   - name: Step 3
-    print:
+    log:
       msg: "Step 3"
 `
 	multiStepFile := filepath.Join(presetsDir, "multi-step-test.yml")

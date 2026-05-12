@@ -147,7 +147,33 @@ func (g *TypeScriptGenerator) generateProperty(b *strings.Builder, name string, 
 	}
 
 	tsType := g.propertyToTypeScript(prop)
-	fmt.Fprintf(b, "  %s%s: %s;\n", name, optional, tsType)
+	// Quote keys that aren't valid TS identifiers (e.g. dot-namespaced
+	// action keys like "file.write" or "os.service").
+	keyOut := name
+	if !isValidTSIdentifier(name) {
+		keyOut = `"` + name + `"`
+	}
+	fmt.Fprintf(b, "  %s%s: %s;\n", keyOut, optional, tsType)
+}
+
+// isValidTSIdentifier reports whether s is a valid TypeScript identifier
+// (so it doesn't need to be quoted as a property name).
+func isValidTSIdentifier(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		if i == 0 {
+			if !(r == '_' || r == '$' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
+				return false
+			}
+			continue
+		}
+		if !(r == '_' || r == '$' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+			return false
+		}
+	}
+	return true
 }
 
 // propertyToTypeScript converts a Property to TypeScript type string.

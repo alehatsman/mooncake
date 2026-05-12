@@ -385,9 +385,7 @@
           "pattern": "^[0-7]{3,4}$"
         },
         "retries": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100
+          "type": "integer"
         },
         "timeout": {
           "type": "string",
@@ -522,7 +520,17 @@
         },
         "state": {
           "type": "string",
-          "description": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)"
+          "description": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)",
+          "enum": [
+            "file",
+            "present",
+            "absent",
+            "directory",
+            "link",
+            "hardlink",
+            "touch",
+            "perms"
+          ]
         }
       },
       "required": [
@@ -602,7 +610,13 @@
         },
         "state": {
           "type": "string",
-          "description": "Desired service state"
+          "description": "Desired service state",
+          "enum": [
+            "started",
+            "stopped",
+            "restarted",
+            "reloaded"
+          ]
         },
         "unit": {
           "type": "object",
@@ -665,7 +679,12 @@
         },
         "state": {
           "type": "string",
-          "description": "Package state (present: installed, absent: removed, latest: install or upgrade)"
+          "description": "Package state (present: installed, absent: removed, latest: install or upgrade)",
+          "enum": [
+            "present",
+            "absent",
+            "latest"
+          ]
         },
         "update_cache": {
           "type": "boolean",
@@ -3236,7 +3255,14 @@
           ],
           "properties": {
             "shell": {
-              "$ref": "#/definitions/shell"
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/shell"
+                }
+              ]
             }
           },
           "not": {
@@ -3906,7 +3932,14 @@
           ],
           "properties": {
             "use": {
-              "$ref": "#/definitions/use"
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/use"
+                }
+              ]
             }
           },
           "not": {
