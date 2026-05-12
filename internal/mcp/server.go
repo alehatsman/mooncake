@@ -103,6 +103,27 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
+// DispatchBytes handles a single JSON-RPC request line and returns the
+// JSON-encoded response. Used by HTTP transports (e.g. agentd's POST /v1/mcp);
+// the stdio Serve loop has its own framing.
+//
+// Read-only methods (tools/list, initialize, ping, and the read-only tool
+// handlers) are safe to call concurrently. Mutating tool handlers — notably
+// run_plan — are NOT safe to invoke concurrently against the same Server;
+// callers that expose them over a multi-goroutine transport must serialize
+// those calls.
+func (s *Server) DispatchBytes(ctx context.Context, line []byte) ([]byte, error) {
+	var req rpcRequest
+	if err := json.Unmarshal(line, &req); err != nil {
+		return json.Marshal(rpcResponse{
+			JSONRPC: "2.0",
+			Error:   &rpcError{Code: -32700, Message: "parse error"},
+		})
+	}
+	resp := s.dispatch(ctx, &req)
+	return json.Marshal(resp)
+}
+
 func (s *Server) dispatch(ctx context.Context, req *rpcRequest) rpcResponse {
 	base := rpcResponse{JSONRPC: "2.0", ID: req.ID}
 

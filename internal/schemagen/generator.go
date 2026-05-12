@@ -461,6 +461,8 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		actionStruct = &config.Copy{}
 	case "file.download":
 		actionStruct = &config.Download{}
+	case "tool":
+		actionStruct = &config.Tool{}
 	case "file.unarchive":
 		actionStruct = &config.Unarchive{}
 	case "pkg":

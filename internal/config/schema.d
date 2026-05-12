@@ -501,6 +501,28 @@ export interface TextReplaceAction {
 }
 
 /**
+ * Install a developer tool at a pinned version with lockfile-backed reproducibility
+ * 
+ * @platforms linux, darwin
+ * @category system
+ */
+export interface ToolAction {
+  asset?: string;
+  backend: string;
+  bin?: string;
+  checksum?: string;
+  env?: Record<string, any>;
+  mise_tool?: string;
+  name: string;
+  repo?: string;
+  strip_components?: number;
+  tag?: string;
+  url?: string;
+  version: string;
+  write_tool_versions?: boolean;
+}
+
+/**
  * Execute a preset by expanding it into steps
  * @category system
  */
@@ -703,6 +725,11 @@ export interface Step {
    * Replace text in files using literal or regex patterns
    */
   "text.replace"?: TextReplaceAction;
+  /**
+   * Install a developer tool at a pinned version with lockfile-backed
+   * reproducibility
+   */
+  tool?: ToolAction;
   /**
    * Execute a preset by expanding it into steps
    */
