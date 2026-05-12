@@ -452,6 +452,10 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		actionStruct = &config.Package{}
 	case "os.service":
 		actionStruct = &config.ServiceAction{}
+	case "container.image":
+		actionStruct = &config.ContainerImage{}
+	case "container":
+		actionStruct = &config.Container{}
 	case "assert":
 		actionStruct = &config.Assert{}
 	case "use":

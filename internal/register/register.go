@@ -14,6 +14,8 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/artifact_validate"
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"
 	_ "github.com/alehatsman/mooncake/internal/actions/command"
+	_ "github.com/alehatsman/mooncake/internal/actions/container_image"
+	_ "github.com/alehatsman/mooncake/internal/actions/container_run"
 	_ "github.com/alehatsman/mooncake/internal/actions/copy"
 	_ "github.com/alehatsman/mooncake/internal/actions/download"
 	_ "github.com/alehatsman/mooncake/internal/actions/file"

@@ -1,0 +1,21 @@
+# Minimal container example: pull an image, run a container, check it,
+# then tear it down. The container.* actions use a runtime-agnostic
+# facade — podman is auto-selected when available, with docker as the
+# fallback. Set the `runtime:` field to pin a specific engine.
+
+- name: Ensure alpine image is present
+  container.image:
+    name: alpine:3.20
+    state: present
+
+- name: Start a long-lived alpine container
+  container:
+    name: mooncake-demo
+    image: alpine:3.20
+    state: running
+    command: ["sleep", "300"]
+
+- name: Remove the demo container
+  container:
+    name: mooncake-demo
+    state: absent

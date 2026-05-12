@@ -376,6 +376,35 @@ type ServiceDropin struct {
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
 }
 
+// ContainerImage represents a container image management operation.
+// Ensures an image reference is present (or absent) in local storage of
+// the selected container runtime (podman/docker).
+type ContainerImage struct {
+	Name      string `yaml:"name" json:"name"`                                   // Image ref (required), e.g. "alpine:3.20" or "ghcr.io/x/y@sha256:..."
+	State     string `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
+	ForcePull bool   `yaml:"force_pull" json:"force_pull,omitempty"`             // When state=present, pull even if image is already local
+	Runtime   string `yaml:"runtime" json:"runtime,omitempty"`                   // podman|docker (auto-detected if empty; podman preferred)
+}
+
+// Container represents a container lifecycle operation.
+// Idempotency is keyed by container name: if the named container is
+// already in the desired state, the action is a no-op. Image and spec
+// drift triggers recreation when state is running/stopped.
+type Container struct {
+	Name    string            `yaml:"name" json:"name"`                                   // Container name (required, idempotency key)
+	Image   string            `yaml:"image" json:"image,omitempty"`                       // Image ref; required for state=running|stopped
+	State   string            `yaml:"state" json:"state,omitempty"`                       // running|stopped|absent (default: running)
+	Command []string          `yaml:"command" json:"command,omitempty"`                   // Override image CMD
+	Env     map[string]string `yaml:"env" json:"env,omitempty"`                           // Environment variables
+	Ports   []string          `yaml:"ports" json:"ports,omitempty"`                       // "host:container[/proto]" entries
+	Volumes []string          `yaml:"volumes" json:"volumes,omitempty"`                   // "host:container[:opts]" entries
+	Network string            `yaml:"network" json:"network,omitempty"`                   // Engine network name
+	Restart string            `yaml:"restart" json:"restart,omitempty"`                   // no|on-failure|always|unless-stopped
+	Recreate bool             `yaml:"recreate" json:"recreate,omitempty"`                 // Force recreate even when spec matches
+	Runtime string            `yaml:"runtime" json:"runtime,omitempty"`                   // podman|docker (auto-detected if empty)
+	Extra   []string          `yaml:"extra" json:"extra,omitempty"`                       // Extra args appended before image
+}
+
 // Assert represents an assertion/verification operation in a configuration step.
 // Assertions always have changed: false and fail if the assertion doesn't pass.
 // Supports three types: command (exit code), file (content/existence), and http (response).
@@ -674,6 +703,8 @@ type Step struct {
 	TextPatch       *FilePatchApply         `yaml:"text.patch" json:"text.patch,omitempty"`
 	Pkg             *Package                `yaml:"pkg" json:"pkg,omitempty"`
 	OsService       *ServiceAction          `yaml:"os.service" json:"os.service,omitempty"`
+	ContainerImage  *ContainerImage         `yaml:"container.image" json:"container.image,omitempty"`
+	Container       *Container              `yaml:"container" json:"container,omitempty"`
 	Cmd             *CommandAction          `yaml:"cmd" json:"cmd,omitempty"`
 	RepoSearch      *RepoSearch             `yaml:"repo.search" json:"repo.search,omitempty"`
 	RepoTree        *RepoTree               `yaml:"repo.tree" json:"repo.tree,omitempty"`
@@ -811,6 +842,12 @@ func (s *Step) countActions() int {
 	if s.OsService != nil {
 		count++
 	}
+	if s.ContainerImage != nil {
+		count++
+	}
+	if s.Container != nil {
+		count++
+	}
 	if s.Cmd != nil {
 		count++
 	}
@@ -897,6 +934,12 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.OsService != nil {
 		return "os.service"
+	}
+	if s.ContainerImage != nil {
+		return "container.image"
+	}
+	if s.Container != nil {
+		return "container"
 	}
 	if s.Assert != nil {
 		return "assert"
@@ -989,6 +1032,8 @@ func (s *Step) Clone() *Step {
 		TextPatch:        s.TextPatch,
 		Pkg:              s.Pkg,
 		OsService:        s.OsService,
+		ContainerImage:   s.ContainerImage,
+		Container:        s.Container,
 		Cmd:              s.Cmd,
 		RepoSearch:       s.RepoSearch,
 		RepoTree:         s.RepoTree,

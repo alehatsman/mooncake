@@ -150,6 +150,40 @@ export interface CmdActionAction {
 }
 
 /**
+ * Manage container lifecycle (running/stopped/absent) via podman or docker
+ * 
+ * @platforms linux, darwin, windows
+ * @category system
+ */
+export interface ContainerAction {
+  command?: string[];
+  env?: Record<string, any>;
+  extra?: string[];
+  image?: string;
+  name: string;
+  network?: string;
+  ports?: string[];
+  recreate?: boolean;
+  restart?: string;
+  runtime?: string;
+  state?: string;
+  volumes?: string[];
+}
+
+/**
+ * Manage container images (pull/remove) via podman or docker
+ * 
+ * @platforms linux, darwin, windows
+ * @category system
+ */
+export interface ContainerImageAction {
+  force_pull?: boolean;
+  name: string;
+  runtime?: string;
+  state?: string;
+}
+
+/**
  * Copy files with checksum verification and atomic writes
  * @category file
  */
@@ -632,6 +666,15 @@ export interface Step {
    * Execute commands directly without shell interpolation
    */
   cmd?: CmdAction;
+  /**
+   * Manage container lifecycle (running/stopped/absent) via podman or
+   * docker
+   */
+  container?: ContainerAction;
+  /**
+   * Manage container images (pull/remove) via podman or docker
+   */
+  container.image?: ContainerImageAction;
   /**
    * Copy files with checksum verification and atomic writes
    */
