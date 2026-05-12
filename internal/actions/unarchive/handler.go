@@ -217,7 +217,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 				BytesExtracted:  stats.BytesExtracted,
 				StripComponents: unarchiveAction.StripComponents,
 				DurationMs:      result.Duration.Milliseconds(),
-				DryRun:          ctx.IsDryRun(),
+				DryRun:          ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

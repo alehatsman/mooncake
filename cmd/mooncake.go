@@ -105,8 +105,6 @@ func applyFlags() []cli.Flag {
 			Value:   false,
 			Usage:   "Disable animated TUI and use raw console output",
 		},
-		&cli.BoolFlag{Name: "dry-run", Value: false, Usage: "Deprecated: use `mooncake plan` for state-aware preview."},
-		&cli.BoolFlag{Name: "check", Value: false, Usage: "Deprecated: use `mooncake plan` for state-aware preview."},
 		&cli.StringFlag{Name: "output-format", Value: "text", Usage: "Output format: text or json (requires --raw)"},
 		&cli.StringFlag{Name: "artifacts-dir", Value: "", Usage: "Directory to store run artifacts (e.g., .mooncake)"},
 		&cli.BoolFlag{Name: "capture-full-output", Value: false, Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)"},
@@ -122,19 +120,6 @@ func applyFlags() []cli.Flag {
 }
 
 func run(c *cli.Context) error {
-	// Spec 16 deprecation note: prefer `apply`. Both commands share
-	// this action; the only difference is the subcommand name used
-	// to invoke it.
-	if c.Command != nil && c.Command.Name == "run" {
-		fmt.Fprintln(os.Stderr, "note: `mooncake run` is deprecated; use `mooncake apply` instead.")
-	}
-	if c.Bool("dry-run") {
-		fmt.Fprintln(os.Stderr, "note: --dry-run is deprecated; use `mooncake plan` for state-aware preview.")
-	}
-	if c.Bool("check") {
-		fmt.Fprintln(os.Stderr, "note: --check is deprecated; use `mooncake plan` for state-aware preview.")
-	}
-
 	// Check if running from plan
 	fromPlan := c.String("from-plan")
 	if fromPlan != "" {
@@ -142,15 +127,8 @@ func run(c *cli.Context) error {
 	}
 
 	raw := c.Bool("raw")
-	dryRun := c.Bool("dry-run")
-	checkMode := c.Bool("check")
 	logLevel := c.String("log-level")
 	outputFormat := c.String("output-format")
-
-	// Force raw mode for dry-run and check mode
-	if dryRun || checkMode {
-		raw = true
-	}
 
 	// Validate output format
 	if outputFormat != outputFormatText && outputFormat != outputFormatJSON && outputFormat != outputFormatAgent && outputFormat != outputFormatQuiet {
@@ -251,8 +229,6 @@ func run(c *cli.Context) error {
 		AskBecomePass:    c.Bool("ask-become-pass"),
 		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
 		Tags:             tags,
-		DryRun:           dryRun,
-		CheckMode:        checkMode,
 
 		// Artifact configuration
 		ArtifactsDir:      c.String("artifacts-dir"),
@@ -282,8 +258,6 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	}
 
 	// Setup logger
-	dryRun := c.Bool("dry-run")
-	checkMode := c.Bool("check")
 	logLevel := c.String("log-level")
 
 	// Always use event-driven architecture
@@ -308,7 +282,7 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	internalLog := logger.NewLogger(level)
 
 	// Execute plan with event publisher
-	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, checkMode, internalLog, publisher)
+	return executor.ExecutePlan(planData, c.String("sudo-pass"), actions.ModeExecute, internalLog, publisher)
 }
 
 func factsCommand(c *cli.Context) error {
@@ -807,14 +781,8 @@ func createApp() *cli.App {
 			mcpCommand(),
 			stepCommand(),
 			{
-				Name:  "apply",
-				Usage: "Apply a playbook or saved plan to the system (Spec 16; mooncake run is the deprecated alias)",
-				Flags: applyFlags(),
-				Action: run,
-			},
-			{
-				Name:   "run",
-				Usage:  "Run a space fighter (deprecated alias for `apply`)",
+				Name:   "apply",
+				Usage:  "Apply a playbook or saved plan to the system",
 				Flags:  applyFlags(),
 				Action: run,
 			},

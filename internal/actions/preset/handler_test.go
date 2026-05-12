@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -146,7 +147,7 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 		Logger:         &testutil.MockLogger{Logs: []string{}},
 		Evaluator:      expression.NewExprEvaluator(),
 		CurrentDir:     ".",
-		DryRun:         false,
+		CurrentMode: actions.ModeExecute,
 	}
 }
 
@@ -418,7 +419,7 @@ func TestHandler_DryRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &Handler{}
 			ec := mockExecutionContext(nil)
-			ec.DryRun = true
+			ec.CurrentMode = actions.ModePlan
 
 			step := &config.Step{
 				Name:   "Test dry-run",
@@ -446,7 +447,7 @@ func TestHandler_DryRun_InvalidContextType(t *testing.T) {
 
 	// Use MockContext instead of ExecutionContext
 	ctx := testutil.NewMockContext()
-	ctx.DryRun = true
+	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
 		Name: "Test dry-run invalid context",

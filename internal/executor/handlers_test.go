@@ -3,6 +3,7 @@ package executor
 import (
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -24,7 +25,7 @@ func TestHandleVars(t *testing.T) {
 	ec := &ExecutionContext{
 		Logger:    testLogger,
 		Variables: make(map[string]interface{}),
-		DryRun:    false,
+		CurrentMode: actions.ModeExecute,
 	}
 
 	err := HandleVars(step, ec)
@@ -56,7 +57,7 @@ func TestHandleVars_DryRun(t *testing.T) {
 	ec := &ExecutionContext{
 		Logger:    testLogger,
 		Variables: make(map[string]interface{}),
-		DryRun:    true,
+		CurrentMode: actions.ModePlan,
 	}
 
 	err := HandleVars(step, ec)

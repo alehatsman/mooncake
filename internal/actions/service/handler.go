@@ -315,7 +315,7 @@ func handleSystemdService(serviceName string, serviceAction *config.ServiceActio
 		Enabled:    serviceAction.Enabled,
 		Changed:    changed,
 		Operations: operations,
-		DryRun:     ec.DryRun,
+		DryRun:     ec.Mode() == actions.ModePlan,
 	})
 
 	// Register result if specified
@@ -795,7 +795,7 @@ func handleLaunchdService(serviceName string, serviceAction *config.ServiceActio
 		Enabled:    serviceAction.Enabled,
 		Changed:    changed,
 		Operations: operations,
-		DryRun:     ec.DryRun,
+		DryRun:     ec.Mode() == actions.ModePlan,
 	})
 
 	// Register result if specified

@@ -178,10 +178,9 @@ func HandleVars(step config.Step, ec *ExecutionContext) error {
 		ec.Logger.Debugf("  %v: %v", k, v)
 	}
 
-	ec.HandleDryRun(func(dryRun *DryRunLogger) {
-		dryRun.LogVariableSet(len(*vars))
-		// Still set variables in dry-run mode so subsequent steps can use them
-	})
+	if ec.Mode() == actions.ModePlan {
+		NewDryRunLogger(ec.Logger).LogVariableSet(len(*vars))
+	}
 
 	ec.Variables = utils.MergeVariables(ec.Variables, *vars)
 
@@ -193,7 +192,7 @@ func HandleVars(step config.Step, ec *ExecutionContext) error {
 	ec.EmitEvent(events.EventVarsSet, events.VarsSetData{
 		Count:  len(*vars),
 		Keys:   keys,
-		DryRun: ec.DryRun,
+		DryRun: ec.Mode() == actions.ModePlan,
 	})
 
 	return nil
@@ -488,7 +487,7 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 		ExitCode:     -1,
 		DurationMs:   stepDuration.Milliseconds(),
 		Depth:        depth,
-		DryRun:       ec.DryRun,
+		DryRun:       ec.Mode() == actions.ModePlan,
 	}
 	var cmdErr *CommandError
 	if errors.As(stepErr, &cmdErr) {
@@ -573,7 +572,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// not-checkable event. Known actions go through the plan-mode
 	// bypass above (which handles every registered handler via the
 	// Runner interface).
-	if ec.CheckMode && hasStepName && step.Include == nil {
+	if ec.Mode() == actions.ModePlan && hasStepName && step.Include == nil {
 		actionType := step.DetermineActionType()
 		if _, ok := actions.Get(actionType); !ok {
 			*ec.Stats.Global++
@@ -631,7 +630,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		Tags:       step.Tags,
 		When:       step.When,
 		Depth:      depth,
-		DryRun:     ec.DryRun,
+		DryRun:     ec.Mode() == actions.ModePlan,
 	})
 
 	// Track start time for duration
@@ -675,7 +674,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		Changed:    changed,
 		Result:     resultData,
 		Depth:      depth,
-		DryRun:     ec.DryRun,
+		DryRun:     ec.Mode() == actions.ModePlan,
 	})
 
 	// Clear current result for next step
@@ -733,8 +732,6 @@ type StartConfig struct {
 	AskBecomePass    bool
 	InsecureSudoPass bool
 	Tags             []string
-	DryRun           bool
-	CheckMode        bool
 
 	// Artifact configuration
 	ArtifactsDir      string
@@ -850,12 +847,12 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	}
 
 	// Execute the plan with event publisher
-	return ExecutePlan(planData, sudoPassword, startConfig.DryRun, startConfig.CheckMode, log, publisher)
+	return ExecutePlan(planData, sudoPassword, actions.ModeExecute, log, publisher)
 }
 
 // ExecutePlan executes a pre-compiled plan.
 // Emits events through the provided publisher for all execution progress.
-func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, checkMode bool, log logger.Logger, publisher events.Publisher) error {
+func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -869,7 +866,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, checkMode bool, log
 		Data: events.RunStartedData{
 			RootFile:   p.RootFile,
 			Tags:       p.Tags,
-			DryRun:     dryRun,
+			DryRun:     mode == actions.ModePlan,
 			TotalSteps: len(p.Steps),
 		},
 	})
@@ -929,8 +926,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, checkMode bool, log
 		Logger:       log.WithPadLevel(0),
 		SudoPass:     sudoPass,
 		Tags:         []string{}, // Not used - tag filtering done by planner (step.Skipped)
-		DryRun:       dryRun,
-		CheckMode:    checkMode,
+		CurrentMode:  mode,
 
 		// Statistics tracking
 		Stats: &ExecutionStats{
@@ -969,7 +965,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, dryRun bool, checkMode bool, log
 			ChangedSteps: statsChanged,
 			DurationMs:   duration.Milliseconds(),
 			Success:      execErr == nil,
-			CheckMode:    checkMode,
+			CheckMode:    mode == actions.ModePlan,
 			ErrorMessage: func() string {
 				if execErr != nil {
 					return execErr.Error()

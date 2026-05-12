@@ -274,7 +274,7 @@ func (h *Handler) createDirectory(ctx actions.Context, ec *executor.ExecutionCon
 				Path:    renderedPath,
 				Mode:    h.formatMode(mode),
 				Changed: result.Changed,
-				DryRun:  ctx.IsDryRun(),
+				DryRun:  ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}
@@ -342,7 +342,7 @@ func (h *Handler) createOrUpdateFile(ctx actions.Context, ec *executor.Execution
 				Mode:      h.formatMode(mode),
 				SizeBytes: int64(len(content)),
 				Changed:   result.Changed,
-				DryRun:    ctx.IsDryRun(),
+				DryRun:    ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}
@@ -383,7 +383,7 @@ func (h *Handler) removeFileOrDirectory(ctx actions.Context, ec *executor.Execut
 			Data: events.FileOperationData{
 				Path:    renderedPath,
 				Changed: result.Changed,
-				DryRun:  ctx.IsDryRun(),
+				DryRun:  ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}
@@ -491,7 +491,7 @@ func (h *Handler) createSymlink(ctx actions.Context, ec *executor.ExecutionConte
 				Src:    expandedSrc,
 				Dest:   renderedPath,
 				Type:   "symlink",
-				DryRun: ctx.IsDryRun(),
+				DryRun: ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}
@@ -557,7 +557,7 @@ func (h *Handler) createHardlink(ctx actions.Context, ec *executor.ExecutionCont
 				Src:    expandedSrc,
 				Dest:   renderedPath,
 				Type:   stateHardlink,
-				DryRun: ctx.IsDryRun(),
+				DryRun: ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}
@@ -620,7 +620,7 @@ func (h *Handler) setPermissions(ctx actions.Context, ec *executor.ExecutionCont
 				Owner:     file.Owner,
 				Group:     file.Group,
 				Recursive: file.Recurse,
-				DryRun:    ctx.IsDryRun(),
+				DryRun:    ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

@@ -134,7 +134,6 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 
 		execErr := executor.Start(executor.StartConfig{
 			ConfigFilePath: tmpFile.Name(),
-			DryRun:         false,
 		}, log, publisher)
 
 		publisher.Close()

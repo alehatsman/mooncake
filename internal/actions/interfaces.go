@@ -98,22 +98,6 @@ type Context interface {
 	//   - Audit logs
 	GetEventPublisher() events.Publisher
 
-	// IsDryRun returns true if this is a dry-run execution.
-	//
-	// In dry-run mode:
-	//   - Handlers MUST NOT make actual changes
-	//   - Handlers SHOULD log what would happen
-	//   - Template rendering should still work (to validate syntax)
-	//   - File existence checks are OK (read-only operations)
-	//   - Writing/deleting/executing is NOT OK
-	//
-	// The DryRun() method handles this automatically, but Execute() can also check.
-	//
-	// Deprecated: prefer Mode() == ModePlan. Spec 16 collapses DryRun and
-	// Check into a single non-mutating mode; IsDryRun will be removed in
-	// Phase 6.
-	IsDryRun() bool
-
 	// Mode reports the dispatch mode for this context. Handlers
 	// implementing Runner consult this to decide whether to perform side
 	// effects (ModeExecute) or only inspect state (ModePlan).

@@ -204,7 +204,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 				SizeBytes: srcInfo.Size(),
 				Mode:      mode.String(),
 				Checksum:  copyAction.Checksum,
-				DryRun:    ctx.IsDryRun(),
+				DryRun:    ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

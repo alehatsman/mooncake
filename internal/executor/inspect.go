@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/plan"
@@ -29,7 +30,7 @@ func InspectPlan(p *plan.Plan, sudoPass string, log logger.Logger) ([]plan.StepI
 	pub.Subscribe(collector)
 	defer pub.Close()
 
-	if err := ExecutePlan(p, sudoPass, false /* dryRun */, true /* checkMode */, log, pub); err != nil {
+	if err := ExecutePlan(p, sudoPass, actions.ModePlan, log, pub); err != nil {
 		return nil, err
 	}
 	return collector.collect(p), nil

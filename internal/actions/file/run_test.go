@@ -28,7 +28,7 @@ func newRunContext(t *testing.T, plan bool) *executor.ExecutionContext {
 		Template:   renderer,
 		PathUtil:   pathutil.NewPathExpander(renderer),
 		CurrentDir: "/tmp",
-		DryRun:     plan,
+		CurrentMode: planMode(plan),
 		Stats:      stats,
 	}
 }
@@ -203,4 +203,11 @@ func TestEffects_RoundTrip(t *testing.T) {
 	if custom.Mode() != actions.ModeExecute {
 		t.Errorf("NewPerformer mode = %v, want ModeExecute", custom.Mode())
 	}
+}
+
+func planMode(b bool) actions.Mode {
+	if b {
+		return actions.ModePlan
+	}
+	return actions.ModeExecute
 }

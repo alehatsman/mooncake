@@ -35,7 +35,7 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 		CurrentStepID:  mockCtx.StepID,
 		PathUtil:       pathutil.NewPathExpander(tmpl),
 		CurrentDir:     tmpDir,
-		DryRun:         false,
+		CurrentMode: actions.ModeExecute,
 	}
 }
 
@@ -468,7 +468,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 func TestHandler_DryRun(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
-	ctx.DryRun = true
+	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
 		RepoApplyPatchset: &config.RepoApplyPatchset{

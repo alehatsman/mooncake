@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -79,12 +80,16 @@ func stepCommand() *cli.Command {
 
 			cwd, _ := os.Getwd()
 
+			mode := actions.ModeExecute
+			if c.Bool("dry-run") {
+				mode = actions.ModePlan
+			}
 			ec := &executor.ExecutionContext{
 				Variables:      make(map[string]interface{}),
 				CurrentDir:     cwd,
 				Level:          0,
 				Logger:         log,
-				DryRun:         c.Bool("dry-run"),
+				CurrentMode:    mode,
 				Stats:          executor.NewExecutionStats(),
 				Template:       renderer,
 				Evaluator:      evaluator,

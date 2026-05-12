@@ -86,7 +86,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 			Data: events.VarsSetData{
 				Count:  len(*vars),
 				Keys:   keys,
-				DryRun: ctx.IsDryRun(),
+				DryRun: ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

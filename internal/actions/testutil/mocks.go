@@ -14,12 +14,12 @@ import (
 
 // MockContext implements actions.Context for testing
 type MockContext struct {
-	Variables map[string]interface{}
-	Tmpl      template.Renderer
-	Publisher *MockPublisher
-	Log       logger.Logger
-	StepID    string
-	DryRun    bool
+	Variables   map[string]interface{}
+	Tmpl        template.Renderer
+	Publisher   *MockPublisher
+	Log         logger.Logger
+	StepID      string
+	CurrentMode actions.Mode
 	// Performer, if set, is returned by Effects(). Tests exercising the
 	// Spec-16 Run path inject a fake or real Performer here. When nil,
 	// Effects() returns a no-op Performer that records nothing.
@@ -57,18 +57,9 @@ func (m *MockContext) GetEvaluator() expression.Evaluator {
 	return expression.NewExprEvaluator()
 }
 
-func (m *MockContext) IsDryRun() bool {
-	return m.DryRun
-}
-
-// Mode reports ModePlan when DryRun is true, ModeExecute otherwise.
-// Mirrors ExecutionContext.Mode() so tests against MockContext behave the
-// same way handlers see in production. See Spec 16.
+// Mode reports the configured CurrentMode.
 func (m *MockContext) Mode() actions.Mode {
-	if m.DryRun {
-		return actions.ModePlan
-	}
-	return actions.ModeExecute
+	return m.CurrentMode
 }
 
 // Effects returns a no-op Performer that records calls but does not
@@ -160,12 +151,12 @@ func NewMockContext() *MockContext {
 		panic("Failed to create mock renderer: " + err.Error())
 	}
 	return &MockContext{
-		Variables: make(map[string]interface{}),
-		Tmpl:      renderer,
-		Publisher: &MockPublisher{Events: []events.Event{}},
-		Log:       &MockLogger{Logs: []string{}},
-		StepID:    "step-1",
-		DryRun:    false,
+		Variables:   make(map[string]interface{}),
+		Tmpl:        renderer,
+		Publisher:   &MockPublisher{Events: []events.Event{}},
+		Log:         &MockLogger{Logs: []string{}},
+		StepID:      "step-1",
+		CurrentMode: actions.ModeExecute,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	_ "github.com/alehatsman/mooncake/internal/actions/print"
 	_ "github.com/alehatsman/mooncake/internal/actions/shell"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"
@@ -31,7 +32,7 @@ func TestExecutePlan_BasicExecution(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "", false, false, testLogger, publisher)
+	err := executor.ExecutePlan(planData, "", actions.ModeExecute, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan failed: %v", err)
 	}
@@ -52,7 +53,7 @@ func TestExecutePlan_WithSudoPass(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "test-sudo-password", false, false, testLogger, publisher)
+	err := executor.ExecutePlan(planData, "test-sudo-password", actions.ModeExecute, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan failed: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestExecutePlan_DryRun(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "", true, false, testLogger, publisher)
+	err := executor.ExecutePlan(planData, "", actions.ModePlan, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan in dry-run failed: %v", err)
 	}
@@ -133,7 +134,7 @@ func TestStart_WithVarsFile(t *testing.T) {
 	cfg := executor.StartConfig{
 		ConfigFilePath: configPath,
 		VarsFilePath:   varsPath,
-		DryRun:         false,
+		
 	}
 
 	testLogger := logger.NewTestLogger()
@@ -160,7 +161,7 @@ func TestStart_DryRun(t *testing.T) {
 
 	cfg := executor.StartConfig{
 		ConfigFilePath: configPath,
-		DryRun:         true,
+		
 	}
 
 	testLogger := logger.NewTestLogger()

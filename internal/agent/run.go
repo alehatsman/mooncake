@@ -63,7 +63,6 @@ func Run(opts RunOptions) (*IterationLog, error) {
 
 	execErr := executor.Start(executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
-		DryRun:         false,
 	}, log, publisher)
 
 	if execErr != nil {

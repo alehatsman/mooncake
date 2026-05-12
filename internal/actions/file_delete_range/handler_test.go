@@ -33,7 +33,7 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 		CurrentStepID:  mockCtx.StepID,
 		PathUtil:       pathutil.NewPathExpander(tmpl),
 		CurrentDir:     tmpDir,
-		DryRun:         false,
+		CurrentMode: actions.ModeExecute,
 	}
 }
 
@@ -411,7 +411,7 @@ func TestHandler_Execute_EmptyRange(t *testing.T) {
 func TestHandler_DryRun(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
-	ctx.DryRun = true
+	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
 		FileDeleteRange: &config.FileDeleteRange{

@@ -16,12 +16,12 @@ import (
 // Helper to create ExecutionContext for testing
 func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor.ExecutionContext {
 	return &executor.ExecutionContext{
-		Variables:  ctx.Variables,
-		CurrentDir: tmpDir,
-		Logger:     ctx.Log,
-		DryRun:     ctx.DryRun,
-		Template:   ctx.Tmpl,
-		PathUtil:   pathutil.NewPathExpander(ctx.Tmpl),
+		Variables:      ctx.Variables,
+		CurrentDir:     tmpDir,
+		Logger:         ctx.Log,
+		CurrentMode:    ctx.CurrentMode,
+		Template:       ctx.Tmpl,
+		PathUtil:       pathutil.NewPathExpander(ctx.Tmpl),
 		EventPublisher: ctx.Publisher,
 		CurrentStepID:  ctx.StepID,
 	}
@@ -613,7 +613,7 @@ func TestHandler_DryRun(t *testing.T) {
 			// Setup context
 			ctx := testutil.NewMockContext()
 			ctx.Variables = tt.variables
-			ctx.DryRun = true
+			ctx.CurrentMode = actions.ModePlan
 
 			execCtx := newTestExecutionContext(ctx, tmpDir)
 
@@ -668,7 +668,7 @@ func TestHandler_DryRun_MissingTemplateFile(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	ctx := testutil.NewMockContext()
-	ctx.DryRun = true
+	ctx.CurrentMode = actions.ModePlan
 	execCtx := newTestExecutionContext(ctx, tmpDir)
 
 	step := &config.Step{
@@ -706,7 +706,7 @@ func TestHandler_DryRun_InvalidContext(t *testing.T) {
 
 	// Use MockContext directly (not ExecutionContext)
 	ctx := testutil.NewMockContext()
-	ctx.DryRun = true
+	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
 		Template: &config.Template{

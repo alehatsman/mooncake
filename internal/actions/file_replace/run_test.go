@@ -25,7 +25,7 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 		PathUtil:   pathutil.NewPathExpander(r),
 		Logger:     logger.NewLogger(logger.ErrorLevel),
 		CurrentDir: "/tmp",
-		DryRun:     plan,
+		CurrentMode: planMode(plan),
 		Stats:      executor.NewExecutionStats(),
 	}
 }
@@ -141,4 +141,11 @@ func TestRun_NoMatchNotAllowed(t *testing.T) {
 // interface after the upgrade.
 func TestRun_ImplementsRunner(t *testing.T) {
 	var _ actions.Runner = &Handler{}
+}
+
+func planMode(b bool) actions.Mode {
+	if b {
+		return actions.ModePlan
+	}
+	return actions.ModeExecute
 }

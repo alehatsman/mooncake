@@ -194,7 +194,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 			Data: events.FileOperationData{
 				Path:    renderedPath,
 				Changed: result.Changed,
-				DryRun:  ctx.IsDryRun(),
+				DryRun:  ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

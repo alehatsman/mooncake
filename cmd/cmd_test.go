@@ -217,7 +217,7 @@ func TestCreateApp(t *testing.T) {
 	}
 
 	// Test commands exist
-	expectedCommands := []string{"presets", "docs", "schema", "snapshot", "last", "mcp", "step", "apply", "run", "plan", "facts", "actions", "validate", "agent"}
+	expectedCommands := []string{"presets", "docs", "schema", "snapshot", "last", "mcp", "step", "apply", "plan", "facts", "actions", "validate", "agent"}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}
@@ -580,7 +580,7 @@ func TestRunCommandFlags(t *testing.T) {
 
 	var runCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
+		if cmd.Name == "apply" {
 			runCmd = cmd
 			break
 		}
@@ -592,9 +592,10 @@ func TestRunCommandFlags(t *testing.T) {
 
 	expectedFlags := []string{
 		"config", "vars", "log-level", "sudo-pass", "ask-become-pass",
-		"sudo-pass-file", "insecure-sudo-pass", "tags", "raw", "dry-run",
+		"sudo-pass-file", "insecure-sudo-pass", "tags", "raw",
 		"output-format", "artifacts-dir", "capture-full-output",
 		"max-output-bytes", "max-output-lines", "from-plan", "facts-json",
+		"allow-stale", "max-plan-age",
 	}
 
 	flagNames := make(map[string]bool)
@@ -606,6 +607,8 @@ func TestRunCommandFlags(t *testing.T) {
 		case *cli.BoolFlag:
 			flagNames[f.Name] = true
 		case *cli.IntFlag:
+			flagNames[f.Name] = true
+		case *cli.DurationFlag:
 			flagNames[f.Name] = true
 		}
 	}
@@ -1681,7 +1684,7 @@ func TestRunCommandOutputFormatValidation(t *testing.T) {
 
 	var runCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
+		if cmd.Name == "apply" {
 			runCmd = cmd
 			break
 		}
@@ -1713,7 +1716,7 @@ func TestRunCommandArtifactsFlags(t *testing.T) {
 
 	var runCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
+		if cmd.Name == "apply" {
 			runCmd = cmd
 			break
 		}
@@ -1768,7 +1771,7 @@ func TestRunCommandPasswordFlags(t *testing.T) {
 
 	var runCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
+		if cmd.Name == "apply" {
 			runCmd = cmd
 			break
 		}
@@ -2351,34 +2354,41 @@ func TestPresetsStatusSubcommandDescription(t *testing.T) {
 	}
 }
 
-// TestRunCommandDryRunFlag tests that run command has dry-run flag
-func TestRunCommandDryRunFlag(t *testing.T) {
+// TestApplyCommandStaleFlags verifies the Spec 16 stale-plan flags
+// are wired on `apply`. (The legacy --dry-run flag was removed; use
+// `mooncake plan` for state-aware preview.)
+func TestApplyCommandStaleFlags(t *testing.T) {
 	app := createApp()
 
-	var runCmd *cli.Command
+	var applyCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
-			runCmd = cmd
+		if cmd.Name == "apply" {
+			applyCmd = cmd
 			break
 		}
 	}
-
-	if runCmd == nil {
-		t.Fatal("run command not found")
+	if applyCmd == nil {
+		t.Fatal("apply command not found")
 	}
 
-	hasDryRun := false
-	for _, flag := range runCmd.Flags {
-		if f, ok := flag.(*cli.BoolFlag); ok && f.Name == "dry-run" {
-			hasDryRun = true
-			if f.Value != false {
-				t.Errorf("dry-run default should be false, got %v", f.Value)
+	hasAllowStale, hasMaxAge := false, false
+	for _, flag := range applyCmd.Flags {
+		switch f := flag.(type) {
+		case *cli.BoolFlag:
+			if f.Name == "allow-stale" {
+				hasAllowStale = true
+			}
+		case *cli.DurationFlag:
+			if f.Name == "max-plan-age" {
+				hasMaxAge = true
 			}
 		}
 	}
-
-	if !hasDryRun {
-		t.Error("run command should have dry-run flag")
+	if !hasAllowStale {
+		t.Error("apply command should have --allow-stale flag")
+	}
+	if !hasMaxAge {
+		t.Error("apply command should have --max-plan-age flag")
 	}
 }
 
@@ -2388,7 +2398,7 @@ func TestRunCommandRawFlag(t *testing.T) {
 
 	var runCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
+		if cmd.Name == "apply" {
 			runCmd = cmd
 			break
 		}
@@ -2419,7 +2429,7 @@ func TestRunCommandLogLevelFlag(t *testing.T) {
 
 	var runCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "run" {
+		if cmd.Name == "apply" {
 			runCmd = cmd
 			break
 		}

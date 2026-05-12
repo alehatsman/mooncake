@@ -676,7 +676,7 @@ func TestHandler_DryRun(t *testing.T) {
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.existingVars
-			mockCtx.DryRun = true
+			mockCtx.CurrentMode = actions.ModePlan
 
 			ctx := &executor.ExecutionContext{
 				Variables:      mockCtx.Variables,
@@ -685,7 +685,7 @@ func TestHandler_DryRun(t *testing.T) {
 				Logger:         mockCtx.Log,
 				PathUtil:       pathExpander,
 				CurrentDir:     "/tmp",
-				DryRun:         true,
+				CurrentMode: actions.ModePlan,
 			}
 
 			step := &config.Step{
@@ -733,7 +733,7 @@ func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
-	mockCtx.DryRun = true
+	mockCtx.CurrentMode = actions.ModePlan
 
 	ctx := &executor.ExecutionContext{
 		Variables:      mockCtx.Variables,
@@ -742,7 +742,7 @@ func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 		Logger:         mockCtx.Log,
 		PathUtil:       pathExpander,
 		CurrentDir:     "/tmp",
-		DryRun:         true,
+		CurrentMode: actions.ModePlan,
 	}
 
 	step := &config.Step{
@@ -765,7 +765,7 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 
 	// Use MockContext directly (not ExecutionContext)
 	mockCtx := testutil.NewMockContext()
-	mockCtx.DryRun = true
+	mockCtx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
 		IncludeVars: stringPtr("/tmp/vars.yml"),
@@ -786,7 +786,7 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 	}
 	pathExpander := pathutil.NewPathExpander(renderer)
 	mockCtx := testutil.NewMockContext()
-	mockCtx.DryRun = true
+	mockCtx.CurrentMode = actions.ModePlan
 
 	ctx := &executor.ExecutionContext{
 		Variables:      mockCtx.Variables,
@@ -795,7 +795,7 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 		Logger:         mockCtx.Log,
 		PathUtil:       pathExpander,
 		CurrentDir:     "/tmp",
-		DryRun:         true,
+		CurrentMode: actions.ModePlan,
 	}
 
 	// Use a path with undefined variable (will fail expansion)

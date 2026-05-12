@@ -97,7 +97,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 				FilePath: expandedPath,
 				Count:    len(vars),
 				Keys:     keys,
-				DryRun:   ctx.IsDryRun(),
+				DryRun:   ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

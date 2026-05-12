@@ -103,19 +103,10 @@ type ExecutionContext struct {
 	// Steps without matching tags are skipped when this is non-empty.
 	Tags []string
 
-	// DryRun when true prevents any system changes (preview mode).
-	// Commands are not executed, files are not created, templates are not rendered.
-	//
-	// Deprecated: prefer ec.Mode() == ModePlan. Spec 16 collapses DryRun
-	// and CheckMode into a single non-mutating mode; this field remains
-	// during the migration but will be removed in a later phase.
-	DryRun bool
-
-	// CheckMode when true queries state without making changes.
-	// Handlers implementing actions.Checker report would-change/ok; others report not-checkable.
-	//
-	// Deprecated: prefer ec.Mode() == ModePlan. See DryRun above.
-	CheckMode bool
+	// CurrentMode is the dispatch mode for this context. ModeExecute
+	// performs side effects; ModePlan inspects state and returns
+	// predictions without mutating. Read via ec.Mode().
+	CurrentMode actions.Mode
 
 	// Stats holds shared execution statistics counters.
 	// SHARED via pointer - all contexts update the same counters.
@@ -173,8 +164,7 @@ func (ec *ExecutionContext) Clone() ExecutionContext {
 		Logger:        ec.Logger,
 		SudoPass:      ec.SudoPass,
 		Tags:          ec.Tags,
-		DryRun:        ec.DryRun,
-		CheckMode:     ec.CheckMode,
+		CurrentMode:   ec.CurrentMode,
 
 		// Share the same statistics pointer
 		Stats: ec.Stats,
@@ -203,34 +193,17 @@ func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface
 	}
 }
 
-// Mode returns the current dispatch mode. Derived from the legacy DryRun and
-// CheckMode bools during the Spec 16 migration: either ModeExecute (mutating)
-// or ModePlan (any non-mutating preview/check).
+// Mode returns the current dispatch mode (ModeExecute or ModePlan).
 func (ec *ExecutionContext) Mode() Mode {
-	if ec.DryRun || ec.CheckMode {
-		return ModePlan
-	}
-	return ModeExecute
+	return ec.CurrentMode
 }
 
 // Effects returns a Performer that routes filesystem and command
 // primitives by the current Mode. Handlers should call this instead of
-// calling os.* directly so that ModePlan vs ModeExecute is decided in one
-// place (Spec 16). The returned Performer is cheap to construct.
+// calling os.* directly so that ModePlan vs ModeExecute is decided in
+// one place. The returned Performer is cheap to construct.
 func (ec *ExecutionContext) Effects() actions.Performer {
 	return effects.NewPerformer(ec.Mode, ec.SudoPass)
-}
-
-// HandleDryRun executes dry-run logging if in dry-run mode.
-// Returns true if in dry-run mode (caller should return early).
-// The logFn is called with a DryRunLogger to perform logging.
-func (ec *ExecutionContext) HandleDryRun(logFn func(*DryRunLogger)) bool {
-	if !ec.DryRun {
-		return false
-	}
-	dryRun := NewDryRunLogger(ec.Logger)
-	logFn(dryRun)
-	return true
 }
 
 // --- actions.Context interface implementation ---
@@ -260,11 +233,6 @@ func (ec *ExecutionContext) GetVariables() map[string]interface{} {
 // GetEventPublisher returns the event publisher.
 func (ec *ExecutionContext) GetEventPublisher() events.Publisher {
 	return ec.EventPublisher
-}
-
-// IsDryRun returns true if this is a dry-run execution.
-func (ec *ExecutionContext) IsDryRun() bool {
-	return ec.DryRun
 }
 
 // GetCurrentStepID returns the current step ID.

@@ -168,7 +168,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 				DestPath:     dest,
 				SizeBytes:    int64(len(output)),
 				Changed:      result.Changed,
-				DryRun:       ctx.IsDryRun(),
+				DryRun:       ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

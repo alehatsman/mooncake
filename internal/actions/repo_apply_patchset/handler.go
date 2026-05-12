@@ -480,7 +480,7 @@ func (h *Handler) applyPatchset(ctx actions.Context, baseDir string, filePatches
 						Data: events.FileOperationData{
 							Path:    targetPath,
 							Changed: true,
-							DryRun:  ctx.IsDryRun(),
+							DryRun:  ctx.Mode() == actions.ModePlan,
 						},
 					})
 				}

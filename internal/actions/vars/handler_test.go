@@ -351,7 +351,7 @@ func TestHandler_DryRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := testutil.NewMockContext()
 			ctx.Variables = tt.existingVars
-			ctx.DryRun = true
+			ctx.CurrentMode = actions.ModePlan
 
 			err := h.DryRun(ctx, tt.step)
 			if (err != nil) != tt.wantErr {

@@ -3,6 +3,7 @@ package executor
 import (
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -115,7 +116,7 @@ func TestHandleVars_MergeExisting(t *testing.T) {
 		Variables: map[string]interface{}{
 			"existing_key": "existing_value",
 		},
-		DryRun: false,
+		CurrentMode: actions.ModeExecute,
 	}
 
 	err := HandleVars(step, ec)

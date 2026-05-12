@@ -213,7 +213,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 				SizeBytes: downloadedSize,
 				Mode:      mode.String(),
 				Checksum:  downloadAction.Checksum,
-				DryRun:    ctx.IsDryRun(),
+				DryRun:    ctx.Mode() == actions.ModePlan,
 			},
 		})
 	}

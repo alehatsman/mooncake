@@ -2,6 +2,8 @@ package executor
 
 import (
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/actions"
 )
 
 // TestResult_SetChanged tests SetChanged method
@@ -95,19 +97,16 @@ func TestResult_SetData(t *testing.T) {
 	// No assertions - this is a TODO/placeholder method
 }
 
-// TestExecutionContext_IsDryRun tests IsDryRun method
-func TestExecutionContext_IsDryRun(t *testing.T) {
-	ctx := &ExecutionContext{
-		DryRun: true,
+// TestExecutionContext_ModeRoundtrip verifies CurrentMode is reported
+// by Mode() unchanged.
+func TestExecutionContext_ModeRoundtrip(t *testing.T) {
+	ctx := &ExecutionContext{CurrentMode: actions.ModePlan}
+	if ctx.Mode() != actions.ModePlan {
+		t.Error("Mode() should return ModePlan when CurrentMode is ModePlan")
 	}
-
-	if !ctx.IsDryRun() {
-		t.Error("IsDryRun() should return true when DryRun is true")
-	}
-
-	ctx.DryRun = false
-	if ctx.IsDryRun() {
-		t.Error("IsDryRun() should return false when DryRun is false")
+	ctx.CurrentMode = actions.ModeExecute
+	if ctx.Mode() != actions.ModeExecute {
+		t.Error("Mode() should return ModeExecute when CurrentMode is ModeExecute")
 	}
 }
 

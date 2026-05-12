@@ -11,6 +11,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/snapshot"
 )
 
@@ -204,7 +205,7 @@ func (c *runCollector) OnEvent(ev events.Event) {
 
 func (c *runCollector) Close() {}
 
-func runConfig(configPath string, dryRun bool) (string, error) {
+func runConfig(configPath string) (string, error) {
 	publisher := events.NewPublisher()
 	defer publisher.Close()
 
@@ -215,7 +216,6 @@ func runConfig(configPath string, dryRun bool) (string, error) {
 
 	runErr := executor.Start(executor.StartConfig{
 		ConfigFilePath: configPath,
-		DryRun:         dryRun,
 	}, internalLog, publisher)
 
 	result := map[string]interface{}{
@@ -242,14 +242,16 @@ func runConfig(configPath string, dryRun bool) (string, error) {
 func HandleRunPlan(_ context.Context, args json.RawMessage) (string, error) {
 	var params struct {
 		Config string `json:"config"`
-		DryRun bool   `json:"dry_run"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil || params.Config == "" {
 		return "", fmt.Errorf("config parameter required")
 	}
-	return runConfig(params.Config, params.DryRun)
+	return runConfig(params.Config)
 }
 
+// HandleCheckPlan builds the plan and inspects it without applying.
+// Returns per-step would-change predictions plus the host/hash metadata
+// callers need to decide whether to apply.
 func HandleCheckPlan(_ context.Context, args json.RawMessage) (string, error) {
 	var params struct {
 		Config string `json:"config"`
@@ -257,5 +259,29 @@ func HandleCheckPlan(_ context.Context, args json.RawMessage) (string, error) {
 	if err := json.Unmarshal(args, &params); err != nil || params.Config == "" {
 		return "", fmt.Errorf("config parameter required")
 	}
-	return runConfig(params.Config, true)
+
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		return "", err
+	}
+	planData, err := planner.BuildPlan(plan.PlannerConfig{ConfigPath: params.Config})
+	if err != nil {
+		return "", err
+	}
+	inspections, err := executor.InspectPlan(planData, "", logger.NewTestLogger())
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(map[string]interface{}{
+		"root_file":   planData.RootFile,
+		"generated_on": planData.GeneratedOn,
+		"inspections": inspections,
+	}); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
