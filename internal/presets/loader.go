@@ -19,7 +19,13 @@ import (
 // 2. ~/.mooncake/presets/ (user presets)
 // 3. /usr/local/share/mooncake/presets/ (local installation)
 // 4. /usr/share/mooncake/presets/ (system installation)
-func PresetSearchPaths() []string {
+//
+// Implemented as a package-level variable so tests can stub discovery
+// to a hermetic path set. Production code calls it as a function;
+// callers don't need to know it's a variable.
+var PresetSearchPaths = defaultPresetSearchPaths
+
+func defaultPresetSearchPaths() []string {
 	paths := []string{
 		"./presets",
 	}

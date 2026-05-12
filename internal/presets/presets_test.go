@@ -662,15 +662,20 @@ func TestGetValueType(t *testing.T) {
 	}
 }
 
-// TestDiscoverAllPresets_EmptyDirectories tests discovery with no presets
+// TestDiscoverAllPresets_EmptyDirectories tests discovery with no presets.
+// Overrides PresetSearchPaths to a hermetic tempdir so user/system
+// preset installations don't leak into the test (previously this test
+// failed for anyone with presets in ~/.mooncake/presets or
+// /usr/local/share/mooncake/presets).
 func TestDiscoverAllPresets_EmptyDirectories(t *testing.T) {
-	// Clean up any existing presets directory
-	presetsDir := filepath.Join(".", "presets")
-	os.RemoveAll(presetsDir)
-	defer os.RemoveAll(presetsDir)
+	presetsDir := filepath.Join(t.TempDir(), "presets")
+	if err := os.MkdirAll(presetsDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
 
-	// Create empty presets directory
-	os.MkdirAll(presetsDir, 0755)
+	orig := PresetSearchPaths
+	PresetSearchPaths = func() []string { return []string{presetsDir} }
+	defer func() { PresetSearchPaths = orig }()
 
 	presets, err := DiscoverAllPresets()
 	if err != nil {
