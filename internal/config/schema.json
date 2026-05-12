@@ -313,6 +313,107 @@
       "x-supports-become": true,
       "x-version": "1.0.0"
     },
+    "container": {
+      "type": "object",
+      "description": "Manage container lifecycle (running/stopped/absent) via podman or docker",
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "extra": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "image": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "network": {
+          "type": "string"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recreate": {
+          "type": "boolean"
+        },
+        "restart": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
+    "container.image": {
+      "type": "object",
+      "description": "Manage container images (pull/remove) via podman or docker",
+      "properties": {
+        "force_pull": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
     "file.copy": {
       "type": "object",
       "description": "Copy files with checksum verification and atomic writes",
@@ -944,6 +1045,14 @@
           "description": "Execute commands directly without shell interpolation",
           "$ref": "#/definitions/cmd"
         },
+        "container": {
+          "description": "Manage container lifecycle (running/stopped/absent) via podman or docker",
+          "$ref": "#/definitions/container"
+        },
+        "container.image": {
+          "description": "Manage container images (pull/remove) via podman or docker",
+          "$ref": "#/definitions/container.image"
+        },
         "continue_on_error": {
           "type": "boolean",
           "description": "Continue execution even if this step fails (universal)"
@@ -1137,6 +1246,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -1272,6 +1391,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -1415,6 +1544,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -1550,6 +1689,304 @@
               {
                 "required": [
                   "assert"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "container"
+          ],
+          "properties": {
+            "container": {
+              "$ref": "#/definitions/container"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "container.image"
+          ],
+          "properties": {
+            "container.image": {
+              "$ref": "#/definitions/container.image"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
                 ]
               },
               {
@@ -1698,6 +2135,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.download"
                 ]
               },
@@ -1833,6 +2280,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -1976,6 +2433,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -2111,6 +2578,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -2254,6 +2731,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -2389,6 +2876,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -2532,6 +3029,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -2667,6 +3174,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -2810,6 +3327,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -2945,6 +3472,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -3088,6 +3625,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -3223,6 +3770,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -3373,6 +3930,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -3508,6 +4075,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -3651,6 +4228,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -3786,6 +4373,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -3929,6 +4526,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -4064,6 +4671,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
@@ -4353,6 +4970,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -4492,6 +5119,16 @@
               },
               {
                 "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
                   "file.copy"
                 ]
               },
@@ -4627,6 +5264,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {
