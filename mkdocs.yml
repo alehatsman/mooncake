@@ -142,8 +142,6 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/alehatsman/mooncake
-  version:
-    provider: mike  # Version switching
 
 # Copyright
 copyright: Copyright &copy; 2024-2026 Aleh Atsman
