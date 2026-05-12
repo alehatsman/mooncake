@@ -388,6 +388,7 @@ func planCommand(c *cli.Context) error {
 	outputPath := c.String("output")
 	format := c.String("format")
 	showOrigins := c.Bool("show-origins")
+	noInspect := c.Bool("no-inspect")
 
 	// Parse tags
 	tags := parseTags(c.String("tags"))
@@ -416,6 +417,20 @@ func planCommand(c *cli.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to build plan: %w", err)
+	}
+
+	// Spec 16: after the static config expansion, inspect each step
+	// against current target state. Unless --no-inspect is set.
+	// Inspection routes through the executor in check mode; legacy
+	// handlers that don't implement Spec-16 Runner report as
+	// "not checkable" until they migrate (Phase 5).
+	if !noInspect {
+		internalLog := logger.NewLogger(logger.ErrorLevel)
+		inspections, err := executor.InspectPlan(planData, "", internalLog)
+		if err != nil {
+			return fmt.Errorf("failed to inspect plan: %w", err)
+		}
+		planData.Inspections = inspections
 	}
 
 	// Save to file if output path specified
@@ -456,56 +471,93 @@ func formatPlanYAML(p *plan.Plan) error {
 	return encoder.Encode(p)
 }
 
+// planSymbol returns the leading symbol for a per-step plan line.
+//
+//	↑  WouldChange  — applying this step would change state
+//	✓  AlreadyOk    — already in desired state
+//	-  Skipped      — when / tag filter removed this step
+//	?  not checkable — handler can't predict (e.g. shell)
+func planSymbol(ins plan.StepInspection, stepSkipped bool) string {
+	switch {
+	case stepSkipped || ins.Skipped:
+		return "-"
+	case !ins.Checkable:
+		return "?"
+	case ins.WouldChange:
+		return "↑"
+	default:
+		return "✓"
+	}
+}
+
 func formatPlanText(p *plan.Plan, showOrigins bool) error {
 	fmt.Printf("Plan: %s\n", p.RootFile)
-	fmt.Printf("Generated: %s\n", p.GeneratedAt.Format("2006-01-02 15:04:05"))
+	hostBits := []string{}
+	if p.GeneratedOn.OsFamily != "" {
+		hostBits = append(hostBits, p.GeneratedOn.OsFamily)
+	}
+	if p.GeneratedOn.Arch != "" {
+		hostBits = append(hostBits, p.GeneratedOn.Arch)
+	}
+	if p.GeneratedOn.DistroFamily != "" {
+		hostBits = append(hostBits, p.GeneratedOn.DistroFamily)
+	}
+	if len(hostBits) > 0 {
+		fmt.Printf("Generated: %s on %s\n", p.GeneratedAt.Format("2006-01-02 15:04:05"), strings.Join(hostBits, "/"))
+	} else {
+		fmt.Printf("Generated: %s\n", p.GeneratedAt.Format("2006-01-02 15:04:05"))
+	}
 	if len(p.Tags) > 0 {
 		fmt.Printf("Tags: %s\n", strings.Join(p.Tags, ", "))
 	}
-	fmt.Printf("Steps: %d\n\n", len(p.Steps))
+	fmt.Println()
 
-	for i, step := range p.Steps {
-		fmt.Printf("[%d] %s (ID: %s)\n", i+1, step.Name, step.ID)
+	// Build a lookup from stepID to inspection so the order matches steps.
+	insByID := make(map[string]plan.StepInspection, len(p.Inspections))
+	for _, ins := range p.Inspections {
+		insByID[ins.StepID] = ins
+	}
 
-		// Determine action type
-		actionType := "unknown"
-		if step.Shell != nil {
-			actionType = "shell"
-		} else if step.File != nil {
-			actionType = "file"
-		} else if step.Template != nil {
-			actionType = "template"
-		} else if step.Vars != nil {
-			actionType = "vars"
-		} else if step.IncludeVars != nil {
-			actionType = "include_vars"
+	var wouldChange, ok, skipped, notCheckable int
+	for _, step := range p.Steps {
+		ins := insByID[step.ID]
+		sym := planSymbol(ins, step.Skipped)
+
+		name := step.Name
+		if name == "" {
+			name = step.ID
 		}
-		fmt.Printf("    Action: %s\n", actionType)
-
-		if step.Skipped {
-			fmt.Printf("    Status: SKIPPED (tags)\n")
+		// One line per step: <sym> <name>   <reason>
+		line := fmt.Sprintf("%s %s", sym, name)
+		if ins.Reason != "" {
+			line = fmt.Sprintf("%-50s  %s", line, ins.Reason)
+		} else if step.Skipped {
+			line = fmt.Sprintf("%-50s  %s", line, "skipped (tags)")
 		}
+		fmt.Println(line)
 
-		if len(step.Tags) > 0 {
-			fmt.Printf("    Tags: %s\n", strings.Join(step.Tags, ", "))
+		switch sym {
+		case "↑":
+			wouldChange++
+		case "✓":
+			ok++
+		case "-":
+			skipped++
+		case "?":
+			notCheckable++
 		}
 
 		if showOrigins && step.Origin != nil {
-			fmt.Printf("    Origin: %s:%d:%d\n", step.Origin.FilePath, step.Origin.Line, step.Origin.Column)
+			fmt.Printf("    %s:%d:%d\n", step.Origin.FilePath, step.Origin.Line, step.Origin.Column)
 			if len(step.Origin.IncludeChain) > 0 {
-				fmt.Printf("    Chain: %s\n", strings.Join(step.Origin.IncludeChain, " -> "))
+				fmt.Printf("    via: %s\n", strings.Join(step.Origin.IncludeChain, " -> "))
 			}
 		}
-
-		if step.LoopContext != nil {
-			fmt.Printf("    Loop: %s[%d] (first=%v, last=%v)\n",
-				step.LoopContext.Type, step.LoopContext.Index,
-				step.LoopContext.First, step.LoopContext.Last)
-		}
-
-		fmt.Println()
 	}
 
+	fmt.Println()
+	fmt.Printf("PLAN SUMMARY  would-change=%d  ok=%d  skipped=%d  not-checkable=%d\n",
+		wouldChange, ok, skipped, notCheckable)
 	return nil
 }
 
@@ -794,6 +846,11 @@ func createApp() *cli.App {
 						Name:  "show-origins",
 						Value: false,
 						Usage: "Show origin file:line:col for each step",
+					},
+					&cli.BoolFlag{
+						Name:  "no-inspect",
+						Value: false,
+						Usage: "Skip the per-step state inspection pass (Spec 16). With this flag, plan output reflects only static YAML expansion — no would-change predictions.",
 					},
 					&cli.StringFlag{
 						Name:    "output",

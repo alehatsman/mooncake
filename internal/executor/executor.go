@@ -341,6 +341,15 @@ func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 	if step.When != "" {
 		shouldSkip, err := HandleWhenExpression(step, ec)
 		if err != nil {
+			// In plan mode the variable set may not include results from
+			// previous steps (nothing actually ran), so a when expression
+			// that references e.g. `prior.changed` can be unevaluable.
+			// Treat that as "skip in plan, can't predict" rather than
+			// aborting the whole inspection. Real execution still
+			// surfaces the error.
+			if ec.Mode() == actions.ModePlan {
+				return true, "when unevaluable in plan mode", nil
+			}
 			return false, "", err
 		}
 		if shouldSkip {

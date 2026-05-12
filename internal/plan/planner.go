@@ -168,6 +168,17 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	// This ensures the facts are available during execution for 'when' conditions
 	plan.InitialVars = variables
 
+	// Snapshot a minimal subset of facts onto GeneratedOn for stale-plan
+	// detection at apply time (Spec 16). Keep this small: OS family,
+	// architecture, distro family. Matching too many facts (hostname,
+	// kernel version) would make plans unportable across similar
+	// machines without adding meaningful safety.
+	plan.GeneratedOn = HostFacts{
+		OsFamily:     systemFacts.OS,
+		Arch:         systemFacts.Arch,
+		DistroFamily: systemFacts.Distribution,
+	}
+
 	// Create expansion context
 	ctx := &ExpansionContext{
 		Variables:  variables,
