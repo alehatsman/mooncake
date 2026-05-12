@@ -27,10 +27,7 @@ func Default(systemMode bool) (Config, error) {
 		}, nil
 	}
 
-	socketDir, err := userSocketDir()
-	if err != nil {
-		return Config{}, err
-	}
+	socketDir := userSocketDir()
 	stateDir, err := userStateDir()
 	if err != nil {
 		return Config{}, err
@@ -42,11 +39,11 @@ func Default(systemMode bool) (Config, error) {
 	}, nil
 }
 
-func userSocketDir() (string, error) {
+func userSocketDir() string {
 	if d := os.Getenv("XDG_RUNTIME_DIR"); d != "" {
-		return d, nil
+		return d
 	}
-	return fmt.Sprintf("/tmp/mooncake-%d", os.Getuid()), nil
+	return fmt.Sprintf("/tmp/mooncake-%d", os.Getuid())
 }
 
 func userStateDir() (string, error) {

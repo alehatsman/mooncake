@@ -993,6 +993,8 @@ func (s *Step) countActions() int {
 
 // DetermineActionType returns the action type for this step based on which action field is populated.
 // Returned strings are the modern dot-namespaced YAML keys (spec-21).
+//
+//nolint:gocyclo // Dispatcher over ~25 action types; complexity grows linearly with action count and is structurally simple.
 func (s *Step) DetermineActionType() string {
 	if s.Shell != nil {
 		return "shell"

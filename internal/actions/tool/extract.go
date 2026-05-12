@@ -98,7 +98,7 @@ func extractTarStream(r io.Reader, destDir string, strip int) error {
 			if err := os.MkdirAll(target, os.FileMode(hdr.Mode)&0o777|0o700); err != nil {
 				return fmt.Errorf("mkdir %s: %w", target, err)
 			}
-		case tar.TypeReg, tar.TypeRegA:
+		case tar.TypeReg:
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("mkdir parent %s: %w", target, err)
 			}
@@ -141,13 +141,13 @@ func extractZip(srcPath, destDir string, strip int) error {
 			return err
 		}
 		if zf.FileInfo().IsDir() {
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return fmt.Errorf("mkdir %s: %w", target, err)
+			if mkErr := os.MkdirAll(target, 0o755); mkErr != nil {
+				return fmt.Errorf("mkdir %s: %w", target, mkErr)
 			}
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return fmt.Errorf("mkdir parent %s: %w", target, err)
+		if mkErr := os.MkdirAll(filepath.Dir(target), 0o755); mkErr != nil {
+			return fmt.Errorf("mkdir parent %s: %w", target, mkErr)
 		}
 		mode := zf.Mode() & 0o777
 		if mode == 0 {

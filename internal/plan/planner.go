@@ -206,8 +206,8 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	})
 
 	// Expand all steps
-	if err := p.expandSteps(runConfig.Steps, ctx, plan, 0); err != nil {
-		return nil, err
+	if expandErr := p.expandSteps(runConfig.Steps, ctx, plan, 0); expandErr != nil {
+		return nil, expandErr
 	}
 
 	// Capture the input-file set + hash for stale-plan detection at
@@ -921,8 +921,9 @@ func (p *Planner) evaluateItemsExpression(expr string, vars map[string]interface
 	return items, nil
 }
 
-// convertToSlice converts a value to []interface{}. Retained for backward
-// compatibility with existing tests; new code should use template.ResolveList.
+// convertToSlice converts a value to []interface{}. Retained for tests.
+//
+//nolint:unused // referenced only from *_test.go which lint skips.
 func convertToSlice(val interface{}, expr string) ([]interface{}, error) {
 	switch v := val.(type) {
 	case []interface{}:
@@ -937,3 +938,4 @@ func convertToSlice(val interface{}, expr string) ([]interface{}, error) {
 		return nil, fmt.Errorf("with_items expression %q is not a list (got %T)", expr, val)
 	}
 }
+

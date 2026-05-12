@@ -531,7 +531,7 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 // buildBatchInstallCommand. Equivalent to buildBatchInstallCommand with a
 // single-element slice — same arg ordering.
 //
-//nolint:dupl,unparam // Similar structure to buildRemoveCommand; upgrade parameter for future use
+//nolint:dupl,unparam,unused // Test-only helper retained for backward compatibility
 func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, extra []string) []string {
 	return h.buildBatchInstallCommand(manager, []string{pkg}, upgrade, extra)
 }
@@ -587,7 +587,7 @@ func installCommandBase(manager string) []string {
 // Retained for backward compatibility with tests; production code paths use
 // buildBatchRemoveCommand.
 //
-//nolint:dupl // Similar structure to buildInstallCommand but different semantics
+//nolint:dupl,unused // Test-only helper retained for backward compatibility
 func (h *Handler) buildRemoveCommand(manager, pkg string, extra []string) []string {
 	return h.buildBatchRemoveCommand(manager, []string{pkg}, extra)
 }

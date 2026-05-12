@@ -253,7 +253,7 @@ func runFromPlan(c *cli.Context, planPath string) error {
 		AllowStale: c.Bool("allow-stale"),
 	}
 	if err := plan.ValidateForApply(planData, validateOpts); err != nil {
-		return fmt.Errorf("refusing to apply stale plan: %w\n\nUse --allow-stale to override.", err)
+		return fmt.Errorf("refusing to apply stale plan: %w (use --allow-stale to override)", err)
 	}
 
 	// Setup logger

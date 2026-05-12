@@ -63,9 +63,9 @@ func (s *Server) submitRunHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		baseDir = filepath.Clean(baseDir)
-		bi, err := os.Stat(baseDir)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "base_dir_not_found", err.Error())
+		bi, statErr := os.Stat(baseDir)
+		if statErr != nil {
+			writeError(w, http.StatusBadRequest, "base_dir_not_found", statErr.Error())
 			return
 		}
 		if !bi.IsDir() {
@@ -159,7 +159,7 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 	// Subscribe to the hub BEFORE reading JSONL so we capture any events
 	// that arrive concurrently. If the run is terminal, hub is nil and we
 	// just replay JSONL.
-	var hubCh <-chan hubMessage
+	var hubCh <-chan HubMessage
 	var unsub func()
 	var snapshotSeq int64
 	if !run.IsTerminal() {
@@ -169,7 +169,7 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := streamJSONL(w, flusher, s.store.EventsPath(id), r.Context()); err != nil {
+	if err := streamJSONL(r.Context(), w, flusher, s.store.EventsPath(id)); err != nil {
 		// Best effort; client may have disconnected.
 		return
 	}
@@ -202,12 +202,12 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 // streamJSONL reads the events.jsonl line by line and emits each as an SSE
 // event. The file may grow during reading (worker still appending) — we
 // stop at EOF; the caller continues tailing from the hub.
-func streamJSONL(w http.ResponseWriter, flusher http.Flusher, path string, ctx context.Context) error {
-	f, err := os.Open(path)
+func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, path string) error {
+	f, err := os.Open(path) //nolint:gosec // path is server-controlled (eventsPath derived from runID)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 1<<20), 1<<20)

@@ -147,8 +147,8 @@ func (l *Lock) Save(path string) error {
 	}
 	defer func() { _ = fl.Close() }()
 
-	if err := lockExclusive(fl); err != nil {
-		return fmt.Errorf("flock lockfile: %w", err)
+	if lockErr := lockExclusive(fl); lockErr != nil {
+		return fmt.Errorf("flock lockfile: %w", lockErr)
 	}
 	defer func() { _ = unlock(fl) }()
 

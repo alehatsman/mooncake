@@ -120,6 +120,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Get patch content
+	//nolint:dupl // patch-load idiom shared with run.go; trivial helper not worth the indirection.
 	patchContent := ""
 	if fpa.Patch != "" {
 		// Render inline patch

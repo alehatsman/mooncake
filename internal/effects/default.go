@@ -562,12 +562,12 @@ func shellQuote(s string) string {
 	return "'" + replaceAll(s, "'", `'\''`) + "'"
 }
 
-func replaceAll(s, old, new string) string {
+func replaceAll(s, old, replacement string) string {
 	out := make([]byte, 0, len(s))
 	i := 0
 	for i < len(s) {
 		if i+len(old) <= len(s) && s[i:i+len(old)] == old {
-			out = append(out, new...)
+			out = append(out, replacement...)
 			i += len(old)
 		} else {
 			out = append(out, s[i])

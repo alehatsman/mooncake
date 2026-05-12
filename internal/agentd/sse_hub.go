@@ -4,16 +4,16 @@ import (
 	"sync"
 )
 
-// hubMessage is one broadcast — a seq number and the already-encoded event
+// HubMessage is one broadcast — a seq number and the already-encoded event
 // line. The sink encodes once and broadcasts the same bytes to all subscribers
 // AND to the JSONL file, so consumers see byte-identical content.
-type hubMessage struct {
+type HubMessage struct {
 	Seq  int64
 	Line []byte
 }
 
 type hubSub struct {
-	ch chan hubMessage
+	ch chan HubMessage
 }
 
 // Hub is a per-run in-memory broadcaster. The worker's event sink calls
@@ -42,11 +42,11 @@ const hubSubBuffer = 256
 // snapshot of lastSeq taken under the same lock — so callers can replay JSONL
 // up to lastSeq and then forward channel messages with seq > lastSeq to bridge
 // the replay→tail boundary without races.
-func (h *Hub) Subscribe() (ch <-chan hubMessage, lastSeq int64, unsubscribe func()) {
+func (h *Hub) Subscribe() (ch <-chan HubMessage, lastSeq int64, unsubscribe func()) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	sub := &hubSub{ch: make(chan hubMessage, hubSubBuffer)}
+	sub := &hubSub{ch: make(chan HubMessage, hubSubBuffer)}
 	id := h.nextSubID
 	h.nextSubID++
 	h.subscribers[id] = sub
@@ -76,7 +76,7 @@ func (h *Hub) Broadcast(seq int64, line []byte) {
 		return
 	}
 	h.lastSeq = seq
-	msg := hubMessage{Seq: seq, Line: line}
+	msg := HubMessage{Seq: seq, Line: line}
 	for _, sub := range h.subscribers {
 		select {
 		case sub.ch <- msg:

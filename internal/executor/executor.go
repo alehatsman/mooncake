@@ -520,6 +520,8 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 }
 
 // ExecuteStep executes a single configuration step within the given execution context.
+//
+//nolint:gocyclo // Step dispatcher; complexity is the action-count fan-out.
 func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// Validate step configuration
 	if err := step.Validate(); err != nil {

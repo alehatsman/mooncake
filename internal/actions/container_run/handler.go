@@ -26,9 +26,7 @@ const (
 )
 
 // newRuntime is overridable in tests to inject a fake Runtime.
-var newRuntime = func(preferred string) (containerruntime.Runtime, error) {
-	return containerruntime.Detect(preferred)
-}
+var newRuntime = containerruntime.Detect
 
 // Handler implements actions.Handler for the container action.
 type Handler struct{}

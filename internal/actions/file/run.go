@@ -99,7 +99,7 @@ func (h *Handler) runState(
 	ctx actions.Context,
 	ec *executor.ExecutionContext,
 	file *config.File,
-	step *config.Step,
+	_ *config.Step,
 	state, renderedPath string,
 	mode os.FileMode,
 	p actions.Performer,

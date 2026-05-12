@@ -702,7 +702,7 @@ export interface Step {
   /**
    * Manage container images (pull/remove) via podman or docker
    */
-  container.image?: ContainerImageAction;
+  "container.image"?: ContainerImageAction;
   /**
    * Copy files with checksum verification and atomic writes
    */

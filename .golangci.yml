@@ -31,10 +31,16 @@ linters:
     gosec:
       severity: "medium"
       confidence: "medium"
+      # Aligned with .github/workflows/security.yml + Makefile.
       excludes:
-        - G104
+        - G104  # errors unhandled
         - G115  # integer overflow conversion
         - G117  # exported struct field matches secret pattern
+        - G204  # subprocess launched with variable
+        - G301  # bad dir perms
+        - G302  # file perms — config/lockfile use 0644 by design
+        - G304  # path from variable — every config-reading codepath
+        - G306  # bad write perms
         - G702  # command injection via taint analysis
         - G703  # path traversal via taint analysis
         - G704  # SSRF via taint analysis
@@ -110,13 +116,26 @@ linters:
         linters: [revive]
         text: "var-naming: avoid meaningless package names"
 
-      - path: internal/actions/(file_replace|repo_search|repo_tree|artifact_capture|artifact_validate)/
+      - path: internal/actions/(file_replace|file_insert|file_delete_range|file_patch_apply|repo_search|repo_tree|repo_apply_patchset|artifact_capture|artifact_validate|include_vars)/
+        linters: [revive, staticcheck]
+        text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names|ST1000:)"
+
+      # The `package` directory uses `package_handler` as its Go package
+      # name because `package` is a Go reserved keyword. Suppress the
+      # underscore-name warning here too.
+      - path: internal/actions/package/
         linters: [revive, staticcheck]
         text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names)"
 
       - path: internal/utils/checksum\.go
         linters: [dupl]
         text: "lines are duplicate"
+
+      # file_patch_apply has the same patch-loading idiom in run.go and
+      # handler.go (Spec-16 dual-path). Helper extraction not worth the
+      # indirection.
+      - path: internal/actions/file_patch_apply/
+        linters: [dupl]
 
       - path: internal/(agent|actions/artifact_capture|actions/artifact_validate)/
         linters: [gosec]

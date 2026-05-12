@@ -39,6 +39,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		ctx.GetLogger().Debugf("  Path validation warning: %v", pathErr)
 	}
 
+	//nolint:dupl // patch-load idiom shared with handler.go; trivial helper not worth the indirection.
 	patchContent := ""
 	if fpa.Patch != "" {
 		rendered, perr := ctx.GetTemplate().Render(fpa.Patch, ctx.GetVariables())

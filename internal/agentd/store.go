@@ -276,7 +276,7 @@ func (s *Store) AppendEvent(id string, line []byte) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if !strings.HasSuffix(string(line), "\n") {
 		line = append(line, '\n')
 	}

@@ -163,13 +163,16 @@ func isValidTSIdentifier(s string) bool {
 		return false
 	}
 	for i, r := range s {
+		isAlpha := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		isDigit := r >= '0' && r <= '9'
+		isSym := r == '_' || r == '$'
 		if i == 0 {
-			if !(r == '_' || r == '$' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
+			if !isAlpha && !isSym {
 				return false
 			}
 			continue
 		}
-		if !(r == '_' || r == '$' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+		if !isAlpha && !isSym && !isDigit {
 			return false
 		}
 	}

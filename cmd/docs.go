@@ -70,13 +70,13 @@ func generateDocsAction(c *cli.Context) error {
 	dryRun := c.Bool("dry-run")
 
 	// Get version from app context
-	version := c.App.Version
-	if version == "" {
-		version = "dev"
+	appVersion := c.App.Version
+	if appVersion == "" {
+		appVersion = "dev"
 	}
 
 	// Create generator
-	generator := docgen.NewGenerator(version)
+	generator := docgen.NewGenerator(appVersion)
 
 	// Determine output writer
 	var writer *os.File

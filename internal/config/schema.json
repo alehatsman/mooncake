@@ -1788,6 +1788,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -1928,6 +1933,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -4827,6 +4837,16 @@
               {
                 "required": [
                   "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
                 ]
               },
               {

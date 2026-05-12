@@ -67,8 +67,8 @@ func InstallURL(_ context.Context, spec Spec, plan Plan, facts FactSnapshot, loc
 	if err != nil {
 		return Outcome{}, err
 	}
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return Outcome{}, fmt.Errorf("create store root: %w", err)
+	if mkErr := os.MkdirAll(root, 0o755); mkErr != nil {
+		return Outcome{}, fmt.Errorf("create store root: %w", mkErr)
 	}
 	tmpFile, err := fetchToTempFile(plan.URL, root)
 	if err != nil {
