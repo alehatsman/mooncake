@@ -43,7 +43,7 @@ func TestHandler_Metadata(t *testing.T) {
 	handler := &Handler{}
 	meta := handler.Metadata()
 
-	if meta.Name != "repo_apply_patchset" {
+	if meta.Name != "repo.patch" {
 		t.Errorf("expected name 'repo_apply_patchset', got '%s'", meta.Name)
 	}
 

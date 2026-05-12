@@ -41,7 +41,7 @@ func TestHandler_Metadata(t *testing.T) {
 	handler := &Handler{}
 	meta := handler.Metadata()
 
-	if meta.Name != "file_insert" {
+	if meta.Name != "text.insert" {
 		t.Errorf("expected name 'file_insert', got '%s'", meta.Name)
 	}
 

@@ -43,7 +43,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "file" {
+	if meta.Name != "file.write" {
 		t.Errorf("Name = %v, want 'file'", meta.Name)
 	}
 	if meta.Description == "" {

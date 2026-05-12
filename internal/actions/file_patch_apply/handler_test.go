@@ -41,7 +41,7 @@ func TestHandler_Metadata(t *testing.T) {
 	handler := &Handler{}
 	meta := handler.Metadata()
 
-	if meta.Name != "file_patch_apply" {
+	if meta.Name != "text.patch" {
 		t.Errorf("expected name 'file_patch_apply', got '%s'", meta.Name)
 	}
 

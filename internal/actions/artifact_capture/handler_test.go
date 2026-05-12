@@ -13,7 +13,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "artifact_capture" {
+	if meta.Name != "artifact.capture" {
 		t.Errorf("expected name 'artifact_capture', got %s", meta.Name)
 	}
 	if meta.Category != "system" {

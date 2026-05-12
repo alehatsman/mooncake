@@ -41,7 +41,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "package" {
+	if meta.Name != "pkg" {
 		t.Errorf("Name = %v, want 'package'", meta.Name)
 	}
 	if meta.Description == "" {

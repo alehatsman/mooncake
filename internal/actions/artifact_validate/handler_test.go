@@ -14,7 +14,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "artifact_validate" {
+	if meta.Name != "artifact.validate" {
 		t.Errorf("expected name 'artifact_validate', got %s", meta.Name)
 	}
 	if meta.Category != "system" {

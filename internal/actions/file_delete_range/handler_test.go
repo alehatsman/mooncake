@@ -41,7 +41,7 @@ func TestHandler_Metadata(t *testing.T) {
 	handler := &Handler{}
 	meta := handler.Metadata()
 
-	if meta.Name != "file_delete_range" {
+	if meta.Name != "text.delete_range" {
 		t.Errorf("expected name 'file_delete_range', got '%s'", meta.Name)
 	}
 

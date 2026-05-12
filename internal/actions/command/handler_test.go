@@ -50,7 +50,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "command" {
+	if meta.Name != "cmd" {
 		t.Errorf("Name = %v, want 'command'", meta.Name)
 	}
 	if meta.Description == "" {

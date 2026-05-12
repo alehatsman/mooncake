@@ -42,7 +42,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "service" {
+	if meta.Name != "os.service" {
 		t.Errorf("Name = %v, want 'service'", meta.Name)
 	}
 	if meta.Description == "" {

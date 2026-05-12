@@ -19,7 +19,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "include_vars" {
+	if meta.Name != "vars.load" {
 		t.Errorf("Name = %v, want 'include_vars'", meta.Name)
 	}
 	if meta.Description == "" {

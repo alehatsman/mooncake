@@ -177,7 +177,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "print" {
+	if meta.Name != "log" {
 		t.Errorf("Name = %v, want 'print'", meta.Name)
 	}
 	if meta.Description == "" {

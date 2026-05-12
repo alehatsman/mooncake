@@ -155,7 +155,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "preset" {
+	if meta.Name != "use" {
 		t.Errorf("Name = %v, want 'preset'", meta.Name)
 	}
 	if meta.Description == "" {

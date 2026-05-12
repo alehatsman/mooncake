@@ -208,7 +208,7 @@ func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
 
-	if meta.Name != "unarchive" {
+	if meta.Name != "file.unarchive" {
 		t.Errorf("Name = %v, want 'unarchive'", meta.Name)
 	}
 	if meta.Description == "" {
