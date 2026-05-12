@@ -25,7 +25,7 @@ import (
 //
 //	func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
 //	    // Render template strings
-//	    path, err := ctx.GetTemplate().RenderString(step.File.Path, ctx.GetVariables())
+//	    path, err := ctx.GetTemplate().RenderString(step.FileWrite.Path, ctx.GetVariables())
 //
 //	    // Log progress
 //	    ctx.GetLogger().Infof("Creating file at %s", path)

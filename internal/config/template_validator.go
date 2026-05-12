@@ -76,8 +76,14 @@ func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, loca
 		{"failed_when", step.FailedWhen, fmt.Sprintf("/%d/failed_when", stepIndex)},
 		{"cwd", step.Cwd, fmt.Sprintf("/%d/cwd", stepIndex)},
 		{"timeout", step.Timeout, fmt.Sprintf("/%d/timeout", stepIndex)},
-		{"retry_delay", step.RetryDelay, fmt.Sprintf("/%d/retry_delay", stepIndex)},
-		{"become_user", step.BecomeUser, fmt.Sprintf("/%d/become_user", stepIndex)},
+		{"as_user", step.AsUser, fmt.Sprintf("/%d/as_user", stepIndex)},
+	}
+	if step.Retry != nil {
+		templateFields = append(templateFields, struct {
+			name  string
+			value string
+			path  string
+		}{"retry.delay", step.Retry.Delay, fmt.Sprintf("/%d/retry/delay", stepIndex)})
 	}
 
 	// Validate pointer fields
@@ -89,36 +95,36 @@ func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, loca
 		}{"shell", step.Shell.Cmd, fmt.Sprintf("/%d/shell", stepIndex)})
 	}
 
-	if step.WithItems != nil {
+	if step.ForEach != nil {
 		templateFields = append(templateFields, struct {
 			name  string
 			value string
 			path  string
-		}{"with_items", *step.WithItems, fmt.Sprintf("/%d/with_items", stepIndex)})
+		}{"for_each", *step.ForEach, fmt.Sprintf("/%d/for_each", stepIndex)})
 	}
 
-	if step.WithFileTree != nil {
+	if step.ForEachFile != nil {
 		templateFields = append(templateFields, struct {
 			name  string
 			value string
 			path  string
-		}{"with_filetree", *step.WithFileTree, fmt.Sprintf("/%d/with_filetree", stepIndex)})
+		}{"for_each_file", *step.ForEachFile, fmt.Sprintf("/%d/for_each_file", stepIndex)})
 	}
 
-	if step.Include != nil {
+	if step.Import != nil {
 		templateFields = append(templateFields, struct {
 			name  string
 			value string
 			path  string
-		}{"include", *step.Include, fmt.Sprintf("/%d/include", stepIndex)})
+		}{"import", *step.Import, fmt.Sprintf("/%d/import", stepIndex)})
 	}
 
-	if step.IncludeVars != nil {
+	if step.VarsLoad != nil {
 		templateFields = append(templateFields, struct {
 			name  string
 			value string
 			path  string
-		}{"include_vars", *step.IncludeVars, fmt.Sprintf("/%d/include_vars", stepIndex)})
+		}{"vars.load", *step.VarsLoad, fmt.Sprintf("/%d/vars.load", stepIndex)})
 	}
 
 	// Validate environment variables
@@ -137,15 +143,15 @@ func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, loca
 	}
 
 	// Validate template action fields
-	if step.Template != nil {
-		diagnostics = v.validateField(step.Template.Src, fmt.Sprintf("/%d/template/src", stepIndex), "template.src", filePath, locationMap, diagnostics)
-		diagnostics = v.validateField(step.Template.Dest, fmt.Sprintf("/%d/template/dest", stepIndex), "template.dest", filePath, locationMap, diagnostics)
+	if step.FileTemplate != nil {
+		diagnostics = v.validateField(step.FileTemplate.Src, fmt.Sprintf("/%d/file.template/src", stepIndex), "file.template.src", filePath, locationMap, diagnostics)
+		diagnostics = v.validateField(step.FileTemplate.Dest, fmt.Sprintf("/%d/file.template/dest", stepIndex), "file.template.dest", filePath, locationMap, diagnostics)
 	}
 
-	// Validate file action fields
-	if step.File != nil {
-		diagnostics = v.validateField(step.File.Path, fmt.Sprintf("/%d/file/path", stepIndex), "file.path", filePath, locationMap, diagnostics)
-		diagnostics = v.validateField(step.File.Content, fmt.Sprintf("/%d/file/content", stepIndex), "file.content", filePath, locationMap, diagnostics)
+	// Validate file.write action fields
+	if step.FileWrite != nil {
+		diagnostics = v.validateField(step.FileWrite.Path, fmt.Sprintf("/%d/file.write/path", stepIndex), "file.write.path", filePath, locationMap, diagnostics)
+		diagnostics = v.validateField(step.FileWrite.Content, fmt.Sprintf("/%d/file.write/content", stepIndex), "file.write.content", filePath, locationMap, diagnostics)
 	}
 
 	// Validate string fields

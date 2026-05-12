@@ -52,10 +52,10 @@ func TestRun_PlanRendersCommand(t *testing.T) {
 }
 
 // TestRun_PlanWithBecome: plan reason includes "sudo" marker when
-// step.Become is true, so users can see when the command would
+// step.ShouldBecome() is true, so users can see when the command would
 // escalate.
 func TestRun_PlanWithBecome(t *testing.T) {
-	step := &config.Step{Shell: &config.ShellAction{Cmd: "rm -rf /tmp/x"}, Become: true}
+	step := &config.Step{Shell: &config.ShellAction{Cmd: "rm -rf /tmp/x"}, AsUser: "root"}
 	h := &Handler{}
 
 	res, _ := h.Run(newCtx(t, true), step)

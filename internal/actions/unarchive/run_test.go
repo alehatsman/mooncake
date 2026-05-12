@@ -40,7 +40,7 @@ func TestRun_CreatesExists_AlreadyOk(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:     "/tmp/fake.tar.gz",
 			Dest:    dir,
 			Creates: marker,
@@ -57,7 +57,7 @@ func TestRun_CreatesExists_AlreadyOk(t *testing.T) {
 // would-extract.
 func TestRun_CreatesMissing_WouldExtract(t *testing.T) {
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:     "/tmp/fake.tar.gz",
 			Dest:    "/tmp/dest",
 			Creates: filepath.Join(t.TempDir(), "does-not-exist"),
@@ -74,7 +74,7 @@ func TestRun_CreatesMissing_WouldExtract(t *testing.T) {
 // inspect → plan always reports would-extract (documented limitation).
 func TestRun_NoCreates_WouldExtract(t *testing.T) {
 	step := &config.Step{
-		Unarchive: &config.Unarchive{Src: "/tmp/x.tgz", Dest: "/tmp/d"},
+		FileUnarchive: &config.Unarchive{Src: "/tmp/x.tgz", Dest: "/tmp/d"},
 	}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
 	r := res.(*executor.Result)

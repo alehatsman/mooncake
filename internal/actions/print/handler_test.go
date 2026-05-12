@@ -214,7 +214,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid print action",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, World!",
 				},
 			},
@@ -223,14 +223,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil print action",
 			step: &config.Step{
-				Print: nil,
+				Log: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty message",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "",
 				},
 			},
@@ -239,7 +239,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "message with template",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, {{ name }}!",
 				},
 			},
@@ -270,7 +270,7 @@ func TestHandler_Execute(t *testing.T) {
 		{
 			name: "simple message",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, World!",
 				},
 			},
@@ -281,7 +281,7 @@ func TestHandler_Execute(t *testing.T) {
 		{
 			name: "message with template variable",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, {{ name }}!",
 				},
 			},
@@ -294,7 +294,7 @@ func TestHandler_Execute(t *testing.T) {
 		{
 			name: "message with multiple variables",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "{{ greeting }}, {{ name }}!",
 				},
 			},
@@ -308,7 +308,7 @@ func TestHandler_Execute(t *testing.T) {
 		{
 			name: "message with missing variable renders empty",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, {{ missing_var }}!",
 				},
 			},
@@ -400,7 +400,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Print: &config.PrintAction{
+		Log: &config.PrintAction{
 			Msg: "Hello, World!",
 		},
 	}
@@ -432,7 +432,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "simple message",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, World!",
 				},
 			},
@@ -442,7 +442,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "message with template variable",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, {{ name }}!",
 				},
 			},
@@ -454,7 +454,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "message with missing variable - should not error",
 			step: &config.Step{
-				Print: &config.PrintAction{
+				Log: &config.PrintAction{
 					Msg: "Hello, {{ missing_var }}!",
 				},
 			},

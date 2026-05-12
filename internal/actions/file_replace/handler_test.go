@@ -69,7 +69,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid configuration",
 			step: &config.Step{
-				FileReplace: &config.FileReplace{
+				TextReplace: &config.FileReplace{
 					Path:    "/tmp/test.txt",
 					Pattern: "old",
 					Replace: "new",
@@ -80,14 +80,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil file_replace",
 			step: &config.Step{
-				FileReplace: nil,
+				TextReplace: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing path",
 			step: &config.Step{
-				FileReplace: &config.FileReplace{
+				TextReplace: &config.FileReplace{
 					Pattern: "old",
 					Replace: "new",
 				},
@@ -97,7 +97,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing pattern",
 			step: &config.Step{
-				FileReplace: &config.FileReplace{
+				TextReplace: &config.FileReplace{
 					Path:    "/tmp/test.txt",
 					Replace: "new",
 				},
@@ -107,7 +107,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid regex",
 			step: &config.Step{
-				FileReplace: &config.FileReplace{
+				TextReplace: &config.FileReplace{
 					Path:    "/tmp/test.txt",
 					Pattern: "[invalid(regex",
 					Replace: "new",
@@ -121,7 +121,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "zero count",
 			step: &config.Step{
-				FileReplace: &config.FileReplace{
+				TextReplace: &config.FileReplace{
 					Path:    "/tmp/test.txt",
 					Pattern: "old",
 					Replace: "new",
@@ -133,7 +133,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "negative count",
 			step: &config.Step{
-				FileReplace: &config.FileReplace{
+				TextReplace: &config.FileReplace{
 					Path:    "/tmp/test.txt",
 					Pattern: "old",
 					Replace: "new",
@@ -166,7 +166,7 @@ func TestHandler_Execute_LiteralReplacement(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: "old",
 			Replace: "new",
@@ -210,7 +210,7 @@ func TestHandler_Execute_RegexReplacement(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: `oldapi\.com`,
 			Replace: "newapi.com",
@@ -254,7 +254,7 @@ func TestHandler_Execute_CountLimit(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: "foo",
 			Replace: "bar",
@@ -299,7 +299,7 @@ func TestHandler_Execute_CaseInsensitive(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: "error",
 			Replace: "warning",
@@ -344,7 +344,7 @@ func TestHandler_Execute_NoMatch(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: "notfound",
 			Replace: "replacement",
@@ -369,7 +369,7 @@ func TestHandler_Execute_NoMatchAllowed(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:         testFile,
 			Pattern:      "notfound",
 			Replace:      "replacement",
@@ -400,7 +400,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: "original",
 			Replace: "modified",
@@ -438,7 +438,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    testFile,
 			Pattern: "old",
 			Replace: "new",
@@ -454,7 +454,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	}
 
 	// Now try with AllowNoMatch
-	step.FileReplace.AllowNoMatch = true
+	step.TextReplace.AllowNoMatch = true
 	result, err = handler.Execute(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
@@ -482,7 +482,7 @@ func TestHandler_DryRun(t *testing.T) {
 	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    "/tmp/test.txt",
 			Pattern: "old",
 			Replace: "new",

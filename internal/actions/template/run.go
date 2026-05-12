@@ -20,7 +20,7 @@ import (
 // execute is eliminated because both modes render and compare against
 // the same dest content via a single Performer.WriteFile call.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	tmpl := step.Template
+	tmpl := step.FileTemplate
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -81,7 +81,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Delegate to Performer.WriteFile — same site decides both
 	// "would change?" and "perform write" semantics for both modes.
-	eff := ctx.Effects().WriteFile(dest, rendered, mode, actions.PerformerOpts{Become: step.Become})
+	eff := ctx.Effects().WriteFile(dest, rendered, mode, actions.PerformerOpts{Become: step.ShouldBecome()})
 
 	if eff.Err != nil {
 		result.Failed = true

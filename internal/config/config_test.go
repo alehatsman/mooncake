@@ -24,7 +24,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "single file action",
 			step: Step{
 				Name: "test",
-				File: &File{Path: "/tmp/test"},
+				FileWrite: &File{Path: "/tmp/test"},
 			},
 			wantErr: false,
 		},
@@ -32,7 +32,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "single template action",
 			step: Step{
 				Name:     "test",
-				Template: &Template{Src: "src", Dest: "dest"},
+				FileTemplate: &Template{Src: "src", Dest: "dest"},
 			},
 			wantErr: false,
 		},
@@ -40,7 +40,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "single include action",
 			step: Step{
 				Name:    "test",
-				Include: stringPtr("other.yml"),
+				Import: stringPtr("other.yml"),
 			},
 			wantErr: false,
 		},
@@ -48,7 +48,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "single include_vars action",
 			step: Step{
 				Name:        "test",
-				IncludeVars: stringPtr("vars.yml"),
+				VarsLoad: stringPtr("vars.yml"),
 			},
 			wantErr: false,
 		},
@@ -65,7 +65,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			step: Step{
 				Name:  "test",
 				Shell: shellActionPtr("echo hello"),
-				File:  &File{Path: "/tmp/test"},
+				FileWrite:  &File{Path: "/tmp/test"},
 			},
 			wantErr: true,
 		},
@@ -73,7 +73,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "multiple actions - template and shell",
 			step: Step{
 				Name:     "test",
-				Template: &Template{Src: "src", Dest: "dest"},
+				FileTemplate: &Template{Src: "src", Dest: "dest"},
 				Shell:    shellActionPtr("echo hello"),
 			},
 			wantErr: true,
@@ -82,7 +82,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 			name: "multiple actions - include and vars",
 			step: Step{
 				Name:    "test",
-				Include: stringPtr("other.yml"),
+				Import: stringPtr("other.yml"),
 				Vars:    &map[string]interface{}{"key": "value"},
 			},
 			wantErr: true,
@@ -117,7 +117,7 @@ func TestStep_ValidateHasAction(t *testing.T) {
 			name: "has file action",
 			step: Step{
 				Name: "test",
-				File: &File{Path: "/tmp/test"},
+				FileWrite: &File{Path: "/tmp/test"},
 			},
 			wantErr: false,
 		},
@@ -165,7 +165,7 @@ func TestStep_Validate(t *testing.T) {
 			name: "valid step with file",
 			step: Step{
 				Name: "test",
-				File: &File{Path: "/tmp/test", State: "file"},
+				FileWrite: &File{Path: "/tmp/test", State: "file"},
 			},
 			wantErr: false,
 		},
@@ -181,7 +181,7 @@ func TestStep_Validate(t *testing.T) {
 			step: Step{
 				Name:  "test",
 				Shell: shellActionPtr("echo hello"),
-				File:  &File{Path: "/tmp/test"},
+				FileWrite:  &File{Path: "/tmp/test"},
 			},
 			wantErr: true,
 		},
@@ -220,10 +220,10 @@ func TestStep_Copy(t *testing.T) {
 		Name:    "test step",
 		When:    "os == 'linux'",
 		Shell:   shellActionPtr("echo hello"),
-		Become:  true,
+		AsUser: "root",
 		Tags:    []string{"tag1", "tag2"},
-		File:    &File{Path: "/tmp/test", State: "file"},
-		Include: stringPtr("other.yml"),
+		FileWrite:    &File{Path: "/tmp/test", State: "file"},
+		Import: stringPtr("other.yml"),
 		Vars:    &map[string]interface{}{"key": "value"},
 	}
 
@@ -236,18 +236,18 @@ func TestStep_Copy(t *testing.T) {
 	if copied.When != original.When {
 		t.Errorf("Copy() When = %v, want %v", copied.When, original.When)
 	}
-	if copied.Become != original.Become {
-		t.Errorf("Copy() Become = %v, want %v", copied.Become, original.Become)
+	if copied.AsUser != original.AsUser {
+		t.Errorf("Copy() AsUser = %v, want %v", copied.AsUser, original.AsUser)
 	}
 
 	// Verify pointers are the same (shallow copy)
 	if copied.Shell != original.Shell {
 		t.Error("Copy() Shell pointer should be same")
 	}
-	if copied.File != original.File {
+	if copied.FileWrite != original.FileWrite {
 		t.Error("Copy() File pointer should be same")
 	}
-	if copied.Include != original.Include {
+	if copied.Import != original.Import {
 		t.Error("Copy() Include pointer should be same")
 	}
 	if copied.Vars != original.Vars {
@@ -306,22 +306,22 @@ func TestStep_CountActions(t *testing.T) {
 		},
 		{
 			name: "one action - template",
-			step: Step{Name: "test", Template: &Template{Src: "src", Dest: "dest"}},
+			step: Step{Name: "test", FileTemplate: &Template{Src: "src", Dest: "dest"}},
 			want: 1,
 		},
 		{
 			name: "one action - file",
-			step: Step{Name: "test", File: &File{Path: "/path"}},
+			step: Step{Name: "test", FileWrite: &File{Path: "/path"}},
 			want: 1,
 		},
 		{
 			name: "one action - include",
-			step: Step{Name: "test", Include: strPtr("file.yml")},
+			step: Step{Name: "test", Import: strPtr("file.yml")},
 			want: 1,
 		},
 		{
 			name: "one action - includeVars",
-			step: Step{Name: "test", IncludeVars: strPtr("vars.yml")},
+			step: Step{Name: "test", VarsLoad: strPtr("vars.yml")},
 			want: 1,
 		},
 		{
@@ -334,7 +334,7 @@ func TestStep_CountActions(t *testing.T) {
 			step: Step{
 				Name:     "test",
 				Shell:    shellActionPtr("echo test"),
-				Template: &Template{Src: "src", Dest: "dest"},
+				FileTemplate: &Template{Src: "src", Dest: "dest"},
 			},
 			want: 2,
 		},
@@ -359,18 +359,17 @@ func TestStep_NewCommonFields(t *testing.T) {
 		step := Step{
 			Name:        "test",
 			Shell:       shellActionPtr("echo test"),
-			BecomeUser:  "postgres",
+			AsUser:  "postgres",
 			Env:         map[string]string{"PATH": "/usr/bin", "HOME": "/home/user"},
 			Cwd:         "/tmp",
 			Timeout:     "30s",
-			Retries:     3,
-			RetryDelay:  "5s",
+			Retry: &RetryPolicy{Attempts: 3, Delay: "5s"},
 			ChangedWhen: "result.rc == 0",
 			FailedWhen:  "result.rc != 0",
 		}
 
-		if step.BecomeUser != "postgres" {
-			t.Errorf("BecomeUser = %s, want postgres", step.BecomeUser)
+		if step.AsUser != "postgres" {
+			t.Errorf("AsUser = %s, want postgres", step.AsUser)
 		}
 		if step.Env["PATH"] != "/usr/bin" {
 			t.Errorf("Env[PATH] = %s, want /usr/bin", step.Env["PATH"])
@@ -381,11 +380,11 @@ func TestStep_NewCommonFields(t *testing.T) {
 		if step.Timeout != "30s" {
 			t.Errorf("Timeout = %s, want 30s", step.Timeout)
 		}
-		if step.Retries != 3 {
-			t.Errorf("Retries = %d, want 3", step.Retries)
+		if step.RetryAttempts() != 3 {
+			t.Errorf("Retries = %d, want 3", step.RetryAttempts())
 		}
-		if step.RetryDelay != "5s" {
-			t.Errorf("RetryDelay = %s, want 5s", step.RetryDelay)
+		if step.RetryDelayDuration() != "5s" {
+			t.Errorf("RetryDelay = %s, want 5s", step.RetryDelayDuration())
 		}
 		if step.ChangedWhen != "result.rc == 0" {
 			t.Errorf("ChangedWhen = %s, want result.rc == 0", step.ChangedWhen)
@@ -400,12 +399,11 @@ func TestStep_CopyWithNewFields(t *testing.T) {
 	original := Step{
 		Name:        "test",
 		Shell:       shellActionPtr("echo test"),
-		BecomeUser:  "postgres",
+		AsUser:  "postgres",
 		Env:         map[string]string{"PATH": "/usr/bin"},
 		Cwd:         "/tmp",
 		Timeout:     "30s",
-		Retries:     3,
-		RetryDelay:  "5s",
+		Retry: &RetryPolicy{Attempts: 3, Delay: "5s"},
 		ChangedWhen: "result.rc == 0",
 		FailedWhen:  "result.rc != 0",
 	}
@@ -413,8 +411,8 @@ func TestStep_CopyWithNewFields(t *testing.T) {
 	copied := original.Clone()
 
 	// Verify all new fields are copied
-	if copied.BecomeUser != original.BecomeUser {
-		t.Errorf("Copy() BecomeUser = %s, want %s", copied.BecomeUser, original.BecomeUser)
+	if copied.AsUser != original.AsUser {
+		t.Errorf("Copy() AsUser = %s, want %s", copied.AsUser, original.AsUser)
 	}
 	if copied.Env["PATH"] != original.Env["PATH"] {
 		t.Errorf("Copy() Env not equal")
@@ -425,11 +423,11 @@ func TestStep_CopyWithNewFields(t *testing.T) {
 	if copied.Timeout != original.Timeout {
 		t.Errorf("Copy() Timeout = %s, want %s", copied.Timeout, original.Timeout)
 	}
-	if copied.Retries != original.Retries {
-		t.Errorf("Copy() Retries = %d, want %d", copied.Retries, original.Retries)
+	if copied.RetryAttempts() != original.RetryAttempts() {
+		t.Errorf("Copy() Retry.Attempts = %d, want %d", copied.RetryAttempts(), original.RetryAttempts())
 	}
-	if copied.RetryDelay != original.RetryDelay {
-		t.Errorf("Copy() RetryDelay = %s, want %s", copied.RetryDelay, original.RetryDelay)
+	if copied.RetryDelayDuration() != original.RetryDelayDuration() {
+		t.Errorf("Copy() Retry.Delay = %s, want %s", copied.RetryDelayDuration(), original.RetryDelayDuration())
 	}
 	if copied.ChangedWhen != original.ChangedWhen {
 		t.Errorf("Copy() ChangedWhen = %s, want %s", copied.ChangedWhen, original.ChangedWhen)
@@ -632,44 +630,44 @@ func TestStep_DetermineActionType(t *testing.T) {
 			want: "shell",
 		},
 		{
-			name: "command action",
-			step: Step{Command: &CommandAction{Argv: []string{"ls", "-la"}}},
-			want: "command",
+			name: "cmd action",
+			step: Step{Cmd: &CommandAction{Argv: []string{"ls", "-la"}}},
+			want: "cmd",
 		},
 		{
-			name: "file action",
-			step: Step{File: &File{Path: "/tmp/test"}},
-			want: "file",
+			name: "file.write action",
+			step: Step{FileWrite: &File{Path: "/tmp/test"}},
+			want: "file.write",
 		},
 		{
-			name: "template action",
-			step: Step{Template: &Template{Src: "src", Dest: "dest"}},
-			want: "template",
+			name: "file.template action",
+			step: Step{FileTemplate: &Template{Src: "src", Dest: "dest"}},
+			want: "file.template",
 		},
 		{
-			name: "copy action",
-			step: Step{Copy: &Copy{Src: "src", Dest: "dest"}},
-			want: "copy",
+			name: "file.copy action",
+			step: Step{FileCopy: &Copy{Src: "src", Dest: "dest"}},
+			want: "file.copy",
 		},
 		{
-			name: "unarchive action",
-			step: Step{Unarchive: &Unarchive{Src: "file.tar.gz", Dest: "/tmp"}},
-			want: "unarchive",
+			name: "file.unarchive action",
+			step: Step{FileUnarchive: &Unarchive{Src: "file.tar.gz", Dest: "/tmp"}},
+			want: "file.unarchive",
 		},
 		{
-			name: "download action",
-			step: Step{Download: &Download{URL: "http://example.com", Dest: "/tmp/file"}},
-			want: "download",
+			name: "file.download action",
+			step: Step{FileDownload: &Download{URL: "http://example.com", Dest: "/tmp/file"}},
+			want: "file.download",
 		},
 		{
-			name: "package action",
-			step: Step{Package: &Package{Name: "nginx", State: "present"}},
-			want: "package",
+			name: "pkg action",
+			step: Step{Pkg: &Package{Name: "nginx", State: "present"}},
+			want: "pkg",
 		},
 		{
-			name: "service action",
-			step: Step{Service: &ServiceAction{Name: "nginx", State: "started"}},
-			want: "service",
+			name: "os.service action",
+			step: Step{OsService: &ServiceAction{Name: "nginx", State: "started"}},
+			want: "os.service",
 		},
 		{
 			name: "assert action",
@@ -677,14 +675,14 @@ func TestStep_DetermineActionType(t *testing.T) {
 			want: "assert",
 		},
 		{
-			name: "preset action",
-			step: Step{Preset: &PresetInvocation{Name: "ollama"}},
-			want: "preset",
+			name: "use (preset) action",
+			step: Step{Use: &PresetInvocation{Name: "ollama"}},
+			want: "use",
 		},
 		{
-			name: "print action",
-			step: Step{Print: &PrintAction{Msg: "Hello"}},
-			want: "print",
+			name: "log (print) action",
+			step: Step{Log: &PrintAction{Msg: "Hello"}},
+			want: "log",
 		},
 		{
 			name: "vars action",
@@ -692,23 +690,23 @@ func TestStep_DetermineActionType(t *testing.T) {
 			want: "vars",
 		},
 		{
-			name: "include_vars action",
-			step: Step{IncludeVars: stringPtr("vars.yml")},
-			want: "include_vars",
+			name: "vars.load action",
+			step: Step{VarsLoad: stringPtr("vars.yml")},
+			want: "vars.load",
 		},
 		{
-			name: "include action",
-			step: Step{Include: stringPtr("other.yml")},
-			want: "include",
+			name: "import action",
+			step: Step{Import: stringPtr("other.yml")},
+			want: "import",
 		},
 		{
-			name: "loop with_items",
-			step: Step{WithItems: stringPtr("['item1', 'item2']")},
+			name: "loop for_each",
+			step: Step{ForEach: stringPtr("['item1', 'item2']")},
 			want: "loop",
 		},
 		{
-			name: "loop with_file_tree",
-			step: Step{WithFileTree: stringPtr("/tmp")},
+			name: "loop for_each_file",
+			step: Step{ForEachFile: stringPtr("/tmp")},
 			want: "loop",
 		},
 		{

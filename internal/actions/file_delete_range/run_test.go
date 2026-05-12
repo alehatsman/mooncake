@@ -38,7 +38,7 @@ func TestRun_DeletionWouldHappen(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        path,
 			StartAnchor: "<<START",
 			EndAnchor:   "END>>",
@@ -77,7 +77,7 @@ func TestRun_NoRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        path,
 			StartAnchor: "missing_start",
 			EndAnchor:   "missing_end",

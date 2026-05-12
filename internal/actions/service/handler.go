@@ -50,11 +50,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate validates the service action configuration.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Service == nil {
+	if step.OsService == nil {
 		return fmt.Errorf("service action requires service configuration")
 	}
 
-	serviceAction := step.Service
+	serviceAction := step.OsService
 
 	// Validate service name
 	if serviceAction.Name == "" {
@@ -96,7 +96,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		return fmt.Errorf("invalid context type")
 	}
 
-	serviceAction := step.Service
+	serviceAction := step.OsService
 	if serviceAction == nil {
 		return fmt.Errorf("service action requires service configuration")
 	}
@@ -130,7 +130,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 
 // HandleService manages services across different platforms (systemd, launchd, Windows).
 func HandleService(step config.Step, ec *executor.ExecutionContext) error {
-	serviceAction := step.Service
+	serviceAction := step.OsService
 	if serviceAction == nil {
 		return &executor.SetupError{Component: "service", Issue: "no service configuration specified"}
 	}
@@ -319,8 +319,8 @@ func handleSystemdService(serviceName string, serviceAction *config.ServiceActio
 	})
 
 	// Register result if specified
-	if step.Register != "" {
-		result.RegisterTo(ec.Variables, step.Register)
+	if step.As != "" {
+		result.RegisterTo(ec.Variables, step.As)
 	}
 
 	if changed {
@@ -391,7 +391,7 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 	// Ensure drop-in directory exists
 	// #nosec G301 - Drop-in directories need to be readable by systemd (0755 is appropriate)
 	if err := os.MkdirAll(dropinDir, 0755); err != nil {
-		if os.IsPermission(err) && !step.Become {
+		if os.IsPermission(err) && !step.ShouldBecome() {
 			return false, &executor.FileOperationError{
 				Operation: "mkdir",
 				Path:      dropinDir,
@@ -415,7 +415,7 @@ func systemdDaemonReload(step config.Step, ec *executor.ExecutionContext) error 
 	ec.Logger.Debugf("  Running systemctl daemon-reload")
 
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return &executor.SetupError{
 				Component: "become",
@@ -485,7 +485,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 	// Execute systemctl command
 	ec.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return false, &executor.SetupError{
 				Component: "become",
@@ -524,7 +524,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 // getSystemdServiceState returns the current state of a systemd service.
 func getSystemdServiceState(serviceName string, step config.Step, ec *executor.ExecutionContext) (string, error) {
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if ec.SudoPass == "" {
 			return "", &executor.SetupError{
 				Component: "sudo",
@@ -567,7 +567,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 
 	ec.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return false, &executor.SetupError{
 				Component: "become",
@@ -606,7 +606,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 // isSystemdServiceEnabled checks if a systemd service is enabled.
 func isSystemdServiceEnabled(serviceName string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if ec.SudoPass == "" {
 			return false, &executor.SetupError{
 				Component: "sudo",
@@ -635,7 +635,7 @@ func writeFileWithPrivileges(path string, content []byte, mode string, step conf
 
 	// Try direct write first
 	if err := os.WriteFile(path, content, fileMode); err != nil {
-		if os.IsPermission(err) && step.Become {
+		if os.IsPermission(err) && step.ShouldBecome() {
 			// Use sudo to write file
 			return writeFileWithSudo(path, content, fileMode, ec)
 		}
@@ -726,7 +726,7 @@ func handleLaunchdService(serviceName string, serviceAction *config.ServiceActio
 	operations := []string{}
 
 	// Determine if this is a user agent or system daemon based on become flag
-	isSystem := step.Become
+	isSystem := step.ShouldBecome()
 	domain := getLaunchdDomain(isSystem)
 
 	// Handle plist file management
@@ -799,8 +799,8 @@ func handleLaunchdService(serviceName string, serviceAction *config.ServiceActio
 	})
 
 	// Register result if specified
-	if step.Register != "" {
-		result.RegisterTo(ec.Variables, step.Register)
+	if step.As != "" {
+		result.RegisterTo(ec.Variables, step.As)
 	}
 
 	if changed {
@@ -872,7 +872,7 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 // isLaunchdServiceLoaded checks if a launchd service is loaded
 func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if ec.SudoPass == "" {
 			return false, &executor.SetupError{
 				Component: "sudo",
@@ -983,7 +983,7 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 	ec.Logger.Debugf("  Running launchctl %s %s %s", command, domain, plistPath)
 
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return &executor.SetupError{
 				Component: "become",
@@ -1066,7 +1066,7 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 	ec.Logger.Debugf("  Running launchctl %s", strings.Join(args, " "))
 
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return &executor.SetupError{
 				Component: "become",
@@ -1109,7 +1109,7 @@ func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionConte
 	ec.Logger.Debugf("  Running launchctl kill SIGTERM %s", serviceID)
 
 	var cmd *exec.Cmd
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return &executor.SetupError{
 				Component: "become",
@@ -1160,8 +1160,8 @@ func handleWindowsService(_ string, _ *config.ServiceAction, _ config.Step, _ *e
 func markStepFailed(result *executor.Result, step config.Step, ec *executor.ExecutionContext) {
 	result.Failed = true
 	result.Rc = 1
-	if step.Register != "" {
-		result.RegisterTo(ec.Variables, step.Register)
+	if step.As != "" {
+		result.RegisterTo(ec.Variables, step.As)
 	}
 }
 

@@ -19,8 +19,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		r.Checkable = true
 		r.WouldChange = true
 
-		rendered := make([]string, len(step.Command.Argv))
-		for i, arg := range step.Command.Argv {
+		rendered := make([]string, len(step.Cmd.Argv))
+		for i, arg := range step.Cmd.Argv {
 			out, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
 			if err != nil {
 				out = arg
@@ -31,7 +31,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		if len(joined) > 80 {
 			joined = joined[:77] + "..."
 		}
-		if step.Become {
+		if step.ShouldBecome() {
 			r.Reason = fmt.Sprintf("would run (sudo): %s", joined)
 		} else {
 			r.Reason = fmt.Sprintf("would run: %s", joined)

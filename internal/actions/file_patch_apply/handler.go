@@ -58,11 +58,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the file_patch_apply configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.FilePatchApply == nil {
+	if step.TextPatch == nil {
 		return fmt.Errorf("file_patch_apply configuration is nil")
 	}
 
-	fpa := step.FilePatchApply
+	fpa := step.TextPatch
 
 	if fpa.Path == "" {
 		hint := actions.GetActionHint(actionName, "path")
@@ -90,7 +90,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the file_patch_apply action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fpa := step.FilePatchApply
+	fpa := step.TextPatch
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -224,7 +224,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would happen without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	fpa := step.FilePatchApply
+	fpa := step.TextPatch
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

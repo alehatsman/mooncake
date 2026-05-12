@@ -245,7 +245,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid unarchive action",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/tmp/test.tar.gz",
 					Dest: "/tmp/extract",
 				},
@@ -255,14 +255,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil unarchive action",
 			step: &config.Step{
-				Unarchive: nil,
+				FileUnarchive: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing src",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Dest: "/tmp/extract",
 				},
 			},
@@ -271,7 +271,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing dest",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src: "/tmp/test.tar.gz",
 				},
 			},
@@ -280,7 +280,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty src",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "",
 					Dest: "/tmp/extract",
 				},
@@ -290,7 +290,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty dest",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/tmp/test.tar.gz",
 					Dest: "",
 				},
@@ -300,7 +300,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with strip components",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:             "/tmp/test.tar.gz",
 					Dest:            "/tmp/extract",
 					StripComponents: 1,
@@ -311,7 +311,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with creates marker",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:     "/tmp/test.tar.gz",
 					Dest:    "/tmp/extract",
 					Creates: "/tmp/extract/marker",
@@ -343,7 +343,7 @@ func TestHandler_Execute_TarArchive(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 		},
@@ -434,7 +434,7 @@ func TestHandler_Execute_TarGzArchive(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarGzPath,
 			Dest: extractDir,
 		},
@@ -499,7 +499,7 @@ func TestHandler_Execute_ZipArchive(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  zipPath,
 			Dest: extractDir,
 		},
@@ -584,7 +584,7 @@ func TestHandler_Execute_StripComponents(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:             tarPath,
 			Dest:            extractDir,
 			StripComponents: 2, // Strip "top/middle"
@@ -642,7 +642,7 @@ func TestHandler_Execute_CreatesIdempotency(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:     tarPath,
 			Dest:    extractDir,
 			Creates: markerFile,
@@ -678,7 +678,7 @@ func TestHandler_Execute_PathTraversalProtection(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 		},
@@ -713,7 +713,7 @@ func TestHandler_Execute_SourceNotFound(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  "/nonexistent/archive.tar.gz",
 			Dest: extractDir,
 		},
@@ -743,7 +743,7 @@ func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  srcDir,
 			Dest: extractDir,
 		},
@@ -778,7 +778,7 @@ func TestHandler_Execute_UnsupportedFormat(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  unsupportedFile,
 			Dest: extractDir,
 		},
@@ -811,7 +811,7 @@ func TestHandler_Execute_WithCustomMode(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 			Mode: "0700",
@@ -851,7 +851,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	ec.Variables["extract_base"] = tmpDir
 
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  "{{ extract_base }}/{{ archive_name }}",
 			Dest: "{{ extract_base }}/extract",
 		},
@@ -888,7 +888,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	ec.EventPublisher = nil
 
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 		},
@@ -923,7 +923,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "basic dry-run tar",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/tmp/test.tar",
 					Dest: "/tmp/extract",
 				},
@@ -933,7 +933,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run tar.gz",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/tmp/test.tar.gz",
 					Dest: "/tmp/extract",
 				},
@@ -943,7 +943,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run zip",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/tmp/test.zip",
 					Dest: "/tmp/extract",
 				},
@@ -953,7 +953,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with strip components",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:             "/tmp/test.tar.gz",
 					Dest:            "/tmp/extract",
 					StripComponents: 1,
@@ -964,7 +964,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with creates skip",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:     "/tmp/test.tar",
 					Dest:    "/tmp/extract",
 					Creates: "/tmp/marker",
@@ -980,7 +980,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run unsupported format",
 			step: &config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/tmp/test.rar",
 					Dest: "/tmp/extract",
 				},
@@ -998,7 +998,7 @@ func TestHandler_DryRun(t *testing.T) {
 			// Run setup if provided
 			if tt.setup != nil {
 				markerPath := tt.setup(tmpDir)
-				tt.step.Unarchive.Creates = markerPath
+				tt.step.FileUnarchive.Creates = markerPath
 			}
 
 			err := h.DryRun(ec, tt.step)
@@ -1029,7 +1029,7 @@ func TestHandler_DryRun_IdempotentCheck(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:     "/tmp/test.tar.gz",
 			Dest:    tmpDir,
 			Creates: markerPath,
@@ -1249,7 +1249,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  "/tmp/test.tar",
 			Dest: "/tmp/extract",
 		},
@@ -1270,7 +1270,7 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  "/tmp/test.tar",
 			Dest: "/tmp/extract",
 		},
@@ -1300,7 +1300,7 @@ func TestHandler_Execute_CorruptedArchive(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 		},
@@ -1358,7 +1358,7 @@ func TestHandler_Execute_TarWithSymlink(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 		},
@@ -1404,7 +1404,7 @@ func TestHandler_Execute_EmptyArchive(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  tarPath,
 			Dest: extractDir,
 		},
@@ -1438,7 +1438,7 @@ func TestHandler_Execute_RenderError(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Unarchive: &config.Unarchive{
+		FileUnarchive: &config.Unarchive{
 			Src:  "{{ invalid template syntax",
 			Dest: "/tmp/extract",
 		},

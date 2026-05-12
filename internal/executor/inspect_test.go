@@ -46,7 +46,7 @@ func TestInspectPlan_FileStep(t *testing.T) {
 			{
 				ID:   "step-0001",
 				Name: "create missing dir",
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  missing,
 					State: "directory",
 					Mode:  "0755",
@@ -55,7 +55,7 @@ func TestInspectPlan_FileStep(t *testing.T) {
 			{
 				ID:   "step-0002",
 				Name: "create existing dir",
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  existing,
 					State: "directory",
 					Mode:  "0755",
@@ -117,13 +117,13 @@ func TestInspectPlan_TolerantWhenInPlanMode(t *testing.T) {
 			{
 				ID:   "step-0001",
 				Name: "file step",
-				File: &config.File{Path: target, State: "directory", Mode: "0755"},
+				FileWrite: &config.File{Path: target, State: "directory", Mode: "0755"},
 			},
 			{
 				ID:   "step-0002",
 				Name: "conditional",
 				When: "{{ no_such_var.changed }}",
-				File: &config.File{Path: target, State: "directory", Mode: "0755"},
+				FileWrite: &config.File{Path: target, State: "directory", Mode: "0755"},
 			},
 		},
 		InitialVars: map[string]interface{}{},

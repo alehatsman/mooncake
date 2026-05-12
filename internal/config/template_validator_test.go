@@ -138,7 +138,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name: "test",
-					Template: &Template{
+					FileTemplate: &Template{
 						Src:  "{{unclosed",
 						Dest: "{{also_bad",
 					},
@@ -151,7 +151,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			steps: []Step{
 				{
 					Name: "test",
-					File: &File{
+					FileWrite: &File{
 						Path:    "{{unclosed",
 						Content: "{{also_bad",
 					},
@@ -166,7 +166,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 					Name:        "test",
 					Shell:       shellActionPtr("echo {{message}}"),
 					When:        "os == 'linux'",
-					BecomeUser:  "{{user}}",
+					AsUser:  "{{user}}",
 					Cwd:         "/tmp/{{project}}",
 					Timeout:     "30s",
 					ChangedWhen: "result.rc == 0",
@@ -184,7 +184,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 				{
 					Name:      "test",
 					Shell:     shellActionPtr("echo {{item}}"),
-					WithItems: strPtr("{{my_list}}"),
+					ForEach: strPtr("{{my_list}}"),
 				},
 			},
 			expectedDiagnostics: 0,
@@ -195,7 +195,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 				{
 					Name:      "test",
 					Shell:     shellActionPtr("echo test"),
-					WithItems: strPtr("{{unclosed"),
+					ForEach: strPtr("{{unclosed"),
 				},
 			},
 			expectedDiagnostics: 1,

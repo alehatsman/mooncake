@@ -38,7 +38,7 @@ func TestRun_RestartAlwaysWouldChange(t *testing.T) {
 		t.Skip("Linux-only inspection path")
 	}
 	step := &config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "definitely-not-a-real-service-xyz",
 			State: "restarted",
 		},
@@ -60,7 +60,7 @@ func TestRun_NonLinux_NotCheckable(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		t.Skip("non-Linux path")
 	}
-	step := &config.Step{Service: &config.ServiceAction{Name: "x", State: "started"}}
+	step := &config.Step{OsService: &config.ServiceAction{Name: "x", State: "started"}}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
 	r := res.(*executor.Result)
 	if r.Checkable {

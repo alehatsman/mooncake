@@ -16,7 +16,7 @@ import (
 // content in memory; plan mode reports the prediction, execute mode
 // commits the change atomically.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fdr := step.FileDeleteRange
+	fdr := step.TextDeleteRange
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

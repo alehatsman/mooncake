@@ -70,11 +70,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the package configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Package == nil {
+	if step.Pkg == nil {
 		return fmt.Errorf("package configuration is nil")
 	}
 
-	pkg := step.Package
+	pkg := step.Pkg
 
 	// Must have either name, names, or upgrade
 	if pkg.Name == "" && len(pkg.Names) == 0 && pkg.NamesExpr == "" && !pkg.Upgrade {
@@ -91,7 +91,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the package action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	pkg := step.Package
+	pkg := step.Pkg
 
 	// Cast to ExecutionContext
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -138,12 +138,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Handle upgrade operation
 	if pkg.Upgrade {
-		return h.executeUpgrade(ec, manager, pkg, step.Become)
+		return h.executeUpgrade(ec, manager, pkg, step.ShouldBecome())
 	}
 
 	// Update cache if requested
 	if pkg.UpdateCache {
-		if err := h.updateCache(ec, manager, step.Become); err != nil {
+		if err := h.updateCache(ec, manager, step.ShouldBecome()); err != nil {
 			return nil, fmt.Errorf("failed to update package cache: %w", err)
 		}
 	}
@@ -151,9 +151,9 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Execute based on state
 	switch state {
 	case statePresent, "latest":
-		return h.installPackages(ec, manager, packages, state == "latest", pkg.Extra, step.Become)
+		return h.installPackages(ec, manager, packages, state == "latest", pkg.Extra, step.ShouldBecome())
 	case stateAbsent:
-		return h.removePackages(ec, manager, packages, pkg.Extra, step.Become)
+		return h.removePackages(ec, manager, packages, pkg.Extra, step.ShouldBecome())
 	default:
 		return nil, fmt.Errorf("unsupported state: %s", state)
 	}
@@ -161,7 +161,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun shows what would be done without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	pkg := step.Package
+	pkg := step.Pkg
 
 	// Determine package manager
 	manager, err := h.determinePackageManager(pkg.Manager, ctx.GetVariables())

@@ -35,7 +35,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
-	svc := step.Service
+	svc := step.OsService
 	if svc == nil {
 		return result, fmt.Errorf("service action requires service configuration")
 	}

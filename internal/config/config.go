@@ -649,61 +649,70 @@ type Step struct {
 	When string `yaml:"when" json:"when,omitempty"`
 
 	// Idempotency controls
-	Creates *string `yaml:"creates" json:"creates,omitempty"` // Skip if path exists
-	Unless  *string `yaml:"unless" json:"unless,omitempty"`   // Skip if command succeeds
+	UnlessExists  *string `yaml:"unless_exists" json:"unless_exists,omitempty"`   // Skip if path exists
+	UnlessCommand *string `yaml:"unless_command" json:"unless_command,omitempty"` // Skip if command succeeds
 
-	// Actions (exactly one required)
-	Template        *Template        `yaml:"template" json:"template,omitempty"`
-	File            *File            `yaml:"file" json:"file,omitempty"`
-	FileReplace     *FileReplace     `yaml:"file_replace" json:"file_replace,omitempty"`
-	FileInsert      *FileInsert      `yaml:"file_insert" json:"file_insert,omitempty"`
-	FileDeleteRange *FileDeleteRange `yaml:"file_delete_range" json:"file_delete_range,omitempty"`
-	FilePatchApply  *FilePatchApply  `yaml:"file_patch_apply" json:"file_patch_apply,omitempty"`
-	Shell           *ShellAction     `yaml:"shell" json:"shell,omitempty"`
-	Command     *CommandAction     `yaml:"command" json:"command,omitempty"`
-	Copy        *Copy              `yaml:"copy" json:"copy,omitempty"`
-	Unarchive   *Unarchive         `yaml:"unarchive" json:"unarchive,omitempty"`
-	Download    *Download          `yaml:"download" json:"download,omitempty"`
-	Package     *Package           `yaml:"package" json:"package,omitempty"`
-	Service     *ServiceAction     `yaml:"service" json:"service,omitempty"`
-	Assert      *Assert            `yaml:"assert" json:"assert,omitempty"`
-	Preset      *PresetInvocation  `yaml:"preset" json:"preset,omitempty"`
-	Print       *PrintAction       `yaml:"print" json:"print,omitempty"`
-	Include     *string            `yaml:"include" json:"include,omitempty"`
-	IncludeVars *string            `yaml:"include_vars" json:"include_vars,omitempty"`
-	Vars        *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
-	RepoSearch  *RepoSearch        `yaml:"repo_search" json:"repo_search,omitempty"`
-	RepoTree    *RepoTree          `yaml:"repo_tree" json:"repo_tree,omitempty"`
-	RepoApplyPatchset *RepoApplyPatchset `yaml:"repo_apply_patchset" json:"repo_apply_patchset,omitempty"`
-	Wait        *WaitAction        `yaml:"wait" json:"wait,omitempty"`
-	ArtifactCapture *ArtifactCapture `yaml:"artifact_capture" json:"artifact_capture,omitempty"`
-	ArtifactValidate *ArtifactValidate `yaml:"artifact_validate" json:"artifact_validate,omitempty"`
+	// Actions (exactly one required).
+	// Action keys are dot-namespaced by domain (spec-21):
+	//   file.*    — file & content management
+	//   text.*    — structured text editing
+	//   os.*      — OS-level resource management
+	//   pkg       — package manager (declarative; state: present/absent)
+	//   cmd       — typed command execution
+	//   repo.*    — repository operations
+	//   artifact.* — artifact capture / validation
+	// Flat keys (shell, assert, wait, vars, log, use, import) are foundational
+	// or control-flow primitives that do not warrant a namespace.
+	FileWrite       *File                   `yaml:"file.write" json:"file.write,omitempty"`
+	FileTemplate    *Template               `yaml:"file.template" json:"file.template,omitempty"`
+	FileCopy        *Copy                   `yaml:"file.copy" json:"file.copy,omitempty"`
+	FileDownload    *Download               `yaml:"file.download" json:"file.download,omitempty"`
+	FileUnarchive   *Unarchive              `yaml:"file.unarchive" json:"file.unarchive,omitempty"`
+	TextReplace     *FileReplace            `yaml:"text.replace" json:"text.replace,omitempty"`
+	TextInsert      *FileInsert             `yaml:"text.insert" json:"text.insert,omitempty"`
+	TextDeleteRange *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty"`
+	TextPatch       *FilePatchApply         `yaml:"text.patch" json:"text.patch,omitempty"`
+	Pkg             *Package                `yaml:"pkg" json:"pkg,omitempty"`
+	OsService       *ServiceAction          `yaml:"os.service" json:"os.service,omitempty"`
+	Cmd             *CommandAction          `yaml:"cmd" json:"cmd,omitempty"`
+	RepoSearch      *RepoSearch             `yaml:"repo.search" json:"repo.search,omitempty"`
+	RepoTree        *RepoTree               `yaml:"repo.tree" json:"repo.tree,omitempty"`
+	RepoPatch       *RepoApplyPatchset      `yaml:"repo.patch" json:"repo.patch,omitempty"`
+	ArtifactCapture *ArtifactCapture        `yaml:"artifact.capture" json:"artifact.capture,omitempty"`
+	ArtifactValidate *ArtifactValidate      `yaml:"artifact.validate" json:"artifact.validate,omitempty"`
+	Shell           *ShellAction            `yaml:"shell" json:"shell,omitempty"`
+	Assert          *Assert                 `yaml:"assert" json:"assert,omitempty"`
+	Wait            *WaitAction             `yaml:"wait" json:"wait,omitempty"`
+	Log             *PrintAction            `yaml:"log" json:"log,omitempty"`
+	Use             *PresetInvocation       `yaml:"use" json:"use,omitempty"`
+	Import          *string                 `yaml:"import" json:"import,omitempty"`
+	VarsLoad        *string                 `yaml:"vars.load" json:"vars.load,omitempty"`
+	Vars            *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 
-	// Privilege escalation
-	Become     bool   `yaml:"become" json:"become,omitempty"`
-	BecomeUser string `yaml:"become_user" json:"become_user,omitempty"`
+	// Privilege escalation (spec-21: collapsed from become/become_user).
+	// Empty = current user; "root" = sudo to root; "<name>" = sudo to <name>.
+	AsUser string `yaml:"as_user" json:"as_user,omitempty"`
 
 	// Environment
 	Env map[string]string `yaml:"env" json:"env,omitempty"`
 	Cwd string            `yaml:"cwd" json:"cwd,omitempty"`
 
 	// Execution control
-	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`
-	Retries      int    `yaml:"retries" json:"retries,omitempty"`
-	RetryDelay   string `yaml:"retry_delay" json:"retry_delay,omitempty"`
-	IgnoreErrors bool   `yaml:"ignore_errors" json:"ignore_errors,omitempty"`
+	Timeout         string       `yaml:"timeout" json:"timeout,omitempty"`
+	Retry           *RetryPolicy `yaml:"retry" json:"retry,omitempty"`
+	ContinueOnError bool         `yaml:"continue_on_error" json:"continue_on_error,omitempty"`
 
 	// Result overrides
 	ChangedWhen string `yaml:"changed_when" json:"changed_when,omitempty"`
 	FailedWhen  string `yaml:"failed_when" json:"failed_when,omitempty"`
 
 	// Loops
-	WithFileTree *string `yaml:"with_filetree" json:"with_filetree,omitempty"`
-	WithItems    *string `yaml:"with_items" json:"with_items,omitempty"`
+	ForEach     *string `yaml:"for_each" json:"for_each,omitempty"`
+	ForEachFile *string `yaml:"for_each_file" json:"for_each_file,omitempty"`
 
-	// Tags and registration
-	Tags     []string `yaml:"tags" json:"tags,omitempty"`
-	Register string   `yaml:"register" json:"register,omitempty"`
+	// Tags and outputs
+	Tags []string `yaml:"tags" json:"tags,omitempty"`
+	As   string   `yaml:"as" json:"as,omitempty"`
 
 	// Plan metadata (populated during plan expansion, omitted in config files)
 	ID             string        `yaml:"id,omitempty" json:"id,omitempty"`
@@ -712,6 +721,39 @@ type Step struct {
 	Skipped        bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
 	LoopContext    *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
 	SourceLocation *Position     `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
+}
+
+// RetryPolicy controls per-step retry behavior (spec-21).
+// Replaces the legacy flat Retries + RetryDelay fields with a single
+// structured block; future-compat for backoff strategies.
+type RetryPolicy struct {
+	Attempts int    `yaml:"attempts" json:"attempts,omitempty"`
+	Delay    string `yaml:"delay" json:"delay,omitempty"`
+	Backoff  string `yaml:"backoff" json:"backoff,omitempty"` // "fixed", "linear", "exponential"
+}
+
+// RetryAttempts returns the configured retry-attempt count, or 0 if no
+// retry policy is set. Helper for the post-spec-21 Retry struct.
+func (s *Step) RetryAttempts() int {
+	if s.Retry == nil {
+		return 0
+	}
+	return s.Retry.Attempts
+}
+
+// RetryDelayDuration returns the configured retry delay string, or "" if no
+// retry policy is set. Helper for the post-spec-21 Retry struct.
+func (s *Step) RetryDelayDuration() string {
+	if s.Retry == nil {
+		return ""
+	}
+	return s.Retry.Delay
+}
+
+// ShouldBecome reports whether the step requests privilege escalation.
+// True iff AsUser is non-empty (spec-21 collapsed become/become_user).
+func (s *Step) ShouldBecome() bool {
+	return s.AsUser != ""
 }
 
 // Origin tracks source location and include chain for plan traceability
@@ -724,7 +766,7 @@ type Origin struct {
 
 // LoopContext captures loop iteration metadata
 type LoopContext struct {
-	Type           string      `yaml:"type" json:"type"` // "with_items" or "with_filetree"
+	Type           string      `yaml:"type" json:"type"` // "for_each" or "for_each_file"
 	Item           interface{} `yaml:"item" json:"item"`
 	Index          int         `yaml:"index" json:"index"`
 	First          bool        `yaml:"first" json:"first"`
@@ -736,61 +778,40 @@ type LoopContext struct {
 // countActions returns the number of non-nil action fields in this step.
 func (s *Step) countActions() int {
 	count := 0
-	if s.Template != nil {
+	if s.FileWrite != nil {
 		count++
 	}
-	if s.File != nil {
+	if s.FileTemplate != nil {
 		count++
 	}
-	if s.FileReplace != nil {
+	if s.FileCopy != nil {
 		count++
 	}
-	if s.FileInsert != nil {
+	if s.FileDownload != nil {
 		count++
 	}
-	if s.FileDeleteRange != nil {
+	if s.FileUnarchive != nil {
 		count++
 	}
-	if s.FilePatchApply != nil {
+	if s.TextReplace != nil {
 		count++
 	}
-	if s.Shell != nil {
+	if s.TextInsert != nil {
 		count++
 	}
-	if s.Command != nil {
+	if s.TextDeleteRange != nil {
 		count++
 	}
-	if s.Copy != nil {
+	if s.TextPatch != nil {
 		count++
 	}
-	if s.Unarchive != nil {
+	if s.Pkg != nil {
 		count++
 	}
-	if s.Download != nil {
+	if s.OsService != nil {
 		count++
 	}
-	if s.Package != nil {
-		count++
-	}
-	if s.Service != nil {
-		count++
-	}
-	if s.Assert != nil {
-		count++
-	}
-	if s.Preset != nil {
-		count++
-	}
-	if s.Print != nil {
-		count++
-	}
-	if s.Include != nil {
-		count++
-	}
-	if s.IncludeVars != nil {
-		count++
-	}
-	if s.Vars != nil {
+	if s.Cmd != nil {
 		count++
 	}
 	if s.RepoSearch != nil {
@@ -799,99 +820,121 @@ func (s *Step) countActions() int {
 	if s.RepoTree != nil {
 		count++
 	}
-	if s.RepoApplyPatchset != nil {
-		count++
-	}
-	if s.Wait != nil {
+	if s.RepoPatch != nil {
 		count++
 	}
 	if s.ArtifactCapture != nil {
 		count++
 	}
 	if s.ArtifactValidate != nil {
+		count++
+	}
+	if s.Shell != nil {
+		count++
+	}
+	if s.Assert != nil {
+		count++
+	}
+	if s.Wait != nil {
+		count++
+	}
+	if s.Log != nil {
+		count++
+	}
+	if s.Use != nil {
+		count++
+	}
+	if s.Import != nil {
+		count++
+	}
+	if s.VarsLoad != nil {
+		count++
+	}
+	if s.Vars != nil {
 		count++
 	}
 	return count
 }
 
 // DetermineActionType returns the action type for this step based on which action field is populated.
+// Returned strings are the modern dot-namespaced YAML keys (spec-21).
 func (s *Step) DetermineActionType() string {
 	if s.Shell != nil {
 		return "shell"
 	}
-	if s.Command != nil {
-		return "command"
+	if s.Cmd != nil {
+		return "cmd"
 	}
-	if s.File != nil {
-		return "file"
+	if s.FileWrite != nil {
+		return "file.write"
 	}
-	if s.FileReplace != nil {
-		return "file_replace"
+	if s.TextReplace != nil {
+		return "text.replace"
 	}
-	if s.FileInsert != nil {
-		return "file_insert"
+	if s.TextInsert != nil {
+		return "text.insert"
 	}
-	if s.FileDeleteRange != nil {
-		return "file_delete_range"
+	if s.TextDeleteRange != nil {
+		return "text.delete_range"
 	}
-	if s.FilePatchApply != nil {
-		return "file_patch_apply"
+	if s.TextPatch != nil {
+		return "text.patch"
 	}
-	if s.Template != nil {
-		return "template"
+	if s.FileTemplate != nil {
+		return "file.template"
 	}
-	if s.Copy != nil {
-		return "copy"
+	if s.FileCopy != nil {
+		return "file.copy"
 	}
-	if s.Unarchive != nil {
-		return "unarchive"
+	if s.FileUnarchive != nil {
+		return "file.unarchive"
 	}
-	if s.Download != nil {
-		return "download"
+	if s.FileDownload != nil {
+		return "file.download"
 	}
-	if s.Package != nil {
-		return "package"
+	if s.Pkg != nil {
+		return "pkg"
 	}
-	if s.Service != nil {
-		return "service"
+	if s.OsService != nil {
+		return "os.service"
 	}
 	if s.Assert != nil {
 		return "assert"
 	}
-	if s.Preset != nil {
-		return "preset"
+	if s.Use != nil {
+		return "use"
 	}
-	if s.Print != nil {
-		return "print"
+	if s.Log != nil {
+		return "log"
 	}
 	if s.Vars != nil {
 		return "vars"
 	}
-	if s.IncludeVars != nil {
-		return "include_vars"
+	if s.VarsLoad != nil {
+		return "vars.load"
 	}
-	if s.Include != nil {
-		return "include"
+	if s.Import != nil {
+		return "import"
 	}
 	if s.RepoSearch != nil {
-		return "repo_search"
+		return "repo.search"
 	}
 	if s.RepoTree != nil {
-		return "repo_tree"
+		return "repo.tree"
 	}
-	if s.RepoApplyPatchset != nil {
-		return "repo_apply_patchset"
+	if s.RepoPatch != nil {
+		return "repo.patch"
 	}
 	if s.Wait != nil {
 		return "wait"
 	}
 	if s.ArtifactCapture != nil {
-		return "artifact_capture"
+		return "artifact.capture"
 	}
 	if s.ArtifactValidate != nil {
-		return "artifact_validate"
+		return "artifact.validate"
 	}
-	if s.WithItems != nil || s.WithFileTree != nil {
+	if s.ForEach != nil || s.ForEachFile != nil {
 		return "loop"
 	}
 	return "unknown"
@@ -931,53 +974,51 @@ func (s *Step) Validate() error {
 // Clone creates a shallow copy of the step.
 func (s *Step) Clone() *Step {
 	return &Step{
-		Name:         s.Name,
-		When:         s.When,
-		Creates:      s.Creates,
-		Unless:       s.Unless,
-		Template:     s.Template,
-		File:         s.File,
-		FileReplace:     s.FileReplace,
-		FileInsert:      s.FileInsert,
-		FileDeleteRange: s.FileDeleteRange,
-		FilePatchApply:  s.FilePatchApply,
-		Shell:           s.Shell,
-		Command:      s.Command,
-		Copy:         s.Copy,
-		Unarchive:    s.Unarchive,
-		Download:     s.Download,
-		Package:      s.Package,
-		Service:      s.Service,
-		Assert:       s.Assert,
-		Preset:       s.Preset,
-		Print:        s.Print,
-		Include:      s.Include,
-		IncludeVars:  s.IncludeVars,
-		Vars:         s.Vars,
-		RepoSearch:   s.RepoSearch,
-		RepoTree:     s.RepoTree,
-		RepoApplyPatchset: s.RepoApplyPatchset,
-		Wait:            s.Wait,
-		ArtifactCapture: s.ArtifactCapture,
+		Name:             s.Name,
+		When:             s.When,
+		UnlessExists:     s.UnlessExists,
+		UnlessCommand:    s.UnlessCommand,
+		FileWrite:        s.FileWrite,
+		FileTemplate:     s.FileTemplate,
+		FileCopy:         s.FileCopy,
+		FileDownload:     s.FileDownload,
+		FileUnarchive:    s.FileUnarchive,
+		TextReplace:      s.TextReplace,
+		TextInsert:       s.TextInsert,
+		TextDeleteRange:  s.TextDeleteRange,
+		TextPatch:        s.TextPatch,
+		Pkg:              s.Pkg,
+		OsService:        s.OsService,
+		Cmd:              s.Cmd,
+		RepoSearch:       s.RepoSearch,
+		RepoTree:         s.RepoTree,
+		RepoPatch:        s.RepoPatch,
+		ArtifactCapture:  s.ArtifactCapture,
 		ArtifactValidate: s.ArtifactValidate,
-		Become:       s.Become,
-		BecomeUser:   s.BecomeUser,
-		Env:          s.Env,
-		Cwd:          s.Cwd,
-		Timeout:      s.Timeout,
-		Retries:      s.Retries,
-		RetryDelay:   s.RetryDelay,
-		IgnoreErrors: s.IgnoreErrors,
-		ChangedWhen:  s.ChangedWhen,
-		FailedWhen:   s.FailedWhen,
-		WithFileTree: s.WithFileTree,
-		WithItems:    s.WithItems,
-		Tags:         append([]string(nil), s.Tags...),
-		Register:     s.Register,
-		ID:           s.ID,
-		ActionType:   s.ActionType,
-		Origin:       s.Origin,
-		Skipped:      s.Skipped,
-		LoopContext:  s.LoopContext,
+		Shell:            s.Shell,
+		Assert:           s.Assert,
+		Wait:             s.Wait,
+		Log:              s.Log,
+		Use:              s.Use,
+		Import:           s.Import,
+		VarsLoad:         s.VarsLoad,
+		Vars:             s.Vars,
+		AsUser:           s.AsUser,
+		Env:              s.Env,
+		Cwd:              s.Cwd,
+		Timeout:          s.Timeout,
+		Retry:            s.Retry,
+		ContinueOnError:  s.ContinueOnError,
+		ChangedWhen:      s.ChangedWhen,
+		FailedWhen:       s.FailedWhen,
+		ForEach:          s.ForEach,
+		ForEachFile:      s.ForEachFile,
+		Tags:             append([]string(nil), s.Tags...),
+		As:               s.As,
+		ID:               s.ID,
+		ActionType:       s.ActionType,
+		Origin:           s.Origin,
+		Skipped:          s.Skipped,
+		LoopContext:      s.LoopContext,
 	}
 }

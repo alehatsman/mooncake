@@ -79,7 +79,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid single package",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					State: "present",
 				},
@@ -89,7 +89,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid multiple packages",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Names: []string{"vim", "git", "curl"},
 					State: "present",
 				},
@@ -99,7 +99,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid upgrade operation",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Upgrade: true,
 				},
 			},
@@ -108,7 +108,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid state: absent",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					State: "absent",
 				},
@@ -118,7 +118,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid state: latest",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					State: "latest",
 				},
@@ -128,7 +128,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid with explicit package manager",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:    "vim",
 					Manager: "apt",
 				},
@@ -138,7 +138,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid with update_cache",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:        "vim",
 					UpdateCache: true,
 				},
@@ -148,7 +148,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid with extra arguments",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					Extra: []string{"--no-install-recommends"},
 				},
@@ -158,7 +158,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil package configuration",
 			step: &config.Step{
-				Package: nil,
+				Pkg: nil,
 			},
 			wantErr: true,
 			errMsg:  "package configuration is nil",
@@ -166,7 +166,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing name, names, and upgrade",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					State: "present",
 				},
 			},
@@ -176,7 +176,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid state",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					State: "invalid_state",
 				},
@@ -187,7 +187,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty state defaults to present (valid)",
 			step: &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name: "vim",
 				},
 			},
@@ -303,7 +303,7 @@ func TestHandler_DryRun(t *testing.T) {
 			ctx := newMockExecutionContext()
 
 			step := &config.Step{
-				Package: tt.pkg,
+				Pkg: tt.pkg,
 			}
 
 			err := h.DryRun(ctx, step)
@@ -802,7 +802,7 @@ func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
 	ctx := testutil.NewMockContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name: "vim",
 		},
 	}
@@ -827,7 +827,7 @@ func TestHandler_Execute_ManagerDetectionFailure(t *testing.T) {
 	// a meaningful error.
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name:    "vim",
 			Manager: "", // Empty manager - let auto-detection run
 		},
@@ -864,7 +864,7 @@ func TestHandler_Validate_StateValidation(t *testing.T) {
 	for _, state := range validStates {
 		t.Run("valid_state_"+state, func(t *testing.T) {
 			step := &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					State: state,
 				},
@@ -880,7 +880,7 @@ func TestHandler_Validate_StateValidation(t *testing.T) {
 	for _, state := range invalidStates {
 		t.Run("invalid_state_"+state, func(t *testing.T) {
 			step := &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:  "vim",
 					State: state,
 				},
@@ -901,7 +901,7 @@ func TestHandler_DryRun_WithExplicitManager(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name:    "vim",
 			Manager: "apt",
 			State:   "present",
@@ -924,7 +924,7 @@ func TestHandler_DryRun_UpgradeOperation(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Upgrade: true,
 			Manager: "apt",
 		},
@@ -946,7 +946,7 @@ func TestHandler_DryRun_UpdateCache(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name:        "vim",
 			Manager:     "apt",
 			UpdateCache: true,
@@ -1115,7 +1115,7 @@ func TestHandler_DryRun_StateOperations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := newMockExecutionContext()
 			step := &config.Step{
-				Package: &config.Package{
+				Pkg: &config.Package{
 					Name:    "vim",
 					Manager: "apt",
 					State:   tt.state,
@@ -1184,7 +1184,7 @@ func TestHandler_Validate_ComplexScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			step := &config.Step{
-				Package: tt.pkg,
+				Pkg: tt.pkg,
 			}
 			err := h.Validate(step)
 			if (err != nil) != tt.wantErr {
@@ -1328,7 +1328,7 @@ func TestHandler_Execute_UpdateCacheEnabled(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name:        "vim",
 			Manager:     "apt",
 			UpdateCache: true,
@@ -1345,7 +1345,7 @@ func TestHandler_Execute_UpgradeOperation(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Upgrade: true,
 			Manager: "apt",
 		},
@@ -1361,7 +1361,7 @@ func TestHandler_Execute_RemoveOperation(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name:    "vim",
 			State:   "absent",
 			Manager: "apt",
@@ -1378,7 +1378,7 @@ func TestHandler_Execute_LatestState(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Name:    "vim",
 			State:   "latest",
 			Manager: "apt",

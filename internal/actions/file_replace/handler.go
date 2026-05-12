@@ -57,11 +57,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the file_replace configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.FileReplace == nil {
+	if step.TextReplace == nil {
 		return fmt.Errorf("file_replace configuration is nil")
 	}
 
-	fr := step.FileReplace
+	fr := step.TextReplace
 
 	if fr.Path == "" {
 		hint := actions.GetActionHint(actionName, "path")
@@ -93,7 +93,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the file_replace action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fr := step.FileReplace
+	fr := step.TextReplace
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -198,7 +198,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would happen without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	fr := step.FileReplace
+	fr := step.TextReplace
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)

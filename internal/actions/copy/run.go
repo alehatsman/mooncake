@@ -26,7 +26,7 @@ import (
 //     else in the codebase depends on this; the freshness check that
 //     used it is replaced by Performer's content comparison.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	cp := step.Copy
+	cp := step.FileCopy
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -104,7 +104,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	eff := ctx.Effects().WriteFile(dest, content, mode, actions.PerformerOpts{Become: step.Become})
+	eff := ctx.Effects().WriteFile(dest, content, mode, actions.PerformerOpts{Become: step.ShouldBecome()})
 	if eff.Err != nil {
 		result.Failed = true
 		return result, eff.Err
@@ -120,7 +120,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Ownership after content is in place.
 	if cp.Owner != "" || cp.Group != "" {
-		own := ctx.Effects().Chown(dest, cp.Owner, cp.Group, actions.PerformerOpts{Become: step.Become})
+		own := ctx.Effects().Chown(dest, cp.Owner, cp.Group, actions.PerformerOpts{Become: step.ShouldBecome()})
 		if own.Err != nil {
 			result.Failed = true
 			return result, fmt.Errorf("failed to set ownership: %w", own.Err)

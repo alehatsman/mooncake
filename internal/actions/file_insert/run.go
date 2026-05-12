@@ -16,7 +16,7 @@ import (
 // in memory once; plan mode reports the prediction, execute mode
 // commits the change.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fi := step.FileInsert
+	fi := step.TextInsert
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

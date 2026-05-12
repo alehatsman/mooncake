@@ -145,8 +145,8 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 func MarkStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
 	result.Failed = true
 	result.Rc = 1
-	if step.Register != "" {
-		result.RegisterTo(ec.Variables, step.Register)
+	if step.As != "" {
+		result.RegisterTo(ec.Variables, step.As)
 	}
 }
 
@@ -280,8 +280,8 @@ func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 // the public API. It may change or be removed in future versions without notice.
 func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check creates condition
-	if step.Creates != nil {
-		path, err := ec.Template.Render(*step.Creates, ec.Variables)
+	if step.UnlessExists != nil {
+		path, err := ec.Template.Render(*step.UnlessExists, ec.Variables)
 		if err != nil {
 			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
@@ -298,8 +298,8 @@ func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 	}
 
 	// Check unless condition
-	if step.Unless != nil {
-		command, err := ec.Template.Render(*step.Unless, ec.Variables)
+	if step.UnlessCommand != nil {
+		command, err := ec.Template.Render(*step.UnlessCommand, ec.Variables)
 		if err != nil {
 			return false, "", &RenderError{Field: "unless command", Cause: err}
 		}
@@ -505,13 +505,13 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 	}
 	ec.EmitEvent(events.EventStepFailed, failedData)
 
-	if step.IgnoreErrors {
+	if step.ContinueOnError {
 		ec.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
-		if step.Register != "" {
+		if step.As != "" {
 			failedResult := NewResult()
 			failedResult.Failed = true
 			failedResult.Rc = 1
-			failedResult.RegisterTo(ec.Variables, step.Register)
+			failedResult.RegisterTo(ec.Variables, step.As)
 		}
 		return nil
 	}
@@ -533,7 +533,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Check idempotency conditions (creates, unless) - ONLY for shell/command steps
-	if !shouldSkip && (step.Shell != nil || step.Command != nil) {
+	if !shouldSkip && (step.Shell != nil || step.Cmd != nil) {
 		idempotencySkip, idempotencyReason, err := CheckIdempotencyConditions(step, ec)
 		if err != nil {
 			return err
@@ -549,7 +549,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Handle skipped steps
 	if shouldSkip {
-		if hasStepName && step.Include == nil {
+		if hasStepName && step.Import == nil {
 			emitStepSkipped(step, ec, stepName, skipReason)
 		}
 		return nil
@@ -563,7 +563,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	//
 	// Legacy --check (non-Runner handlers) keeps its existing bypass
 	// flow below.
-	if hasStepName && step.Include == nil {
+	if hasStepName && step.Import == nil {
 		actionType := step.DetermineActionType()
 		if handler, ok := actions.Get(actionType); ok {
 			if runner, isRunner := handler.(actions.Runner); isRunner && ec.Mode() == actions.ModePlan {
@@ -578,7 +578,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// not-checkable event. Known actions go through the plan-mode
 	// bypass above (which handles every registered handler via the
 	// Runner interface).
-	if ec.Mode() == actions.ModePlan && hasStepName && step.Include == nil {
+	if ec.Mode() == actions.ModePlan && hasStepName && step.Import == nil {
 		actionType := step.DetermineActionType()
 		if _, ok := actions.Get(actionType); !ok {
 			*ec.Stats.Global++
@@ -606,8 +606,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	if step.Name == "" {
 		if step.Vars != nil {
 			ec.Logger.Debugf("Setting variables")
-		} else if step.IncludeVars != nil {
-			ec.Logger.Debugf("Loading variables from %s", *step.IncludeVars)
+		} else if step.VarsLoad != nil {
+			ec.Logger.Debugf("Loading variables from %s", *step.VarsLoad)
 		}
 	}
 
@@ -1052,8 +1052,8 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	}
 
 	// ModeApply: register result if requested.
-	if step.Register != "" && ec.CurrentResult != nil {
-		ec.CurrentResult.RegisterTo(ec.Variables, step.Register)
+	if step.As != "" && ec.CurrentResult != nil {
+		ec.CurrentResult.RegisterTo(ec.Variables, step.As)
 	}
 	return nil
 }

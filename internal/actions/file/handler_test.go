@@ -77,7 +77,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid file action",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path: "/tmp/test.txt",
 				},
 			},
@@ -86,14 +86,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil file action",
 			step: &config.Step{
-				File: nil,
+				FileWrite: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty path",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path: "",
 				},
 			},
@@ -102,7 +102,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid directory state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/testdir",
 					State: "directory",
 				},
@@ -112,7 +112,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid absent state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "absent",
 				},
@@ -122,7 +122,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid touch state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "touch",
 				},
@@ -132,7 +132,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid link state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/link",
 					State: "link",
 					Src:   "/tmp/target",
@@ -143,7 +143,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid hardlink state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/link",
 					State: "hardlink",
 					Src:   "/tmp/target",
@@ -154,7 +154,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid perms state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "perms",
 					Mode:  "0644",
@@ -165,7 +165,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid state",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "invalid",
 				},
@@ -175,7 +175,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "link without src",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/link",
 					State: "link",
 				},
@@ -185,7 +185,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "hardlink without src",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/link",
 					State: "hardlink",
 				},
@@ -213,7 +213,7 @@ func TestHandler_Execute_CreateFile(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			State:   "file",
 			Content: testContent,
@@ -277,7 +277,7 @@ func TestHandler_Execute_UpdateFile(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: newContent,
 		},
@@ -328,7 +328,7 @@ func TestHandler_Execute_FileIdempotent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: testContent,
 		},
@@ -353,7 +353,7 @@ func TestHandler_Execute_CreateDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "directory",
 		},
@@ -403,7 +403,7 @@ func TestHandler_Execute_DirectoryIdempotent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "directory",
 		},
@@ -434,7 +434,7 @@ func TestHandler_Execute_RemoveFile(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "absent",
 		},
@@ -479,7 +479,7 @@ func TestHandler_Execute_RemoveDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "absent",
 		},
@@ -518,7 +518,7 @@ func TestHandler_Execute_AbsentIdempotent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "absent",
 		},
@@ -543,7 +543,7 @@ func TestHandler_Execute_TouchCreateFile(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "touch",
 		},
@@ -585,7 +585,7 @@ func TestHandler_Execute_TouchUpdateTime(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "touch",
 		},
@@ -627,7 +627,7 @@ func TestHandler_Execute_CreateSymlink(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "link",
 			Src:   targetPath,
@@ -688,7 +688,7 @@ func TestHandler_Execute_SymlinkIdempotent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "link",
 			Src:   targetPath,
@@ -732,7 +732,7 @@ func TestHandler_Execute_SymlinkForce(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "link",
 			Src:   newTarget,
@@ -787,7 +787,7 @@ func TestHandler_Execute_SymlinkNoForce(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "link",
 			Src:   newTarget,
@@ -820,7 +820,7 @@ func TestHandler_Execute_CreateHardlink(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "hardlink",
 			Src:   targetPath,
@@ -886,7 +886,7 @@ func TestHandler_Execute_HardlinkIdempotent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "hardlink",
 			Src:   targetPath,
@@ -918,7 +918,7 @@ func TestHandler_Execute_SetPermissions(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "perms",
 			Mode:  "0600",
@@ -970,7 +970,7 @@ func TestHandler_Execute_PermissionsIdempotent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "perms",
 			Mode:  "0600",
@@ -996,7 +996,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "test content",
 			Mode:    "0600",
@@ -1036,7 +1036,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: newContent,
 			Backup:  true,
@@ -1081,7 +1081,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	ec.Variables["message"] = "hello"
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "User: {{ username }}, Message: {{ message }}",
 		},
@@ -1112,7 +1112,7 @@ func TestHandler_Execute_InvalidTemplate(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "{{ invalid template syntax",
 		},
@@ -1138,7 +1138,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	ec.EventPublisher = nil
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "content",
 		},
@@ -1165,7 +1165,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path: "/tmp/test.txt",
 		},
 	}
@@ -1188,7 +1188,7 @@ func TestHandler_Execute_UnknownState(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "unknown",
 		},
@@ -1216,7 +1216,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run file",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:    "/tmp/test.txt",
 					Content: "test content",
 				},
@@ -1226,7 +1226,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run directory",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/testdir",
 					State: "directory",
 				},
@@ -1236,7 +1236,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run absent",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "absent",
 				},
@@ -1246,7 +1246,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run touch",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "touch",
 				},
@@ -1256,7 +1256,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run link",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/link",
 					State: "link",
 					Src:   "/tmp/target",
@@ -1267,7 +1267,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run hardlink",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/link",
 					State: "hardlink",
 					Src:   "/tmp/target",
@@ -1278,7 +1278,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run perms",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					State: "perms",
 					Mode:  "0644",
@@ -1289,7 +1289,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with owner",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					Owner: "root",
 				},
@@ -1299,7 +1299,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with group",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/test.txt",
 					Group: "root",
 				},
@@ -1334,7 +1334,7 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path: "/tmp/test.txt",
 		},
 	}
@@ -1367,7 +1367,7 @@ func TestHandler_DryRun_ReportsCorrectDefaultMode(t *testing.T) {
 		{
 			name: "directory without explicit mode defaults to 0755",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/testdir",
 					State: "directory",
 				},
@@ -1377,7 +1377,7 @@ func TestHandler_DryRun_ReportsCorrectDefaultMode(t *testing.T) {
 		{
 			name: "file without explicit mode defaults to 0644",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:    "/tmp/test.txt",
 					Content: "hello",
 				},
@@ -1387,7 +1387,7 @@ func TestHandler_DryRun_ReportsCorrectDefaultMode(t *testing.T) {
 		{
 			name: "directory respects explicit mode",
 			step: &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "/tmp/testdir",
 					State: "directory",
 					Mode:  "0700",
@@ -1572,7 +1572,7 @@ func TestHandler_Execute_DirectoryWithMode(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "directory",
 			Mode:  "0700",
@@ -1604,7 +1604,7 @@ func TestHandler_Execute_NestedDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "directory",
 		},
@@ -1651,7 +1651,7 @@ func TestHandler_Execute_RemoveNonEmptyDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "absent",
 		},
@@ -1683,7 +1683,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 	ec.Variables["filename"] = "test.txt"
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    "{{ basedir }}/{{ filename }}",
 			Content: "test content",
 		},
@@ -1716,7 +1716,7 @@ func TestHandler_Execute_InvalidPathExpansion(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path: "{{ invalid template syntax",
 		},
 	}
@@ -1754,7 +1754,7 @@ func TestHandler_Execute_OwnershipLinuxOnly(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "content",
 			Owner:   "root",
@@ -1780,7 +1780,7 @@ func TestHandler_Execute_StatError(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  invalidPath,
 			State: "absent",
 		},
@@ -1802,7 +1802,7 @@ func TestHandler_DryRun_InvalidPathTemplate(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path: "{{ invalid template syntax",
 		},
 	}
@@ -1828,7 +1828,7 @@ func TestHandler_Execute_EmptyContent(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "",
 		},
@@ -1863,7 +1863,7 @@ func TestHandler_Execute_DefaultState(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "content",
 			// State not specified, should default to "file"
@@ -1894,7 +1894,7 @@ func TestHandler_Execute_ResultTiming(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "content",
 		},
@@ -1935,7 +1935,7 @@ func TestHandler_Execute_MultipleEvents(t *testing.T) {
 
 	// First execution - create file
 	step1 := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "content1",
 		},
@@ -1948,7 +1948,7 @@ func TestHandler_Execute_MultipleEvents(t *testing.T) {
 
 	// Second execution - update file
 	step2 := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "content2",
 		},
@@ -1990,12 +1990,12 @@ func TestHandler_CreateDirectoryWithBecome(t *testing.T) {
 	dirPath := filepath.Join(tmpDir, "become-dir")
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  dirPath,
 			State: "directory",
 			Mode:  "0755",
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	// Will fail without actual sudo, but tests the code path
@@ -2016,11 +2016,11 @@ func TestHandler_CreateFileWithBecome(t *testing.T) {
 	filePath := filepath.Join(tmpDir, "become-file.txt")
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    filePath,
 			Content: "test content",
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	// Will fail without actual sudo, but tests the code path
@@ -2047,11 +2047,11 @@ func TestHandler_RemoveWithBecome(t *testing.T) {
 	ec.SudoPass = "test-password"
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "absent",
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	// Will fail without actual sudo, but tests the code path
@@ -2083,7 +2083,7 @@ func TestHandler_SetOwnership(t *testing.T) {
 	}
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			Owner: currentUser.Username,
 			Group: currentUser.Gid,
@@ -2121,12 +2121,12 @@ func TestHandler_ChownWithBecome(t *testing.T) {
 	ec.SudoPass = "test-password"
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			Owner: "root",
 			Group: "root",
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	// Will fail without actual sudo, but tests the code path
@@ -2174,7 +2174,7 @@ func TestHandler_TouchFile_WithOwnership(t *testing.T) {
 	}
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "touch",
 			Owner: currentUser.Username,
@@ -2196,7 +2196,7 @@ func TestHandler_Execute_RecursiveDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  deepPath,
 			State: "directory",
 			Mode:  "0755",
@@ -2244,7 +2244,7 @@ func TestHandler_Execute_SymlinkWithOwnership(t *testing.T) {
 	}
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "link",
 			Src:   targetPath,
@@ -2283,7 +2283,7 @@ func TestHandler_Execute_HardlinkWithOwnership(t *testing.T) {
 	}
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  linkPath,
 			State: "hardlink",
 			Src:   targetPath,
@@ -2317,7 +2317,7 @@ func TestHandler_Execute_PermsWithOwnership(t *testing.T) {
 	}
 
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  filePath,
 			State: "perms",
 			Mode:  "0600",

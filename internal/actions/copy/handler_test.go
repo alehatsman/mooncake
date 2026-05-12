@@ -83,7 +83,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid copy action",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "/tmp/source.txt",
 					Dest: "/tmp/dest.txt",
 				},
@@ -93,14 +93,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil copy action",
 			step: &config.Step{
-				Copy: nil,
+				FileCopy: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing src",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Dest: "/tmp/dest.txt",
 				},
 			},
@@ -109,7 +109,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing dest",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src: "/tmp/source.txt",
 				},
 			},
@@ -118,7 +118,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty src",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "",
 					Dest: "/tmp/dest.txt",
 				},
@@ -128,7 +128,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty dest",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "/tmp/source.txt",
 					Dest: "",
 				},
@@ -138,7 +138,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with checksum",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:      "/tmp/source.txt",
 					Dest:     "/tmp/dest.txt",
 					Checksum: "md5:d8e8fca2dc0f896fd7cb4cb0031ba249",
@@ -149,7 +149,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with mode",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "/tmp/source.txt",
 					Dest: "/tmp/dest.txt",
 					Mode: "0600",
@@ -160,7 +160,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with owner and group",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:   "/tmp/source.txt",
 					Dest:  "/tmp/dest.txt",
 					Owner: "root",
@@ -172,7 +172,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with backup",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:    "/tmp/source.txt",
 					Dest:   "/tmp/dest.txt",
 					Backup: true,
@@ -183,7 +183,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with force",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:   "/tmp/source.txt",
 					Dest:  "/tmp/dest.txt",
 					Force: true,
@@ -219,7 +219,7 @@ func TestHandler_Execute_BasicCopy(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -294,7 +294,7 @@ func TestHandler_Execute_SourceNotFound(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -329,7 +329,7 @@ func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcDir,
 			Dest: destPath,
 		},
@@ -370,7 +370,7 @@ func TestHandler_Execute_WithChecksum(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:      srcPath,
 			Dest:     destPath,
 			Checksum: md5sum,
@@ -409,7 +409,7 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:      srcPath,
 			Dest:     destPath,
 			Checksum: wrongChecksum,
@@ -460,7 +460,7 @@ func TestHandler_Execute_IdempotencyByTime(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -499,7 +499,7 @@ func TestHandler_Execute_ForceCopy(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:   srcPath,
 			Dest:  destPath,
 			Force: true,
@@ -542,7 +542,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 			Mode: "0600",
@@ -590,7 +590,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:    srcPath,
 			Dest:   destPath,
 			Backup: true,
@@ -657,7 +657,7 @@ func TestHandler_Execute_SHA256Checksum(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:      srcPath,
 			Dest:     destPath,
 			Checksum: sha256sum,
@@ -694,7 +694,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	ec.Variables["tmpdir"] = tmpDir
 
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  "{{ tmpdir }}/{{ srcfile }}",
 			Dest: "{{ tmpdir }}/{{ destfile }}",
 		},
@@ -733,7 +733,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	ec.EventPublisher = nil
 
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -760,7 +760,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  "/tmp/source.txt",
 			Dest: "/tmp/dest.txt",
 		},
@@ -781,7 +781,7 @@ func TestHandler_Execute_RenderErrorSrc(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  "{{ invalid template syntax",
 			Dest: "/tmp/dest.txt",
 		},
@@ -809,7 +809,7 @@ func TestHandler_Execute_RenderErrorDest(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: "{{ invalid template syntax",
 		},
@@ -837,7 +837,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "basic dry-run",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "source.txt",
 					Dest: "dest.txt",
 				},
@@ -851,7 +851,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with checksum",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:      "source.txt",
 					Dest:     "dest.txt",
 					Checksum: "md5:abc123",
@@ -866,7 +866,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with existing file",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "source.txt",
 					Dest: "existing.txt",
 				},
@@ -882,7 +882,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with mode",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "source.txt",
 					Dest: "dest.txt",
 					Mode: "0600",
@@ -897,7 +897,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with backup",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:    "source.txt",
 					Dest:   "backup.txt",
 					Backup: true,
@@ -914,7 +914,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with owner and group",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:   "source.txt",
 					Dest:  "dest.txt",
 					Owner: "root",
@@ -930,7 +930,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run source not found",
 			step: &config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "nonexistent.txt",
 					Dest: "dest.txt",
 				},
@@ -950,11 +950,11 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			// Update paths to use temp dir
-			if tt.step.Copy.Src != "" && !filepath.IsAbs(tt.step.Copy.Src) {
-				tt.step.Copy.Src = filepath.Join(tmpDir, tt.step.Copy.Src)
+			if tt.step.FileCopy.Src != "" && !filepath.IsAbs(tt.step.FileCopy.Src) {
+				tt.step.FileCopy.Src = filepath.Join(tmpDir, tt.step.FileCopy.Src)
 			}
-			if tt.step.Copy.Dest != "" && !filepath.IsAbs(tt.step.Copy.Dest) {
-				tt.step.Copy.Dest = filepath.Join(tmpDir, tt.step.Copy.Dest)
+			if tt.step.FileCopy.Dest != "" && !filepath.IsAbs(tt.step.FileCopy.Dest) {
+				tt.step.FileCopy.Dest = filepath.Join(tmpDir, tt.step.FileCopy.Dest)
 			}
 
 			err := h.DryRun(ec, tt.step)
@@ -979,7 +979,7 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  "/tmp/source.txt",
 			Dest: "/tmp/dest.txt",
 		},
@@ -1168,7 +1168,7 @@ func TestHandler_Execute_OwnershipWithoutBecome(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:   srcPath,
 			Dest:  destPath,
 			Owner: "root",
@@ -1206,7 +1206,7 @@ func TestHandler_Execute_DestinationChecksum(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:      srcPath,
 			Dest:     destPath,
 			Checksum: sha256sum,
@@ -1252,7 +1252,7 @@ func TestHandler_Execute_DestinationChecksumMismatch(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:      srcPath,
 			Dest:     destPath,
 			Checksum: wrongChecksum,
@@ -1299,7 +1299,7 @@ func TestHandler_SetOwnership_Success(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:   srcPath,
 			Dest:  destPath,
 			Owner: currentUser.Username,
@@ -1337,13 +1337,13 @@ func TestHandler_ChownWithBecome(t *testing.T) {
 	ec.SudoPass = "test-password"
 
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:   srcPath,
 			Dest:  destPath,
 			Owner: "root",
 			Group: "root",
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	// Will fail without actual sudo, but tests the code path
@@ -1370,7 +1370,7 @@ func TestHandler_Execute_LargeFile(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -1427,7 +1427,7 @@ func TestHandler_Execute_BackupWithTimestamp(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:    srcPath,
 			Dest:   destPath,
 			Backup: true,
@@ -1478,7 +1478,7 @@ func TestHandler_Execute_MultipleBackups(t *testing.T) {
 		}
 
 		step := &config.Step{
-			Copy: &config.Copy{
+			FileCopy: &config.Copy{
 				Src:    srcPath,
 				Dest:   destPath,
 				Backup: true,
@@ -1560,7 +1560,7 @@ func TestHandler_Execute_CopyWithDifferentTimestamps(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -1600,7 +1600,7 @@ func TestHandler_Execute_WithOwnershipAndMode(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Copy: &config.Copy{
+		FileCopy: &config.Copy{
 			Src:   srcPath,
 			Dest:  destPath,
 			Owner: currentUser.Username,

@@ -45,7 +45,7 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 		if steps[1].Name != "create file" {
 			t.Errorf("step[1].Name = %q, want 'create file'", steps[1].Name)
 		}
-		if steps[1].File == nil {
+		if steps[1].FileWrite == nil {
 			t.Error("step[1].File should not be nil")
 		}
 	})
@@ -100,7 +100,7 @@ func TestYAMLReader_ReadConfig(t *testing.T) {
 			t.Errorf("ReadConfig() got %d steps, want 1", len(steps))
 		}
 
-		if steps[0].Template == nil {
+		if steps[0].FileTemplate == nil {
 			t.Error("step[0].Template should not be nil")
 		}
 	})
@@ -376,22 +376,22 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 	}
 
 	// Verify file step with mode
-	if steps[0].File != nil && steps[0].File.Mode != "0755" {
-		t.Errorf("file mode = %q, want '0755'", steps[0].File.Mode)
+	if steps[0].FileWrite != nil && steps[0].FileWrite.Mode != "0755" {
+		t.Errorf("file mode = %q, want '0755'", steps[0].FileWrite.Mode)
 	}
 
 	// Verify become flag
-	if !steps[2].Become {
+	if !steps[2].ShouldBecome() {
 		t.Error("step with sudo should have Become = true")
 	}
 
 	// Verify include
-	if steps[3].Include == nil {
+	if steps[3].Import == nil {
 		t.Error("include step should have Include field set")
 	}
 
 	// Verify with_filetree
-	if steps[4].WithFileTree == nil {
+	if steps[4].ForEachFile == nil {
 		t.Error("with_filetree step should have WithFileTree field set")
 	}
 

@@ -81,7 +81,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid command",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"echo", "hello"},
 				},
 			},
@@ -90,14 +90,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil command action",
 			step: &config.Step{
-				Command: nil,
+				Cmd: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty argv",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{},
 				},
 			},
@@ -106,7 +106,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "single command",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"ls"},
 				},
 			},
@@ -115,7 +115,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "command with multiple arguments",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"ls", "-la", "/tmp"},
 				},
 			},
@@ -187,7 +187,7 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 			}
 
 			step := &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: tt.argv,
 				},
 			}
@@ -233,7 +233,7 @@ func TestHandler_Execute_WithEnvironment(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: argv,
 		},
 		Env: map[string]string{
@@ -268,7 +268,7 @@ func TestHandler_Execute_WithEnvironmentTemplate(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: argv,
 		},
 		Env: map[string]string{
@@ -302,7 +302,7 @@ func TestHandler_Execute_WithWorkingDirectory(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: argv,
 		},
 		Cwd: tmpDir,
@@ -341,7 +341,7 @@ func TestHandler_Execute_WithWorkingDirectoryTemplate(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: argv,
 		},
 		Cwd: "{{ work_dir }}",
@@ -376,7 +376,7 @@ func TestHandler_Execute_WithTimeout(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: argv,
 		},
 		Timeout: "500ms",
@@ -401,7 +401,7 @@ func TestHandler_Execute_WithTimeout_Success(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		Timeout: "5s",
@@ -423,7 +423,7 @@ func TestHandler_Execute_WithInvalidTimeout(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		Timeout: "invalid",
@@ -448,10 +448,10 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 
 	// Command that always fails
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"ls", "/nonexistent/path/12345"},
 		},
-		Retries: 2,
+		Retry: &config.RetryPolicy{Attempts: 2},
 	}
 
 	_, err := h.Execute(ctx, step)
@@ -473,11 +473,10 @@ func TestHandler_Execute_WithRetryDelay(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"ls", "/nonexistent/path/12345"},
 		},
-		Retries:    2,
-		RetryDelay: "100ms",
+		Retry: &config.RetryPolicy{Attempts: 2, Delay: "100ms"},
 	}
 
 	start := time.Now()
@@ -540,7 +539,7 @@ func TestHandler_Execute_WithChangedWhen(t *testing.T) {
 			ctx := newMockExecutionContext()
 
 			step := &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: tt.argv,
 				},
 				ChangedWhen: tt.changedWhen,
@@ -611,7 +610,7 @@ func TestHandler_Execute_WithFailedWhen(t *testing.T) {
 			ctx := newMockExecutionContext()
 
 			step := &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: tt.argv,
 				},
 				FailedWhen: tt.failedWhen,
@@ -639,7 +638,7 @@ func TestHandler_Execute_FailedCommand_WithFailedWhen(t *testing.T) {
 
 	// Command that fails
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"ls", "/nonexistent/path/12345"},
 		},
 		FailedWhen: "rc > 10", // Only fail if return code > 10
@@ -671,7 +670,7 @@ func TestHandler_Execute_WithStdin(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv:  argv,
 			Stdin: "test input",
 		},
@@ -703,7 +702,7 @@ func TestHandler_Execute_WithStdinTemplate(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv:  argv,
 			Stdin: "{{ input_text }}",
 		},
@@ -731,7 +730,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "simple command",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"echo", "hello"},
 				},
 			},
@@ -740,7 +739,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "command with template",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"echo", "{{ message }}"},
 				},
 			},
@@ -749,17 +748,17 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "command with become",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"systemctl", "start", "nginx"},
 				},
-				Become: true,
+				AsUser: "root",
 			},
 			wantErr: false,
 		},
 		{
 			name: "command with working directory",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"ls"},
 				},
 				Cwd: "/tmp",
@@ -769,7 +768,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "command with environment",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"env"},
 				},
 				Env: map[string]string{
@@ -781,7 +780,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "command with timeout",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"sleep", "10"},
 				},
 				Timeout: "5s",
@@ -791,10 +790,10 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "command with retries",
 			step: &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: []string{"curl", "https://example.com"},
 				},
-				Retries: 3,
+				Retry: &config.RetryPolicy{Attempts: 3},
 			},
 			wantErr: false,
 		},
@@ -823,7 +822,7 @@ func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "{{ missing_var }}"},
 		},
 	}
@@ -840,7 +839,7 @@ func TestHandler_Execute_InvalidArgvTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "{{ invalid.syntax"},
 		},
 	}
@@ -856,7 +855,7 @@ func TestHandler_Execute_InvalidEnvTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		Env: map[string]string{
@@ -875,7 +874,7 @@ func TestHandler_Execute_InvalidCwdTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		Cwd: "{{ invalid.syntax",
@@ -892,7 +891,7 @@ func TestHandler_Execute_InvalidStdinTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv:  []string{"cat"},
 			Stdin: "{{ invalid.syntax",
 		},
@@ -909,7 +908,7 @@ func TestHandler_Execute_InvalidChangedWhenExpression(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		ChangedWhen: "invalid expression syntax",
@@ -926,7 +925,7 @@ func TestHandler_Execute_InvalidFailedWhenExpression(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		FailedWhen: "invalid expression syntax",
@@ -943,7 +942,7 @@ func TestHandler_Execute_NonBoolChangedWhenResult(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		ChangedWhen: "42", // Evaluates to int, not bool
@@ -960,7 +959,7 @@ func TestHandler_Execute_NonBoolFailedWhenResult(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 		FailedWhen: "'string'", // Evaluates to string, not bool
@@ -978,7 +977,7 @@ func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
 	ctx := testutil.NewMockContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "hello"},
 		},
 	}
@@ -1006,7 +1005,7 @@ func TestHandler_Execute_StderrCapture(t *testing.T) {
 	}
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: argv,
 		},
 		FailedWhen: "false", // Don't fail on any output
@@ -1028,7 +1027,7 @@ func TestHandler_Execute_MultipleArgv(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Command: &config.CommandAction{
+		Cmd: &config.CommandAction{
 			Argv: []string{"echo", "arg1", "arg2", "arg3"},
 		},
 	}
@@ -1069,7 +1068,7 @@ func TestHandler_Execute_ResultRc(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			step := &config.Step{
-				Command: &config.CommandAction{
+				Cmd: &config.CommandAction{
 					Argv: tt.argv,
 				},
 				FailedWhen: "false", // Don't fail

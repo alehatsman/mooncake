@@ -89,11 +89,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the unarchive configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Unarchive == nil {
+	if step.FileUnarchive == nil {
 		return fmt.Errorf("unarchive configuration is nil")
 	}
 
-	unarchiveAction := step.Unarchive
+	unarchiveAction := step.FileUnarchive
 	if unarchiveAction.Src == "" {
 		return fmt.Errorf("src is required")
 	}
@@ -107,7 +107,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the unarchive action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	unarchiveAction := step.Unarchive
+	unarchiveAction := step.FileUnarchive
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -227,7 +227,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would be done without actually doing it.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	unarchiveAction := step.Unarchive
+	unarchiveAction := step.FileUnarchive
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

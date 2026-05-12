@@ -39,7 +39,7 @@ func TestRun_InsertWouldHappen(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     path,
 			Anchor:   "# header",
 			Position: "after",
@@ -75,7 +75,7 @@ func TestRun_AnchorMissing(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     path,
 			Anchor:   "no_such_anchor",
 			Position: "after",

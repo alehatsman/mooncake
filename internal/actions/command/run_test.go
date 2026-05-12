@@ -32,7 +32,7 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 // TestRun_PlanRendersArgv: plan mode renders each argv element and
 // joins them for display. Does NOT execute.
 func TestRun_PlanRendersArgv(t *testing.T) {
-	step := &config.Step{Command: &config.CommandAction{Argv: []string{"useradd", "-m", "{{ name }}"}}}
+	step := &config.Step{Cmd: &config.CommandAction{Argv: []string{"useradd", "-m", "{{ name }}"}}}
 	res, err := (&Handler{}).Run(newCtx(t, true), step)
 	if err != nil {
 		t.Fatalf("plan: %v", err)
@@ -47,7 +47,7 @@ func TestRun_PlanRendersArgv(t *testing.T) {
 }
 
 func TestRun_PlanWithBecome(t *testing.T) {
-	step := &config.Step{Command: &config.CommandAction{Argv: []string{"shutdown", "now"}}, Become: true}
+	step := &config.Step{Cmd: &config.CommandAction{Argv: []string{"shutdown", "now"}}, AsUser: "root"}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
 	r := res.(*executor.Result)
 	if !strings.Contains(r.Reason, "sudo") {

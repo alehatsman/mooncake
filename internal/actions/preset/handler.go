@@ -92,10 +92,10 @@ func displayPresetHelp(ec *executor.ExecutionContext, _, baseDir string) {
 
 // Validate validates the preset action configuration.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Preset == nil {
+	if step.Use == nil {
 		return fmt.Errorf("preset action requires preset configuration")
 	}
-	if step.Preset.Name == "" {
+	if step.Use.Name == "" {
 		return fmt.Errorf("preset name is required")
 	}
 	return nil
@@ -108,7 +108,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("invalid context type")
 	}
 
-	invocation := step.Preset
+	invocation := step.Use
 
 	// Expand preset into steps
 	expandedSteps, parametersNamespace, presetBaseDir, err := presets.ExpandPreset(invocation)
@@ -204,7 +204,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		return fmt.Errorf("invalid context type")
 	}
 
-	invocation := step.Preset
+	invocation := step.Use
 
 	// Try to expand preset to show step count
 	expandedSteps, parametersNamespace, presetBaseDir, err := presets.ExpandPreset(invocation)

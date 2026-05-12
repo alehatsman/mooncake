@@ -42,11 +42,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the include_vars configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.IncludeVars == nil {
+	if step.VarsLoad == nil {
 		return fmt.Errorf("include_vars configuration is nil")
 	}
 
-	if *step.IncludeVars == "" {
+	if *step.VarsLoad == "" {
 		return fmt.Errorf("include_vars path is empty")
 	}
 
@@ -55,7 +55,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the include_vars action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	includeVars := step.IncludeVars
+	includeVars := step.VarsLoad
 
 	// We need access to PathUtil which isn't in the Context interface
 	// Cast to concrete type for now
@@ -111,7 +111,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what variables would be loaded.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	includeVars := step.IncludeVars
+	includeVars := step.VarsLoad
 
 	// Get path (attempt expansion but don't fail)
 	ec, ok := ctx.(*executor.ExecutionContext)

@@ -53,11 +53,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the copy configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Copy == nil {
+	if step.FileCopy == nil {
 		return fmt.Errorf("copy configuration is nil")
 	}
 
-	copyAction := step.Copy
+	copyAction := step.FileCopy
 	if copyAction.Src == "" {
 		hint := actions.GetActionHint("copy", "src")
 		return fmt.Errorf("src is required%s", hint)
@@ -73,7 +73,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the copy action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	copyAction := step.Copy
+	copyAction := step.FileCopy
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -214,7 +214,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would be done without actually doing it.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	copyAction := step.Copy
+	copyAction := step.FileCopy
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -339,7 +339,7 @@ func (h *Handler) copyFile(src, dest string, mode os.FileMode, step *config.Step
 	}
 
 	// Move temp file to destination (atomic)
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
@@ -369,7 +369,7 @@ func (h *Handler) setOwnership(path, owner, group string, step *config.Step, ec 
 		return nil
 	}
 
-	if step.Become || runtime.GOOS != "linux" {
+	if step.ShouldBecome() || runtime.GOOS != "linux" {
 		return h.chownWithBecome(path, owner, group, step, ec)
 	}
 
@@ -396,7 +396,7 @@ func (h *Handler) setOwnership(path, owner, group string, step *config.Step, ec 
 }
 
 func (h *Handler) chownWithBecome(path, owner, group string, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.Become {
+	if !step.ShouldBecome() {
 		return fmt.Errorf("chown requires become: true")
 	}
 

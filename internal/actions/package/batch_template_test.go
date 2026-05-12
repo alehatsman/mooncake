@@ -208,7 +208,7 @@ manager: pacman
 func TestHandler_Validate_NamesExpr(t *testing.T) {
 	h := &Handler{}
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			NamesExpr: "{{ pkgs }}",
 			State:     "present",
 		},
@@ -266,7 +266,7 @@ func TestHandler_Execute_TemplatedNames(t *testing.T) {
 		"pkgs": []string{"a", "b"},
 	}
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			NamesExpr: "{{ pkgs }}",
 			State:     "present",
 			Manager:   pmApt,

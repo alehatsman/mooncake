@@ -40,11 +40,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the print configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Print == nil {
+	if step.Log == nil {
 		return fmt.Errorf("print configuration is nil")
 	}
 
-	if step.Print.Msg == "" {
+	if step.Log.Msg == "" {
 		return fmt.Errorf("print message is empty")
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the print action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	printAction := step.Print
+	printAction := step.Log
 
 	// Create result
 	result := executor.NewResult()
@@ -87,7 +87,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would be printed without actually printing.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	printAction := step.Print
+	printAction := step.Log
 
 	// Attempt to render the message (but don't fail if it errors)
 	renderedMsg, err := ctx.GetTemplate().Render(printAction.Msg, ctx.GetVariables())

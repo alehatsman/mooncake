@@ -79,11 +79,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the file configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.File == nil {
+	if step.FileWrite == nil {
 		return fmt.Errorf("file configuration is nil")
 	}
 
-	file := step.File
+	file := step.FileWrite
 	if file.Path == "" {
 		// Generate hint from schema
 		hint := actions.GetActionHint("file", "path")
@@ -118,7 +118,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the file action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	file := step.File
+	file := step.FileWrite
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -177,7 +177,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would be done without actually doing it.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	file := step.File
+	file := step.FileWrite
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -411,7 +411,7 @@ func (h *Handler) touchFile(ctx actions.Context, ec *executor.ExecutionContext, 
 		result.Changed = true
 		now := time.Now()
 		ctx.GetLogger().Debugf("  Touching file: %s", renderedPath)
-		if step.Become {
+		if step.ShouldBecome() {
 			// Use touch command with sudo
 			if err := h.executeSudoCommand(fmt.Sprintf("touch %s", renderedPath), step, ec); err != nil {
 				result.Failed = true
@@ -469,7 +469,7 @@ func (h *Handler) createSymlink(ctx actions.Context, ec *executor.ExecutionConte
 	result.Changed = true
 	ctx.GetLogger().Debugf("  Creating symlink: %s -> %s", renderedPath, expandedSrc)
 
-	if step.Become {
+	if step.ShouldBecome() {
 		cmd := fmt.Sprintf("ln -s %s %s", expandedSrc, renderedPath)
 		if err := h.executeSudoCommand(cmd, step, ec); err != nil {
 			result.Failed = true
@@ -535,7 +535,7 @@ func (h *Handler) createHardlink(ctx actions.Context, ec *executor.ExecutionCont
 	result.Changed = true
 	ctx.GetLogger().Debugf("  Creating hardlink: %s -> %s", renderedPath, expandedSrc)
 
-	if step.Become {
+	if step.ShouldBecome() {
 		cmd := fmt.Sprintf("ln %s %s", expandedSrc, renderedPath)
 		if err := h.executeSudoCommand(cmd, step, ec); err != nil {
 			result.Failed = true
@@ -581,7 +581,7 @@ func (h *Handler) setPermissions(ctx actions.Context, ec *executor.ExecutionCont
 
 	ctx.GetLogger().Debugf("  Setting permissions: %s (mode: %s)", renderedPath, h.formatMode(mode))
 
-	if step.Become {
+	if step.ShouldBecome() {
 		cmd := fmt.Sprintf("chmod %s %s", file.Mode, renderedPath)
 		if file.Recurse {
 			cmd = fmt.Sprintf("chmod -R %s %s", file.Mode, renderedPath)
@@ -631,7 +631,7 @@ func (h *Handler) setPermissions(ctx actions.Context, ec *executor.ExecutionCont
 // Become support helpers
 
 func (h *Handler) createFileWithBecome(path string, content []byte, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.Become {
+	if !step.ShouldBecome() {
 		// #nosec G306 -- Mode is user-configurable for provisioning
 		return os.WriteFile(path, content, mode)
 	}
@@ -661,7 +661,7 @@ func (h *Handler) createFileWithBecome(path string, content []byte, mode os.File
 }
 
 func (h *Handler) createDirectoryWithBecome(path string, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.Become {
+	if !step.ShouldBecome() {
 		return os.MkdirAll(path, mode)
 	}
 
@@ -675,7 +675,7 @@ func (h *Handler) createDirectoryWithBecome(path string, mode os.FileMode, step 
 }
 
 func (h *Handler) removeWithBecome(path string, isDir bool, _ bool, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.Become {
+	if !step.ShouldBecome() {
 		if isDir {
 			return os.RemoveAll(path)
 		}
@@ -699,7 +699,7 @@ func (h *Handler) setOwnership(path, owner, group string, recurse bool, step *co
 		return nil
 	}
 
-	if step.Become || runtime.GOOS != "linux" {
+	if step.ShouldBecome() || runtime.GOOS != "linux" {
 		return h.chownWithBecome(path, owner, group, recurse, step, ec)
 	}
 
@@ -726,7 +726,7 @@ func (h *Handler) setOwnership(path, owner, group string, recurse bool, step *co
 }
 
 func (h *Handler) chownWithBecome(path, owner, group string, recurse bool, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.Become {
+	if !step.ShouldBecome() {
 		return fmt.Errorf("chown requires become: true")
 	}
 

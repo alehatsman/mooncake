@@ -34,7 +34,7 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 // would update. Plan always reports would-change.
 func TestRun_UpgradeAlwaysWouldChange(t *testing.T) {
 	step := &config.Step{
-		Package: &config.Package{
+		Pkg: &config.Package{
 			Manager: "pacman", // explicit so plan doesn't have to auto-detect
 			Upgrade: true,
 		},

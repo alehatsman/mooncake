@@ -32,7 +32,7 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 // TestRun_PlanRendersMessage: plan renders the print message template
 // and surfaces it in Reason. Does not actually print.
 func TestRun_PlanRendersMessage(t *testing.T) {
-	step := &config.Step{Print: &config.PrintAction{Msg: "hello {{ who }}"}}
+	step := &config.Step{Log: &config.PrintAction{Msg: "hello {{ who }}"}}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
 	r := res.(*executor.Result)
 	if r.WouldChange {
@@ -46,7 +46,7 @@ func TestRun_PlanRendersMessage(t *testing.T) {
 // TestRun_PlanMultilinePreview: multi-line message is condensed to
 // the first non-empty line for the preview.
 func TestRun_PlanMultilinePreview(t *testing.T) {
-	step := &config.Step{Print: &config.PrintAction{Msg: "first\nsecond\n"}}
+	step := &config.Step{Log: &config.PrintAction{Msg: "first\nsecond\n"}}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
 	r := res.(*executor.Result)
 	if !strings.Contains(r.Reason, "first") || strings.Contains(r.Reason, "second") {

@@ -114,7 +114,7 @@ number_var: 42
 	}
 
 	step := config.Step{
-		IncludeVars: &varsFile,
+		VarsLoad: &varsFile,
 	}
 
 	ctx := &ExpansionContext{
@@ -152,7 +152,7 @@ environment: production
 	// Use template in path
 	varsPath := filepath.Join(tmpDir, "env-{{ env }}.yml")
 	step := config.Step{
-		IncludeVars: &varsPath,
+		VarsLoad: &varsPath,
 	}
 
 	ctx := &ExpansionContext{
@@ -179,7 +179,7 @@ func TestExpandIncludeVars_NilIncludeVars(t *testing.T) {
 	}
 
 	step := config.Step{
-		IncludeVars: nil,
+		VarsLoad: nil,
 	}
 
 	ctx := &ExpansionContext{
@@ -200,7 +200,7 @@ func TestExpandIncludeVars_FileNotFound(t *testing.T) {
 
 	nonexistentFile := "/nonexistent/vars.yml"
 	step := config.Step{
-		IncludeVars: &nonexistentFile,
+		VarsLoad: &nonexistentFile,
 	}
 
 	ctx := &ExpansionContext{

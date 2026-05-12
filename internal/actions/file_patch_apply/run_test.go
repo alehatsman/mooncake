@@ -46,7 +46,7 @@ func TestRun_PatchWouldApply(t *testing.T) {
  line3
 `
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  target,
 			Patch: patch,
 		},
@@ -92,7 +92,7 @@ func TestRun_AlreadyApplied(t *testing.T) {
  line3
 `
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  target,
 			Patch: patch,
 		},

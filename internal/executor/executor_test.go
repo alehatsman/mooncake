@@ -417,7 +417,7 @@ func TestMarkStepFailed(t *testing.T) {
 	}
 	step := config.Step{
 		Name:     "test",
-		Register: "result",
+		As: "result",
 	}
 
 	executor.MarkStepFailed(result, step, ec)
@@ -666,7 +666,7 @@ func TestDispatchStepAction(t *testing.T) {
 		},
 		{
 			name:    "file action",
-			step:    config.Step{File: &config.File{Path: tmpDir + "/test", State: "file"}},
+			step:    config.Step{FileWrite: &config.File{Path: tmpDir + "/test", State: "file"}},
 			wantErr: false,
 		},
 	}
@@ -701,7 +701,7 @@ func TestDryRunLogger(t *testing.T) {
 	dryRun.LogTemplateRender("/src", "/dest", 0644)
 	dryRun.LogVariableLoad(5, "/path/vars.yml")
 	dryRun.LogVariableSet(3)
-	dryRun.LogRegister(config.Step{Register: "result"})
+	dryRun.LogRegister(config.Step{As: "result"})
 
 	// If we got here without panicking, the tests pass
 }

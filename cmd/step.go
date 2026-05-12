@@ -57,8 +57,8 @@ func stepCommand() *cli.Command {
 				return fmt.Errorf("failed to parse step YAML: %w", err)
 			}
 
-			if c.Bool("become") {
-				step.Become = true
+			if c.Bool("become") && step.AsUser == "" {
+				step.AsUser = "root"
 			}
 
 			actionType := step.DetermineActionType()

@@ -124,7 +124,7 @@ func TestHandler_Validate(t *testing.T) {
 				Shell: &config.ShellAction{
 					Cmd: "echo hello",
 				},
-				RetryDelay: "1s",
+				Retry: &config.RetryPolicy{Delay: "1s"},
 			},
 			wantErr: false,
 		},
@@ -134,7 +134,7 @@ func TestHandler_Validate(t *testing.T) {
 				Shell: &config.ShellAction{
 					Cmd: "echo hello",
 				},
-				RetryDelay: "invalid",
+				Retry: &config.RetryPolicy{Delay: "invalid"},
 			},
 			wantErr: true,
 		},
@@ -520,7 +520,7 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 		Shell: &config.ShellAction{
 			Cmd: "ls /nonexistent/path/12345",
 		},
-		Retries: 2,
+		Retry: &config.RetryPolicy{Attempts: 2},
 	}
 
 	_, err := h.Execute(ctx, step)
@@ -546,8 +546,7 @@ func TestHandler_Execute_WithRetryDelay(t *testing.T) {
 		Shell: &config.ShellAction{
 			Cmd: "ls /nonexistent/path/12345",
 		},
-		Retries:    2,
-		RetryDelay: "100ms",
+		Retry: &config.RetryPolicy{Attempts: 2, Delay: "100ms"},
 	}
 
 	start := time.Now()
@@ -875,7 +874,7 @@ func TestHandler_DryRun(t *testing.T) {
 				Shell: &config.ShellAction{
 					Cmd: "systemctl start nginx",
 				},
-				Become: true,
+				AsUser: "root",
 			},
 			wantErr: false,
 		},

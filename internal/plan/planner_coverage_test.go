@@ -58,7 +58,7 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 		{
 			name: "file action with path and content",
 			step: config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:    "{{ dir }}/file.txt",
 					Content: "Content: {{ value }}",
 					State:   "present",
@@ -66,51 +66,51 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 			},
 			vars: map[string]interface{}{"dir": "/tmp", "value": "test"},
 			verify: func(t *testing.T, step config.Step) {
-				if step.File.Path != "/tmp/file.txt" {
-					t.Errorf("Expected '/tmp/file.txt', got '%s'", step.File.Path)
+				if step.FileWrite.Path != "/tmp/file.txt" {
+					t.Errorf("Expected '/tmp/file.txt', got '%s'", step.FileWrite.Path)
 				}
-				if step.File.Content != "Content: test" {
-					t.Errorf("Expected 'Content: test', got '%s'", step.File.Content)
+				if step.FileWrite.Content != "Content: test" {
+					t.Errorf("Expected 'Content: test', got '%s'", step.FileWrite.Content)
 				}
 			},
 		},
 		{
 			name: "file action with path only",
 			step: config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  "{{ dir }}/file2.txt",
 					State: "absent",
 				},
 			},
 			vars: map[string]interface{}{"dir": "/var"},
 			verify: func(t *testing.T, step config.Step) {
-				if step.File.Path != "/var/file2.txt" {
-					t.Errorf("Expected '/var/file2.txt', got '%s'", step.File.Path)
+				if step.FileWrite.Path != "/var/file2.txt" {
+					t.Errorf("Expected '/var/file2.txt', got '%s'", step.FileWrite.Path)
 				}
 			},
 		},
 		{
 			name: "template action with absolute path",
 			step: config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "/absolute/{{ name }}.j2",
 					Dest: "{{ output }}/result",
 				},
 			},
 			vars: map[string]interface{}{"name": "template", "output": "/tmp"},
 			verify: func(t *testing.T, step config.Step) {
-				if step.Template.Src != "/absolute/template.j2" {
-					t.Errorf("Expected '/absolute/template.j2', got '%s'", step.Template.Src)
+				if step.FileTemplate.Src != "/absolute/template.j2" {
+					t.Errorf("Expected '/absolute/template.j2', got '%s'", step.FileTemplate.Src)
 				}
-				if step.Template.Dest != "/tmp/result" {
-					t.Errorf("Expected '/tmp/result', got '%s'", step.Template.Dest)
+				if step.FileTemplate.Dest != "/tmp/result" {
+					t.Errorf("Expected '/tmp/result', got '%s'", step.FileTemplate.Dest)
 				}
 			},
 		},
 		{
 			name: "template action with relative path",
 			step: config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "{{ name }}.j2",
 					Dest: "{{ output }}/result",
 				},
@@ -118,36 +118,36 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 			vars: map[string]interface{}{"name": "template", "output": "/tmp"},
 			verify: func(t *testing.T, step config.Step) {
 				// Should be resolved to absolute path based on tmpDir
-				if !filepath.IsAbs(step.Template.Src) {
-					t.Errorf("Expected absolute path, got relative: '%s'", step.Template.Src)
+				if !filepath.IsAbs(step.FileTemplate.Src) {
+					t.Errorf("Expected absolute path, got relative: '%s'", step.FileTemplate.Src)
 				}
-				if step.Template.Dest != "/tmp/result" {
-					t.Errorf("Expected '/tmp/result', got '%s'", step.Template.Dest)
+				if step.FileTemplate.Dest != "/tmp/result" {
+					t.Errorf("Expected '/tmp/result', got '%s'", step.FileTemplate.Dest)
 				}
 			},
 		},
 		{
 			name: "copy action with absolute path",
 			step: config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "/absolute/{{ file }}.txt",
 					Dest: "{{ dst }}/copy.txt",
 				},
 			},
 			vars: map[string]interface{}{"file": "source", "dst": "/dest"},
 			verify: func(t *testing.T, step config.Step) {
-				if step.Copy.Src != "/absolute/source.txt" {
-					t.Errorf("Expected '/absolute/source.txt', got '%s'", step.Copy.Src)
+				if step.FileCopy.Src != "/absolute/source.txt" {
+					t.Errorf("Expected '/absolute/source.txt', got '%s'", step.FileCopy.Src)
 				}
-				if step.Copy.Dest != "/dest/copy.txt" {
-					t.Errorf("Expected '/dest/copy.txt', got '%s'", step.Copy.Dest)
+				if step.FileCopy.Dest != "/dest/copy.txt" {
+					t.Errorf("Expected '/dest/copy.txt', got '%s'", step.FileCopy.Dest)
 				}
 			},
 		},
 		{
 			name: "copy action with relative path",
 			step: config.Step{
-				Copy: &config.Copy{
+				FileCopy: &config.Copy{
 					Src:  "{{ file }}.txt",
 					Dest: "{{ dst }}/copy.txt",
 				},
@@ -155,36 +155,36 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 			vars: map[string]interface{}{"file": "source", "dst": "/dest"},
 			verify: func(t *testing.T, step config.Step) {
 				// Should be resolved to absolute path
-				if !filepath.IsAbs(step.Copy.Src) {
-					t.Errorf("Expected absolute path, got relative: '%s'", step.Copy.Src)
+				if !filepath.IsAbs(step.FileCopy.Src) {
+					t.Errorf("Expected absolute path, got relative: '%s'", step.FileCopy.Src)
 				}
-				if step.Copy.Dest != "/dest/copy.txt" {
-					t.Errorf("Expected '/dest/copy.txt', got '%s'", step.Copy.Dest)
+				if step.FileCopy.Dest != "/dest/copy.txt" {
+					t.Errorf("Expected '/dest/copy.txt', got '%s'", step.FileCopy.Dest)
 				}
 			},
 		},
 		{
 			name: "unarchive action with absolute path",
 			step: config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "/archive/{{ name }}.tar.gz",
 					Dest: "{{ extract }}/files",
 				},
 			},
 			vars: map[string]interface{}{"name": "backup", "extract": "/tmp"},
 			verify: func(t *testing.T, step config.Step) {
-				if step.Unarchive.Src != "/archive/backup.tar.gz" {
-					t.Errorf("Expected '/archive/backup.tar.gz', got '%s'", step.Unarchive.Src)
+				if step.FileUnarchive.Src != "/archive/backup.tar.gz" {
+					t.Errorf("Expected '/archive/backup.tar.gz', got '%s'", step.FileUnarchive.Src)
 				}
-				if step.Unarchive.Dest != "/tmp/files" {
-					t.Errorf("Expected '/tmp/files', got '%s'", step.Unarchive.Dest)
+				if step.FileUnarchive.Dest != "/tmp/files" {
+					t.Errorf("Expected '/tmp/files', got '%s'", step.FileUnarchive.Dest)
 				}
 			},
 		},
 		{
 			name: "unarchive action with relative path",
 			step: config.Step{
-				Unarchive: &config.Unarchive{
+				FileUnarchive: &config.Unarchive{
 					Src:  "{{ name }}.tar.gz",
 					Dest: "{{ extract }}/files",
 				},
@@ -192,11 +192,11 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 			vars: map[string]interface{}{"name": "backup", "extract": "/tmp"},
 			verify: func(t *testing.T, step config.Step) {
 				// Should be resolved to absolute path
-				if !filepath.IsAbs(step.Unarchive.Src) {
-					t.Errorf("Expected absolute path, got relative: '%s'", step.Unarchive.Src)
+				if !filepath.IsAbs(step.FileUnarchive.Src) {
+					t.Errorf("Expected absolute path, got relative: '%s'", step.FileUnarchive.Src)
 				}
-				if step.Unarchive.Dest != "/tmp/files" {
-					t.Errorf("Expected '/tmp/files', got '%s'", step.Unarchive.Dest)
+				if step.FileUnarchive.Dest != "/tmp/files" {
+					t.Errorf("Expected '/tmp/files', got '%s'", step.FileUnarchive.Dest)
 				}
 			},
 		},

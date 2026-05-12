@@ -180,7 +180,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid preset action with name only",
 			step: &config.Step{
-				Preset: &config.PresetInvocation{
+				Use: &config.PresetInvocation{
 					Name: "test-preset",
 				},
 			},
@@ -189,7 +189,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid preset action with parameters",
 			step: &config.Step{
-				Preset: &config.PresetInvocation{
+				Use: &config.PresetInvocation{
 					Name: "test-preset",
 					With: map[string]interface{}{
 						"param1": "value1",
@@ -201,14 +201,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil preset action",
 			step: &config.Step{
-				Preset: nil,
+				Use: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty preset name",
 			step: &config.Step{
-				Preset: &config.PresetInvocation{
+				Use: &config.PresetInvocation{
 					Name: "",
 				},
 			},
@@ -234,7 +234,7 @@ func TestHandler_Execute_InvalidContextType(t *testing.T) {
 
 	step := &config.Step{
 		Name: "Test invalid context",
-		Preset: &config.PresetInvocation{
+		Use: &config.PresetInvocation{
 			Name: "simple-test",
 		},
 	}
@@ -258,7 +258,7 @@ func TestHandler_Execute_NonexistentPreset(t *testing.T) {
 
 	step := &config.Step{
 		Name: "Test nonexistent preset",
-		Preset: &config.PresetInvocation{
+		Use: &config.PresetInvocation{
 			Name: "does-not-exist",
 		},
 	}
@@ -423,7 +423,7 @@ func TestHandler_DryRun(t *testing.T) {
 
 			step := &config.Step{
 				Name:   "Test dry-run",
-				Preset: tt.preset,
+				Use: tt.preset,
 			}
 
 			// DryRun should not error even for nonexistent presets
@@ -451,7 +451,7 @@ func TestHandler_DryRun_InvalidContextType(t *testing.T) {
 
 	step := &config.Step{
 		Name: "Test dry-run invalid context",
-		Preset: &config.PresetInvocation{
+		Use: &config.PresetInvocation{
 			Name: "simple-test",
 		},
 	}

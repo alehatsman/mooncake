@@ -56,42 +56,42 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid include_vars action",
 			step: &config.Step{
-				IncludeVars: stringPtr("vars.yml"),
+				VarsLoad: stringPtr("vars.yml"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "nil include_vars action",
 			step: &config.Step{
-				IncludeVars: nil,
+				VarsLoad: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty include_vars path",
 			step: &config.Step{
-				IncludeVars: stringPtr(""),
+				VarsLoad: stringPtr(""),
 			},
 			wantErr: true,
 		},
 		{
 			name: "path with tilde",
 			step: &config.Step{
-				IncludeVars: stringPtr("~/vars.yml"),
+				VarsLoad: stringPtr("~/vars.yml"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "absolute path",
 			step: &config.Step{
-				IncludeVars: stringPtr("/tmp/vars.yml"),
+				VarsLoad: stringPtr("/tmp/vars.yml"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "relative path",
 			step: &config.Step{
-				IncludeVars: stringPtr("./vars.yml"),
+				VarsLoad: stringPtr("./vars.yml"),
 			},
 			wantErr: false,
 		},
@@ -238,7 +238,7 @@ func TestHandler_Execute(t *testing.T) {
 			}
 
 			step := &config.Step{
-				IncludeVars: stringPtr(tmpFile.Name()),
+				VarsLoad: stringPtr(tmpFile.Name()),
 			}
 
 			result, err := h.Execute(ctx, step)
@@ -376,7 +376,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			}
 
 			step := &config.Step{
-				IncludeVars: stringPtr(tt.filePath),
+				VarsLoad: stringPtr(tt.filePath),
 			}
 
 			result, err := h.Execute(ctx, step)
@@ -437,7 +437,7 @@ func TestHandler_Execute_FileNotFound(t *testing.T) {
 	}
 
 	step := &config.Step{
-		IncludeVars: stringPtr("/nonexistent/vars.yml"),
+		VarsLoad: stringPtr("/nonexistent/vars.yml"),
 	}
 
 	_, err = h.Execute(ctx, step)
@@ -477,7 +477,7 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 	}
 
 	step := &config.Step{
-		IncludeVars: stringPtr(tmpFile.Name()),
+		VarsLoad: stringPtr(tmpFile.Name()),
 	}
 
 	_, err = h.Execute(ctx, step)
@@ -506,7 +506,7 @@ func TestHandler_Execute_NilIncludeVars(t *testing.T) {
 	}
 
 	step := &config.Step{
-		IncludeVars: nil,
+		VarsLoad: nil,
 	}
 
 	// Note: This will panic because handler doesn't check for nil before dereferencing
@@ -553,7 +553,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 
 	step := &config.Step{
-		IncludeVars: stringPtr(tmpFile.Name()),
+		VarsLoad: stringPtr(tmpFile.Name()),
 	}
 
 	result, err := h.Execute(ctx, step)
@@ -583,7 +583,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 	mockCtx := testutil.NewMockContext()
 
 	step := &config.Step{
-		IncludeVars: stringPtr("/tmp/vars.yml"),
+		VarsLoad: stringPtr("/tmp/vars.yml"),
 	}
 
 	_, err := h.Execute(mockCtx, step)
@@ -689,7 +689,7 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			step := &config.Step{
-				IncludeVars: stringPtr(tmpFilePath),
+				VarsLoad: stringPtr(tmpFilePath),
 			}
 
 			err = h.DryRun(ctx, step)
@@ -746,7 +746,7 @@ func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 	}
 
 	step := &config.Step{
-		IncludeVars: nil,
+		VarsLoad: nil,
 	}
 
 	// Note: This will panic because handler doesn't check for nil before dereferencing
@@ -768,7 +768,7 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 	mockCtx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		IncludeVars: stringPtr("/tmp/vars.yml"),
+		VarsLoad: stringPtr("/tmp/vars.yml"),
 	}
 
 	err := h.DryRun(mockCtx, step)
@@ -800,7 +800,7 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 
 	// Use a path with undefined variable (will fail expansion)
 	step := &config.Step{
-		IncludeVars: stringPtr("{{ undefined_var }}/vars.yml"),
+		VarsLoad: stringPtr("{{ undefined_var }}/vars.yml"),
 	}
 
 	// Should not error, just use original path

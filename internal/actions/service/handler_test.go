@@ -67,7 +67,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid service with name and state",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: ServiceStateStarted,
 				},
@@ -77,7 +77,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid service with enabled",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:    "nginx",
 					Enabled: boolPtr(true),
 				},
@@ -87,14 +87,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil service action",
 			step: &config.Step{
-				Service: nil,
+				OsService: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing service name",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					State: ServiceStateStarted,
 				},
 			},
@@ -103,7 +103,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid state",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: "invalid-state",
 				},
@@ -113,7 +113,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid state: started",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: ServiceStateStarted,
 				},
@@ -123,7 +123,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid state: stopped",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: ServiceStateStopped,
 				},
@@ -133,7 +133,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid state: restarted",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: ServiceStateRestarted,
 				},
@@ -143,7 +143,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid state: reloaded",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: ServiceStateReloaded,
 				},
@@ -153,7 +153,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "service with unit file",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name: "myapp",
 					Unit: &config.ServiceUnit{
 						Content: "[Service]\nType=simple",
@@ -165,7 +165,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "service with drop-in",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name: "myapp",
 					Dropin: &config.ServiceDropin{
 						Name:    "10-env.conf",
@@ -192,7 +192,7 @@ func TestHandler_Execute_InvalidContext(t *testing.T) {
 	ctx := testutil.NewMockContext()
 
 	step := &config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "nginx",
 			State: ServiceStateStarted,
 		},
@@ -218,7 +218,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "service with state",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "nginx",
 					State: ServiceStateStarted,
 				},
@@ -228,7 +228,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "service with enabled",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:    "nginx",
 					Enabled: boolPtr(true),
 				},
@@ -238,7 +238,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "service with unit file",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name: "myapp",
 					Unit: &config.ServiceUnit{
 						Content: "[Service]\nType=simple",
@@ -251,7 +251,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "service with drop-in",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name: "myapp",
 					Dropin: &config.ServiceDropin{
 						Name:    "10-env.conf",
@@ -264,7 +264,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "service with daemon reload",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:         "nginx",
 					State:        ServiceStateRestarted,
 					DaemonReload: true,
@@ -275,7 +275,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "service with template name",
 			step: &config.Step{
-				Service: &config.ServiceAction{
+				OsService: &config.ServiceAction{
 					Name:  "{{ service_name }}",
 					State: ServiceStateStarted,
 				},
@@ -285,7 +285,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "nil service action",
 			step: &config.Step{
-				Service: nil,
+				OsService: nil,
 			},
 			wantErr: true,
 		},
@@ -317,7 +317,7 @@ func TestHandler_DryRun_InvalidContext(t *testing.T) {
 	ctx := testutil.NewMockContext()
 
 	step := &config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "nginx",
 			State: ServiceStateStarted,
 		},
@@ -334,7 +334,7 @@ func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	step := &config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "{{ invalid.syntax",
 			State: ServiceStateStarted,
 		},
@@ -372,7 +372,7 @@ func TestValidateServiceStates(t *testing.T) {
 	h := &Handler{}
 	for _, state := range validStates {
 		step := &config.Step{
-			Service: &config.ServiceAction{
+			OsService: &config.ServiceAction{
 				Name:  "test",
 				State: state,
 			},
@@ -386,7 +386,7 @@ func TestValidateServiceStates(t *testing.T) {
 func TestHandleService_NilServiceAction(t *testing.T) {
 	ctx := newMockExecutionContext()
 	step := config.Step{
-		Service: nil,
+		OsService: nil,
 	}
 
 	err := HandleService(step, ctx)
@@ -402,7 +402,7 @@ func TestHandleService_NilServiceAction(t *testing.T) {
 func TestHandleService_EmptyServiceName(t *testing.T) {
 	ctx := newMockExecutionContext()
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name: "",
 		},
 	}
@@ -420,7 +420,7 @@ func TestHandleService_EmptyServiceName(t *testing.T) {
 func TestHandleService_InvalidServiceName_Template(t *testing.T) {
 	ctx := newMockExecutionContext()
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name: "{{ invalid.syntax",
 		},
 	}
@@ -434,7 +434,7 @@ func TestHandleService_InvalidServiceName_Template(t *testing.T) {
 func TestHandleService_InvalidState(t *testing.T) {
 	ctx := newMockExecutionContext()
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "nginx",
 			State: "invalid-state",
 		},
@@ -638,11 +638,11 @@ func TestHandleService_PlatformSupport(t *testing.T) {
 	ctx.SudoPass = "test" // Provide sudo password to get past initial checks
 
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "test-service",
 			State: ServiceStateStarted,
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	err := HandleService(step, ctx)
@@ -682,7 +682,7 @@ func TestHandleService_TemplateRendering(t *testing.T) {
 	ctx.Variables["svc_state"] = "started"
 
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "{{ svc_name }}",
 			State: ServiceStateStarted,
 		},
@@ -705,11 +705,11 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 	ctx.SudoPass = "" // No password provided
 
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name:  "nginx",
 			State: ServiceStateStarted,
 		},
-		Become: true,
+		AsUser: "root",
 	}
 
 	err := HandleService(step, ctx)
@@ -725,7 +725,7 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 func TestHandleWindowsService(t *testing.T) {
 	ctx := newMockExecutionContext()
 	step := config.Step{
-		Service: &config.ServiceAction{
+		OsService: &config.ServiceAction{
 			Name: "test",
 		},
 	}
@@ -744,7 +744,7 @@ func TestMarkStepFailed(t *testing.T) {
 	ctx := newMockExecutionContext()
 	result := executor.NewResult()
 	step := config.Step{
-		Register: "test_result",
+		As: "test_result",
 	}
 
 	markStepFailed(result, step, ctx)

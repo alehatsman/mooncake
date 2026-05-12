@@ -69,7 +69,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid configuration",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Path:     "/tmp/test.txt",
 					Anchor:   "import",
 					Position: "after",
@@ -81,14 +81,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil file_insert",
 			step: &config.Step{
-				FileInsert: nil,
+				TextInsert: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing path",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Anchor:   "import",
 					Position: "after",
 					Content:  "new line",
@@ -99,7 +99,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing anchor",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Path:     "/tmp/test.txt",
 					Position: "after",
 					Content:  "new line",
@@ -110,7 +110,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing position",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Path:    "/tmp/test.txt",
 					Anchor:  "import",
 					Content: "new line",
@@ -121,7 +121,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing content",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Path:     "/tmp/test.txt",
 					Anchor:   "import",
 					Position: "after",
@@ -132,7 +132,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid position",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Path:     "/tmp/test.txt",
 					Anchor:   "import",
 					Position: "invalid",
@@ -144,7 +144,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid regex",
 			step: &config.Step{
-				FileInsert: &config.FileInsert{
+				TextInsert: &config.FileInsert{
 					Path:     "/tmp/test.txt",
 					Anchor:   "[invalid(regex",
 					Position: "after",
@@ -178,7 +178,7 @@ func TestHandler_Execute_InsertAfter(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     testFile,
 			Anchor:   "import foo",
 			Position: "after",
@@ -220,7 +220,7 @@ func TestHandler_Execute_InsertBefore(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     testFile,
 			Anchor:   "export default",
 			Position: "before",
@@ -262,7 +262,7 @@ func TestHandler_Execute_RegexAnchor(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     testFile,
 			Anchor:   `^import.*from`,
 			Position: "after",
@@ -305,7 +305,7 @@ func TestHandler_Execute_AllowMultiple(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:          testFile,
 			Anchor:        "import",
 			Position:      "after",
@@ -348,7 +348,7 @@ func TestHandler_Execute_SingleMatch(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:          testFile,
 			Anchor:        "import",
 			Position:      "after",
@@ -391,7 +391,7 @@ func TestHandler_Execute_AnchorNotFound(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     testFile,
 			Anchor:   "not found",
 			Position: "after",
@@ -417,7 +417,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:     testFile,
 			Anchor:   "anchor",
 			Position: "after",
@@ -450,7 +450,7 @@ func TestHandler_DryRun(t *testing.T) {
 	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		FileInsert: &config.FileInsert{
+		TextInsert: &config.FileInsert{
 			Path:          "/tmp/test.txt",
 			Anchor:        "import",
 			Position:      "after",

@@ -53,7 +53,7 @@ func TestRun_DirectoryModeParity(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "dir")
 			step := &config.Step{
-				File: &config.File{
+				FileWrite: &config.File{
 					Path:  path,
 					State: "directory",
 					Mode:  tc.mode,
@@ -101,7 +101,7 @@ func TestRun_FileContentParity(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.txt")
 	content := "hello mooncake"
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:    path,
 			Content: content,
 			Mode:    "0644",
@@ -146,7 +146,7 @@ func TestRun_FileContentParity(t *testing.T) {
 func TestRun_IdempotentDirectory(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "dir")
 	step := &config.Step{
-		File: &config.File{
+		FileWrite: &config.File{
 			Path:  path,
 			State: "directory",
 			Mode:  "0755",

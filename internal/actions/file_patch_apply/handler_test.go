@@ -69,7 +69,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid inline patch",
 			step: &config.Step{
-				FilePatchApply: &config.FilePatchApply{
+				TextPatch: &config.FilePatchApply{
 					Path:  "/tmp/test.txt",
 					Patch: "@@ -1,3 +1,3 @@\n line1\n-old\n+new\n line3",
 				},
@@ -79,7 +79,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid patch file",
 			step: &config.Step{
-				FilePatchApply: &config.FilePatchApply{
+				TextPatch: &config.FilePatchApply{
 					Path:      "/tmp/test.txt",
 					PatchFile: "/tmp/test.patch",
 				},
@@ -89,14 +89,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil file_patch_apply",
 			step: &config.Step{
-				FilePatchApply: nil,
+				TextPatch: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing path",
 			step: &config.Step{
-				FilePatchApply: &config.FilePatchApply{
+				TextPatch: &config.FilePatchApply{
 					Patch: "some patch",
 				},
 			},
@@ -105,7 +105,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing patch and patch_file",
 			step: &config.Step{
-				FilePatchApply: &config.FilePatchApply{
+				TextPatch: &config.FilePatchApply{
 					Path: "/tmp/test.txt",
 				},
 			},
@@ -114,7 +114,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "both patch and patch_file specified",
 			step: &config.Step{
-				FilePatchApply: &config.FilePatchApply{
+				TextPatch: &config.FilePatchApply{
 					Path:      "/tmp/test.txt",
 					Patch:     "patch content",
 					PatchFile: "/tmp/test.patch",
@@ -125,7 +125,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid context_lines",
 			step: &config.Step{
-				FilePatchApply: &config.FilePatchApply{
+				TextPatch: &config.FilePatchApply{
 					Path:         "/tmp/test.txt",
 					Patch:        "patch",
 					ContextLines: intPtr(-1),
@@ -164,7 +164,7 @@ func TestHandler_Execute_SimpleInlinePatch(t *testing.T) {
  line3`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  testFile,
 			Patch: patch,
 		},
@@ -215,7 +215,7 @@ func TestHandler_Execute_PatchFromFile(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:      testFile,
 			PatchFile: patchFile,
 		},
@@ -269,7 +269,7 @@ func TestHandler_Execute_MultipleHunks(t *testing.T) {
  footer`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  testFile,
 			Patch: patch,
 		},
@@ -316,7 +316,7 @@ func TestHandler_Execute_StrictMode(t *testing.T) {
  line3`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:   testFile,
 			Patch:  patch,
 			Strict: true,
@@ -346,7 +346,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
  content`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:   testFile,
 			Patch:  patch,
 			Backup: true,
@@ -390,7 +390,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
  line3`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  testFile,
 			Patch: patch,
 		},
@@ -426,7 +426,7 @@ func TestHandler_Execute_AdditionPatch(t *testing.T) {
  line3`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  testFile,
 			Patch: patch,
 		},
@@ -472,7 +472,7 @@ func TestHandler_Execute_DeletionPatch(t *testing.T) {
  line3`
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:  testFile,
 			Patch: patch,
 		},
@@ -506,7 +506,7 @@ func TestHandler_DryRun(t *testing.T) {
 	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		FilePatchApply: &config.FilePatchApply{
+		TextPatch: &config.FilePatchApply{
 			Path:   "/tmp/test.txt",
 			Patch:  "@@ -1,1 +1,1 @@\n-old\n+new",
 			Strict: true,

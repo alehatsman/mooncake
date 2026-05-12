@@ -60,11 +60,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the repo_apply_patchset configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.RepoApplyPatchset == nil {
+	if step.RepoPatch == nil {
 		return fmt.Errorf("repo_apply_patchset configuration is nil")
 	}
 
-	raps := step.RepoApplyPatchset
+	raps := step.RepoPatch
 
 	// Either patchset or patchset_file must be specified
 	if raps.Patchset == "" && raps.PatchsetFile == "" {
@@ -82,7 +82,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the repo_apply_patchset action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	raps := step.RepoApplyPatchset
+	raps := step.RepoPatch
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -197,7 +197,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would happen without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	raps := step.RepoApplyPatchset
+	raps := step.RepoPatch
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

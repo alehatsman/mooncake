@@ -265,15 +265,15 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 // expandStep dispatches a single step to the appropriate expansion handler
 func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan, stepIndex int) error {
 	// Handle include directives
-	if step.Include != nil {
+	if step.Import != nil {
 		return p.expandInclude(step, ctx, plan, stepIndex)
 	}
 
 	// Handle loop constructs
-	if step.WithItems != nil {
+	if step.ForEach != nil {
 		return p.expandWithItems(step, ctx, plan)
 	}
-	if step.WithFileTree != nil {
+	if step.ForEachFile != nil {
 		return p.expandWithFileTree(step, ctx, plan)
 	}
 
@@ -284,7 +284,7 @@ func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan
 		}
 		return p.expandVars(step, ctx)
 	}
-	if step.IncludeVars != nil {
+	if step.VarsLoad != nil {
 		if !p.shouldProcessAtPlanTime(step, ctx) {
 			return nil // Skip this step
 		}
@@ -313,12 +313,12 @@ func (p *Planner) expandSteps(steps []config.Step, ctx *ExpansionContext, plan *
 
 // expandInclude expands an include directive with cycle detection
 func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *Plan, stepIndex int) error {
-	if step.Include == nil {
+	if step.Import == nil {
 		return fmt.Errorf("include step has nil Include field")
 	}
 
 	// Render the include path template
-	includePath, err := p.template.Render(*step.Include, ctx.Variables)
+	includePath, err := p.template.Render(*step.Import, ctx.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to render include path: %w", err)
 	}
@@ -391,12 +391,12 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 
 // expandWithItems expands a step with with_items loop
 func (p *Planner) expandWithItems(step config.Step, ctx *ExpansionContext, plan *Plan) error {
-	if step.WithItems == nil {
+	if step.ForEach == nil {
 		return fmt.Errorf("with_items step has nil WithItems field")
 	}
 
 	// Render the items expression
-	itemsExpr, err := p.template.Render(*step.WithItems, ctx.Variables)
+	itemsExpr, err := p.template.Render(*step.ForEach, ctx.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to render with_items expression: %w", err)
 	}
@@ -417,7 +417,7 @@ func (p *Planner) expandWithItems(step config.Step, ctx *ExpansionContext, plan 
 			Index:          i,
 			First:          i == 0,
 			Last:           i == len(items)-1,
-			LoopExpression: *step.WithItems,
+			LoopExpression: *step.ForEach,
 		}
 
 		// Create new context with loop variables
@@ -436,12 +436,12 @@ func (p *Planner) expandWithItems(step config.Step, ctx *ExpansionContext, plan 
 
 // expandWithFileTree expands a step with with_filetree loop
 func (p *Planner) expandWithFileTree(step config.Step, ctx *ExpansionContext, plan *Plan) error {
-	if step.WithFileTree == nil {
+	if step.ForEachFile == nil {
 		return fmt.Errorf("with_filetree step has nil WithFileTree field")
 	}
 
 	// Render the path template
-	treePath, err := p.template.Render(*step.WithFileTree, ctx.Variables)
+	treePath, err := p.template.Render(*step.ForEachFile, ctx.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to render with_filetree path: %w", err)
 	}
@@ -473,7 +473,7 @@ func (p *Planner) expandWithFileTree(step config.Step, ctx *ExpansionContext, pl
 			Index:          i,
 			First:          i == 0,
 			Last:           i == len(items)-1,
-			LoopExpression: *step.WithFileTree,
+			LoopExpression: *step.ForEachFile,
 			Depth:          depth,
 		}
 
@@ -516,12 +516,12 @@ func (p *Planner) expandVars(step config.Step, ctx *ExpansionContext) error {
 
 // expandIncludeVars loads variables from an external file
 func (p *Planner) expandIncludeVars(step config.Step, ctx *ExpansionContext) error {
-	if step.IncludeVars == nil {
+	if step.VarsLoad == nil {
 		return fmt.Errorf("include_vars step has nil IncludeVars field")
 	}
 
 	// Render the vars path template
-	varsPath, err := p.template.Render(*step.IncludeVars, ctx.Variables)
+	varsPath, err := p.template.Render(*step.VarsLoad, ctx.Variables)
 	if err != nil {
 		return fmt.Errorf("failed to render include_vars path: %w", err)
 	}
@@ -614,12 +614,12 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 	}
 
 	// Clear loop directives (already expanded)
-	step.WithItems = nil
-	step.WithFileTree = nil
+	step.ForEach = nil
+	step.ForEachFile = nil
 
 	// Clear compile-time directives (already processed)
-	step.Include = nil
-	step.IncludeVars = nil
+	step.Import = nil
+	step.VarsLoad = nil
 	step.Vars = nil
 
 	// Add plan metadata
@@ -653,34 +653,34 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		step.Shell.Cmd = command
 	}
 
-	if step.File != nil {
+	if step.FileWrite != nil {
 		// Make a deep copy of File to avoid modifying shared pointer
-		fileCopy := *step.File
-		step.File = &fileCopy
+		fileCopy := *step.FileWrite
+		step.FileWrite = &fileCopy
 
 		// Render file fields
-		path, err := p.template.Render(step.File.Path, ctx.Variables)
+		path, err := p.template.Render(step.FileWrite.Path, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render file path: %w", err)
 		}
-		step.File.Path = path
+		step.FileWrite.Path = path
 
-		if step.File.Content != "" {
-			content, err := p.template.Render(step.File.Content, ctx.Variables)
+		if step.FileWrite.Content != "" {
+			content, err := p.template.Render(step.FileWrite.Content, ctx.Variables)
 			if err != nil {
 				return fmt.Errorf("failed to render file content: %w", err)
 			}
-			step.File.Content = content
+			step.FileWrite.Content = content
 		}
 	}
 
-	if step.Template != nil {
+	if step.FileTemplate != nil {
 		// Make a deep copy of Template to avoid modifying shared pointer
-		templateCopy := *step.Template
-		step.Template = &templateCopy
+		templateCopy := *step.FileTemplate
+		step.FileTemplate = &templateCopy
 
 		// Render and resolve template fields
-		src, err := p.template.Render(step.Template.Src, ctx.Variables)
+		src, err := p.template.Render(step.FileTemplate.Src, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render template src: %w", err)
 		}
@@ -688,22 +688,22 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(ctx.CurrentDir, src)
 		}
-		step.Template.Src = src
+		step.FileTemplate.Src = src
 
-		dest, err := p.template.Render(step.Template.Dest, ctx.Variables)
+		dest, err := p.template.Render(step.FileTemplate.Dest, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render template dest: %w", err)
 		}
-		step.Template.Dest = dest
+		step.FileTemplate.Dest = dest
 	}
 
-	if step.Copy != nil {
+	if step.FileCopy != nil {
 		// Make a deep copy of Copy to avoid modifying shared pointer
-		copyCopy := *step.Copy
-		step.Copy = &copyCopy
+		copyCopy := *step.FileCopy
+		step.FileCopy = &copyCopy
 
 		// Render and resolve source path
-		src, err := p.template.Render(step.Copy.Src, ctx.Variables)
+		src, err := p.template.Render(step.FileCopy.Src, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render copy src: %w", err)
 		}
@@ -711,23 +711,23 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(ctx.CurrentDir, src)
 		}
-		step.Copy.Src = src
+		step.FileCopy.Src = src
 
 		// Render destination path
-		dest, err := p.template.Render(step.Copy.Dest, ctx.Variables)
+		dest, err := p.template.Render(step.FileCopy.Dest, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render copy dest: %w", err)
 		}
-		step.Copy.Dest = dest
+		step.FileCopy.Dest = dest
 	}
 
-	if step.Unarchive != nil {
+	if step.FileUnarchive != nil {
 		// Make a deep copy of Unarchive to avoid modifying shared pointer
-		unarchiveCopy := *step.Unarchive
-		step.Unarchive = &unarchiveCopy
+		unarchiveCopy := *step.FileUnarchive
+		step.FileUnarchive = &unarchiveCopy
 
 		// Render and resolve source path
-		src, err := p.template.Render(step.Unarchive.Src, ctx.Variables)
+		src, err := p.template.Render(step.FileUnarchive.Src, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render unarchive src: %w", err)
 		}
@@ -735,22 +735,22 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(ctx.CurrentDir, src)
 		}
-		step.Unarchive.Src = src
+		step.FileUnarchive.Src = src
 
 		// Render destination path
-		dest, err := p.template.Render(step.Unarchive.Dest, ctx.Variables)
+		dest, err := p.template.Render(step.FileUnarchive.Dest, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render unarchive dest: %w", err)
 		}
-		step.Unarchive.Dest = dest
+		step.FileUnarchive.Dest = dest
 	}
 
-	if step.File != nil && step.File.Src != "" {
+	if step.FileWrite != nil && step.FileWrite.Src != "" {
 		// Make a deep copy of File to avoid modifying shared pointer (already done above)
 		// Just need to resolve the Src field if it's a link operation
 
 		// Render and resolve source path
-		src, err := p.template.Render(step.File.Src, ctx.Variables)
+		src, err := p.template.Render(step.FileWrite.Src, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to render file src: %w", err)
 		}
@@ -758,13 +758,13 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(ctx.CurrentDir, src)
 		}
-		step.File.Src = src
+		step.FileWrite.Src = src
 	}
 
-	if step.Service != nil {
+	if step.OsService != nil {
 		// Make a deep copy of Service to avoid modifying shared pointer
-		serviceCopy := *step.Service
-		step.Service = &serviceCopy
+		serviceCopy := *step.OsService
+		step.OsService = &serviceCopy
 
 		// Resolve unit.src_template if present
 		if serviceCopy.Unit != nil && serviceCopy.Unit.SrcTemplate != "" {
@@ -792,7 +792,7 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 			serviceCopy.Dropin.SrcTemplate = rendered
 		}
 
-		step.Service = &serviceCopy
+		step.OsService = &serviceCopy
 	}
 
 	return nil

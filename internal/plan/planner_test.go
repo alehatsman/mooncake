@@ -889,12 +889,12 @@ steps:
 	step1 := fileSteps[0]
 	step2 := fileSteps[1]
 
-	if step1.Template == nil || step2.Template == nil {
+	if step1.FileTemplate == nil || step2.FileTemplate == nil {
 		t.Fatal("Template action is nil")
 	}
 
-	src1 := step1.Template.Src
-	src2 := step2.Template.Src
+	src1 := step1.FileTemplate.Src
+	src2 := step2.FileTemplate.Src
 
 	if src1 == src2 {
 		t.Errorf("Bug detected: both steps have the same template src: %s\nThis indicates shared pointer bug", src1)

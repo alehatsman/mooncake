@@ -82,7 +82,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid download action",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "https://example.com/file.txt",
 					Dest: "/tmp/file.txt",
 				},
@@ -92,14 +92,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil download action",
 			step: &config.Step{
-				Download: nil,
+				FileDownload: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing URL",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					Dest: "/tmp/file.txt",
 				},
 			},
@@ -108,7 +108,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing dest",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL: "https://example.com/file.txt",
 				},
 			},
@@ -117,7 +117,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty URL",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "",
 					Dest: "/tmp/file.txt",
 				},
@@ -127,7 +127,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty dest",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "https://example.com/file.txt",
 					Dest: "",
 				},
@@ -137,7 +137,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with checksum",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:      "https://example.com/file.txt",
 					Dest:     "/tmp/file.txt",
 					Checksum: "md5:d8e8fca2dc0f896fd7cb4cb0031ba249",
@@ -148,7 +148,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with headers",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "https://example.com/file.txt",
 					Dest: "/tmp/file.txt",
 					Headers: map[string]string{
@@ -187,7 +187,7 @@ func TestHandler_Execute_BasicDownload(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  server.URL,
 			Dest: destPath,
 		},
@@ -275,7 +275,7 @@ func TestHandler_Execute_WithChecksum(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      server.URL,
 			Dest:     destPath,
 			Checksum: md5sum,
@@ -315,7 +315,7 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      server.URL,
 			Dest:     destPath,
 			Checksum: wrongChecksum,
@@ -366,7 +366,7 @@ func TestHandler_Execute_IdempotencyWithChecksum(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      server.URL,
 			Dest:     destPath,
 			Checksum: sha256sum,
@@ -410,7 +410,7 @@ func TestHandler_Execute_ForceRedownload(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:   server.URL,
 			Dest:  destPath,
 			Force: true,
@@ -458,7 +458,7 @@ func TestHandler_Execute_WithCustomHeaders(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  server.URL,
 			Dest: destPath,
 			Headers: map[string]string{
@@ -492,7 +492,7 @@ func TestHandler_Execute_HTTPError(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  server.URL,
 			Dest: destPath,
 		},
@@ -529,7 +529,7 @@ func TestHandler_Execute_WithTimeout(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:     server.URL,
 			Dest:    destPath,
 			Timeout: "50ms",
@@ -570,7 +570,7 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:     server.URL,
 			Dest:    destPath,
 			Retries: 2,
@@ -611,12 +611,12 @@ func TestHandler_Execute_RetryExhausted(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:     server.URL,
 			Dest:    destPath,
 			Retries: 2,
 		},
-		RetryDelay: "10ms",
+		Retry: &config.RetryPolicy{Delay: "10ms"},
 	}
 
 	result, err := h.Execute(ec, step)
@@ -646,7 +646,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  server.URL,
 			Dest: destPath,
 			Mode: "0600",
@@ -692,7 +692,7 @@ func TestHandler_Execute_SHA256Checksum(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      server.URL,
 			Dest:     destPath,
 			Checksum: sha256sum,
@@ -724,7 +724,7 @@ func TestHandler_Execute_InvalidTimeout(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:     server.URL,
 			Dest:    destPath,
 			Timeout: "invalid",
@@ -764,7 +764,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	ec.Variables["destdir"] = tmpDir
 
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  server.URL + "/files/{{ filename }}",
 			Dest: "{{ destdir }}/templated.txt",
 		},
@@ -804,7 +804,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	ec.EventPublisher = nil
 
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  server.URL,
 			Dest: destPath,
 		},
@@ -838,7 +838,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "basic dry-run",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "https://example.com/file.txt",
 					Dest: "/tmp/file.txt",
 				},
@@ -848,7 +848,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with checksum",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:      "https://example.com/file.txt",
 					Dest:     "/tmp/file.txt",
 					Checksum: "md5:abc123",
@@ -859,7 +859,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with existing file",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "https://example.com/file.txt",
 					Dest: "/tmp/existing.txt",
 				},
@@ -874,7 +874,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with headers",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:  "https://example.com/file.txt",
 					Dest: "/tmp/file.txt",
 					Headers: map[string]string{
@@ -887,7 +887,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with timeout",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:     "https://example.com/file.txt",
 					Dest:    "/tmp/file.txt",
 					Timeout: "30s",
@@ -898,7 +898,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with retries",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:     "https://example.com/file.txt",
 					Dest:    "/tmp/file.txt",
 					Retries: 3,
@@ -909,7 +909,7 @@ func TestHandler_DryRun(t *testing.T) {
 		{
 			name: "dry-run with backup",
 			step: &config.Step{
-				Download: &config.Download{
+				FileDownload: &config.Download{
 					URL:    "https://example.com/file.txt",
 					Dest:   "/tmp/backup.txt",
 					Backup: true,
@@ -934,11 +934,11 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			// Update dest path to use temp dir if it's a template
-			if tt.step.Download.Dest == "/tmp/existing.txt" && tt.setup != nil {
-				tt.step.Download.Dest = filepath.Join(tmpDir, "existing.txt")
+			if tt.step.FileDownload.Dest == "/tmp/existing.txt" && tt.setup != nil {
+				tt.step.FileDownload.Dest = filepath.Join(tmpDir, "existing.txt")
 			}
-			if tt.step.Download.Dest == "/tmp/backup.txt" && tt.setup != nil {
-				tt.step.Download.Dest = filepath.Join(tmpDir, "backup.txt")
+			if tt.step.FileDownload.Dest == "/tmp/backup.txt" && tt.setup != nil {
+				tt.step.FileDownload.Dest = filepath.Join(tmpDir, "backup.txt")
 			}
 
 			err := h.DryRun(ec, tt.step)
@@ -976,7 +976,7 @@ func TestHandler_DryRun_IdempotentCheck(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      "https://example.com/file.txt",
 			Dest:     destPath,
 			Checksum: md5sum,
@@ -1095,7 +1095,7 @@ func TestHandler_Execute_RenderError(t *testing.T) {
 
 	ec := mockExecutionContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  "{{ invalid template syntax",
 			Dest: "/tmp/file.txt",
 		},
@@ -1117,7 +1117,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  "https://example.com/file.txt",
 			Dest: "/tmp/file.txt",
 		},
@@ -1139,7 +1139,7 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 
 	ctx := testutil.NewMockContext()
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  "https://example.com/file.txt",
 			Dest: "/tmp/file.txt",
 		},

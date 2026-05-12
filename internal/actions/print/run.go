@@ -16,9 +16,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		r := executor.NewResult()
 		r.Checkable = true
 
-		rendered, err := ctx.GetTemplate().Render(step.Print.Msg, ctx.GetVariables())
+		rendered, err := ctx.GetTemplate().Render(step.Log.Msg, ctx.GetVariables())
 		if err != nil {
-			rendered = step.Print.Msg
+			rendered = step.Log.Msg
 		}
 		// Single-line preview: take first line, trim, truncate.
 		preview := rendered

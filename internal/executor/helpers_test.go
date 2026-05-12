@@ -84,7 +84,7 @@ func TestMarkStepFailed_WithRegister(t *testing.T) {
 
 	step := config.Step{
 		Name:     "Test Step",
-		Register: "myresult",
+		As: "myresult",
 	}
 
 	variables := make(map[string]interface{})
@@ -109,7 +109,7 @@ func TestMarkStepFailed_NoRegister(t *testing.T) {
 	result := NewResult()
 	step := config.Step{
 		Name:     "Test Step",
-		Register: "", // No register
+		As: "", // No register
 	}
 
 	variables := make(map[string]interface{})

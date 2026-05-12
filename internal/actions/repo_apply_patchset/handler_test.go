@@ -71,7 +71,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid inline patchset",
 			step: &config.Step{
-				RepoApplyPatchset: &config.RepoApplyPatchset{
+				RepoPatch: &config.RepoApplyPatchset{
 					Patchset: "--- a/file.txt\n+++ b/file.txt\n@@ -1,1 +1,1 @@\n-old\n+new",
 				},
 			},
@@ -80,7 +80,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid patchset file",
 			step: &config.Step{
-				RepoApplyPatchset: &config.RepoApplyPatchset{
+				RepoPatch: &config.RepoApplyPatchset{
 					PatchsetFile: "/tmp/changes.patch",
 				},
 			},
@@ -89,21 +89,21 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil repo_apply_patchset",
 			step: &config.Step{
-				RepoApplyPatchset: nil,
+				RepoPatch: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing patchset and patchset_file",
 			step: &config.Step{
-				RepoApplyPatchset: &config.RepoApplyPatchset{},
+				RepoPatch: &config.RepoApplyPatchset{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "both patchset and patchset_file specified",
 			step: &config.Step{
-				RepoApplyPatchset: &config.RepoApplyPatchset{
+				RepoPatch: &config.RepoApplyPatchset{
 					Patchset:     "patch content",
 					PatchsetFile: "/tmp/patch.txt",
 				},
@@ -143,7 +143,7 @@ func TestHandler_Execute_SingleFile(t *testing.T) {
  debug=true`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 		},
 	}
@@ -199,7 +199,7 @@ func TestHandler_Execute_MultipleFiles(t *testing.T) {
 +const DB = 'mongodb://db.prod.com:27017';`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 		},
 	}
@@ -255,7 +255,7 @@ func TestHandler_Execute_StrictMode_Rollback(t *testing.T) {
 +new content`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 			Strict:   true, // Rollback on any failure
 		},
@@ -302,7 +302,7 @@ func TestHandler_Execute_LenientMode(t *testing.T) {
 +new content`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 			Strict:   false, // Don't rollback on failures
 		},
@@ -349,7 +349,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 +modified=content`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 			Backup:   true,
 		},
@@ -393,7 +393,7 @@ func TestHandler_Execute_JSONOutput(t *testing.T) {
  line2`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset:   patchset,
 			OutputFile: outputFile,
 		},
@@ -447,7 +447,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 +port=8080`
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 			Strict:   false, // Lenient mode (don't fail on mismatch)
 		},
@@ -471,7 +471,7 @@ func TestHandler_DryRun(t *testing.T) {
 	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset:   "--- a/file.txt\n+++ b/file.txt\n@@ -1,1 +1,1 @@\n-old\n+new",
 			Strict:     true,
 			Backup:     true,

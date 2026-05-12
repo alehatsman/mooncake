@@ -19,7 +19,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return h.Execute(ctx, step)
 	}
 
-	raps := step.RepoApplyPatchset
+	raps := step.RepoPatch
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
 		return nil, fmt.Errorf("context is not an ExecutionContext")

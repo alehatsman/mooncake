@@ -46,7 +46,7 @@ func TestRun_PatchsetWouldApply(t *testing.T) {
  gamma
 `
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 		},
 	}
@@ -81,7 +81,7 @@ func TestRun_PatchsetAlreadyApplied(t *testing.T) {
  gamma
 `
 	step := &config.Step{
-		RepoApplyPatchset: &config.RepoApplyPatchset{
+		RepoPatch: &config.RepoApplyPatchset{
 			Patchset: patchset,
 		},
 	}

@@ -22,7 +22,7 @@ import (
 // run. This is the structural fix for the drift class of bugs that
 // motivated Spec 16 (see docs-working/spec-16-unify-dryrun-execute.md).
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	file := step.File
+	file := step.FileWrite
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -49,7 +49,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
 	p := ctx.Effects()
-	opts := actions.PerformerOpts{Become: step.Become}
+	opts := actions.PerformerOpts{Become: step.ShouldBecome()}
 
 	primary, err := h.runState(ctx, ec, file, step, state, renderedPath, mode, p, opts)
 	if err != nil {

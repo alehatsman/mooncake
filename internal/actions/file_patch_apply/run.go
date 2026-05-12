@@ -16,7 +16,7 @@ import (
 // to predict the result; plan mode reports the prediction, execute
 // mode commits the atomic write.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fpa := step.FilePatchApply
+	fpa := step.TextPatch
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

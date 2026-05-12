@@ -197,7 +197,7 @@ func TestCheckIdempotencyConditions_Creates(t *testing.T) {
 	tmpFile := "/tmp/nonexistent_file_for_test_mooncake_12345.txt"
 
 	step := config.Step{
-		Creates: &tmpFile,
+		UnlessExists: &tmpFile,
 	}
 
 	renderer := mustNewRenderer()
@@ -290,7 +290,7 @@ func TestEmitEvent_WithNilPublisher(t *testing.T) {
 func TestCheckIdempotencyConditions_UnlessSuccess(t *testing.T) {
 	unlessCmd := "true" // Command that succeeds
 	step := config.Step{
-		Unless: &unlessCmd,
+		UnlessCommand: &unlessCmd,
 	}
 
 	renderer := mustNewRenderer()
@@ -321,7 +321,7 @@ func TestCheckIdempotencyConditions_UnlessSuccess(t *testing.T) {
 func TestCheckIdempotencyConditions_UnlessFail(t *testing.T) {
 	unlessCmd := "false" // Command that fails
 	step := config.Step{
-		Unless: &unlessCmd,
+		UnlessCommand: &unlessCmd,
 	}
 
 	renderer := mustNewRenderer()

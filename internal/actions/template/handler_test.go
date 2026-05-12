@@ -68,7 +68,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid template action",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "template.j2",
 					Dest: "/etc/config",
 				},
@@ -78,14 +78,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil template action",
 			step: &config.Step{
-				Template: nil,
+				FileTemplate: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing src",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Dest: "/etc/config",
 				},
 			},
@@ -94,7 +94,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing dest",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src: "template.j2",
 				},
 			},
@@ -103,7 +103,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty src",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "",
 					Dest: "/etc/config",
 				},
@@ -113,7 +113,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "empty dest",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "template.j2",
 					Dest: "",
 				},
@@ -123,7 +123,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with mode",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "template.j2",
 					Dest: "/etc/config",
 					Mode: "0755",
@@ -134,7 +134,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "with vars",
 			step: &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  "template.j2",
 					Dest: "/etc/config",
 					Vars: &map[string]interface{}{
@@ -265,7 +265,7 @@ func TestHandler_Execute(t *testing.T) {
 
 			// Create step
 			step := &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  srcPath,
 					Dest: destPath,
 					Mode: tt.mode,
@@ -378,7 +378,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	execCtx := newTestExecutionContext(ctx, tmpDir)
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -423,7 +423,7 @@ func TestHandler_Execute_MissingTemplateFile(t *testing.T) {
 	execCtx := newTestExecutionContext(ctx, tmpDir)
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  filepath.Join(tmpDir, "nonexistent.j2"),
 			Dest: filepath.Join(tmpDir, "output.txt"),
 		},
@@ -463,7 +463,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	execCtx := newTestExecutionContext(ctx, tmpDir)
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  srcPath,
 			Dest: destPath,
 		},
@@ -508,7 +508,7 @@ func TestHandler_Execute_InvalidContext(t *testing.T) {
 	ctx := testutil.NewMockContext()
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  srcPath,
 			Dest: filepath.Join(tmpDir, "output.txt"),
 		},
@@ -619,7 +619,7 @@ func TestHandler_DryRun(t *testing.T) {
 
 			// Create step
 			step := &config.Step{
-				Template: &config.Template{
+				FileTemplate: &config.Template{
 					Src:  srcPath,
 					Dest: destPath,
 					Vars: tt.templateVars,
@@ -672,7 +672,7 @@ func TestHandler_DryRun_MissingTemplateFile(t *testing.T) {
 	execCtx := newTestExecutionContext(ctx, tmpDir)
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  filepath.Join(tmpDir, "nonexistent.j2"),
 			Dest: filepath.Join(tmpDir, "output.txt"),
 		},
@@ -709,7 +709,7 @@ func TestHandler_DryRun_InvalidContext(t *testing.T) {
 	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  srcPath,
 			Dest: filepath.Join(tmpDir, "output.txt"),
 		},
@@ -834,7 +834,7 @@ func TestHandler_Execute_WithRelativePaths(t *testing.T) {
 
 	// Use relative paths (will be expanded by PathExpander)
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  "template.j2",
 			Dest: "output.txt",
 		},
@@ -889,7 +889,7 @@ func TestHandler_Execute_WithPresetBaseDir(t *testing.T) {
 	execCtx.PresetBaseDir = presetDir // Set preset base directory
 
 	step := &config.Step{
-		Template: &config.Template{
+		FileTemplate: &config.Template{
 			Src:  "template.j2", // Relative to PresetBaseDir
 			Dest: destPath,
 		},

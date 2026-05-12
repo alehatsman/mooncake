@@ -69,7 +69,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid configuration",
 			step: &config.Step{
-				FileDeleteRange: &config.FileDeleteRange{
+				TextDeleteRange: &config.FileDeleteRange{
 					Path:        "/tmp/test.txt",
 					StartAnchor: "BEGIN",
 					EndAnchor:   "END",
@@ -80,14 +80,14 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "nil file_delete_range",
 			step: &config.Step{
-				FileDeleteRange: nil,
+				TextDeleteRange: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing path",
 			step: &config.Step{
-				FileDeleteRange: &config.FileDeleteRange{
+				TextDeleteRange: &config.FileDeleteRange{
 					StartAnchor: "BEGIN",
 					EndAnchor:   "END",
 				},
@@ -97,7 +97,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing start_anchor",
 			step: &config.Step{
-				FileDeleteRange: &config.FileDeleteRange{
+				TextDeleteRange: &config.FileDeleteRange{
 					Path:      "/tmp/test.txt",
 					EndAnchor: "END",
 				},
@@ -107,7 +107,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "missing end_anchor",
 			step: &config.Step{
-				FileDeleteRange: &config.FileDeleteRange{
+				TextDeleteRange: &config.FileDeleteRange{
 					Path:        "/tmp/test.txt",
 					StartAnchor: "BEGIN",
 				},
@@ -117,7 +117,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid start regex",
 			step: &config.Step{
-				FileDeleteRange: &config.FileDeleteRange{
+				TextDeleteRange: &config.FileDeleteRange{
 					Path:        "/tmp/test.txt",
 					StartAnchor: "[invalid(regex",
 					EndAnchor:   "END",
@@ -129,7 +129,7 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "invalid end regex",
 			step: &config.Step{
-				FileDeleteRange: &config.FileDeleteRange{
+				TextDeleteRange: &config.FileDeleteRange{
 					Path:        "/tmp/test.txt",
 					StartAnchor: "BEGIN",
 					EndAnchor:   "[invalid(regex",
@@ -162,7 +162,7 @@ func TestHandler_Execute_ExclusiveDelete(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: "// BEGIN DEPRECATED",
 			EndAnchor:   "// END DEPRECATED",
@@ -204,7 +204,7 @@ func TestHandler_Execute_InclusiveDelete(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: "// BEGIN",
 			EndAnchor:   "// END",
@@ -246,7 +246,7 @@ func TestHandler_Execute_RegexAnchors(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: `^<script>$`,
 			EndAnchor:   `^</script>$`,
@@ -289,7 +289,7 @@ func TestHandler_Execute_StartAnchorNotFound(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: "NOT FOUND",
 			EndAnchor:   "END",
@@ -314,7 +314,7 @@ func TestHandler_Execute_EndAnchorNotFound(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: "START",
 			EndAnchor:   "NOT FOUND",
@@ -339,7 +339,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: "BEGIN",
 			EndAnchor:   "END",
@@ -378,7 +378,7 @@ func TestHandler_Execute_EmptyRange(t *testing.T) {
 	}
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        testFile,
 			StartAnchor: "START",
 			EndAnchor:   "END",
@@ -414,7 +414,7 @@ func TestHandler_DryRun(t *testing.T) {
 	ctx.CurrentMode = actions.ModePlan
 
 	step := &config.Step{
-		FileDeleteRange: &config.FileDeleteRange{
+		TextDeleteRange: &config.FileDeleteRange{
 			Path:        "/tmp/test.txt",
 			StartAnchor: "BEGIN",
 			EndAnchor:   "END",

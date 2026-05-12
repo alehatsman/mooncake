@@ -56,11 +56,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the file_delete_range configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.FileDeleteRange == nil {
+	if step.TextDeleteRange == nil {
 		return fmt.Errorf("file_delete_range configuration is nil")
 	}
 
-	fdr := step.FileDeleteRange
+	fdr := step.TextDeleteRange
 
 	if fdr.Path == "" {
 		hint := actions.GetActionHint(actionName, "path")
@@ -92,7 +92,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the file_delete_range action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fdr := step.FileDeleteRange
+	fdr := step.TextDeleteRange
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -201,7 +201,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would happen without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	fdr := step.FileDeleteRange
+	fdr := step.TextDeleteRange
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

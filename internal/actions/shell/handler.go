@@ -76,9 +76,9 @@ func (h *Handler) Validate(step *config.Step) error {
 	}
 
 	// Validate retry_delay if specified
-	if step.RetryDelay != "" {
-		if _, err := time.ParseDuration(step.RetryDelay); err != nil {
-			return fmt.Errorf("invalid retry_delay duration %q: %w", step.RetryDelay, err)
+	if step.RetryDelayDuration() != "" {
+		if _, err := time.ParseDuration(step.RetryDelayDuration()); err != nil {
+			return fmt.Errorf("invalid retry_delay duration %q: %w", step.RetryDelayDuration(), err)
 		}
 	}
 
@@ -115,7 +115,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 
 	// Log what would be executed
 	ctx.GetLogger().Infof("  [DRY-RUN] Would execute: %s", renderedCommand)
-	if step.Become {
+	if step.ShouldBecome() {
 		ctx.GetLogger().Infof("  [DRY-RUN] With sudo privileges")
 	}
 
@@ -124,7 +124,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 
 // executeWithRetry wraps command execution with retry logic
 func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
-	maxAttempts := step.Retries + 1
+	maxAttempts := step.RetryAttempts() + 1
 	if maxAttempts < 1 {
 		maxAttempts = 1
 	}
@@ -134,7 +134,7 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
-			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt-1, step.Retries)
+			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt-1, step.RetryAttempts())
 		}
 
 		result, err := h.executeShellCommand(ctx, step, renderedCommand)
@@ -146,19 +146,19 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 		lastErr = err
 
 		// Don't sleep after the last attempt
-		if attempt < maxAttempts && step.RetryDelay != "" {
-			delay, parseErr := time.ParseDuration(step.RetryDelay)
+		if attempt < maxAttempts && step.RetryDelayDuration() != "" {
+			delay, parseErr := time.ParseDuration(step.RetryDelayDuration())
 			if parseErr != nil {
-				ctx.GetLogger().Debugf("  Invalid retry_delay %q: %v", step.RetryDelay, parseErr)
+				ctx.GetLogger().Debugf("  Invalid retry_delay %q: %v", step.RetryDelayDuration(), parseErr)
 			} else {
-				ctx.GetLogger().Debugf("  Waiting %s before retry...", step.RetryDelay)
+				ctx.GetLogger().Debugf("  Waiting %s before retry...", step.RetryDelayDuration())
 				time.Sleep(delay)
 			}
 		}
 	}
 
 	// All attempts failed
-	if step.Retries > 0 {
+	if step.RetryAttempts() > 0 {
 		return lastResult, fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
 	}
 	return lastResult, lastErr
@@ -241,7 +241,7 @@ func (h *Handler) createShellCommand(cmdCtx context.Context, ctx actions.Context
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return nil, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
@@ -251,8 +251,8 @@ func (h *Handler) createShellCommand(cmdCtx context.Context, ctx actions.Context
 		// with passwordless sudo this succeeds; otherwise sudo itself
 		// fails with a clear error.
 		args := []string{"-S"}
-		if step.BecomeUser != "" {
-			args = append(args, "-u", step.BecomeUser)
+		if step.AsUser != "" {
+			args = append(args, "-u", step.AsUser)
 		}
 		args = append(args, "--", interpreter, "-c", renderedCommand)
 

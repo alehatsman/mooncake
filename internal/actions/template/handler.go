@@ -50,11 +50,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the template configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Template == nil {
+	if step.FileTemplate == nil {
 		return fmt.Errorf("template configuration is nil")
 	}
 
-	tmpl := step.Template
+	tmpl := step.FileTemplate
 	if tmpl.Src == "" {
 		hint := actions.GetActionHint("template", "src")
 		return fmt.Errorf("template src is required%s", hint)
@@ -70,7 +70,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the template action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	tmpl := step.Template
+	tmpl := step.FileTemplate
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -178,7 +178,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would be done without actually doing it.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	tmpl := step.Template
+	tmpl := step.FileTemplate
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -293,7 +293,7 @@ func (h *Handler) readAndRenderTemplate(src string, ctx actions.Context, variabl
 }
 
 func (h *Handler) createFileWithBecome(path string, content []byte, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.Become {
+	if !step.ShouldBecome() {
 		// #nosec G306 -- Mode is user-configurable for provisioning
 		return os.WriteFile(path, content, mode)
 	}

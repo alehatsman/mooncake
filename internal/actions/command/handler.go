@@ -46,11 +46,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the command configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Command == nil {
+	if step.Cmd == nil {
 		return fmt.Errorf("command configuration is nil")
 	}
 
-	if len(step.Command.Argv) == 0 {
+	if len(step.Cmd.Argv) == 0 {
 		return fmt.Errorf("command argv is empty")
 	}
 
@@ -59,7 +59,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the command action with retry logic if configured.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	cmdAction := step.Command
+	cmdAction := step.Cmd
 
 	// Render all argv elements with templates
 	renderedArgv := make([]string, len(cmdAction.Argv))
@@ -79,7 +79,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // executeWithRetry executes the command with retry logic if configured.
 func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, renderedArgv []string) (actions.Result, error) {
-	maxAttempts := step.Retries + 1
+	maxAttempts := step.RetryAttempts() + 1
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
@@ -97,8 +97,8 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 		}
 
 		// Sleep before retry if configured
-		if step.RetryDelay != "" {
-			delay, parseErr := time.ParseDuration(step.RetryDelay)
+		if step.RetryDelayDuration() != "" {
+			delay, parseErr := time.ParseDuration(step.RetryDelayDuration())
 			if parseErr == nil && delay > 0 {
 				ctx.GetLogger().Debugf("  Waiting %v before retry", delay)
 				time.Sleep(delay)
@@ -243,7 +243,7 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 		return nil, fmt.Errorf("empty argv")
 	}
 
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return nil, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
@@ -251,8 +251,8 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 		// Build sudo arguments. Empty SudoPass is OK for passwordless
 		// sudo hosts; sudo will fail with a real error otherwise.
 		args := []string{"-S"}
-		if step.BecomeUser != "" {
-			args = append(args, "-u", step.BecomeUser)
+		if step.AsUser != "" {
+			args = append(args, "-u", step.AsUser)
 		}
 		args = append(args, "--")
 		args = append(args, argv...)
@@ -261,8 +261,8 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 		command := exec.CommandContext(ctx, "sudo", args...)
 
 		// Handle stdin: sudo password comes first, then user stdin if provided
-		if step.Command.Stdin != "" {
-			renderedStdin, err := ec.Template.Render(step.Command.Stdin, ec.Variables)
+		if step.Cmd.Stdin != "" {
+			renderedStdin, err := ec.Template.Render(step.Cmd.Stdin, ec.Variables)
 			if err != nil {
 				return nil, fmt.Errorf("failed to render stdin: %w", err)
 			}
@@ -278,8 +278,8 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 	command := exec.CommandContext(ctx, argv[0], argv[1:]...)
 
 	// Handle stdin for non-sudo commands
-	if step.Command.Stdin != "" {
-		renderedStdin, err := ec.Template.Render(step.Command.Stdin, ec.Variables)
+	if step.Cmd.Stdin != "" {
+		renderedStdin, err := ec.Template.Render(step.Cmd.Stdin, ec.Variables)
 		if err != nil {
 			return nil, fmt.Errorf("failed to render stdin: %w", err)
 		}
@@ -314,7 +314,7 @@ func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string,
 
 // DryRun logs what would be executed without actually running the command.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	cmdAction := step.Command
+	cmdAction := step.Cmd
 
 	// Render argv for dry-run display
 	renderedArgv := make([]string, len(cmdAction.Argv))
@@ -328,7 +328,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	prefix := "  "
-	if step.Become {
+	if step.ShouldBecome() {
 		ctx.GetLogger().Infof("%s[DRY-RUN] Would execute (with sudo): %s", prefix, strings.Join(renderedArgv, " "))
 	} else {
 		ctx.GetLogger().Infof("%s[DRY-RUN] Would execute: %s", prefix, strings.Join(renderedArgv, " "))
@@ -346,8 +346,8 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		ctx.GetLogger().Infof("%s           Timeout: %s", prefix, step.Timeout)
 	}
 
-	if step.Retries > 0 {
-		ctx.GetLogger().Infof("%s           Retries: %d", prefix, step.Retries)
+	if step.RetryAttempts() > 0 {
+		ctx.GetLogger().Infof("%s           Retries: %d", prefix, step.RetryAttempts())
 	}
 
 	return nil

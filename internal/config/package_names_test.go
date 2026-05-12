@@ -61,7 +61,7 @@ func TestPackageNames_ScalarRoundTrip(t *testing.T) {
 			if len(parsed.Steps) != 1 {
 				t.Fatalf("got %d steps, want 1", len(parsed.Steps))
 			}
-			pkg := parsed.Steps[0].Package
+			pkg := parsed.Steps[0].Pkg
 			if pkg == nil {
 				t.Fatal("Package is nil")
 			}

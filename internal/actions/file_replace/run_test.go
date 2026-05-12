@@ -38,7 +38,7 @@ func TestRun_NoChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:         path,
 			Pattern:      "absent_pattern",
 			Replace:      "X",
@@ -77,7 +77,7 @@ func TestRun_WouldReplace(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:    path,
 			Pattern: "old",
 			Replace: "new",
@@ -120,7 +120,7 @@ func TestRun_NoMatchNotAllowed(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.txt")
 	_ = os.WriteFile(path, []byte("hello\n"), 0o644)
 	step := &config.Step{
-		FileReplace: &config.FileReplace{
+		TextReplace: &config.FileReplace{
 			Path:         path,
 			Pattern:      "missing",
 			Replace:      "X",

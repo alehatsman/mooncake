@@ -62,7 +62,7 @@ func TestLogRegister_WithRegister(t *testing.T) {
 	dryRun := NewDryRunLogger(log)
 
 	step := config.Step{
-		Register: "my_result",
+		As: "my_result",
 	}
 
 	// Should not panic
@@ -354,7 +354,7 @@ func TestDryRunLogger_AllMethods(t *testing.T) {
 	t.Run("variables", func(t *testing.T) {
 		dryRun.LogVariableLoad(5, "file")
 		dryRun.LogVariableSet(3)
-		dryRun.LogRegister(config.Step{Register: "var"})
+		dryRun.LogRegister(config.Step{As: "var"})
 		dryRun.LogRegister(config.Step{})
 	})
 

@@ -57,11 +57,11 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the download configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Download == nil {
+	if step.FileDownload == nil {
 		return fmt.Errorf("download configuration is nil")
 	}
 
-	downloadAction := step.Download
+	downloadAction := step.FileDownload
 	if downloadAction.URL == "" {
 		hint := actions.GetActionHint("download", "url")
 		return fmt.Errorf("url is required%s", hint)
@@ -77,7 +77,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the download action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	downloadAction := step.Download
+	downloadAction := step.FileDownload
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -171,8 +171,8 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 		if attempt < maxRetries {
 			// Wait before retry (using step-level retry delay if available)
-			if step.RetryDelay != "" {
-				if delay, parseErr := time.ParseDuration(step.RetryDelay); parseErr == nil {
+			if step.RetryDelayDuration() != "" {
+				if delay, parseErr := time.ParseDuration(step.RetryDelayDuration()); parseErr == nil {
 					time.Sleep(delay)
 				} else {
 					time.Sleep(1 * time.Second) // Default 1s delay
@@ -223,7 +223,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would be done without actually doing it.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	downloadAction := step.Download
+	downloadAction := step.FileDownload
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -384,7 +384,7 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 	}
 
 	// Move temp file to destination (atomic)
-	if step.Become {
+	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return 0, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}

@@ -59,11 +59,11 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Validate checks if the file_insert configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.FileInsert == nil {
+	if step.TextInsert == nil {
 		return fmt.Errorf("file_insert configuration is nil")
 	}
 
-	fi := step.FileInsert
+	fi := step.TextInsert
 
 	if fi.Path == "" {
 		hint := actions.GetActionHint(actionName, "path")
@@ -102,7 +102,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Execute runs the file_insert action.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fi := step.FileInsert
+	fi := step.TextInsert
 
 	// We need ExecutionContext for PathUtil
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -212,7 +212,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 // DryRun logs what would happen without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	fi := step.FileInsert
+	fi := step.TextInsert
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

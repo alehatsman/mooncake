@@ -17,7 +17,7 @@ import (
 // eliminating any chance of the plan preview disagreeing with what
 // execute would actually do.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	pkg := step.Package
+	pkg := step.Pkg
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -52,20 +52,20 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result.SetChanged(false)
 
 	if pkg.Upgrade {
-		return h.executeUpgrade(ec, manager, pkg, step.Become)
+		return h.executeUpgrade(ec, manager, pkg, step.ShouldBecome())
 	}
 
 	if pkg.UpdateCache {
-		if err := h.updateCache(ec, manager, step.Become); err != nil {
+		if err := h.updateCache(ec, manager, step.ShouldBecome()); err != nil {
 			return nil, fmt.Errorf("failed to update package cache: %w", err)
 		}
 	}
 
 	switch state {
 	case statePresent, stateLatest:
-		return h.installPackages(ec, manager, packages, state == stateLatest, pkg.Extra, step.Become)
+		return h.installPackages(ec, manager, packages, state == stateLatest, pkg.Extra, step.ShouldBecome())
 	case stateAbsent:
-		return h.removePackages(ec, manager, packages, pkg.Extra, step.Become)
+		return h.removePackages(ec, manager, packages, pkg.Extra, step.ShouldBecome())
 	default:
 		return nil, fmt.Errorf("unsupported state: %s", state)
 	}

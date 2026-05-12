@@ -42,7 +42,7 @@ func sha256OfBytes(b []byte) string {
 // would-download.
 func TestRun_DestMissing_WouldDownload(t *testing.T) {
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:  "https://example.com/x",
 			Dest: filepath.Join(t.TempDir(), "x"),
 		},
@@ -66,7 +66,7 @@ func TestRun_ExistingWithCorrectChecksum_AlreadyOk(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      "https://example.com/x",
 			Dest:     dest,
 			Checksum: sha256OfBytes(body),
@@ -87,7 +87,7 @@ func TestRun_ExistingWithBadChecksum_WouldDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:      "https://example.com/x",
 			Dest:     dest,
 			Checksum: sha256OfBytes([]byte("expected")),
@@ -108,7 +108,7 @@ func TestRun_Force_AlwaysWouldDownload(t *testing.T) {
 	dest := filepath.Join(t.TempDir(), "file")
 	_ = os.WriteFile(dest, []byte("x"), 0o644)
 	step := &config.Step{
-		Download: &config.Download{
+		FileDownload: &config.Download{
 			URL:   "https://example.com/x",
 			Dest:  dest,
 			Force: true,

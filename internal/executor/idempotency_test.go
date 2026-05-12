@@ -38,7 +38,7 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 	// Step with creates pointing to existing file
 	step := config.Step{
 		Shell:   &config.ShellAction{Cmd: "echo test"},
-		Creates: strPtr(tmpFile.Name()),
+		UnlessExists: strPtr(tmpFile.Name()),
 	}
 
 	renderer, err := template.NewPongo2Renderer()
@@ -71,7 +71,7 @@ func TestCheckIdempotencyConditions_Creates_FileNotExists(t *testing.T) {
 	creates := "/nonexistent/file/that/does/not/exist"
 	step := config.Step{
 		Shell:   &config.ShellAction{Cmd: "echo test"},
-		Creates: strPtr(creates),
+		UnlessExists: strPtr(creates),
 	}
 
 	renderer, err := template.NewPongo2Renderer()
@@ -105,7 +105,7 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 
 	step := config.Step{
 		Shell:   &config.ShellAction{Cmd: "echo test"},
-		Creates: strPtr("{{ output_file }}"),
+		UnlessExists: strPtr("{{ output_file }}"),
 	}
 
 	renderer, err := template.NewPongo2Renderer()
@@ -137,7 +137,7 @@ func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 	unless := "true" // Always succeeds
 	step := config.Step{
 		Shell:  &config.ShellAction{Cmd: "echo test"},
-		Unless: &unless,
+		UnlessCommand: &unless,
 	}
 
 	renderer, err := template.NewPongo2Renderer()
@@ -169,7 +169,7 @@ func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 	unless := "false" // Always fails
 	step := config.Step{
 		Shell:  &config.ShellAction{Cmd: "echo test"},
-		Unless: &unless,
+		UnlessCommand: &unless,
 	}
 
 	renderer, err := template.NewPongo2Renderer()
@@ -194,7 +194,7 @@ func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 func TestCheckIdempotencyConditions_Unless_WithTemplateVariable(t *testing.T) {
 	step := config.Step{
 		Shell:  &config.ShellAction{Cmd: "echo test"},
-		Unless: strPtr("test -f {{ marker_file }}"),
+		UnlessCommand: strPtr("test -f {{ marker_file }}"),
 	}
 
 	// Create temp file for testing
@@ -241,8 +241,8 @@ func TestCheckIdempotencyConditions_BothConditions(t *testing.T) {
 	// Both creates and unless are satisfied
 	step := config.Step{
 		Shell:   &config.ShellAction{Cmd: "echo test"},
-		Creates: strPtr(tmpFile.Name()),
-		Unless:  strPtr("true"),
+		UnlessExists: strPtr(tmpFile.Name()),
+		UnlessCommand:  strPtr("true"),
 	}
 
 	renderer, err := template.NewPongo2Renderer()
@@ -306,7 +306,7 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 	step := config.Step{
 		Name:    "Test step with creates",
 		Shell:   &config.ShellAction{Cmd: "echo should not run"},
-		Creates: strPtr(tmpFile.Name()),
+		UnlessExists: strPtr(tmpFile.Name()),
 	}
 
 	renderer, err := template.NewPongo2Renderer()

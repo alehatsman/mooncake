@@ -18,7 +18,7 @@ import (
 // real execution is impossible because both modes compute the same
 // `newContent` and compare against the same on-disk content.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	fr := step.FileReplace
+	fr := step.TextReplace
 
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {

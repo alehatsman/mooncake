@@ -33,7 +33,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		if len(preview) > 80 {
 			preview = preview[:77] + "..."
 		}
-		if step.Become {
+		if step.ShouldBecome() {
 			r.Reason = fmt.Sprintf("would run (sudo): %s", preview)
 		} else {
 			r.Reason = fmt.Sprintf("would run: %s", preview)
