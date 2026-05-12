@@ -447,57 +447,10 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 			return fmt.Errorf("%s", errMsg)
 		}
 
-		// Spec 16: prefer Runner if the handler implements it. Runner
-		// is the unified Execute / DryRun / Check replacement; the legacy
-		// branches below are the shim for handlers that haven't migrated.
-		if runner, ok := handler.(actions.Runner); ok {
-			return dispatchRunner(step, ec, runner)
-		}
-
-		// Handle check mode — query without writing
-		if ec.CheckMode {
-			return dispatchCheck(step, ec, actionType, handler)
-		}
-
-		// Handle dry-run mode
-		if ec.DryRun {
-			// Create a result for dry-run
-			result := NewResult()
-			ec.CurrentResult = result
-
-			if err := handler.DryRun(ec, &step); err != nil {
-				return err
-			}
-
-			// Register result if requested
-			if step.Register != "" {
-				result.RegisterTo(ec.Variables, step.Register)
-			}
-			return nil
-		}
-
-		// Execute the action
-		actionResult, execErr := handler.Execute(ec, &step)
-
-		// Capture result even on failure so callers can read stdout/stderr.
-		if actionResult != nil {
-			if concreteResult, ok := actionResult.(*Result); ok {
-				ec.CurrentResult = concreteResult
-			} else {
-				ec.CurrentResult = NewResult()
-			}
-		}
-
-		if execErr != nil {
-			return execErr
-		}
-
-		// Register result if requested
-		if step.Register != "" && actionResult != nil {
-			actionResult.RegisterTo(ec.Variables, step.Register)
-		}
-
-		return nil
+		// Spec 16: all handlers implement Runner. dispatchRunner is the
+		// single dispatch path; it consults ctx.Mode() and emits the
+		// appropriate events.
+		return dispatchRunner(step, ec, handler)
 	}
 
 	// If we get here, the action type is not registered
@@ -616,27 +569,27 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		}
 	}
 
-	// In check mode, bypass started/completed events and go straight to
-	// the check path for legacy (non-Runner) handlers.
+	// Unknown-action fallback for check mode: emit a synthetic
+	// not-checkable event. Known actions go through the plan-mode
+	// bypass above (which handles every registered handler via the
+	// Runner interface).
 	if ec.CheckMode && hasStepName && step.Include == nil {
-		*ec.Stats.Global++
-		stepID := generateStepID(step, ec)
-		ec.CurrentStepID = stepID
 		actionType := step.DetermineActionType()
-		if handler, ok := actions.Get(actionType); ok {
-			return dispatchCheck(step, ec, actionType, handler)
+		if _, ok := actions.Get(actionType); !ok {
+			*ec.Stats.Global++
+			stepID := generateStepID(step, ec)
+			ec.CurrentStepID = stepID
+			ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
+				StepID:    stepID,
+				Name:      stepName,
+				Action:    actionType,
+				Checkable: false,
+				Reason:    "unknown action",
+				Level:     ec.Level,
+			})
+			*ec.Stats.Executed++
+			return nil
 		}
-		// Unknown action — emit not-checkable
-		ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
-			StepID:    stepID,
-			Name:      stepName,
-			Action:    actionType,
-			Checkable: false,
-			Reason:    "unknown action",
-			Level:     ec.Level,
-		})
-		*ec.Stats.Executed++
-		return nil
 	}
 
 	// Debug: show tags for non-skipped steps
@@ -1100,55 +1053,6 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	if step.Register != "" && ec.CurrentResult != nil {
 		ec.CurrentResult.RegisterTo(ec.Variables, step.Register)
 	}
-	return nil
-}
-
-// dispatchCheck calls the handler's Check() method if it implements actions.Checker,
-// otherwise marks the step as not-checkable. Emits EventStepChecked.
-func dispatchCheck(step config.Step, ec *ExecutionContext, actionType string, handler actions.Handler) error {
-	var cr actions.CheckResult
-
-	// Validate before checking (same as Execute path)
-	if err := handler.Validate(&step); err != nil {
-		return fmt.Errorf("validation failed for %s action: %v", actionType, err)
-	}
-
-	if checker, ok := handler.(actions.Checker); ok {
-		var err error
-		cr, err = checker.Check(ec, &step)
-		if err != nil {
-			return err
-		}
-		// Checkable field is set by Check(); handlers that don't check specific states return Checkable: false
-	} else {
-		cr = actions.CheckResult{
-			Checkable:   false,
-			WouldChange: false,
-			Reason:      "not checkable",
-		}
-	}
-
-	name := step.Name
-	if name == "" {
-		name = actionType
-	}
-
-	ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
-		StepID:      ec.CurrentStepID,
-		Name:        name,
-		Action:      actionType,
-		WouldChange: cr.WouldChange,
-		Checkable:   cr.Checkable,
-		Reason:      cr.Reason,
-		Level:       ec.Level,
-	})
-
-	// Update stats: treat would-change as "changed", ok as "executed"
-	if cr.WouldChange {
-		*ec.Stats.Changed++
-	}
-	*ec.Stats.Executed++
-
 	return nil
 }
 

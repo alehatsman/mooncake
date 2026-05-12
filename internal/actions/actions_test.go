@@ -47,6 +47,16 @@ func (m *mockHandler) DryRun(ctx Context, step *config.Step) error {
 	return nil
 }
 
+func (m *mockHandler) Run(ctx Context, step *config.Step) (Result, error) {
+	if ctx.Mode() == ModePlan {
+		if m.dryRunFunc != nil {
+			return nil, m.dryRunFunc(ctx, step)
+		}
+		return nil, nil
+	}
+	return m.Execute(ctx, step)
+}
+
 // Mock context for testing
 type mockContext struct {
 	variables map[string]interface{}
@@ -615,7 +625,7 @@ func TestHandlerFunc_NewHandlerFunc(t *testing.T) {
 
 	// Test Execute
 	ctx := &mockContext{}
-	_, err = handler.Execute(ctx, &config.Step{})
+	_, err = handler.(*HandlerFunc).Execute(ctx, &config.Step{})
 	if err != nil {
 		t.Errorf("Execute returned error: %v", err)
 	}
@@ -624,7 +634,7 @@ func TestHandlerFunc_NewHandlerFunc(t *testing.T) {
 	}
 
 	// Test DryRun
-	err = handler.DryRun(ctx, &config.Step{})
+	err = handler.(*HandlerFunc).DryRun(ctx, &config.Step{})
 	if err != nil {
 		t.Errorf("DryRun returned error: %v", err)
 	}
@@ -659,7 +669,7 @@ func TestHandlerFunc_NilDryRun(t *testing.T) {
 
 	ctx := &mockContext{}
 
-	err := handler.DryRun(ctx, &config.Step{})
+	err := handler.(*HandlerFunc).DryRun(ctx, &config.Step{})
 	if err != nil {
 		t.Errorf("DryRun with nil function should return nil, got: %v", err)
 	}
@@ -700,7 +710,7 @@ func TestHandlerFunc_ExecuteError(t *testing.T) {
 	)
 
 	ctx := &mockContext{}
-	_, err := handler.Execute(ctx, &config.Step{})
+	_, err := handler.(*HandlerFunc).Execute(ctx, &config.Step{})
 	if err != expectedErr {
 		t.Errorf("Expected error %v, got %v", expectedErr, err)
 	}
@@ -720,7 +730,7 @@ func TestHandlerFunc_DryRunError(t *testing.T) {
 	)
 
 	ctx := &mockContext{}
-	err := handler.DryRun(ctx, &config.Step{})
+	err := handler.(*HandlerFunc).DryRun(ctx, &config.Step{})
 	if err != expectedErr {
 		t.Errorf("Expected error %v, got %v", expectedErr, err)
 	}

@@ -149,46 +149,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 }
 
-// Check implements actions.Checker — reports whether packages would be installed/removed.
-func (h *Handler) Check(ctx actions.Context, step *config.Step) (actions.CheckResult, error) {
-	pkg := step.Package
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return actions.CheckResult{Checkable: true, Reason: "not checkable (wrong context)"}, nil
-	}
-
-	manager, err := h.determinePackageManager(pkg.Manager, ctx.GetVariables())
-	if err != nil {
-		return actions.CheckResult{Checkable: true, Reason: "cannot determine package manager"}, nil
-	}
-
-	state := pkg.State
-	if state == "" {
-		state = statePresent
-	}
-
-	packages := h.buildPackageList(pkg)
-
-	for _, name := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, name)
-		if err != nil {
-			return actions.CheckResult{Checkable: true, Reason: fmt.Sprintf("check error: %v", err)}, nil
-		}
-		switch state {
-		case statePresent, stateLatest:
-			if !installed {
-				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: fmt.Sprintf("would install %s", name)}, nil
-			}
-		case stateAbsent:
-			if installed {
-				return actions.CheckResult{Checkable: true, WouldChange: true, Reason: fmt.Sprintf("would remove %s", name)}, nil
-			}
-		}
-	}
-
-	return actions.CheckResult{Checkable: true, WouldChange: false, Reason: "already in desired state"}, nil
-}
-
 // DryRun shows what would be done without making changes.
 func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	pkg := step.Package

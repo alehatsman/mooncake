@@ -245,36 +245,10 @@ type Result interface {
 	RegisterTo(variables map[string]interface{}, name string)
 }
 
-// Checker is an optional interface handlers can implement for check mode.
-// When a handler implements Checker, mooncake --check calls Check() instead
-// of Execute(), making zero writes to the system.
-//
-// Deprecated: implement Runner instead. Spec 16 collapses Execute / DryRun /
-// Check into a single Run(ctx, step) method; Checker will be removed once
-// all handlers migrate (Phase 6).
-type Checker interface {
-	Check(ctx Context, step *config.Step) (CheckResult, error)
-}
-
-// CheckResult describes what a step would do without executing it.
-//
-// Deprecated: Spec 16 moves these fields onto Result; new code should
-// populate Result.WouldChange / Result.Reason / Result.Checkable instead.
-type CheckResult struct {
-	WouldChange bool   // true if the step would modify state
-	Checkable   bool   // false for actions that can't predict outcomes (shell)
-	Reason      string // short description: "would install", "already present", etc.
-}
-
-// Runner is the unified handler entry point introduced by Spec 16. When a
-// handler implements Runner, the dispatcher prefers Run(ctx, step) over
-// the legacy Execute / DryRun / Check methods. Run consults ctx (which
-// exposes the current Mode) and either performs side effects (ModeExecute)
-// or returns a state prediction (ModePlan) without mutating anything.
-//
-// Handlers implement Runner *alongside* the existing Handler interface
-// during the migration; once a handler's Runner is at parity with its
-// legacy methods, the legacy methods can be deleted.
+// Runner is the unified handler entry point introduced by Spec 16. The
+// Handler interface now embeds Run as a required method; Runner remains
+// as a named type alias for clarity in call sites that want to express
+// "the Run capability" specifically.
 type Runner interface {
 	Run(ctx Context, step *config.Step) (Result, error)
 }

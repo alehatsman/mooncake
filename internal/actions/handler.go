@@ -106,39 +106,33 @@ type ActionMetadata struct {
 //   - Returning results
 //
 // Handlers should be stateless - all execution state is passed via ExecutionContext.
+//
+// Spec 16 collapsed the previous Execute / DryRun / Check trio into a
+// single Run(ctx, step) method (the Runner interface). The legacy
+// methods may still exist on concrete handler types — they are no
+// longer part of the contract.
 type Handler interface {
 	// Metadata returns metadata describing this action type.
 	Metadata() ActionMetadata
 
 	// Validate checks if the step configuration is valid for this action.
-	// This is called before Execute to fail fast on configuration errors.
-	// Returns an error if validation fails.
+	// Called before Run to fail fast on configuration errors.
 	Validate(step *config.Step) error
 
-	// Execute runs the action and returns a result.
-	// The result includes whether the action made changes, output data,
-	// and any error information.
+	// Run executes the action when ctx.Mode() is ModeExecute, or
+	// inspects state and returns a prediction when ctx.Mode() is
+	// ModePlan. Implementations:
 	//
-	// Handlers should:
-	//   - Emit appropriate events via ctx.GetEventPublisher()
-	//   - Handle template rendering via ctx.GetTemplate()
-	//   - Use ctx.GetLogger() for logging
-	//   - Return a Result with Changed=true if the action modified state
+	//   - emit appropriate events via ctx.GetEventPublisher() (execute mode)
+	//   - render templates via ctx.GetTemplate()
+	//   - use ctx.GetLogger() for logging
+	//   - return Result with Changed=true (execute) or
+	//     WouldChange=true (plan) when state would change
+	//   - route filesystem mutations through ctx.Effects() so that
+	//     plan and execute modes share the same predicates
 	//
-	// If an error occurs, return it - the executor will handle result registration.
-	Execute(ctx Context, step *config.Step) (Result, error)
-
-	// DryRun logs what would happen if Execute were called, without making changes.
-	// This is called when the executor is in dry-run mode.
-	//
-	// Handlers should:
-	//   - Use ctx.GetLogger() to describe what would happen
-	//   - Attempt to render templates (but catch errors gracefully)
-	//   - NOT make any actual changes to the system
-	//   - NOT emit action-specific events (step lifecycle events are handled by executor)
-	//
-	// Returns an error only if dry-run simulation fails catastrophically.
-	DryRun(ctx Context, step *config.Step) error
+	// Returns an error only on unrecoverable failure.
+	Run(ctx Context, step *config.Step) (Result, error)
 }
 
 // HandlerFunc is a function type that implements Handler for simple actions.
@@ -184,7 +178,18 @@ func (h *HandlerFunc) DryRun(ctx Context, step *config.Step) error {
 	if h.dryRun != nil {
 		return h.dryRun(ctx, step)
 	}
-	// Default: log that action would execute
 	ctx.GetLogger().Infof("  [DRY-RUN] Would execute %s action", h.metadata.Name)
 	return nil
+}
+
+// Run satisfies the Spec 16 Handler contract. In ModePlan it reports
+// "not checkable" by default; in ModeExecute it delegates to the
+// underlying execute function. HandlerFunc users wanting accurate
+// plan-mode behavior should construct a typed Handler with its own
+// Run method instead.
+func (h *HandlerFunc) Run(ctx Context, step *config.Step) (Result, error) {
+	if ctx.Mode() == ModePlan {
+		return nil, nil
+	}
+	return h.execute(ctx, step)
 }
