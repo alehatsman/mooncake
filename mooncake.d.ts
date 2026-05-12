@@ -6,6 +6,86 @@
  */
 
 /**
+ * Capture file changes with enhanced metadata for LLM agents
+ * @category system
+ */
+export interface ArtifactCaptureAction {
+  /**
+   * Capture full file content before/after
+   */
+  capture_content?: boolean;
+  /**
+   * Embed full plan in artifact for LLM context
+   */
+  embed_plan?: boolean;
+  /**
+   * Output format
+   * 
+   * @values json | markdown | both
+   */
+  format?: "json" | "markdown" | "both";
+  /**
+   * Include SHA256 checksums
+   */
+  include_checksums?: boolean;
+  /**
+   * Maximum diff size in bytes per file
+   */
+  max_diff_size?: number;
+  /**
+   * Don't embed plan if exceeds this many steps
+   */
+  max_plan_steps?: number;
+  /**
+   * Name of the artifact (used for output directory)
+   */
+  name: string;
+  /**
+   * Base directory for artifacts (default: './artifacts')
+   */
+  output_dir?: string;
+  /**
+   * Steps to execute while capturing changes
+   */
+  steps: StepAction[];
+}
+
+/**
+ * Validate artifacts against constraints (change budgets)
+ * @category system
+ */
+export interface ArtifactValidateAction {
+  /**
+   * Glob patterns for allowed file paths
+   */
+  allowed_paths?: string[];
+  /**
+   * Path to artifact metadata JSON file
+   */
+  artifact_file: string;
+  /**
+   * Glob patterns for forbidden file paths
+   */
+  forbidden_paths?: string[];
+  /**
+   * Maximum file size in bytes after changes
+   */
+  max_file_size?: number;
+  /**
+   * Maximum number of files allowed to change
+   */
+  max_files?: number;
+  /**
+   * Maximum total lines changed
+   */
+  max_lines_changed?: number;
+  /**
+   * Require test file changes when code files change
+   */
+  require_tests?: boolean;
+}
+
+/**
  * Verify conditions without changing system state
  * @category system
  */
@@ -22,6 +102,18 @@ export interface AssertAction {
     mode: string;
     owner: string;
     path: string;
+  };
+  file_sha256?: {
+    checksum: string;
+    path: string;
+  };
+  git_clean?: {
+    allow_untracked: boolean;
+  };
+  git_diff?: {
+    cached: boolean;
+    expected_diff: string;
+    files: string;
   };
   http?: {
     body: string;
@@ -115,12 +207,78 @@ export interface FileAction {
   recurse?: boolean;
   src?: string;
   /**
-   * Desired file state (present: file exists, absent: removed, directory:
-   * dir exists, link: symlink, touch: update timestamp)
+   * Desired file state (file/present: file exists, absent: removed,
+   * directory: dir exists, link: symlink, hardlink: hard link, touch:
+   * update timestamp, perms: change permissions only)
    * 
-   * @values present | absent | directory | link | touch
+   * @values file | present | absent | directory | link | hardlink | touch | perms
    */
-  state?: "present" | "absent" | "directory" | "link" | "touch";
+  state?: "file" | "present" | "absent" | "directory" | "link" | "hardlink" | "touch" | "perms";
+}
+
+/**
+ * Delete text between start and end anchor patterns in files
+ * @category file
+ */
+export interface FileDeleteRangeAction {
+  backup?: boolean;
+  end_anchor: string;
+  inclusive?: boolean;
+  path: string;
+  regex?: boolean;
+  start_anchor: string;
+}
+
+/**
+ * Insert text before or after anchor patterns in files
+ * @category file
+ */
+export interface FileInsertAction {
+  allow_multiple?: boolean;
+  anchor: string;
+  backup?: boolean;
+  content: string;
+  path: string;
+  position: string;
+  regex?: boolean;
+}
+
+/**
+ * Apply unified diff patches to files
+ * @category file
+ */
+export interface FilePatchApplyAction {
+  backup?: boolean;
+  context_lines?: number;
+  dry_run?: boolean;
+  patch?: string;
+  patch_file?: string;
+  path: string;
+  strict?: boolean;
+}
+
+/**
+ * Replace text in files using literal or regex patterns
+ * @category file
+ */
+export interface FileReplaceAction {
+  allow_no_match?: boolean;
+  backup?: boolean;
+  count?: number;
+  flags?: {
+    case_insensitive: boolean;
+    multiline: boolean;
+    regex: boolean;
+  };
+  path: string;
+  pattern: string;
+  replace: string;
+}
+
+/**
+ * Include steps from another file
+ */
+export interface IncludeAction {
 }
 
 /**
@@ -151,7 +309,7 @@ export interface PackageAction {
   /**
    * Multiple packages to install/remove
    */
-  names?: string[];
+  names?: string[] | string;
   /**
    * Package state (present: installed, absent: removed, latest: install or
    * upgrade)
@@ -181,6 +339,64 @@ export interface PresetAction {
  */
 export interface PrintAction {
   msg?: string;
+}
+
+/**
+ * Apply multiple patches to multiple files atomically
+ * @category file
+ */
+export interface RepoApplyPatchsetAction {
+  backup?: boolean;
+  base_dir?: string;
+  dry_run?: boolean;
+  output_file?: string;
+  patchset?: string;
+  patchset_file?: string;
+  strict?: boolean;
+}
+
+/**
+ * Search codebase for patterns and output results in JSON format
+ * @category file
+ */
+export interface RepoSearchAction {
+  glob?: string;
+  ignore_dirs?: string[];
+  max_results?: number;
+  output_file?: string;
+  path?: string;
+  pattern: string;
+  regex?: boolean;
+}
+
+/**
+ * Generate a JSON representation of directory structure
+ * @category file
+ */
+export interface RepoTreeAction {
+  exclude_dirs?: string[];
+  include_files?: boolean;
+  max_depth?: number;
+  output_file?: string;
+  path?: string;
+}
+
+/**
+ * Structured configuration with version, global variables, and steps
+ */
+export interface RunConfigAction {
+  /**
+   * Configuration steps to execute
+   */
+  steps: StepAction[];
+  /**
+   * Global variables available to all steps
+   */
+  vars?: Record<string, any>;
+  /**
+   * Configuration schema version (e.g., '1.0')
+   */
+  version?: string;
 }
 
 /**
@@ -308,6 +524,24 @@ export interface VarsAction {
 }
 
 /**
+ * Poll a condition until it becomes true or times out
+ * @category system
+ */
+export interface WaitAction {
+  allow_untracked?: boolean;
+  cmd?: string;
+  condition: string;
+  exit_code?: number;
+  host?: string;
+  interval?: string;
+  path?: string;
+  port?: number;
+  status?: number;
+  timeout?: string;
+  url?: string;
+}
+
+/**
  * A single configuration step
  * 
  * Each step must contain exactly one action (shell, file, service, etc.)
@@ -398,6 +632,14 @@ export interface Step {
 
   // Action fields (exactly one must be specified)
   /**
+   * Capture file changes with enhanced metadata for LLM agents
+   */
+  artifact_capture?: ArtifactCaptureAction;
+  /**
+   * Validate artifacts against constraints (change budgets)
+   */
+  artifact_validate?: ArtifactValidateAction;
+  /**
    * Verify conditions without changing system state
    */
   assert?: AssertAction;
@@ -418,6 +660,22 @@ export interface Step {
    */
   file?: FileAction;
   /**
+   * Delete text between start and end anchor patterns in files
+   */
+  file_delete_range?: FileDeleteRangeAction;
+  /**
+   * Insert text before or after anchor patterns in files
+   */
+  file_insert?: FileInsertAction;
+  /**
+   * Apply unified diff patches to files
+   */
+  file_patch_apply?: FilePatchApplyAction;
+  /**
+   * Replace text in files using literal or regex patterns
+   */
+  file_replace?: FileReplaceAction;
+  /**
    * Load variables from YAML files
    */
   include_vars?: IncludeVarsAction;
@@ -433,6 +691,18 @@ export interface Step {
    * Display messages to the user
    */
   print?: PrintAction;
+  /**
+   * Apply multiple patches to multiple files atomically
+   */
+  repo_apply_patchset?: RepoApplyPatchsetAction;
+  /**
+   * Search codebase for patterns and output results in JSON format
+   */
+  repo_search?: RepoSearchAction;
+  /**
+   * Generate a JSON representation of directory structure
+   */
+  repo_tree?: RepoTreeAction;
   /**
    * Manage services across platforms (systemd, launchd, Windows)
    */
@@ -454,6 +724,10 @@ export interface Step {
    * Set variables for use in subsequent steps
    */
   vars?: VarsAction;
+  /**
+   * Poll a condition until it becomes true or times out
+   */
+  wait?: WaitAction;
 }
 
 /**

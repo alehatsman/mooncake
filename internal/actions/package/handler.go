@@ -20,6 +20,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/template"
 )
 
 // Package manager constants
@@ -76,7 +77,7 @@ func (h *Handler) Validate(step *config.Step) error {
 	pkg := step.Package
 
 	// Must have either name, names, or upgrade
-	if pkg.Name == "" && len(pkg.Names) == 0 && !pkg.Upgrade {
+	if pkg.Name == "" && len(pkg.Names) == 0 && pkg.NamesExpr == "" && !pkg.Upgrade {
 		return fmt.Errorf("one of 'name', 'names', or 'upgrade' is required")
 	}
 
@@ -120,6 +121,15 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		if renderErr == nil {
 			packages[i] = rendered
 		}
+	}
+
+	// Resolve templated names expression (when YAML `names:` was a scalar).
+	if pkg.NamesExpr != "" {
+		expanded, expandErr := h.resolveNamesExpr(ctx, pkg.NamesExpr)
+		if expandErr != nil {
+			return nil, fmt.Errorf("failed to resolve package names expression %q: %w", pkg.NamesExpr, expandErr)
+		}
+		packages = append(packages, expanded...)
 	}
 
 	// Create result
@@ -167,6 +177,13 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 
 	// Build package list
 	packages := h.buildPackageList(pkg)
+	if pkg.NamesExpr != "" {
+		if expanded, expandErr := h.resolveNamesExpr(ctx, pkg.NamesExpr); expandErr == nil {
+			packages = append(packages, expanded...)
+		} else {
+			ctx.GetLogger().Infof("  Would expand names from expression: %s", pkg.NamesExpr)
+		}
+	}
 
 	if pkg.Upgrade {
 		ctx.GetLogger().Infof("  Would upgrade all packages using %s", manager)
@@ -268,6 +285,42 @@ func (h *Handler) buildPackageList(pkg *config.Package) []string {
 	return packages
 }
 
+// resolveNamesExpr renders pkg.NamesExpr against the current variables and
+// converts the result into a []string. Variables that hold a slice are
+// matched without a Pongo2 round-trip (preserves typing); otherwise the
+// template renders to a string and the shared resolver parses it.
+func (h *Handler) resolveNamesExpr(ctx actions.Context, expr string) ([]string, error) {
+	vars := ctx.GetVariables()
+	evaluator := ctx.GetEvaluator()
+
+	trimmed := strings.TrimSpace(expr)
+	if inner, ok := stripTemplateWrapper(trimmed); ok {
+		if items, err := template.ResolveStringList(inner, vars, evaluator); err == nil {
+			return items, nil
+		}
+	}
+
+	rendered, renderErr := ctx.GetTemplate().Render(expr, vars)
+	if renderErr != nil {
+		return nil, fmt.Errorf("render: %w", renderErr)
+	}
+	return template.ResolveStringList(rendered, vars, evaluator)
+}
+
+// stripTemplateWrapper unwraps `{{ expr }}` to `expr` so we can resolve
+// against the variable map directly and preserve []string typing. Returns
+// (inner, true) on a clean single-tag wrapper; (input, false) otherwise.
+func stripTemplateWrapper(s string) (string, bool) {
+	if !strings.HasPrefix(s, "{{") || !strings.HasSuffix(s, "}}") {
+		return s, false
+	}
+	inner := strings.TrimSpace(s[2 : len(s)-2])
+	if inner == "" || strings.Contains(inner, "{{") || strings.Contains(inner, "}}") {
+		return s, false
+	}
+	return inner, true
+}
+
 // updateCache updates the package manager cache.
 func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, become bool) error {
 	var cmdArgs []string
@@ -313,13 +366,15 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 }
 
 // installPackages installs or upgrades packages.
+//
+// Behavior: partition into existing vs. to-install via per-package check,
+// then issue a single batched manager invocation for the to-install set.
 func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string, packages []string, upgrade bool, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
-	var newPkgs, existingPkgs []string
+	var toInstall, existingPkgs []string
 
 	for _, pkg := range packages {
-		// Check if package is already installed
 		installed, err := h.isPackageInstalled(ec, manager, pkg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
@@ -331,24 +386,32 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 			continue
 		}
 
-		// Build install command
-		cmdArgs := h.buildInstallCommand(manager, pkg, upgrade, extra)
-		ec.Logger.Infof("  Installing package: %s", pkg)
-		ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
-
-		output, execErr := h.runCmd(ec, become, cmdArgs)
-		if execErr != nil {
-			ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-			return nil, fmt.Errorf("failed to install package %q: %w", pkg, execErr)
-		}
-
-		newPkgs = append(newPkgs, pkg)
-		result.SetChanged(true)
+		toInstall = append(toInstall, pkg)
 	}
+
+	if len(toInstall) == 0 {
+		ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
+			Manager:        manager,
+			AlreadyPresent: existingPkgs,
+		})
+		return result, nil
+	}
+
+	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, extra)
+	ec.Logger.Infof("  Installing packages: %s", strings.Join(toInstall, ", "))
+	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+
+	output, execErr := h.runCmd(ec, become, cmdArgs)
+	if execErr != nil {
+		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf("failed to install packages %v: %w", toInstall, execErr)
+	}
+
+	result.SetChanged(true)
 
 	ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
 		Manager:        manager,
-		Installed:      newPkgs,
+		Installed:      toInstall,
 		AlreadyPresent: existingPkgs,
 	})
 
@@ -356,13 +419,15 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 }
 
 // removePackages removes packages.
+//
+// Behavior: filter out packages that aren't installed, then issue a single
+// batched manager invocation for the remaining set.
 func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, packages []string, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
-	var removed []string
+	var toRemove []string
 
 	for _, pkg := range packages {
-		// Check if package is installed
 		installed, err := h.isPackageInstalled(ec, manager, pkg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
@@ -373,24 +438,31 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 			continue
 		}
 
-		// Build remove command
-		cmdArgs := h.buildRemoveCommand(manager, pkg, extra)
-		ec.Logger.Infof("  Removing package: %s", pkg)
-		ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
-
-		output, execErr := h.runCmd(ec, become, cmdArgs)
-		if execErr != nil {
-			ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-			return nil, fmt.Errorf("failed to remove package %q: %w", pkg, execErr)
-		}
-
-		removed = append(removed, pkg)
-		result.SetChanged(true)
+		toRemove = append(toRemove, pkg)
 	}
+
+	if len(toRemove) == 0 {
+		ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
+			Manager: manager,
+		})
+		return result, nil
+	}
+
+	cmdArgs := h.buildBatchRemoveCommand(manager, toRemove, extra)
+	ec.Logger.Infof("  Removing packages: %s", strings.Join(toRemove, ", "))
+	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+
+	output, execErr := h.runCmd(ec, become, cmdArgs)
+	if execErr != nil {
+		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf("failed to remove packages %v: %w", toRemove, execErr)
+	}
+
+	result.SetChanged(true)
 
 	ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
 		Manager: manager,
-		Removed: removed,
+		Removed: toRemove,
 	})
 
 	return result, nil
@@ -453,80 +525,108 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 	return err == nil, nil
 }
 
-// buildInstallCommand builds the install command for a package manager.
+// buildInstallCommand builds the install command for a single package.
+//
+// Retained for backward compatibility with tests; production code paths use
+// buildBatchInstallCommand. Equivalent to buildBatchInstallCommand with a
+// single-element slice — same arg ordering.
+//
 //nolint:dupl,unparam // Similar structure to buildRemoveCommand; upgrade parameter for future use
 func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, extra []string) []string {
-	// Preallocate: base command (3) + extra + package name (1)
-	cmd := make([]string, 0, 3+len(extra)+1)
+	return h.buildBatchInstallCommand(manager, []string{pkg}, upgrade, extra)
+}
 
-	switch manager {
-	case pmApt:
-		cmd = []string{"apt-get", "install", "-y"}
-	case pmDnf:
-		cmd = []string{pmDnf, "install", "-y"}
-	case pmYum:
-		cmd = []string{pmYum, "install", "-y"}
-	case pmPacman:
-		cmd = []string{pmPacman, "-S", "--noconfirm"}
-	case pmZypper:
-		cmd = []string{pmZypper, "install", "-y"}
-	case pmApk:
-		cmd = []string{pmApk, "add"}
-	case pmBrew:
-		cmd = []string{pmBrew, "install"}
-	case pmPort:
-		cmd = []string{pmPort, "install"}
-	case pmChoco:
-		cmd = []string{pmChoco, "install", "-y"}
-	case pmScoop:
-		cmd = []string{pmScoop, "install"}
-	}
-
-	// Add extra arguments
+// buildBatchInstallCommand builds the install command for one or more packages.
+//
+// Arg ordering: <manager-base> <extra...> <pkgs...> — `extra` precedes the
+// package list so the manager parses non-package flags before names.
+//
+// Pacman uses `--needed` so reinstall is skipped at the manager level even if
+// the pre-check missed something concurrent.
+//
+//nolint:unparam // upgrade parameter preserved for future use (no-op today)
+func (h *Handler) buildBatchInstallCommand(manager string, pkgs []string, upgrade bool, extra []string) []string {
+	_ = upgrade
+	base := installCommandBase(manager)
+	cmd := make([]string, 0, len(base)+len(extra)+len(pkgs))
+	cmd = append(cmd, base...)
 	cmd = append(cmd, extra...)
-
-	// Add package name
-	cmd = append(cmd, pkg)
-
+	cmd = append(cmd, pkgs...)
 	return cmd
 }
 
-// buildRemoveCommand builds the remove command for a package manager.
-//nolint:dupl // Similar structure to buildInstallCommand but different semantics
-func (h *Handler) buildRemoveCommand(manager, pkg string, extra []string) []string {
-	// Preallocate: base command (3) + extra + package name (1)
-	cmd := make([]string, 0, 3+len(extra)+1)
-
+// installCommandBase returns the manager-specific install command prefix.
+func installCommandBase(manager string) []string {
 	switch manager {
 	case pmApt:
-		cmd = []string{"apt-get", "remove", "-y"}
+		return []string{"apt-get", "install", "-y"}
 	case pmDnf:
-		cmd = []string{pmDnf, "remove", "-y"}
+		return []string{pmDnf, "install", "-y"}
 	case pmYum:
-		cmd = []string{pmYum, "remove", "-y"}
+		return []string{pmYum, "install", "-y"}
 	case pmPacman:
-		cmd = []string{pmPacman, "-R", "--noconfirm"}
+		return []string{pmPacman, "-S", "--noconfirm", "--needed"}
 	case pmZypper:
-		cmd = []string{pmZypper, "remove", "-y"}
+		return []string{pmZypper, "install", "-y"}
 	case pmApk:
-		cmd = []string{pmApk, "del"}
+		return []string{pmApk, "add"}
 	case pmBrew:
-		cmd = []string{pmBrew, "uninstall"}
+		return []string{pmBrew, "install"}
 	case pmPort:
-		cmd = []string{pmPort, "uninstall"}
+		return []string{pmPort, "install"}
 	case pmChoco:
-		cmd = []string{pmChoco, "uninstall", "-y"}
+		return []string{pmChoco, "install", "-y"}
 	case pmScoop:
-		cmd = []string{pmScoop, "uninstall"}
+		return []string{pmScoop, "install"}
 	}
+	return nil
+}
 
-	// Add extra arguments
+// buildRemoveCommand builds the remove command for a single package.
+//
+// Retained for backward compatibility with tests; production code paths use
+// buildBatchRemoveCommand.
+//
+//nolint:dupl // Similar structure to buildInstallCommand but different semantics
+func (h *Handler) buildRemoveCommand(manager, pkg string, extra []string) []string {
+	return h.buildBatchRemoveCommand(manager, []string{pkg}, extra)
+}
+
+// buildBatchRemoveCommand builds the remove command for one or more packages.
+func (h *Handler) buildBatchRemoveCommand(manager string, pkgs []string, extra []string) []string {
+	base := removeCommandBase(manager)
+	cmd := make([]string, 0, len(base)+len(extra)+len(pkgs))
+	cmd = append(cmd, base...)
 	cmd = append(cmd, extra...)
-
-	// Add package name
-	cmd = append(cmd, pkg)
-
+	cmd = append(cmd, pkgs...)
 	return cmd
+}
+
+// removeCommandBase returns the manager-specific remove command prefix.
+func removeCommandBase(manager string) []string {
+	switch manager {
+	case pmApt:
+		return []string{"apt-get", "remove", "-y"}
+	case pmDnf:
+		return []string{pmDnf, "remove", "-y"}
+	case pmYum:
+		return []string{pmYum, "remove", "-y"}
+	case pmPacman:
+		return []string{pmPacman, "-R", "--noconfirm"}
+	case pmZypper:
+		return []string{pmZypper, "remove", "-y"}
+	case pmApk:
+		return []string{pmApk, "del"}
+	case pmBrew:
+		return []string{pmBrew, "uninstall"}
+	case pmPort:
+		return []string{pmPort, "uninstall"}
+	case pmChoco:
+		return []string{pmChoco, "uninstall", "-y"}
+	case pmScoop:
+		return []string{pmScoop, "uninstall"}
+	}
+	return nil
 }
 
 // buildUpgradeCommand builds the upgrade all command for a package manager.

@@ -778,7 +778,7 @@ Manage system packages (install, remove, update) with automatic package manager 
 | Property | Type | Description |
 |----------|------|-------------|
 | `package.name` | string | Single package name to manage |
-| `package.names` | array | Multiple package names to manage |
+| `package.names` | array \| string | Multiple package names — either an inline YAML list, or a template expression that resolves to a list at execute time |
 | `package.state` | string | Desired state: `present` (default), `absent`, `latest` |
 | `package.manager` | string | Package manager to use (auto-detected if not specified) |
 | `package.update_cache` | boolean | Update package cache before operation |
@@ -796,6 +796,11 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
 **Auto-detection:** Uses `package_manager` system fact or detects based on OS if not specified.
 
 **Idempotency:** Checks if package is already installed before attempting installation.
+
+**Batched execution:** Installs and removes issue a single manager invocation per
+step. For pacman that means `pacman -S --noconfirm --needed pkg1 pkg2 …`; other
+managers follow the analogous one-shot form. The pre-install check still runs
+per package, so reports of `installed` / `already_present` are unchanged.
 
 ### Install Single Package
 
@@ -820,6 +825,37 @@ Plus [universal fields](#universal-fields): `name`, `when`, `become`, `tags`, `r
     state: present
   become: true
 ```
+
+### Install From a Templated List
+
+`names` accepts a single template expression that resolves to a list. The
+canonical pattern is to keep the package list in a dedicated file and load it
+with `include_vars`:
+
+```yaml
+# packages.yml
+pacman_packages:
+  - vim
+  - git
+  - tmux
+  - ripgrep
+```
+
+```yaml
+- include_vars: ./packages.yml
+
+- name: Install all packages
+  package:
+    manager: pacman
+    state: present
+    names: "{{ pacman_packages }}"
+  become: true
+  # Runs: pacman -S --noconfirm --needed vim git tmux ripgrep
+```
+
+The expression may resolve to a `[]string`/`[]interface{}` (typed slice
+from `include_vars`), a YAML/JSON list literal, or a whitespace- or
+comma-separated scalar. Inline `names: [vim, git, …]` continues to work.
 
 ### Auto-Detect Package Manager
 

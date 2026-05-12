@@ -1,0 +1,56 @@
+# ============================================================================
+# Package Action - Templated `names` Examples (spec-17)
+# ============================================================================
+# The `names` field accepts either an inline YAML list or a single template
+# expression that resolves to a list at execute time. Combined with
+# `include_vars`, this lets you keep the package list in a dedicated data file
+# and reference it from a single batched `package:` step.
+#
+# Run this file (dry-run keeps things side-effect-free):
+#   mooncake run --config examples/actions/package_templated_names.yml --dry-run
+# ============================================================================
+
+# A) Inline list (existing behavior — still supported, regression baseline)
+- name: "Inline names list"
+  package:
+    manager: pacman
+    state: present
+    names: [vim, git, curl]
+  tags: [inline]
+
+# B) Templated names from in-line vars
+- vars:
+    pacman_packages:
+      - vim
+      - git
+      - tmux
+      - ripgrep
+
+- name: "Templated names from vars"
+  package:
+    manager: pacman
+    state: present
+    names: "{{ pacman_packages }}"
+  tags: [templated]
+
+# C) Realistic pattern: include_vars + batched package step
+#
+# Place your package list in arch/packages.yml as:
+#   pacman_packages:
+#     - vim
+#     - git
+#     - tmux
+#     - ...
+#
+# Then:
+#
+#   - include_vars: ./arch/packages.yml
+#   - package:
+#       manager: pacman
+#       state: present
+#       names: "{{ pacman_packages }}"
+#     become: true
+#
+# A single batched `pacman -S --noconfirm --needed vim git tmux ...`
+# invocation handles the entire list — no per-package subprocess overhead and
+# no plan-step explosion from `with_items`.

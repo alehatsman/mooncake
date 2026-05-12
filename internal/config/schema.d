@@ -207,12 +207,13 @@ export interface FileAction {
   recurse?: boolean;
   src?: string;
   /**
-   * Desired file state (present: file exists, absent: removed, directory:
-   * dir exists, link: symlink, touch: update timestamp)
+   * Desired file state (file/present: file exists, absent: removed,
+   * directory: dir exists, link: symlink, hardlink: hard link, touch:
+   * update timestamp, perms: change permissions only)
    * 
-   * @values present | absent | directory | link | touch
+   * @values file | present | absent | directory | link | hardlink | touch | perms
    */
-  state?: "present" | "absent" | "directory" | "link" | "touch";
+  state?: "file" | "present" | "absent" | "directory" | "link" | "hardlink" | "touch" | "perms";
 }
 
 /**
@@ -308,7 +309,7 @@ export interface PackageAction {
   /**
    * Multiple packages to install/remove
    */
-  names?: string[];
+  names?: string[] | string;
   /**
    * Package state (present: installed, absent: removed, latest: install or
    * upgrade)

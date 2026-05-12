@@ -498,7 +498,8 @@ Package represents a package management operation \(install/remove/update packag
 ```go
 type Package struct {
     Name        string   `yaml:"name" json:"name,omitempty"`                 // Package name (single package)
-    Names       []string `yaml:"names" json:"names,omitempty"`               // Multiple packages
+    Names       []string `yaml:"-" json:"names,omitempty"`                   // Multiple packages (literal list)
+    NamesExpr   string   `yaml:"-" json:"-"`                                 // Templated names expression (set when YAML `names:` is a scalar)
     State       string   `yaml:"state" json:"state,omitempty"`               // present|absent|latest (default: present)
     Manager     string   `yaml:"manager" json:"manager,omitempty"`           // Package manager to use (auto-detected if empty)
     UpdateCache bool     `yaml:"update_cache" json:"update_cache,omitempty"` // Update package cache before operation
@@ -506,6 +507,11 @@ type Package struct {
     Extra       []string `yaml:"extra" json:"extra,omitempty"`               // Extra arguments to pass to package manager
 }
 ```
+
+Custom `UnmarshalYAML` accepts `names:` as either a YAML sequence or a single
+scalar template expression. The scalar form is stashed in `NamesExpr` and
+resolved against the variable map at execute time via the shared
+`internal/template.ResolveStringList` helper.
 
 <a name="Position"></a>
 ## type [Position](<https://github.com/alehatsman/mooncake/blob/master/internal/config/location.go#L11-L14>)

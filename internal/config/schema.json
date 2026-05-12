@@ -700,11 +700,18 @@
           "description": "Package name (single package)"
         },
         "names": {
-          "type": "array",
           "description": "Multiple packages to install/remove",
-          "items": {
-            "type": "string"
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
         },
         "state": {
           "type": "string",
