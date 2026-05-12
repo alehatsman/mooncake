@@ -71,6 +71,10 @@ type Planner struct {
 	includeStack  []IncludeFrame
 	seenFiles     map[string]bool
 	locationMap   map[int]*IncludeFrame // Map step index to location
+	// inputFiles tracks every absolute file path read while building
+	// the plan (root file + all transitively included files). Used for
+	// the Spec 16 stale-plan integrity check.
+	inputFiles []string
 }
 
 // IncludeFrame tracks a frame in the include stack for cycle detection and origin tracking
@@ -192,6 +196,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		return nil, fmt.Errorf("failed to resolve config path: %w", err)
 	}
 	p.seenFiles[absPath] = true
+	p.inputFiles = append(p.inputFiles, absPath)
 
 	// Push root frame
 	p.includeStack = append(p.includeStack, IncludeFrame{
@@ -205,7 +210,32 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		return nil, err
 	}
 
+	// Capture the input-file set + hash for stale-plan detection at
+	// apply time. Dedupe (a file may appear multiple times if included
+	// from multiple parents) and store sorted for determinism.
+	plan.InputFiles = uniqueSorted(p.inputFiles)
+	hash, err := HashInputFiles(plan.InputFiles)
+	if err != nil {
+		return nil, fmt.Errorf("hash input files: %w", err)
+	}
+	plan.InputFilesHash = hash
+
 	return plan, nil
+}
+
+// uniqueSorted dedupes and sorts a slice of strings.
+func uniqueSorted(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // readRunConfig reads and parses a config file with validation
@@ -307,6 +337,7 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 	// Mark as seen and add to stack
 	p.seenFiles[absIncludePath] = true
 	defer delete(p.seenFiles, absIncludePath)
+	p.inputFiles = append(p.inputFiles, absIncludePath)
 
 	p.includeStack = append(p.includeStack, IncludeFrame{
 		FilePath: absIncludePath,

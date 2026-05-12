@@ -8,18 +8,23 @@ import (
 
 // Plan represents a fully expanded, deterministic execution plan.
 //
-// Spec 16 adds Inspections (per-step state predictions) and GeneratedOn
-// (a subset of facts that identify the host the plan was built against,
-// used for stale-plan detection).
+// Spec 16 adds:
+//   - Inspections: per-step state predictions
+//   - GeneratedOn: host facts subset for stale-plan detection
+//   - InputFiles + InputFilesHash: source-file integrity check so
+//     `apply --from-plan` refuses to run plans that no longer match
+//     the YAML they were built from.
 type Plan struct {
-	Version     string                 `json:"version" yaml:"version"`
-	GeneratedAt time.Time              `json:"generated_at" yaml:"generated_at"`
-	GeneratedOn HostFacts              `json:"generated_on,omitempty" yaml:"generated_on,omitempty"`
-	RootFile    string                 `json:"root_file" yaml:"root_file"`
-	Steps       []config.Step          `json:"steps" yaml:"steps"`
-	Inspections []StepInspection       `json:"inspections,omitempty" yaml:"inspections,omitempty"`
-	InitialVars map[string]interface{} `json:"initial_vars,omitempty" yaml:"initial_vars,omitempty"`
-	Tags        []string               `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Version        string                 `json:"version" yaml:"version"`
+	GeneratedAt    time.Time              `json:"generated_at" yaml:"generated_at"`
+	GeneratedOn    HostFacts              `json:"generated_on,omitempty" yaml:"generated_on,omitempty"`
+	RootFile       string                 `json:"root_file" yaml:"root_file"`
+	InputFiles     []string               `json:"input_files,omitempty" yaml:"input_files,omitempty"`
+	InputFilesHash string                 `json:"input_files_hash,omitempty" yaml:"input_files_hash,omitempty"`
+	Steps          []config.Step          `json:"steps" yaml:"steps"`
+	Inspections    []StepInspection       `json:"inspections,omitempty" yaml:"inspections,omitempty"`
+	InitialVars    map[string]interface{} `json:"initial_vars,omitempty" yaml:"initial_vars,omitempty"`
+	Tags           []string               `json:"tags,omitempty" yaml:"tags,omitempty"`
 }
 
 // StepInspection is the result of running a handler in ModePlan against

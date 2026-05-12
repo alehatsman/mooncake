@@ -62,7 +62,79 @@ func parseTags(tagsStr string) []string {
 }
 
 
+// applyFlags returns the canonical flag set shared by `apply` and the
+// deprecated `run` alias. Centralized so both commands stay in sync.
+func applyFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:    "config",
+			Aliases: []string{"c"},
+			Usage:   "Path to configuration file",
+		},
+		&cli.StringFlag{
+			Name:    "vars",
+			Aliases: []string{"v"},
+			Usage:   "Path to variables file",
+		},
+		&cli.StringFlag{
+			Name:    "log-level",
+			Aliases: []string{"l"},
+			Value:   "info",
+			Usage:   "Log level (debug, info, error)",
+		},
+		&cli.StringFlag{
+			Name:    "sudo-pass",
+			Aliases: []string{"s"},
+			Usage:   "Sudo password for steps with become: true (requires --insecure-sudo-pass)",
+		},
+		&cli.BoolFlag{
+			Name:    "ask-become-pass",
+			Aliases: []string{"K"},
+			Usage:   "Prompt for sudo password interactively (recommended)",
+		},
+		&cli.StringFlag{Name: "sudo-pass-file", Usage: "Read sudo password from file (must have 0600 permissions)"},
+		&cli.BoolFlag{Name: "insecure-sudo-pass", Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)"},
+		&cli.StringFlag{
+			Name:    "tags",
+			Aliases: []string{"t"},
+			Usage:   "Filter steps by tags (comma-separated)",
+		},
+		&cli.BoolFlag{
+			Name:    "raw",
+			Aliases: []string{"r"},
+			Value:   false,
+			Usage:   "Disable animated TUI and use raw console output",
+		},
+		&cli.BoolFlag{Name: "dry-run", Value: false, Usage: "Deprecated: use `mooncake plan` for state-aware preview."},
+		&cli.BoolFlag{Name: "check", Value: false, Usage: "Deprecated: use `mooncake plan` for state-aware preview."},
+		&cli.StringFlag{Name: "output-format", Value: "text", Usage: "Output format: text or json (requires --raw)"},
+		&cli.StringFlag{Name: "artifacts-dir", Value: "", Usage: "Directory to store run artifacts (e.g., .mooncake)"},
+		&cli.BoolFlag{Name: "capture-full-output", Value: false, Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)"},
+		&cli.IntFlag{Name: "max-output-bytes", Value: defaultMaxOutputBytes, Usage: "Max bytes of output per step in results.json"},
+		&cli.IntFlag{Name: "max-output-lines", Value: defaultMaxOutputLines, Usage: "Max lines of output per step in results.json"},
+		&cli.StringFlag{Name: "from-plan", Usage: "Apply from saved plan file (JSON or YAML)"},
+		&cli.StringFlag{Name: "facts-json", Usage: "Path to write collected facts as JSON"},
+
+		// Spec 16 stale-plan policy (only meaningful with --from-plan).
+		&cli.BoolFlag{Name: "allow-stale", Value: false, Usage: "Apply a saved plan even if host facts mismatch or input files have changed since plan time"},
+		&cli.DurationFlag{Name: "max-plan-age", Value: 0, Usage: "Refuse to apply a saved plan older than this duration (e.g. 1h). Default: no limit."},
+	}
+}
+
 func run(c *cli.Context) error {
+	// Spec 16 deprecation note: prefer `apply`. Both commands share
+	// this action; the only difference is the subcommand name used
+	// to invoke it.
+	if c.Command != nil && c.Command.Name == "run" {
+		fmt.Fprintln(os.Stderr, "note: `mooncake run` is deprecated; use `mooncake apply` instead.")
+	}
+	if c.Bool("dry-run") {
+		fmt.Fprintln(os.Stderr, "note: --dry-run is deprecated; use `mooncake plan` for state-aware preview.")
+	}
+	if c.Bool("check") {
+		fmt.Fprintln(os.Stderr, "note: --check is deprecated; use `mooncake plan` for state-aware preview.")
+	}
+
 	// Check if running from plan
 	fromPlan := c.String("from-plan")
 	if fromPlan != "" {
@@ -197,8 +269,21 @@ func runFromPlan(c *cli.Context, planPath string) error {
 		return fmt.Errorf("failed to load plan: %w", err)
 	}
 
+	// Spec 16 stale-plan policy: refuse to apply a plan that was built
+	// for a different host, against source files that have changed, or
+	// older than --max-plan-age. --allow-stale demotes all rejections
+	// to warnings.
+	validateOpts := plan.ValidateOptions{
+		MaxAge:     c.Duration("max-plan-age"),
+		AllowStale: c.Bool("allow-stale"),
+	}
+	if err := plan.ValidateForApply(planData, validateOpts); err != nil {
+		return fmt.Errorf("refusing to apply stale plan: %w\n\nUse --allow-stale to override.", err)
+	}
+
 	// Setup logger
 	dryRun := c.Bool("dry-run")
+	checkMode := c.Bool("check")
 	logLevel := c.String("log-level")
 
 	// Always use event-driven architecture
@@ -223,7 +308,7 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	internalLog := logger.NewLogger(level)
 
 	// Execute plan with event publisher
-	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, false, internalLog, publisher)
+	return executor.ExecutePlan(planData, c.String("sudo-pass"), dryRun, checkMode, internalLog, publisher)
 }
 
 func factsCommand(c *cli.Context) error {
@@ -722,98 +807,15 @@ func createApp() *cli.App {
 			mcpCommand(),
 			stepCommand(),
 			{
-				Name:  "run",
-				Usage: "Run a space fighter",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "config",
-						Aliases:  []string{"c"},
-						Usage:    "Path to configuration file",
-					},
-					&cli.StringFlag{
-						Name:    "vars",
-						Aliases: []string{"v"},
-						Usage:   "Path to variables file",
-					},
-					&cli.StringFlag{
-						Name:    "log-level",
-						Aliases: []string{"l"},
-						Value:   "info",
-						Usage:   "Log level (debug, info, error)",
-					},
-					&cli.StringFlag{
-						Name:    "sudo-pass",
-						Aliases: []string{"s"},
-						Usage:   "Sudo password for steps with become: true (requires --insecure-sudo-pass)",
-					},
-					&cli.BoolFlag{
-						Name:    "ask-become-pass",
-						Aliases: []string{"K"},
-						Usage:   "Prompt for sudo password interactively (recommended)",
-					},
-					&cli.StringFlag{
-						Name:  "sudo-pass-file",
-						Usage: "Read sudo password from file (must have 0600 permissions)",
-					},
-					&cli.BoolFlag{
-						Name:  "insecure-sudo-pass",
-						Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
-					},
-					&cli.StringFlag{
-						Name:    "tags",
-						Aliases: []string{"t"},
-						Usage:   "Filter steps by tags (comma-separated)",
-					},
-					&cli.BoolFlag{
-						Name:    "raw",
-						Aliases: []string{"r"},
-						Value:   false,
-						Usage:   "Disable animated TUI and use raw console output",
-					},
-					&cli.BoolFlag{
-						Name:  "dry-run",
-						Value: false,
-						Usage: "Preview what would be executed without making changes",
-					},
-					&cli.BoolFlag{
-						Name:  "check",
-						Value: false,
-						Usage: "Query current state without making changes; exit 1 if anything would change",
-					},
-					&cli.StringFlag{
-						Name:  "output-format",
-						Value: "text",
-						Usage: "Output format: text or json (requires --raw)",
-					},
-					&cli.StringFlag{
-						Name:  "artifacts-dir",
-						Value: "",
-						Usage: "Directory to store run artifacts (e.g., .mooncake)",
-					},
-					&cli.BoolFlag{
-						Name:  "capture-full-output",
-						Value: false,
-						Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)",
-					},
-					&cli.IntFlag{
-						Name:  "max-output-bytes",
-						Value: defaultMaxOutputBytes,
-						Usage: "Max bytes of output per step in results.json",
-					},
-					&cli.IntFlag{
-						Name:  "max-output-lines",
-						Value: defaultMaxOutputLines,
-						Usage: "Max lines of output per step in results.json",
-					},
-					&cli.StringFlag{
-						Name:  "from-plan",
-						Usage: "Execute from saved plan file (JSON or YAML)",
-					},
-					&cli.StringFlag{
-						Name:  "facts-json",
-						Usage: "Path to write collected facts as JSON",
-					},
-				},
+				Name:  "apply",
+				Usage: "Apply a playbook or saved plan to the system (Spec 16; mooncake run is the deprecated alias)",
+				Flags: applyFlags(),
+				Action: run,
+			},
+			{
+				Name:   "run",
+				Usage:  "Run a space fighter (deprecated alias for `apply`)",
+				Flags:  applyFlags(),
 				Action: run,
 			},
 			{
