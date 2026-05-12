@@ -172,9 +172,9 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:   "command that fails",
-			argv:   []string{"ls", "/nonexistent/path/12345"},
-			wantRC: 1, // Could be 1 or 2 depending on system
+			name:    "command that fails",
+			argv:    []string{"ls", "/nonexistent/path/12345"},
+			wantRC:  1, // Could be 1 or 2 depending on system
 			wantErr: true,
 		},
 	}

@@ -37,7 +37,7 @@ func mockExecutionContext() *executor.ExecutionContext {
 		CurrentStepID:  ctx.StepID,
 		PathUtil:       pathutil.NewPathExpander(tmpl),
 		CurrentDir:     "/tmp",
-		CurrentMode: actions.ModeApply,
+		CurrentMode:    actions.ModeApply,
 	}
 }
 

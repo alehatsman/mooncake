@@ -96,15 +96,15 @@ func miseToolID(spec Spec) string {
 
 // realMiseRunner is the default miseRunner backed by exec.Command. It
 // resolves `mise` in this order:
-//   1. exec.LookPath("mise") — anything on the user's PATH (system
-//      install, manual install, mooncake-managed install already on
-//      PATH via `mooncake tool env`)
-//   2. The mooncake tool store — `<store>/mise/<version>/bin/mise`
-//      for any installed version. This is what makes the
-//      `mise-bootstrap` preset (Spec 19 E8.7) work in a single apply:
-//      after the bootstrap step installs mise into mooncake's tree,
-//      the next `backend: mise` step finds it here without any PATH
-//      manipulation.
+//  1. exec.LookPath("mise") — anything on the user's PATH (system
+//     install, manual install, mooncake-managed install already on
+//     PATH via `mooncake tool env`)
+//  2. The mooncake tool store — `<store>/mise/<version>/bin/mise`
+//     for any installed version. This is what makes the
+//     `mise-bootstrap` preset (Spec 19 E8.7) work in a single apply:
+//     after the bootstrap step installs mise into mooncake's tree,
+//     the next `backend: mise` step finds it here without any PATH
+//     manipulation.
 type realMiseRunner struct{}
 
 func (r realMiseRunner) lookPath() error {

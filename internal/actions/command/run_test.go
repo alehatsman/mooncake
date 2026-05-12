@@ -19,13 +19,13 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 		t.Fatal(err)
 	}
 	return &executor.ExecutionContext{
-		Variables:  map[string]interface{}{"name": "alice"},
-		Template:   r,
-		PathUtil:   pathutil.NewPathExpander(r),
-		Logger:     logger.NewLogger(logger.ErrorLevel),
-		CurrentDir: "/tmp",
+		Variables:   map[string]interface{}{"name": "alice"},
+		Template:    r,
+		PathUtil:    pathutil.NewPathExpander(r),
+		Logger:      logger.NewLogger(logger.ErrorLevel),
+		CurrentDir:  "/tmp",
 		CurrentMode: planMode(plan),
-		Stats:      executor.NewExecutionStats(),
+		Stats:       executor.NewExecutionStats(),
 	}
 }
 

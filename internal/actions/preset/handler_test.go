@@ -24,7 +24,6 @@ func mustNewRenderer() template.Renderer {
 	return r
 }
 
-
 // setupTestPresets creates temporary preset files for testing
 func setupTestPresets(t *testing.T) (cleanup func()) {
 	t.Helper()
@@ -147,7 +146,7 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 		Logger:         &testutil.MockLogger{Logs: []string{}},
 		Evaluator:      expression.NewExprEvaluator(),
 		CurrentDir:     ".",
-		CurrentMode: actions.ModeApply,
+		CurrentMode:    actions.ModeApply,
 	}
 }
 
@@ -422,8 +421,8 @@ func TestHandler_DryRun(t *testing.T) {
 			ec.CurrentMode = actions.ModePlan
 
 			step := &config.Step{
-				Name:   "Test dry-run",
-				Use: tt.preset,
+				Name: "Test dry-run",
+				Use:  tt.preset,
 			}
 
 			// DryRun should not error even for nonexistent presets

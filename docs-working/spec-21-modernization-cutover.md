@@ -1,9 +1,21 @@
 # Spec 21: Modernization Cutover (Mooncake 2.0)
 
-**Effort:** L (1–2 weeks, single coordinated landing)
-**Value:** Foundational — locks in the modern action surface before further
-expansion. Renames cannot be done incrementally without poisoning the schema
-and presets with mixed conventions.
+**Status:** Shipped — 9 commits between `c77c461` and `f0ac797` on `master`
+(2026-05-12 / 2026-05-13). Build / vet / lint / 55 test packages green;
+schema + docs regenerated; sibling feature branches (`agentd`, `spec-19`
+tool, `container-actions`, `partition-action-exploration`) integrated.
+
+**Epic:** E9 Modern Action Surface — see
+[`epic-spec-21-followup.md`](epic-spec-21-followup.md) for the
+next-iteration roadmap (specs 22–31).
+
+**Effort delivered:** ~2 days end-to-end (extended by CI fixes + branch
+integration in the same session).
+
+**Value:** Foundational — locked in the modern action surface and
+dot-namespaced YAML keys before any further expansion. Without this,
+every subsequent spec would have carried the cost of mixed v1/v2
+conventions forever.
 
 **Companion docs:** `VISION.md`, `VISION_ACTIONS.md`.
 

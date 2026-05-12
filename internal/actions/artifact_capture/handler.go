@@ -21,7 +21,7 @@ const (
 	defaultOutputDir    = "./artifacts"
 	defaultFormat       = "both"
 	defaultMaxDiffSize  = 1 * 1024 * 1024 // 1MB
-	defaultMaxPlanSteps = 20               // Don't embed plans with more than 20 steps
+	defaultMaxPlanSteps = 20              // Don't embed plans with more than 20 steps
 )
 
 // Handler implements the artifact_capture action handler.
@@ -430,4 +430,26 @@ func (t *fileChangeTracker) GetFileChanges() []artifacts.FileChange {
 // Close implements the Subscriber interface (no-op for this tracker).
 func (t *fileChangeTracker) Close() {
 	// No resources to clean up
+}
+
+// Run is the Spec 16 unified entry point. Artifact capture re-runs its
+// inner steps every execute (it's not idempotent — capturing is the
+// point), so plan mode always reports would-change with the inner-step
+// count for context.
+//
+// Deep inspection (running each inner step's plan-mode prediction
+// recursively) is a follow-up; today the plan output for an
+// artifact_capture step shows the step's name and inner count, while
+// the inner steps themselves are not inspected.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	if ctx.Mode() != actions.ModePlan {
+		return h.Execute(ctx, step)
+	}
+
+	c := step.ArtifactCapture
+	result := executor.NewResult()
+	result.Checkable = true
+	result.WouldChange = true
+	result.Reason = fmt.Sprintf("would capture artifact %q (%d inner step(s))", c.Name, len(c.Steps))
+	return result, nil
 }

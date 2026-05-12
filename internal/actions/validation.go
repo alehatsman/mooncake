@@ -16,10 +16,10 @@ type Schema struct {
 
 // ActionDefinition represents an action's schema definition
 type ActionDefinition struct {
-	Type        string                     `json:"type"`
-	Description string                     `json:"description"`
-	Properties  map[string]PropertySchema  `json:"properties"`
-	Required    []string                   `json:"required"`
+	Type        string                    `json:"type"`
+	Description string                    `json:"description"`
+	Properties  map[string]PropertySchema `json:"properties"`
+	Required    []string                  `json:"required"`
 }
 
 // PropertySchema represents a property's schema

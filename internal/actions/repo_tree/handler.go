@@ -26,22 +26,22 @@ const (
 
 // TreeNode represents a file or directory in the tree structure.
 type TreeNode struct {
-	Name     string      `json:"name"`               // File or directory name
-	Type     string      `json:"type"`               // "file" or "directory"
-	Path     string      `json:"path"`               // Relative path from root
-	Size     int64       `json:"size,omitempty"`     // File size in bytes (files only)
-	Children []TreeNode  `json:"children,omitempty"` // Child nodes (directories only)
+	Name     string     `json:"name"`               // File or directory name
+	Type     string     `json:"type"`               // "file" or "directory"
+	Path     string     `json:"path"`               // Relative path from root
+	Size     int64      `json:"size,omitempty"`     // File size in bytes (files only)
+	Children []TreeNode `json:"children,omitempty"` // Child nodes (directories only)
 }
 
 // TreeOutput is the JSON structure written to output file.
 type TreeOutput struct {
-	RootPath      string    `json:"root_path"`        // Root path that was traversed
-	MaxDepth      int       `json:"max_depth"`        // Maximum depth traversed (-1 = unlimited)
-	IncludeFiles  bool      `json:"include_files"`    // Whether files were included
-	TotalDirs     int       `json:"total_dirs"`       // Total number of directories
-	TotalFiles    int       `json:"total_files"`      // Total number of files
-	Tree          TreeNode  `json:"tree"`             // Root tree node
-	Timestamp     time.Time `json:"timestamp"`        // When tree was generated
+	RootPath     string    `json:"root_path"`     // Root path that was traversed
+	MaxDepth     int       `json:"max_depth"`     // Maximum depth traversed (-1 = unlimited)
+	IncludeFiles bool      `json:"include_files"` // Whether files were included
+	TotalDirs    int       `json:"total_dirs"`    // Total number of directories
+	TotalFiles   int       `json:"total_files"`   // Total number of files
+	Tree         TreeNode  `json:"tree"`          // Root tree node
+	Timestamp    time.Time `json:"timestamp"`     // When tree was generated
 }
 
 // Handler implements the Handler interface for repo_tree actions.
@@ -55,11 +55,11 @@ func init() {
 // Metadata returns metadata about the repo_tree action.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:        actionName,
-		Description: "Generate a JSON representation of directory structure",
-		Category:    actions.CategoryFile,
-		SupportsDryRun: true,
-		SupportsBecome: false,
+		Name:               actionName,
+		Description:        "Generate a JSON representation of directory structure",
+		Category:           actions.CategoryFile,
+		SupportsDryRun:     true,
+		SupportsBecome:     false,
 		EmitsEvents:        []string{}, // No events emitted (read-only operation)
 		Version:            "1.0.0",
 		SupportedPlatforms: []string{}, // All platforms
@@ -333,4 +333,21 @@ func (h *Handler) buildTree(
 	}
 
 	return node, nil
+}
+
+// Run is the Spec 16 entry point. repo_tree reads repository structure
+// without mutating, so plan mode delegates to Execute and surfaces
+// Checkable=true.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	res, err := h.Execute(ctx, step)
+	if err != nil {
+		return res, err
+	}
+	if ctx.Mode() == actions.ModePlan {
+		if r, ok := res.(*executor.Result); ok {
+			r.Checkable = true
+			r.Reason = "repo_tree (read-only)"
+		}
+	}
+	return res, nil
 }

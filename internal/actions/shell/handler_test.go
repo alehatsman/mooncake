@@ -260,10 +260,10 @@ func TestHandler_Execute_WithInterpreter(t *testing.T) {
 			skipWindows: true,
 		},
 		{
-			name:     "pwsh interpreter",
+			name:        "pwsh interpreter",
 			interpreter: "pwsh",
-			cmd:      "Write-Output hello",
-			skipUnix: true, // Only test on Windows
+			cmd:         "Write-Output hello",
+			skipUnix:    true, // Only test on Windows
 		},
 	}
 
@@ -1298,4 +1298,3 @@ func TestHandler_GetInterpreter(t *testing.T) {
 		})
 	}
 }
-

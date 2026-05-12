@@ -45,8 +45,8 @@ func TestHandler_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing artifact_capture",
-			step: &config.Step{},
+			name:    "missing artifact_capture",
+			step:    &config.Step{},
 			wantErr: true,
 		},
 		{

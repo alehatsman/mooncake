@@ -16,10 +16,10 @@ import (
 
 // Mock handler for testing
 type mockHandler struct {
-	metadata ActionMetadata
+	metadata     ActionMetadata
 	validateFunc func(*config.Step) error
-	executeFunc func(Context, *config.Step) (Result, error)
-	dryRunFunc func(Context, *config.Step) error
+	executeFunc  func(Context, *config.Step) (Result, error)
+	dryRunFunc   func(Context, *config.Step) error
 }
 
 func (m *mockHandler) Metadata() ActionMetadata {
@@ -253,9 +253,9 @@ func TestRegistry_Register(t *testing.T) {
 
 	handler := &mockHandler{
 		metadata: ActionMetadata{
-			Name: "test",
+			Name:        "test",
 			Description: "Test action",
-			Category: CategoryCommand,
+			Category:    CategoryCommand,
 		},
 	}
 
@@ -313,9 +313,7 @@ func TestRegistry_Get(t *testing.T) {
 
 	if err := reg.Register(handler); err != nil {
 
-
 		t.Fatalf("Register failed: %v", err)
-
 
 	}
 	// Test successful retrieval
@@ -381,9 +379,7 @@ func TestRegistry_Has(t *testing.T) {
 
 	if err := reg.Register(handler); err != nil {
 
-
 		t.Fatalf("Register failed: %v", err)
-
 
 	}
 	if !reg.Has("exists") {
@@ -405,9 +401,7 @@ func TestRegistry_Count(t *testing.T) {
 
 	if err := reg.Register(&mockHandler{metadata: ActionMetadata{Name: "h1"}}); err != nil {
 
-
 		t.Fatalf("Register failed: %v", err)
-
 
 	}
 	if reg.Count() != 1 {
@@ -416,9 +410,7 @@ func TestRegistry_Count(t *testing.T) {
 
 	if err := reg.Register(&mockHandler{metadata: ActionMetadata{Name: "h2"}}); err != nil {
 
-
 		t.Fatalf("Register failed: %v", err)
-
 
 	}
 	if reg.Count() != 2 {
@@ -526,13 +518,13 @@ func TestGlobalRegistry_Functions(t *testing.T) {
 // TestActionMetadata_Fields tests ActionMetadata structure
 func TestActionMetadata_Fields(t *testing.T) {
 	meta := ActionMetadata{
-		Name: "test_action",
-		Description: "A test action",
-		Category: CategoryCommand,
+		Name:           "test_action",
+		Description:    "A test action",
+		Category:       CategoryCommand,
 		SupportsDryRun: true,
 		SupportsBecome: true,
-		EmitsEvents: []string{"test.started", "test.completed"},
-		Version: "1.0.0",
+		EmitsEvents:    []string{"test.started", "test.completed"},
+		Version:        "1.0.0",
 	}
 
 	if meta.Name != "test_action" {
@@ -562,11 +554,11 @@ func TestActionMetadata_Fields(t *testing.T) {
 func TestActionCategory_Constants(t *testing.T) {
 	categories := map[ActionCategory]string{
 		CategoryCommand: "command",
-		CategoryFile: "file",
-		CategorySystem: "system",
-		CategoryData: "data",
+		CategoryFile:    "file",
+		CategorySystem:  "system",
+		CategoryData:    "data",
 		CategoryNetwork: "network",
-		CategoryOutput: "output",
+		CategoryOutput:  "output",
 	}
 
 	for category, expected := range categories {
@@ -579,9 +571,9 @@ func TestActionCategory_Constants(t *testing.T) {
 // TestHandlerFunc_NewHandlerFunc tests HandlerFunc creation
 func TestHandlerFunc_NewHandlerFunc(t *testing.T) {
 	metadata := ActionMetadata{
-		Name: "func_test",
+		Name:        "func_test",
 		Description: "Test function handler",
-		Category: CategoryCommand,
+		Category:    CategoryCommand,
 	}
 
 	validateCalled := false
@@ -767,7 +759,7 @@ func TestRegistry_MultipleCategories(t *testing.T) {
 	for i, cat := range categories {
 		handler := &mockHandler{
 			metadata: ActionMetadata{
-				Name: fmt.Sprintf("handler_%d", i),
+				Name:     fmt.Sprintf("handler_%d", i),
 				Category: cat,
 			},
 		}
@@ -796,13 +788,13 @@ func TestRegistry_MultipleCategories(t *testing.T) {
 // TestHandlerFunc_ComplexMetadata tests HandlerFunc with full metadata
 func TestHandlerFunc_ComplexMetadata(t *testing.T) {
 	metadata := ActionMetadata{
-		Name: "complex",
-		Description: "A complex handler with all metadata fields",
-		Category: CategorySystem,
+		Name:           "complex",
+		Description:    "A complex handler with all metadata fields",
+		Category:       CategorySystem,
 		SupportsDryRun: true,
 		SupportsBecome: true,
-		EmitsEvents: []string{"complex.start", "complex.progress", "complex.complete"},
-		Version: "2.1.0",
+		EmitsEvents:    []string{"complex.start", "complex.progress", "complex.complete"},
+		Version:        "2.1.0",
 	}
 
 	handler := NewHandlerFunc(
@@ -851,7 +843,7 @@ func TestRegistry_StressTest(t *testing.T) {
 	for i := 0; i < numHandlers; i++ {
 		handler := &mockHandler{
 			metadata: ActionMetadata{
-				Name: fmt.Sprintf("stress_handler_%d", i),
+				Name:     fmt.Sprintf("stress_handler_%d", i),
 				Category: CategoryCommand,
 			},
 		}

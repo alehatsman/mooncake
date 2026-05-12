@@ -31,7 +31,7 @@ func init() {
 // Metadata returns metadata about the command action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:           "cmd",
+		Name:               "cmd",
 		Description:        "Execute commands directly without shell interpolation",
 		Category:           actions.CategoryCommand,
 		SupportsDryRun:     true,
@@ -351,4 +351,36 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	return nil
+}
+
+// Run is the Spec 16 entry point. Like shell, command actions can't be
+// predicted for idempotency. Plan mode surfaces the rendered argv so
+// users see what would run. WouldChange is set because command steps
+// are assumed to mutate state.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	if ctx.Mode() == actions.ModePlan {
+		r := executor.NewResult()
+		r.Checkable = true
+		r.WouldChange = true
+
+		rendered := make([]string, len(step.Cmd.Argv))
+		for i, arg := range step.Cmd.Argv {
+			out, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
+			if err != nil {
+				out = arg
+			}
+			rendered[i] = out
+		}
+		joined := strings.Join(rendered, " ")
+		if len(joined) > 80 {
+			joined = joined[:77] + "..."
+		}
+		if step.ShouldBecome() {
+			r.Reason = fmt.Sprintf("would run (sudo): %s", joined)
+		} else {
+			r.Reason = fmt.Sprintf("would run: %s", joined)
+		}
+		return r, nil
+	}
+	return h.Execute(ctx, step)
 }

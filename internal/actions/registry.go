@@ -14,18 +14,18 @@ import (
 //  4. Thread safety - concurrent access from multiple goroutines
 //
 // Registration flow:
-//   1. Action package imports actions: import "github.com/.../internal/actions"
-//   2. Action package defines handler: type Handler struct{}
-//   3. Action package registers in init(): func init() { actions.Register(&Handler{}) }
-//   4. Main imports register package: import _ "github.com/.../internal/register"
-//   5. Register package imports all actions: import _ ".../actions/shell"
-//   6. All handlers automatically registered before main() runs
+//  1. Action package imports actions: import "github.com/.../internal/actions"
+//  2. Action package defines handler: type Handler struct{}
+//  3. Action package registers in init(): func init() { actions.Register(&Handler{}) }
+//  4. Main imports register package: import _ "github.com/.../internal/register"
+//  5. Register package imports all actions: import _ ".../actions/shell"
+//  6. All handlers automatically registered before main() runs
 //
 // Lookup flow:
-//   1. Executor determines action type from step: actionType := step.DetermineActionType()
-//   2. Executor queries registry: handler, ok := actions.Get(actionType)
-//   3. If found, executor calls: handler.Validate(step), handler.Execute(ctx, step)
-//   4. If not found, executor falls back to legacy implementation
+//  1. Executor determines action type from step: actionType := step.DetermineActionType()
+//  2. Executor queries registry: handler, ok := actions.Get(actionType)
+//  3. If found, executor calls: handler.Validate(step), handler.Execute(ctx, step)
+//  4. If not found, executor falls back to legacy implementation
 //
 // This avoids circular imports because:
 //   - actions package defines Handler interface
@@ -34,8 +34,8 @@ import (
 //   - register package imports action implementations (triggers init())
 //   - cmd imports register (triggers all registrations)
 type Registry struct {
-	mu       sync.RWMutex        // Protects concurrent access to handlers map
-	handlers map[string]Handler  // Maps action names ("shell", "file") to handlers
+	mu       sync.RWMutex       // Protects concurrent access to handlers map
+	handlers map[string]Handler // Maps action names ("shell", "file") to handlers
 }
 
 // NewRegistry creates a new action registry.

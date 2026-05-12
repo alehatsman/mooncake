@@ -35,7 +35,7 @@ func mockExecutionContext() *executor.ExecutionContext {
 		CurrentStepID:  ctx.StepID,
 		PathUtil:       pathutil.NewPathExpander(tmpl),
 		CurrentDir:     "/tmp",
-		CurrentMode: actions.ModeApply,
+		CurrentMode:    actions.ModeApply,
 	}
 }
 
@@ -1115,11 +1115,11 @@ func TestHandler_stripPathComponents(t *testing.T) {
 	h := &Handler{}
 
 	tests := []struct {
-		name       string
-		path       string
-		count      int
-		wantPath   string
-		wantStrip  bool
+		name      string
+		path      string
+		count     int
+		wantPath  string
+		wantStrip bool
 	}{
 		{
 			name:      "no stripping",

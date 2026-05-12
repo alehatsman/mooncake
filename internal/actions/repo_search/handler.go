@@ -38,14 +38,14 @@ type SearchResult struct {
 
 // SearchOutput is the JSON structure written to output file.
 type SearchOutput struct {
-	Pattern     string         `json:"pattern"`               // Search pattern used
-	Regex       bool           `json:"regex"`                 // Whether regex mode was used
-	Glob        string         `json:"glob,omitempty"`        // Glob pattern used
-	Path        string         `json:"path"`                  // Search root path
-	TotalFiles  int            `json:"total_files_searched"`  // Number of files searched
-	TotalMatches int           `json:"total_matches"`         // Total number of matches found
-	Results     []SearchResult `json:"results"`               // Individual match results
-	Timestamp   time.Time      `json:"timestamp"`             // When search was performed
+	Pattern      string         `json:"pattern"`              // Search pattern used
+	Regex        bool           `json:"regex"`                // Whether regex mode was used
+	Glob         string         `json:"glob,omitempty"`       // Glob pattern used
+	Path         string         `json:"path"`                 // Search root path
+	TotalFiles   int            `json:"total_files_searched"` // Number of files searched
+	TotalMatches int            `json:"total_matches"`        // Total number of matches found
+	Results      []SearchResult `json:"results"`              // Individual match results
+	Timestamp    time.Time      `json:"timestamp"`            // When search was performed
 }
 
 // Handler implements the Handler interface for repo_search actions.
@@ -59,11 +59,11 @@ func init() {
 // Metadata returns metadata about the repo_search action.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:        actionName,
-		Description: "Search codebase for patterns and output results in JSON format",
-		Category:    actions.CategoryFile,
-		SupportsDryRun: true,
-		SupportsBecome: false,
+		Name:               actionName,
+		Description:        "Search codebase for patterns and output results in JSON format",
+		Category:           actions.CategoryFile,
+		SupportsDryRun:     true,
+		SupportsBecome:     false,
 		EmitsEvents:        []string{}, // No events emitted (read-only operation)
 		Version:            "1.0.0",
 		SupportedPlatforms: []string{}, // All platforms
@@ -408,4 +408,21 @@ func (h *Handler) matchesGlobPattern(filename, globPattern string) bool {
 	// Fallback to simple match
 	matched, _ := filepath.Match(globPattern, filename)
 	return matched
+}
+
+// Run is the Spec 16 entry point. repo_search reads repository state
+// without mutating, so plan mode delegates to Execute and surfaces
+// Checkable=true.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	res, err := h.Execute(ctx, step)
+	if err != nil {
+		return res, err
+	}
+	if ctx.Mode() == actions.ModePlan {
+		if r, ok := res.(*executor.Result); ok {
+			r.Checkable = true
+			r.Reason = "repo_search (read-only)"
+		}
+	}
+	return res, nil
 }

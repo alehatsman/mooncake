@@ -23,7 +23,6 @@ func mustNewRenderer() template.Renderer {
 	return r
 }
 
-
 // mockContext implements actions.Context for testing
 type mockContext struct {
 	variables map[string]interface{}

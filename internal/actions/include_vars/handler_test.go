@@ -221,9 +221,9 @@ func TestHandler_Execute(t *testing.T) {
 
 			// Create ExecutionContext (include_vars needs PathUtil)
 			renderer, err := template.NewPongo2Renderer()
-	if err != nil {
-		panic("Failed to create renderer: " + err.Error())
-	}
+			if err != nil {
+				panic("Failed to create renderer: " + err.Error())
+			}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.existingVars
@@ -359,9 +359,9 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 
 			// Create ExecutionContext
 			renderer, err := template.NewPongo2Renderer()
-	if err != nil {
-		panic("Failed to create renderer: " + err.Error())
-	}
+			if err != nil {
+				panic("Failed to create renderer: " + err.Error())
+			}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.setupVars
@@ -670,9 +670,9 @@ func TestHandler_DryRun(t *testing.T) {
 
 			// Create ExecutionContext
 			renderer, err := template.NewPongo2Renderer()
-	if err != nil {
-		panic("Failed to create renderer: " + err.Error())
-	}
+			if err != nil {
+				panic("Failed to create renderer: " + err.Error())
+			}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.existingVars
@@ -685,7 +685,7 @@ func TestHandler_DryRun(t *testing.T) {
 				Logger:         mockCtx.Log,
 				PathUtil:       pathExpander,
 				CurrentDir:     "/tmp",
-				CurrentMode: actions.ModePlan,
+				CurrentMode:    actions.ModePlan,
 			}
 
 			step := &config.Step{
@@ -742,7 +742,7 @@ func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 		Logger:         mockCtx.Log,
 		PathUtil:       pathExpander,
 		CurrentDir:     "/tmp",
-		CurrentMode: actions.ModePlan,
+		CurrentMode:    actions.ModePlan,
 	}
 
 	step := &config.Step{
@@ -795,7 +795,7 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 		Logger:         mockCtx.Log,
 		PathUtil:       pathExpander,
 		CurrentDir:     "/tmp",
-		CurrentMode: actions.ModePlan,
+		CurrentMode:    actions.ModePlan,
 	}
 
 	// Use a path with undefined variable (will fail expansion)

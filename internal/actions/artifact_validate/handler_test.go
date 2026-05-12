@@ -147,11 +147,11 @@ func TestValidateMaxLinesChanged(t *testing.T) {
 	artifactPath := filepath.Join(tmpDir, "changes.json")
 
 	tests := []struct {
-		name          string
-		linesPerFile  int
-		fileCount     int
-		maxLines      int
-		wantPass      bool
+		name         string
+		linesPerFile int
+		fileCount    int
+		maxLines     int
+		wantPass     bool
 	}{
 		{
 			name:         "within limit",
@@ -268,16 +268,16 @@ func TestMatchGlob(t *testing.T) {
 		// Basic wildcards
 		{"*.go", "main.go", true},
 		{"*.go", "main.py", false},
-		
+
 		// Directory wildcards
 		{"src/**/*.go", "src/main.go", true},
 		{"src/**/*.go", "src/pkg/main.go", true},
 		{"src/**/*.go", "other/main.go", false},
-		
+
 		// Prefix/suffix
 		{"src/**", "src/anything", true},
 		{"**/*.json", "config.json", true},
-		
+
 		// No match
 		{"*.txt", "readme.md", false},
 	}
@@ -309,7 +309,7 @@ func createTestMetadata(fileCount, linesPerFile int) artifacts.ArtifactMetadata 
 	}
 
 	totalLines := fileCount * linesPerFile * 2 // added + removed
-	
+
 	return artifacts.ArtifactMetadata{
 		Name:        "test-artifact",
 		CaptureTime: "2026-02-17T12:00:00Z",

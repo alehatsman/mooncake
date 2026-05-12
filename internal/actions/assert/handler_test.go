@@ -487,9 +487,9 @@ func TestHandler_Execute_FileAssertion_Content(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		content  string
-		wantErr  bool
+		name    string
+		content string
+		wantErr bool
 	}{
 		{
 			name:    "exact content match",
@@ -1262,9 +1262,9 @@ func TestHandler_Execute_HTTPAssertion_WithTemplate(t *testing.T) {
 	defer server.Close()
 
 	ctx.Variables = map[string]interface{}{
-		"server_url":      server.URL,
-		"expected_text":   "Hello",
-		"custom_header":   "Bearer token123",
+		"server_url":    server.URL,
+		"expected_text": "Hello",
+		"custom_header": "Bearer token123",
 	}
 
 	contains := "{{ expected_text }}"
@@ -1367,8 +1367,8 @@ func TestHandler_DryRun_File(t *testing.T) {
 	defer os.RemoveAll(ctx.CurrentDir)
 
 	tests := []struct {
-		name     string
-		file     *config.AssertFile
+		name string
+		file *config.AssertFile
 	}{
 		{
 			name: "file exists",
