@@ -423,14 +423,18 @@ do it (`Install`).
 
 ---
 
-## Task 2 — Install pipeline
+## Task 2 — Shared URL install pipeline
+
+Used by `archive-url` and `github-release`. Bypassed by the `mise` backend
+(which does its own thing inside `Backend.Install`).
 
 `internal/actions/tool/install.go`:
 
 ```go
-// Install resolves the lockfile, downloads, verifies, extracts. Idempotent
-// on (name, version): if the target dir is non-empty, returns "ok, no change".
-func Install(ec *executor.ExecutionContext, spec Spec, resolved Resolved, lock *lockfile.Lock) (Outcome, error)
+// InstallURL handles the download → verify → extract flow for URL-based
+// backends. Idempotent on installDir: if the target dir is non-empty,
+// returns "ok, no change".
+func InstallURL(ec *executor.ExecutionContext, spec Spec, plan Plan, lock *lockfile.Lock) (Outcome, error)
 ```
 
 Flow:
@@ -441,20 +445,30 @@ Flow:
    everything below.
 3. Reconcile checksum source:
    - Lock entry exists → `expectedChecksum = lock.entry.SHA256`.
-   - No lock entry, `resolved.Checksum != ""` → `expectedChecksum =
-     resolved.Checksum`.
-   - No lock entry, no resolved checksum → TOFU mode (`expectedChecksum =
-     ""`, compute after download).
+   - No lock entry, `plan.Checksum != ""` → `expectedChecksum = plan.Checksum`.
+   - No lock entry, no plan checksum → TOFU mode (compute after download).
 4. Download to a temp file (reuse `download.downloadFile` — see Snag 1).
 5. Verify or compute checksum.
-6. Extract to `installDir` (reuse `unarchive` extraction — see Snag 1).
-   Honor `strip_components`.
+6. Extract to `<installDir>.tmp/` (reuse `unarchive` extraction). Honor
+   `StripComponents`. Atomically rename to `installDir` on success
+   (mitigates partial-install — Snag 2).
 7. Write/update lock entry.
 8. If step has `write_tool_versions: true`, write/update `.tool-versions`
    at the same dir as `mooncake.lock`.
 
 DryRun: steps 1, 3, 4 (HEAD request to verify URL exists, no body), report
 what would happen. No filesystem writes.
+
+### Mise install dispatch
+
+For `backend: mise`, the handler skips `InstallURL` entirely and calls
+`Backend.Install` directly. After success, the handler:
+
+1. Calls `Backend.Locate` to find where mise put it (for logging).
+2. Writes an abbreviated lock entry (`backend, name, version, locked_at`).
+3. Does **not** write `.tool-versions` even if `write_tool_versions: true`
+   — mise already manages that file (and writing through it would race).
+   Validation rejects `write_tool_versions: true` for the mise backend.
 
 ---
 
@@ -527,9 +541,9 @@ Register in `internal/register/register.go` alongside the other handlers.
 
 | Command | What |
 |---|---|
-| `mooncake tool which <name>` | Print the absolute bin path for `<name>` from the lockfile + install dir. Uses CWD's `mooncake.lock`; falls back to `~/.mooncake/mooncake.lock` if none. |
-| `mooncake tool list` | List installed tools (across all `~/.local/share/mooncake/tools/<name>/<version>/` dirs). Annotate which are referenced from the current dir's lockfile. |
-| `mooncake tool env --shell zsh` | Print PATH-prepend lines for every tool in the lockfile, with comment headers. User pipes to `eval` or sources. **String generator, not a runtime.** |
+| `mooncake tool which <name>` | Print the absolute bin path for `<name>` from the lockfile. For URL-backed tools, returns the install-dir path. For mise-backed tools, delegates to `mise which`. Uses CWD's `mooncake.lock`; falls back to `~/.mooncake/mooncake.lock` if none. |
+| `mooncake tool list` | List declared tools from the lockfile, annotated with backend (`go 1.25.3  via archive-url`, `node 24.0.0  via mise`) and install status. |
+| `mooncake tool env --shell zsh` | Print PATH-prepend lines for URL-backed tools. For mise-backed tools, emit a comment line and a hint (`# node managed by mise — run 'eval "$(mise activate zsh)"'`) rather than re-deriving mise's PATH logic. **String generator, not a runtime.** |
 
 Explicit non-features in v1:
 - No `mooncake tool install <name>@<ver>` (would need a config; defeats the
@@ -547,24 +561,33 @@ Explicit non-features in v1:
 
 ```go
 type Tool struct {
-    Name             string `yaml:"name"`
-    Version          string `yaml:"version"`
-    Backend          string `yaml:"backend"`
-    URL              string `yaml:"url,omitempty"`
-    Repo             string `yaml:"repo,omitempty"`
-    Asset            string `yaml:"asset,omitempty"`
-    Tag              string `yaml:"tag,omitempty"`
-    Checksum         string `yaml:"checksum,omitempty"`
-    StripComponents  int    `yaml:"strip_components,omitempty"`
-    Bin              string `yaml:"bin,omitempty"`
-    WriteToolVersions bool  `yaml:"write_tool_versions,omitempty"`
+    Name             string            `yaml:"name"`
+    Version          string            `yaml:"version"`
+    Backend          string            `yaml:"backend"` // archive-url | github-release | mise
+    // archive-url
+    URL              string            `yaml:"url,omitempty"`
+    // github-release
+    Repo             string            `yaml:"repo,omitempty"`
+    Asset            string            `yaml:"asset,omitempty"`
+    Tag              string            `yaml:"tag,omitempty"`
+    // mise
+    MiseTool         string            `yaml:"mise_tool,omitempty"`
+    Env              map[string]string `yaml:"env,omitempty"`
+    // Common (URL-based)
+    Checksum         string            `yaml:"checksum,omitempty"`
+    StripComponents  int               `yaml:"strip_components,omitempty"`
+    Bin              string            `yaml:"bin,omitempty"`
+    WriteToolVersions bool             `yaml:"write_tool_versions,omitempty"`
 }
 ```
 
 Add `Tool *Tool` to `config.Step`. Update `internal/config/schema.json` —
-mirror the field constraints (oneOf `archive-url` requires `url`;
-`github-release` requires `repo` + `asset`). Regenerate schema artifacts
-via `make schema` (or whatever the project target is).
+oneOf branches for each backend with their required + forbidden fields
+(`archive-url` requires `url`, forbids `repo`/`asset`/`mise_tool`/`env`;
+`github-release` requires `repo` + `asset`; `mise` forbids `url`/`repo`/
+`asset`/`checksum`/`strip_components`/`bin`/`write_tool_versions`).
+Regenerate schema artifacts via `make schema` (or whatever the project
+target is).
 
 ---
 
@@ -574,14 +597,18 @@ Add `internal/actions/tool/handler_test.go`:
 
 | Layer | Test |
 |---|---|
-| Validate | Missing required fields → error. `archive-url` without `url` → error. `github-release` without `repo`/`asset` → error. `http://` URL + no checksum → error. |
-| Backend `archive-url` | Resolve renders `{{ version }}/{{ os }}/{{ arch }}` correctly with a fixed `FactSnapshot`. |
-| Backend `github-release` | Resolve builds the expected GitHub URL with default `v` tag prefix and with `tag:` override. |
+| Validate | Missing required fields → error. `archive-url` without `url` → error. `github-release` without `repo`/`asset` → error. `http://` URL + no checksum → error. `mise` backend with `url:` set → error. `mise` backend without `mise` on PATH → error. `mise` + `write_tool_versions: true` → error. |
+| Backend `archive-url` | `Plan` renders `{{ version }}/{{ os }}/{{ arch }}` correctly with a fixed `FactSnapshot`. |
+| Backend `github-release` | `Plan` builds the expected GitHub URL with default `v` tag prefix and with `tag:` override. |
+| Backend `mise` | With a fake `mise` binary on PATH (a shell stub script), `Install` is called with the right args; `Locate` parses `mise which` output. Idempotency check via `mise which` short-circuits. |
 | Install pipeline | Mock the HTTP fetcher + extractor. Given a TOFU spec, install writes a lock entry with the computed checksum. Given an existing lock entry with mismatched checksum, fails clearly. |
-| Idempotency | Install when `installDir` already exists → returns `ok`, no fetch attempted. |
-| Lockfile | Round-trip TOML. Concurrent writes (two goroutines `Set`+`Save`) under `flock` produce a valid file with both entries. |
-| Action E2E | A canned http test server serves a tiny tarball; full `Execute` path installs to a temp dir, writes lockfile, second run is no-op. |
-| `.tool-versions` | `write_tool_versions: true` appends `name version\n` to `<lockfile-dir>/.tool-versions`, deduping on rerun. |
+| Idempotency (URL) | Install when `installDir` already exists → returns `ok`, no fetch attempted. |
+| Idempotency (mise) | When `mise which` reports the tool installed → returns `ok`, no `mise install` invocation. |
+| Lockfile | Round-trip TOML with both URL-backed and mise-backed entries. Concurrent writes (two goroutines `Set`+`Save`) under `flock` produce a valid file with both entries. |
+| Lockfile backend binding | Lock entry recorded as `backend=mise` rejects subsequent attempts to install the same `(name, version)` via `archive-url` (and vice versa) with a clear error. |
+| Action E2E (URL) | A canned http test server serves a tiny tarball; full `Execute` path installs to a temp dir, writes lockfile, second run is no-op. |
+| Action E2E (mise) | With a shell-stub `mise` on PATH, full `Execute` path delegates and records an abbreviated lockfile entry. |
+| `.tool-versions` | `write_tool_versions: true` (URL-backed) appends `name version\n` to `<lockfile-dir>/.tool-versions`, deduping on rerun. |
 
 CLI smoke tests under `cmd/`:
 
@@ -629,11 +656,19 @@ CLI smoke tests under `cmd/`:
    with a clear error pointing at the lock entry.
 6. `github-release` backend installs `terraform 1.13.0` end-to-end against
    real GitHub (or a recorded fixture — pick one).
-7. `write_tool_versions: true` produces an asdf/mise-compatible
-   `.tool-versions` file in the lockfile's directory.
-8. mise installed on the same machine, reading the generated
+7. **`mise` backend installs `node 24.0.0` end-to-end** against a real
+   `mise` binary on the test machine. Lockfile records
+   `backend=mise, name=node, version=24.0.0` with no checksum/URL fields.
+   Rerunning the apply is a no-op (idempotency via `mise which`).
+8. `write_tool_versions: true` (URL-backed tools) produces an
+   asdf/mise-compatible `.tool-versions` file in the lockfile's directory.
+9. mise installed on the same machine, reading the generated
    `.tool-versions`, activates the same versions. (Manual smoke test;
    document in PR.)
+10. Mixed config: one `archive-url` tool, one `github-release` tool, one
+    `mise` tool. `mooncake apply` installs all three; `mooncake tool list`
+    reports each with its backend annotation; `mooncake tool which` works
+    for all three (delegating to mise for the third).
 
 ---
 
@@ -676,16 +711,25 @@ In rough priority order; spec numbers assigned when written.
 - **E8.2** `mooncake tool upgrade <name>` — explicit verb to bump a lock
   entry. Needs version-constraint parsing.
 - **E8.3** `latest` / version-constraint resolution (`>=1.25`, `^1.25.3`).
-  Touches every backend's `Resolve`.
+  Touches every backend's `Plan`. For the mise backend, delegate to
+  `mise latest <name>`.
 - **E8.4** `mooncake tool verify` — re-hash installed contents against
-  recorded checksum (integrity check, not just idempotency).
-- **E8.5** Content-addressed store + GC — `installs/<name>/<version>` becomes
-  a symlink into `store/<sha>/`. Multi-config dedup.
-- **E8.6** Additional backends: `npm:`, `pipx:`, `cargo:`, `go install`.
-  Each gated on a "is the ecosystem already bootstrapped" precondition.
-- **E8.7** A small library of stock tool presets that wrap the `tool`
+  recorded checksum (URL-backed tools only; mise verifies on its own
+  schedule).
+- **E8.5** Content-addressed store + GC for URL-backed tools —
+  `installs/<name>/<version>` becomes a symlink into `store/<sha>/`.
+  Multi-config dedup. Mise-backed tools unaffected.
+- **E8.6** A small library of stock tool presets that wrap the `tool`
   action (`preset: go-tool`, `preset: terraform-tool`, etc.) — what users
   actually copy-paste.
+- **E8.7** Auto-bootstrap mise via the `archive-url` backend. Ships as a
+  stock preset (`preset: mise-bootstrap`) so users can declare `mise` as
+  a tool that mooncake installs, then declare `mise`-backend tools that
+  use it. Strict ordering required at apply time.
+
+*Removed from earlier plan:* native `npm:` / `pipx:` / `cargo:` /
+`go install` backends. These are now provided through the `mise` backend
+and do not justify a separate code path inside mooncake.
 
 ---
 
@@ -710,3 +754,15 @@ In rough priority order; spec numbers assigned when written.
   quarantine bit set, which can prompt Gatekeeper on first run. Document;
   don't try to strip xattrs in v1 (that's a privilege/permissions can of
   worms).
+- **`mise` backend is a shell-out.** Inherits mise's bugs, version
+  incompatibilities, and stderr noise. The action wraps and prefixes
+  mise's output but does not try to translate or interpret it — if `mise
+  install` fails, mooncake surfaces the exit code and stderr verbatim
+  with a `[mise]` prefix in the log. Document that pinning mise's own
+  version (via the mise-bootstrap preset, E8.7) is the way to get
+  reproducibility across mise upgrades.
+- **`mise` precondition cost.** Forcing users to install mise first is real
+  friction. Mitigations: (a) the validation error message is explicit
+  about which install command to run on each platform; (b) E8.7 ships the
+  bootstrap preset so the friction is one-time and declarative once that
+  lands. Worth doing E8.7 soon after this spec ships.

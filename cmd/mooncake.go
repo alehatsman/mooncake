@@ -100,12 +100,11 @@ func applyFlags() []cli.Flag {
 			Usage:   "Filter steps by tags (comma-separated)",
 		},
 		&cli.BoolFlag{
-			Name:    "raw",
-			Aliases: []string{"r"},
-			Value:   false,
-			Usage:   "Disable animated TUI and use raw console output",
+			Name:  "tui",
+			Value: false,
+			Usage: "Use the animated TUI subscriber (default: raw console output)",
 		},
-		&cli.StringFlag{Name: "output-format", Value: "text", Usage: "Output format: text or json (requires --raw)"},
+		&cli.StringFlag{Name: "output-format", Value: "text", Usage: "Output format: text or json (json requires not using --tui)"},
 		&cli.StringFlag{Name: "artifacts-dir", Value: "", Usage: "Directory to store run artifacts (e.g., .mooncake)"},
 		&cli.BoolFlag{Name: "capture-full-output", Value: false, Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)"},
 		&cli.IntFlag{Name: "max-output-bytes", Value: defaultMaxOutputBytes, Usage: "Max bytes of output per step in results.json"},
@@ -126,7 +125,7 @@ func run(c *cli.Context) error {
 		return runFromPlan(c, fromPlan)
 	}
 
-	raw := c.Bool("raw")
+	tui := c.Bool("tui")
 	logLevel := c.String("log-level")
 	outputFormat := c.String("output-format")
 
@@ -136,8 +135,8 @@ func run(c *cli.Context) error {
 	}
 
 	// JSON format requires raw mode
-	if outputFormat == outputFormatJSON && !raw {
-		return fmt.Errorf("--output-format json requires --raw flag")
+	if outputFormat == outputFormatJSON && tui {
+		return fmt.Errorf("--output-format json cannot be combined with --tui")
 	}
 
 	// Parse tags from comma-separated string
@@ -199,8 +198,8 @@ func run(c *cli.Context) error {
 		publisher.Subscribe(logger.NewAgentSubscriber())
 	} else if outputFormat == outputFormatQuiet {
 		publisher.Subscribe(logger.NewQuietSubscriber())
-	} else if !raw && logger.IsTUISupported() {
-		// Use TUI subscriber for animated display
+	} else if tui && logger.IsTUISupported() {
+		// Use TUI subscriber when explicitly requested.
 		tuiSubscriber, err := logger.NewTUISubscriber(level)
 		if err != nil {
 			// Fallback to console subscriber if TUI initialization fails

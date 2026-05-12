@@ -592,7 +592,7 @@ func TestRunCommandFlags(t *testing.T) {
 
 	expectedFlags := []string{
 		"config", "vars", "log-level", "sudo-pass", "ask-become-pass",
-		"sudo-pass-file", "insecure-sudo-pass", "tags", "raw",
+		"sudo-pass-file", "insecure-sudo-pass", "tags", "tui",
 		"output-format", "artifacts-dir", "capture-full-output",
 		"max-output-bytes", "max-output-lines", "from-plan", "facts-json",
 		"allow-stale", "max-plan-age",
@@ -2392,8 +2392,9 @@ func TestApplyCommandStaleFlags(t *testing.T) {
 	}
 }
 
-// TestRunCommandRawFlag tests that run command has raw flag
-func TestRunCommandRawFlag(t *testing.T) {
+// TestApplyCommandTUIFlag verifies the apply command exposes --tui
+// (opt-in animated display; default is raw console output).
+func TestApplyCommandTUIFlag(t *testing.T) {
 	app := createApp()
 
 	var runCmd *cli.Command
@@ -2405,21 +2406,21 @@ func TestRunCommandRawFlag(t *testing.T) {
 	}
 
 	if runCmd == nil {
-		t.Fatal("run command not found")
+		t.Fatal("apply command not found")
 	}
 
-	hasRaw := false
+	hasTUI := false
 	for _, flag := range runCmd.Flags {
-		if f, ok := flag.(*cli.BoolFlag); ok && f.Name == "raw" {
-			hasRaw = true
+		if f, ok := flag.(*cli.BoolFlag); ok && f.Name == "tui" {
+			hasTUI = true
 			if f.Value != false {
-				t.Errorf("raw default should be false, got %v", f.Value)
+				t.Errorf("--tui default should be false, got %v", f.Value)
 			}
 		}
 	}
 
-	if !hasRaw {
-		t.Error("run command should have raw flag")
+	if !hasTUI {
+		t.Error("apply command should have --tui flag")
 	}
 }
 
