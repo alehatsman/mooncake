@@ -118,7 +118,7 @@ func (m *mockContext) Mode() Mode {
 	if m.dryRun {
 		return ModePlan
 	}
-	return ModeExecute
+	return ModeApply
 }
 
 func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }

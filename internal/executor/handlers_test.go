@@ -25,7 +25,7 @@ func TestHandleVars(t *testing.T) {
 	ec := &ExecutionContext{
 		Logger:    testLogger,
 		Variables: make(map[string]interface{}),
-		CurrentMode: actions.ModeExecute,
+		CurrentMode: actions.ModeApply,
 	}
 
 	err := HandleVars(step, ec)

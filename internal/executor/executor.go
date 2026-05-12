@@ -853,7 +853,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	}
 
 	// Execute the plan with event publisher
-	return ExecutePlan(planData, sudoPassword, actions.ModeExecute, log, publisher)
+	return ExecutePlan(planData, sudoPassword, actions.ModeApply, log, publisher)
 }
 
 // ExecutePlan executes a pre-compiled plan.
@@ -1003,7 +1003,7 @@ func truncate(s string, maxLen int) string {
 // DispatchStepAction.
 //
 // In ModePlan it emits EventStepChecked (matching the legacy Check
-// flow) so existing subscribers continue to work; in ModeExecute it
+// flow) so existing subscribers continue to work; in ModeApply it
 // relies on the surrounding ExecuteStep to emit started/completed.
 func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runner) error {
 	result, err := runner.Run(ec, &step)
@@ -1051,7 +1051,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		return nil
 	}
 
-	// ModeExecute: register result if requested.
+	// ModeApply: register result if requested.
 	if step.Register != "" && ec.CurrentResult != nil {
 		ec.CurrentResult.RegisterTo(ec.Variables, step.Register)
 	}

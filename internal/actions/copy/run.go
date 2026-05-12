@@ -85,7 +85,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	mode := h.parseFileMode(cp.Mode, srcInfo.Mode()&os.ModePerm)
 
 	// Backup before overwrite — only in execute mode.
-	if ctx.Mode() == actions.ModeExecute && cp.Backup {
+	if ctx.Mode() == actions.ModeApply && cp.Backup {
 		if _, statErr := os.Stat(dest); statErr == nil {
 			if backupPath, berr := utils.CreateBackup(dest); berr != nil {
 				ctx.GetLogger().Debugf("  Warning: failed to create backup: %v", berr)
@@ -99,7 +99,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if cp.Force {
 		// Touch the dest to force WriteFile to overwrite even if
 		// content matches. Cheapest: remove and let WriteFile create.
-		if ctx.Mode() == actions.ModeExecute {
+		if ctx.Mode() == actions.ModeApply {
 			_ = os.Remove(dest)
 		}
 	}

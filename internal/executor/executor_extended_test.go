@@ -104,9 +104,9 @@ func TestExecutionContext_ModeRoundtrip(t *testing.T) {
 	if ctx.Mode() != actions.ModePlan {
 		t.Error("Mode() should return ModePlan when CurrentMode is ModePlan")
 	}
-	ctx.CurrentMode = actions.ModeExecute
-	if ctx.Mode() != actions.ModeExecute {
-		t.Error("Mode() should return ModeExecute when CurrentMode is ModeExecute")
+	ctx.CurrentMode = actions.ModeApply
+	if ctx.Mode() != actions.ModeApply {
+		t.Error("Mode() should return ModeApply when CurrentMode is ModeApply")
 	}
 }
 

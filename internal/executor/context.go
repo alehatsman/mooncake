@@ -46,7 +46,7 @@ func NewExecutionStats() *ExecutionStats {
 type Mode = actions.Mode
 
 const (
-	ModeExecute = actions.ModeExecute
+	ModeApply = actions.ModeApply
 	ModePlan    = actions.ModePlan
 )
 
@@ -103,7 +103,7 @@ type ExecutionContext struct {
 	// Steps without matching tags are skipped when this is non-empty.
 	Tags []string
 
-	// CurrentMode is the dispatch mode for this context. ModeExecute
+	// CurrentMode is the dispatch mode for this context. ModeApply
 	// performs side effects; ModePlan inspects state and returns
 	// predictions without mutating. Read via ec.Mode().
 	CurrentMode actions.Mode
@@ -193,14 +193,14 @@ func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface
 	}
 }
 
-// Mode returns the current dispatch mode (ModeExecute or ModePlan).
+// Mode returns the current dispatch mode (ModeApply or ModePlan).
 func (ec *ExecutionContext) Mode() Mode {
 	return ec.CurrentMode
 }
 
 // Effects returns a Performer that routes filesystem and command
 // primitives by the current Mode. Handlers should call this instead of
-// calling os.* directly so that ModePlan vs ModeExecute is decided in
+// calling os.* directly so that ModePlan vs ModeApply is decided in
 // one place. The returned Performer is cheap to construct.
 func (ec *ExecutionContext) Effects() actions.Performer {
 	return effects.NewPerformer(ec.Mode, ec.SudoPass)

@@ -22,7 +22,7 @@ const (
 //
 // Field semantics by mode:
 //
-//	ModeExecute:
+//	ModeApply:
 //	    Performed   true if a side effect actually happened
 //	    AlreadyOk   true if the target was already in desired state (no-op)
 //	    WouldChange unused (false)
@@ -31,7 +31,7 @@ const (
 //	ModePlan:
 //	    Performed   false (no side effects in plan mode)
 //	    AlreadyOk   true if the target is already in desired state
-//	    WouldChange true if applying ModeExecute would change state
+//	    WouldChange true if applying ModeApply would change state
 //	    Err         any error encountered while *inspecting* state
 //
 // Performed and WouldChange are mutually exclusive; AlreadyOk is set when
@@ -48,7 +48,7 @@ type Effect struct {
 }
 
 // Changed reports whether this Effect represents a state change — either
-// performed (ModeExecute) or predicted (ModePlan).
+// performed (ModeApply) or predicted (ModePlan).
 func (e Effect) Changed() bool {
 	return e.Performed || e.WouldChange
 }
@@ -65,7 +65,7 @@ type PerformerOpts struct {
 }
 
 // Performer executes filesystem and command primitives in either
-// ModeExecute (real side effects) or ModePlan (state inspection only,
+// ModeApply (real side effects) or ModePlan (state inspection only,
 // returning a prediction).
 //
 // Spec 16 introduces Performer so that mutating primitives have exactly

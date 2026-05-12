@@ -116,7 +116,7 @@ func TestHandleVars_MergeExisting(t *testing.T) {
 		Variables: map[string]interface{}{
 			"existing_key": "existing_value",
 		},
-		CurrentMode: actions.ModeExecute,
+		CurrentMode: actions.ModeApply,
 	}
 
 	err := HandleVars(step, ec)

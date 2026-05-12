@@ -147,7 +147,7 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 		Logger:         &testutil.MockLogger{Logs: []string{}},
 		Evaluator:      expression.NewExprEvaluator(),
 		CurrentDir:     ".",
-		CurrentMode: actions.ModeExecute,
+		CurrentMode: actions.ModeApply,
 	}
 }
 

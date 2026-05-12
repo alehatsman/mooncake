@@ -51,7 +51,7 @@ func TestExecutionContext_Mode(t *testing.T) {
 		name string
 		mode actions.Mode
 	}{
-		{"execute", actions.ModeExecute},
+		{"execute", actions.ModeApply},
 		{"plan", actions.ModePlan},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -68,7 +68,7 @@ func TestMode_String(t *testing.T) {
 		mode actions.Mode
 		want string
 	}{
-		{actions.ModeExecute, "execute"},
+		{actions.ModeApply, "execute"},
 		{actions.ModePlan, "plan"},
 		{actions.Mode(99), "unknown"},
 	} {
@@ -91,7 +91,7 @@ func TestNewExecutionContext(t *testing.T) {
 		Logger:      testLogger,
 		Template:    tmpl,
 		Evaluator:   eval,
-		CurrentMode: actions.ModeExecute,
+		CurrentMode: actions.ModeApply,
 	}
 
 	if ctx.Logger == nil {
@@ -103,7 +103,7 @@ func TestNewExecutionContext(t *testing.T) {
 	if ctx.Evaluator == nil {
 		t.Error("Evaluator should not be nil")
 	}
-	if ctx.Mode() != actions.ModeExecute {
-		t.Errorf("Mode = %v, want ModeExecute", ctx.Mode())
+	if ctx.Mode() != actions.ModeApply {
+		t.Errorf("Mode = %v, want ModeApply", ctx.Mode())
 	}
 }

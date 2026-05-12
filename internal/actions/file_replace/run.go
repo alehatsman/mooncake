@@ -14,7 +14,7 @@ import (
 
 // Run is the Spec 16 unified entry point. Performs the regex replacement
 // in memory once and either reports the predicted change (ModePlan) or
-// commits it atomically (ModeExecute). Drift between plan preview and
+// commits it atomically (ModeApply). Drift between plan preview and
 // real execution is impossible because both modes compute the same
 // `newContent` and compare against the same on-disk content.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {

@@ -80,7 +80,7 @@ func stepCommand() *cli.Command {
 
 			cwd, _ := os.Getwd()
 
-			mode := actions.ModeExecute
+			mode := actions.ModeApply
 			if c.Bool("dry-run") {
 				mode = actions.ModePlan
 			}

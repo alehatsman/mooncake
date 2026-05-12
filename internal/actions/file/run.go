@@ -15,7 +15,7 @@ import (
 
 // Run is the Spec 16 unified entry point. It replaces the legacy Execute,
 // DryRun, and Check methods. The handler inspects state once, then either
-// performs side effects (ModeExecute) or returns a prediction (ModePlan).
+// performs side effects (ModeApply) or returns a prediction (ModePlan).
 //
 // All filesystem mutations route through ctx.Effects() so the same
 // defaulting and predicate logic decides both the preview and the real
@@ -118,7 +118,7 @@ func (h *Handler) runState(
 
 		// Backup before overwriting — only in execute mode and only if
 		// the file currently exists.
-		if ctx.Mode() == actions.ModeExecute && file.Backup {
+		if ctx.Mode() == actions.ModeApply && file.Backup {
 			if existing, readErr := os.ReadFile(renderedPath); readErr == nil {
 				backupPath := renderedPath + ".bak"
 				if writeErr := os.WriteFile(backupPath, existing, 0o600); writeErr != nil {
@@ -207,7 +207,7 @@ func (h *Handler) checkHardlinkForce(path, desiredTarget string, force bool) err
 }
 
 // emitFileEvent publishes the appropriate event for the state and
-// effect outcome. Only called in ModeExecute. Matches the events the
+// effect outcome. Only called in ModeApply. Matches the events the
 // legacy Execute path emitted.
 func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string) {
 	pub := ctx.GetEventPublisher()

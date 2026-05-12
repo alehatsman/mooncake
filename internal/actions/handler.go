@@ -119,7 +119,7 @@ type Handler interface {
 	// Called before Run to fail fast on configuration errors.
 	Validate(step *config.Step) error
 
-	// Run executes the action when ctx.Mode() is ModeExecute, or
+	// Run executes the action when ctx.Mode() is ModeApply, or
 	// inspects state and returns a prediction when ctx.Mode() is
 	// ModePlan. Implementations:
 	//
@@ -183,7 +183,7 @@ func (h *HandlerFunc) DryRun(ctx Context, step *config.Step) error {
 }
 
 // Run satisfies the Spec 16 Handler contract. In ModePlan it reports
-// "not checkable" by default; in ModeExecute it delegates to the
+// "not checkable" by default; in ModeApply it delegates to the
 // underlying execute function. HandlerFunc users wanting accurate
 // plan-mode behavior should construct a typed Handler with its own
 // Run method instead.

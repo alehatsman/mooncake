@@ -32,7 +32,7 @@ func TestExecutePlan_BasicExecution(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "", actions.ModeExecute, testLogger, publisher)
+	err := executor.ExecutePlan(planData, "", actions.ModeApply, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan failed: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestExecutePlan_WithSudoPass(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "test-sudo-password", actions.ModeExecute, testLogger, publisher)
+	err := executor.ExecutePlan(planData, "test-sudo-password", actions.ModeApply, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan failed: %v", err)
 	}

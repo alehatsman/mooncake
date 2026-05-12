@@ -156,7 +156,7 @@ func NewMockContext() *MockContext {
 		Publisher:   &MockPublisher{Events: []events.Event{}},
 		Log:         &MockLogger{Logs: []string{}},
 		StepID:      "step-1",
-		CurrentMode: actions.ModeExecute,
+		CurrentMode: actions.ModeApply,
 	}
 }
 

@@ -68,7 +68,7 @@ func (m *mockContext) IsDryRun() bool {
 	return false
 }
 
-func (m *mockContext) Mode() actions.Mode { return actions.ModeExecute }
+func (m *mockContext) Mode() actions.Mode { return actions.ModeApply }
 
 func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
 
@@ -76,7 +76,7 @@ func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} 
 // print action doesn't call effect helpers but the interface requires it.
 type printNoopPerformer struct{}
 
-func (printNoopPerformer) Mode() actions.Mode { return actions.ModeExecute }
+func (printNoopPerformer) Mode() actions.Mode { return actions.ModeApply }
 func (printNoopPerformer) Mkdir(string, os.FileMode, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
 }

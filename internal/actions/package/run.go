@@ -10,7 +10,7 @@ import (
 
 // Run is the Spec 16 unified entry point. It consults ctx.Mode() and
 // either inspects which packages would change (ModePlan) or actually
-// installs / removes / upgrades them (ModeExecute).
+// installs / removes / upgrades them (ModeApply).
 //
 // The shared preamble (manager detection, package-list building,
 // template rendering, state normalization) runs once for both modes,
@@ -46,7 +46,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return h.runPlan(ec, manager, state, packages, pkg)
 	}
 
-	// ModeExecute — preserve the legacy Execute behavior. Upgrade and
+	// ModeApply — preserve the legacy Execute behavior. Upgrade and
 	// cache update both fall through to their existing helpers.
 	result := executor.NewResult()
 	result.SetChanged(false)

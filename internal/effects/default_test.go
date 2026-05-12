@@ -61,9 +61,9 @@ func TestMkdir_ModePlan_AlreadyExists(t *testing.T) {
 	}
 }
 
-func TestMkdir_ModeExecute_CreatesWithMode(t *testing.T) {
+func TestMkdir_ModeApply_CreatesWithMode(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "newdir")
-	p := newTestPerformer(actions.ModeExecute)
+	p := newTestPerformer(actions.ModeApply)
 
 	got := p.Mkdir(dir, 0o750, actions.PerformerOpts{})
 
@@ -87,7 +87,7 @@ func TestMkdir_ModeExecute_CreatesWithMode(t *testing.T) {
 
 // TestMkdir_DefaultModeRegressionParity is the Spec-16 mode-parity test
 // for directories. Drives the SAME path + mode through ModePlan and
-// ModeExecute and asserts the plan prediction matches the execute reality.
+// ModeApply and asserts the plan prediction matches the execute reality.
 // If this fails, the preview is lying about what execute does — exactly
 // the bug class that motivated Spec 16.
 func TestMkdir_DefaultModeRegressionParity(t *testing.T) {
@@ -102,7 +102,7 @@ func TestMkdir_DefaultModeRegressionParity(t *testing.T) {
 				t.Fatalf("plan: expected WouldChange=true")
 			}
 
-			exec := newTestPerformer(actions.ModeExecute).
+			exec := newTestPerformer(actions.ModeApply).
 				Mkdir(dir, mode, actions.PerformerOpts{})
 			if exec.Err != nil {
 				t.Fatalf("execute: %v", exec.Err)
@@ -126,9 +126,9 @@ func TestMkdir_DefaultModeRegressionParity(t *testing.T) {
 // WriteFile
 // ----------------------------------------------------------------------
 
-func TestWriteFile_ModeExecute_CreatesNew(t *testing.T) {
+func TestWriteFile_ModeApply_CreatesNew(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.txt")
-	p := newTestPerformer(actions.ModeExecute)
+	p := newTestPerformer(actions.ModeApply)
 
 	got := p.WriteFile(path, []byte("hello"), 0o644, actions.PerformerOpts{})
 	if got.Err != nil {
@@ -148,7 +148,7 @@ func TestWriteFile_AlreadyMatches(t *testing.T) {
 	if err := os.WriteFile(path, []byte("same"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	p := newTestPerformer(actions.ModeExecute)
+	p := newTestPerformer(actions.ModeApply)
 
 	got := p.WriteFile(path, []byte("same"), 0o644, actions.PerformerOpts{})
 	if !got.AlreadyOk {
@@ -196,7 +196,7 @@ func TestSymlink_Create(t *testing.T) {
 	}
 	link := filepath.Join(tmp, "link")
 
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Symlink(target, link, actions.PerformerOpts{})
 	if got.Err != nil {
 		t.Fatalf("unexpected error: %v", got.Err)
@@ -220,7 +220,7 @@ func TestSymlink_AlreadyCorrect(t *testing.T) {
 	link := filepath.Join(tmp, "link")
 	_ = os.Symlink(target, link)
 
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Symlink(target, link, actions.PerformerOpts{})
 	if !got.AlreadyOk {
 		t.Errorf("AlreadyOk expected, got %+v", got)
@@ -235,7 +235,7 @@ func TestRemove_File(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "doomed")
 	_ = os.WriteFile(path, []byte("x"), 0o644)
 
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Remove(path, false, actions.PerformerOpts{})
 	if got.Err != nil {
 		t.Fatalf("unexpected error: %v", got.Err)
@@ -247,7 +247,7 @@ func TestRemove_File(t *testing.T) {
 
 func TestRemove_AlreadyAbsent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "never-existed")
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Remove(path, false, actions.PerformerOpts{})
 	if !got.AlreadyOk {
 		t.Errorf("AlreadyOk expected, got %+v", got)
@@ -259,7 +259,7 @@ func TestRemove_Recursive(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(dir, "sub"), 0o755)
 	_ = os.WriteFile(filepath.Join(dir, "sub", "file"), []byte("x"), 0o644)
 
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Remove(dir, true, actions.PerformerOpts{})
 	if got.Err != nil {
 		t.Fatalf("unexpected error: %v", got.Err)
@@ -277,7 +277,7 @@ func TestChmod_Idempotent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f")
 	_ = os.WriteFile(path, []byte("x"), 0o644)
 
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Chmod(path, 0o644, actions.PerformerOpts{})
 	if !got.AlreadyOk {
 		t.Errorf("AlreadyOk expected for matching mode, got %+v", got)
@@ -288,7 +288,7 @@ func TestChmod_Changes(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f")
 	_ = os.WriteFile(path, []byte("x"), 0o644)
 
-	got := newTestPerformer(actions.ModeExecute).
+	got := newTestPerformer(actions.ModeApply).
 		Chmod(path, 0o600, actions.PerformerOpts{})
 	if got.Err != nil {
 		t.Fatalf("unexpected error: %v", got.Err)

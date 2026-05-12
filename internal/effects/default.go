@@ -6,7 +6,7 @@
 // handler's parallel Execute / DryRun / Check methods into a single
 // Run(ctx, step) method. Inside Run, handlers call Performer methods
 // instead of os.* directly. The Performer consults the current mode and
-// either performs the side effect (ModeExecute) or returns a prediction
+// either performs the side effect (ModeApply) or returns a prediction
 // (ModePlan).
 package effects
 
@@ -38,7 +38,7 @@ type defaultPerformer struct {
 }
 
 // NewPerformer constructs an actions.Performer that performs real
-// filesystem operations in ModeExecute and inspects state in ModePlan.
+// filesystem operations in ModeApply and inspects state in ModePlan.
 // modeFn is called once per primitive to decide the path; sudoPass is
 // consulted when opts.Become is true.
 func NewPerformer(modeFn ModeFunc, sudoPass string) actions.Performer {

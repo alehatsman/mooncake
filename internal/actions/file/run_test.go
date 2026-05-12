@@ -14,7 +14,7 @@ import (
 )
 
 // newRunContext builds an ExecutionContext suitable for exercising
-// Handler.Run in either ModeExecute or ModePlan. Spec 16 derives Mode
+// Handler.Run in either ModeApply or ModePlan. Spec 16 derives Mode
 // from the legacy DryRun bool until Phase 6 cleanup.
 func newRunContext(t *testing.T, plan bool) *executor.ExecutionContext {
 	t.Helper()
@@ -34,7 +34,7 @@ func newRunContext(t *testing.T, plan bool) *executor.ExecutionContext {
 }
 
 // TestRun_DirectoryModeParity is Spec 16's structural regression. It
-// drives Handler.Run through ModePlan and ModeExecute against the same
+// drives Handler.Run through ModePlan and ModeApply against the same
 // step and asserts that the prediction matches reality. Before Phase 1
 // shipped, the legacy DryRun used defaultFileMode (0644) for directory
 // steps while createDirectory used defaultDirMode (0755). This test
@@ -140,7 +140,7 @@ func TestRun_FileContentParity(t *testing.T) {
 	}
 }
 
-// TestRun_IdempotentDirectory verifies that a second ModeExecute run
+// TestRun_IdempotentDirectory verifies that a second ModeApply run
 // against an already-correct directory does not flip Changed. (Today's
 // dumb DryRun would have lied "would create" here.)
 func TestRun_IdempotentDirectory(t *testing.T) {
@@ -191,8 +191,8 @@ func TestHandler_ImplementsRunner(t *testing.T) {
 func TestEffects_RoundTrip(t *testing.T) {
 	ec := newRunContext(t, false)
 	p := ec.Effects()
-	if p.Mode() != actions.ModeExecute {
-		t.Errorf("Effects() mode = %v, want ModeExecute", p.Mode())
+	if p.Mode() != actions.ModeApply {
+		t.Errorf("Effects() mode = %v, want ModeApply", p.Mode())
 	}
 	planEc := newRunContext(t, true)
 	if planEc.Effects().Mode() != actions.ModePlan {
@@ -200,8 +200,8 @@ func TestEffects_RoundTrip(t *testing.T) {
 	}
 	// Ensure NewPerformer returns the same concrete type
 	custom := effects.NewPerformer(ec.Mode, "")
-	if custom.Mode() != actions.ModeExecute {
-		t.Errorf("NewPerformer mode = %v, want ModeExecute", custom.Mode())
+	if custom.Mode() != actions.ModeApply {
+		t.Errorf("NewPerformer mode = %v, want ModeApply", custom.Mode())
 	}
 }
 
@@ -209,5 +209,5 @@ func planMode(b bool) actions.Mode {
 	if b {
 		return actions.ModePlan
 	}
-	return actions.ModeExecute
+	return actions.ModeApply
 }

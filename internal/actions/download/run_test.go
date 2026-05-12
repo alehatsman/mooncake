@@ -129,5 +129,5 @@ func planMode(b bool) actions.Mode {
 	if b {
 		return actions.ModePlan
 	}
-	return actions.ModeExecute
+	return actions.ModeApply
 }

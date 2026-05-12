@@ -281,7 +281,7 @@ func runFromPlan(c *cli.Context, planPath string) error {
 	internalLog := logger.NewLogger(level)
 
 	// Execute plan with event publisher
-	return executor.ExecutePlan(planData, c.String("sudo-pass"), actions.ModeExecute, internalLog, publisher)
+	return executor.ExecutePlan(planData, c.String("sudo-pass"), actions.ModeApply, internalLog, publisher)
 }
 
 func factsCommand(c *cli.Context) error {

@@ -100,12 +100,12 @@ type Context interface {
 
 	// Mode reports the dispatch mode for this context. Handlers
 	// implementing Runner consult this to decide whether to perform side
-	// effects (ModeExecute) or only inspect state (ModePlan).
+	// effects (ModeApply) or only inspect state (ModePlan).
 	Mode() Mode
 
 	// Effects returns a Performer wired to this context. Handlers
 	// implementing Runner should call Performer methods instead of os.*
-	// directly so that ModePlan vs ModeExecute is decided in one place.
+	// directly so that ModePlan vs ModeApply is decided in one place.
 	// The returned Performer is cheap to construct and may be called
 	// multiple times.
 	Effects() Performer
