@@ -38,7 +38,7 @@ func init() {
 // Metadata returns metadata about the copy action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "copy",
+		Name:               "file.copy",
 		Description:        "Copy files with checksum verification and atomic writes",
 		Category:           actions.CategoryFile,
 		SupportsDryRun:     true,

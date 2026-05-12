@@ -25,7 +25,7 @@ func init() {
 // Metadata returns metadata about the print action.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "print",
+		Name:               "log",
 		Description:        "Display messages to the user",
 		Category:           actions.CategoryOutput,
 		SupportsDryRun:     true,

@@ -74,7 +74,7 @@ func init() {
 // Metadata returns metadata about the unarchive action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "unarchive",
+		Name:               "file.unarchive",
 		Description:        "Extract archive files (tar, tar.gz, zip) with path traversal protection",
 		Category:           actions.CategoryFile,
 		SupportsDryRun:     true,

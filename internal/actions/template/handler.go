@@ -35,7 +35,7 @@ func init() {
 // Metadata returns metadata about the template action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "template",
+		Name:               "file.template",
 		Description:        "Render template files and write to destination",
 		Category:           actions.CategoryFile,
 		SupportsDryRun:     true,

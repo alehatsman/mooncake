@@ -171,7 +171,7 @@ func (d *DryRunLogger) LogArchiveExtraction(src, dest, format string, stripCompo
 	if stripComponents > 0 {
 		msg += fmt.Sprintf(" (stripping %d components)", stripComponents)
 	}
-	d.logAction("unarchive", msg)
+	d.logAction("file.unarchive", msg)
 }
 
 // LogFileDownload logs a dry-run message for file download.

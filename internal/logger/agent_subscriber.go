@@ -165,7 +165,7 @@ func (a *AgentSubscriber) OnEvent(event events.Event) {
 		rec = &agentEvent{
 			Event:          "package.managed",
 			TS:             ts,
-			Action:         "package",
+			Action:         "pkg",
 			Manager:        d.Manager,
 			Installed:      d.Installed,
 			AlreadyPresent: d.AlreadyPresent,

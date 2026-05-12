@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	actionName = "file_patch_apply"
+	actionName = "text.patch"
 )
 
 // Handler implements the Handler interface for file_patch_apply actions.

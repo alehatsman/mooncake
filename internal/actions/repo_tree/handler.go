@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	actionName = "repo_tree"
+	actionName = "repo.tree"
 )
 
 // TreeNode represents a file or directory in the tree structure.

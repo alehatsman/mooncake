@@ -61,7 +61,7 @@ func (s *savedContext) restore(ec *executor.ExecutionContext, parametersNamespac
 // Metadata returns the action metadata.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "preset",
+		Name:               "use",
 		Description:        "Execute a preset by expanding it into steps",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,

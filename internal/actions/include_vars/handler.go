@@ -27,7 +27,7 @@ func init() {
 // Metadata returns metadata about the include_vars action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "include_vars",
+		Name:               "vars.load",
 		Description:        "Load variables from YAML files",
 		Category:           actions.CategoryData,
 		SupportsDryRun:     true,

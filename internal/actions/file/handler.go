@@ -56,7 +56,7 @@ func init() {
 // Metadata returns metadata about the file action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:        "file",
+		Name:        "file.write",
 		Description: "Manage files, directories, links, and permissions",
 		Category:    actions.CategoryFile,
 		SupportsDryRun: true,

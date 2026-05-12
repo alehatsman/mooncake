@@ -55,7 +55,7 @@ func init() {
 // Metadata returns metadata about the package action.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "package",
+		Name:               "pkg",
 		Description:        "Manage system packages (install/remove/update)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,

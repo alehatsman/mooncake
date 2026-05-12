@@ -42,7 +42,7 @@ func init() {
 // Metadata returns metadata about the download action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "download",
+		Name:               "file.download",
 		Description:        "Download files from URLs with checksum verification",
 		Category:           actions.CategoryNetwork,
 		SupportsDryRun:     true,

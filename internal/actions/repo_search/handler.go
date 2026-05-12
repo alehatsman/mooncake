@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	actionName = "repo_search"
+	actionName = "repo.search"
 )
 
 // SearchResult represents a single match in a file.

@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	actionName = "repo_apply_patchset"
+	actionName = "repo.patch"
 )
 
 // Handler implements the Handler interface for repo_apply_patchset actions.

@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	actionName     = "file_insert"
+	actionName     = "text.insert"
 	positionBefore = "before"
 	positionAfter  = "after"
 )

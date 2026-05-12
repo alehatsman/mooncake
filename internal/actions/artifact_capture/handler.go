@@ -34,7 +34,7 @@ func init() {
 // Metadata returns the action metadata.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "artifact_capture",
+		Name:               "artifact.capture",
 		Description:        "Capture file changes with enhanced metadata for LLM agents",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,

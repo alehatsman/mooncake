@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	actionName = "file_delete_range"
+	actionName = "text.delete_range"
 )
 
 // Handler implements the Handler interface for file_delete_range actions.

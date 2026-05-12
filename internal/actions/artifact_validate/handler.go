@@ -25,7 +25,7 @@ func init() {
 // Metadata returns the action metadata.
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "artifact_validate",
+		Name:               "artifact.validate",
 		Description:        "Validate artifacts against constraints (change budgets)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,

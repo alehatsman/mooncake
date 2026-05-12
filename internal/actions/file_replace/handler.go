@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	actionName = "file_replace"
+	actionName     = "text.replace"
 )
 
 // Handler implements the Handler interface for file_replace actions.
