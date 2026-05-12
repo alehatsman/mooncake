@@ -133,7 +133,7 @@ export interface AssertAction {
  * Execute commands directly without shell interpolation
  * @category command
  */
-export interface CommandAction {
+export interface CmdAction {
   argv: string[];
   capture?: boolean;
   stdin?: string;
@@ -143,7 +143,7 @@ export interface CommandAction {
  * Execute commands directly without shell interpolation
  * @category command
  */
-export interface CommandActionAction {
+export interface CmdActionAction {
   argv: string[];
   capture?: boolean;
   stdin?: string;
@@ -153,7 +153,7 @@ export interface CommandActionAction {
  * Copy files with checksum verification and atomic writes
  * @category file
  */
-export interface CopyAction {
+export interface FileCopyAction {
   backup?: boolean;
   checksum?: string;
   dest: string;
@@ -168,7 +168,7 @@ export interface CopyAction {
  * Download files from URLs with checksum verification
  * @category network
  */
-export interface DownloadAction {
+export interface FileDownloadAction {
   backup?: boolean;
   checksum?: string;
   dest: string;
@@ -181,10 +181,33 @@ export interface DownloadAction {
 }
 
 /**
+ * Render template files and write to destination
+ * @category file
+ */
+export interface FileTemplateAction {
+  dest: string;
+  mode?: string;
+  src: string;
+  vars?: Record<string, any>;
+}
+
+/**
+ * Extract archive files (tar, tar.gz, zip) with path traversal protection
+ * @category file
+ */
+export interface FileUnarchiveAction {
+  creates?: string;
+  dest: string;
+  mode?: string;
+  src: string;
+  strip_components?: number;
+}
+
+/**
  * Manage files, directories, links, and permissions
  * @category file
  */
-export interface FileAction {
+export interface FileWriteAction {
   backup?: boolean;
   content?: string;
   force?: boolean;
@@ -210,82 +233,60 @@ export interface FileAction {
    * Desired file state (file/present: file exists, absent: removed,
    * directory: dir exists, link: symlink, hardlink: hard link, touch:
    * update timestamp, perms: change permissions only)
-   * 
-   * @values file | present | absent | directory | link | hardlink | touch | perms
    */
-  state?: "file" | "present" | "absent" | "directory" | "link" | "hardlink" | "touch" | "perms";
+  state?: string;
 }
 
 /**
- * Delete text between start and end anchor patterns in files
- * @category file
+ * Import steps from another file
  */
-export interface FileDeleteRangeAction {
-  backup?: boolean;
-  end_anchor: string;
-  inclusive?: boolean;
-  path: string;
-  regex?: boolean;
-  start_anchor: string;
+export interface ImportAction {
 }
 
 /**
- * Insert text before or after anchor patterns in files
- * @category file
+ * Display messages to the user
+ * @category output
  */
-export interface FileInsertAction {
-  allow_multiple?: boolean;
-  anchor: string;
-  backup?: boolean;
-  content: string;
-  path: string;
-  position: string;
-  regex?: boolean;
+export interface LogAction {
+  msg?: string;
 }
 
 /**
- * Apply unified diff patches to files
- * @category file
+ * Manage services across platforms (systemd, launchd, Windows)
+ * 
+ * @platforms linux, darwin, windows
+ * @requiresSudo true
+ * @category system
  */
-export interface FilePatchApplyAction {
-  backup?: boolean;
-  context_lines?: number;
-  dry_run?: boolean;
-  patch?: string;
-  patch_file?: string;
-  path: string;
-  strict?: boolean;
-}
-
-/**
- * Replace text in files using literal or regex patterns
- * @category file
- */
-export interface FileReplaceAction {
-  allow_no_match?: boolean;
-  backup?: boolean;
-  count?: number;
-  flags?: {
-    case_insensitive: boolean;
-    multiline: boolean;
-    regex: boolean;
+export interface OsServiceAction {
+  /**
+   * Run 'systemctl daemon-reload' after unit file changes (systemd only)
+   */
+  daemon_reload?: boolean;
+  dropin?: {
+    content: string;
+    name: string;
+    src_template: string;
   };
-  path: string;
-  pattern: string;
-  replace: string;
-}
-
-/**
- * Include steps from another file
- */
-export interface IncludeAction {
-}
-
-/**
- * Load variables from a YAML file
- * @category data
- */
-export interface IncludeVarsAction {
+  /**
+   * Enable service to start on boot (systemd: enable/disable, launchd:
+   * bootstrap/bootout)
+   */
+  enabled?: boolean;
+  /**
+   * Service name (systemd: nginx, launchd: com.example.app)
+   */
+  name: string;
+  /**
+   * Desired service state
+   */
+  state?: string;
+  unit?: {
+    content: string;
+    dest: string;
+    mode: string;
+    src_template: string;
+  };
 }
 
 /**
@@ -295,7 +296,7 @@ export interface IncludeVarsAction {
  * @requiresSudo true
  * @category system
  */
-export interface PackageAction {
+export interface PkgAction {
   extra?: string[];
   /**
    * Package manager (auto-detected if empty: apt, dnf, yum, pacman,
@@ -309,14 +310,12 @@ export interface PackageAction {
   /**
    * Multiple packages to install/remove
    */
-  names?: string[] | string;
+  names?: string[];
   /**
    * Package state (present: installed, absent: removed, latest: install or
    * upgrade)
-   * 
-   * @values present | absent | latest
    */
-  state?: "present" | "absent" | "latest";
+  state?: string;
   /**
    * Update package cache before operation (e.g., apt-get update)
    */
@@ -325,27 +324,10 @@ export interface PackageAction {
 }
 
 /**
- * Execute a preset by expanding it into steps
- * @category system
- */
-export interface PresetAction {
-  name: string;
-  with?: Record<string, any>;
-}
-
-/**
- * Display messages to the user
- * @category output
- */
-export interface PrintAction {
-  msg?: string;
-}
-
-/**
  * Apply multiple patches to multiple files atomically
  * @category file
  */
-export interface RepoApplyPatchsetAction {
+export interface RepoPatchAction {
   backup?: boolean;
   base_dir?: string;
   dry_run?: boolean;
@@ -397,46 +379,6 @@ export interface RunConfigAction {
    * Configuration schema version (e.g., '1.0')
    */
   version?: string;
-}
-
-/**
- * Manage services across platforms (systemd, launchd, Windows)
- * 
- * @platforms linux, darwin, windows
- * @requiresSudo true
- * @category system
- */
-export interface ServiceAction {
-  /**
-   * Run 'systemctl daemon-reload' after unit file changes (systemd only)
-   */
-  daemon_reload?: boolean;
-  dropin?: {
-    content: string;
-    name: string;
-    src_template: string;
-  };
-  /**
-   * Enable service to start on boot (systemd: enable/disable, launchd:
-   * bootstrap/bootout)
-   */
-  enabled?: boolean;
-  /**
-   * Service name (systemd: nginx, launchd: com.example.app)
-   */
-  name: string;
-  /**
-   * Desired service state
-   * 
-   * @values started | stopped | restarted | reloaded
-   */
-  state?: "started" | "stopped" | "restarted" | "reloaded";
-  unit?: {
-    content: string;
-    dest: string;
-    mode: string;
-    src_template: string;
-  };
 }
 
 /**
@@ -494,26 +436,71 @@ export interface ShellActionAction {
 }
 
 /**
- * Render template files and write to destination
+ * Delete text between start and end anchor patterns in files
  * @category file
  */
-export interface TemplateAction {
-  dest: string;
-  mode?: string;
-  src: string;
-  vars?: Record<string, any>;
+export interface TextDeleteRangeAction {
+  backup?: boolean;
+  end_anchor: string;
+  inclusive?: boolean;
+  path: string;
+  regex?: boolean;
+  start_anchor: string;
 }
 
 /**
- * Extract archive files (tar, tar.gz, zip) with path traversal protection
+ * Insert text before or after anchor patterns in files
  * @category file
  */
-export interface UnarchiveAction {
-  creates?: string;
-  dest: string;
-  mode?: string;
-  src: string;
-  strip_components?: number;
+export interface TextInsertAction {
+  allow_multiple?: boolean;
+  anchor: string;
+  backup?: boolean;
+  content: string;
+  path: string;
+  position: string;
+  regex?: boolean;
+}
+
+/**
+ * Apply unified diff patches to files
+ * @category file
+ */
+export interface TextPatchAction {
+  backup?: boolean;
+  context_lines?: number;
+  dry_run?: boolean;
+  patch?: string;
+  patch_file?: string;
+  path: string;
+  strict?: boolean;
+}
+
+/**
+ * Replace text in files using literal or regex patterns
+ * @category file
+ */
+export interface TextReplaceAction {
+  allow_no_match?: boolean;
+  backup?: boolean;
+  count?: number;
+  flags?: {
+    case_insensitive: boolean;
+    multiline: boolean;
+    regex: boolean;
+  };
+  path: string;
+  pattern: string;
+  replace: string;
+}
+
+/**
+ * Execute a preset by expanding it into steps
+ * @category system
+ */
+export interface UseAction {
+  name: string;
+  with?: Record<string, any>;
 }
 
 /**
@@ -521,6 +508,13 @@ export interface UnarchiveAction {
  * @category data
  */
 export interface VarsAction {
+}
+
+/**
+ * Load variables from a YAML file
+ * @category data
+ */
+export interface VarsLoadAction {
 }
 
 /**
@@ -559,33 +553,34 @@ export interface Step {
   /**
    * Skip step if this file path exists. Useful for idempotency (universal)
    */
-  creates?: string;
+  unless_exists?: string;
   /**
    * Skip step if this command succeeds (exit code 0). Useful for
    * idempotency (universal)
    */
-  unless?: string;
+  unless_command?: string;
   /**
-   * Execute with sudo privileges. Works with: shell, command, file,
-   * template
+   * Run as this user (empty = current user, 'root' = sudo to root,
+   * '<name>' = sudo to user). Works with: shell, cmd, file.write,
+   * file.template
    */
-  become?: boolean;
+  as_user?: string;
   /**
    * Tags for filtering step execution (universal)
    */
   tags?: string[];
   /**
-   * Variable name to store step execution result (universal)
+   * Variable name to store step execution outputs (universal)
    */
-  register?: string;
+  as?: string;
   /**
    * Directory path for iterating over files (universal)
    */
-  with_filetree?: string;
+  for_each_file?: string;
   /**
    * Variable expression for iterating over items (universal)
    */
-  with_items?: string;
+  for_each?: string;
   /**
    * Environment variables for the step
    */
@@ -595,22 +590,18 @@ export interface Step {
    */
   cwd?: string;
   /**
-   * ⚠️ SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m',
-   * '1h'). Works with 'shell' and 'command' actions. Ignored for
-   * file/template/include.
+   * ⚠️ shell/cmd ONLY: Maximum execution time (e.g., '30s', '5m',
+   * '1h')
    */
   timeout?: string;
   /**
-   * ⚠️ SHELL/COMMAND ONLY: Number of retry attempts on failure. Works
-   * with 'shell' and 'command' actions. Ignored for file/template/include.
+   * Retry policy: { attempts: int, delay: string, backoff: string }
    */
-  retries?: number;
+  retry?: object;
   /**
-   * ⚠️ SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s',
-   * '5s'). Works with 'shell' and 'command' actions. Ignored for
-   * file/template/include.
+   * Continue execution even if this step fails (universal)
    */
-  retry_delay?: string;
+  continue_on_error?: boolean;
   /**
    * Expression to override changed result
    */
@@ -620,25 +611,19 @@ export interface Step {
    */
   failed_when?: string;
   /**
-   * ⚠️ SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root',
-   * 'postgres'). Works with 'shell' and 'command' actions. Ignored for
-   * file/template/include.
+   * Path to YAML file with steps to import
    */
-  become_user?: string;
-  /**
-   * Path to YAML file with steps to include
-   */
-  include?: string;
+  import?: string;
 
   // Action fields (exactly one must be specified)
   /**
    * Capture file changes with enhanced metadata for LLM agents
    */
-  artifact_capture?: ArtifactCaptureAction;
+  artifact.capture?: ArtifactCaptureAction;
   /**
    * Validate artifacts against constraints (change budgets)
    */
-  artifact_validate?: ArtifactValidateAction;
+  artifact.validate?: ArtifactValidateAction;
   /**
    * Verify conditions without changing system state
    */
@@ -646,84 +631,84 @@ export interface Step {
   /**
    * Execute commands directly without shell interpolation
    */
-  command?: CommandAction;
+  cmd?: CmdAction;
   /**
    * Copy files with checksum verification and atomic writes
    */
-  copy?: CopyAction;
+  file.copy?: FileCopyAction;
   /**
    * Download files from URLs with checksum verification
    */
-  download?: DownloadAction;
+  file.download?: FileDownloadAction;
+  /**
+   * Render template files and write to destination
+   */
+  file.template?: FileTemplateAction;
+  /**
+   * Extract archive files (tar, tar.gz, zip) with path traversal
+   * protection
+   */
+  file.unarchive?: FileUnarchiveAction;
   /**
    * Manage files, directories, links, and permissions
    */
-  file?: FileAction;
-  /**
-   * Delete text between start and end anchor patterns in files
-   */
-  file_delete_range?: FileDeleteRangeAction;
-  /**
-   * Insert text before or after anchor patterns in files
-   */
-  file_insert?: FileInsertAction;
-  /**
-   * Apply unified diff patches to files
-   */
-  file_patch_apply?: FilePatchApplyAction;
-  /**
-   * Replace text in files using literal or regex patterns
-   */
-  file_replace?: FileReplaceAction;
-  /**
-   * Load variables from YAML files
-   */
-  include_vars?: IncludeVarsAction;
-  /**
-   * Manage system packages (install/remove/update)
-   */
-  package?: PackageAction;
-  /**
-   * Execute a preset by expanding it into steps
-   */
-  preset?: string | PresetAction;
+  file.write?: FileWriteAction;
   /**
    * Display messages to the user
    */
-  print?: PrintAction;
-  /**
-   * Apply multiple patches to multiple files atomically
-   */
-  repo_apply_patchset?: RepoApplyPatchsetAction;
-  /**
-   * Search codebase for patterns and output results in JSON format
-   */
-  repo_search?: RepoSearchAction;
-  /**
-   * Generate a JSON representation of directory structure
-   */
-  repo_tree?: RepoTreeAction;
+  log?: LogAction;
   /**
    * Manage services across platforms (systemd, launchd, Windows)
    */
-  service?: ServiceAction;
+  os.service?: OsServiceAction;
+  /**
+   * Manage system packages (install/remove/update)
+   */
+  pkg?: PkgAction;
+  /**
+   * Apply multiple patches to multiple files atomically
+   */
+  repo.patch?: RepoPatchAction;
+  /**
+   * Search codebase for patterns and output results in JSON format
+   */
+  repo.search?: RepoSearchAction;
+  /**
+   * Generate a JSON representation of directory structure
+   */
+  repo.tree?: RepoTreeAction;
   /**
    * Execute shell commands
    */
   shell?: string | ShellAction;
   /**
-   * Render template files and write to destination
+   * Delete text between start and end anchor patterns in files
    */
-  template?: TemplateAction;
+  text.delete_range?: TextDeleteRangeAction;
   /**
-   * Extract archive files (tar, tar.gz, zip) with path traversal
-   * protection
+   * Insert text before or after anchor patterns in files
    */
-  unarchive?: UnarchiveAction;
+  text.insert?: TextInsertAction;
+  /**
+   * Apply unified diff patches to files
+   */
+  text.patch?: TextPatchAction;
+  /**
+   * Replace text in files using literal or regex patterns
+   */
+  text.replace?: TextReplaceAction;
+  /**
+   * Execute a preset by expanding it into steps
+   */
+  use?: string | UseAction;
   /**
    * Set variables for use in subsequent steps
    */
   vars?: VarsAction;
+  /**
+   * Load variables from YAML files
+   */
+  vars.load?: VarsLoadAction;
   /**
    * Poll a condition until it becomes true or times out
    */

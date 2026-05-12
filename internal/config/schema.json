@@ -15,7 +15,7 @@
     }
   ],
   "definitions": {
-    "artifact_capture": {
+    "artifact.capture": {
       "type": "object",
       "description": "Capture file changes with enhanced metadata for LLM agents",
       "properties": {
@@ -72,7 +72,7 @@
       "x-category": "system",
       "x-supports-dry-run": true
     },
-    "artifact_validate": {
+    "artifact.validate": {
       "type": "object",
       "description": "Validate artifacts against constraints (change budgets)",
       "properties": {
@@ -261,7 +261,7 @@
       "x-category": "system",
       "x-supports-dry-run": true
     },
-    "command": {
+    "cmd": {
       "type": "object",
       "description": "Execute commands directly without shell interpolation",
       "properties": {
@@ -287,7 +287,7 @@
       "x-supports-become": true,
       "x-version": "1.0.0"
     },
-    "command_action": {
+    "cmd_action": {
       "type": "object",
       "description": "Execute commands directly without shell interpolation",
       "properties": {
@@ -313,7 +313,7 @@
       "x-supports-become": true,
       "x-version": "1.0.0"
     },
-    "copy": {
+    "file.copy": {
       "type": "object",
       "description": "Copy files with checksum verification and atomic writes",
       "properties": {
@@ -359,7 +359,7 @@
         "file.copied"
       ]
     },
-    "download": {
+    "file.download": {
       "type": "object",
       "description": "Download files from URLs with checksum verification",
       "properties": {
@@ -412,7 +412,78 @@
         "file.downloaded"
       ]
     },
-    "file": {
+    "file.template": {
+      "type": "object",
+      "description": "Render template files and write to destination",
+      "properties": {
+        "dest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1
+        },
+        "vars": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "src",
+        "dest"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "template.rendered"
+      ]
+    },
+    "file.unarchive": {
+      "type": "object",
+      "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
+      "properties": {
+        "creates": {
+          "type": "string"
+        },
+        "dest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "pattern": "^[0-7]{3,4}$"
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strip_components": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "src",
+        "dest"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "archive.extracted"
+      ]
+    },
+    "file.write": {
       "type": "object",
       "description": "Manage files, directories, links, and permissions",
       "properties": {
@@ -451,17 +522,7 @@
         },
         "state": {
           "type": "string",
-          "description": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)",
-          "enum": [
-            "file",
-            "present",
-            "absent",
-            "directory",
-            "link",
-            "hardlink",
-            "touch",
-            "perms"
-          ]
+          "description": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)"
         }
       },
       "required": [
@@ -483,205 +544,101 @@
         "permissions.changed"
       ]
     },
-    "file_delete_range": {
-      "type": "object",
-      "description": "Delete text between start and end anchor patterns in files",
-      "properties": {
-        "backup": {
-          "type": "boolean"
-        },
-        "end_anchor": {
-          "type": "string",
-          "minLength": 1
-        },
-        "inclusive": {
-          "type": "boolean"
-        },
-        "path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "regex": {
-          "type": "boolean"
-        },
-        "start_anchor": {
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "required": [
-        "path",
-        "start_anchor",
-        "end_anchor"
-      ],
-      "additionalProperties": false,
-      "x-implements-check": true,
-      "x-category": "file",
-      "x-supports-dry-run": true,
-      "x-supports-become": true,
-      "x-version": "1.0.0",
-      "x-emits-events": [
-        "file.updated"
-      ]
+    "import": {
+      "type": "string",
+      "description": "Import steps from another file"
     },
-    "file_insert": {
+    "log": {
       "type": "object",
-      "description": "Insert text before or after anchor patterns in files",
+      "description": "Display messages to the user",
       "properties": {
-        "allow_multiple": {
-          "type": "boolean"
-        },
-        "anchor": {
-          "type": "string",
-          "minLength": 1
-        },
-        "backup": {
-          "type": "boolean"
-        },
-        "content": {
-          "type": "string",
-          "minLength": 1
-        },
-        "path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "position": {
-          "type": "string",
-          "minLength": 1
-        },
-        "regex": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "path",
-        "anchor",
-        "position",
-        "content"
-      ],
-      "additionalProperties": false,
-      "x-implements-check": true,
-      "x-category": "file",
-      "x-supports-dry-run": true,
-      "x-supports-become": true,
-      "x-version": "1.0.0",
-      "x-emits-events": [
-        "file.updated"
-      ]
-    },
-    "file_patch_apply": {
-      "type": "object",
-      "description": "Apply unified diff patches to files",
-      "properties": {
-        "backup": {
-          "type": "boolean"
-        },
-        "context_lines": {
-          "type": "integer"
-        },
-        "dry_run": {
-          "type": "boolean"
-        },
-        "patch": {
+        "msg": {
           "type": "string"
-        },
-        "patch_file": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "strict": {
-          "type": "boolean"
         }
       },
-      "required": [
-        "path"
-      ],
       "additionalProperties": false,
-      "x-implements-check": true,
-      "x-category": "file",
+      "x-category": "output",
       "x-supports-dry-run": true,
-      "x-supports-become": true,
       "x-version": "1.0.0",
       "x-emits-events": [
-        "file.updated"
+        "print.message"
       ]
     },
-    "file_replace": {
+    "os.service": {
       "type": "object",
-      "description": "Replace text in files using literal or regex patterns",
+      "description": "Manage services across platforms (systemd, launchd, Windows)",
       "properties": {
-        "allow_no_match": {
-          "type": "boolean"
+        "daemon_reload": {
+          "type": "boolean",
+          "description": "Run 'systemctl daemon-reload' after unit file changes (systemd only)"
         },
-        "backup": {
-          "type": "boolean"
-        },
-        "count": {
-          "type": "integer"
-        },
-        "flags": {
+        "dropin": {
           "type": "object",
           "properties": {
-            "case_insensitive": {
-              "type": "boolean"
+            "content": {
+              "type": "string"
             },
-            "multiline": {
-              "type": "boolean"
+            "name": {
+              "type": "string",
+              "minLength": 1
             },
-            "regex": {
-              "type": "boolean"
+            "src_template": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Service name (systemd: nginx, launchd: com.example.app)",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "description": "Desired service state"
+        },
+        "unit": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "dest": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string",
+              "pattern": "^[0-7]{3,4}$"
+            },
+            "src_template": {
+              "type": "string"
             }
           },
           "additionalProperties": false
-        },
-        "path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "pattern": {
-          "type": "string",
-          "minLength": 1
-        },
-        "replace": {
-          "type": "string",
-          "minLength": 1
         }
       },
       "required": [
-        "path",
-        "pattern",
-        "replace"
+        "name"
       ],
       "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "x-requires-sudo": true,
       "x-implements-check": true,
-      "x-category": "file",
-      "x-supports-dry-run": true,
-      "x-supports-become": true,
-      "x-version": "1.0.0",
-      "x-emits-events": [
-        "file.updated"
-      ]
+      "x-category": "system",
+      "x-supports-dry-run": true
     },
-    "include": {
-      "type": "string",
-      "description": "Include steps from another file"
-    },
-    "include_vars": {
-      "type": "string",
-      "description": "Load variables from a YAML file",
-      "additionalProperties": false,
-      "x-category": "data",
-      "x-supports-dry-run": true,
-      "x-version": "1.0.0",
-      "x-emits-events": [
-        "variables.loaded"
-      ]
-    },
-    "package": {
+    "pkg": {
       "type": "object",
       "description": "Manage system packages (install/remove/update)",
       "properties": {
@@ -700,27 +657,15 @@
           "description": "Package name (single package)"
         },
         "names": {
+          "type": "array",
           "description": "Multiple packages to install/remove",
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "string"
-            }
-          ]
+          "items": {
+            "type": "string"
+          }
         },
         "state": {
           "type": "string",
-          "description": "Package state (present: installed, absent: removed, latest: install or upgrade)",
-          "enum": [
-            "present",
-            "absent",
-            "latest"
-          ]
+          "description": "Package state (present: installed, absent: removed, latest: install or upgrade)"
         },
         "update_cache": {
           "type": "boolean",
@@ -747,43 +692,7 @@
         "package.managed"
       ]
     },
-    "preset": {
-      "type": "object",
-      "description": "Execute a preset by expanding it into steps",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "with": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "additionalProperties": false,
-      "x-category": "system",
-      "x-supports-dry-run": true
-    },
-    "print": {
-      "type": "object",
-      "description": "Display messages to the user",
-      "properties": {
-        "msg": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "x-category": "output",
-      "x-supports-dry-run": true,
-      "x-version": "1.0.0",
-      "x-emits-events": [
-        "print.message"
-      ]
-    },
-    "repo_apply_patchset": {
+    "repo.patch": {
       "type": "object",
       "description": "Apply multiple patches to multiple files atomically",
       "properties": {
@@ -819,7 +728,7 @@
         "file.updated"
       ]
     },
-    "repo_search": {
+    "repo.search": {
       "type": "object",
       "description": "Search codebase for patterns and output results in JSON format",
       "properties": {
@@ -857,7 +766,7 @@
       "x-supports-dry-run": true,
       "x-version": "1.0.0"
     },
-    "repo_tree": {
+    "repo.tree": {
       "type": "object",
       "description": "Generate a JSON representation of directory structure",
       "properties": {
@@ -910,86 +819,6 @@
         "steps"
       ],
       "additionalProperties": false
-    },
-    "service": {
-      "type": "object",
-      "description": "Manage services across platforms (systemd, launchd, Windows)",
-      "properties": {
-        "daemon_reload": {
-          "type": "boolean",
-          "description": "Run 'systemctl daemon-reload' after unit file changes (systemd only)"
-        },
-        "dropin": {
-          "type": "object",
-          "properties": {
-            "content": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "src_template": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "name"
-          ],
-          "additionalProperties": false
-        },
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)"
-        },
-        "name": {
-          "type": "string",
-          "description": "Service name (systemd: nginx, launchd: com.example.app)",
-          "minLength": 1
-        },
-        "state": {
-          "type": "string",
-          "description": "Desired service state",
-          "enum": [
-            "started",
-            "stopped",
-            "restarted",
-            "reloaded"
-          ]
-        },
-        "unit": {
-          "type": "object",
-          "properties": {
-            "content": {
-              "type": "string"
-            },
-            "dest": {
-              "type": "string"
-            },
-            "mode": {
-              "type": "string",
-              "pattern": "^[0-7]{3,4}$"
-            },
-            "src_template": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "additionalProperties": false,
-      "x-platforms": [
-        "linux",
-        "darwin",
-        "windows"
-      ],
-      "x-requires-sudo": true,
-      "x-implements-check": true,
-      "x-category": "system",
-      "x-supports-dry-run": true
     },
     "shell": {
       "type": "object",
@@ -1068,49 +897,41 @@
     "step": {
       "type": "object",
       "properties": {
-        "artifact_capture": {
+        "artifact.capture": {
           "description": "Capture file changes with enhanced metadata for LLM agents",
-          "$ref": "#/definitions/artifact_capture"
+          "$ref": "#/definitions/artifact.capture"
         },
-        "artifact_validate": {
+        "artifact.validate": {
           "description": "Validate artifacts against constraints (change budgets)",
-          "$ref": "#/definitions/artifact_validate"
+          "$ref": "#/definitions/artifact.validate"
+        },
+        "as": {
+          "type": "string",
+          "description": "Variable name to store step execution outputs (universal)"
+        },
+        "as_user": {
+          "type": "string",
+          "description": "Run as this user (empty = current user, 'root' = sudo to root, '\u003cname\u003e' = sudo to user). Works with: shell, cmd, file.write, file.template"
         },
         "assert": {
           "description": "Verify conditions without changing system state",
           "$ref": "#/definitions/assert"
         },
-        "become": {
-          "type": "boolean",
-          "description": "Execute with sudo privileges. Works with: shell, command, file, template"
-        },
-        "become_user": {
-          "type": "string",
-          "description": "⚠️ SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include."
-        },
         "changed_when": {
           "type": "string",
           "description": "Expression to override changed result"
         },
-        "command": {
+        "cmd": {
           "description": "Execute commands directly without shell interpolation",
-          "$ref": "#/definitions/command"
+          "$ref": "#/definitions/cmd"
         },
-        "copy": {
-          "description": "Copy files with checksum verification and atomic writes",
-          "$ref": "#/definitions/copy"
-        },
-        "creates": {
-          "type": "string",
-          "description": "Skip step if this file path exists. Useful for idempotency (universal)"
+        "continue_on_error": {
+          "type": "boolean",
+          "description": "Continue execution even if this step fails (universal)"
         },
         "cwd": {
           "type": "string",
           "description": "Working directory for the step"
-        },
-        "download": {
-          "description": "Download files from URLs with checksum verification",
-          "$ref": "#/definitions/download"
         },
         "env": {
           "type": "object",
@@ -1121,93 +942,69 @@
           "type": "string",
           "description": "Expression to override failure condition"
         },
-        "file": {
+        "file.copy": {
+          "description": "Copy files with checksum verification and atomic writes",
+          "$ref": "#/definitions/file.copy"
+        },
+        "file.download": {
+          "description": "Download files from URLs with checksum verification",
+          "$ref": "#/definitions/file.download"
+        },
+        "file.template": {
+          "description": "Render template files and write to destination",
+          "$ref": "#/definitions/file.template"
+        },
+        "file.unarchive": {
+          "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
+          "$ref": "#/definitions/file.unarchive"
+        },
+        "file.write": {
           "description": "Manage files, directories, links, and permissions",
-          "$ref": "#/definitions/file"
+          "$ref": "#/definitions/file.write"
         },
-        "file_delete_range": {
-          "description": "Delete text between start and end anchor patterns in files",
-          "$ref": "#/definitions/file_delete_range"
-        },
-        "file_insert": {
-          "description": "Insert text before or after anchor patterns in files",
-          "$ref": "#/definitions/file_insert"
-        },
-        "file_patch_apply": {
-          "description": "Apply unified diff patches to files",
-          "$ref": "#/definitions/file_patch_apply"
-        },
-        "file_replace": {
-          "description": "Replace text in files using literal or regex patterns",
-          "$ref": "#/definitions/file_replace"
-        },
-        "ignore_errors": {
-          "type": "boolean",
-          "description": "Continue execution even if this step fails (universal)"
-        },
-        "include": {
+        "for_each": {
           "type": "string",
-          "description": "Path to YAML file with steps to include"
+          "description": "Variable expression for iterating over items (universal)"
         },
-        "include_vars": {
-          "description": "Load variables from YAML files",
-          "$ref": "#/definitions/include_vars"
+        "for_each_file": {
+          "type": "string",
+          "description": "Directory path for iterating over files (universal)"
+        },
+        "import": {
+          "type": "string",
+          "description": "Path to YAML file with steps to import"
+        },
+        "log": {
+          "description": "Display messages to the user",
+          "$ref": "#/definitions/log"
         },
         "name": {
           "type": "string",
           "description": "Name of the step (universal)"
         },
-        "package": {
-          "description": "Manage system packages (install/remove/update)",
-          "$ref": "#/definitions/package"
-        },
-        "preset": {
-          "description": "Execute a preset by expanding it into steps",
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "preset (simple string format)"
-            },
-            {
-              "description": "preset (structured object format)",
-              "$ref": "#/definitions/preset"
-            }
-          ]
-        },
-        "print": {
-          "description": "Display messages to the user",
-          "$ref": "#/definitions/print"
-        },
-        "register": {
-          "type": "string",
-          "description": "Variable name to store step execution result (universal)"
-        },
-        "repo_apply_patchset": {
-          "description": "Apply multiple patches to multiple files atomically",
-          "$ref": "#/definitions/repo_apply_patchset"
-        },
-        "repo_search": {
-          "description": "Search codebase for patterns and output results in JSON format",
-          "$ref": "#/definitions/repo_search"
-        },
-        "repo_tree": {
-          "description": "Generate a JSON representation of directory structure",
-          "$ref": "#/definitions/repo_tree"
-        },
-        "retries": {
-          "type": "integer",
-          "description": "⚠️ SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "minimum": 0,
-          "maximum": 100
-        },
-        "retry_delay": {
-          "type": "string",
-          "description": "⚠️ SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        },
-        "service": {
+        "os.service": {
           "description": "Manage services across platforms (systemd, launchd, Windows)",
-          "$ref": "#/definitions/service"
+          "$ref": "#/definitions/os.service"
+        },
+        "pkg": {
+          "description": "Manage system packages (install/remove/update)",
+          "$ref": "#/definitions/pkg"
+        },
+        "repo.patch": {
+          "description": "Apply multiple patches to multiple files atomically",
+          "$ref": "#/definitions/repo.patch"
+        },
+        "repo.search": {
+          "description": "Search codebase for patterns and output results in JSON format",
+          "$ref": "#/definitions/repo.search"
+        },
+        "repo.tree": {
+          "description": "Generate a JSON representation of directory structure",
+          "$ref": "#/definitions/repo.tree"
+        },
+        "retry": {
+          "type": "object",
+          "description": "Retry policy: { attempts: int, delay: string, backoff: string }"
         },
         "shell": {
           "description": "Execute shell commands",
@@ -1229,26 +1026,55 @@
             "type": "string"
           }
         },
-        "template": {
-          "description": "Render template files and write to destination",
-          "$ref": "#/definitions/template"
+        "text.delete_range": {
+          "description": "Delete text between start and end anchor patterns in files",
+          "$ref": "#/definitions/text.delete_range"
+        },
+        "text.insert": {
+          "description": "Insert text before or after anchor patterns in files",
+          "$ref": "#/definitions/text.insert"
+        },
+        "text.patch": {
+          "description": "Apply unified diff patches to files",
+          "$ref": "#/definitions/text.patch"
+        },
+        "text.replace": {
+          "description": "Replace text in files using literal or regex patterns",
+          "$ref": "#/definitions/text.replace"
         },
         "timeout": {
           "type": "string",
-          "description": "⚠️ SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+          "description": "⚠️ shell/cmd ONLY: Maximum execution time (e.g., '30s', '5m', '1h')",
           "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
-        "unarchive": {
-          "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
-          "$ref": "#/definitions/unarchive"
-        },
-        "unless": {
+        "unless_command": {
           "type": "string",
           "description": "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)"
+        },
+        "unless_exists": {
+          "type": "string",
+          "description": "Skip step if this file path exists. Useful for idempotency (universal)"
+        },
+        "use": {
+          "description": "Execute a preset by expanding it into steps",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "use (simple string format)"
+            },
+            {
+              "description": "use (structured object format)",
+              "$ref": "#/definitions/use"
+            }
+          ]
         },
         "vars": {
           "description": "Set variables for use in subsequent steps",
           "$ref": "#/definitions/vars"
+        },
+        "vars.load": {
+          "description": "Load variables from YAML files",
+          "$ref": "#/definitions/vars.load"
         },
         "wait": {
           "description": "Poll a condition until it becomes true or times out",
@@ -1257,31 +1083,23 @@
         "when": {
           "type": "string",
           "description": "Conditional expression for step execution (universal)"
-        },
-        "with_filetree": {
-          "type": "string",
-          "description": "Directory path for iterating over files (universal)"
-        },
-        "with_items": {
-          "type": "string",
-          "description": "Variable expression for iterating over items (universal)"
         }
       },
       "oneOf": [
         {
           "required": [
-            "artifact_capture"
+            "artifact.capture"
           ],
           "properties": {
-            "artifact_capture": {
-              "$ref": "#/definitions/artifact_capture"
+            "artifact.capture": {
+              "$ref": "#/definitions/artifact.capture"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -1291,87 +1109,67 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -1381,17 +1179,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -1404,18 +1222,18 @@
         },
         {
           "required": [
-            "artifact_validate"
+            "artifact.validate"
           ],
           "properties": {
-            "artifact_validate": {
-              "$ref": "#/definitions/artifact_validate"
+            "artifact.validate": {
+              "$ref": "#/definitions/artifact.validate"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
@@ -1425,87 +1243,67 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -1515,17 +1313,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -1549,97 +1367,77 @@
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -1649,17 +1447,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -1672,23 +1490,23 @@
         },
         {
           "required": [
-            "command"
+            "cmd"
           ],
           "properties": {
-            "command": {
-              "$ref": "#/definitions/command"
+            "cmd": {
+              "$ref": "#/definitions/cmd"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -1698,82 +1516,62 @@
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -1783,17 +1581,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -1806,23 +1624,23 @@
         },
         {
           "required": [
-            "copy"
+            "file.copy"
           ],
           "properties": {
-            "copy": {
-              "$ref": "#/definitions/copy"
+            "file.copy": {
+              "$ref": "#/definitions/file.copy"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -1832,82 +1650,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -1917,17 +1715,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -1940,23 +1758,23 @@
         },
         {
           "required": [
-            "download"
+            "file.download"
           ],
           "properties": {
-            "download": {
-              "$ref": "#/definitions/download"
+            "file.download": {
+              "$ref": "#/definitions/file.download"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -1966,82 +1784,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2051,17 +1849,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2074,23 +1892,23 @@
         },
         {
           "required": [
-            "file"
+            "file.template"
           ],
           "properties": {
-            "file": {
-              "$ref": "#/definitions/file"
+            "file.template": {
+              "$ref": "#/definitions/file.template"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2100,82 +1918,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2185,17 +1983,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2208,23 +2026,23 @@
         },
         {
           "required": [
-            "file_delete_range"
+            "file.unarchive"
           ],
           "properties": {
-            "file_delete_range": {
-              "$ref": "#/definitions/file_delete_range"
+            "file.unarchive": {
+              "$ref": "#/definitions/file.unarchive"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2234,82 +2052,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2319,17 +2117,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2342,23 +2160,23 @@
         },
         {
           "required": [
-            "file_insert"
+            "file.write"
           ],
           "properties": {
-            "file_insert": {
-              "$ref": "#/definitions/file_insert"
+            "file.write": {
+              "$ref": "#/definitions/file.write"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2368,82 +2186,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2453,17 +2251,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2476,23 +2294,23 @@
         },
         {
           "required": [
-            "file_patch_apply"
+            "import"
           ],
           "properties": {
-            "file_patch_apply": {
-              "$ref": "#/definitions/file_patch_apply"
+            "import": {
+              "$ref": "#/definitions/import"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2502,82 +2320,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2587,17 +2385,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2610,23 +2428,23 @@
         },
         {
           "required": [
-            "file_replace"
+            "log"
           ],
           "properties": {
-            "file_replace": {
-              "$ref": "#/definitions/file_replace"
+            "log": {
+              "$ref": "#/definitions/log"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2636,82 +2454,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2721,17 +2519,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2744,23 +2562,23 @@
         },
         {
           "required": [
-            "include"
+            "os.service"
           ],
           "properties": {
-            "include": {
-              "$ref": "#/definitions/include"
+            "os.service": {
+              "$ref": "#/definitions/os.service"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2770,82 +2588,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2855,17 +2653,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -2878,23 +2696,23 @@
         },
         {
           "required": [
-            "include_vars"
+            "pkg"
           ],
           "properties": {
-            "include_vars": {
-              "$ref": "#/definitions/include_vars"
+            "pkg": {
+              "$ref": "#/definitions/pkg"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -2904,82 +2722,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -2989,17 +2787,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -3012,23 +2830,23 @@
         },
         {
           "required": [
-            "package"
+            "repo.patch"
           ],
           "properties": {
-            "package": {
-              "$ref": "#/definitions/package"
+            "repo.patch": {
+              "$ref": "#/definitions/repo.patch"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -3038,82 +2856,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -3123,17 +2921,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -3146,23 +2964,23 @@
         },
         {
           "required": [
-            "preset"
+            "repo.search"
           ],
           "properties": {
-            "preset": {
-              "$ref": "#/definitions/preset"
+            "repo.search": {
+              "$ref": "#/definitions/repo.search"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -3172,82 +2990,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -3257,17 +3055,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -3280,23 +3098,23 @@
         },
         {
           "required": [
-            "print"
+            "repo.tree"
           ],
           "properties": {
-            "print": {
-              "$ref": "#/definitions/print"
+            "repo.tree": {
+              "$ref": "#/definitions/repo.tree"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -3306,82 +3124,62 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.search"
                 ]
               },
               {
@@ -3391,146 +3189,27 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
                 ]
               },
               {
                 "required": [
-                  "vars"
+                  "text.patch"
                 ]
               },
               {
                 "required": [
-                  "wait"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo_apply_patchset"
-          ],
-          "properties": {
-            "repo_apply_patchset": {
-              "$ref": "#/definitions/repo_apply_patchset"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "artifact_capture"
+                  "text.replace"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
+                  "use"
                 ]
               },
               {
@@ -3540,404 +3219,7 @@
               },
               {
                 "required": [
-                  "wait"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo_search"
-          ],
-          "properties": {
-            "repo_search": {
-              "$ref": "#/definitions/repo_search"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo_tree"
-          ],
-          "properties": {
-            "repo_tree": {
-              "$ref": "#/definitions/repo_tree"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "service"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "service"
-          ],
-          "properties": {
-            "service": {
-              "$ref": "#/definitions/service"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "artifact_capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact_validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "command"
-                ]
-              },
-              {
-                "required": [
-                  "copy"
-                ]
-              },
-              {
-                "required": [
-                  "download"
-                ]
-              },
-              {
-                "required": [
-                  "file"
-                ]
-              },
-              {
-                "required": [
-                  "file_delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "file_insert"
-                ]
-              },
-              {
-                "required": [
-                  "file_patch_apply"
-                ]
-              },
-              {
-                "required": [
-                  "file_replace"
-                ]
-              },
-              {
-                "required": [
-                  "include"
-                ]
-              },
-              {
-                "required": [
-                  "include_vars"
-                ]
-              },
-              {
-                "required": [
-                  "package"
-                ]
-              },
-              {
-                "required": [
-                  "preset"
-                ]
-              },
-              {
-                "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
+                  "vars.load"
                 ]
               },
               {
@@ -3961,12 +3243,12 @@
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -3976,102 +3258,102 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
+                  "repo.tree"
                 ]
               },
               {
                 "required": [
-                  "repo_apply_patchset"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "repo_search"
+                  "text.insert"
                 ]
               },
               {
                 "required": [
-                  "repo_tree"
+                  "text.patch"
                 ]
               },
               {
                 "required": [
-                  "service"
+                  "text.replace"
                 ]
               },
               {
                 "required": [
-                  "template"
-                ]
-              },
-              {
-                "required": [
-                  "unarchive"
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -4084,23 +3366,23 @@
         },
         {
           "required": [
-            "template"
+            "text.delete_range"
           ],
           "properties": {
-            "template": {
-              "$ref": "#/definitions/template"
+            "text.delete_range": {
+              "$ref": "#/definitions/text.delete_range"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -4110,87 +3392,67 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -4200,12 +3462,32 @@
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -4218,23 +3500,23 @@
         },
         {
           "required": [
-            "unarchive"
+            "text.insert"
           ],
           "properties": {
-            "unarchive": {
-              "$ref": "#/definitions/unarchive"
+            "text.insert": {
+              "$ref": "#/definitions/text.insert"
             }
           },
           "not": {
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -4244,87 +3526,67 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -4334,12 +3596,434 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "text.patch"
+          ],
+          "properties": {
+            "text.patch": {
+              "$ref": "#/definitions/text.patch"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "text.replace"
+          ],
+          "properties": {
+            "text.replace": {
+              "$ref": "#/definitions/text.replace"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "use"
+          ],
+          "properties": {
+            "use": {
+              "$ref": "#/definitions/use"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -4363,12 +4047,12 @@
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -4378,87 +4062,67 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -4468,12 +4132,166 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "vars.load"
+          ],
+          "properties": {
+            "vars.load": {
+              "$ref": "#/definitions/vars.load"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
                 ]
               },
               {
@@ -4497,12 +4315,12 @@
             "anyOf": [
               {
                 "required": [
-                  "artifact_capture"
+                  "artifact.capture"
                 ]
               },
               {
                 "required": [
-                  "artifact_validate"
+                  "artifact.validate"
                 ]
               },
               {
@@ -4512,87 +4330,67 @@
               },
               {
                 "required": [
-                  "command"
+                  "cmd"
                 ]
               },
               {
                 "required": [
-                  "copy"
+                  "file.copy"
                 ]
               },
               {
                 "required": [
-                  "download"
+                  "file.download"
                 ]
               },
               {
                 "required": [
-                  "file"
+                  "file.template"
                 ]
               },
               {
                 "required": [
-                  "file_delete_range"
+                  "file.unarchive"
                 ]
               },
               {
                 "required": [
-                  "file_insert"
+                  "file.write"
                 ]
               },
               {
                 "required": [
-                  "file_patch_apply"
+                  "import"
                 ]
               },
               {
                 "required": [
-                  "file_replace"
+                  "log"
                 ]
               },
               {
                 "required": [
-                  "include"
+                  "os.service"
                 ]
               },
               {
                 "required": [
-                  "include_vars"
+                  "pkg"
                 ]
               },
               {
                 "required": [
-                  "package"
+                  "repo.patch"
                 ]
               },
               {
                 "required": [
-                  "preset"
+                  "repo.search"
                 ]
               },
               {
                 "required": [
-                  "print"
-                ]
-              },
-              {
-                "required": [
-                  "repo_apply_patchset"
-                ]
-              },
-              {
-                "required": [
-                  "repo_search"
-                ]
-              },
-              {
-                "required": [
-                  "repo_tree"
-                ]
-              },
-              {
-                "required": [
-                  "service"
+                  "repo.tree"
                 ]
               },
               {
@@ -4602,17 +4400,37 @@
               },
               {
                 "required": [
-                  "template"
+                  "text.delete_range"
                 ]
               },
               {
                 "required": [
-                  "unarchive"
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "use"
                 ]
               },
               {
                 "required": [
                   "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               }
             ]
@@ -4621,30 +4439,36 @@
       ],
       "additionalProperties": false
     },
-    "template": {
+    "text.delete_range": {
       "type": "object",
-      "description": "Render template files and write to destination",
+      "description": "Delete text between start and end anchor patterns in files",
       "properties": {
-        "dest": {
+        "backup": {
+          "type": "boolean"
+        },
+        "end_anchor": {
           "type": "string",
           "minLength": 1
         },
-        "mode": {
-          "type": "string",
-          "pattern": "^[0-7]{3,4}$"
+        "inclusive": {
+          "type": "boolean"
         },
-        "src": {
+        "path": {
           "type": "string",
           "minLength": 1
         },
-        "vars": {
-          "type": "object",
-          "additionalProperties": true
+        "regex": {
+          "type": "boolean"
+        },
+        "start_anchor": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
-        "src",
-        "dest"
+        "path",
+        "start_anchor",
+        "end_anchor"
       ],
       "additionalProperties": false,
       "x-implements-check": true,
@@ -4653,44 +4477,170 @@
       "x-supports-become": true,
       "x-version": "1.0.0",
       "x-emits-events": [
-        "template.rendered"
+        "file.updated"
       ]
     },
-    "unarchive": {
+    "text.insert": {
       "type": "object",
-      "description": "Extract archive files (tar, tar.gz, zip) with path traversal protection",
+      "description": "Insert text before or after anchor patterns in files",
       "properties": {
-        "creates": {
-          "type": "string"
+        "allow_multiple": {
+          "type": "boolean"
         },
-        "dest": {
+        "anchor": {
           "type": "string",
           "minLength": 1
         },
-        "mode": {
-          "type": "string",
-          "pattern": "^[0-7]{3,4}$"
+        "backup": {
+          "type": "boolean"
         },
-        "src": {
+        "content": {
           "type": "string",
           "minLength": 1
         },
-        "strip_components": {
-          "type": "integer"
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "position": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regex": {
+          "type": "boolean"
         }
       },
       "required": [
-        "src",
-        "dest"
+        "path",
+        "anchor",
+        "position",
+        "content"
       ],
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",
       "x-supports-dry-run": true,
+      "x-supports-become": true,
       "x-version": "1.0.0",
       "x-emits-events": [
-        "archive.extracted"
+        "file.updated"
       ]
+    },
+    "text.patch": {
+      "type": "object",
+      "description": "Apply unified diff patches to files",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "context_lines": {
+          "type": "integer"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "patch": {
+          "type": "string"
+        },
+        "patch_file": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strict": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "text.replace": {
+      "type": "object",
+      "description": "Replace text in files using literal or regex patterns",
+      "properties": {
+        "allow_no_match": {
+          "type": "boolean"
+        },
+        "backup": {
+          "type": "boolean"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "flags": {
+          "type": "object",
+          "properties": {
+            "case_insensitive": {
+              "type": "boolean"
+            },
+            "multiline": {
+              "type": "boolean"
+            },
+            "regex": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replace": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "pattern",
+        "replace"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "use": {
+      "type": "object",
+      "description": "Execute a preset by expanding it into steps",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "with": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
     },
     "vars": {
       "type": "object",
@@ -4701,6 +4651,17 @@
       "x-version": "1.0.0",
       "x-emits-events": [
         "variables.set"
+      ]
+    },
+    "vars.load": {
+      "type": "string",
+      "description": "Load variables from a YAML file",
+      "additionalProperties": false,
+      "x-category": "data",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "variables.loaded"
       ]
     },
     "wait": {

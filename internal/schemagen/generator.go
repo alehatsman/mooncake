@@ -50,16 +50,16 @@ func (g *Generator) Generate() (*Schema, error) {
 
 		// Store as both the action name and action_action for consistency
 		schema.Definitions[meta.Name] = def
-		if meta.Name == "shell" || meta.Name == "command" { //nolint:goconst // Action name checks
+		if meta.Name == "shell" || meta.Name == "cmd" { //nolint:goconst // Action name checks
 			// Special case: shell can be string or object
 			schema.Definitions[meta.Name+"_action"] = def
 		}
 	}
 
-	// Add include definition (not a registered action, but needs a definition for schema)
-	schema.Definitions["include"] = &Definition{
+	// Add import definition (not a registered action, but needs a definition for schema)
+	schema.Definitions["import"] = &Definition{
 		Type:        "string", //nolint:goconst // JSON Schema type
-		Description: "Include steps from another file",
+		Description: "Import steps from another file",
 	}
 
 	// Support both formats at root level using oneOf:
@@ -97,7 +97,7 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 	// Helper for bool pointers
 	trueVal := true
 
-	// Add universal fields
+	// Add universal fields (spec-21 modernized names)
 	universalFields := map[string]*Property{
 		"name": {
 			Type:        "string",
@@ -107,17 +107,17 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "Conditional expression for step execution (universal)",
 		},
-		"creates": {
+		"unless_exists": {
 			Type:        "string",
 			Description: "Skip step if this file path exists. Useful for idempotency (universal)",
 		},
-		"unless": {
+		"unless_command": {
 			Type:        "string",
 			Description: "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)",
 		},
-		"become": {
-			Type:        "boolean",
-			Description: "Execute with sudo privileges. Works with: shell, command, file, template",
+		"as_user": {
+			Type:        "string",
+			Description: "Run as this user (empty = current user, 'root' = sudo to root, '<name>' = sudo to user). Works with: shell, cmd, file.write, file.template",
 		},
 		"tags": {
 			Type: "array",
@@ -126,15 +126,15 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			},
 			Description: "Tags for filtering step execution (universal)",
 		},
-		"register": {
+		"as": {
 			Type:        "string",
-			Description: "Variable name to store step execution result (universal)",
+			Description: "Variable name to store step execution outputs (universal)",
 		},
-		"with_filetree": {
+		"for_each_file": {
 			Type:        "string",
 			Description: "Directory path for iterating over files (universal)",
 		},
-		"with_items": {
+		"for_each": {
 			Type:        "string",
 			Description: "Variable expression for iterating over items (universal)",
 		},
@@ -150,15 +150,11 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 		},
 		"timeout": {
 			Type:        "string",
-			Description: "⚠️ SHELL/COMMAND ONLY: Maximum execution time (e.g., '30s', '5m', '1h'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+			Description: "⚠️ shell/cmd ONLY: Maximum execution time (e.g., '30s', '5m', '1h')",
 		},
-		"retries": {
-			Type:        "integer",
-			Description: "⚠️ SHELL/COMMAND ONLY: Number of retry attempts on failure. Works with 'shell' and 'command' actions. Ignored for file/template/include.",
-		},
-		"retry_delay": {
-			Type:        "string",
-			Description: "⚠️ SHELL/COMMAND ONLY: Delay between retry attempts (e.g., '1s', '5s'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+		"retry": {
+			Type:        "object",
+			Description: "Retry policy: { attempts: int, delay: string, backoff: string }",
 		},
 		"changed_when": {
 			Type:        "string",
@@ -168,15 +164,11 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "Expression to override failure condition",
 		},
-		"become_user": {
+		"import": {
 			Type:        "string",
-			Description: "⚠️ SHELL/COMMAND ONLY: User to become via sudo (e.g., 'root', 'postgres'). Works with 'shell' and 'command' actions. Ignored for file/template/include.",
+			Description: "Path to YAML file with steps to import",
 		},
-		"include": {
-			Type:        "string",
-			Description: "Path to YAML file with steps to include",
-		},
-		"ignore_errors": {
+		"continue_on_error": {
 			Type:        "boolean",
 			Description: "Continue execution even if this step fails (universal)",
 		},
@@ -203,7 +195,7 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 		}
 
 		// Handle special cases where actions support multiple forms
-		if meta.Name == "shell" || meta.Name == "preset" {
+		if meta.Name == "shell" || meta.Name == "use" {
 			actionProp.OneOf = []*Property{
 				{
 					Type:        "string",
@@ -221,9 +213,9 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 		def.Properties[meta.Name] = actionProp
 	}
 
-	// Add "include" to action names for oneOf generation
-	// (include is a special string field, not a registered action)
-	actionNames = append(actionNames, "include")
+	// Add "import" to action names for oneOf generation
+	// (import is a special string field, not a registered action)
+	actionNames = append(actionNames, "import")
 
 	// Sort action names for deterministic schema generation
 	sort.Strings(actionNames)
@@ -348,22 +340,22 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 		return def, nil
 	}
 
-	if meta.Name == "include_vars" {
-		// include_vars is a string (file path)
+	if meta.Name == "vars.load" {
+		// vars.load is a string (file path)
 		def.Type = "string" //nolint:goconst // JSON Schema type
 		def.Description = "Load variables from a YAML file"
 		return def, nil
 	}
 
-	if meta.Name == "include" {
-		// include is a string (file path)
+	if meta.Name == "import" {
+		// import is a string (file path)
 		def.Type = "string" //nolint:goconst // JSON Schema type
-		def.Description = "Include steps from another file"
+		def.Description = "Import steps from another file"
 		return def, nil
 	}
 
 	// Handle artifact_capture specially (has circular reference via Steps)
-	if meta.Name == "artifact_capture" {
+	if meta.Name == "artifact.capture" {
 		def.Properties = map[string]*Property{
 			"name":              {Type: "string", Description: "Name of the artifact (used for output directory)"},
 			"output_dir":        {Type: "string", Description: "Base directory for artifacts (default: './artifacts')"},
@@ -386,7 +378,7 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 	}
 
 	// Handle artifact_validate specially
-	if meta.Name == "artifact_validate" {
+	if meta.Name == "artifact.validate" {
 		def.Properties = map[string]*Property{
 			"artifact_file":     {Type: "string", Description: "Path to artifact metadata JSON file"},
 			"max_files":         {Type: "integer", Description: "Maximum number of files allowed to change"},
@@ -444,59 +436,59 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 	switch actionName {
 	case "shell":
 		actionStruct = &config.ShellAction{}
-	case "command":
+	case "cmd":
 		actionStruct = &config.CommandAction{}
-	case "file":
+	case "file.write":
 		actionStruct = &config.File{}
-	case "template":
+	case "file.template":
 		actionStruct = &config.Template{}
-	case "copy":
+	case "file.copy":
 		actionStruct = &config.Copy{}
-	case "download":
+	case "file.download":
 		actionStruct = &config.Download{}
-	case "unarchive":
+	case "file.unarchive":
 		actionStruct = &config.Unarchive{}
-	case "package":
+	case "pkg":
 		actionStruct = &config.Package{}
-	case "service":
+	case "os.service":
 		actionStruct = &config.ServiceAction{}
 	case "assert":
 		actionStruct = &config.Assert{}
-	case "preset":
+	case "use":
 		actionStruct = &config.PresetInvocation{}
-	case "print":
+	case "log":
 		actionStruct = &config.PrintAction{}
-	case "file_replace":
+	case "text.replace":
 		actionStruct = &config.FileReplace{}
-	case "file_insert":
+	case "text.insert":
 		actionStruct = &config.FileInsert{}
-	case "file_delete_range":
+	case "text.delete_range":
 		actionStruct = &config.FileDeleteRange{}
-	case "file_patch_apply":
+	case "text.patch":
 		actionStruct = &config.FilePatchApply{}
-	case "repo_search":
+	case "repo.search":
 		actionStruct = &config.RepoSearch{}
-	case "repo_tree":
+	case "repo.tree":
 		actionStruct = &config.RepoTree{}
-	case "repo_apply_patchset":
+	case "repo.patch":
 		actionStruct = &config.RepoApplyPatchset{}
 	case "wait":
 		actionStruct = &config.WaitAction{}
-	case "artifact_capture":
+	case "artifact.capture":
 		// Handled as special case in generateActionDefinition
-		return nil, fmt.Errorf("artifact_capture uses custom definition (circular reference)")
-	case "artifact_validate":
+		return nil, fmt.Errorf("artifact.capture uses custom definition (circular reference)")
+	case "artifact.validate":
 		// Handled as special case in generateActionDefinition
-		return nil, fmt.Errorf("artifact_validate uses custom definition")
+		return nil, fmt.Errorf("artifact.validate uses custom definition")
 	case "vars":
 		// vars is a map[string]interface{} directly in Step
 		return nil, fmt.Errorf("vars action uses inline map definition")
-	case "include_vars":
-		// include_vars is a string directly in Step
-		return nil, fmt.Errorf("include_vars action uses inline string definition")
-	case "include":
-		// include is a string directly in Step
-		return nil, fmt.Errorf("include action uses inline string definition")
+	case "vars.load":
+		// vars.load is a string directly in Step
+		return nil, fmt.Errorf("vars.load action uses inline string definition")
+	case "import":
+		// import is a string directly in Step
+		return nil, fmt.Errorf("import action uses inline string definition")
 	default:
 		return nil, fmt.Errorf("unknown action: %s", actionName)
 	}

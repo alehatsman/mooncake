@@ -243,10 +243,10 @@ func (g *TypeScriptGenerator) generateStepInterface(b *strings.Builder, def *Def
 
 	// Universal fields (from step definition)
 	universalFields := []string{
-		"name", "when", "creates", "unless", "become", "tags",
-		"register", "with_filetree", "with_items", "env", "cwd",
-		"timeout", "retries", "retry_delay", "changed_when",
-		"failed_when", "become_user", "include",
+		"name", "when", "unless_exists", "unless_command", "as_user", "tags",
+		"as", "for_each_file", "for_each", "env", "cwd",
+		"timeout", "retry", "continue_on_error", "changed_when",
+		"failed_when", "import",
 	}
 
 	// Required fields map
@@ -293,14 +293,17 @@ func (g *TypeScriptGenerator) generateStepInterface(b *strings.Builder, def *Def
 
 // toPascalCase converts a string to PascalCase.
 func toPascalCase(s string) string {
-	parts := strings.Split(s, "_")
+	// spec-21: split on both "_" and "." so dot-namespaced action names
+	// (e.g. "file.write", "text.replace") produce clean PascalCase
+	// TypeScript identifiers (FileWrite, TextReplace).
+	separators := func(r rune) bool { return r == '_' || r == '.' }
+	parts := strings.FieldsFunc(s, separators)
 	for i, part := range parts {
 		if len(part) > 0 {
 			parts[i] = strings.ToUpper(part[:1]) + part[1:]
 		}
 	}
 	result := strings.Join(parts, "")
-	// Handle special cases
 	if len(result) > 0 {
 		return strings.ToUpper(result[:1]) + result[1:]
 	}

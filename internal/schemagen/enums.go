@@ -61,13 +61,13 @@ func applyKnownValidation(actionName, fieldName string, prop *Property) {
 
 // EnhancedDescriptions adds detailed descriptions to properties.
 var EnhancedDescriptions = map[string]map[string]string{
-	"service": {
+	"os.service": {
 		"name":          "Service name (systemd: nginx, launchd: com.example.app)",
 		"state":         "Desired service state",
 		"enabled":       "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)",
 		"daemon_reload": "Run 'systemctl daemon-reload' after unit file changes (systemd only)",
 	},
-	"file": {
+	"file.write": {
 		"path":  "File, directory, or symlink path (required)",
 		"state": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)",
 		"mode":  "File permissions (e.g., '0644', '0755')",
@@ -80,7 +80,7 @@ var EnhancedDescriptions = map[string]map[string]string{
 		"stdin":       "Input to provide to the command via stdin",
 		"capture":     "Capture command output (default: true). When false, output is only streamed",
 	},
-	"package": {
+	"pkg": {
 		"name":         "Package name (single package)",
 		"names":        "Multiple packages to install/remove",
 		"state":        "Package state (present: installed, absent: removed, latest: install or upgrade)",
