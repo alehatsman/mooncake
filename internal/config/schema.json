@@ -1047,6 +1047,10 @@
           "description": "⚠️ shell/cmd ONLY: Maximum execution time (e.g., '30s', '5m', '1h')",
           "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
+        "tool": {
+          "description": "Install a developer tool at a pinned version with lockfile-backed reproducibility",
+          "$ref": "#/definitions/tool"
+        },
         "unless_command": {
           "type": "string",
           "description": "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)"
@@ -1199,6 +1203,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -1329,6 +1338,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -1467,6 +1481,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -1597,6 +1616,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -1735,6 +1759,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -1865,6 +1894,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -2003,6 +2037,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -2133,6 +2172,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -2271,6 +2315,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -2401,6 +2450,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -2539,6 +2593,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -2669,6 +2728,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -2807,6 +2871,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -2937,6 +3006,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -3075,6 +3149,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -3205,6 +3284,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -3343,6 +3427,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -3473,6 +3562,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -3611,6 +3705,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -3745,6 +3844,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -3875,6 +3979,150 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "tool"
+          ],
+          "properties": {
+            "tool": {
+              "$ref": "#/definitions/tool"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
                 ]
               },
               {
@@ -4018,6 +4266,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "vars"
                 ]
               },
@@ -4148,6 +4401,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -4286,6 +4544,11 @@
               },
               {
                 "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -4416,6 +4679,11 @@
               {
                 "required": [
                   "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
                 ]
               },
               {
@@ -4621,6 +4889,69 @@
       "x-emits-events": [
         "file.updated"
       ]
+    },
+    "tool": {
+      "type": "object",
+      "description": "Install a developer tool at a pinned version with lockfile-backed reproducibility",
+      "properties": {
+        "asset": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bin": {
+          "type": "string"
+        },
+        "checksum": {
+          "type": "string"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mise_tool": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repo": {
+          "type": "string"
+        },
+        "strip_components": {
+          "type": "integer"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "write_tool_versions": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "backend"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "0.1.0"
     },
     "use": {
       "type": "object",

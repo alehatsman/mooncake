@@ -277,6 +277,32 @@ type Unarchive struct {
 	Mode            string `yaml:"mode" json:"mode,omitempty"`                         // Octal directory permissions (e.g., "0755")
 }
 
+// Tool represents a declarative tool install via a backend (archive-url,
+// github-release, mise). Spec 19.
+type Tool struct {
+	Name    string `yaml:"name" json:"name"`       // Tool name (required)
+	Version string `yaml:"version" json:"version"` // Concrete version (required)
+	Backend string `yaml:"backend" json:"backend"` // archive-url | github-release | mise
+
+	// archive-url
+	URL string `yaml:"url,omitempty" json:"url,omitempty"`
+
+	// github-release
+	Repo  string `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Asset string `yaml:"asset,omitempty" json:"asset,omitempty"`
+	Tag   string `yaml:"tag,omitempty" json:"tag,omitempty"`
+
+	// mise
+	MiseTool string            `yaml:"mise_tool,omitempty" json:"mise_tool,omitempty"`
+	Env      map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
+	// Common (URL-based)
+	Checksum          string `yaml:"checksum,omitempty" json:"checksum,omitempty"`
+	StripComponents   int    `yaml:"strip_components,omitempty" json:"strip_components,omitempty"`
+	Bin               string `yaml:"bin,omitempty" json:"bin,omitempty"`
+	WriteToolVersions bool   `yaml:"write_tool_versions,omitempty" json:"write_tool_versions,omitempty"`
+}
+
 // Download represents a file download operation in a configuration step.
 type Download struct {
 	URL      string            `yaml:"url" json:"url"`                         // Remote URL (required)
@@ -673,6 +699,7 @@ type Step struct {
 	TextDeleteRange *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty"`
 	TextPatch       *FilePatchApply         `yaml:"text.patch" json:"text.patch,omitempty"`
 	Pkg             *Package                `yaml:"pkg" json:"pkg,omitempty"`
+	Tool            *Tool                   `yaml:"tool" json:"tool,omitempty"`
 	OsService       *ServiceAction          `yaml:"os.service" json:"os.service,omitempty"`
 	Cmd             *CommandAction          `yaml:"cmd" json:"cmd,omitempty"`
 	RepoSearch      *RepoSearch             `yaml:"repo.search" json:"repo.search,omitempty"`
@@ -808,6 +835,9 @@ func (s *Step) countActions() int {
 	if s.Pkg != nil {
 		count++
 	}
+	if s.Tool != nil {
+		count++
+	}
 	if s.OsService != nil {
 		count++
 	}
@@ -894,6 +924,9 @@ func (s *Step) DetermineActionType() string {
 	}
 	if s.Pkg != nil {
 		return "pkg"
+	}
+	if s.Tool != nil {
+		return "tool"
 	}
 	if s.OsService != nil {
 		return "os.service"
@@ -988,6 +1021,7 @@ func (s *Step) Clone() *Step {
 		TextDeleteRange:  s.TextDeleteRange,
 		TextPatch:        s.TextPatch,
 		Pkg:              s.Pkg,
+		Tool:             s.Tool,
 		OsService:        s.OsService,
 		Cmd:              s.Cmd,
 		RepoSearch:       s.RepoSearch,

@@ -1,0 +1,139 @@
+# ============================================================================
+# Tool Action - Examples (Spec 19 v1: archive-url backend)
+# ============================================================================
+# Install dev tools declaratively with a stable install layout and a
+# lockfile (mooncake.lock) that pins checksums for reproducibility.
+#
+# v1 ships a single backend: `archive-url`. github-release and mise are
+# declared in the schema and will be implemented in follow-up specs.
+#
+# Run this file:
+#   mooncake run --config examples/actions/tool.yml
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Example 1 — Pinned archive with inline checksum
+# ----------------------------------------------------------------------------
+# When `checksum:` is provided, mooncake verifies the download against it
+# and records the same value into mooncake.lock for future runs.
+
+- name: "Install Go via archive-url (with checksum)"
+  tool:
+    name: go
+    version: "1.21.5"
+    backend: archive-url
+    url: "https://go.dev/dl/go{{ version }}.{{ os }}-{{ arch }}.tar.gz"
+    checksum: "sha256:e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e"
+    strip_components: 1
+    bin: "bin/go"
+  tags: [pinned]
+
+# ----------------------------------------------------------------------------
+# Example 2 — Trust-on-first-use (TOFU)
+# ----------------------------------------------------------------------------
+# Omitting `checksum:` enables TOFU: mooncake records the downloaded
+# artifact's sha256 into mooncake.lock on the first install. Subsequent
+# installs verify against the recorded checksum — a mismatched upstream
+# artifact will fail the apply.
+
+- name: "Install Go via archive-url (TOFU)"
+  tool:
+    name: go-tofu
+    version: "1.21.5"
+    backend: archive-url
+    url: "https://go.dev/dl/go{{ version }}.{{ os }}-{{ arch }}.tar.gz"
+    strip_components: 1
+    bin: "bin/go"
+  tags: [tofu]
+
+# ----------------------------------------------------------------------------
+# Example 3 — github-release backend (sugar over archive-url)
+# ----------------------------------------------------------------------------
+# Builds the asset URL from `repo` + `tag` + `asset`. Default tag is
+# "v{{ version }}"; override with `tag:` for projects that don't use
+# the `v` prefix.
+
+- name: "Install hyperfine via github-release"
+  tool:
+    name: hyperfine
+    version: "1.18.0"
+    backend: github-release
+    repo: sharkdp/hyperfine
+    asset: "hyperfine-v{{ version }}-x86_64-unknown-linux-gnu.tar.gz"
+    checksum: "sha256:0cf1779354f46037df145bce9dd298d28aee341ac789b6a377ad77855029bc8e"
+    strip_components: 1
+    bin: "hyperfine"
+  tags: [github]
+
+# Custom tag scheme example (no `v` prefix). The `tag` field is templated
+# against {{ version }} too, so this works for projects whose releases
+# are tagged "1.13.0" or "release-1.13.0" etc.
+#
+# - name: "Install a tool whose tag doesn't have v prefix"
+#   tool:
+#     name: example
+#     version: "2.4.0"
+#     backend: github-release
+#     repo: owner/name
+#     tag: "{{ version }}"
+#     asset: "example-{{ version }}-{{ os }}-{{ arch }}.tar.gz"
+#   tags: [github]
+
+# ----------------------------------------------------------------------------
+# Example 4 — mise backend (delegating)
+# ----------------------------------------------------------------------------
+# Mooncake doesn't try to be mise. It declaratively wraps mise's broad
+# tool catalog (Node, Python, Ruby, Java, dozens more) so a single
+# mooncake config can mix URL-pinned installs with mise-managed ones.
+#
+# Precondition: `mise` must be on PATH (https://mise.jdx.dev/).
+# Mooncake records (backend, name, version) in mooncake.lock; mise owns
+# checksum integrity via its own lockfile.
+
+- name: "Install Node via mise"
+  tool:
+    name: node
+    version: "24.0.0"
+    backend: mise
+  tags: [mise]
+
+# Use `mise_tool:` when the catalog ID differs from the natural name —
+# common for Java runtimes (temurin, zulu, corretto, ...).
+#
+# - name: "Install Temurin 21 via mise"
+#   tool:
+#     name: java
+#     version: "21.0.5"
+#     backend: mise
+#     mise_tool: "temurin"
+#   tags: [mise]
+
+# ----------------------------------------------------------------------------
+# Example 5 — Write a .tool-versions side effect
+# ----------------------------------------------------------------------------
+# `write_tool_versions: true` updates a .tool-versions file next to the
+# mooncake.lock, so asdf/mise/direnv can activate the same versions.
+
+- name: "Install Go and update .tool-versions"
+  tool:
+    name: go-with-versions
+    version: "1.21.5"
+    backend: archive-url
+    url: "https://go.dev/dl/go{{ version }}.{{ os }}-{{ arch }}.tar.gz"
+    strip_components: 1
+    bin: "bin/go"
+    write_tool_versions: true
+  tags: [interop]
+
+# ----------------------------------------------------------------------------
+# After running:
+# ----------------------------------------------------------------------------
+# Tools installed under:
+#   ~/.local/share/mooncake/tools/<name>/<version>/
+#
+# Lockfile recorded at:
+#   ./mooncake.lock          (next to this YAML, or nearest ancestor lock)
+#
+# .tool-versions written when `write_tool_versions: true`:
+#   ./.tool-versions
+# ============================================================================
