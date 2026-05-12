@@ -17,6 +17,28 @@ import (
 	"github.com/alehatsman/mooncake/internal/snapshot"
 )
 
+// RegisterAllTools registers every tool returned by AllTools() on srv with
+// the package's default handlers. Both `mooncake mcp` (stdio) and the daemon's
+// /v1/mcp endpoint use this so the tool surface stays in one place.
+func RegisterAllTools(srv *Server) {
+	for _, def := range AllTools() {
+		switch def.Name {
+		case "get_facts":
+			srv.RegisterTool(def, HandleGetFacts)
+		case "get_snapshot":
+			srv.RegisterTool(def, HandleGetSnapshot)
+		case "fact_query":
+			srv.RegisterTool(def, HandleFactQuery)
+		case "run_plan":
+			srv.RegisterTool(def, HandleRunPlan)
+		case "check_plan":
+			srv.RegisterTool(def, HandleCheckPlan)
+		case "get_metrics":
+			srv.RegisterTool(def, HandleGetMetrics)
+		}
+	}
+}
+
 // ---- schema helpers ---------------------------------------------------------
 
 func strProp(desc string) map[string]interface{} {

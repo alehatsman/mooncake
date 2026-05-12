@@ -13,22 +13,7 @@ func mcpCommand() *cli.Command {
 		Usage: "Start MCP server (stdio transport) for use with Claude Desktop and other MCP clients",
 		Action: func(c *cli.Context) error {
 			srv := mcp.New(os.Stdin, os.Stdout)
-			for _, def := range mcp.AllTools() {
-				switch def.Name {
-				case "get_facts":
-					srv.RegisterTool(def, mcp.HandleGetFacts)
-				case "get_snapshot":
-					srv.RegisterTool(def, mcp.HandleGetSnapshot)
-				case "fact_query":
-					srv.RegisterTool(def, mcp.HandleFactQuery)
-				case "run_plan":
-					srv.RegisterTool(def, mcp.HandleRunPlan)
-				case "check_plan":
-					srv.RegisterTool(def, mcp.HandleCheckPlan)
-				case "get_metrics":
-					srv.RegisterTool(def, mcp.HandleGetMetrics)
-				}
-			}
+			mcp.RegisterAllTools(srv)
 			return srv.Serve(c.Context)
 		},
 	}
