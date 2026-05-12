@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -10,11 +12,10 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
-// Run is the Spec 16 unified entry point. Plan mode queries systemctl
-// is-active / is-enabled to predict whether state and enabled-status
-// changes are needed, then reports a structured prediction. Execute
-// mode delegates to the existing HandleService machinery, which
-// already performs all the necessary platform-specific operations.
+// Run is the Spec 16 unified entry point. Plan mode queries
+// systemctl is-active / is-enabled to predict state and enabled-flag
+// changes, and compares unit / dropin file contents against the
+// rendered templates. Execute mode delegates to HandleService.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -22,11 +23,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if ctx.Mode() != actions.ModePlan {
-		// Execute mode: delegate to the legacy machinery.
 		return nil, HandleService(*step, ec)
 	}
 
-	// Plan mode: predict via systemctl queries (Linux only for now).
 	result := executor.NewResult()
 	result.Checkable = true
 
@@ -61,7 +60,6 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 				reasons = append(reasons, "would stop service")
 			}
 		case ServiceStateReloaded, ServiceStateRestarted:
-			// Not idempotent — always counts as a change.
 			reasons = append(reasons, "would "+svc.State+" service")
 		}
 	}
@@ -78,15 +76,39 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	// Unit file / dropin management would change something if those
-	// are set; we don't attempt to compare file contents here (more
-	// involved). Mark as would-change to err on the side of accurate
-	// preview.
+	// Unit file content compare — same logic as manageSystemdUnitFile,
+	// just without writing.
 	if svc.Unit != nil {
-		reasons = append(reasons, "would manage unit file")
+		unitPath := svc.Unit.Dest
+		if unitPath == "" {
+			unitPath = fmt.Sprintf("/etc/systemd/system/%s.service", renderedName)
+		}
+		desired, err := renderTemplateOrContent(svc.Unit.SrcTemplate, svc.Unit.Content, "service.unit", ec)
+		if err != nil {
+			reasons = append(reasons, fmt.Sprintf("would write unit file: %s (render error: %v)", unitPath, err))
+		} else {
+			// #nosec G304 -- unit file path from caller
+			existing, readErr := os.ReadFile(unitPath)
+			if readErr != nil || string(existing) != desired {
+				reasons = append(reasons, fmt.Sprintf("would write unit file: %s", unitPath))
+			}
+		}
 	}
-	if svc.Dropin != nil {
-		reasons = append(reasons, "would manage dropin file")
+
+	// Dropin content compare — same logic as manageSystemdDropin.
+	if svc.Dropin != nil && svc.Dropin.Name != "" {
+		dropinDir := fmt.Sprintf("/etc/systemd/system/%s.service.d", renderedName)
+		dropinPath := filepath.Join(dropinDir, svc.Dropin.Name)
+		desired, err := renderTemplateOrContent(svc.Dropin.SrcTemplate, svc.Dropin.Content, "service.dropin", ec)
+		if err != nil {
+			reasons = append(reasons, fmt.Sprintf("would write dropin: %s (render error: %v)", dropinPath, err))
+		} else {
+			// #nosec G304 -- dropin path from caller
+			existing, readErr := os.ReadFile(dropinPath)
+			if readErr != nil || string(existing) != desired {
+				reasons = append(reasons, fmt.Sprintf("would write dropin: %s", dropinPath))
+			}
+		}
 	}
 
 	if len(reasons) == 0 {

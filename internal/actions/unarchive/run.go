@@ -17,6 +17,14 @@ import (
 //
 // Execute mode delegates to the legacy Execute path which does the
 // actual archive walking and writing.
+//
+// Limitation: when `creates:` is not configured, plan mode cannot
+// tell whether the archive contents already match the destination
+// tree without opening the archive and walking it (which is
+// format-specific: tar, tar.gz, zip, etc). Users who want accurate
+// plan output should set `creates:` to a path that exists after
+// successful extraction — the standard idempotency pattern for this
+// action.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
 		return h.Execute(ctx, step)
