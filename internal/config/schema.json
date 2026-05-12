@@ -451,13 +451,16 @@
         },
         "state": {
           "type": "string",
-          "description": "Desired file state (present: file exists, absent: removed, directory: dir exists, link: symlink, touch: update timestamp)",
+          "description": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)",
           "enum": [
+            "file",
             "present",
             "absent",
             "directory",
             "link",
-            "touch"
+            "hardlink",
+            "touch",
+            "perms"
           ]
         }
       },

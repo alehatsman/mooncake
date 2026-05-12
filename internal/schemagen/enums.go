@@ -7,7 +7,7 @@ var KnownEnums = map[string][]string{
 	"service.state": {"started", "stopped", "restarted", "reloaded"},
 
 	// File action enums
-	"file.state": {"present", "absent", "directory", "link", "touch"},
+	"file.state": {"file", "present", "absent", "directory", "link", "hardlink", "touch", "perms"},
 
 	// Package action enums
 	"package.state": {"present", "absent", "latest"},
@@ -69,7 +69,7 @@ var EnhancedDescriptions = map[string]map[string]string{
 	},
 	"file": {
 		"path":  "File, directory, or symlink path (required)",
-		"state": "Desired file state (present: file exists, absent: removed, directory: dir exists, link: symlink, touch: update timestamp)",
+		"state": "Desired file state (file/present: file exists, absent: removed, directory: dir exists, link: symlink, hardlink: hard link, touch: update timestamp, perms: change permissions only)",
 		"mode":  "File permissions (e.g., '0644', '0755')",
 		"owner": "File owner (username or UID)",
 		"group": "File group (groupname or GID)",
