@@ -707,8 +707,8 @@ type Step struct {
 	FailedWhen  string `yaml:"failed_when" json:"failed_when,omitempty"`
 
 	// Loops
-	ForEach     *string `yaml:"for_each" json:"for_each,omitempty"`
-	ForEachFile *string `yaml:"for_each_file" json:"for_each_file,omitempty"`
+	ForEach     *ForEachField `yaml:"for_each" json:"for_each,omitempty"`
+	ForEachFile *string       `yaml:"for_each_file" json:"for_each_file,omitempty"`
 
 	// Tags and outputs
 	Tags []string `yaml:"tags" json:"tags,omitempty"`
@@ -721,6 +721,49 @@ type Step struct {
 	Skipped        bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
 	LoopContext    *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
 	SourceLocation *Position     `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
+}
+
+// ForEachField holds the value of a Step's `for_each` keyword. It supports
+// two YAML forms:
+//
+//	for_each: items_var          # scalar — variable reference / template
+//	for_each: [a, b, c]          # inline sequence — literal list
+//	for_each:                     # block sequence — literal list
+//	  - a
+//	  - b
+//
+// The scalar form is rendered through the template engine and resolved
+// via the variable scope at plan time; the sequence form is used as a
+// literal list of items.
+type ForEachField struct {
+	// Expr is set when YAML is a scalar (string). Rendered and then
+	// resolved by template.ResolveList at plan expansion time.
+	Expr string
+	// Items is set when YAML is a sequence (inline or block).
+	Items []interface{}
+}
+
+// UnmarshalYAML accepts scalar or sequence forms.
+func (f *ForEachField) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var s string
+	if err := unmarshal(&s); err == nil {
+		f.Expr = s
+		return nil
+	}
+	var items []interface{}
+	if err := unmarshal(&items); err == nil {
+		f.Items = items
+		return nil
+	}
+	return fmt.Errorf("for_each: expected scalar (variable expression) or sequence (literal list)")
+}
+
+// MarshalYAML emits whichever form is populated (scalar or sequence).
+func (f ForEachField) MarshalYAML() (interface{}, error) {
+	if f.Items != nil {
+		return f.Items, nil
+	}
+	return f.Expr, nil
 }
 
 // RetryPolicy controls per-step retry behavior (spec-21).

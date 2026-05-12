@@ -389,35 +389,42 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 	return p.expandSteps(includedConfig.Steps, newCtx, plan, stepIndex)
 }
 
-// expandWithItems expands a step with with_items loop
+// expandForEach expands a step's for_each loop. Accepts both scalar
+// (variable expression) and sequence (literal list) forms.
 func (p *Planner) expandWithItems(step config.Step, ctx *ExpansionContext, plan *Plan) error {
 	if step.ForEach == nil {
-		return fmt.Errorf("with_items step has nil WithItems field")
+		return fmt.Errorf("for_each step has nil ForEach field")
 	}
 
-	// Render the items expression
-	itemsExpr, err := p.template.Render(*step.ForEach, ctx.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to render with_items expression: %w", err)
-	}
+	var items []interface{}
+	var loopExpr string
 
-	// Evaluate the expression to get the items
-	// Supports both simple variable references (e.g., "packages") and
-	// complex expressions with dot notation (e.g., "parameters.items")
-	items, err := p.evaluateItemsExpression(itemsExpr, ctx.Variables)
-	if err != nil {
-		return fmt.Errorf("failed to evaluate with_items: %w", err)
+	if len(step.ForEach.Items) > 0 {
+		// Literal list form: use items directly.
+		items = step.ForEach.Items
+		loopExpr = "<literal list>"
+	} else {
+		// Scalar form: render and resolve via variables.
+		itemsExpr, err := p.template.Render(step.ForEach.Expr, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to render for_each expression: %w", err)
+		}
+		items, err = p.evaluateItemsExpression(itemsExpr, ctx.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to evaluate for_each: %w", err)
+		}
+		loopExpr = step.ForEach.Expr
 	}
 
 	// Expand step for each item
 	for i, item := range items {
 		loopCtx := &config.LoopContext{
-			Type:           "with_items",
+			Type:           "for_each",
 			Item:           item,
 			Index:          i,
 			First:          i == 0,
 			Last:           i == len(items)-1,
-			LoopExpression: *step.ForEach,
+			LoopExpression: loopExpr,
 		}
 
 		// Create new context with loop variables

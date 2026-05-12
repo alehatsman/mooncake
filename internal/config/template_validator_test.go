@@ -182,9 +182,9 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			name: "valid with_items",
 			steps: []Step{
 				{
-					Name:      "test",
-					Shell:     shellActionPtr("echo {{item}}"),
-					ForEach: strPtr("{{my_list}}"),
+					Name:    "test",
+					Shell:   shellActionPtr("echo {{item}}"),
+					ForEach: &ForEachField{Expr: "{{my_list}}"},
 				},
 			},
 			expectedDiagnostics: 0,
@@ -193,9 +193,9 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 			name: "invalid with_items",
 			steps: []Step{
 				{
-					Name:      "test",
-					Shell:     shellActionPtr("echo test"),
-					ForEach: strPtr("{{unclosed"),
+					Name:    "test",
+					Shell:   shellActionPtr("echo test"),
+					ForEach: &ForEachField{Expr: "{{unclosed"},
 				},
 			},
 			expectedDiagnostics: 1,

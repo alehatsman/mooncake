@@ -701,7 +701,7 @@ func TestStep_DetermineActionType(t *testing.T) {
 		},
 		{
 			name: "loop for_each",
-			step: Step{ForEach: stringPtr("['item1', 'item2']")},
+			step: Step{ForEach: &ForEachField{Expr: "['item1', 'item2']"}},
 			want: "loop",
 		},
 		{

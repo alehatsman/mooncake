@@ -95,12 +95,13 @@ func (v *TemplateValidator) validateStepTemplates(step Step, stepIndex int, loca
 		}{"shell", step.Shell.Cmd, fmt.Sprintf("/%d/shell", stepIndex)})
 	}
 
-	if step.ForEach != nil {
+	if step.ForEach != nil && step.ForEach.Expr != "" {
+		// Only the scalar form contains template syntax; list form is literal.
 		templateFields = append(templateFields, struct {
 			name  string
 			value string
 			path  string
-		}{"for_each", *step.ForEach, fmt.Sprintf("/%d/for_each", stepIndex)})
+		}{"for_each", step.ForEach.Expr, fmt.Sprintf("/%d/for_each", stepIndex)})
 	}
 
 	if step.ForEachFile != nil {
