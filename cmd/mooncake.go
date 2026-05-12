@@ -24,6 +24,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var version = "dev"
+
 const (
 	outputFormatJSON  = "json"
 	outputFormatText  = "text"
@@ -656,7 +658,7 @@ func createApp() *cli.App {
 	app := &cli.App{
 		Name:                 "mooncake",
 		Usage:                "Space fighters provisioning tool, Chookity!",
-		Version:              "0.2.0",
+		Version:              version,
 		EnableBashCompletion: true,
 
 		Commands: []*cli.Command{
