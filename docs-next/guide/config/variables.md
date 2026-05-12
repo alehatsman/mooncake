@@ -209,6 +209,11 @@ Output shows:
 - Network (interfaces, gateway, DNS)
 - Software (package manager, Python, Docker, Git, Go)
 
+**Live utilization** (CPU%, GPU%, load average, memory used, network
+throughput) is a separate surface — see [Metrics](metrics.md). Metrics and
+facts share the same template namespace, so `when:` expressions can mix them
+freely: `when: cpu_cores >= 8 and load_avg_1m < 4`.
+
 ## Using System Facts
 
 ### OS Detection

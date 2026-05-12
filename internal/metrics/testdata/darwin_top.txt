@@ -1,0 +1,13 @@
+Processes: 525 total, 2 running, 523 sleeping, 2456 threads
+2026/05/12 10:00:00
+Load Avg: 1.23, 1.45, 1.67
+CPU usage: 8.34% user, 4.16% sys, 87.5% idle
+SharedLibs: ...
+MemRegions: ...
+PhysMem: ...
+
+Processes: 525 total, 2 running, 523 sleeping, 2456 threads
+2026/05/12 10:00:01
+Load Avg: 1.25, 1.45, 1.67
+CPU usage: 12.50% user, 7.50% sys, 80.00% idle
+SharedLibs: ...

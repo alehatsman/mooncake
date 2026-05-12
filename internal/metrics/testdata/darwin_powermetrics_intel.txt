@@ -1,0 +1,18 @@
+Machine model: MacBookPro15,1
+OS version: 22A380
+Boot arguments:
+Boot time: Mon May 12 09:00:00 2026
+
+*** Sampled system activity (Mon May 12 21:00:00 2026 -0500) (100ms elapsed) ***
+
+
+**** SMC sensors ****
+
+CPU die temperature: 51.50 C
+GPU die temperature: 47.25 C
+CPU heat sink temperature: 48.00 C
+Battery temperature: 31.00 C
+Fan: 1500 rpm
+CPU Plimit: 0.00
+GPU Plimit (Int): 0.00
+Number of prochots: 0

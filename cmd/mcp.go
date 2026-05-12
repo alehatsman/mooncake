@@ -25,6 +25,8 @@ func mcpCommand() *cli.Command {
 					srv.RegisterTool(def, mcp.HandleRunPlan)
 				case "check_plan":
 					srv.RegisterTool(def, mcp.HandleCheckPlan)
+				case "get_metrics":
+					srv.RegisterTool(def, mcp.HandleGetMetrics)
 				}
 			}
 			return srv.Serve(c.Context)

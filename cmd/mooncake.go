@@ -291,7 +291,7 @@ func factsCommand(c *cli.Context) error {
 
 	// --query mode: print specific values and exit
 	if queries := c.StringSlice("query"); len(queries) > 0 {
-		return factsQuery(f.ToMap(), queries)
+		return queryMap(f.ToMap(), queries)
 	}
 
 	format := c.String("format")
@@ -310,54 +310,6 @@ func factsCommand(c *cli.Context) error {
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
-}
-
-// factsQuery looks up one or more dot-path keys in the facts map and prints results.
-// Key normalization: dots are replaced with underscores to match ToMap() key names.
-// Exits with code 1 if any key is not found or has an empty value.
-func factsQuery(m map[string]interface{}, queries []string) error {
-	multi := len(queries) > 1
-	missing := false
-
-	for _, q := range queries {
-		key := strings.ReplaceAll(q, ".", "_")
-		val, ok := m[key]
-		if !ok || val == nil || val == "" || val == false {
-			if multi {
-				fmt.Printf("%s=\n", q)
-			}
-			missing = true
-			continue
-		}
-
-		var out string
-		switch v := val.(type) {
-		case string:
-			out = v
-		case bool:
-			out = "true" // false is caught by the early-exit condition above
-		case int, int64, float64:
-			out = fmt.Sprintf("%v", v)
-		default:
-			b, err := json.Marshal(v)
-			if err != nil {
-				out = fmt.Sprintf("%v", v)
-			} else {
-				out = string(b)
-			}
-		}
-
-		if multi {
-			fmt.Printf("%s=%s\n", q, out)
-		} else {
-			fmt.Println(out)
-		}
-	}
-
-	if missing {
-		return cli.Exit("", 1)
-	}
-	return nil
 }
 
 // actionsListCommand lists all registered actions with their platform support.
@@ -847,6 +799,37 @@ func createApp() *cli.App {
 					},
 				},
 				Action: factsCommand,
+			},
+			{
+				Name:  "metrics",
+				Usage: "Display live system metrics (CPU/GPU/memory/load/network)",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Value:   "text",
+						Usage:   "Output format: text or json",
+					},
+					&cli.StringSliceFlag{
+						Name:    "query",
+						Aliases: []string{"q"},
+						Usage:   "Query a specific metric by key (e.g. cpu_usage_pct). Repeatable.",
+					},
+					&cli.StringSliceFlag{
+						Name:  "fields",
+						Usage: "Restrict output to these keys. Repeatable or comma-separated. Adds a _collected_at sibling map.",
+					},
+					&cli.BoolFlag{
+						Name:  "refresh",
+						Usage: "Force re-sample, bypassing TTL",
+					},
+					&cli.StringFlag{
+						Name:    "output",
+						Aliases: []string{"o"},
+						Usage:   "Save metrics to file (JSON)",
+					},
+				},
+				Action: metricsCommand,
 			},
 			{
 				Name:  "actions",

@@ -104,9 +104,17 @@ mooncake/
 - Handler priority: Registry (new) → Legacy methods
 
 **5. Facts** (`internal/facts/`)
-- Cached per-process (`sync.Once`)
+- Cached per-process (`sync.Once`) — static, describe what the machine *is*
 - Available: `os`, `arch`, `apt_available`, `brew_available`, `cpu_cores`, `memory_total_mb`, etc.
 - Use in templates: `{{ os }}`, `{{ cpu_cores }}`
+
+**6. Metrics** (`internal/metrics/`)
+- Live system utilization — describe what the machine is *doing right now*
+- Per-metric TTL caching (2s for CPU/GPU/net, 5s for load/mem) — daemon-friendly
+- Available: `cpu_usage_pct`, `load_avg_1m`, `memory_used_pct`, `gpus_metrics`, `net_rx_bps`, etc.
+- Use in templates: `{{ cpu_usage_pct }}`, `when: load_avg_1m < 4`
+- Surfaces: `mooncake metrics` CLI, MCP `get_metrics` tool
+- See `docs-next/guide/config/metrics.md`
 
 ## Critical: Path Resolution (Common Confusion)
 

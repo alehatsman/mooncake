@@ -119,6 +119,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/facts"
+	"github.com/alehatsman/mooncake/internal/metrics"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
@@ -149,15 +150,20 @@ func MarkStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
 	}
 }
 
-// AddGlobalVariables injects system facts into the variables map.
-// This makes facts like ansible_os_family, ansible_distribution, etc. available during planning.
+// AddGlobalVariables injects system facts and live metrics into the
+// variables map so that templates and `when:` expressions can read them.
+// Facts (capabilities, configuration) come from facts.Collect; metrics
+// (live CPU/GPU/memory/load/network) come from metrics.Collect with
+// per-metric TTL caching. Keys across the two are disjoint by contract —
+// see metrics.disjoint_test.go.
 func AddGlobalVariables(variables map[string]interface{}) {
-	// Collect system facts
-	systemFacts := facts.Collect()
-
-	// Add all facts to variables
-	for k, v := range systemFacts.ToMap() {
+	for k, v := range facts.Collect().ToMap() {
 		variables[k] = v
+	}
+	if m, _, err := metrics.Collect(nil); err == nil {
+		for k, v := range m.ToMap() {
+			variables[k] = v
+		}
 	}
 }
 
