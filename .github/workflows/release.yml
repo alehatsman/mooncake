@@ -36,7 +36,11 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          # Docker images are configured in .goreleaser.yml but the CI
+          # runner doesn't have buildx / QEMU / ghcr login wired up.
+          # Skip the docker pipe until that's set up; binary artifacts
+          # and SBOMs still publish.
+          args: release --clean --skip=docker
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
