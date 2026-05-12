@@ -18,7 +18,7 @@
 # =============================================================================
 
 - name: "Example 1: Start a service (demo)"
-  print: |
+  log: |
     Start service:
     service:
       name: nginx
@@ -27,7 +27,7 @@
   tags: [basics]
 
 - name: "Example 2: Stop a service (demo)"
-  print: |
+  log: |
     Stop service:
     service:
       name: nginx
@@ -36,7 +36,7 @@
   tags: [basics]
 
 - name: "Example 3: Restart a service (demo)"
-  print: |
+  log: |
     Restart service:
     service:
       name: nginx
@@ -45,7 +45,7 @@
   tags: [basics]
 
 - name: "Example 4: Reload service configuration (demo)"
-  print: |
+  log: |
     Reload service:
     service:
       name: nginx
@@ -58,7 +58,7 @@
 # =============================================================================
 
 - name: "Example 5: Enable service on boot (demo)"
-  print: |
+  log: |
     Enable on boot:
     service:
       name: nginx
@@ -67,7 +67,7 @@
   tags: [enable]
 
 - name: "Example 6: Disable service on boot (demo)"
-  print: |
+  log: |
     Disable on boot:
     service:
       name: nginx
@@ -76,7 +76,7 @@
   tags: [enable]
 
 - name: "Example 7: Start and enable (demo)"
-  print: |
+  log: |
     Start and enable:
     service:
       name: nginx
@@ -90,7 +90,7 @@
 # =============================================================================
 
 - name: "Example 8: Create service with inline content"
-  print: |
+  log: |
     Create service:
     service:
       name: myapp
@@ -114,7 +114,7 @@
   tags: [create]
 
 - name: "Example 9: Create service from template"
-  print: |
+  log: |
     Create from template:
     service:
       name: myapp
@@ -132,7 +132,7 @@
 # =============================================================================
 
 - name: "Example 10: Service with environment"
-  print: |
+  log: |
     Service with environment:
     service:
       name: myapp
@@ -162,7 +162,7 @@
 # =============================================================================
 
 - name: "Example 11: Add drop-in override"
-  print: |
+  log: |
     Add drop-in configuration:
     service:
       name: myapp
@@ -178,7 +178,7 @@
   tags: [dropin]
 
 - name: "Example 12: Drop-in from template"
-  print: |
+  log: |
     Drop-in from template:
     service:
       name: myapp
@@ -195,7 +195,7 @@
 # =============================================================================
 
 - name: "Example 13: Full service deployment"
-  print: |
+  log: |
     Complete deployment:
     - name: Deploy application binary
       copy:
@@ -258,7 +258,7 @@
     working_dir: "/opt/webapp"
 
 - name: "Example 14: Service with template variables"
-  print: |
+  log: |
     Service with variables:
     service:
       name: "{{ app_name }}"
@@ -289,7 +289,7 @@
 # =============================================================================
 
 - name: "Example 15: Forking service"
-  print: |
+  log: |
     Forking service:
     service:
       name: myapp
@@ -311,7 +311,7 @@
   tags: [types]
 
 - name: "Example 16: Oneshot service"
-  print: |
+  log: |
     Oneshot service (runs once):
     service:
       name: myapp-setup
@@ -336,7 +336,7 @@
 # =============================================================================
 
 - name: "Example 17: Service with dependencies"
-  print: |
+  log: |
     Service with dependencies:
     service:
       name: myapp
@@ -363,7 +363,7 @@
 # =============================================================================
 
 - name: "Example 18: Service with resource limits"
-  print: |
+  log: |
     Service with limits:
     service:
       name: myapp
@@ -391,17 +391,17 @@
 
 - name: "Example 19: Check service status"
   shell: systemctl status nginx || true
-  register: service_status
+  as: service_status
   tags: [status]
 
 - name: "Example 20: Check if service is active"
   shell: systemctl is-active nginx || echo "inactive"
-  register: is_active
+  as: is_active
   tags: [status]
 
 - name: "Example 21: Check if service is enabled"
   shell: systemctl is-enabled nginx || echo "disabled"
-  register: is_enabled
+  as: is_enabled
   tags: [status]
 
 # =============================================================================
@@ -409,7 +409,7 @@
 # =============================================================================
 
 - name: "Example 22: Manage service on Linux only"
-  print: |
+  log: |
     Conditional service:
     service:
       name: nginx
@@ -424,7 +424,7 @@
 # =============================================================================
 
 - name: "Example 23: Web application deployment"
-  print: |
+  log: |
     Full web app deployment:
 
     - name: Install Node.js application
@@ -472,7 +472,7 @@
 # =============================================================================
 
 - name: "Example 24: Create timer for scheduled task"
-  print: |
+  log: |
     Timer unit (like cron):
 
     - name: Create backup service
@@ -516,7 +516,7 @@
 # =============================================================================
 
 - name: "Summary"
-  print: |
+  log: |2
 
     Service action examples completed!
     Covered:
@@ -532,5 +532,4 @@
 
     Note: Most operations require sudo (become: true)
     Run with: mooncake run --config service.yml --sudo-pass
-
   tags: [always]

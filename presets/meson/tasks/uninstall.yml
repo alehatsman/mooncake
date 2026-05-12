@@ -1,65 +1,55 @@
 - name: Check if meson is installed via package manager
   shell: command -v meson
-  register: meson_check
+  as: meson_check
   failed_when: false
 
 # Try to uninstall from package managers
 - name: Uninstall meson via apt
   shell: apt-get remove -y meson
   when: apt_available and parameters.method != "pip"
-  become: true
+  as_user: root
   failed_when: false
-  register: apt_remove
-
+  as: apt_remove
 - name: Uninstall meson via dnf
   shell: dnf remove -y meson
   when: dnf_available and parameters.method != "pip"
-  become: true
+  as_user: root
   failed_when: false
-  register: dnf_remove
-
+  as: dnf_remove
 - name: Uninstall meson via yum
   shell: yum remove -y meson
   when: yum_available and parameters.method != "pip"
-  become: true
+  as_user: root
   failed_when: false
-  register: yum_remove
-
+  as: yum_remove
 - name: Uninstall meson via pacman
   shell: pacman -R --noconfirm meson
   when: pacman_available and parameters.method != "pip"
-  become: true
+  as_user: root
   failed_when: false
-  register: pacman_remove
-
+  as: pacman_remove
 - name: Uninstall meson via zypper
   shell: zypper remove -y meson
   when: zypper_available and parameters.method != "pip"
-  become: true
+  as_user: root
   failed_when: false
-  register: zypper_remove
-
+  as: zypper_remove
 - name: Uninstall meson via apk
   shell: apk del --no-cache meson
   when: apk_available and parameters.method != "pip"
-  become: true
+  as_user: root
   failed_when: false
-  register: apk_remove
-
+  as: apk_remove
 - name: Uninstall meson via Homebrew
   shell: brew uninstall meson
   when: brew_available and parameters.method != "pip"
   failed_when: false
-  register: brew_remove
-
-# Uninstall from pip as fallback or if explicitly requested
+  as: brew_remove
 - name: Uninstall meson via pip3
   shell: pip3 uninstall -y meson
   when: meson_check.rc == 0 or parameters.method == "pip"
   failed_when: false
-  register: pip_remove
-
-# Verify uninstallation
+  as: pip_remove
 - name: Verify meson is not installed
   assert:
     command:
@@ -68,4 +58,4 @@
   failed_when: false
 
 - name: Confirm uninstallation
-  print: "Meson uninstalled successfully"
+  log: "Meson uninstalled successfully"

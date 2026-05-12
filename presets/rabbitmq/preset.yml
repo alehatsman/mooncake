@@ -48,13 +48,13 @@ parameters:
 
 steps:
   - name: Install RabbitMQ
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure RabbitMQ
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present"
 
   - name: Uninstall RabbitMQ
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

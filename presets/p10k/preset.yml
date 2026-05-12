@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install p10k
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall p10k
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

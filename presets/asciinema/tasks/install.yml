@@ -1,19 +1,19 @@
 - name: Check if asciinema is installed
   shell: command -v asciinema
-  register: asciinema_check
+  as: asciinema_check
   failed_when: false
 
 - name: Install asciinema via Homebrew
-  package:
+  pkg:
     name: asciinema
     state: present
   when: brew_available and asciinema_check.rc != 0
 
 - name: Install asciinema via apt
-  package:
+  pkg:
     name: asciinema
     state: present
-  become: true
+  as_user: root
   when: apt_available and asciinema_check.rc != 0
 
 - name: Install asciinema via pip3
@@ -27,4 +27,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "asciinema installed"
+  log: "asciinema installed"

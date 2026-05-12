@@ -1,19 +1,19 @@
 - name: Check if borg is installed
   shell: command -v borg
-  register: borg_check
+  as: borg_check
   failed_when: false
 
 - name: Install borgbackup via Homebrew
-  package:
+  pkg:
     name: borgbackup
     state: present
   when: brew_available and borg_check.rc != 0
 
 - name: Install borgbackup via apt
-  package:
+  pkg:
     name: borgbackup
     state: present
-  become: true
+  as_user: root
   when: apt_available and borg_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "borgbackup installed"
+  log: "borgbackup installed"

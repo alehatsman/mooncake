@@ -1,17 +1,16 @@
 - name: Check if cass is installed
   shell: command -v cass
-  register: cassandra_check
+  as: cassandra_check
   failed_when: false
 
 - name: Install cassandra
-  package:
+  pkg:
     name: cassandra
     state: present
   when: cassandra_check.rc != 0
 
 - name: Verify installation
   shell: cass --version 2>&1 || cass -v 2>&1 || echo "installed"
-  register: cassandra_version
-
+  as: cassandra_version
 - name: Display version
-  print: "cassandra installed"
+  log: "cassandra installed"

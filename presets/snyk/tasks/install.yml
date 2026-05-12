@@ -1,10 +1,10 @@
 - name: Check if snyk is installed
   shell: command -v snyk
-  register: snyk_check
+  as: snyk_check
   failed_when: false
 
 - name: Install snyk (macOS)
-  package:
+  pkg:
     name: snyk
     state: present
   when: brew_available and snyk_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "snyk installed"
+  log: "snyk installed"

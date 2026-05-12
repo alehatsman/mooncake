@@ -1,10 +1,10 @@
 - name: Check if hcloud is installed
   shell: command -v hcloud
-  register: hcloud_check
+  as: hcloud_check
   failed_when: false
 
 - name: Install hcloud (macOS)
-  package:
+  pkg:
     name: hcloud
     state: present
   when: brew_available and hcloud_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "hcloud installed"
+  log: "hcloud installed"

@@ -1,8 +1,8 @@
 - name: Uninstall argo-workflows
-  package:
+  pkg:
     name: argo-workflows
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "argo-workflows uninstalled"
+  log: "argo-workflows uninstalled"

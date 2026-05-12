@@ -1,17 +1,16 @@
 - name: Check if beam is installed
   shell: command -v beam
-  register: beam_check
+  as: beam_check
   failed_when: false
 
 - name: Install beam
-  package:
+  pkg:
     name: beam
     state: present
   when: beam_check.rc != 0
 
 - name: Verify installation
   shell: beam --version 2>&1 || beam -v 2>&1 || echo "installed"
-  register: beam_version
-
+  as: beam_version
 - name: Display version
-  print: "beam installed"
+  log: "beam installed"

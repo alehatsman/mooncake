@@ -3,7 +3,7 @@
 # Check if nvm is already installed
 - name: Check if nvm is installed
   shell: test -f ~/.nvm/nvm.sh && echo "installed" || echo "not installed"
-  register: nvm_check
+  as: nvm_check
   failed_when: false
 
 # Install nvm on Linux/macOS
@@ -15,7 +15,7 @@
 
 # Create nvm initialization file
 - name: Create nvm init file
-  file:
+  file.write:
     path: "~/.nvm_init"
     content: |
       # nvm configuration
@@ -57,7 +57,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install {{ item }}
-  with_items: parameters.additional_versions
+  for_each: parameters.additional_versions
   when: parameters.additional_versions | length > 0
 
 # Install global npm packages
@@ -66,7 +66,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     npm install -g {{ item }}
-  with_items: parameters.global_packages
+  for_each: parameters.global_packages
   when: parameters.global_packages | length > 0
 
 # Verify installation
@@ -75,15 +75,13 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     node --version
-  register: node_version
-
+  as: node_version
 - name: Verify npm installation
   shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     npm --version
-  register: npm_version
-
+  as: npm_version
 - name: Verify nvm installation with assert
   assert:
     file:
@@ -91,7 +89,7 @@
       exists: true
 
 - name: Print installation summary
-  print: |
+  log: |
     Node.js installed successfully!
 
     Node version: {{ node_version.stdout }}

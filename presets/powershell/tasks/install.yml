@@ -1,10 +1,10 @@
 - name: Check if pwsh is installed
   shell: command -v pwsh
-  register: powershell_check
+  as: powershell_check
   failed_when: false
 
 - name: Install powershell via Homebrew
-  package:
+  pkg:
     name: powershell
     state: present
   when: brew_available and powershell_check.rc != 0
@@ -25,4 +25,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "powershell installed"
+  log: "powershell installed"

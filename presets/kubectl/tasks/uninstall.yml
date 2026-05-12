@@ -1,5 +1,5 @@
 - name: Uninstall kubectl (macOS)
-  package:
+  pkg:
     name: kubectl
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "kubectl uninstalled"
+  log: "kubectl uninstalled"

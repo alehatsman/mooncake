@@ -1,8 +1,8 @@
 - name: Uninstall sonic
-  package:
+  pkg:
     name: sonic
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "sonic uninstalled"
+  log: "sonic uninstalled"

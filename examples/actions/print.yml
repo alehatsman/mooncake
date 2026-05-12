@@ -13,19 +13,19 @@
 # =============================================================================
 
 - name: "Example 1: Simple message"
-  print: "Hello from Mooncake!"
+  log: "Hello from Mooncake!"
   tags: [basics]
 
 - name: "Example 2: Multi-word message"
-  print: "This is a message with multiple words and spaces"
+  log: "This is a message with multiple words and spaces"
   tags: [basics]
 
 - name: "Example 3: Message with special characters"
-  print: "Special chars: !@#$%^&*()_+-={}[]|:;<>?,./"
+  log: "Special chars: !@#$%^&*()_+-={}[]|:;<>?,./"
   tags: [basics]
 
 - name: "Example 4: Empty line for spacing"
-  print: ""
+  log: ""
   tags: [basics]
 
 # =============================================================================
@@ -39,19 +39,19 @@
     environment: "production"
 
 - name: "Example 5: Print with single variable"
-  print: "Application name: {{ app_name }}"
+  log: "Application name: {{ app_name }}"
   tags: [variables]
 
 - name: "Example 6: Print with multiple variables"
-  print: "Deploying {{ app_name }} version {{ version }}"
+  log: "Deploying {{ app_name }} version {{ version }}"
   tags: [variables]
 
 - name: "Example 7: Print with system facts"
-  print: "Running on {{ os }}/{{ arch }}"
+  log: "Running on {{ os }}/{{ arch }}"
   tags: [variables]
 
 - name: "Example 8: Print with all info"
-  print: "{{ app_name }} v{{ version }} by {{ author }} on {{ os }}/{{ arch }} ({{ environment }})"
+  log: "{{ app_name }} v{{ version }} by {{ author }} on {{ os }}/{{ arch }} ({{ environment }})"
   tags: [variables]
 
 # =============================================================================
@@ -60,38 +60,38 @@
 
 - name: "Example 9: Get current user"
   shell: whoami
-  register: current_user
+  as: current_user
   tags: [register]
 
 - name: "Example 10: Print command output"
-  print: "Current user: {{ current_user.stdout }}"
+  log: "Current user: {{ current_user.stdout }}"
   tags: [register]
 
 - name: "Example 11: Get system info"
   shell: uname -a
-  register: system_info
+  as: system_info
   tags: [register]
 
 - name: "Example 12: Print system info"
-  print: "System: {{ system_info.stdout }}"
+  log: "System: {{ system_info.stdout }}"
   tags: [register]
 
 - name: "Example 13: Get date and time"
   shell: date "+%Y-%m-%d %H:%M:%S"
-  register: current_time
+  as: current_time
   tags: [register]
 
 - name: "Example 14: Print formatted timestamp"
-  print: "Report generated at: {{ current_time.stdout }}"
+  log: "Report generated at: {{ current_time.stdout }}"
   tags: [register]
 
 - name: "Example 15: Command with exit code"
   shell: test -d /tmp
-  register: test_result
+  as: test_result
   tags: [register]
 
 - name: "Example 16: Print exit code result"
-  print: "Directory exists check returned: {{ test_result.rc }}"
+  log: "Directory exists check returned: {{ test_result.rc }}"
   tags: [register]
 
 # =============================================================================
@@ -99,7 +99,7 @@
 # =============================================================================
 
 - name: "Example 17: Multi-line message with pipe"
-  print: |
+  log: |
     ==========================================
     Mooncake Configuration Management
     ==========================================
@@ -109,7 +109,7 @@
   tags: [multiline]
 
 - name: "Example 18: Multi-line with variables"
-  print: |
+  log: |
     Application: {{ app_name }}
     Version: {{ version }}
     Environment: {{ environment }}
@@ -117,7 +117,7 @@
   tags: [multiline]
 
 - name: "Example 19: Multi-line report"
-  print: |
+  log: |2
 
     DEPLOYMENT SUMMARY
     ------------------
@@ -126,7 +126,6 @@
     Target:      {{ environment }}
     Platform:    {{ os }}/{{ arch }}
     Status:      Ready
-
   tags: [multiline]
 
 # =============================================================================
@@ -134,33 +133,33 @@
 # =============================================================================
 
 - name: "Example 20: Print on Linux only"
-  print: "This is a Linux system"
+  log: "This is a Linux system"
   when: os == "linux"
   tags: [conditional]
 
 - name: "Example 21: Print on macOS only"
-  print: "This is a macOS system"
+  log: "This is a macOS system"
   when: os == "darwin"
   tags: [conditional]
 
 - name: "Example 22: Print based on environment"
-  print: "Running in PRODUCTION mode"
+  log: "Running in PRODUCTION mode"
   when: environment == "production"
   tags: [conditional]
 
 - name: "Example 23: Check if directory exists"
   shell: test -d /tmp
-  register: tmp_exists
+  as: tmp_exists
   failed_when: false
   tags: [conditional]
 
 - name: "Example 24: Print if condition is met"
-  print: "/tmp directory exists"
+  log: "/tmp directory exists"
   when: tmp_exists.rc == 0
   tags: [conditional]
 
 - name: "Example 25: Print if condition is not met"
-  print: "/tmp directory does not exist"
+  log: "/tmp directory does not exist"
   when: tmp_exists.rc != 0
   tags: [conditional]
 
@@ -170,37 +169,37 @@
 
 - vars:
     packages:
-      - git
-      - vim
-      - tmux
-      - curl
-      - wget
+    - git
+    - vim
+    - tmux
+    - curl
+    - wget
     servers:
-      - name: web-01
-        ip: 192.168.1.10
-      - name: web-02
-        ip: 192.168.1.11
-      - name: db-01
-        ip: 192.168.1.20
+    - name: web-01
+      ip: 192.168.1.10
+    - name: web-02
+      ip: 192.168.1.11
+    - name: db-01
+      ip: 192.168.1.20
 
 - name: "Example 26: Print each item in list"
-  print: "Package: {{ item }}"
-  with_items: "{{ packages }}"
+  log: "Package: {{ item }}"
+  for_each: "{{ packages }}"
   tags: [loops]
 
 - name: "Example 27: Print with loop counter (simulated)"
-  print: "Installing package: {{ item }}"
-  with_items: "{{ packages }}"
+  log: "Installing package: {{ item }}"
+  for_each: "{{ packages }}"
   tags: [loops]
 
 - name: "Example 28: Print complex items"
-  print: "Server {{ item.name }} at {{ item.ip }}"
-  with_items: "{{ servers }}"
+  log: "Server {{ item.name }} at {{ item.ip }}"
+  for_each: "{{ servers }}"
   tags: [loops]
 
 - name: "Example 29: Print formatted list"
-  print: "  - {{ item }}"
-  with_items: "{{ packages }}"
+  log: "  - {{ item }}"
+  for_each: "{{ packages }}"
   tags: [loops]
 
 # =============================================================================
@@ -208,28 +207,28 @@
 # =============================================================================
 
 - name: "Example 30: Debug separator"
-  print: "========================================"
+  log: "========================================"
   tags: [debug]
 
 - name: "Example 31: Debug message"
-  print: "[DEBUG] Starting deployment process"
+  log: "[DEBUG] Starting deployment process"
   tags: [debug]
 
 - name: "Example 32: Debug with variables"
-  print: "[DEBUG] app_name={{ app_name }}, version={{ version }}"
+  log: "[DEBUG] app_name={{ app_name }}, version={{ version }}"
   tags: [debug]
 
 - name: "Example 33: Debug command execution"
   shell: echo "test output"
-  register: debug_cmd
+  as: debug_cmd
   tags: [debug]
 
 - name: "Example 34: Print debug result"
-  print: "[DEBUG] Command returned: rc={{ debug_cmd.rc }}, stdout={{ debug_cmd.stdout }}"
+  log: "[DEBUG] Command returned: rc={{ debug_cmd.rc }}, stdout={{ debug_cmd.stdout }}"
   tags: [debug]
 
 - name: "Example 35: Another debug separator"
-  print: "========================================"
+  log: "========================================"
   tags: [debug]
 
 # =============================================================================
@@ -237,7 +236,7 @@
 # =============================================================================
 
 - name: "Example 36: Step 1 indicator"
-  print: "[1/5] Checking prerequisites..."
+  log: "[1/5] Checking prerequisites..."
   tags: [progress]
 
 - name: "Example 37: Simulate step 1"
@@ -245,7 +244,7 @@
   tags: [progress]
 
 - name: "Example 38: Step 2 indicator"
-  print: "[2/5] Downloading packages..."
+  log: "[2/5] Downloading packages..."
   tags: [progress]
 
 - name: "Example 39: Simulate step 2"
@@ -253,7 +252,7 @@
   tags: [progress]
 
 - name: "Example 40: Step 3 indicator"
-  print: "[3/5] Installing dependencies..."
+  log: "[3/5] Installing dependencies..."
   tags: [progress]
 
 - name: "Example 41: Simulate step 3"
@@ -261,7 +260,7 @@
   tags: [progress]
 
 - name: "Example 42: Step 4 indicator"
-  print: "[4/5] Configuring application..."
+  log: "[4/5] Configuring application..."
   tags: [progress]
 
 - name: "Example 43: Simulate step 4"
@@ -269,7 +268,7 @@
   tags: [progress]
 
 - name: "Example 44: Step 5 indicator"
-  print: "[5/5] Starting services..."
+  log: "[5/5] Starting services..."
   tags: [progress]
 
 - name: "Example 45: Simulate step 5"
@@ -277,7 +276,7 @@
   tags: [progress]
 
 - name: "Example 46: Completion message"
-  print: "✓ All steps completed successfully!"
+  log: "✓ All steps completed successfully!"
   tags: [progress]
 
 # =============================================================================
@@ -285,7 +284,7 @@
 # =============================================================================
 
 - name: "Example 47: Header for table"
-  print: |
+  log: |2
 
     Server Inventory
     ================
@@ -294,12 +293,12 @@
   tags: [formatting]
 
 - name: "Example 48: Table rows"
-  print: "{{ item.name | ljust(10) }} {{ item.ip | ljust(15) }} online"
-  with_items: "{{ servers }}"
+  log: "{{ item.name | ljust(10) }} {{ item.ip | ljust(15) }} online"
+  for_each: "{{ servers }}"
   tags: [formatting]
 
 - name: "Example 49: Configuration summary"
-  print: |
+  log: |2
 
     Configuration Summary:
       • Application: {{ app_name }}
@@ -310,7 +309,7 @@
   tags: [formatting]
 
 - name: "Example 50: Status report"
-  print: |
+  log: |2
 
     ┌─────────────────────────────────────┐
     │      Deployment Status Report       │
@@ -326,19 +325,19 @@
 # =============================================================================
 
 - name: "Example 51: Info message"
-  print: "[INFO] This is an informational message"
+  log: "[INFO] This is an informational message"
   tags: [messages]
 
 - name: "Example 52: Warning message"
-  print: "[WARN] This is a warning message"
+  log: "[WARN] This is a warning message"
   tags: [messages]
 
 - name: "Example 53: Success message"
-  print: "[SUCCESS] Operation completed successfully"
+  log: "[SUCCESS] Operation completed successfully"
   tags: [messages]
 
 - name: "Example 54: Notice message"
-  print: "[NOTICE] Please review the configuration before proceeding"
+  log: "[NOTICE] Please review the configuration before proceeding"
   tags: [messages]
 
 # =============================================================================
@@ -346,8 +345,8 @@
 # =============================================================================
 
 - name: "Example 55: Print and register"
-  print: "This message was printed"
-  register: print_result
+  log: "This message was printed"
+  as: print_result
   tags: [register]
 
 - name: "Example 56: Check print result"
@@ -359,16 +358,15 @@
 # =============================================================================
 
 - name: "Example 57: Deployment banner"
-  print: |
+  log: |2
 
     ╔══════════════════════════════════════════╗
     ║   🚀 Starting Deployment Process        ║
     ╚══════════════════════════════════════════╝
-
   tags: [real-world]
 
 - name: "Example 58: Pre-flight checks"
-  print: "⚙️  Running pre-flight checks..."
+  log: "⚙️  Running pre-flight checks..."
   tags: [real-world]
 
 - name: "Example 59: Simulate checks"
@@ -376,15 +374,15 @@
     echo "Checking disk space... OK"
     echo "Checking network... OK"
     echo "Checking permissions... OK"
-  register: checks
+  as: checks
   tags: [real-world]
 
 - name: "Example 60: Print check results"
-  print: "✓ All pre-flight checks passed"
+  log: "✓ All pre-flight checks passed"
   tags: [real-world]
 
 - name: "Example 61: Final summary"
-  print: |
+  log: |2
 
     ════════════════════════════════════════════
     🎉 Deployment Complete!
@@ -402,7 +400,6 @@
       3. Run smoke tests
 
     ════════════════════════════════════════════
-
   tags: [real-world]
 
 # =============================================================================
@@ -410,7 +407,7 @@
 # =============================================================================
 
 - name: "Completion message"
-  print: |
+  log: |2
 
     Print action examples completed!
     Explored 60+ different use cases including:
@@ -423,5 +420,4 @@
       • Progress indicators
       • Formatted output
       • Real-world scenarios
-
   tags: [always]

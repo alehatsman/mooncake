@@ -1,8 +1,8 @@
 - name: Uninstall apisix
-  package:
+  pkg:
     name: apisix
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "apisix uninstalled"
+  log: "apisix uninstalled"

@@ -1,12 +1,11 @@
 - name: Uninstall clair
-  package:
+  pkg:
     name: clair
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "clair uninstalled"
-
+  log: "clair uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

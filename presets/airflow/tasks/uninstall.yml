@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "airflow uninstalled"
+  log: "airflow uninstalled"

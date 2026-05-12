@@ -1,10 +1,10 @@
 - name: Check if flux is installed
   shell: command -v flux
-  register: flux_check
+  as: flux_check
   failed_when: false
 
 - name: Install flux via Homebrew
-  package:
+  pkg:
     name: fluxcd/tap/flux
     state: present
   when: brew_available and flux_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "flux installed"
+  log: "flux installed"

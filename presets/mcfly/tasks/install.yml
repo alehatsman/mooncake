@@ -1,10 +1,10 @@
 - name: Check if mcfly is installed
   shell: command -v mcfly
-  register: mcfly_check
+  as: mcfly_check
   failed_when: false
 
 - name: Install mcfly (macOS)
-  package:
+  pkg:
     name: mcfly
     state: present
   when: brew_available and mcfly_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "mcfly installed"
+  log: "mcfly installed"

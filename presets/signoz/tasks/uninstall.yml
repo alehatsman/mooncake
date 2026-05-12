@@ -1,8 +1,8 @@
 - name: Uninstall signoz
-  package:
+  pkg:
     name: signoz
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "signoz uninstalled"
+  log: "signoz uninstalled"

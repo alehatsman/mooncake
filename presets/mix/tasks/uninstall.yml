@@ -1,15 +1,15 @@
 - name: Uninstall elixir (macOS)
-  package:
+  pkg:
     name: elixir
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall elixir (Linux)
-  package:
+  pkg:
     name: elixir
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "mix uninstalled"
+  log: "mix uninstalled"

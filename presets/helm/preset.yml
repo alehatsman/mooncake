@@ -36,13 +36,13 @@ parameters:
 
 steps:
   - name: Install Helm
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure Helm
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present"
 
   - name: Uninstall Helm
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

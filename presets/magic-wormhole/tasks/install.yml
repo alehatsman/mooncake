@@ -1,10 +1,10 @@
 - name: Check if wormhole is installed
   shell: command -v wormhole
-  register: magic_wormhole_check
+  as: magic_wormhole_check
   failed_when: false
 
 - name: Install magic-wormhole via Homebrew
-  package:
+  pkg:
     name: magic-wormhole
     state: present
   when: brew_available and magic_wormhole_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "magic-wormhole installed"
+  log: "magic-wormhole installed"

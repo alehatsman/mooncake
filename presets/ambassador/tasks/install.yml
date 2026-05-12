@@ -1,17 +1,16 @@
 - name: Check if ambassador is installed
   shell: command -v ambassador
-  register: ambassador_check
+  as: ambassador_check
   failed_when: false
 
 - name: Install ambassador
-  package:
+  pkg:
     name: ambassador
     state: present
   when: ambassador_check.rc != 0
 
 - name: Verify installation
   shell: ambassador --version 2>&1 || ambassador -v 2>&1 || echo "installed"
-  register: ambassador_version
-
+  as: ambassador_version
 - name: Display version
-  print: "ambassador installed"
+  log: "ambassador installed"

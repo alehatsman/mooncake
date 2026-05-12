@@ -1,10 +1,10 @@
 - name: Check if fx is installed
   shell: command -v fx
-  register: fx_check
+  as: fx_check
   failed_when: false
 
 - name: Install fx
-  package:
+  pkg:
     name: fx
     state: present
   when: fx_check.rc != 0
@@ -16,4 +16,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "fx installed"
+  log: "fx installed"

@@ -1,10 +1,10 @@
 - name: Check if mdl is installed
   shell: command -v mdl
-  register: mdl_check
+  as: mdl_check
   failed_when: false
 
 - name: Install mdl via Homebrew
-  package:
+  pkg:
     name: mdl
     state: present
   when: brew_available and mdl_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mdl installed"
+  log: "mdl installed"

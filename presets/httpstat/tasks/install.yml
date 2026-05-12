@@ -1,10 +1,10 @@
 - name: Check if httpstat is installed
   shell: command -v httpstat
-  register: httpstat_check
+  as: httpstat_check
   failed_when: false
 
 - name: Install httpstat (macOS)
-  package:
+  pkg:
     name: httpstat
     state: present
   when: brew_available and httpstat_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "httpstat installed"
+  log: "httpstat installed"

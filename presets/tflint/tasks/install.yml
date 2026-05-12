@@ -1,10 +1,10 @@
 - name: Check if tflint is installed
   shell: command -v tflint
-  register: tflint_check
+  as: tflint_check
   failed_when: false
 
 - name: Install tflint (macOS)
-  package:
+  pkg:
     name: tflint
     state: present
   when: brew_available and tflint_check.rc != 0
@@ -21,4 +21,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "tflint installed"
+  log: "tflint installed"

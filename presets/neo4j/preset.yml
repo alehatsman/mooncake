@@ -12,9 +12,9 @@ parameters:
 
 steps:
   - name: Install neo4j
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall neo4j
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

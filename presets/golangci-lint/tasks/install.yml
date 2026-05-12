@@ -1,10 +1,10 @@
 - name: Check if golangci-lint is installed
   shell: command -v golangci-lint
-  register: golangci_lint_check
+  as: golangci_lint_check
   failed_when: false
 
 - name: Install golangci-lint (macOS)
-  package:
+  pkg:
     name: golangci-lint
     state: present
   when: brew_available and golangci_lint_check.rc != 0
@@ -12,7 +12,7 @@
 - name: Install golangci-lint (Linux)
   shell: |
     curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin
-  become: true
+  as_user: root
   when: linux and golangci_lint_check.rc != 0
 
 - name: Verify installation with assert
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "golangci-lint installed"
+  log: "golangci-lint installed"

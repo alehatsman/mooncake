@@ -1,15 +1,15 @@
 - name: Uninstall gradle (macOS)
-  package:
+  pkg:
     name: gradle
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall gradle (Linux)
-  package:
+  pkg:
     name: gradle
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "gradle uninstalled"
+  log: "gradle uninstalled"

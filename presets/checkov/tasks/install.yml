@@ -1,21 +1,19 @@
 - name: Check if checkov is installed
   shell: command -v checkov
-  register: checkov_check
+  as: checkov_check
   failed_when: false
 
 - name: Install checkov
-  package:
+  pkg:
     name: checkov
     state: present
   when: checkov_check.rc != 0
 
 - name: Verify installation
   shell: checkov --version 2>&1 || checkov -v 2>&1 || echo "installed"
-  register: checkov_version
-
+  as: checkov_version
 - name: Display version
-  print: "checkov installed"
-
+  log: "checkov installed"
 - name: Verify installation with assert
   assert:
     command:

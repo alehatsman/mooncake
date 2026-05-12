@@ -1,8 +1,8 @@
 - name: Uninstall spinnaker
-  package:
+  pkg:
     name: spinnaker
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "spinnaker uninstalled"
+  log: "spinnaker uninstalled"

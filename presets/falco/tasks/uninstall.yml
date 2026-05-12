@@ -1,8 +1,8 @@
 - name: Uninstall falco
-  package:
+  pkg:
     name: falco
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "falco uninstalled"
+  log: "falco uninstalled"

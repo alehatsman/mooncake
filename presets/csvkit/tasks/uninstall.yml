@@ -1,5 +1,5 @@
 - name: Uninstall csvkit via Homebrew
-  package:
+  pkg:
     name: csvkit
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "csvkit uninstalled"
+  log: "csvkit uninstalled"

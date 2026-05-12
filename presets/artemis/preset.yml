@@ -12,9 +12,9 @@ parameters:
 
 steps:
   - name: Install artemis
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall artemis
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

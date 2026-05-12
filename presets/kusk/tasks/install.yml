@@ -1,10 +1,10 @@
 - name: Check if kusk is installed
   shell: command -v kusk
-  register: kusk_check
+  as: kusk_check
   failed_when: false
 
 - name: Install kusk (macOS)
-  package:
+  pkg:
     name: kusk
     state: present
   when: brew_available and kusk_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "kusk installed"
+  log: "kusk installed"

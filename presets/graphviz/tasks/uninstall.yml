@@ -1,15 +1,15 @@
 - name: Uninstall graphviz (macOS)
-  package:
+  pkg:
     name: graphviz
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall graphviz (Linux)
-  package:
+  pkg:
     name: graphviz
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "graphviz uninstalled"
+  log: "graphviz uninstalled"

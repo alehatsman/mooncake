@@ -1,19 +1,19 @@
 - name: Check if tmate is installed
   shell: command -v tmate
-  register: tmate_check
+  as: tmate_check
   failed_when: false
 
 - name: Install tmate (macOS)
-  package:
+  pkg:
     name: tmate
     state: present
   when: brew_available and tmate_check.rc != 0
 
 - name: Install tmate (Linux)
-  package:
+  pkg:
     name: tmate
     state: present
-  become: true
+  as_user: root
   when: apt_available and tmate_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "tmate installed"
+  log: "tmate installed"

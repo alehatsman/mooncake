@@ -12,9 +12,9 @@ parameters:
 
 steps:
   - name: Install Harness CLI
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall Harness CLI
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

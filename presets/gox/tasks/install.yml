@@ -1,10 +1,10 @@
 - name: Check if gox is installed
   shell: command -v gox
-  register: gox_check
+  as: gox_check
   failed_when: false
 
 - name: Install gox (macOS)
-  package:
+  pkg:
     name: gox
     state: present
   when: brew_available and gox_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gox installed"
+  log: "gox installed"

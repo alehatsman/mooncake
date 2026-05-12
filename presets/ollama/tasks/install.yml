@@ -3,21 +3,21 @@
 
 - name: Check if Ollama is already installed
   shell: command -v ollama
-  register: ollama_check
+  as: ollama_check
   failed_when: false
 
 # Package Manager Installation
 - name: Install Ollama via package manager
-  package:
+  pkg:
     name: ollama
     state: present
-  become: true
+  as_user: root
   when: (ollama_check.rc != 0) and (parameters.method == "package")
 
 # Official Script Installation
 - name: Install Ollama via official script
   shell: curl -fsSL https://ollama.com/install.sh | sh
-  become: true
+  as_user: root
   when: (ollama_check.rc != 0) and ((parameters.method == "auto") or (parameters.method == "script"))
 
 - name: Verify installation

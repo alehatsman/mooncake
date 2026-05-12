@@ -1,5 +1,5 @@
 - name: Uninstall atlantis (macOS)
-  package:
+  pkg:
     name: atlantis
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "atlantis uninstalled"
+  log: "atlantis uninstalled"

@@ -1,17 +1,16 @@
 - name: Check if dgraph is installed
   shell: command -v dgraph
-  register: dgraph_check
+  as: dgraph_check
   failed_when: false
 
 - name: Install dgraph
-  package:
+  pkg:
     name: dgraph
     state: present
   when: dgraph_check.rc != 0
 
 - name: Verify installation
   shell: dgraph --version 2>&1 || dgraph -v 2>&1 || echo "installed"
-  register: dgraph_version
-
+  as: dgraph_version
 - name: Display version
-  print: "dgraph installed"
+  log: "dgraph installed"

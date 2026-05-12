@@ -42,9 +42,9 @@ parameters:
 
 steps:
   - name: Install MkDocs
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall MkDocs
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

@@ -1,10 +1,10 @@
 - name: Check if doctl is installed
   shell: command -v doctl
-  register: doctl_check
+  as: doctl_check
   failed_when: false
 
 - name: Install doctl
-  package:
+  pkg:
     name: doctl
     state: present
   when: doctl_check.rc != 0
@@ -16,4 +16,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "doctl installed"
+  log: "doctl installed"

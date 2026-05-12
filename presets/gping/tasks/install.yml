@@ -1,10 +1,10 @@
 - name: Check if gping is installed
   shell: command -v gping
-  register: gping_check
+  as: gping_check
   failed_when: false
 
 - name: Install gping (macOS)
-  package:
+  pkg:
     name: gping
     state: present
   when: brew_available and gping_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gping installed"
+  log: "gping installed"

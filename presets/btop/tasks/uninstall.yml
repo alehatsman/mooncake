@@ -1,12 +1,11 @@
 - name: Uninstall btop
-  package:
+  pkg:
     name: btop
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "btop uninstalled"
-
+  log: "btop uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

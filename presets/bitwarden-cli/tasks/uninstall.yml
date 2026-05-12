@@ -1,5 +1,5 @@
 - name: Uninstall bitwarden-cli via Homebrew
-  package:
+  pkg:
     name: bitwarden-cli
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "bitwarden-cli uninstalled"
+  log: "bitwarden-cli uninstalled"

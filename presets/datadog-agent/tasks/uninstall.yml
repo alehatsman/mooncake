@@ -1,12 +1,11 @@
 - name: Uninstall datadog-agent
-  package:
+  pkg:
     name: datadog-agent
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "datadog-agent uninstalled"
-
+  log: "datadog-agent uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

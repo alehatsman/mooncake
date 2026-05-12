@@ -1,10 +1,10 @@
 - name: Check if helm is installed
   shell: command -v helm
-  register: helm_check
+  as: helm_check
   failed_when: false
 
 - name: Install helm (macOS)
-  package:
+  pkg:
     name: helm
     state: present
   when: brew_available and helm_check.rc != 0
@@ -21,4 +21,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "helm installed"
+  log: "helm installed"

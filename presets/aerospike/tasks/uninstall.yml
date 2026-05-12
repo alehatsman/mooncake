@@ -1,8 +1,8 @@
 - name: Uninstall aerospike
-  package:
+  pkg:
     name: aerospike
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "aerospike uninstalled"
+  log: "aerospike uninstalled"

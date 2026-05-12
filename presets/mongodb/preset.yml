@@ -48,13 +48,13 @@ parameters:
 
 steps:
   - name: Install MongoDB
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure MongoDB service
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present" and parameters.service
 
   - name: Uninstall MongoDB
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

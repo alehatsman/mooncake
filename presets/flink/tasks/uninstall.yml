@@ -1,5 +1,5 @@
 - name: Uninstall flink
-  package:
+  pkg:
     name: flink
     state: absent
   failed_when: false
@@ -11,4 +11,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "flink uninstalled"
+  log: "flink uninstalled"

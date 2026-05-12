@@ -1,10 +1,10 @@
 - name: Check if stack is installed
   shell: command -v stack
-  register: stack_check
+  as: stack_check
   failed_when: false
 
 - name: Install stack via Homebrew
-  package:
+  pkg:
     name: haskell-stack
     state: present
   when: brew_available and stack_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "stack installed"
+  log: "stack installed"

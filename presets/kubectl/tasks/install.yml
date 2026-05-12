@@ -1,10 +1,10 @@
 - name: Check if kubectl is installed
   shell: command -v kubectl
-  register: kubectl_check
+  as: kubectl_check
   failed_when: false
 
 - name: Install kubectl (macOS)
-  package:
+  pkg:
     name: kubectl
     state: present
   when: brew_available and kubectl_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "kubectl installed"
+  log: "kubectl installed"

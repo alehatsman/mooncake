@@ -1,5 +1,5 @@
 - name: Uninstall jekyll (macOS)
-  package:
+  pkg:
     name: jekyll
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "jekyll uninstalled"
+  log: "jekyll uninstalled"

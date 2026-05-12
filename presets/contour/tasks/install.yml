@@ -1,17 +1,16 @@
 - name: Check if contour is installed
   shell: command -v contour
-  register: contour_check
+  as: contour_check
   failed_when: false
 
 - name: Install contour
-  package:
+  pkg:
     name: contour
     state: present
   when: contour_check.rc != 0
 
 - name: Verify installation
   shell: contour --version 2>&1 || contour -v 2>&1 || echo "installed"
-  register: contour_version
-
+  as: contour_version
 - name: Display version
-  print: "contour installed"
+  log: "contour installed"

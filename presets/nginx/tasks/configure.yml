@@ -1,27 +1,27 @@
 # Nginx Configuration Tasks
 
 - name: Ensure document root exists
-  file:
+  file.write:
     path: "{{ parameters.root_dir }}"
     state: directory
     mode: "0755"
-  become: true
+  as_user: root
   when: os == "linux"
 
 - name: Create basic index.html
-  file:
+  file.write:
     path: "{{ parameters.root_dir }}/index.html"
     state: touch
     mode: "0644"
-  become: true
+  as_user: root
   when: (os == "linux") and (parameters.root_dir != "/var/www/html")
 
 - name: Start Nginx service (Linux systemd)
-  service:
+  os.service:
     name: nginx
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: (os == "linux") and (parameters.start_service)
 
 - name: Start Nginx service (macOS)
@@ -30,4 +30,4 @@
   failed_when: false
 
 - name: Display status
-  print: "Nginx installation complete"
+  log: "Nginx installation complete"

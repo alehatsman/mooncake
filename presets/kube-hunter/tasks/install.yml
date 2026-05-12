@@ -1,10 +1,10 @@
 - name: Check if kube-hunter is installed
   shell: command -v kube-hunter
-  register: kube_hunter_check
+  as: kube_hunter_check
   failed_when: false
 
 - name: Install kube-hunter (macOS)
-  package:
+  pkg:
     name: kube-hunter
     state: present
   when: brew_available and kube_hunter_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "kube-hunter installed"
+  log: "kube-hunter installed"

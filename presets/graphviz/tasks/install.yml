@@ -1,19 +1,19 @@
 - name: Check if dot is installed
   shell: command -v dot
-  register: graphviz_check
+  as: graphviz_check
   failed_when: false
 
 - name: Install graphviz (macOS)
-  package:
+  pkg:
     name: graphviz
     state: present
   when: brew_available and graphviz_check.rc != 0
 
 - name: Install graphviz (Linux)
-  package:
+  pkg:
     name: graphviz
     state: present
-  become: true
+  as_user: root
   when: apt_available and graphviz_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "graphviz installed"
+  log: "graphviz installed"

@@ -1,10 +1,10 @@
 - name: Check if goreleaser is installed
   shell: command -v goreleaser
-  register: goreleaser_check
+  as: goreleaser_check
   failed_when: false
 
 - name: Install goreleaser (macOS)
-  package:
+  pkg:
     name: goreleaser
     state: present
   when: brew_available and goreleaser_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "goreleaser installed"
+  log: "goreleaser installed"

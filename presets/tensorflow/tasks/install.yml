@@ -3,17 +3,17 @@
 # Check Python
 - name: Check if Python is installed
   shell: python3 --version
-  register: python_check
+  as: python_check
   failed_when: false
 
 - name: Display Python version
-  print: "Python installed: {{ python_check.stdout }}"
+  log: "Python installed: {{ python_check.stdout }}"
   when: python_check.rc == 0
 
 # Detect GPU support
 - name: Check for NVIDIA GPU (CUDA)
   shell: nvidia-smi 2>&1
-  register: cuda_check
+  as: cuda_check
   when: parameters.gpu_support == "auto" or parameters.gpu_support == "gpu"
   failed_when: false
 
@@ -59,24 +59,24 @@
 # Verify installation
 - name: Verify TensorFlow installation
   shell: python3 -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}')"
-  register: tf_version
+  as: tf_version
   failed_when: false
 
 - name: Display TensorFlow version
-  print: "TensorFlow installed: {{ tf_version.stdout }}"
+  log: "TensorFlow installed: {{ tf_version.stdout }}"
   when: tf_version.rc == 0
 
 # Test TensorFlow functionality
 - name: Test TensorFlow tensor creation
   shell: python3 -c "import tensorflow as tf; x = tf.constant([[1, 2], [3, 4]]); print('Tensor created:', x.shape)"
-  register: tf_test
+  as: tf_test
   failed_when: false
   timeout: 10s
 
 - name: Display TensorFlow test - Success
-  print: "OK TensorFlow functional test passed (tensor operations working)"
+  log: "OK TensorFlow functional test passed (tensor operations working)"
   when: tf_test.rc == 0
 
 - name: Display TensorFlow test - Warning
-  print: "WARNING TensorFlow test failed, but installation attempted"
+  log: "WARNING TensorFlow test failed, but installation attempted"
   when: tf_test.rc != 0

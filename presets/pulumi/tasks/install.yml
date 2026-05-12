@@ -1,10 +1,10 @@
 - name: Check if pulumi is installed
   shell: command -v pulumi
-  register: pulumi_check
+  as: pulumi_check
   failed_when: false
 
 - name: Install pulumi via Homebrew
-  package:
+  pkg:
     name: pulumi
     state: present
   when: brew_available and pulumi_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "pulumi installed"
+  log: "pulumi installed"

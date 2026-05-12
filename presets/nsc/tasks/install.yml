@@ -1,10 +1,10 @@
 - name: Check if nsc is installed
   shell: command -v nsc
-  register: nsc_check
+  as: nsc_check
   failed_when: false
 
 - name: Install nsc via Homebrew
-  package:
+  pkg:
     name: nsc
     state: present
   when: brew_available and nsc_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "nsc installed"
+  log: "nsc installed"

@@ -1,6 +1,6 @@
 - name: Check if pelican is installed
   shell: command -v pelican
-  register: pelican_check
+  as: pelican_check
   failed_when: false
 
 - name: Install pelican via pip3
@@ -15,7 +15,6 @@
 
 - name: Get pelican version
   shell: pelican --version 2>&1 | head -1
-  register: pelican_version
-
+  as: pelican_version
 - name: Display version
-  print: "pelican installed: {{ pelican_version.stdout }}"
+  log: "pelican installed: {{ pelican_version.stdout }}"

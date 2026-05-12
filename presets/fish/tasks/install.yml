@@ -1,10 +1,10 @@
 - name: Check if fish is installed
   shell: command -v fish
-  register: fish_check
+  as: fish_check
   failed_when: false
 
 - name: Install fish
-  package:
+  pkg:
     name: fish
     state: present
   when: fish_check.rc != 0
@@ -16,4 +16,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "fish installed"
+  log: "fish installed"

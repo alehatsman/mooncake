@@ -1,10 +1,10 @@
 - name: Check if ignite is installed
   shell: command -v ignite
-  register: ignite_check
+  as: ignite_check
   failed_when: false
 
 - name: Install ignite (macOS)
-  package:
+  pkg:
     name: ignite
     state: present
   when: brew_available and ignite_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "ignite installed"
+  log: "ignite installed"

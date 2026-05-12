@@ -1,10 +1,10 @@
 - name: Check if wezterm is installed
   shell: command -v wezterm
-  register: wezterm_check
+  as: wezterm_check
   failed_when: false
 
 - name: Install wezterm (macOS)
-  package:
+  pkg:
     name: wezterm
     state: present
   when: brew_available and wezterm_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "wezterm installed"
+  log: "wezterm installed"

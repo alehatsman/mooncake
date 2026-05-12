@@ -1,8 +1,8 @@
 - name: Uninstall fleet
-  package:
+  pkg:
     name: fleet
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "fleet uninstalled"
+  log: "fleet uninstalled"

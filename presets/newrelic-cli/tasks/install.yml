@@ -1,10 +1,10 @@
 - name: Check if newrelic is installed
   shell: command -v newrelic
-  register: newrelic_check
+  as: newrelic_check
   failed_when: false
 
 - name: Install newrelic-cli via Homebrew
-  package:
+  pkg:
     name: newrelic-cli
     state: present
   when: (parameters.state == "present") and (os == "darwin") and (newrelic_check.rc != 0)
@@ -21,4 +21,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "newrelic-cli installed"
+  log: "newrelic-cli installed"

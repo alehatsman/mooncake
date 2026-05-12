@@ -5,37 +5,37 @@
   failed_when: false
 
 - name: Stop Vault service (Linux)
-  service:
+  os.service:
     name: vault
     state: stopped
-  become: true
+  as_user: root
   failed_when: false
   when: linux
 
 # macOS Uninstallation
 - name: Uninstall Vault via Homebrew (macOS)
-  package:
+  pkg:
     name: hashicorp/tap/vault
     state: absent
   when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Vault (Debian/Ubuntu)
-  package:
+  pkg:
     name: vault
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall Vault (RHEL/Fedora)
-  package:
+  pkg:
     name: vault
     state: absent
-  become: true
+  as_user: root
   when: dnf_available
 
 - name: Clean up dev log
-  file:
+  file.write:
     path: /tmp/vault-dev.log
     state: absent
   failed_when: false
@@ -47,4 +47,4 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: "Vault has been uninstalled (configuration in /etc/vault.d may remain)"
+  log: "Vault has been uninstalled (configuration in /etc/vault.d may remain)"

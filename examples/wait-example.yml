@@ -151,7 +151,7 @@
 
 # Use case: Multi-agent coordination
 - name: Agent 1 signals completion
-  file:
+  file.write:
     path: /tmp/agent1-done
     state: touch
   tags: [coordination]
@@ -170,10 +170,10 @@
 
 # Use case: Service dependency chain
 - name: Start database
-  service:
+  os.service:
     name: postgresql
     state: started
-  become: true
+  as_user: root
   tags: [services]
 
 - name: Wait for database to accept connections
@@ -190,10 +190,10 @@
   tags: [services]
 
 - name: Start application server
-  service:
+  os.service:
     name: myapp
     state: started
-  become: true
+  as_user: root
   tags: [services]
 
 - name: Wait for application health check
@@ -219,7 +219,7 @@
   tags: [git]
 
 - name: Perform code modifications
-  file_replace:
+  text.replace:
     path: src/config.ts
     pattern: 'version: "1.0.0"'
     replace: 'version: "1.1.0"'
@@ -284,11 +284,11 @@
     port: 5432
     timeout: 60s
     interval: 2s
-  register: wait_result
+  as: wait_result
   tags: [register]
 
 - name: Show wait results
-  print:
+  log:
     msg: |
       Wait completed: {{ wait_result.success }}
       Elapsed: {{ wait_result.elapsed_ms }}ms
@@ -327,11 +327,11 @@
     path: /nonexistent/file.txt
     timeout: 5s
     interval: 1s
-  ignore_errors: true
+  continue_on_error: true
   tags: [error]
 
 - name: Continue after timeout
-  print:
+  log:
     msg: "Timeout occurred, but continuing anyway"
   tags: [error]
 
@@ -368,7 +368,7 @@
 
 # Database migration with coordination
 - name: Create migration lock file
-  file:
+  file.write:
     path: /tmp/db-migration.lock
     state: touch
     mode: "0644"
@@ -387,7 +387,7 @@
   tags: [migration]
 
 - name: Remove lock file
-  file:
+  file.write:
     path: /tmp/db-migration.lock
     state: absent
   tags: [migration]

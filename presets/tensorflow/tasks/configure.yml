@@ -3,12 +3,12 @@
 # Check GPU availability
 - name: Check TensorFlow GPU availability
   shell: python3 -c "import tensorflow as tf; print('GPU available:', len(tf.config.list_physical_devices('GPU')) > 0)"
-  register: gpu_available
+  as: gpu_available
   failed_when: false
 
 # Display configuration
 - name: Display TensorFlow configuration
-  print: |
+  log: |
     OK TensorFlow installed and configured
 
     Installation:

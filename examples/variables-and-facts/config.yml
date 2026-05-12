@@ -48,18 +48,18 @@
 
 # Combine custom variables and system facts
 - name: Create version-specific directory
-  file:
+  file.write:
     path: "/tmp/{{app_name}}-{{version}}-{{os}}-{{arch}}"
     state: directory
     mode: "0755"
-  register: dir_result
+  as: dir_result
 
 - name: Print directory creation result
-  print:
+  log:
     msg: "Created directory: /tmp/{{app_name}}-{{version}}-{{os}}-{{arch}}"
 
 - name: Create system info file
-  file:
+  file.write:
     path: "/tmp/system-info.txt"
     state: file
     content: |
@@ -74,7 +74,7 @@
     mode: "0644"
 
 - name: Print summary
-  print:
+  log:
     msg: |
       Variables and facts example complete!
       Check /tmp/system-info.txt for system details.

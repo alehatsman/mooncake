@@ -1,10 +1,10 @@
 - name: Check if vuepress is installed
   shell: command -v vuepress
-  register: vuepress_check
+  as: vuepress_check
   failed_when: false
 
 - name: Install vuepress (macOS)
-  package:
+  pkg:
     name: vuepress
     state: present
   when: brew_available and vuepress_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "vuepress installed"
+  log: "vuepress installed"

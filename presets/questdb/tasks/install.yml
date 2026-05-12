@@ -1,19 +1,19 @@
 - name: Check if questdb is installed
   shell: command -v questdb
-  register: questdb_check
+  as: questdb_check
   failed_when: false
 
 - name: Install questdb via Homebrew
-  package:
+  pkg:
     name: questdb
     state: present
   when: brew_available and questdb_check.rc != 0
 
 - name: Install questdb via apt
-  package:
+  pkg:
     name: questdb
     state: present
-  become: true
+  as_user: root
   when: apt_available and questdb_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "questdb installed"
+  log: "questdb installed"

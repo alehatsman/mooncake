@@ -1,10 +1,10 @@
 - name: Check if infisical is installed
   shell: command -v infisical
-  register: infisical_check
+  as: infisical_check
   failed_when: false
 
 - name: Install infisical (macOS)
-  package:
+  pkg:
     name: infisical
     state: present
   when: brew_available and infisical_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "infisical installed"
+  log: "infisical installed"

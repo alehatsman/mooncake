@@ -1,5 +1,5 @@
 - name: Uninstall mkcert via Homebrew
-  package:
+  pkg:
     name: mkcert
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "mkcert uninstalled"
+  log: "mkcert uninstalled"

@@ -1,19 +1,19 @@
 - name: Check if gradle is installed
   shell: command -v gradle
-  register: gradle_check
+  as: gradle_check
   failed_when: false
 
 - name: Install gradle (macOS)
-  package:
+  pkg:
     name: gradle
     state: present
   when: brew_available and gradle_check.rc != 0
 
 - name: Install gradle (Linux)
-  package:
+  pkg:
     name: gradle
     state: present
-  become: true
+  as_user: root
   when: apt_available and gradle_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gradle installed"
+  log: "gradle installed"

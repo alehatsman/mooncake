@@ -2,74 +2,74 @@
 
 # Install build dependencies for Python compilation
 - name: Install Python build dependencies via {{ package_manager }}
-  package:
+  pkg:
     names:
-      - make
-      - build-essential
-      - libssl-dev
-      - zlib1g-dev
-      - libbz2-dev
-      - libreadline-dev
-      - libsqlite3-dev
-      - wget
-      - curl
-      - llvm
-      - libncursesw5-dev
-      - xz-utils
-      - tk-dev
-      - libxml2-dev
-      - libxmlsec1-dev
-      - libffi-dev
-      - liblzma-dev
+    - make
+    - build-essential
+    - libssl-dev
+    - zlib1g-dev
+    - libbz2-dev
+    - libreadline-dev
+    - libsqlite3-dev
+    - wget
+    - curl
+    - llvm
+    - libncursesw5-dev
+    - xz-utils
+    - tk-dev
+    - libxml2-dev
+    - libxmlsec1-dev
+    - libffi-dev
+    - liblzma-dev
     state: present
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Install Python build dependencies via {{ package_manager }}
-  package:
+  pkg:
     names:
-      - make
-      - gcc
-      - zlib-devel
-      - bzip2
-      - bzip2-devel
-      - readline-devel
-      - sqlite
-      - sqlite-devel
-      - openssl-devel
-      - tk-devel
-      - libffi-devel
-      - xz-devel
+    - make
+    - gcc
+    - zlib-devel
+    - bzip2
+    - bzip2-devel
+    - readline-devel
+    - sqlite
+    - sqlite-devel
+    - openssl-devel
+    - tk-devel
+    - libffi-devel
+    - xz-devel
     state: present
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Install Python build dependencies via {{ package_manager }}
-  package:
+  pkg:
     names:
-      - openssl
-      - readline
-      - sqlite3
-      - xz
-      - zlib
-      - tcl-tk
+    - openssl
+    - readline
+    - sqlite3
+    - xz
+    - zlib
+    - tcl-tk
     state: present
   when: package_manager == "brew"
 
 - name: Install Python build dependencies via {{ package_manager }}
-  package:
+  pkg:
     names:
-      - base-devel
-      - openssl
-      - zlib
-      - readline
-      - sqlite
-      - xz
-      - tk
-      - libffi
-      - bzip2
+    - base-devel
+    - openssl
+    - zlib
+    - readline
+    - sqlite
+    - xz
+    - tk
+    - libffi
+    - bzip2
     state: present
-  become: true
+  as_user: root
   when: pacman_available
 
 # Check if pyenv is installed
@@ -78,17 +78,15 @@
     file:
       path: "~/.pyenv/bin/pyenv"
       exists: true
-  register: pyenv_installed
-  ignore_errors: true
-
-# Install pyenv
+  as: pyenv_installed
+  continue_on_error: true
 - name: Install pyenv
   shell: curl https://pyenv.run | bash
   when: pyenv_installed.failed
 
 # Create pyenv initialization file
 - name: Create pyenv init file
-  file:
+  file.write:
     path: "~/.pyenv_init"
     content: |
       # pyenv configuration
@@ -115,9 +113,7 @@
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv install -s {{ parameters.version }}
-  creates: "~/.pyenv/versions/{{ parameters.version }}"
-
-# Set global version
+  unless_exists: "~/.pyenv/versions/{{ parameters.version }}"
 - name: Set Python {{ parameters.version }} as global version
   shell: |
     export PYENV_ROOT="$HOME/.pyenv"
@@ -133,7 +129,7 @@
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv install -s {{ item }}
-  with_items: parameters.additional_versions
+  for_each: parameters.additional_versions
   when: parameters.additional_versions | length > 0
 
 # Install pyenv-virtualenv plugin
@@ -165,18 +161,16 @@
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     python --version
-  register: python_version
-
+  as: python_version
 - name: List installed Python versions
   shell: |
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
     eval "$(pyenv init -)"
     pyenv versions
-  register: pyenv_versions
-
+  as: pyenv_versions
 - name: Print installation summary
-  print: |
+  log: |
     Python installed successfully via pyenv!
 
     Current Python: {{ python_version.stdout }}

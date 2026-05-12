@@ -1,5 +1,5 @@
 - name: Uninstall helm (macOS)
-  package:
+  pkg:
     name: helm
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "helm uninstalled"
+  log: "helm uninstalled"

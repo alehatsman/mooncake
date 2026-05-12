@@ -3,7 +3,7 @@
 # Check if rustup is already installed
 - name: Check if rustup is installed
   shell: command -v rustup
-  register: rustup_installed
+  as: rustup_installed
   failed_when: false
 
 # Install rustup on Linux/macOS
@@ -51,7 +51,7 @@
   shell: |
     [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     rustup component add {{ item }}
-  with_items: parameters.components
+  for_each: parameters.components
   when: parameters.components | length > 0
 
 # Install compilation targets
@@ -59,7 +59,7 @@
   shell: |
     [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     rustup target add {{ item }}
-  with_items: parameters.targets
+  for_each: parameters.targets
   when: parameters.targets | length > 0
 
 # Verify installation
@@ -67,26 +67,22 @@
   shell: |
     [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     rustc --version
-  register: rustc_version
-
+  as: rustc_version
 - name: Verify Cargo installation
   shell: |
     [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     cargo --version
-  register: cargo_version
-
+  as: cargo_version
 - name: List installed toolchains
   shell: |
     [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     rustup toolchain list
-  register: toolchains
-
+  as: toolchains
 - name: List installed components
   shell: |
     [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
     rustup component list --installed
-  register: components_installed
-
+  as: components_installed
 - name: Verify installation with assert
   assert:
     file:
@@ -94,7 +90,7 @@
       exists: true
 
 - name: Print installation summary
-  print: |
+  log: |
     Rust installed successfully!
 
     Rust compiler: {{ rustc_version.stdout }}

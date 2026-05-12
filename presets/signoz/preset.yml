@@ -1,4 +1,4 @@
-name: signoz  
+name: signoz
 description: Open-source observability platform
 version: "1.0.0"
 parameters:
@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install signoz
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall signoz
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

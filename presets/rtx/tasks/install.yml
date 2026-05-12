@@ -1,19 +1,19 @@
 - name: Check if rtx is installed
   shell: command -v rtx
-  register: rtx_check
+  as: rtx_check
   failed_when: false
 
 - name: Install rtx (macOS)
-  package:
+  pkg:
     name: rtx
     state: present
   when: brew_available and rtx_check.rc != 0
 
 - name: Install rtx (Linux)
-  package:
+  pkg:
     name: rtx
     state: present
-  become: true
+  as_user: root
   when: apt_available and rtx_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "rtx installed"
+  log: "rtx installed"

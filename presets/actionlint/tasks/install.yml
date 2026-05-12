@@ -1,10 +1,10 @@
 - name: Check if actionlint is installed
   shell: command -v actionlint
-  register: actionlint_check
+  as: actionlint_check
   failed_when: false
 
 - name: Install actionlint via Homebrew
-  package:
+  pkg:
     name: actionlint
     state: present
   when: brew_available and actionlint_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "actionlint installed"
+  log: "actionlint installed"

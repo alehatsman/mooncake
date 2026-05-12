@@ -1,10 +1,10 @@
 - name: Check if argocd-autopilot is installed
   shell: command -v argocd-autopilot
-  register: argocd_autopilot_check
+  as: argocd_autopilot_check
   failed_when: false
 
 - name: Install argocd-autopilot via Homebrew
-  package:
+  pkg:
     name: argocd-autopilot
     state: present
   when: brew_available and argocd_autopilot_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "argocd-autopilot installed"
+  log: "argocd-autopilot installed"

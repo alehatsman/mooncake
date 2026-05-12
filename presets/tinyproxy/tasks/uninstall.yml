@@ -1,8 +1,8 @@
 - name: Uninstall tinyproxy
-  package:
+  pkg:
     name: tinyproxy
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "tinyproxy uninstalled"
+  log: "tinyproxy uninstalled"

@@ -1,10 +1,10 @@
 - name: Check if delta is installed
   shell: command -v delta
-  register: delta_check
+  as: delta_check
   failed_when: false
 
 - name: Install delta (macOS)
-  package:
+  pkg:
     name: git-delta
     state: present
   when: brew_available and delta_check.rc != 0
@@ -24,4 +24,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "delta installed"
+  log: "delta installed"

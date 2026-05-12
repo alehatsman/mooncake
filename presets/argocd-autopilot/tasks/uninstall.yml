@@ -1,5 +1,5 @@
 - name: Uninstall argocd-autopilot (macOS)
-  package:
+  pkg:
     name: argocd-autopilot
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "argocd-autopilot uninstalled"
+  log: "argocd-autopilot uninstalled"

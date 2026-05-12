@@ -1,5 +1,5 @@
 - name: Uninstall xsv via Homebrew
-  package:
+  pkg:
     name: xsv
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "xsv uninstalled"
+  log: "xsv uninstalled"

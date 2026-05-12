@@ -1,12 +1,11 @@
 - name: Uninstall cabal
-  package:
+  pkg:
     name: cabal
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "cabal uninstalled"
-
+  log: "cabal uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

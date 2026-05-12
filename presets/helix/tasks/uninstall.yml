@@ -1,15 +1,15 @@
 - name: Uninstall helix (macOS)
-  package:
+  pkg:
     name: helix
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall helix (Linux)
-  package:
+  pkg:
     name: helix
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "helix uninstalled"
+  log: "helix uninstalled"

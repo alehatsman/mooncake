@@ -1,10 +1,10 @@
 - name: Check if linode-cli is installed
   shell: command -v linode-cli
-  register: linode_cli_check
+  as: linode_cli_check
   failed_when: false
 
 - name: Install linode-cli (macOS)
-  package:
+  pkg:
     name: linode-cli
     state: present
   when: brew_available and linode_cli_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "linode-cli installed"
+  log: "linode-cli installed"

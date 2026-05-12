@@ -1,8 +1,8 @@
 - name: Uninstall weaviate
-  package:
+  pkg:
     name: weaviate
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "weaviate uninstalled"
+  log: "weaviate uninstalled"

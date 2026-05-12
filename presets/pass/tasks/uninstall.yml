@@ -1,15 +1,15 @@
 - name: Uninstall pass (macOS)
-  package:
+  pkg:
     name: pass
     state: absent
   when: (parameters.state == "absent") and (os == "darwin")
   failed_when: false
 
 - name: Uninstall pass (Linux)
-  package:
+  pkg:
     name: pass
     state: absent
-  become: true
+  as_user: root
   when: (parameters.state == "absent") and (os == "linux")
   failed_when: false
 
@@ -21,5 +21,5 @@
   when: parameters.state == "absent"
 
 - name: Display confirmation
-  print: "pass uninstalled"
+  log: "pass uninstalled"
   when: parameters.state == "absent"

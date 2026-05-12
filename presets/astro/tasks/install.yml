@@ -1,6 +1,6 @@
 - name: Check if astro is installed
   shell: command -v astro
-  register: astro_check
+  as: astro_check
   failed_when: false
 
 - name: Install astro via npm
@@ -14,4 +14,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "astro installed"
+  log: "astro installed"

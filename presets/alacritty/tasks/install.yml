@@ -1,21 +1,19 @@
 - name: Check if alacritty is installed
   shell: command -v alacritty
-  register: alacritty_check
+  as: alacritty_check
   failed_when: false
 
 - name: Install alacritty
-  package:
+  pkg:
     name: alacritty
     state: present
   when: alacritty_check.rc != 0
 
 - name: Verify installation
   shell: alacritty --version 2>&1 || alacritty -v 2>&1 || echo "installed"
-  register: alacritty_version
-
+  as: alacritty_version
 - name: Display version
-  print: "alacritty installed"
-
+  log: "alacritty installed"
 - name: Verify installation with assert
   assert:
     command:

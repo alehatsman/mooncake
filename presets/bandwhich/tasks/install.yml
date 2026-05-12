@@ -1,19 +1,19 @@
 - name: Check if bandwhich is installed
   shell: command -v bandwhich
-  register: bandwhich_check
+  as: bandwhich_check
   failed_when: false
 
 - name: Install bandwhich via Homebrew
-  package:
+  pkg:
     name: bandwhich
     state: present
   when: brew_available and bandwhich_check.rc != 0
 
 - name: Install bandwhich via apt
-  package:
+  pkg:
     name: bandwhich
     state: present
-  become: true
+  as_user: root
   when: apt_available and bandwhich_check.rc != 0
 
 - name: Install bandwhich via cargo
@@ -27,4 +27,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "bandwhich installed"
+  log: "bandwhich installed"

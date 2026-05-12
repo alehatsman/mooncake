@@ -1,19 +1,19 @@
 - name: Check if mtr is installed
   shell: command -v mtr
-  register: mtr_check
+  as: mtr_check
   failed_when: false
 
 - name: Install mtr (macOS)
-  package:
+  pkg:
     name: mtr
     state: present
   when: brew_available and mtr_check.rc != 0
 
 - name: Install mtr (Linux)
-  package:
+  pkg:
     name: mtr
     state: present
-  become: true
+  as_user: root
   when: apt_available and mtr_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mtr installed"
+  log: "mtr installed"

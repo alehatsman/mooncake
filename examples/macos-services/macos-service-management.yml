@@ -13,13 +13,13 @@ steps:
 
   # Start a service (bootstrap if not loaded, kickstart if loaded)
   - name: Start service
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: started
 
   # Start and enable (load) a service
   - name: Start and enable service
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: started
       enabled: true
@@ -30,13 +30,13 @@ steps:
 
   # Stop a service (send SIGTERM)
   - name: Stop service
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: stopped
 
   # Stop and disable (unload) a service
   - name: Stop and disable service
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: stopped
       enabled: false
@@ -47,13 +47,13 @@ steps:
 
   # Restart a service (kill and restart)
   - name: Restart service
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: restarted
 
   # Reload service configuration (treated as restart on macOS)
   - name: Reload service
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: reloaded
 
@@ -63,7 +63,7 @@ steps:
 
   # Update plist and restart (only restarts if plist changed)
   - name: Update service configuration
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: restarted
       unit:
@@ -89,7 +89,7 @@ steps:
 
   # Update from template with variables
   - name: Update service from template
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: restarted
       unit:
@@ -101,7 +101,7 @@ steps:
 
   # Manage system daemon
   - name: Manage system daemon
-    service:
+    os.service:
       name: com.example.system-daemon
       state: started
       enabled: true
@@ -122,33 +122,17 @@ steps:
             <true/>
           </dict>
           </plist>
-    become: true
-
-  # ============================================================================
-  # Checking Service Status
-  # ============================================================================
-
-  # Check if service is running
+    as_user: root
   - name: Check service status
     shell:
       cmd: launchctl print gui/$(id -u)/{{ service_name }}
-    register: service_status
-
-  # List all loaded services
+    as: service_status
   - name: List loaded services
     shell:
       cmd: launchctl list
-    register: loaded_services
-
-  # ============================================================================
-  # Dry-Run Mode
-  # ============================================================================
-
-  # Preview changes without applying them
-  # Run with: mooncake run --dry-run service-management.yml
-
+    as: loaded_services
   - name: Preview service update
-    service:
+    os.service:
       name: "{{ service_name }}"
       state: restarted
       unit:

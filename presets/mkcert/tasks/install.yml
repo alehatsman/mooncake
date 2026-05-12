@@ -1,19 +1,19 @@
 - name: Check if mkcert is installed
   shell: command -v mkcert
-  register: mkcert_check
+  as: mkcert_check
   failed_when: false
 
 - name: Install mkcert via Homebrew
-  package:
+  pkg:
     name: mkcert
     state: present
   when: brew_available and mkcert_check.rc != 0
 
 - name: Install libnss3-tools dependency via apt
-  package:
+  pkg:
     name: libnss3-tools
     state: present
-  become: true
+  as_user: root
   when: apt_available and mkcert_check.rc != 0
 
 - name: Install mkcert via go install
@@ -27,4 +27,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mkcert installed"
+  log: "mkcert installed"

@@ -1,10 +1,10 @@
 - name: Check if sentry-cli is installed
   shell: command -v sentry-cli
-  register: sentry_cli_check
+  as: sentry_cli_check
   failed_when: false
 
 - name: Install sentry-cli (macOS)
-  package:
+  pkg:
     name: sentry-cli
     state: present
   when: brew_available and sentry_cli_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "sentry-cli installed"
+  log: "sentry-cli installed"

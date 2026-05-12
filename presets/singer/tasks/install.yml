@@ -1,6 +1,6 @@
 - name: Check if singer is installed
   shell: pip3 show singer-python
-  register: singer_check
+  as: singer_check
   failed_when: false
 
 - name: Install singer (macOS)
@@ -18,4 +18,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "singer installed"
+  log: "singer installed"

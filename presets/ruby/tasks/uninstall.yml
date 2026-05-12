@@ -28,5 +28,5 @@
   when: parameters.state == "absent"
 
 - name: Print uninstallation complete
-  print: "Ruby and rbenv uninstalled successfully!"
+  log: "Ruby and rbenv uninstalled successfully!"
   when: parameters.state == "absent"

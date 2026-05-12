@@ -1,21 +1,19 @@
 - name: Check if datadog-agent is installed
   shell: command -v datadog-agent
-  register: datadog_agent_check
+  as: datadog_agent_check
   failed_when: false
 
 - name: Install datadog-agent
-  package:
+  pkg:
     name: datadog-agent
     state: present
   when: datadog_agent_check.rc != 0
 
 - name: Verify installation
   shell: datadog-agent --version 2>&1 || datadog-agent -v 2>&1 || echo "installed"
-  register: datadog_agent_version
-
+  as: datadog_agent_version
 - name: Display version
-  print: "datadog-agent installed"
-
+  log: "datadog-agent installed"
 - name: Verify installation with assert
   assert:
     command:

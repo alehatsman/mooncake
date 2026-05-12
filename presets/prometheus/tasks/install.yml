@@ -2,45 +2,45 @@
 
 - name: Check if Prometheus is already installed
   shell: command -v prometheus
-  register: prometheus_check
+  as: prometheus_check
   failed_when: false
 
 # macOS Installation
 - name: Install Prometheus via Homebrew (macOS)
-  package:
+  pkg:
     name: prometheus
     state: present
   when: brew_available and prometheus_check.rc != 0
 
 # Linux - via package manager
 - name: Install Prometheus (Debian/Ubuntu)
-  package:
+  pkg:
     name: prometheus
     state: present
-  become: true
+  as_user: root
   when: apt_available and prometheus_check.rc != 0
 
 - name: Install Prometheus (Fedora/RHEL)
-  package:
+  pkg:
     name: prometheus
     state: present
-  become: true
+  as_user: root
   when: dnf_available and prometheus_check.rc != 0
 
 # Arch requires download
 - name: Get latest Prometheus version (Arch)
   shell: curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | grep tag_name | cut -d '"' -f 4
-  register: prometheus_version_tag
+  as: prometheus_version_tag
   when: pacman_available and prometheus_check.rc != 0
 
 - name: Download Prometheus (Arch)
-  download:
+  file.download:
     url: "https://github.com/prometheus/prometheus/releases/download/{{ prometheus_version_tag.stdout }}/prometheus-{{ prometheus_version_tag.stdout | regex_replace('^v', '') }}.linux-amd64.tar.gz"
     dest: /tmp/prometheus.tar.gz
   when: pacman_available and prometheus_check.rc != 0
 
 - name: Extract Prometheus (Arch)
-  unarchive:
+  file.unarchive:
     src: /tmp/prometheus.tar.gz
     dest: /tmp
   when: pacman_available and prometheus_check.rc != 0
@@ -50,7 +50,7 @@
     cd /tmp/prometheus-*linux-amd64
     cp prometheus promtool /usr/local/bin/
     chmod +x /usr/local/bin/prometheus /usr/local/bin/promtool
-  become: true
+  as_user: root
   when: pacman_available and prometheus_check.rc != 0
 
 # Verify installation
@@ -62,7 +62,6 @@
 
 - name: Get Prometheus version
   shell: prometheus --version 2>&1 | head -n 1
-  register: prometheus_version
-
+  as: prometheus_version
 - name: Display Prometheus version
-  print: "Prometheus installed: {{ prometheus_version.stdout }}"
+  log: "Prometheus installed: {{ prometheus_version.stdout }}"

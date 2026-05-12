@@ -6,17 +6,17 @@
     sed -i 's/^bind .*/bind {{ parameters.bind_address }}/' /etc/redis/redis.conf
     sed -i 's/^# maxmemory .*/maxmemory {{ parameters.max_memory }}/' /etc/redis/redis.conf
     sed -i 's/^port .*/port {{ parameters.port }}/' /etc/redis/redis.conf
-  become: true
+  as_user: root
   when: os == "linux"
   failed_when: false
 
 # Start Redis service
 - name: Start Redis service (Linux)
-  service:
+  os.service:
     name: redis-server
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: os == "linux" and parameters.start_service
 
 - name: Start Redis service (macOS)
@@ -27,12 +27,12 @@
 # Test Redis connection
 - name: Test Redis connection
   shell: redis-cli -h {{ parameters.bind_address }} -p {{ parameters.port }} ping
-  register: redis_test
+  as: redis_test
   failed_when: false
   timeout: 10s
 
 - name: Display connection info - Success
-  print: |
+  log: |
     OK Redis is running
 
     Connection details:
@@ -45,7 +45,7 @@
   when: redis_test.rc == 0
 
 - name: Display connection info - Failed
-  print: |
+  log: |
     WARNING Redis service started but connection test failed
 
     Connection details:

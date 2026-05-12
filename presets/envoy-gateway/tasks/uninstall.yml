@@ -1,8 +1,8 @@
 - name: Uninstall envoy-gateway
-  package:
+  pkg:
     name: envoy-gateway
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "envoy-gateway uninstalled"
+  log: "envoy-gateway uninstalled"

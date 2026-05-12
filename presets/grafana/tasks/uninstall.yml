@@ -1,10 +1,10 @@
 # Grafana Uninstallation Tasks
 
 - name: Stop Grafana service (Linux)
-  service:
+  os.service:
     name: grafana-server
     state: stopped
-  become: true
+  as_user: root
   failed_when: false
   when: linux
 
@@ -15,24 +15,24 @@
 
 # macOS Uninstallation
 - name: Uninstall Grafana via Homebrew (macOS)
-  package:
+  pkg:
     name: grafana
     state: absent
   when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Grafana (Debian/Ubuntu)
-  package:
+  pkg:
     name: grafana
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall Grafana (RHEL/Fedora)
-  package:
+  pkg:
     name: grafana
     state: absent
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Verify uninstallation with assert
@@ -42,4 +42,4 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: "Grafana has been uninstalled (configuration and data in /var/lib/grafana may remain)"
+  log: "Grafana has been uninstalled (configuration and data in /var/lib/grafana may remain)"

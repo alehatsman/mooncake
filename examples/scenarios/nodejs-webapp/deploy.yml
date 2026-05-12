@@ -1,4 +1,3 @@
----
 name: Node.js Web App Deployment
 description: |
   Deploy a simple Node.js Express application with PM2 process manager
@@ -16,29 +15,25 @@ steps:
   - name: Update apt cache
     shell:
       cmd: apt-get update
-    become: true
-
+    as_user: root
   - name: Install Node.js and npm
     shell:
       cmd: |
         apt-get install -y curl
         curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
         apt-get install -y nodejs
-    become: true
-    register: node_install
-
+    as_user: root
+    as: node_install
   - name: Check Node.js version
     shell:
       cmd: node --version
-    register: node_version
-
+    as: node_version
   - name: Check npm version
     shell:
       cmd: npm --version
-    register: npm_version
-
+    as: npm_version
   - name: Print Node.js info
-    print:
+    log:
       msg: |
         Node.js installed: {{ node_version.stdout }}
         npm version: {{ npm_version.stdout }}
@@ -46,134 +41,112 @@ steps:
   - name: Install PM2 globally
     shell:
       cmd: npm install -g pm2
-    become: true
-    register: pm2_install
-
+    as_user: root
+    as: pm2_install
   - name: Print PM2 installation status
-    print:
+    log:
       msg: "PM2 installed successfully"
 
   - name: Create app directory
-    file:
+    file.write:
       path: "{{ app_dir }}"
       state: directory
       mode: "0755"
       owner: "{{ node_user }}"
       group: "{{ node_user }}"
-    become: true
-
+    as_user: root
   - name: Copy package.json
-    copy:
+    file.copy:
       src: files/package.json
       dest: "{{ app_dir }}/package.json"
       mode: "0644"
       owner: "{{ node_user }}"
       group: "{{ node_user }}"
-    become: true
-
+    as_user: root
   - name: Copy application code
-    copy:
+    file.copy:
       src: files/app.js
       dest: "{{ app_dir }}/app.js"
       mode: "0644"
       owner: "{{ node_user }}"
       group: "{{ node_user }}"
-    become: true
-
+    as_user: root
   - name: Install npm dependencies
     shell:
       cmd: cd {{ app_dir }} && npm install
-    become: true
-    become_user: "{{ node_user }}"
-    register: npm_install_result
-
+    as_user: "{{ node_user }}"
+    as: npm_install_result
   - name: Print npm install status
-    print:
+    log:
       msg: "Dependencies installed successfully"
 
   - name: Generate PM2 ecosystem config
-    template:
+    file.template:
       src: templates/ecosystem.config.js.j2
       dest: "{{ app_dir }}/ecosystem.config.js"
       mode: "0644"
       owner: "{{ node_user }}"
       group: "{{ node_user }}"
-    become: true
-
+    as_user: root
   - name: Stop any existing PM2 processes
     shell:
       cmd: pm2 delete {{ app_name }} || true
-    become: true
-    become_user: "{{ node_user }}"
-    register: pm2_stop
-
+    as_user: "{{ node_user }}"
+    as: pm2_stop
   - name: Start app with PM2
     shell:
       cmd: cd {{ app_dir }} && pm2 start ecosystem.config.js
-    become: true
-    become_user: "{{ node_user }}"
-    register: pm2_start
-
+    as_user: "{{ node_user }}"
+    as: pm2_start
   - name: Save PM2 process list
     shell:
       cmd: pm2 save
-    become: true
-    become_user: "{{ node_user }}"
-
+    as_user: "{{ node_user }}"
   - name: Setup PM2 startup script
     shell:
       cmd: pm2 startup systemd -u {{ node_user }} --hp /var/www
-    become: true
-
+    as_user: root
   - name: Check PM2 status
     shell:
       cmd: pm2 list
-    become: true
-    become_user: "{{ node_user }}"
-    register: pm2_status
-
+    as_user: "{{ node_user }}"
+    as: pm2_status
   - name: Print PM2 status
-    print:
+    log:
       msg: "{{ pm2_status.stdout }}"
 
   - name: Install nginx
     shell:
       cmd: apt-get install -y nginx
-    become: true
-
+    as_user: root
   - name: Generate nginx proxy config
-    template:
+    file.template:
       src: templates/nginx-proxy.conf.j2
       dest: /etc/nginx/sites-available/{{ app_name }}
       mode: "0644"
-    become: true
-
+    as_user: root
   - name: Enable nginx site
-    file:
+    file.write:
       src: /etc/nginx/sites-available/{{ app_name }}
       dest: /etc/nginx/sites-enabled/{{ app_name }}
       state: link
-    become: true
-
+    as_user: root
   - name: Remove default nginx site
-    file:
+    file.write:
       path: /etc/nginx/sites-enabled/default
       state: absent
-    become: true
-
+    as_user: root
   - name: Test nginx configuration
     shell:
       cmd: nginx -t
-    become: true
-    register: nginx_test
-
+    as_user: root
+    as: nginx_test
   - name: Restart nginx
-    service:
+    os.service:
       name: nginx
       state: restarted
       enabled: true
-    become: true
-
+    as_user: root
   - name: Wait for app to be ready
     shell:
       cmd: sleep 3
@@ -181,13 +154,11 @@ steps:
   - name: Test app directly
     shell:
       cmd: curl -s http://localhost:{{ app_port }}
-    register: app_response
-
+    as: app_response
   - name: Test app through nginx
     shell:
       cmd: curl -s http://localhost:{{ nginx_port }}
-    register: nginx_response
-
+    as: nginx_response
   - name: Verify app is responding
     assert:
       that:
@@ -196,7 +167,7 @@ steps:
       success_msg: "Application is running and accessible through nginx!"
 
   - name: Print success message
-    print:
+    log:
       msg: |
         ========================================
         Node.js App Deployment Complete!

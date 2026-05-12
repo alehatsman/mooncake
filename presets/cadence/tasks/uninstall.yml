@@ -1,8 +1,8 @@
 - name: Uninstall cadence
-  package:
+  pkg:
     name: cadence
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "cadence uninstalled"
+  log: "cadence uninstalled"

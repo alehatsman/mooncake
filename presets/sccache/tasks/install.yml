@@ -1,10 +1,10 @@
 - name: Check if sccache is installed
   shell: command -v sccache
-  register: sccache_check
+  as: sccache_check
   failed_when: false
 
 - name: Install sccache (macOS)
-  package:
+  pkg:
     name: sccache
     state: present
   when: brew_available and sccache_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "sccache installed"
+  log: "sccache installed"

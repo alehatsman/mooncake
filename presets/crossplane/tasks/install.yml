@@ -1,10 +1,10 @@
 - name: Check if crossplane is installed
   shell: command -v crossplane
-  register: crossplane_check
+  as: crossplane_check
   failed_when: false
 
 - name: Install crossplane via Homebrew
-  package:
+  pkg:
     name: crossplane-cli
     state: present
   when: brew_available and crossplane_check.rc != 0
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "crossplane installed"
+  log: "crossplane installed"

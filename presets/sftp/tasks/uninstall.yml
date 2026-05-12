@@ -1,8 +1,8 @@
 - name: Uninstall sftp
-  package:
+  pkg:
     name: sftp
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "sftp uninstalled"
+  log: "sftp uninstalled"

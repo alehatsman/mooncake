@@ -1,5 +1,5 @@
 - name: Uninstall httpx (macOS)
-  package:
+  pkg:
     name: httpx
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "httpx uninstalled"
+  log: "httpx uninstalled"

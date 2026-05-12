@@ -1,5 +1,5 @@
 - name: Uninstall ko (macOS)
-  package:
+  pkg:
     name: ko
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "ko uninstalled"
+  log: "ko uninstalled"

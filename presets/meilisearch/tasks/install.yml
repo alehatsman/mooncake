@@ -1,23 +1,20 @@
 - name: Check if meilisearch is installed
   shell: command -v meilisearch
-  register: meilisearch_check
+  as: meilisearch_check
   failed_when: false
 
 - name: Install meilisearch via apt
   shell: apt-get install -y meilisearch
   when: apt_available and meilisearch_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install meilisearch via dnf
   shell: dnf install -y meilisearch
   when: dnf_available and meilisearch_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install meilisearch via yum
   shell: yum install -y meilisearch
   when: yum_available and meilisearch_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install meilisearch via Homebrew
   shell: brew install meilisearch
   when: brew_available and meilisearch_check.rc != 0

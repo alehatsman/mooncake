@@ -1,10 +1,10 @@
 - name: Check if gcloud is installed
   shell: command -v gcloud
-  register: gcloud_check
+  as: gcloud_check
   failed_when: false
 
 - name: Install gcloud (macOS)
-  package:
+  pkg:
     name: google-cloud-sdk
     state: present
   when: brew_available and gcloud_check.rc != 0
@@ -21,10 +21,10 @@
   when: apt_available and gcloud_check.rc != 0
 
 - name: Install gcloud (Linux)
-  package:
+  pkg:
     name: google-cloud-sdk
     state: present
-  become: true
+  as_user: root
   when: apt_available and gcloud_check.rc != 0
 
 - name: Verify installation with assert
@@ -34,4 +34,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gcloud installed"
+  log: "gcloud installed"

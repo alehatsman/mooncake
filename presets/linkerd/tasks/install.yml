@@ -1,10 +1,10 @@
 - name: Check if linkerd is installed
   shell: command -v linkerd
-  register: linkerd_check
+  as: linkerd_check
   failed_when: false
 
 - name: Install linkerd (macOS)
-  package:
+  pkg:
     name: linkerd
     state: present
   when: brew_available and linkerd_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "linkerd installed"
+  log: "linkerd installed"

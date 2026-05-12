@@ -1,19 +1,19 @@
 - name: Check if prometheus is installed
   shell: command -v prometheus
-  register: prometheus_server_check
+  as: prometheus_server_check
   failed_when: false
 
 - name: Install prometheus-server via Homebrew
-  package:
+  pkg:
     name: prometheus
     state: present
   when: brew_available and prometheus_server_check.rc != 0
 
 - name: Install prometheus-server via apt
-  package:
+  pkg:
     name: prometheus
     state: present
-  become: true
+  as_user: root
   when: apt_available and prometheus_server_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "prometheus-server installed"
+  log: "prometheus-server installed"

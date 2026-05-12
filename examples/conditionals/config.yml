@@ -17,17 +17,17 @@
 - name: Development setup
   shell: echo "Setting up development environment"
   tags:
-    - dev
-    - setup
+  - dev
+  - setup
 
 - name: Production deployment
   shell: echo "Deploying to production"
   tags:
-    - prod
-    - deploy
+  - prod
+  - deploy
 
 - name: Run tests
   shell: echo "Running test suite"
   tags:
-    - dev
-    - test
+  - dev
+  - test

@@ -1,17 +1,16 @@
 - name: Check if cadence is installed
   shell: command -v cadence
-  register: cadence_check
+  as: cadence_check
   failed_when: false
 
 - name: Install cadence
-  package:
+  pkg:
     name: cadence
     state: present
   when: cadence_check.rc != 0
 
 - name: Verify installation
   shell: cadence --version 2>&1 || cadence -v 2>&1 || echo "installed"
-  register: cadence_version
-
+  as: cadence_version
 - name: Display version
-  print: "cadence installed"
+  log: "cadence installed"

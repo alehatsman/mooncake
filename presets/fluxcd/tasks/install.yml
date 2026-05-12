@@ -1,10 +1,10 @@
 - name: Check if fluxctl is installed
   shell: command -v fluxctl
-  register: fluxcd_check
+  as: fluxcd_check
   failed_when: false
 
 - name: Install fluxcd via Homebrew
-  package:
+  pkg:
     name: fluxctl
     state: present
   when: brew_available and fluxcd_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "fluxcd installed"
+  log: "fluxcd installed"

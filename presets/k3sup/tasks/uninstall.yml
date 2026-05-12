@@ -1,5 +1,5 @@
 - name: Uninstall k3sup (macOS)
-  package:
+  pkg:
     name: k3sup
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "k3sup uninstalled"
+  log: "k3sup uninstalled"

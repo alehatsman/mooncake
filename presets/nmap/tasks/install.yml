@@ -1,19 +1,19 @@
 - name: Check if nmap is installed
   shell: command -v nmap
-  register: nmap_check
+  as: nmap_check
   failed_when: false
 
 - name: Install nmap via Homebrew
-  package:
+  pkg:
     name: nmap
     state: present
   when: brew_available and nmap_check.rc != 0
 
 - name: Install nmap via apt
-  package:
+  pkg:
     name: nmap
     state: present
-  become: true
+  as_user: root
   when: apt_available and nmap_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "nmap installed"
+  log: "nmap installed"

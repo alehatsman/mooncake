@@ -1,8 +1,8 @@
 - name: Uninstall airbyte
-  package:
+  pkg:
     name: airbyte
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "airbyte uninstalled"
+  log: "airbyte uninstalled"

@@ -1,7 +1,7 @@
 # MinIO Configuration Tasks
 
 - name: Ensure data directory exists
-  file:
+  file.write:
     path: "{{ parameters.data_dir }}"
     state: directory
     mode: "0755"
@@ -32,20 +32,20 @@
     [Install]
     WantedBy=multi-user.target
     EOF
-  become: true
+  as_user: root
   when: linux
 
 - name: Reload systemd daemon (Linux)
   shell: systemctl daemon-reload
-  become: true
+  as_user: root
   when: linux
 
 - name: Start MinIO service (Linux)
-  service:
+  os.service:
     name: minio
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: linux and parameters.start_service
 
 - name: Start MinIO server (macOS)
@@ -57,14 +57,15 @@
 
 - name: Wait for MinIO to be ready
   shell: curl -s http://localhost:{{ parameters.api_port }}/minio/health/live
-  register: minio_ready
+  as: minio_ready
   until: minio_ready.rc == 0
-  retries: 10
+  retry:
+    attempts: 10
   delay: 2
   failed_when: false
 
 - name: Display MinIO information
-  print: |
+  log: |
     MinIO Server is running:
     - API endpoint: http://localhost:{{ parameters.api_port }}
     - Console UI: http://localhost:{{ parameters.console_port }}

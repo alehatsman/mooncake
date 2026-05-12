@@ -24,9 +24,9 @@ parameters:
 
 steps:
   - name: Install fzf
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall fzf
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

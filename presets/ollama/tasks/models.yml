@@ -18,4 +18,4 @@
     {% endif %}
     {% endfor %}
   when: len(parameters.pull) > 0
-  register: model_pull
+  as: model_pull

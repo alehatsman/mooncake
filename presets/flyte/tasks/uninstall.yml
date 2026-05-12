@@ -1,5 +1,5 @@
 - name: Uninstall flyte
-  package:
+  pkg:
     name: flyte
     state: absent
   failed_when: false
@@ -11,4 +11,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "flyte uninstalled"
+  log: "flyte uninstalled"

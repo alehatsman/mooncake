@@ -1,10 +1,10 @@
 - name: Check if mise is installed
   shell: command -v mise
-  register: mise_check
+  as: mise_check
   failed_when: false
 
 - name: Install mise via Homebrew
-  package:
+  pkg:
     name: mise
     state: present
   when: brew_available and mise_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mise installed"
+  log: "mise installed"

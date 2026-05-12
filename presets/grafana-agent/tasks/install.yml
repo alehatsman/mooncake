@@ -1,10 +1,10 @@
 - name: Check if grafana-agent is installed
   shell: command -v grafana-agent
-  register: grafana_agent_check
+  as: grafana_agent_check
   failed_when: false
 
 - name: Install grafana-agent (macOS)
-  package:
+  pkg:
     name: grafana-agent
     state: present
   when: brew_available and grafana_agent_check.rc != 0
@@ -25,4 +25,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "grafana-agent installed"
+  log: "grafana-agent installed"

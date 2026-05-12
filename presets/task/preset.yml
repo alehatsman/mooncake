@@ -10,8 +10,8 @@ parameters:
     description: Whether task should be installed or removed
 steps:
   - name: Install task
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall task
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

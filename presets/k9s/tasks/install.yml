@@ -2,7 +2,7 @@
 
 - name: Check if k9s is already installed
   shell: command -v k9s
-  register: k9s_check
+  as: k9s_check
   failed_when: false
 
 # macOS Installation
@@ -29,17 +29,15 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "k9s installed"
-
-# Check for kubectl
+  log: "k9s installed"
 - name: Check if kubectl is installed
   shell: command -v kubectl
-  register: kubectl_check
+  as: kubectl_check
   failed_when: false
 
 # Create config directory
 - name: Create k9s config directory
-  file:
+  file.write:
     path: ~/.config/k9s
     state: directory
     mode: "0755"
@@ -47,7 +45,7 @@
 
 # Create default configuration
 - name: Create k9s configuration
-  file:
+  file.write:
     path: ~/.config/k9s/config.yaml
     content: |
       k9s:
@@ -108,7 +106,7 @@
   when: parameters.create_config
 
 - name: Display k9s usage
-  print: |
+  log: |
     k9s installed successfully!
 
     {% if kubectl_check.rc != 0 %}

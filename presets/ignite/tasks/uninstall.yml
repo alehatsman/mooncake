@@ -1,5 +1,5 @@
 - name: Uninstall ignite (macOS)
-  package:
+  pkg:
     name: ignite
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "ignite uninstalled"
+  log: "ignite uninstalled"

@@ -1,11 +1,11 @@
 # Elasticsearch Uninstallation Tasks
 
 - name: Stop Elasticsearch service (Linux)
-  service:
+  os.service:
     name: elasticsearch
     state: stopped
     enabled: false
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
@@ -19,31 +19,31 @@
   when: brew_available
 
 - name: Uninstall Elasticsearch (Debian/Ubuntu)
-  package:
+  pkg:
     name: elasticsearch
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall Elasticsearch (RHEL/Fedora)
-  package:
+  pkg:
     name: elasticsearch
     state: absent
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Remove Elasticsearch repository (Debian/Ubuntu)
-  file:
+  file.write:
     path: "/etc/apt/sources.list.d/elastic-{{ parameters.version }}.list"
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Remove Elasticsearch repository (RHEL/Fedora)
-  file:
+  file.write:
     path: /etc/yum.repos.d/elasticsearch.repo
     state: absent
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Verify uninstallation (brew)
@@ -56,9 +56,9 @@
 
 - name: Verify uninstallation (package)
   shell: dpkg -l elasticsearch 2>/dev/null || rpm -q elasticsearch 2>/dev/null
-  register: pkg_check
+  as: pkg_check
   failed_when: false
   when: apt_available or dnf_available or yum_available
 
 - name: Display uninstall confirmation
-  print: "Elasticsearch uninstalled. Data directory preserved at {{ parameters.data_dir }}"
+  log: "Elasticsearch uninstalled. Data directory preserved at {{ parameters.data_dir }}"

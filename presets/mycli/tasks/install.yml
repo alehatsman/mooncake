@@ -1,10 +1,10 @@
 - name: Check if mycli is installed
   shell: command -v mycli
-  register: mycli_check
+  as: mycli_check
   failed_when: false
 
 - name: Install mycli via Homebrew
-  package:
+  pkg:
     name: mycli
     state: present
   when: brew_available and mycli_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mycli installed"
+  log: "mycli installed"

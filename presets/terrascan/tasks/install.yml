@@ -1,10 +1,10 @@
 - name: Check if terrascan is installed
   shell: command -v terrascan
-  register: terrascan_check
+  as: terrascan_check
   failed_when: false
 
 - name: Install terrascan (macOS)
-  package:
+  pkg:
     name: terrascan
     state: present
   when: brew_available and terrascan_check.rc != 0
@@ -24,4 +24,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "terrascan installed"
+  log: "terrascan installed"

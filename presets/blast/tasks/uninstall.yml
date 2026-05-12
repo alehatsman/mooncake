@@ -1,8 +1,8 @@
 - name: Uninstall blast
-  package:
+  pkg:
     name: blast
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "blast uninstalled"
+  log: "blast uninstalled"

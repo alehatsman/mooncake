@@ -1,23 +1,20 @@
 - name: Check if memcached is installed
   shell: command -v memcached
-  register: memcached_check
+  as: memcached_check
   failed_when: false
 
 - name: Install memcached via apt
   shell: apt-get install -y memcached
   when: apt_available and memcached_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install memcached via dnf
   shell: dnf install -y memcached
   when: dnf_available and memcached_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install memcached via yum
   shell: yum install -y memcached
   when: yum_available and memcached_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install memcached via Homebrew
   shell: brew install memcached
   when: brew_available and memcached_check.rc != 0

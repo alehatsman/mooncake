@@ -46,8 +46,8 @@ parameters:
     description: Compilation targets to add (wasm32-unknown-unknown, x86_64-pc-windows-gnu, etc.)
 
 steps:
-  - include: tasks/install.yml
+  - import: tasks/install.yml
     when: parameters.state == "present"
 
-  - include: tasks/uninstall.yml
+  - import: tasks/uninstall.yml
     when: parameters.state == "absent"

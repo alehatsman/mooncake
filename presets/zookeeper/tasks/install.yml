@@ -1,17 +1,16 @@
 - name: Check if zookeeper is installed
   shell: command -v zookeeper
-  register: zookeeper_check
+  as: zookeeper_check
   failed_when: false
 
 - name: Install zookeeper
-  package:
+  pkg:
     name: zookeeper
     state: present
   when: zookeeper_check.rc != 0
 
 - name: Verify installation
   shell: zookeeper --version 2>&1 || zookeeper -v 2>&1 || echo "installed"
-  register: zookeeper_version
-
+  as: zookeeper_version
 - name: Display version
-  print: "zookeeper installed"
+  log: "zookeeper installed"

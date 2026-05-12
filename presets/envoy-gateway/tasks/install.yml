@@ -1,17 +1,16 @@
 - name: Check if envoy-gateway is installed
   shell: command -v envoy-gateway
-  register: envoy_gateway_check
+  as: envoy_gateway_check
   failed_when: false
 
 - name: Install envoy-gateway
-  package:
+  pkg:
     name: envoy-gateway
     state: present
   when: envoy_gateway_check.rc != 0
 
 - name: Verify installation
   shell: envoy-gateway --version 2>&1 || envoy-gateway -v 2>&1 || echo "installed"
-  register: envoy_gateway_version
-
+  as: envoy_gateway_version
 - name: Display version
-  print: "envoy-gateway installed"
+  log: "envoy-gateway installed"

@@ -1,10 +1,10 @@
 - name: Check if rye is installed
   shell: command -v rye
-  register: rye_check
+  as: rye_check
   failed_when: false
 
 - name: Install rye (macOS)
-  package:
+  pkg:
     name: rye
     state: present
   when: brew_available and rye_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "rye installed"
+  log: "rye installed"

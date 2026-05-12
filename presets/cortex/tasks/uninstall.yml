@@ -1,8 +1,8 @@
 - name: Uninstall cortex
-  package:
+  pkg:
     name: cortex
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "cortex uninstalled"
+  log: "cortex uninstalled"

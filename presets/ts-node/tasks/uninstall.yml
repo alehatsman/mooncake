@@ -1,5 +1,5 @@
 - name: Uninstall ts-node (macOS)
-  package:
+  pkg:
     name: ts-node
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "ts-node uninstalled"
+  log: "ts-node uninstalled"

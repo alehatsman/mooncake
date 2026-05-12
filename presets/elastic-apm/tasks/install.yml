@@ -1,17 +1,16 @@
 - name: Check if elastic-apm-server is installed
   shell: command -v elastic-apm-server
-  register: elastic_apm_check
+  as: elastic_apm_check
   failed_when: false
 
 - name: Install elastic-apm
-  package:
+  pkg:
     name: elastic-apm
     state: present
   when: elastic_apm_check.rc != 0
 
 - name: Verify installation
   shell: elastic-apm-server --version 2>&1 || elastic-apm-server -v 2>&1 || echo "installed"
-  register: elastic_apm_version
-
+  as: elastic_apm_version
 - name: Display version
-  print: "elastic-apm installed"
+  log: "elastic-apm installed"

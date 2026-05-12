@@ -3,5 +3,5 @@ description: Fast static site generator written in Go for building websites
 version: 1.0.0
 parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - {name: Install, import: tasks/install.yml, when: 'parameters.state == "present"'}
+  - {name: Uninstall, import: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

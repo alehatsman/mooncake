@@ -1,10 +1,10 @@
 - name: Check if garnet is installed
   shell: command -v garnet
-  register: garnet_check
+  as: garnet_check
   failed_when: false
 
 - name: Install garnet (macOS)
-  package:
+  pkg:
     name: garnet
     state: present
   when: brew_available and garnet_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "garnet installed"
+  log: "garnet installed"

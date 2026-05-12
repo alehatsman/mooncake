@@ -34,13 +34,13 @@ parameters:
 
 steps:
   - name: Install MLflow
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure service
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present" and parameters.service
 
   - name: Uninstall MLflow
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

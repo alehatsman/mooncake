@@ -1,17 +1,16 @@
 - name: Check if arangodb is installed
   shell: command -v arangodb
-  register: arangodb_check
+  as: arangodb_check
   failed_when: false
 
 - name: Install arangodb
-  package:
+  pkg:
     name: arangodb
     state: present
   when: arangodb_check.rc != 0
 
 - name: Verify installation
   shell: arangodb --version 2>&1 || arangodb -v 2>&1 || echo "installed"
-  register: arangodb_version
-
+  as: arangodb_version
 - name: Display version
-  print: "arangodb installed"
+  log: "arangodb installed"

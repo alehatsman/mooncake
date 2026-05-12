@@ -1,10 +1,10 @@
 - name: Check if argocd is installed
   shell: command -v argocd
-  register: argocd_check
+  as: argocd_check
   failed_when: false
 
 - name: Install argocd via Homebrew
-  package:
+  pkg:
     name: argocd
     state: present
   when: brew_available and argocd_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "argocd installed"
+  log: "argocd installed"

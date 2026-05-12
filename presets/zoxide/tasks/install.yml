@@ -1,10 +1,10 @@
 - name: Check if zoxide is installed
   shell: command -v zoxide
-  register: zoxide_check
+  as: zoxide_check
   failed_when: false
 
 - name: Install zoxide via Homebrew
-  package:
+  pkg:
     name: zoxide
     state: present
   when: brew_available and zoxide_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "zoxide installed"
+  log: "zoxide installed"

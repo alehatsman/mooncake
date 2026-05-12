@@ -2,7 +2,7 @@
 
 # Create kubeconfig directory
 - name: Create ~/.kube directory
-  file:
+  file.write:
     path: "{{ lookup_env('HOME') }}/.kube"
     state: directory
     mode: "0700"
@@ -10,12 +10,12 @@
 
 - name: Check if kubeconfig exists
   shell: test -f {{ lookup_env('HOME') }}/.kube/config
-  register: kubeconfig_check
+  as: kubeconfig_check
   failed_when: false
   when: parameters.setup_kubeconfig
 
 - name: Create minimal kubeconfig
-  file:
+  file.write:
     path: "{{ lookup_env('HOME') }}/.kube/config"
     content: |
       apiVersion: v1
@@ -52,7 +52,7 @@
 # Install krew
 - name: Check if krew is installed
   shell: kubectl krew version
-  register: krew_check
+  as: krew_check
   failed_when: false
   when: parameters.install_krew
 
@@ -92,7 +92,7 @@
   when: parameters.install_krew and parameters.krew_plugins | length > 0
 
 - name: Display configuration summary
-  print: |
+  log: |
     kubectl configured successfully!
 
     {% if parameters.setup_kubeconfig %}

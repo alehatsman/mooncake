@@ -1,19 +1,19 @@
 - name: Check if ttyd is installed
   shell: command -v ttyd
-  register: ttyd_check
+  as: ttyd_check
   failed_when: false
 
 - name: Install ttyd (macOS)
-  package:
+  pkg:
     name: ttyd
     state: present
   when: brew_available and ttyd_check.rc != 0
 
 - name: Install ttyd (Linux)
-  package:
+  pkg:
     name: ttyd
     state: present
-  become: true
+  as_user: root
   when: apt_available and ttyd_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "ttyd installed"
+  log: "ttyd installed"

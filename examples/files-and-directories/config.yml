@@ -4,28 +4,28 @@
     app_name: MyApplication
 
 - name: Create application directory
-  file:
+  file.write:
     path: "{{app_dir}}"
     state: directory
     mode: "0755"
 
 - name: Create config directory
-  file:
+  file.write:
     path: "{{app_dir}}/config"
     state: directory
 
 - name: Create a simple file with content
-  file:
+  file.write:
     path: "{{app_dir}}/README.txt"
     state: file
     content: |
       Welcome to {{app_name}}!
-      
+
       This is a simple application.
     mode: "0644"
 
 - name: Create an executable script
-  file:
+  file.write:
     path: "{{app_dir}}/run.sh"
     state: file
     content: |
@@ -36,10 +36,9 @@
 - name: Test executable script
   shell:
     cmd: "{{app_dir}}/run.sh"
-  register: script_output
-
+  as: script_output
 - name: Print summary
-  print:
+  log:
     msg: |
       Files and directories example complete!
       Created: {{app_dir}}

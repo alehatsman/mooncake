@@ -1,19 +1,19 @@
 - name: Check if make is installed
   shell: command -v make
-  register: make_check
+  as: make_check
   failed_when: false
 
 - name: Install make (macOS)
-  package:
+  pkg:
     name: make
     state: present
   when: brew_available and make_check.rc != 0
 
 - name: Install make (Linux)
-  package:
+  pkg:
     name: build-essential
     state: present
-  become: true
+  as_user: root
   when: apt_available and make_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "make installed"
+  log: "make installed"

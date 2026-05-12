@@ -1,8 +1,8 @@
 - name: Uninstall sublime
-  package:
+  pkg:
     name: sublime
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "sublime uninstalled"
+  log: "sublime uninstalled"

@@ -12,7 +12,7 @@
 # =============================================================================
 
 - name: "Setup: Create output directory"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples
     state: directory
     mode: "0755"
@@ -28,7 +28,7 @@
     environment: "production"
 
 - name: "Example 1: Render simple template"
-  template:
+  file.template:
     src: ./templates/simple-config.yml.j2
     dest: /tmp/mooncake-template-examples/config.yml
     mode: "0644"
@@ -43,7 +43,7 @@
 # =============================================================================
 
 - name: "Example 3: Render with additional vars"
-  template:
+  file.template:
     src: ./templates/simple-config.yml.j2
     dest: /tmp/mooncake-template-examples/config-dev.yml
     mode: "0644"
@@ -53,7 +53,7 @@
   tags: [vars]
 
 - name: "Example 4: Render nginx config"
-  template:
+  file.template:
     src: ./templates/nginx.conf.j2
     dest: /tmp/mooncake-template-examples/nginx.conf
     mode: "0644"
@@ -66,7 +66,7 @@
   tags: [vars]
 
 - name: "Example 5: Render nginx with SSL"
-  template:
+  file.template:
     src: ./templates/nginx.conf.j2
     dest: /tmp/mooncake-template-examples/nginx-ssl.conf
     mode: "0644"
@@ -85,16 +85,16 @@
 # =============================================================================
 
 - name: "Example 6: Render executable script"
-  template:
+  file.template:
     src: ./templates/script.sh.j2
     dest: /tmp/mooncake-template-examples/deploy.sh
     mode: "0755"
     vars:
       deploy_commands:
-        - "git pull origin main"
-        - "npm install"
-        - "npm run build"
-        - "systemctl restart myapp"
+      - "git pull origin main"
+      - "npm install"
+      - "npm run build"
+      - "systemctl restart myapp"
   tags: [scripts]
 
 - name: "Example 7: Execute generated script"
@@ -106,7 +106,7 @@
 # =============================================================================
 
 - name: "Example 8: Create inline template with facts"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/system-info.txt
     state: file
     content: |
@@ -129,18 +129,18 @@
 
 - vars:
     servers:
-      - name: web-01
-        ip: 192.168.1.10
-        port: 8080
-      - name: web-02
-        ip: 192.168.1.11
-        port: 8080
-      - name: api-01
-        ip: 192.168.1.20
-        port: 3000
+    - name: web-01
+      ip: 192.168.1.10
+      port: 8080
+    - name: web-02
+      ip: 192.168.1.11
+      port: 8080
+    - name: api-01
+      ip: 192.168.1.20
+      port: 3000
 
 - name: "Example 10: Create hosts file template"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/hosts
     state: file
     content: |
@@ -163,7 +163,7 @@
 # =============================================================================
 
 - name: "Example 12: Template with OS-specific content"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/os-specific.txt
     state: file
     content: |
@@ -190,7 +190,7 @@
 # =============================================================================
 
 - name: "Example 14: Render systemd service file"
-  template:
+  file.template:
     src: ./templates/systemd-service.j2
     dest: /tmp/mooncake-template-examples/myapp.service
     mode: "0644"
@@ -219,18 +219,18 @@
 
 - vars:
     environments:
-      - name: development
-        debug: true
-        port: 3000
-      - name: staging
-        debug: false
-        port: 8080
-      - name: production
-        debug: false
-        port: 80
+    - name: development
+      debug: true
+      port: 3000
+    - name: staging
+      debug: false
+      port: 8080
+    - name: production
+      debug: false
+      port: 80
 
 - name: "Example 16: Generate config for each environment"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/{{ item.name }}.conf
     state: file
     content: |
@@ -240,7 +240,7 @@
       port={{ item.port }}
       app_name={{ app_name }}
     mode: "0644"
-  with_items: "{{ environments }}"
+  for_each: "{{ environments }}"
   tags: [loops]
 
 - name: "Example 17: List generated configs"
@@ -252,7 +252,7 @@
 # =============================================================================
 
 - name: "Example 18: Template with string filters"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/filters.txt
     state: file
     content: |
@@ -285,13 +285,13 @@
       host: "localhost"
       port: 6379
     features:
-      - authentication
-      - api
-      - websockets
-      - admin
+    - authentication
+    - api
+    - websockets
+    - admin
 
 - name: "Example 20: Complete application config"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/app-config.yml
     state: file
     content: |
@@ -334,7 +334,7 @@
 # =============================================================================
 
 - name: "Example 22: Generate docker-compose.yml"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/docker-compose.yml
     state: file
     content: |
@@ -378,7 +378,7 @@
 # =============================================================================
 
 - name: "Example 24: Render read-only config"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/readonly-config.yml
     state: file
     content: |
@@ -389,7 +389,7 @@
   tags: [permissions]
 
 - name: "Example 25: Render private config"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples/private-config.yml
     state: file
     content: |
@@ -420,14 +420,14 @@
 # =============================================================================
 
 - name: "Cleanup: Remove example files"
-  file:
+  file.write:
     path: /tmp/mooncake-template-examples
     state: absent
     force: true
   tags: [cleanup]
 
 - name: "Summary"
-  print: |
+  log: |2
 
     Template action examples completed!
     Explored template rendering including:
@@ -439,5 +439,4 @@
       • System service files
       • Docker configs
       • Permission management
-
   tags: [always]

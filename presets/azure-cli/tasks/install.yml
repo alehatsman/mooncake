@@ -1,19 +1,19 @@
 - name: Check if az is installed
   shell: command -v az
-  register: az_check
+  as: az_check
   failed_when: false
 
 - name: Install azure-cli via Homebrew
-  package:
+  pkg:
     name: azure-cli
     state: present
   when: brew_available and az_check.rc != 0
 
 - name: Install azure-cli via apt
-  package:
+  pkg:
     name: azure-cli
     state: present
-  become: true
+  as_user: root
   when: apt_available and az_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "azure-cli installed"
+  log: "azure-cli installed"

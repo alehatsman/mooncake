@@ -12,9 +12,9 @@ parameters:
 
 steps:
   - name: Install Zinc
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall Zinc
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

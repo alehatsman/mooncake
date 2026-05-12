@@ -1,17 +1,16 @@
 - name: Check if argo-events is installed
   shell: command -v argo-events
-  register: argo_events_check
+  as: argo_events_check
   failed_when: false
 
 - name: Install argo-events
-  package:
+  pkg:
     name: argo-events
     state: present
   when: argo_events_check.rc != 0
 
 - name: Verify installation
   shell: argo-events --version 2>&1 || argo-events -v 2>&1 || echo "installed"
-  register: argo_events_version
-
+  as: argo_events_version
 - name: Display version
-  print: "argo-events installed"
+  log: "argo-events installed"

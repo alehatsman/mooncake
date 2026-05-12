@@ -1,8 +1,8 @@
 - name: Uninstall temporal
-  package:
+  pkg:
     name: temporal
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "temporal uninstalled"
+  log: "temporal uninstalled"

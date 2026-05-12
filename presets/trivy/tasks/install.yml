@@ -1,10 +1,10 @@
 - name: Check if trivy is installed
   shell: command -v trivy
-  register: trivy_check
+  as: trivy_check
   failed_when: false
 
 - name: Install trivy (macOS)
-  package:
+  pkg:
     name: trivy
     state: present
   when: brew_available and trivy_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "trivy installed"
+  log: "trivy installed"

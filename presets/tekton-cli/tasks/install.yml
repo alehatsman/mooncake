@@ -1,10 +1,10 @@
 - name: Check if tkn is installed
   shell: command -v tkn
-  register: tekton_cli_check
+  as: tekton_cli_check
   failed_when: false
 
 - name: Install tekton-cli (macOS)
-  package:
+  pkg:
     name: tekton-cli
     state: present
   when: brew_available and tekton_cli_check.rc != 0
@@ -24,4 +24,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "tekton-cli installed"
+  log: "tekton-cli installed"

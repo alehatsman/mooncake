@@ -1,17 +1,16 @@
 - name: Check if apisix is installed
   shell: command -v apisix
-  register: apisix_check
+  as: apisix_check
   failed_when: false
 
 - name: Install apisix
-  package:
+  pkg:
     name: apisix
     state: present
   when: apisix_check.rc != 0
 
 - name: Verify installation
   shell: apisix --version 2>&1 || apisix -v 2>&1 || echo "installed"
-  register: apisix_version
-
+  as: apisix_version
 - name: Display version
-  print: "apisix installed"
+  log: "apisix installed"

@@ -1,17 +1,16 @@
 - name: Check if aerospike is installed
   shell: command -v aerospike
-  register: aerospike_check
+  as: aerospike_check
   failed_when: false
 
 - name: Install aerospike
-  package:
+  pkg:
     name: aerospike
     state: present
   when: aerospike_check.rc != 0
 
 - name: Verify installation
   shell: aerospike --version 2>&1 || aerospike -v 2>&1 || echo "installed"
-  register: aerospike_version
-
+  as: aerospike_version
 - name: Display version
-  print: "aerospike installed"
+  log: "aerospike installed"

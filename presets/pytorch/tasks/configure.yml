@@ -3,18 +3,18 @@
 # Check GPU availability
 - name: Check PyTorch CUDA availability
   shell: python3 -c "import torch; print('CUDA available:', torch.cuda.is_available())"
-  register: cuda_available
+  as: cuda_available
   failed_when: false
 
 - name: Check PyTorch MPS availability
   shell: python3 -c "import torch; print('MPS available:', torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False)"
-  register: mps_available
+  as: mps_available
   when: brew_available
   failed_when: false
 
 # Display configuration
 - name: Display PyTorch configuration
-  print: |
+  log: |
     OK PyTorch installed and configured
 
     Installation:

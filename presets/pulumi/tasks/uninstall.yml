@@ -1,5 +1,5 @@
 - name: Uninstall pulumi (macOS)
-  package:
+  pkg:
     name: pulumi
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "pulumi uninstalled"
+  log: "pulumi uninstalled"

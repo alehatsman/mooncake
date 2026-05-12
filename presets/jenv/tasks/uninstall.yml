@@ -1,5 +1,5 @@
 - name: Uninstall jenv (macOS)
-  package:
+  pkg:
     name: jenv
     state: absent
   when: brew_available
@@ -19,4 +19,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "jenv uninstalled"
+  log: "jenv uninstalled"

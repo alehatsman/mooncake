@@ -1,12 +1,11 @@
 - name: Uninstall checkov
-  package:
+  pkg:
     name: checkov
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "checkov uninstalled"
-
+  log: "checkov uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

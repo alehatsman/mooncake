@@ -1,10 +1,10 @@
 - name: Check if micro is installed
   shell: command -v micro
-  register: micro_check
+  as: micro_check
   failed_when: false
 
 - name: Install micro (macOS)
-  package:
+  pkg:
     name: micro
     state: present
   when: brew_available and micro_check.rc != 0
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "micro installed"
+  log: "micro installed"

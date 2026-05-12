@@ -1,10 +1,10 @@
 - name: Check if hexo is installed
   shell: command -v hexo
-  register: hexo_check
+  as: hexo_check
   failed_when: false
 
 - name: Install hexo (macOS)
-  package:
+  pkg:
     name: hexo
     state: present
   when: brew_available and hexo_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "hexo installed"
+  log: "hexo installed"

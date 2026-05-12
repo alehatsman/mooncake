@@ -1,5 +1,5 @@
 - name: Uninstall goreleaser (macOS)
-  package:
+  pkg:
     name: goreleaser
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "goreleaser uninstalled"
+  log: "goreleaser uninstalled"

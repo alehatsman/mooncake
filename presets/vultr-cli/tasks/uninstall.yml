@@ -1,15 +1,15 @@
 - name: Uninstall vultr-cli (macOS)
-  package:
+  pkg:
     name: vultr-cli
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall vultr-cli (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/vultr
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "vultr-cli uninstalled"
+  log: "vultr-cli uninstalled"

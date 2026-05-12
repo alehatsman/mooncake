@@ -1,7 +1,6 @@
 # macOS-specific tasks
 - name: "macOS: Check Homebrew"
   shell: which brew || echo "not installed"
-  register: brew_check
-
+  as: brew_check
 - name: "macOS: Display Homebrew status"
-  print: "Homebrew: {{ brew_check.stdout }}"
+  log: "Homebrew: {{ brew_check.stdout }}"

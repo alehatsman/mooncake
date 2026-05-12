@@ -1,18 +1,17 @@
 - name: Check if lite-xl is installed
   shell: command -v lite-xl
-  register: lite_xl_check
+  as: lite_xl_check
   failed_when: false
 
 - name: Install lite-xl
-  package:
+  pkg:
     name: lite-xl
     state: present
   when: lite_xl_check.rc != 0
 
 - name: Verify installation
   shell: lite-xl --version 2>&1 || lite-xl -v 2>&1 || echo "installed"
-  register: lite_xl_version
-
+  as: lite_xl_version
 - name: Assert lite-xl is installed
   assert:
     command:
@@ -20,4 +19,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "lite-xl installed"
+  log: "lite-xl installed"

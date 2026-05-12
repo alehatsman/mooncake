@@ -10,8 +10,8 @@ parameters:
     description: Install or remove mtr
 steps:
   - name: Install mtr
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall mtr
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

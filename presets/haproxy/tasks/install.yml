@@ -1,19 +1,19 @@
 - name: Check if haproxy is installed
   shell: command -v haproxy
-  register: haproxy_check
+  as: haproxy_check
   failed_when: false
 
 - name: Install haproxy (macOS)
-  package:
+  pkg:
     name: haproxy
     state: present
   when: brew_available and haproxy_check.rc != 0
 
 - name: Install haproxy (Linux)
-  package:
+  pkg:
     name: haproxy
     state: present
-  become: true
+  as_user: root
   when: apt_available and haproxy_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "haproxy installed"
+  log: "haproxy installed"

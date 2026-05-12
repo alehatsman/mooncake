@@ -1,6 +1,6 @@
 - name: Check if cdktf is installed
   shell: command -v cdktf
-  register: cdktf_check
+  as: cdktf_check
   failed_when: false
 
 - name: Install cdktf via npm
@@ -14,4 +14,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "cdktf installed"
+  log: "cdktf installed"

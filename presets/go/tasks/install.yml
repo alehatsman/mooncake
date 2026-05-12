@@ -2,36 +2,36 @@
 
 - name: Check if Go is already installed
   shell: command -v go
-  register: go_check
+  as: go_check
   failed_when: false
 
 # macOS Installation
 - name: Install Go via Homebrew (macOS)
-  package:
+  pkg:
     name: go
     state: present
   when: brew_available and go_check.rc != 0
 
 # Linux - via package manager
 - name: Install Go (Debian/Ubuntu)
-  package:
+  pkg:
     name: golang-go
     state: present
-  become: true
+  as_user: root
   when: apt_available and go_check.rc != 0
 
 - name: Install Go (Fedora/RHEL)
-  package:
+  pkg:
     name: golang
     state: present
-  become: true
+  as_user: root
   when: dnf_available and go_check.rc != 0
 
 - name: Install Go (Arch)
-  package:
+  pkg:
     name: go
     state: present
-  become: true
+  as_user: root
   when: pacman_available and go_check.rc != 0
 
 # Verify installation
@@ -42,4 +42,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "Go installed"
+  log: "Go installed"

@@ -38,9 +38,9 @@ parameters:
 
 steps:
   - name: Install JanusGraph
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall JanusGraph
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

@@ -1,5 +1,5 @@
 - name: Uninstall magic-wormhole via Homebrew
-  package:
+  pkg:
     name: magic-wormhole
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "magic-wormhole uninstalled"
+  log: "magic-wormhole uninstalled"

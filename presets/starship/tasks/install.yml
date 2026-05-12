@@ -2,7 +2,7 @@
 
 - name: Check if Starship is already installed
   shell: command -v starship
-  register: starship_check
+  as: starship_check
   failed_when: false
 
 # macOS Installation
@@ -18,8 +18,7 @@
 # Verify installation
 - name: Verify Starship installation
   shell: starship --version
-  register: starship_version
-
+  as: starship_version
 - name: Verify installation with assert
   assert:
     command:
@@ -27,11 +26,9 @@
       exit_code: 0
 
 - name: Display Starship version
-  print: "Starship installed: {{ starship_version.stdout }}"
-
-# Create config directory
+  log: "Starship installed: {{ starship_version.stdout }}"
 - name: Create Starship config directory
-  file:
+  file.write:
     path: ~/.config
     state: directory
     mode: "0755"
@@ -69,7 +66,7 @@
   failed_when: false
 
 - name: Display Starship usage
-  print: |
+  log: |
     Starship installed successfully!
 
     {% if parameters.configure_shell %}

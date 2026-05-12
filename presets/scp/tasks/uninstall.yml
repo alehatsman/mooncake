@@ -1,8 +1,8 @@
 - name: Uninstall scp
-  package:
+  pkg:
     name: scp
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "scp uninstalled"
+  log: "scp uninstalled"

@@ -1,15 +1,15 @@
 - name: Uninstall chruby via Homebrew
-  package:
+  pkg:
     name: chruby
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall chruby via apt
-  package:
+  pkg:
     name: chruby
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exists: false
 
 - name: Display confirmation
-  print: "chruby uninstalled"
+  log: "chruby uninstalled"

@@ -1,19 +1,19 @@
 - name: Check if rclone is installed
   shell: command -v rclone
-  register: rclone_check
+  as: rclone_check
   failed_when: false
 
 - name: Install rclone (macOS)
-  package:
+  pkg:
     name: rclone
     state: present
   when: brew_available and rclone_check.rc != 0
 
 - name: Install rclone (Linux)
-  package:
+  pkg:
     name: rclone
     state: present
-  become: true
+  as_user: root
   when: apt_available and rclone_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "rclone installed"
+  log: "rclone installed"

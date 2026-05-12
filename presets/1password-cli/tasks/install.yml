@@ -1,6 +1,6 @@
 - name: Check if op is installed
   shell: command -v op
-  register: op_check
+  as: op_check
   failed_when: false
 
 - name: Install op via Homebrew
@@ -49,7 +49,6 @@
 
 - name: Display version
   shell: op --version 2>&1 || op -v 2>&1
-  register: op_version
-
+  as: op_version
 - name: Display version
-  print: "op installed: {{ op_version.stdout }}"
+  log: "op installed: {{ op_version.stdout }}"

@@ -1,8 +1,8 @@
 - name: Uninstall couchbase
-  package:
+  pkg:
     name: couchbase
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "couchbase uninstalled"
+  log: "couchbase uninstalled"

@@ -1,6 +1,6 @@
 - name: Check if uptrace is installed
   shell: command -v uptrace
-  register: uptrace_check
+  as: uptrace_check
   failed_when: false
 
 - name: Install uptrace (macOS)
@@ -28,4 +28,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "uptrace installed"
+  log: "uptrace installed"

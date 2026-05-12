@@ -10,8 +10,8 @@ parameters:
     description: Install or remove mosquitto
 steps:
   - name: Install mosquitto
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall mosquitto
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

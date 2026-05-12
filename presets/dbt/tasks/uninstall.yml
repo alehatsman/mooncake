@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "dbt uninstalled"
+  log: "dbt uninstalled"

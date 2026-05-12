@@ -1,19 +1,19 @@
 # Consul Uninstallation Tasks
 
 - name: Stop Consul service (Linux)
-  service:
+  os.service:
     name: consul
     state: stopped
     enabled: false
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Remove Consul systemd service
-  file:
+  file.write:
     path: /etc/systemd/system/consul.service
     state: absent
-  become: true
+  as_user: root
   when: linux
 
 - name: Reload systemd daemon
@@ -26,17 +26,17 @@
   failed_when: false
 
 - name: Remove Consul binary (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/consul
     state: absent
-  become: true
+  as_user: root
   when: linux
 
 - name: Remove Consul configuration
-  file:
+  file.write:
     path: /etc/consul.d
     state: absent
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Verify uninstallation
@@ -46,7 +46,7 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: |
+  log: |
     Consul uninstalled.
 
     Note: Data directory not removed for safety.

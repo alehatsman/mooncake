@@ -1,5 +1,5 @@
 - name: Uninstall opensearch via Homebrew (macOS)
-  package:
+  pkg:
     name: opensearch
     state: absent
   when: (parameters.state == "absent") and (os == "darwin")
@@ -9,12 +9,12 @@
   shell: |
     sudo rm -rf /usr/share/opensearch
     sudo rm -f /usr/local/bin/opensearch
-  become: true
+  as_user: root
   when: (parameters.state == "absent") and (os == "linux")
   failed_when: false
 
 - name: Display confirmation
-  print: "opensearch uninstalled"
+  log: "opensearch uninstalled"
   when: parameters.state == "absent"
 
 - name: Assert tool is removed

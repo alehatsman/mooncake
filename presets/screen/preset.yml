@@ -9,5 +9,5 @@ parameters:
     enum: [present, absent]
     description: Whether screen should be installed or removed
 steps:
-  - {name: Install, include: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, include: tasks/uninstall.yml, when: 'parameters.state == "absent"'}
+  - {name: Install, import: tasks/install.yml, when: 'parameters.state == "present"'}
+  - {name: Uninstall, import: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

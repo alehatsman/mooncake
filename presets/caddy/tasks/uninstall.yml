@@ -1,10 +1,10 @@
 # Caddy Uninstallation Tasks
 
 - name: Stop Caddy service (Linux)
-  service:
+  os.service:
     name: caddy
     state: stopped
-  become: true
+  as_user: root
   failed_when: false
   when: linux
 
@@ -15,24 +15,24 @@
 
 # macOS Uninstallation
 - name: Uninstall Caddy via Homebrew (macOS)
-  package:
+  pkg:
     name: caddy
     state: absent
   when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Caddy (Debian/Ubuntu)
-  package:
+  pkg:
     name: caddy
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall Caddy (Fedora/RHEL)
-  package:
+  pkg:
     name: caddy
     state: absent
-  become: true
+  as_user: root
   when: dnf_available
 
 - name: Verify uninstallation with assert
@@ -42,4 +42,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "caddy uninstalled"
+  log: "caddy uninstalled"

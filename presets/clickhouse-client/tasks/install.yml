@@ -1,19 +1,19 @@
 - name: Check if clickhouse-client is installed
   shell: command -v clickhouse-client
-  register: clickhouse_client_check
+  as: clickhouse_client_check
   failed_when: false
 
 - name: Install clickhouse-client via Homebrew
-  package:
+  pkg:
     name: clickhouse
     state: present
   when: brew_available and clickhouse_client_check.rc != 0
 
 - name: Install clickhouse-client (Linux)
-  package:
+  pkg:
     name: clickhouse-client
     state: present
-  become: true
+  as_user: root
   when: apt_available and clickhouse_client_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "clickhouse-client installed"
+  log: "clickhouse-client installed"

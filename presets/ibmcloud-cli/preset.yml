@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install ibmcloud-cli
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall ibmcloud-cli
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

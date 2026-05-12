@@ -1,5 +1,5 @@
 - name: Uninstall gitlab-runner (macOS)
-  package:
+  pkg:
     name: gitlab-runner
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "gitlab-runner uninstalled"
+  log: "gitlab-runner uninstalled"

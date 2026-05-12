@@ -1,19 +1,19 @@
 - name: Uninstall orientdb via Homebrew (macOS)
-  package:
+  pkg:
     name: orientdb
     state: absent
   when: (parameters.state == "absent") and (os == "darwin")
   failed_when: false
 
 - name: Remove orientdb directory (Linux)
-  file:
+  file.write:
     path: ~/orientdb
     state: absent
   when: (parameters.state == "absent") and (os == "linux")
   failed_when: false
 
 - name: Display confirmation
-  print: "orientdb uninstalled"
+  log: "orientdb uninstalled"
   when: parameters.state == "absent"
 
 - name: Assert tool is removed (Linux)

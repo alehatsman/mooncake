@@ -1,5 +1,5 @@
 - name: Uninstall watchexec (macOS)
-  package:
+  pkg:
     name: watchexec
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "watchexec uninstalled"
+  log: "watchexec uninstalled"

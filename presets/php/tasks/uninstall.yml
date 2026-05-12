@@ -5,24 +5,24 @@
   when: brew_available
 
 - name: Uninstall PHP (Debian/Ubuntu)
-  package:
+  pkg:
     name: "php{{ parameters.version }}"
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall PHP (RHEL/Fedora)
-  package:
+  pkg:
     name: php
     state: absent
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Remove Composer
-  file:
+  file.write:
     path: /usr/local/bin/composer
     state: absent
-  become: true
+  as_user: root
   when: parameters.install_composer
 
 - name: Verify uninstallation with assert
@@ -32,4 +32,4 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: "PHP uninstalled."
+  log: "PHP uninstalled."

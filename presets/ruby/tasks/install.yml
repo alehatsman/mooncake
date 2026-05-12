@@ -2,45 +2,45 @@
 
 # Install build dependencies for Ruby compilation
 - name: Install Ruby build dependencies (macOS)
-  package:
+  pkg:
     names:
-      - openssl
-      - readline
-      - libyaml
-      - gmp
+    - openssl
+    - readline
+    - libyaml
+    - gmp
     state: present
   when: brew_available
 
 - name: Install Ruby build dependencies (Debian/Ubuntu)
-  package:
+  pkg:
     names:
-      - build-essential
-      - libssl-dev
-      - libreadline-dev
-      - zlib1g-dev
-      - libyaml-dev
-      - libffi-dev
+    - build-essential
+    - libssl-dev
+    - libreadline-dev
+    - zlib1g-dev
+    - libyaml-dev
+    - libffi-dev
     state: present
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Install Ruby build dependencies (RHEL/Fedora)
-  package:
+  pkg:
     names:
-      - gcc
-      - openssl-devel
-      - readline-devel
-      - zlib-devel
-      - libyaml-devel
-      - libffi-devel
+    - gcc
+    - openssl-devel
+    - readline-devel
+    - zlib-devel
+    - libyaml-devel
+    - libffi-devel
     state: present
-  become: true
+  as_user: root
   when: (dnf_available | default(false)) or (yum_available | default(false))
 
 # Check if rbenv is installed
 - name: Check if rbenv is installed
   shell: command -v rbenv || test -f "$HOME/.rbenv/bin/rbenv"
-  register: rbenv_installed
+  as: rbenv_installed
   failed_when: false
 
 # Install rbenv
@@ -90,7 +90,7 @@
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init -)"
     rbenv install -s {{ item }}
-  with_items: parameters.additional_versions
+  for_each: parameters.additional_versions
   when: parameters.additional_versions | length > 0
 
 # Install Bundler
@@ -107,15 +107,13 @@
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init -)"
     ruby --version
-  register: ruby_version
-
+  as: ruby_version
 - name: List installed Ruby versions
   shell: |
     export PATH="$HOME/.rbenv/bin:$PATH"
     eval "$(rbenv init -)"
     rbenv versions
-  register: rbenv_versions
-
+  as: rbenv_versions
 - name: Verify installation with assert
   assert:
     command:
@@ -123,7 +121,7 @@
       exit_code: 0
 
 - name: Print installation summary
-  print: |
+  log: |
     Ruby installed successfully via rbenv!
 
     Current Ruby: {{ ruby_version.stdout }}

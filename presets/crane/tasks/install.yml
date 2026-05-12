@@ -1,21 +1,19 @@
 - name: Check if crane is installed
   shell: command -v crane
-  register: crane_check
+  as: crane_check
   failed_when: false
 
 - name: Install crane
-  package:
+  pkg:
     name: crane
     state: present
   when: crane_check.rc != 0
 
 - name: Verify installation
   shell: crane --version 2>&1 || echo "installed"
-  register: crane_version
-
+  as: crane_version
 - name: Display version
-  print: "crane installed: {{ crane_version.stdout }}"
-
+  log: "crane installed: {{ crane_version.stdout }}"
 - name: Verify installation with assert
   assert:
     command:

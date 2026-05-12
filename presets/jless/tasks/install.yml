@@ -1,10 +1,10 @@
 - name: Check if jless is installed
   shell: command -v jless
-  register: jless_check
+  as: jless_check
   failed_when: false
 
 - name: Install jless (macOS)
-  package:
+  pkg:
     name: jless
     state: present
   when: brew_available and jless_check.rc != 0
@@ -25,4 +25,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "jless installed"
+  log: "jless installed"

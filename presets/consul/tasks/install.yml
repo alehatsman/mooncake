@@ -2,7 +2,7 @@
 
 - name: Check if Consul is already installed
   shell: command -v consul
-  register: consul_check
+  as: consul_check
   failed_when: false
 
 # macOS Installation
@@ -34,32 +34,29 @@
 
 - name: Get Consul version
   shell: consul version
-  register: consul_version
-
+  as: consul_version
 - name: Display Consul version
-  print: "Consul installed: {{ consul_version.stdout }}"
-
-# Create data directory
+  log: "Consul installed: {{ consul_version.stdout }}"
 - name: Create Consul data directory
-  file:
+  file.write:
     path: "{{ parameters.data_dir }}"
     state: directory
     mode: "0755"
-  become: true
+  as_user: root
   when: parameters.mode != "dev"
 
 # Create configuration directory
 - name: Create Consul config directory
-  file:
+  file.write:
     path: /etc/consul.d
     state: directory
     mode: "0755"
-  become: true
+  as_user: root
   when: parameters.mode != "dev"
 
 # Server mode configuration
 - name: Create Consul server configuration
-  file:
+  file.write:
     path: /etc/consul.d/consul.hcl
     content: |
       datacenter = "{{ parameters.datacenter }}"
@@ -87,12 +84,12 @@
         raft_multiplier = 1
       }
     mode: "0644"
-  become: true
+  as_user: root
   when: parameters.mode == "server"
 
 # Client mode configuration
 - name: Create Consul client configuration
-  file:
+  file.write:
     path: /etc/consul.d/consul.hcl
     content: |
       datacenter = "{{ parameters.datacenter }}"
@@ -108,12 +105,12 @@
         dns = 8600
       }
     mode: "0644"
-  become: true
+  as_user: root
   when: parameters.mode == "client"
 
 # Create systemd service (Linux)
 - name: Create Consul systemd service
-  file:
+  file.write:
     path: /etc/systemd/system/consul.service
     content: |
       [Unit]
@@ -137,7 +134,7 @@
       [Install]
       WantedBy=multi-user.target
     mode: "0644"
-  become: true
+  as_user: root
   when: (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available) and parameters.mode != "dev"
 
 # Create consul user (Linux)
@@ -156,16 +153,16 @@
 
 # Start service
 - name: Start Consul service
-  service:
+  os.service:
     name: consul
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: parameters.start_service and parameters.mode != "dev" and (apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available)
 
 # Dev mode instructions
 - name: Display dev mode instructions
-  print: |
+  log: |
     Consul installed successfully!
 
     Dev Mode (single-node, in-memory):
@@ -186,7 +183,7 @@
 
 # Production mode instructions
 - name: Display production mode instructions
-  print: |
+  log: |
     Consul installed successfully!
 
     Configuration: /etc/consul.d/consul.hcl

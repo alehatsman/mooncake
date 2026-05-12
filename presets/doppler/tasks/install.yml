@@ -1,10 +1,10 @@
 - name: Check if doppler is installed
   shell: command -v doppler
-  register: doppler_check
+  as: doppler_check
   failed_when: false
 
 - name: Install doppler
-  package:
+  pkg:
     name: doppler
     state: present
   when: doppler_check.rc != 0
@@ -16,4 +16,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "doppler installed"
+  log: "doppler installed"

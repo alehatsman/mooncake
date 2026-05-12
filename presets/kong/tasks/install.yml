@@ -1,17 +1,16 @@
 - name: Check if kong is installed
   shell: command -v kong
-  register: kong_check
+  as: kong_check
   failed_when: false
 
 - name: Install kong
-  package:
+  pkg:
     name: kong
     state: present
   when: kong_check.rc != 0
 
 - name: Verify installation
   shell: kong --version 2>&1 || kong -v 2>&1 || echo "installed"
-  register: kong_version
-
+  as: kong_version
 - name: Display version
-  print: "kong installed"
+  log: "kong installed"

@@ -26,9 +26,9 @@ parameters:
 
 steps:
   - name: Install modern Unix tools
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall modern Unix tools
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

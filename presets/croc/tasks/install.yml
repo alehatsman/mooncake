@@ -1,19 +1,19 @@
 - name: Check if croc is installed
   shell: command -v croc
-  register: croc_check
+  as: croc_check
   failed_when: false
 
 - name: Install croc via Homebrew
-  package:
+  pkg:
     name: croc
     state: present
   when: brew_available and croc_check.rc != 0
 
 - name: Install croc via apt
-  package:
+  pkg:
     name: croc
     state: present
-  become: true
+  as_user: root
   when: apt_available and croc_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "croc installed"
+  log: "croc installed"

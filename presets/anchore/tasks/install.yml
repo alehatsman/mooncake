@@ -1,17 +1,16 @@
 - name: Check if anchore-cli is installed
   shell: command -v anchore-cli
-  register: anchore_check
+  as: anchore_check
   failed_when: false
 
 - name: Install anchore
-  package:
+  pkg:
     name: anchore
     state: present
   when: anchore_check.rc != 0
 
 - name: Verify installation
   shell: anchore-cli --version 2>&1 || anchore-cli -v 2>&1 || echo "installed"
-  register: anchore_version
-
+  as: anchore_version
 - name: Display version
-  print: "anchore installed"
+  log: "anchore installed"

@@ -1,17 +1,16 @@
 - name: Check if searchd is installed
   shell: command -v searchd
-  register: sphinxsearch_check
+  as: sphinxsearch_check
   failed_when: false
 
 - name: Install sphinxsearch
-  package:
+  pkg:
     name: sphinxsearch
     state: present
   when: sphinxsearch_check.rc != 0
 
 - name: Verify installation
   shell: searchd --version 2>&1 || searchd -v 2>&1 || echo "installed"
-  register: sphinxsearch_version
-
+  as: sphinxsearch_version
 - name: Display version
-  print: "sphinxsearch installed"
+  log: "sphinxsearch installed"

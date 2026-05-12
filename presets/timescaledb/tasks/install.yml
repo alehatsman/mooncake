@@ -1,17 +1,16 @@
 - name: Check if timescaledb is installed
   shell: command -v timescaledb
-  register: timescaledb_check
+  as: timescaledb_check
   failed_when: false
 
 - name: Install timescaledb
-  package:
+  pkg:
     name: timescaledb
     state: present
   when: timescaledb_check.rc != 0
 
 - name: Verify installation
   shell: timescaledb --version 2>&1 || timescaledb -v 2>&1 || echo "installed"
-  register: timescaledb_version
-
+  as: timescaledb_version
 - name: Display version
-  print: "timescaledb installed"
+  log: "timescaledb installed"

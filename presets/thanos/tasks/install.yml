@@ -1,17 +1,16 @@
 - name: Check if thanos is installed
   shell: command -v thanos
-  register: thanos_check
+  as: thanos_check
   failed_when: false
 
 - name: Install thanos
-  package:
+  pkg:
     name: thanos
     state: present
   when: thanos_check.rc != 0
 
 - name: Verify installation
   shell: thanos --version 2>&1 || thanos -v 2>&1 || echo "installed"
-  register: thanos_version
-
+  as: thanos_version
 - name: Display version
-  print: "thanos installed"
+  log: "thanos installed"

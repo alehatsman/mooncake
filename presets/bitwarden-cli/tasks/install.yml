@@ -1,10 +1,10 @@
 - name: Check if bw is installed
   shell: command -v bw
-  register: bitwarden_cli_check
+  as: bitwarden_cli_check
   failed_when: false
 
 - name: Install bitwarden-cli via Homebrew
-  package:
+  pkg:
     name: bitwarden-cli
     state: present
   when: brew_available and bitwarden_cli_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "bitwarden-cli installed"
+  log: "bitwarden-cli installed"

@@ -55,13 +55,13 @@ parameters:
 
 steps:
   - name: Install Jupyter
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure Jupyter
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present"
 
   - name: Uninstall Jupyter
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

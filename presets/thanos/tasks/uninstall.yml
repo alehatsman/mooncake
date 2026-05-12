@@ -1,8 +1,8 @@
 - name: Uninstall thanos
-  package:
+  pkg:
     name: thanos
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "thanos uninstalled"
+  log: "thanos uninstalled"

@@ -1,12 +1,11 @@
 - name: Uninstall chamber
-  package:
+  pkg:
     name: chamber
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "chamber uninstalled"
-
+  log: "chamber uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

@@ -36,10 +36,8 @@ parameters:
 
 steps:
   - name: Install Redis
-    include: tasks/install.yml
-
+    import: tasks/install.yml
   - name: Configure Redis
-    include: tasks/configure.yml
-
+    import: tasks/configure.yml
   - name: Uninstall Redis
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml

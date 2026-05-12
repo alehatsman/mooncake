@@ -1,5 +1,5 @@
 - name: Uninstall loki-server
-  package:
+  pkg:
     name: loki-server
     state: absent
   failed_when: false
@@ -11,4 +11,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "loki-server uninstalled"
+  log: "loki-server uninstalled"

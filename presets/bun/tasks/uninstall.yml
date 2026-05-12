@@ -1,5 +1,5 @@
 - name: Uninstall bun via Homebrew
-  package:
+  pkg:
     name: bun
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "bun uninstalled"
+  log: "bun uninstalled"

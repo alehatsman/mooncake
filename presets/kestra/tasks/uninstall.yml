@@ -1,8 +1,8 @@
 - name: Uninstall kestra
-  package:
+  pkg:
     name: kestra
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "kestra uninstalled"
+  log: "kestra uninstalled"

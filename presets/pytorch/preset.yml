@@ -38,13 +38,13 @@ parameters:
 
 steps:
   - name: Install PyTorch
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure PyTorch
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present"
 
   - name: Uninstall PyTorch
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

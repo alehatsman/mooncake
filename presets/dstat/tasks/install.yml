@@ -1,13 +1,13 @@
 - name: Check if dstat is installed
   shell: command -v dstat
-  register: dstat_check
+  as: dstat_check
   failed_when: false
 
 - name: Install dstat via apt
-  package:
+  pkg:
     name: dstat
     state: present
-  become: true
+  as_user: root
   when: apt_available and dstat_check.rc != 0
 
 - name: Verify installation with assert
@@ -18,4 +18,4 @@
   when: apt_available or dnf_available or yum_available or pacman_available or zypper_available or apk_available
 
 - name: Display confirmation
-  print: "dstat installed"
+  log: "dstat installed"

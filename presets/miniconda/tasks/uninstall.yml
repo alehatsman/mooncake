@@ -1,7 +1,7 @@
 # Miniconda Uninstallation Tasks
 
 - name: Remove Miniconda directory
-  file:
+  file.write:
     path: "{{ parameters.install_path }}"
     state: absent
   failed_when: false
@@ -21,7 +21,7 @@
   failed_when: false
 
 - name: Remove conda config
-  file:
+  file.write:
     path: ~/.condarc
     state: absent
   failed_when: false
@@ -33,7 +33,7 @@
       exists: false
 
 - name: Display uninstall complete
-  print: |
+  log: |
     OK Miniconda uninstalled
 
     Note: Restart your shell to complete removal

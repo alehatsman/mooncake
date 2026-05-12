@@ -1,19 +1,19 @@
 - name: Uninstall mosquitto via apt
   shell: apt-get remove -y mosquitto
   when: apt_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall mosquitto via dnf
   shell: dnf remove -y mosquitto
   when: dnf_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall mosquitto via yum
   shell: yum remove -y mosquitto
   when: yum_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall mosquitto via Homebrew

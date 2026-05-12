@@ -2,11 +2,11 @@
 
 # Start PostgreSQL service
 - name: Start PostgreSQL service (Linux)
-  service:
+  os.service:
     name: postgresql
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: linux and parameters.start_service
 
 - name: Start PostgreSQL service (macOS)
@@ -17,16 +17,17 @@
 # Wait for PostgreSQL to be ready
 - name: Wait for PostgreSQL to be ready
   shell: pg_isready -h localhost -p {{ parameters.port }}
-  register: pg_ready
-  retries: 5
-  retry_delay: 2s
+  as: pg_ready
+  retry:
+    attempts: 5
+    delay: 2s
   failed_when: false
 
 # Create user if specified
 - name: Create PostgreSQL user
   shell: |
     sudo -u postgres psql -c "CREATE USER {{ parameters.create_user }} WITH PASSWORD '{{ parameters.create_user }}';"
-  become: true
+  as_user: root
   when: parameters.create_user != "" and linux
   failed_when: false
 
@@ -40,14 +41,14 @@
 - name: Create PostgreSQL database with custom owner (Linux)
   shell: |
     sudo -u postgres createdb -O {{ parameters.create_user }} {{ parameters.create_database }}
-  become: true
+  as_user: root
   when: parameters.create_database != "" and parameters.create_user != "" and linux
   failed_when: false
 
 - name: Create PostgreSQL database with default owner (Linux)
   shell: |
     sudo -u postgres createdb {{ parameters.create_database }}
-  become: true
+  as_user: root
   when: parameters.create_database != "" and parameters.create_user == "" and linux
   failed_when: false
 
@@ -59,7 +60,7 @@
 
 # Display connection info - with custom user/db
 - name: Display connection information (custom setup)
-  print: |
+  log: |
     OK PostgreSQL is running
 
     Connection details:
@@ -73,7 +74,7 @@
 
 # Display connection info - default
 - name: Display connection information (default)
-  print: |
+  log: |
     OK PostgreSQL is running
 
     Connection details:

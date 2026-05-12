@@ -1,21 +1,19 @@
 - name: Check if milvus is installed
   shell: command -v milvus
-  register: milvus_check
+  as: milvus_check
   failed_when: false
 
 - name: Install milvus
-  package:
+  pkg:
     name: milvus
     state: present
   when: milvus_check.rc != 0
 
 - name: Verify installation
   shell: milvus --version 2>&1 || milvus -v 2>&1 || echo "installed"
-  register: milvus_version
-
+  as: milvus_version
 - name: Display version
-  print: "milvus installed"
-
+  log: "milvus installed"
 - name: Verify installation
   assert:
     command:

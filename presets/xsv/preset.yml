@@ -10,8 +10,8 @@ parameters:
     description: Whether xsv should be installed or removed
 steps:
   - name: Install xsv
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall xsv
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

@@ -1,10 +1,10 @@
 - name: Check if asdf is installed
   shell: test -d ~/.asdf && echo "installed" || echo "not installed"
-  register: asdf_check
+  as: asdf_check
   failed_when: false
 
 - name: Install asdf via Homebrew
-  package:
+  pkg:
     name: asdf
     state: present
   when: brew_available and asdf_check.stdout == "not installed"
@@ -21,4 +21,4 @@
       exists: true
 
 - name: Display confirmation
-  print: "asdf installed"
+  log: "asdf installed"

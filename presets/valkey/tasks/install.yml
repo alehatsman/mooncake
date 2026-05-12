@@ -1,17 +1,16 @@
 - name: Check if valkey is installed
   shell: command -v valkey
-  register: valkey_check
+  as: valkey_check
   failed_when: false
 
 - name: Install valkey
-  package:
+  pkg:
     name: valkey
     state: present
   when: valkey_check.rc != 0
 
 - name: Verify installation
   shell: valkey --version 2>&1 || valkey -v 2>&1 || echo "installed"
-  register: valkey_version
-
+  as: valkey_version
 - name: Display version
-  print: "valkey installed"
+  log: "valkey installed"

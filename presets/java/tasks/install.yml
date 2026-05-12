@@ -2,7 +2,7 @@
 
 - name: Check if Java is already installed
   shell: command -v java
-  register: java_check
+  as: java_check
   failed_when: false
 
 # macOS Installation
@@ -13,37 +13,37 @@
 - name: Link Java (macOS)
   shell: |
     sudo ln -sfn /opt/homebrew/opt/openjdk@{{ parameters.version }}/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-{{ parameters.version }}.jdk
-  become: true
+  as_user: root
   when: brew_available and java_check.rc != 0
   failed_when: false
 
 # Linux - Debian/Ubuntu
 - name: Install OpenJDK (Debian/Ubuntu)
-  package:
+  pkg:
     name: "openjdk-{{ parameters.version }}-jdk"
     state: present
-  become: true
+  as_user: root
   when: apt_available and java_check.rc != 0
 
 # Linux - RHEL/Fedora
 - name: Install OpenJDK (RHEL/Fedora)
-  package:
+  pkg:
     name: "java-{{ parameters.version }}-openjdk-devel"
     state: present
-  become: true
+  as_user: root
   when: dnf_available or yum_available and java_check.rc != 0
 
 # Linux - Arch Linux
 - name: Install OpenJDK (Arch Linux)
-  package:
+  pkg:
     name: "jdk{{ parameters.version }}-openjdk"
     state: present
-  become: true
+  as_user: root
   when: pacman_available and java_check.rc != 0
 
 # Set JAVA_HOME
 - name: Create Java environment file
-  file:
+  file.write:
     path: "~/.java_env"
     content: |
       # Java environment
@@ -75,11 +75,9 @@
     else
       dirname $(dirname $(readlink -f $(which java)))
     fi
-  register: java_home
-
+  as: java_home
 - name: Display confirmation
-  print: "Java installed"
-
+  log: "Java installed"
 - name: Display JAVA_HOME
-  print: "JAVA_HOME: {{ java_home.stdout }}"
+  log: "JAVA_HOME: {{ java_home.stdout }}"
   when: parameters.set_java_home

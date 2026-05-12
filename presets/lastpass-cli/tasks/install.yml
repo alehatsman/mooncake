@@ -1,19 +1,19 @@
 - name: Check if lpass is installed
   shell: command -v lpass
-  register: lastpass_cli_check
+  as: lastpass_cli_check
   failed_when: false
 
 - name: Install lastpass-cli (macOS)
-  package:
+  pkg:
     name: lastpass-cli
     state: present
   when: brew_available and lastpass_cli_check.rc != 0
 
 - name: Install lastpass-cli (Linux)
-  package:
+  pkg:
     name: lastpass-cli
     state: present
-  become: true
+  as_user: root
   when: apt_available and lastpass_cli_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "lastpass-cli installed"
+  log: "lastpass-cli installed"

@@ -1,10 +1,10 @@
 - name: Check if terraform is installed
   shell: command -v terraform
-  register: terraform_check
+  as: terraform_check
   failed_when: false
 
 - name: Install terraform (macOS)
-  package:
+  pkg:
     name: terraform
     state: present
   when: brew_available and terraform_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "terraform installed"
+  log: "terraform installed"

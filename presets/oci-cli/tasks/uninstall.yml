@@ -1,5 +1,5 @@
 - name: Uninstall oci-cli (macOS)
-  package:
+  pkg:
     name: oci-cli
     state: absent
   when: brew_available
@@ -19,4 +19,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "oci-cli uninstalled"
+  log: "oci-cli uninstalled"

@@ -1,8 +1,8 @@
 - name: Uninstall spark
-  package:
+  pkg:
     name: spark
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "spark uninstalled"
+  log: "spark uninstalled"

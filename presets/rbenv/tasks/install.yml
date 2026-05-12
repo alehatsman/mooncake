@@ -1,26 +1,26 @@
 - name: Check if rbenv is installed
   shell: command -v rbenv
-  register: rbenv_check
+  as: rbenv_check
   failed_when: false
 
 - name: Install rbenv (macOS)
-  package:
+  pkg:
     name: rbenv
     state: present
   when: brew_available
 
 - name: Install rbenv (Debian/Ubuntu)
-  package:
+  pkg:
     name: rbenv
     state: present
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Install rbenv (RHEL/Fedora)
-  package:
+  pkg:
     name: rbenv
     state: present
-  become: true
+  as_user: root
   when: (dnf_available | default(false)) or (yum_available | default(false))
 
 - name: Verify installation with assert
@@ -30,4 +30,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "rbenv installed"
+  log: "rbenv installed"

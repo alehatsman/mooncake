@@ -1,10 +1,10 @@
 - name: Check if z is installed
   shell: test -f ~/.z.sh || test -f /usr/local/etc/profile.d/z.sh
-  register: z_check
+  as: z_check
   failed_when: false
 
 - name: Install z via Homebrew
-  package:
+  pkg:
     name: z
     state: present
   when: brew_available and z_check.rc != 0
@@ -30,4 +30,4 @@
   when: brew_available
 
 - name: Display version
-  print: "z installed"
+  log: "z installed"

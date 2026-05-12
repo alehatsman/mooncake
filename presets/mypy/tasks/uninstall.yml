@@ -1,5 +1,5 @@
 - name: Uninstall mypy via Homebrew
-  package:
+  pkg:
     name: mypy
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "mypy uninstalled"
+  log: "mypy uninstalled"

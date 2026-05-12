@@ -1,23 +1,20 @@
 - name: Check if nats-server is installed
   shell: command -v nats-server
-  register: nats_server_check
+  as: nats_server_check
   failed_when: false
 
 - name: Install nats-server via apt
   shell: apt-get install -y nats-server
   when: apt_available and nats_server_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install nats-server via dnf
   shell: dnf install -y nats-server
   when: dnf_available and nats_server_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install nats-server via yum
   shell: yum install -y nats-server
   when: yum_available and nats_server_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install nats-server via Homebrew
   shell: brew install nats-server
   when: brew_available and nats_server_check.rc != 0

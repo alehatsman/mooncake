@@ -1,19 +1,19 @@
 - name: Check if ninja is installed
   shell: command -v ninja
-  register: ninja_check
+  as: ninja_check
   failed_when: false
 
 - name: Install ninja via Homebrew
-  package:
+  pkg:
     name: ninja
     state: present
   when: brew_available and ninja_check.rc != 0
 
 - name: Install ninja via apt
-  package:
+  pkg:
     name: ninja-build
     state: present
-  become: true
+  as_user: root
   when: apt_available and ninja_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "ninja installed"
+  log: "ninja installed"

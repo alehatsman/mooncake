@@ -5,21 +5,21 @@
   when: brew_available
 
 - name: Uninstall OpenJDK (Debian/Ubuntu)
-  package:
+  pkg:
     name: "openjdk-{{ parameters.version }}-jdk"
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall OpenJDK (RHEL/Fedora)
-  package:
+  pkg:
     name: "java-{{ parameters.version }}-openjdk-devel"
     state: absent
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Remove Java environment file
-  file:
+  file.write:
     path: "~/.java_env"
     state: absent
 
@@ -39,4 +39,4 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: "Java uninstalled."
+  log: "Java uninstalled."

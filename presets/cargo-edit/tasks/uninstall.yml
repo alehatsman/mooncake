@@ -1,5 +1,5 @@
 - name: Uninstall cargo-edit (macOS)
-  package:
+  pkg:
     name: cargo-edit
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "cargo-edit uninstalled"
+  log: "cargo-edit uninstalled"

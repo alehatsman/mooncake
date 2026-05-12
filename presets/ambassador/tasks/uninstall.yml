@@ -1,8 +1,8 @@
 - name: Uninstall ambassador
-  package:
+  pkg:
     name: ambassador
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "ambassador uninstalled"
+  log: "ambassador uninstalled"

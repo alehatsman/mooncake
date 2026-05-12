@@ -1,7 +1,7 @@
 # Kafka Configuration Tasks
 
 - name: Ensure data directory exists
-  file:
+  file.write:
     path: "{{ parameters.data_dir }}"
     state: directory
     mode: "0755"
@@ -13,7 +13,7 @@
     else
       /opt/kafka/bin/kafka-storage.sh random-uuid
     fi
-  register: cluster_id
+  as: cluster_id
   when: parameters.kraft_mode
 
 - name: Format storage (KRaft mode)
@@ -48,15 +48,16 @@
     else
       /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:{{ parameters.port }}
     fi
-  register: kafka_ready
+  as: kafka_ready
   until: kafka_ready.rc == 0
-  retries: 10
+  retry:
+    attempts: 10
   delay: 3
   failed_when: false
   when: parameters.start_service
 
 - name: Display Kafka information
-  print: |
+  log: |
     Kafka is running:
     - Bootstrap server: localhost:{{ parameters.port }}
     - Data directory: {{ parameters.data_dir }}

@@ -1,17 +1,16 @@
 - name: Check if krakend is installed
   shell: command -v krakend
-  register: krakend_check
+  as: krakend_check
   failed_when: false
 
 - name: Install krakend
-  package:
+  pkg:
     name: krakend
     state: present
   when: krakend_check.rc != 0
 
 - name: Verify installation
   shell: krakend --version 2>&1 || krakend -v 2>&1 || echo "installed"
-  register: krakend_version
-
+  as: krakend_version
 - name: Display version
-  print: "krakend installed"
+  log: "krakend installed"

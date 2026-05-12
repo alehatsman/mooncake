@@ -1,19 +1,19 @@
 - name: Check if gopass is installed
   shell: command -v gopass
-  register: gopass_check
+  as: gopass_check
   failed_when: false
 
 - name: Install gopass (macOS)
-  package:
+  pkg:
     name: gopass
     state: present
   when: brew_available and gopass_check.rc != 0
 
 - name: Install gopass (Linux)
-  package:
+  pkg:
     name: gopass
     state: present
-  become: true
+  as_user: root
   when: apt_available and gopass_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gopass installed"
+  log: "gopass installed"

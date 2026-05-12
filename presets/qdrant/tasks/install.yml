@@ -1,19 +1,19 @@
 - name: Check if qdrant is installed
   shell: command -v qdrant
-  register: qdrant_check
+  as: qdrant_check
   failed_when: false
 
 - name: Install qdrant via Homebrew
-  package:
+  pkg:
     name: qdrant
     state: present
   when: brew_available and qdrant_check.rc != 0
 
 - name: Install qdrant via apt
-  package:
+  pkg:
     name: qdrant
     state: present
-  become: true
+  as_user: root
   when: apt_available and qdrant_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "qdrant installed"
+  log: "qdrant installed"

@@ -1,15 +1,15 @@
 - name: Uninstall restic (macOS)
-  package:
+  pkg:
     name: restic
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall restic (Linux)
-  package:
+  pkg:
     name: restic
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "restic uninstalled"
+  log: "restic uninstalled"

@@ -1,10 +1,10 @@
 - name: Check if terragrunt is installed
   shell: command -v terragrunt
-  register: terragrunt_check
+  as: terragrunt_check
   failed_when: false
 
 - name: Install terragrunt (macOS)
-  package:
+  pkg:
     name: terragrunt
     state: present
   when: brew_available and terragrunt_check.rc != 0
@@ -24,4 +24,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "terragrunt installed"
+  log: "terragrunt installed"

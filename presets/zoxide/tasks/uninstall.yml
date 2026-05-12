@@ -1,5 +1,5 @@
 - name: Uninstall zoxide via Homebrew
-  package:
+  pkg:
     name: zoxide
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "zoxide uninstalled"
+  log: "zoxide uninstalled"

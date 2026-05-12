@@ -18,9 +18,9 @@ parameters:
 
 steps:
   - name: Install GitHub CLI
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall GitHub CLI
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

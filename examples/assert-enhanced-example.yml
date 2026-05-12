@@ -180,7 +180,7 @@
     file_sha256:
       path: ./nonexistent.txt
       checksum: "abc123"
-  ignore_errors: true
+  continue_on_error: true
   tags: [error]
 
 # This will fail if working tree has uncommitted changes
@@ -188,7 +188,7 @@
   assert:
     git_clean:
       allow_untracked: false
-  ignore_errors: true
+  continue_on_error: true
   tags: [error]
 
 # This will fail if diff doesn't match
@@ -197,7 +197,7 @@
     git_diff:
       expected_diff: "some expected diff"
       cached: false
-  ignore_errors: true
+  continue_on_error: true
   tags: [error]
 
 ####################
@@ -227,12 +227,12 @@
   assert:
     git_clean:
       allow_untracked: true
-  register: git_status
-  ignore_errors: true
+  as: git_status
+  continue_on_error: true
   tags: [register]
 
 - name: Show git status result
-  print:
+  log:
     msg: "Git clean check: {{ git_status.changed }}"
   tags: [register]
 
@@ -241,11 +241,11 @@
     file_sha256:
       path: ./config.yml
       checksum: "abc123"
-  register: checksum_result
-  ignore_errors: true
+  as: checksum_result
+  continue_on_error: true
   tags: [register]
 
 - name: Show checksum result
-  print:
+  log:
     msg: "Checksum valid: {{ checksum_result.failed }}"
   tags: [register]

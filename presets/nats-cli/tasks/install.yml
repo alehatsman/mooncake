@@ -1,10 +1,10 @@
 - name: Check if nats is installed
   shell: command -v nats
-  register: nats_check
+  as: nats_check
   failed_when: false
 
 - name: Install nats-cli via Homebrew
-  package:
+  pkg:
     name: natscli
     state: present
   when: brew_available and nats_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "nats-cli installed"
+  log: "nats-cli installed"

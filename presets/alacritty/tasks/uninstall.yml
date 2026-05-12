@@ -1,12 +1,11 @@
 - name: Uninstall alacritty
-  package:
+  pkg:
     name: alacritty
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "alacritty uninstalled"
-
+  log: "alacritty uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

@@ -26,7 +26,7 @@
 
 # Display usage information (pip)
 - name: Display Jupyter usage information (pip)
-  print: |
+  log: |
     OK Jupyter installed and configured
 
     Installation:
@@ -42,7 +42,7 @@
 
 # Display usage information (conda)
 - name: Display Jupyter usage information (conda)
-  print: |
+  log: |
     OK Jupyter installed and configured
 
     Installation:

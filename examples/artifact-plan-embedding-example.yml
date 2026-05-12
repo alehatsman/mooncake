@@ -4,20 +4,20 @@
 # Example 1: Basic plan embedding (automatic)
 # Plans with <= 20 steps are embedded automatically
 - name: "Short plan - auto embedded"
-  artifact_capture:
+  artifact.capture:
     name: "auto-embed-example"
     steps:
-      - name: "Update config"
-        file_replace:
-          path: "config.json"
-          regex: '"version": "[^"]+"'
-          replace: '"version": "2.0.0"'
+    - name: "Update config"
+      text.replace:
+        path: "config.json"
+        regex: '"version": "[^"]+"'
+        replace: '"version": "2.0.0"'
 
-      - name: "Add timestamp"
-        file_replace:
-          path: "config.json"
-          regex: '"updated": "[^"]+"'
-          replace: '"updated": "{{ ansible_date_time.iso8601 }}"'
+    - name: "Add timestamp"
+      text.replace:
+        path: "config.json"
+        regex: '"updated": "[^"]+"'
+        replace: '"updated": "{{ ansible_date_time.iso8601 }}"'
 
 # Artifact will contain:
 # {
@@ -33,25 +33,25 @@
 
 # Example 2: Explicit plan embedding
 - name: "Force embed even for large plans"
-  artifact_capture:
+  artifact.capture:
     name: "force-embed"
     embed_plan: true
     max_plan_steps: 50  # Allow up to 50 steps
     steps:
-      - shell: { cmd: "echo 'Step 1'" }
-      - shell: { cmd: "echo 'Step 2'" }
+    - shell: {cmd: "echo 'Step 1'"}
+    - shell: {cmd: "echo 'Step 2'"}
       # ... many steps ...
 
 # Example 3: Disable plan embedding
 - name: "Don't embed plan (summary only)"
-  artifact_capture:
+  artifact.capture:
     name: "no-embed"
     embed_plan: false
     steps:
-      - file_replace:
-          path: "large-file.txt"
-          regex: "old"
-          replace: "new"
+    - text.replace:
+        path: "large-file.txt"
+        regex: "old"
+        replace: "new"
 
 # Artifact will contain:
 # {
@@ -70,45 +70,44 @@
     max_lines: 500
 
 - name: "Capture LLM attempt with full context"
-  artifact_capture:
+  artifact.capture:
     name: "llm-attempt-{{ iteration }}"
     embed_plan: true  # LLM can see what it tried
     format: "json"
     steps:
       # LLM-generated changes
-      - name: "Apply LLM patch"
-        file_patch_apply:
-          path: "src/main.go"
-          patch: |
-            --- a/src/main.go
-            +++ b/src/main.go
-            @@ -10,3 +10,4 @@
-             func main() {
-               fmt.Println("Hello, World!")
-            +  fmt.Println("LLM added this")
-             }
+    - name: "Apply LLM patch"
+      text.patch:
+        path: "src/main.go"
+        patch: |
+          --- a/src/main.go
+          +++ b/src/main.go
+          @@ -10,3 +10,4 @@
+           func main() {
+             fmt.Println("Hello, World!")
+          +  fmt.Println("LLM added this")
+           }
 
-      - name: "Update tests"
-        file_insert:
-          path: "src/main_test.go"
-          position: "end"
-          content: |
-            func TestNewFeature(t *testing.T) {
-              // LLM-generated test
-            }
+    - name: "Update tests"
+      text.insert:
+        path: "src/main_test.go"
+        position: "end"
+        content: |
+          func TestNewFeature(t *testing.T) {
+            // LLM-generated test
+          }
 
 - name: "Validate LLM changes"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./artifacts/llm-attempt-{{ iteration }}/changes.json"
     max_files: "{{ max_files }}"
     max_lines_changed: "{{ max_lines }}"
     require_tests: true
-  register: validation
-
+  as: validation
 - name: "Run tests"
   shell:
     cmd: "go test ./..."
-  register: tests
+  as: tests
   when: validation is succeeded
 
 # Artifact now contains complete context for LLM feedback:
@@ -158,18 +157,18 @@
 
 # Example 6: Multi-iteration with full history
 - name: "Iteration 1"
-  artifact_capture:
+  artifact.capture:
     name: "iter-1"
     embed_plan: true
     steps:
-      - file_replace: { path: "main.go", regex: "v1", replace: "v2" }
+    - text.replace: {path: "main.go", regex: "v1", replace: "v2"}
 
 - name: "Iteration 2 (learns from iteration 1)"
-  artifact_capture:
+  artifact.capture:
     name: "iter-2"
     embed_plan: true
     steps:
-      - file_replace: { path: "main.go", regex: "v2", replace: "v3" }
+    - text.replace: {path: "main.go", regex: "v2", replace: "v3"}
 
 - name: "Compare what changed between iterations"
   shell:
@@ -190,7 +189,7 @@
     step_count: "{{ dynamic_steps | length }}"
 
 - name: "Capture with smart embedding"
-  artifact_capture:
+  artifact.capture:
     name: "smart-embed"
     # embed_plan not specified - auto-decides based on step count
     max_plan_steps: 10
@@ -201,14 +200,14 @@
 
 # Example 8: Debugging with embedded plans
 - name: "Debug artifact with full plan"
-  artifact_capture:
+  artifact.capture:
     name: "debug-run"
     embed_plan: true
     capture_content: true  # Also capture file content
     steps:
-      - shell: { cmd: "ls -la" }
-      - shell: { cmd: "pwd" }
-      - file_replace: { path: "debug.log", regex: ".*", replace: "Debug info" }
+    - shell: {cmd: "ls -la"}
+    - shell: {cmd: "pwd"}
+    - text.replace: {path: "debug.log", regex: ".*", replace: "Debug info"}
 
 # Artifact contains:
 # - Full plan (what commands were run)

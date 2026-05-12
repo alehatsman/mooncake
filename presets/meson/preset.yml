@@ -23,8 +23,8 @@ parameters:
     description: Installation method - auto tries package manager first, package only uses package manager, pip uses Python pip
 steps:
   - name: Install meson
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall meson
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

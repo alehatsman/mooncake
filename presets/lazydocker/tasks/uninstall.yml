@@ -1,5 +1,5 @@
 - name: Uninstall lazydocker (macOS)
-  package:
+  pkg:
     name: lazydocker
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "lazydocker uninstalled"
+  log: "lazydocker uninstalled"

@@ -1,4 +1,4 @@
-name: victoriametrics  
+name: victoriametrics
 description: Time-series database and monitoring
 version: "1.0.0"
 parameters:
@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install victoriametrics
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall victoriametrics
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

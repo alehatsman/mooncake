@@ -1,6 +1,6 @@
 - name: Check if dog is installed
   shell: command -v dog
-  register: dog_check
+  as: dog_check
   failed_when: false
 
 - name: Install dog (macOS)
@@ -28,4 +28,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "dog installed"
+  log: "dog installed"

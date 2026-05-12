@@ -1,18 +1,17 @@
 - name: Check if etcd is installed
   shell: command -v etcd
-  register: etcd_check
+  as: etcd_check
   failed_when: false
 
 - name: Install etcd
-  package:
+  pkg:
     name: etcd
     state: present
   when: etcd_check.rc != 0
 
 - name: Verify installation
   shell: etcd --version 2>&1 || etcd -v 2>&1 || echo "installed"
-  register: etcd_version
-
+  as: etcd_version
 - name: Assert etcd is installed
   assert:
     command:
@@ -20,4 +19,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "etcd installed"
+  log: "etcd installed"

@@ -1,4 +1,3 @@
----
 name: PostgreSQL Database Setup
 description: |
   Install and configure PostgreSQL database on Ubuntu.
@@ -15,40 +14,35 @@ steps:
   - name: Update apt cache
     shell:
       cmd: apt-get update
-    become: true
-
+    as_user: root
   - name: Install PostgreSQL
     shell:
       cmd: apt-get install -y postgresql postgresql-contrib
-    become: true
-    register: postgres_install
-
+    as_user: root
+    as: postgres_install
   - name: Print PostgreSQL installation status
-    print:
+    log:
       msg: "PostgreSQL installed successfully"
 
   - name: Check PostgreSQL version
     shell:
       cmd: psql --version
-    register: postgres_version_output
-
+    as: postgres_version_output
   - name: Print PostgreSQL version
-    print:
+    log:
       msg: "{{ postgres_version_output.stdout }}"
 
   - name: Start PostgreSQL service
-    service:
+    os.service:
       name: postgresql
       state: started
       enabled: true
-    become: true
-
+    as_user: root
   - name: Verify PostgreSQL is running
     shell:
       cmd: systemctl is-active postgresql
-    become: true
-    register: postgres_status
-
+    as_user: root
+    as: postgres_status
   - name: Assert PostgreSQL is active
     assert:
       that:
@@ -58,96 +52,78 @@ steps:
   - name: Check if database exists
     shell:
       cmd: psql -lqt | cut -d \| -f 1 | grep -qw {{ db_name }}
-    become: true
-    become_user: postgres
-    register: db_exists
+    as_user: postgres
+    as: db_exists
     failed_when: false
 
   - name: Create database
     shell:
       cmd: psql -c "CREATE DATABASE {{ db_name }};"
-    become: true
-    become_user: postgres
+    as_user: postgres
     when: db_exists.rc != 0
-    register: db_created
-
+    as: db_created
   - name: Print database creation status
-    print:
+    log:
       msg: "Database {{ db_name }} created"
     when: db_exists.rc != 0
 
   - name: Check if user exists
     shell:
       cmd: psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='{{ db_user }}'"
-    become: true
-    become_user: postgres
-    register: user_exists
-
+    as_user: postgres
+    as: user_exists
   - name: Create database user
     shell:
       cmd: psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';"
-    become: true
-    become_user: postgres
+    as_user: postgres
     when: user_exists.stdout != "1"
-    register: user_created
-
+    as: user_created
   - name: Print user creation status
-    print:
+    log:
       msg: "User {{ db_user }} created"
     when: user_exists.stdout != "1"
 
   - name: Grant privileges to user
     shell:
       cmd: psql -c "GRANT ALL PRIVILEGES ON DATABASE {{ db_name }} TO {{ db_user }};"
-    become: true
-    become_user: postgres
-
+    as_user: postgres
   - name: Grant schema privileges
     shell:
       cmd: psql {{ db_name }} -c "GRANT ALL ON SCHEMA public TO {{ db_user }};"
-    become: true
-    become_user: postgres
-
+    as_user: postgres
   - name: Copy init SQL script
-    copy:
+    file.copy:
       src: files/init.sql
       dest: /tmp/init.sql
       mode: "0644"
-    become: true
-
+    as_user: root
   - name: Run init SQL script
     shell:
       cmd: psql {{ db_name }} -f /tmp/init.sql
-    become: true
-    become_user: postgres
-    register: init_sql
-
+    as_user: postgres
+    as: init_sql
   - name: Print init SQL status
-    print:
+    log:
       msg: "Initial schema loaded successfully"
 
   - name: Clean up temp SQL file
-    file:
+    file.write:
       path: /tmp/init.sql
       state: absent
-    become: true
-
+    as_user: root
   - name: Query sample data
     shell:
       cmd: psql {{ db_name }} -c "SELECT * FROM users;"
-    become: true
-    become_user: postgres
-    register: sample_query
-
+    as_user: postgres
+    as: sample_query
   - name: Print sample data
-    print:
+    log:
       msg: "Sample data:\n{{ sample_query.stdout }}"
 
   - name: Test connection with new user
     shell:
       cmd: PGPASSWORD={{ db_password }} psql -h localhost -U {{ db_user }} -d {{ db_name }} -c "SELECT current_database(), current_user;"
-    register: user_connection
-
+    as: user_connection
   - name: Verify user can connect
     assert:
       that:
@@ -158,19 +134,15 @@ steps:
   - name: Get database size
     shell:
       cmd: psql {{ db_name }} -c "SELECT pg_size_pretty(pg_database_size('{{ db_name }}'));"
-    become: true
-    become_user: postgres
-    register: db_size
-
+    as_user: postgres
+    as: db_size
   - name: List all tables
     shell:
       cmd: psql {{ db_name }} -c "\dt"
-    become: true
-    become_user: postgres
-    register: tables_list
-
+    as_user: postgres
+    as: tables_list
   - name: Print success message
-    print:
+    log:
       msg: |
         ========================================
         PostgreSQL Setup Complete!

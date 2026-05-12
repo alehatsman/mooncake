@@ -9,7 +9,7 @@ vars:
 steps:
   # Example 1: Simple user agent with inline plist
   - name: Create user agent for web server
-    service:
+    os.service:
       name: com.example.webserver
       state: started
       enabled: true
@@ -41,7 +41,7 @@ steps:
 
   # Example 2: User agent with template and variables
   - name: Create user agent from template
-    service:
+    os.service:
       name: com.example.{{ app_name }}
       state: started
       enabled: true
@@ -50,7 +50,7 @@ steps:
 
   # Example 3: System daemon (requires sudo)
   - name: Create system daemon
-    service:
+    os.service:
       name: com.example.daemon
       state: started
       enabled: true
@@ -89,11 +89,9 @@ steps:
             </dict>
           </dict>
           </plist>
-    become: true
-
-  # Example 4: Update service configuration (will reload if changed)
+    as_user: root
   - name: Update service environment
-    service:
+    os.service:
       name: com.example.{{ app_name }}
       state: restarted
       unit:
@@ -120,20 +118,20 @@ steps:
 
   # Example 5: Stop and unload a service
   - name: Stop and disable service
-    service:
+    os.service:
       name: com.example.old-service
       state: stopped
       enabled: false
 
   # Example 6: Just restart a service (without changing plist)
   - name: Restart service
-    service:
+    os.service:
       name: com.example.{{ app_name }}
       state: restarted
 
   # Example 7: Scheduled task (run every hour)
   - name: Create scheduled backup task
-    service:
+    os.service:
       name: com.example.backup
       enabled: true
       unit:
@@ -158,7 +156,7 @@ steps:
 
   # Example 8: Service with resource limits
   - name: Create resource-limited service
-    service:
+    os.service:
       name: com.example.limited
       state: started
       enabled: true

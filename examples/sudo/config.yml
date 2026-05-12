@@ -10,52 +10,45 @@
 
 - name: Check sudo access
   shell: echo "This command will run with sudo"
-  become: true
-
-# Linux package management
+  as_user: root
 - name: Update package list (Linux)
   shell: apt update
-  become: true
+  as_user: root
   when: os == "linux" and package_manager == "apt"
 
 - name: Install system package (Linux)
   shell: apt install -y curl
-  become: true
+  as_user: root
   when: os == "linux" and package_manager == "apt"
 
 # macOS doesn't typically need sudo for brew, but showing the concept
 - name: System-level operation (macOS)
   shell: echo "Would install system-level package"
-  become: true
+  as_user: root
   when: os == "darwin"
 
 # Create system directory
 - name: Create system directory
-  file:
+  file.write:
     path: /opt/myapp
     state: directory
     mode: "0755"
-  become: true
-
-# Create system config file
+  as_user: root
 - name: Create system config
-  file:
+  file.write:
     path: /opt/myapp/config.txt
     state: file
     content: |
       System configuration
       Created with sudo privileges
     mode: "0644"
-  become: true
-
-# Show the difference
+  as_user: root
 - name: Show files created
   shell: ls -la /opt/myapp
-  become: true
-  register: ls_result
-
+  as_user: root
+  as: ls_result
 - name: Print summary
-  print:
+  log:
     msg: |
       Sudo/become example complete!
       Files created in /opt/myapp:

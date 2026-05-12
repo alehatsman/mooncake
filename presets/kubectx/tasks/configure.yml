@@ -24,7 +24,7 @@
   failed_when: false
 
 - name: Display configuration summary
-  print: |
+  log: |
     kubectx configured successfully!
 
     {% if parameters.configure_aliases %}

@@ -1,19 +1,19 @@
 - name: Uninstall memcached via apt
   shell: apt-get remove -y memcached
   when: apt_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall memcached via dnf
   shell: dnf remove -y memcached
   when: dnf_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall memcached via yum
   shell: yum remove -y memcached
   when: yum_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall memcached via Homebrew

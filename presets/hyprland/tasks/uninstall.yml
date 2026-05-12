@@ -7,5 +7,5 @@
       hyprpaper hyprlock hypridle \
       xdg-desktop-portal-hyprland \
       grim slurp 2>/dev/null || true
-  become: true
+  as_user: root
   when: pacman_available

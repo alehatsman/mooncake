@@ -1,5 +1,5 @@
 - name: Uninstall shfmt (macOS)
-  package:
+  pkg:
     name: shfmt
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "shfmt uninstalled"
+  log: "shfmt uninstalled"

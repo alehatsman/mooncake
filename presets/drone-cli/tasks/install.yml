@@ -1,10 +1,10 @@
 - name: Check if drone is installed
   shell: command -v drone
-  register: drone_cli_check
+  as: drone_cli_check
   failed_when: false
 
 - name: Install drone-cli
-  package:
+  pkg:
     name: drone-cli
     state: present
   when: drone_cli_check.rc != 0
@@ -16,4 +16,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "drone-cli installed"
+  log: "drone-cli installed"

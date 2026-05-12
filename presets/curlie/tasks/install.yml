@@ -1,10 +1,10 @@
 - name: Check if curlie is installed
   shell: command -v curlie
-  register: curlie_check
+  as: curlie_check
   failed_when: false
 
 - name: Install curlie via Homebrew
-  package:
+  pkg:
     name: curlie
     state: present
   when: brew_available and curlie_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "curlie installed"
+  log: "curlie installed"

@@ -2,26 +2,26 @@
 
 - name: Check if Docker is already installed
   shell: command -v docker
-  register: docker_check
+  as: docker_check
   failed_when: false
 
 # macOS Installation
 - name: Install Docker Desktop via Homebrew (macOS)
-  package:
+  pkg:
     name: docker
     state: present
   when: brew_available and docker_check.rc != 0
 
 # Linux - Debian/Ubuntu
 - name: Install Docker prerequisites (Debian/Ubuntu)
-  package:
+  pkg:
     names:
-      - ca-certificates
-      - curl
-      - gnupg
-      - lsb-release
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
     state: present
-  become: true
+  as_user: root
   when: apt_available and docker_check.rc != 0
 
 - name: Add Docker GPG key (Debian/Ubuntu)
@@ -29,43 +29,43 @@
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
-  become: true
+  as_user: root
   when: apt_available and docker_check.rc != 0
 
 - name: Add Docker repository (Debian/Ubuntu)
   shell: |
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-  become: true
+  as_user: root
   when: apt_available and docker_check.rc != 0
 
 - name: Update apt cache (Debian/Ubuntu)
   shell: apt-get update
-  become: true
+  as_user: root
   when: apt_available and docker_check.rc != 0
 
 - name: Install Docker Engine (Debian/Ubuntu)
-  package:
+  pkg:
     names:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
     state: present
-  become: true
+  as_user: root
   when: apt_available and docker_check.rc != 0
 
 # Linux - RHEL/Fedora/CentOS
 - name: Install Docker via DNF (RHEL/Fedora)
-  package:
+  pkg:
     names:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
     state: present
-  become: true
+  as_user: root
   when: dnf_available and docker_check.rc != 0
 
 # Verify installation
@@ -76,4 +76,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "Docker installed"
+  log: "Docker installed"

@@ -1,5 +1,5 @@
 - name: Uninstall nvm (macOS via Homebrew)
-  package:
+  pkg:
     name: nvm
     state: absent
   when: (parameters.state == "absent") and (os == "darwin")
@@ -18,5 +18,5 @@
   when: parameters.state == "absent"
 
 - name: Display confirmation
-  print: "nvm uninstalled"
+  log: "nvm uninstalled"
   when: parameters.state == "absent"

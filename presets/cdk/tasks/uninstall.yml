@@ -9,4 +9,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "cdk uninstalled"
+  log: "cdk uninstalled"

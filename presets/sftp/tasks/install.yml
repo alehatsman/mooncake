@@ -1,17 +1,16 @@
 - name: Check if sftp is installed
   shell: command -v sftp
-  register: sftp_check
+  as: sftp_check
   failed_when: false
 
 - name: Install sftp
-  package:
+  pkg:
     name: sftp
     state: present
   when: sftp_check.rc != 0
 
 - name: Verify installation
   shell: sftp --version 2>&1 || sftp -v 2>&1 || echo "installed"
-  register: sftp_version
-
+  as: sftp_version
 - name: Display version
-  print: "sftp installed"
+  log: "sftp installed"

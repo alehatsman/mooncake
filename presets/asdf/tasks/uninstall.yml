@@ -1,5 +1,5 @@
 - name: Uninstall asdf via Homebrew
-  package:
+  pkg:
     name: asdf
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exists: false
 
 - name: Display confirmation
-  print: "asdf uninstalled"
+  log: "asdf uninstalled"

@@ -1,10 +1,10 @@
 - name: Check if nvm is installed
   shell: test -f ~/.nvm/nvm.sh && echo "installed" || echo "not installed"
-  register: nvm_check
+  as: nvm_check
   failed_when: false
 
 - name: Install nvm via Homebrew (macOS)
-  package:
+  pkg:
     name: nvm
     state: present
   when: (parameters.state == "present") and (os == "darwin") and (nvm_check.stdout != "installed")
@@ -20,4 +20,4 @@
       exists: true
 
 - name: Display confirmation
-  print: "nvm installed"
+  log: "nvm installed"

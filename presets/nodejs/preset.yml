@@ -35,8 +35,8 @@ parameters:
     description: npm packages to install globally (e.g., ["typescript", "eslint"])
 
 steps:
-  - include: tasks/install.yml
+  - import: tasks/install.yml
     when: parameters.state == "present"
 
-  - include: tasks/uninstall.yml
+  - import: tasks/uninstall.yml
     when: parameters.state == "absent"

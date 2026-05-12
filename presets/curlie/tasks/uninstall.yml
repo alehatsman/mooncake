@@ -1,5 +1,5 @@
 - name: Uninstall curlie via Homebrew
-  package:
+  pkg:
     name: curlie
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "curlie uninstalled"
+  log: "curlie uninstalled"

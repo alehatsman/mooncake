@@ -2,27 +2,27 @@
 
 # macOS Uninstallation
 - name: Uninstall AWS CLI via Homebrew (macOS)
-  package:
+  pkg:
     name: awscli
     state: absent
   when: brew_available
 
 # Linux Uninstallation (v2)
 - name: Remove AWS CLI installation (Linux)
-  file:
+  file.write:
     path: /usr/local/aws-cli
     state: absent
-  become: true
+  as_user: root
   when: linux and parameters.version == "2"
 
 - name: Remove AWS CLI symlinks (Linux)
-  file:
+  file.write:
     path: "{{ item }}"
     state: absent
-  become: true
+  as_user: root
   loop:
-    - /usr/local/bin/aws
-    - /usr/local/bin/aws_completer
+  - /usr/local/bin/aws
+  - /usr/local/bin/aws_completer
   when: linux and parameters.version == "2"
 
 # Uninstall v1 via pip
@@ -32,8 +32,7 @@
   when: parameters.version == "1"
 
 - name: Display uninstall confirmation
-  print: "AWS CLI has been uninstalled (configuration in ~/.aws remains)"
-
+  log: "AWS CLI has been uninstalled (configuration in ~/.aws remains)"
 - name: Verify uninstallation with assert
   assert:
     command:

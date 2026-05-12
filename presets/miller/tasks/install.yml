@@ -1,19 +1,19 @@
 - name: Check if miller is installed
   shell: command -v miller
-  register: miller_check
+  as: miller_check
   failed_when: false
 
 - name: Install miller (macOS)
-  package:
+  pkg:
     name: miller
     state: present
   when: brew_available and miller_check.rc != 0
 
 - name: Install miller (Linux)
-  package:
+  pkg:
     name: miller
     state: present
-  become: true
+  as_user: root
   when: apt_available and miller_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "miller installed"
+  log: "miller installed"

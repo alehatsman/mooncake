@@ -1,21 +1,19 @@
 - name: Check if btop is installed
   shell: command -v btop
-  register: btop_check
+  as: btop_check
   failed_when: false
 
 - name: Install btop
-  package:
+  pkg:
     name: btop
     state: present
   when: btop_check.rc != 0
 
 - name: Verify installation
   shell: btop --version 2>&1 || echo "installed"
-  register: btop_version
-
+  as: btop_version
 - name: Display version
-  print: "btop installed: {{ btop_version.stdout }}"
-
+  log: "btop installed: {{ btop_version.stdout }}"
 - name: Verify installation with assert
   assert:
     command:

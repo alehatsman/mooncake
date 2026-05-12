@@ -1,12 +1,11 @@
 - name: Uninstall duf
-  package:
+  pkg:
     name: duf
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "duf uninstalled"
-
+  log: "duf uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

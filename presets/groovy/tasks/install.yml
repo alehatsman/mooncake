@@ -1,19 +1,19 @@
 - name: Check if groovy is installed
   shell: command -v groovy
-  register: groovy_check
+  as: groovy_check
   failed_when: false
 
 - name: Install groovy (macOS)
-  package:
+  pkg:
     name: groovy
     state: present
   when: brew_available and groovy_check.rc != 0
 
 - name: Install groovy (Linux)
-  package:
+  pkg:
     name: groovy
     state: present
-  become: true
+  as_user: root
   when: apt_available and groovy_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "groovy installed"
+  log: "groovy installed"

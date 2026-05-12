@@ -59,13 +59,13 @@ parameters:
 
 steps:
   - name: Install Elasticsearch
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure Elasticsearch
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present"
 
   - name: Uninstall Elasticsearch
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

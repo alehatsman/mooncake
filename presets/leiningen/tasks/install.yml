@@ -1,19 +1,19 @@
 - name: Check if lein is installed
   shell: command -v lein
-  register: leiningen_check
+  as: leiningen_check
   failed_when: false
 
 - name: Install leiningen via Homebrew
-  package:
+  pkg:
     name: leiningen
     state: present
   when: brew_available and leiningen_check.rc != 0
 
 - name: Install leiningen (Linux)
-  package:
+  pkg:
     name: leiningen
     state: present
-  become: true
+  as_user: root
   when: apt_available and leiningen_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "leiningen installed"
+  log: "leiningen installed"

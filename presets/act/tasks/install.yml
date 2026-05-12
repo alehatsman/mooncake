@@ -1,10 +1,10 @@
 - name: Check if act is installed
   shell: command -v act
-  register: act_check
+  as: act_check
   failed_when: false
 
 - name: Install act via Homebrew
-  package:
+  pkg:
     name: act
     state: present
   when: brew_available and act_check.rc != 0
@@ -22,7 +22,6 @@
 
 - name: Display version
   shell: act --version
-  register: act_version
-
+  as: act_version
 - name: Display version
-  print: "act installed: {{ act_version.stdout }}"
+  log: "act installed: {{ act_version.stdout }}"

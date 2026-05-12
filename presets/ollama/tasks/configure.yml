@@ -2,7 +2,7 @@
 # Handles systemd (Linux) and launchd (macOS) service setup
 
 - name: Configure Ollama systemd service (Linux)
-  service:
+  os.service:
     name: ollama
     state: started
     enabled: true
@@ -10,13 +10,13 @@
     dropin:
       name: 10-mooncake.conf
       src_template: ../templates/systemd-dropin.conf.j2
-  become: true
+  as_user: root
   when: >
     parameters.service and
     linux
 
 - name: Configure Ollama launchd service (macOS)
-  service:
+  os.service:
     name: ollama
     state: started
     enabled: true

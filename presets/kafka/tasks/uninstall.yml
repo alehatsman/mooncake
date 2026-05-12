@@ -17,15 +17,15 @@
   when: brew_available
 
 - name: Remove Kafka directory (Linux)
-  file:
+  file.write:
     path: /opt/kafka
     state: absent
-  become: true
+  as_user: root
   when: linux
 
 - name: Remove Kafka user (Linux)
   shell: sudo userdel kafka
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
@@ -36,4 +36,4 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: "Kafka uninstalled. Data directory preserved at {{ parameters.data_dir }}"
+  log: "Kafka uninstalled. Data directory preserved at {{ parameters.data_dir }}"

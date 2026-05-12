@@ -2,7 +2,7 @@
 
 - name: Check if Elasticsearch is already installed
   shell: command -v elasticsearch
-  register: elasticsearch_check
+  as: elasticsearch_check
   failed_when: false
 
 # macOS Installation
@@ -14,25 +14,25 @@
 - name: Add Elasticsearch GPG key (Debian/Ubuntu)
   shell: |
     wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
-  become: true
+  as_user: root
   when: apt_available and elasticsearch_check.rc != 0
 
 - name: Add Elasticsearch repository (Debian/Ubuntu)
   shell: |
     echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/{{ parameters.version }}/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-{{ parameters.version }}.list
-  become: true
+  as_user: root
   when: apt_available and elasticsearch_check.rc != 0
 
 - name: Update apt cache (Debian/Ubuntu)
   shell: apt-get update
-  become: true
+  as_user: root
   when: apt_available and elasticsearch_check.rc != 0
 
 - name: Install Elasticsearch (Debian/Ubuntu)
-  package:
+  pkg:
     name: elasticsearch
     state: present
-  become: true
+  as_user: root
   when: apt_available and elasticsearch_check.rc != 0
 
 # Linux - RHEL/Fedora
@@ -48,14 +48,14 @@
     autorefresh=1
     type=rpm-md
     EOF
-  become: true
+  as_user: root
   when: dnf_available or yum_available and elasticsearch_check.rc != 0
 
 - name: Install Elasticsearch (RHEL/Fedora)
-  package:
+  pkg:
     name: elasticsearch
     state: present
-  become: true
+  as_user: root
   when: dnf_available or yum_available and elasticsearch_check.rc != 0
 
 # Verify installation
@@ -67,7 +67,6 @@
 
 - name: Get Elasticsearch version
   shell: elasticsearch --version
-  register: elasticsearch_version
-
+  as: elasticsearch_version
 - name: Display Elasticsearch version
-  print: "Elasticsearch installed: {{ elasticsearch_version.stdout }}"
+  log: "Elasticsearch installed: {{ elasticsearch_version.stdout }}"

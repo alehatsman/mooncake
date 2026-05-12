@@ -2,13 +2,12 @@
 # Installs ollama and tests it with the smallest model (tinyllama ~637MB)
 
 - name: install ollama with tinyllama model
-  preset:
+  use:
     name: ollama
     with:
       service: false  # we'll start manually for demo
       pull: [tinyllama]  # smallest model, good for testing
-  become: true
-
+  as_user: root
 - name: start ollama server
   shell: nohup ollama serve > /tmp/ollama.log 2>&1 &
 
@@ -17,12 +16,12 @@
 
 - name: verify ollama is running
   shell: curl -s http://localhost:11434/api/tags
-  retries: 5
-  retry_delay: 2s
-
+  retry:
+    attempts: 5
+    delay: 2s
 - name: ask a simple math question
   shell: ollama run tinyllama "what is 2+2? answer in one word"
-  register: answer
+  as: answer
   timeout: 2m
 
 - name: show answer
@@ -30,7 +29,7 @@
 
 - name: ask about geography
   shell: ollama run tinyllama "what is the capital of france? answer in one word"
-  register: capital
+  as: capital
   timeout: 2m
 
 - name: show capital

@@ -1,8 +1,8 @@
 - name: Uninstall bookkeeper
-  package:
+  pkg:
     name: bookkeeper
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "bookkeeper uninstalled"
+  log: "bookkeeper uninstalled"

@@ -1,10 +1,10 @@
 - name: Check if xsv is installed
   shell: command -v xsv
-  register: xsv_check
+  as: xsv_check
   failed_when: false
 
 - name: Install xsv via Homebrew
-  package:
+  pkg:
     name: xsv
     state: present
   when: brew_available and xsv_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "xsv installed"
+  log: "xsv installed"

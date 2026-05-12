@@ -1,7 +1,7 @@
 # Go Configuration Tasks
 
 - name: Ensure GOPATH directory exists
-  file:
+  file.write:
     path: "{{ parameters.gopath }}"
     state: directory
     mode: "0755"
@@ -14,7 +14,6 @@
 
 - name: Display Go environment
   shell: go env GOPATH GOROOT
-  register: go_env
-
+  as: go_env
 - name: Display Go paths
-  print: "Go environment: {{ go_env.stdout }}"
+  log: "Go environment: {{ go_env.stdout }}"

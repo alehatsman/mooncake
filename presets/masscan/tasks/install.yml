@@ -1,19 +1,19 @@
 - name: Check if masscan is installed
   shell: command -v masscan
-  register: masscan_check
+  as: masscan_check
   failed_when: false
 
 - name: Install masscan via Homebrew
-  package:
+  pkg:
     name: masscan
     state: present
   when: brew_available and masscan_check.rc != 0
 
 - name: Install masscan via apt
-  package:
+  pkg:
     name: masscan
     state: present
-  become: true
+  as_user: root
   when: apt_available and masscan_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "masscan installed"
+  log: "masscan installed"

@@ -1,10 +1,10 @@
 - name: Check if grype is installed
   shell: command -v grype
-  register: grype_check
+  as: grype_check
   failed_when: false
 
 - name: Install grype (macOS)
-  package:
+  pkg:
     name: grype
     state: present
   when: brew_available and grype_check.rc != 0
@@ -12,7 +12,7 @@
 - name: Install grype (Linux)
   shell: |
     curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-  become: true
+  as_user: root
   when: linux and grype_check.rc != 0
 
 - name: Verify installation with assert
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "grype installed"
+  log: "grype installed"

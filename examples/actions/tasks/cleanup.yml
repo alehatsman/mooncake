@@ -1,9 +1,9 @@
 # Cleanup tasks
 - name: "Cleanup: Remove test directory"
-  file:
+  file.write:
     path: /tmp/mooncake-include-demo
     state: absent
     force: true
 
 - name: "Cleanup: Display message"
-  print: "✓ Cleanup completed"
+  log: "✓ Cleanup completed"

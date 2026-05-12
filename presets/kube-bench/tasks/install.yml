@@ -1,10 +1,10 @@
 - name: Check if kube-bench is installed
   shell: command -v kube-bench
-  register: kube_bench_check
+  as: kube_bench_check
   failed_when: false
 
 - name: Install kube-bench (macOS)
-  package:
+  pkg:
     name: kube-bench
     state: present
   when: brew_available and kube_bench_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "kube-bench installed"
+  log: "kube-bench installed"

@@ -1,12 +1,12 @@
 - name: Uninstall uv (macOS)
-  package:
+  pkg:
     name: uv
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall uv (Linux)
-  file:
+  file.write:
     path: "{{ lookup('env', 'HOME') }}/.cargo/bin/uv"
     state: absent
   when: linux
@@ -19,4 +19,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "uv uninstalled"
+  log: "uv uninstalled"

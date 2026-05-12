@@ -1,10 +1,10 @@
 - name: Check if gatsby is installed
   shell: command -v gatsby
-  register: gatsby_check
+  as: gatsby_check
   failed_when: false
 
 - name: Install gatsby-cli (macOS)
-  package:
+  pkg:
     name: gatsby-cli
     state: present
   when: brew_available and gatsby_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gatsby installed"
+  log: "gatsby installed"

@@ -1,10 +1,10 @@
 - name: Check if procs is installed
   shell: command -v procs
-  register: procs_check
+  as: procs_check
   failed_when: false
 
 - name: Install  via Homebrew
-  package:
+  pkg:
     name: procs
     state: present
   when: brew_available and procs_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "procs installed"
+  log: "procs installed"

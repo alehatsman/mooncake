@@ -1,10 +1,10 @@
 - name: Check if ytop is installed
   shell: command -v ytop
-  register: ytop_check
+  as: ytop_check
   failed_when: false
 
 - name: Install ytop via Homebrew
-  package:
+  pkg:
     name: ytop
     state: present
   when: brew_available and ytop_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "ytop installed"
+  log: "ytop installed"

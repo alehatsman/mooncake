@@ -3,23 +3,23 @@
 # Check Python
 - name: Check if Python is installed
   shell: python3 --version
-  register: python_check
+  as: python_check
   failed_when: false
 
 - name: Display Python version
-  print: "Python installed: {{ python_check.stdout }}"
+  log: "Python installed: {{ python_check.stdout }}"
   when: python_check.rc == 0
 
 # Detect GPU support
 - name: Check for NVIDIA GPU (CUDA)
   shell: nvidia-smi 2>&1
-  register: cuda_check
+  as: cuda_check
   when: parameters.gpu_support == "auto" or parameters.gpu_support == "cuda"
   failed_when: false
 
 - name: Check for Apple Silicon (MPS)
   shell: sysctl -n machdep.cpu.brand_string 2>&1 | grep -i "Apple"
-  register: mps_check
+  as: mps_check
   when: parameters.gpu_support == "auto" or parameters.gpu_support == "mps"
   failed_when: false
 
@@ -80,17 +80,17 @@
 # Verify installation
 - name: Verify PyTorch installation
   shell: python3 -c "import torch; print(f'PyTorch {torch.__version__}')"
-  register: pytorch_version
+  as: pytorch_version
   failed_when: false
 
 - name: Display PyTorch version
-  print: "PyTorch installed: {{ pytorch_version.stdout }}"
+  log: "PyTorch installed: {{ pytorch_version.stdout }}"
   when: pytorch_version.rc == 0
 
 # Test PyTorch functionality
 - name: Test PyTorch tensor creation
   shell: python3 -c "import torch; x = torch.randn(3, 3); print('Tensor created:', x.shape)"
-  register: pytorch_test
+  as: pytorch_test
   failed_when: false
   timeout: 10s
 
@@ -101,9 +101,9 @@
       exit_code: 0
 
 - name: Display PyTorch test - Success
-  print: "OK PyTorch functional test passed (tensor operations working)"
+  log: "OK PyTorch functional test passed (tensor operations working)"
   when: pytorch_test.rc == 0
 
 - name: Display PyTorch test - Warning
-  print: "WARNING PyTorch test failed, but installation attempted"
+  log: "WARNING PyTorch test failed, but installation attempted"
   when: pytorch_test.rc != 0

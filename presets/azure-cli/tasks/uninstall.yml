@@ -1,15 +1,15 @@
 - name: Uninstall azure-cli via Homebrew
-  package:
+  pkg:
     name: azure-cli
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall azure-cli via apt
-  package:
+  pkg:
     name: azure-cli
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "azure-cli uninstalled"
+  log: "azure-cli uninstalled"

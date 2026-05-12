@@ -1,10 +1,10 @@
 - name: Check if black is installed
   shell: command -v black
-  register: black_check
+  as: black_check
   failed_when: false
 
 - name: Install black via Homebrew
-  package:
+  pkg:
     name: black
     state: present
   when: brew_available and black_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "black installed"
+  log: "black installed"

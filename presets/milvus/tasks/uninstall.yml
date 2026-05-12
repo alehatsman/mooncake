@@ -1,12 +1,11 @@
 - name: Uninstall milvus
-  package:
+  pkg:
     name: milvus
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "milvus uninstalled"
-
+  log: "milvus uninstalled"
 - name: Assert tool is removed
   assert:
     command:

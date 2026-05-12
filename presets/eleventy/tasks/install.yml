@@ -1,6 +1,6 @@
 - name: Check if eleventy is installed
   shell: command -v eleventy
-  register: eleventy_check
+  as: eleventy_check
   failed_when: false
 
 - name: Install eleventy via npm
@@ -14,4 +14,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "eleventy installed"
+  log: "eleventy installed"

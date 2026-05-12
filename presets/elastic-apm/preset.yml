@@ -1,4 +1,4 @@
-name: elastic-apm  
+name: elastic-apm
 description: Elastic APM Server
 version: "1.0.0"
 parameters:
@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install elastic-apm
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall elastic-apm
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

@@ -1,8 +1,8 @@
 - name: Uninstall vscode
-  package:
+  pkg:
     name: vscode
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "vscode uninstalled"
+  log: "vscode uninstalled"

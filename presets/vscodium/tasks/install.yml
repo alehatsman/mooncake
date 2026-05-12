@@ -1,17 +1,16 @@
 - name: Check if codium is installed
   shell: command -v codium
-  register: vscodium_check
+  as: vscodium_check
   failed_when: false
 
 - name: Install vscodium
-  package:
+  pkg:
     name: vscodium
     state: present
   when: vscodium_check.rc != 0
 
 - name: Verify installation
   shell: codium --version 2>&1 || codium -v 2>&1 || echo "installed"
-  register: vscodium_version
-
+  as: vscodium_version
 - name: Display version
-  print: "vscodium installed"
+  log: "vscodium installed"

@@ -1,15 +1,15 @@
 - name: Uninstall gopass (macOS)
-  package:
+  pkg:
     name: gopass
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall gopass (Linux)
-  package:
+  pkg:
     name: gopass
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "gopass uninstalled"
+  log: "gopass uninstalled"

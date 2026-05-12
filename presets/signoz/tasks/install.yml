@@ -1,17 +1,16 @@
 - name: Check if signoz is installed
   shell: command -v signoz
-  register: signoz_check
+  as: signoz_check
   failed_when: false
 
 - name: Install signoz
-  package:
+  pkg:
     name: signoz
     state: present
   when: signoz_check.rc != 0
 
 - name: Verify installation
   shell: signoz --version 2>&1 || signoz -v 2>&1 || echo "installed"
-  register: signoz_version
-
+  as: signoz_version
 - name: Display version
-  print: "signoz installed"
+  log: "signoz installed"

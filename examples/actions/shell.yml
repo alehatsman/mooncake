@@ -37,7 +37,7 @@
 
 - name: "Example 4: Capture command output"
   shell: whoami
-  register: current_user
+  as: current_user
   tags: [register]
 
 - name: "Example 5: Use captured output"
@@ -51,7 +51,7 @@
     Line 2: World
     Line 3: From Mooncake
     EOF
-  register: multi_line_output
+  as: multi_line_output
   tags: [register]
 
 - name: "Example 7: Display captured multi-line output"
@@ -60,7 +60,7 @@
 
 - name: "Example 8: Check exit code"
   shell: test -d /tmp
-  register: test_result
+  as: test_result
   tags: [register]
 
 - name: "Example 9: Show exit code"
@@ -105,7 +105,7 @@
 - name: "Example 14: Run command in specific directory"
   shell: pwd
   cwd: /tmp/mooncake-shell-examples
-  register: pwd_result
+  as: pwd_result
   tags: [cwd]
 
 - name: "Example 15: Show working directory"
@@ -147,8 +147,7 @@
 
 - name: "Example 21: Command with retry configuration"
   shell: echo "This will succeed first try"
-  retries: 3
-  retry_delay: 1s
+  retry: {attempts: 3, delay: 1s}
   tags: [retry]
 
 # Simulate a flaky command
@@ -177,9 +176,8 @@
 
 - name: "Example 23: Run flaky script with retries"
   shell: /tmp/flaky-script.sh
-  retries: 3
-  retry_delay: 1s
-  register: flaky_result
+  retry: {attempts: 3, delay: 1s}
+  as: flaky_result
   tags: [retry]
 
 - name: "Example 24: Show retry result"
@@ -193,25 +191,25 @@
 
 - name: "Example 25: Accept multiple exit codes"
   shell: grep "nonexistent" /etc/hosts || true
-  register: grep_result
+  as: grep_result
   failed_when: result.rc != 0 and result.rc != 1
   tags: [failed_when]
 
 - name: "Example 26: Fail on specific string in output"
   shell: echo "Operation completed successfully"
-  register: operation_result
+  as: operation_result
   failed_when: "'ERROR' in result.stdout or 'FAILED' in result.stdout"
   tags: [failed_when]
 
 - name: "Example 27: Fail if stderr contains errors"
   shell: echo "Some output" 2>&1
-  register: cmd_result
+  as: cmd_result
   failed_when: "'error' in result.stderr.lower()"
   tags: [failed_when]
 
 - name: "Example 28: Complex failure condition"
   shell: echo "Status: 200"
-  register: status_check
+  as: status_check
   failed_when: "result.rc != 0 or '404' in result.stdout or '500' in result.stdout"
   tags: [failed_when]
 
@@ -226,7 +224,7 @@
 
 - name: "Example 30: Mark as changed based on output"
   shell: echo "Updated 3 files"
-  register: update_result
+  as: update_result
   changed_when: "'Updated' in result.stdout and result.stdout != 'Updated 0 files'"
   tags: [changed_when]
 
@@ -245,7 +243,7 @@
     fi
     # Simulate git pull
     echo "Already up to date."
-  register: git_pull
+  as: git_pull
   changed_when: "'Already up to date' not in result.stdout"
   tags: [changed_when]
 
@@ -269,7 +267,7 @@
 
 - name: "Example 35: Conditional based on previous result"
   shell: test -f /tmp/mooncake-shell-examples/test.txt
-  register: file_check
+  as: file_check
   failed_when: false
   tags: [conditional]
 
@@ -310,7 +308,7 @@
       Line 1: Hello
       Line 2: World
       Line 3: From stdin
-  register: stdin_result
+  as: stdin_result
   tags: [stdin]
 
 - name: "Example 41: Show stdin result"
@@ -324,14 +322,14 @@
       Hello
       World
       Test
-  register: grep_stdin
+  as: grep_stdin
   tags: [stdin]
 
 - name: "Example 43: Process JSON with jq via stdin"
   shell:
     cmd: jq '.name'
     stdin: '{"name": "Mooncake", "version": "1.0"}'
-  register: jq_result
+  as: jq_result
   tags: [stdin]
 
 # =============================================================================
@@ -366,7 +364,7 @@
       tr ',' '\n' | \
       sort | \
       head -2
-  register: pipe_result
+  as: pipe_result
   tags: [advanced]
 
 - name: "Example 47: Create function and use it"
@@ -411,9 +409,8 @@
     DEPLOY_TARGET: "/opt/app"
   cwd: /tmp
   timeout: 10s
-  retries: 2
-  retry_delay: 5s
-  register: complex_deploy
+  retry: {attempts: 2, delay: 5s}
+  as: complex_deploy
   changed_when: "'completed successfully' in result.stdout"
   failed_when: "result.rc != 0 or 'ERROR' in result.stdout"
   tags: [complex]

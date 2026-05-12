@@ -1,10 +1,10 @@
 - name: Check if meltano is installed
   shell: command -v meltano
-  register: meltano_check
+  as: meltano_check
   failed_when: false
 
 - name: Install meltano via Homebrew
-  package:
+  pkg:
     name: meltano
     state: present
   when: brew_available and meltano_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "meltano installed"
+  log: "meltano installed"

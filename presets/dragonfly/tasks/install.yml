@@ -1,17 +1,16 @@
 - name: Check if dragonfly is installed
   shell: command -v dragonfly
-  register: dragonfly_check
+  as: dragonfly_check
   failed_when: false
 
 - name: Install dragonfly
-  package:
+  pkg:
     name: dragonfly
     state: present
   when: dragonfly_check.rc != 0
 
 - name: Verify installation
   shell: dragonfly --version 2>&1 || dragonfly -v 2>&1 || echo "installed"
-  register: dragonfly_version
-
+  as: dragonfly_version
 - name: Display version
-  print: "dragonfly installed"
+  log: "dragonfly installed"

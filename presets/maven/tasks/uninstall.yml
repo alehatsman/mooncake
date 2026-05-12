@@ -1,15 +1,15 @@
 - name: Uninstall maven (macOS)
-  package:
+  pkg:
     name: maven
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall maven (Linux)
-  package:
+  pkg:
     name: maven
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "maven uninstalled"
+  log: "maven uninstalled"

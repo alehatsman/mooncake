@@ -21,7 +21,7 @@
   failed_when: false
 
 - name: Remove Jupyter configuration
-  file:
+  file.write:
     path: ~/.jupyter
     state: absent
   failed_when: false
@@ -33,4 +33,4 @@
       exit_code: 1
 
 - name: Display uninstall complete
-  print: "OK Jupyter uninstalled"
+  log: "OK Jupyter uninstalled"

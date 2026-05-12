@@ -1,10 +1,10 @@
 - name: Check if hazelcast is installed
   shell: command -v hazelcast
-  register: hazelcast_check
+  as: hazelcast_check
   failed_when: false
 
 - name: Install hazelcast (macOS)
-  package:
+  pkg:
     name: hazelcast
     state: present
   when: brew_available and hazelcast_check.rc != 0
@@ -24,4 +24,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "hazelcast installed"
+  log: "hazelcast installed"

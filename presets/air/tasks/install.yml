@@ -1,10 +1,10 @@
 - name: Check if air is installed
   shell: command -v air
-  register: air_check
+  as: air_check
   failed_when: false
 
 - name: Install air via Homebrew
-  package:
+  pkg:
     name: air
     state: present
   when: brew_available and air_check.rc != 0
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "air installed"
+  log: "air installed"

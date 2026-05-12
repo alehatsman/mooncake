@@ -1,10 +1,10 @@
 - name: Check if yq is installed
   shell: command -v yq
-  register: yq_check
+  as: yq_check
   failed_when: false
 
 - name: Install yq via Homebrew
-  package:
+  pkg:
     name: yq
     state: present
   when: brew_available and yq_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "yq installed"
+  log: "yq installed"

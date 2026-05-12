@@ -1,10 +1,10 @@
 - name: Check if algolia is installed
   shell: command -v algolia
-  register: algolia_cli_check
+  as: algolia_cli_check
   failed_when: false
 
 - name: Install algolia-cli via Homebrew
-  package:
+  pkg:
     name: algolia
     state: present
   when: brew_available and algolia_cli_check.rc != 0
@@ -24,4 +24,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "algolia-cli installed"
+  log: "algolia-cli installed"

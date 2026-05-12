@@ -1,8 +1,8 @@
 - name: Uninstall stitch
-  package:
+  pkg:
     name: stitch
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "stitch uninstalled"
+  log: "stitch uninstalled"

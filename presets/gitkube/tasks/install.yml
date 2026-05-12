@@ -1,10 +1,10 @@
 - name: Check if gitkube is installed
   shell: command -v gitkube
-  register: gitkube_check
+  as: gitkube_check
   failed_when: false
 
 - name: Install gitkube (macOS)
-  package:
+  pkg:
     name: gitkube
     state: present
   when: brew_available and gitkube_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gitkube installed"
+  log: "gitkube installed"

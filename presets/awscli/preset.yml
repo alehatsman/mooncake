@@ -41,13 +41,13 @@ parameters:
 
 steps:
   - name: Install AWS CLI
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure AWS CLI
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present" and parameters.configure
 
   - name: Uninstall AWS CLI
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

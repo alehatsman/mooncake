@@ -1,10 +1,10 @@
 - name: Check if vite is installed
   shell: command -v vite
-  register: vite_check
+  as: vite_check
   failed_when: false
 
 - name: Install vite (macOS)
-  package:
+  pkg:
     name: vite
     state: present
   when: brew_available and vite_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "vite installed"
+  log: "vite installed"

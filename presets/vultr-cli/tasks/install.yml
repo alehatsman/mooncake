@@ -1,10 +1,10 @@
 - name: Check if vultr is installed
   shell: command -v vultr
-  register: vultr_cli_check
+  as: vultr_cli_check
   failed_when: false
 
 - name: Install vultr-cli (macOS)
-  package:
+  pkg:
     name: vultr-cli
     state: present
   when: brew_available and vultr_cli_check.rc != 0
@@ -25,4 +25,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "vultr-cli installed"
+  log: "vultr-cli installed"

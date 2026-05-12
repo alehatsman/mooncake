@@ -3,11 +3,11 @@
     file:
       path: "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k"
       exists: true
-  register: p10k_check
+  as: p10k_check
   failed_when: false
 
 - name: Install p10k via Homebrew
-  package:
+  pkg:
     name: romkatv/powerlevel10k/powerlevel10k
     state: present
   when: brew_available and p10k_check.failed
@@ -23,4 +23,4 @@
       exists: true
 
 - name: Display confirmation
-  print: "p10k installed"
+  log: "p10k installed"

@@ -1,5 +1,5 @@
 - name: Uninstall kubescape (macOS)
-  package:
+  pkg:
     name: kubescape
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "kubescape uninstalled"
+  log: "kubescape uninstalled"

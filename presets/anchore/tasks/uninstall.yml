@@ -1,8 +1,8 @@
 - name: Uninstall anchore
-  package:
+  pkg:
     name: anchore
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "anchore uninstalled"
+  log: "anchore uninstalled"

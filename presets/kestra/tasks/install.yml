@@ -1,17 +1,16 @@
 - name: Check if kestra is installed
   shell: command -v kestra
-  register: kestra_check
+  as: kestra_check
   failed_when: false
 
 - name: Install kestra
-  package:
+  pkg:
     name: kestra
     state: present
   when: kestra_check.rc != 0
 
 - name: Verify installation
   shell: kestra --version 2>&1 || kestra -v 2>&1 || echo "installed"
-  register: kestra_version
-
+  as: kestra_version
 - name: Display version
-  print: "kestra installed"
+  log: "kestra installed"

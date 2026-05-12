@@ -9,4 +9,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "docusaurus uninstalled"
+  log: "docusaurus uninstalled"

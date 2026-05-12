@@ -1,21 +1,19 @@
 - name: Check if cabal is installed
   shell: command -v cabal
-  register: cabal_check
+  as: cabal_check
   failed_when: false
 
 - name: Install cabal
-  package:
+  pkg:
     name: cabal
     state: present
   when: cabal_check.rc != 0
 
 - name: Verify installation
   shell: cabal --version 2>&1 || cabal -v 2>&1 || echo "installed"
-  register: cabal_version
-
+  as: cabal_version
 - name: Display version
-  print: "cabal installed"
-
+  log: "cabal installed"
 - name: Verify installation with assert
   assert:
     command:

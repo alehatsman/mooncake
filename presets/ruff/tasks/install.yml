@@ -1,10 +1,10 @@
 - name: Check if ruff is installed
   shell: command -v ruff
-  register: ruff_check
+  as: ruff_check
   failed_when: false
 
 - name: Install ruff (macOS)
-  package:
+  pkg:
     name: ruff
     state: present
   when: brew_available and ruff_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "ruff installed"
+  log: "ruff installed"

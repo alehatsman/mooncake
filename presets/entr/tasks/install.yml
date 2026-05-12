@@ -1,21 +1,19 @@
 - name: Check if entr is installed
   shell: command -v entr
-  register: entr_check
+  as: entr_check
   failed_when: false
 
 - name: Install entr
-  package:
+  pkg:
     name: entr
     state: present
   when: entr_check.rc != 0
 
 - name: Verify installation
   shell: entr --version 2>&1 || entr -v 2>&1 || echo "installed"
-  register: entr_version
-
+  as: entr_version
 - name: Display version
-  print: "entr installed"
-
+  log: "entr installed"
 - name: Verify installation with assert
   assert:
     command:

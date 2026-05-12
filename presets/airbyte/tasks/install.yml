@@ -1,17 +1,16 @@
 - name: Check if airbyte is installed
   shell: command -v airbyte
-  register: airbyte_check
+  as: airbyte_check
   failed_when: false
 
 - name: Install airbyte
-  package:
+  pkg:
     name: airbyte
     state: present
   when: airbyte_check.rc != 0
 
 - name: Verify installation
   shell: airbyte --version 2>&1 || airbyte -v 2>&1 || echo "installed"
-  register: airbyte_version
-
+  as: airbyte_version
 - name: Display version
-  print: "airbyte installed"
+  log: "airbyte installed"

@@ -1,10 +1,10 @@
 - name: Check if glances is installed
   shell: command -v glances
-  register: glances_check
+  as: glances_check
   failed_when: false
 
 - name: Install glances (macOS)
-  package:
+  pkg:
     name: glances
     state: present
   when: brew_available and glances_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "glances installed"
+  log: "glances installed"

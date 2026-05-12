@@ -1,5 +1,5 @@
 - name: Uninstall hexo (macOS)
-  package:
+  pkg:
     name: hexo
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "hexo uninstalled"
+  log: "hexo uninstalled"

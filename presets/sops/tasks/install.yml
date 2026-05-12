@@ -1,19 +1,19 @@
 - name: Check if sops is installed
   shell: command -v sops
-  register: sops_check
+  as: sops_check
   failed_when: false
 
 - name: Install sops (macOS)
-  package:
+  pkg:
     name: sops
     state: present
   when: brew_available and sops_check.rc != 0
 
 - name: Install sops (Linux)
-  package:
+  pkg:
     name: sops
     state: present
-  become: true
+  as_user: root
   when: apt_available and sops_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "sops installed"
+  log: "sops installed"

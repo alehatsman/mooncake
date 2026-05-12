@@ -11,4 +11,4 @@
   failed_when: false
 
 - name: Display uninstall complete
-  print: "OK TensorFlow uninstalled"
+  log: "OK TensorFlow uninstalled"

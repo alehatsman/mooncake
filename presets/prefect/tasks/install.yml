@@ -1,6 +1,6 @@
 - name: Check if prefect is installed
   shell: command -v prefect
-  register: prefect_check
+  as: prefect_check
   failed_when: false
 
 - name: Install prefect via pip3
@@ -15,7 +15,6 @@
 
 - name: Get prefect version
   shell: prefect version
-  register: prefect_version
-
+  as: prefect_version
 - name: Display version
-  print: "prefect installed: {{ prefect_version.stdout }}"
+  log: "prefect installed: {{ prefect_version.stdout }}"

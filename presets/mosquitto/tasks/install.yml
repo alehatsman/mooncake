@@ -1,23 +1,20 @@
 - name: Check if mosquitto is installed
   shell: command -v mosquitto
-  register: mosquitto_check
+  as: mosquitto_check
   failed_when: false
 
 - name: Install mosquitto via apt
   shell: apt-get install -y mosquitto
   when: apt_available and mosquitto_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install mosquitto via dnf
   shell: dnf install -y mosquitto
   when: dnf_available and mosquitto_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install mosquitto via yum
   shell: yum install -y mosquitto
   when: yum_available and mosquitto_check.rc != 0
-  become: true
-
+  as_user: root
 - name: Install mosquitto via Homebrew
   shell: brew install mosquitto
   when: brew_available and mosquitto_check.rc != 0

@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install oh-my-posh
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall oh-my-posh
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

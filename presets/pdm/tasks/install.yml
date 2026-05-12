@@ -1,19 +1,19 @@
 - name: Check if pdm is installed
   shell: command -v pdm
-  register: pdm_check
+  as: pdm_check
   failed_when: false
 
 - name: Install pdm via Homebrew
-  package:
+  pkg:
     name: pdm
     state: present
   when: (parameters.state == "present") and (os == "darwin") and (pdm_check.rc != 0)
 
 - name: Install python3-pip (Linux)
-  package:
+  pkg:
     name: python3-pip
     state: present
-  become: true
+  as_user: root
   when: (parameters.state == "present") and (os == "linux") and (pdm_check.rc != 0)
   failed_when: false
 
@@ -28,4 +28,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "pdm installed"
+  log: "pdm installed"

@@ -15,7 +15,7 @@
     max_lines: 500
 
 - name: "Display agent configuration"
-  print:
+  log:
     msg: |
       🤖 LLM Agent: {{ agent_name }}
       📋 Task ID: {{ task_id }}
@@ -32,13 +32,11 @@
   assert:
     git_clean:
       allow_untracked: true
-  ignore_errors: false
-
+  continue_on_error: false
 - name: "Verify test suite passes before changes"
   shell:
     cmd: "npm test"
-  register: baseline_tests
-
+  as: baseline_tests
 - name: "Abort if baseline tests fail"
   assert:
     command:
@@ -53,7 +51,7 @@
 
 # Phase 3: LLM Agent Execution with Artifact Capture
 - name: "Capture LLM agent changes"
-  artifact_capture:
+  artifact.capture:
     name: "{{ agent_name }}-{{ task_id }}"
     output_dir: "{{ artifact_dir }}"
     format: "both"
@@ -62,90 +60,85 @@
     include_checksums: true
     steps:
       # Step 1: LLM generates a patchset
-      - name: "Apply LLM-generated patchset"
-        repo_apply_patchset:
-          patchset_file: "{{ workspace }}/llm-changes.patch"
-          strict: true  # Rollback all if any file fails
-          backup: true  # Create .bak files
-        register: patch_result
-
-      # Step 2: Additional file operations from LLM
-      - name: "Update package dependencies (if needed)"
-        file_replace:
-          path: "package.json"
-          regex: '"version": "[^"]+"'
-          replace: '"version": "{{ new_version }}"'
-        when: new_version is defined
+    - name: "Apply LLM-generated patchset"
+      repo.patch:
+        patchset_file: "{{ workspace }}/llm-changes.patch"
+        strict: true    # Rollback all if any file fails
+        backup: true    # Create .bak files
+      as: patch_result
+    - name: "Update package dependencies (if needed)"
+      text.replace:
+        path: "package.json"
+        regex: '"version": "[^"]+"'
+        replace: '"version": "{{ new_version }}"'
+      when: new_version is defined
 
       # Step 3: Apply template changes
-      - name: "Update configuration files"
-        template:
-          src: "{{ workspace }}/generated-config.j2"
-          dest: "config/app.yml"
-        when: workspace + '/generated-config.j2' is file
+    - name: "Update configuration files"
+      file.template:
+        src: "{{ workspace }}/generated-config.j2"
+        dest: "config/app.yml"
+      when: workspace + '/generated-config.j2' is file
 
 - name: "Display capture summary"
   shell:
     cmd: "cat {{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/SUMMARY.md"
-  register: summary
-
+  as: summary
 - name: "Show summary to user"
-  print:
+  log:
     msg: "{{ summary.stdout }}"
 
 # Phase 4: Validation (Change Budget Enforcement)
 - name: "Validate change budget"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "{{ artifact_dir }}/{{ agent_name }}-{{ task_id }}/changes.json"
     max_files: "{{ max_files }}"
     max_lines_changed: "{{ max_lines }}"
     require_tests: true
     forbidden_paths:
-      - "node_modules/**"
-      - "dist/**"
-      - "build/**"
-      - ".env*"
-      - "secrets/**"
-      - "config/production.yml"
+    - "node_modules/**"
+    - "dist/**"
+    - "build/**"
+    - ".env*"
+    - "secrets/**"
+    - "config/production.yml"
     allowed_paths:
-      - "src/**/*.js"
-      - "src/**/*.ts"
-      - "tests/**/*.js"
-      - "tests/**/*.ts"
-      - "config/dev.yml"
-      - "config/staging.yml"
-  register: validation
-
-# Phase 5: Automated Testing
+    - "src/**/*.js"
+    - "src/**/*.ts"
+    - "tests/**/*.js"
+    - "tests/**/*.ts"
+    - "config/dev.yml"
+    - "config/staging.yml"
+  as: validation
 - name: "Run linter"
   shell:
     cmd: "npm run lint"
-  register: lint_result
+  as: lint_result
   when: validation is succeeded
 
 - name: "Run unit tests"
   shell:
     cmd: "npm test"
-  register: test_result
+  as: test_result
   when: validation is succeeded and lint_result is succeeded
 
 - name: "Run integration tests"
   shell:
     cmd: "npm run test:integration"
-  register: integration_result
+  as: integration_result
   when: test_result is succeeded
 
 - name: "Check test coverage"
   shell:
     cmd: "npm run coverage -- --min-coverage=80"
-  register: coverage_result
+  as: coverage_result
   when: integration_result is succeeded
 
 # Phase 6: Security Checks
 - name: "Run security audit"
   shell:
     cmd: "npm audit --audit-level=moderate"
-  register: audit_result
+  as: audit_result
   when: coverage_result is succeeded
 
 - name: "Check for secrets in changed files"
@@ -155,24 +148,16 @@
       if echo "$FILES" | xargs grep -E '(API_KEY|SECRET|PASSWORD|TOKEN)' 2>/dev/null; then
         exit 1
       fi
-  register: secrets_check
+  as: secrets_check
   when: audit_result is succeeded
 
 # Phase 7: Decision Point
 - name: "Aggregate test results"
   vars:
-    all_passed: "{{
-      validation is succeeded and
-      lint_result is succeeded and
-      test_result is succeeded and
-      integration_result is succeeded and
-      coverage_result is succeeded and
-      audit_result is succeeded and
-      secrets_check is succeeded
-    }}"
+    all_passed: "{{ validation is succeeded and lint_result is succeeded and test_result is succeeded and integration_result is succeeded and coverage_result is succeeded and audit_result is succeeded and secrets_check is succeeded }}"
 
 - name: "Display validation results"
-  print:
+  log:
     msg: |
       📊 Validation Results:
 
@@ -224,7 +209,7 @@
       }
       EOF
       cat {{ workspace }}/feedback.json
-  register: feedback
+  as: feedback
   when: all_passed == false
 
 - name: "Generate success report for LLM"
@@ -248,7 +233,7 @@
       }
       EOF
       cat {{ workspace }}/success.json
-  register: success_report
+  as: success_report
   when: all_passed == true
 
 # Phase 10: Finalization
@@ -260,8 +245,8 @@
   when: all_passed == true
 
 - name: "Display final status"
-  print:
-    msg: |
+  log:
+    msg: |2
 
       🎯 LLM Agent Workflow Complete
 

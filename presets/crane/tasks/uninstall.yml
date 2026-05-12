@@ -1,12 +1,11 @@
 - name: Uninstall crane
-  package:
+  pkg:
     name: crane
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "crane uninstalled"
-
+  log: "crane uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

@@ -1,5 +1,5 @@
 - name: Uninstall snyk (macOS)
-  package:
+  pkg:
     name: snyk
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "snyk uninstalled"
+  log: "snyk uninstalled"

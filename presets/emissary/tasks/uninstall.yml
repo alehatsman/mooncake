@@ -1,8 +1,8 @@
 - name: Uninstall emissary
-  package:
+  pkg:
     name: emissary
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "emissary uninstalled"
+  log: "emissary uninstalled"

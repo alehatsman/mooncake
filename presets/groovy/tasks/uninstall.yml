@@ -1,15 +1,15 @@
 - name: Uninstall groovy (macOS)
-  package:
+  pkg:
     name: groovy
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall groovy (Linux)
-  package:
+  pkg:
     name: groovy
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "groovy uninstalled"
+  log: "groovy uninstalled"

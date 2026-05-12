@@ -1,19 +1,19 @@
 - name: Check if proxychains is installed
   shell: command -v proxychains4 || command -v proxychains-ng
-  register: proxychains_check
+  as: proxychains_check
   failed_when: false
 
 - name: Install proxychains via Homebrew
-  package:
+  pkg:
     name: proxychains-ng
     state: present
   when: brew_available and proxychains_check.rc != 0
 
 - name: Install proxychains via apt
-  package:
+  pkg:
     name: proxychains4
     state: present
-  become: true
+  as_user: root
   when: apt_available and proxychains_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "proxychains installed"
+  log: "proxychains installed"

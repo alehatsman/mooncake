@@ -1,10 +1,10 @@
 - name: Check if just is installed
   shell: command -v just
-  register: just_check
+  as: just_check
   failed_when: false
 
 - name: Install just (macOS)
-  package:
+  pkg:
     name: just
     state: present
   when: brew_available and just_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "just installed"
+  log: "just installed"

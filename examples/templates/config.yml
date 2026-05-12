@@ -19,9 +19,9 @@
 
     # Features
     features:
-      - authentication
-      - api
-      - websockets
+    - authentication
+    - api
+    - websockets
 
     # Nginx config
     server_name: example.com
@@ -31,40 +31,40 @@
 
     # Script config
     commands:
-      - "npm install"
-      - "npm run build"
-      - "npm test"
+    - "npm install"
+    - "npm run build"
+    - "npm test"
 
 - name: Create output directory
-  file:
+  file.write:
     path: /tmp/mooncake-templates
     state: directory
     mode: "0755"
 
 # Render application config
 - name: Render application config
-  template:
+  file.template:
     src: ./templates/config.yml.j2
     dest: /tmp/mooncake-templates/config.yml
     mode: "0644"
 
 # Render nginx config
 - name: Render nginx config
-  template:
+  file.template:
     src: ./templates/nginx.conf.j2
     dest: /tmp/mooncake-templates/nginx.conf
     mode: "0644"
 
 # Render executable script
 - name: Render deployment script
-  template:
+  file.template:
     src: ./templates/script.sh.j2
     dest: /tmp/mooncake-templates/deploy.sh
     mode: "0755"
 
 # You can also pass additional vars to templates
 - name: Render with additional vars
-  template:
+  file.template:
     src: ./templates/config.yml.j2
     dest: /tmp/mooncake-templates/config-prod.yml
     mode: "0644"

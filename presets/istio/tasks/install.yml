@@ -1,10 +1,10 @@
 - name: Check if istioctl is installed
   shell: command -v istioctl
-  register: istio_check
+  as: istio_check
   failed_when: false
 
 - name: Install istio (macOS)
-  package:
+  pkg:
     name: istio
     state: present
   when: brew_available and istio_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "istio installed"
+  log: "istio installed"

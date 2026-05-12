@@ -2,7 +2,7 @@
 
 # Create config directory
 - name: Create Neovim config directory
-  file:
+  file.write:
     path: ~/.config/nvim
     state: directory
     mode: "0755"
@@ -18,7 +18,7 @@
   failed_when: false
 
 - name: Display Packer installation status
-  print: "OK Packer.nvim plugin manager installed"
+  log: "OK Packer.nvim plugin manager installed"
   when: parameters.install_packer != false
 
 # Install lazy.nvim
@@ -32,12 +32,12 @@
   failed_when: false
 
 - name: Display lazy.nvim installation status
-  print: "OK lazy.nvim plugin manager installed"
+  log: "OK lazy.nvim plugin manager installed"
   when: parameters.install_lazy != false
 
 # Create basic init.lua
 - name: Create basic init.lua
-  file:
+  file.write:
     path: ~/.config/nvim/init.lua
     state: touch
     mode: "0644"
@@ -72,7 +72,7 @@
 
 # Display configuration info
 - name: Display Neovim setup info
-  print: |
+  log: |
     Neovim configured successfully
 
     Configuration: ~/.config/nvim

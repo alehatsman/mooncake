@@ -1,19 +1,19 @@
 - name: Check if bazel is installed
   shell: command -v bazel
-  register: bazel_check
+  as: bazel_check
   failed_when: false
 
 - name: Install bazel via Homebrew
-  package:
+  pkg:
     name: bazel
     state: present
   when: brew_available and bazel_check.rc != 0
 
 - name: Install bazel via apt
-  package:
+  pkg:
     name: bazel
     state: present
-  become: true
+  as_user: root
   when: apt_available and bazel_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "bazel installed"
+  log: "bazel installed"

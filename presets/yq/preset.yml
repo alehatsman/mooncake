@@ -10,8 +10,8 @@ parameters:
     description: Whether yq should be installed or removed
 steps:
   - name: Install yq
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall yq
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

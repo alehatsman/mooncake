@@ -15,14 +15,14 @@
 # =============================================================================
 
 - name: "Example 1: Create empty file"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/empty-file.txt
     state: file
     mode: "0644"
   tags: [basics, files]
 
 - name: "Example 2: Create file with content"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/hello.txt
     state: file
     content: "Hello from Mooncake!"
@@ -30,7 +30,7 @@
   tags: [basics, files]
 
 - name: "Example 3: Create file with multi-line content"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/config.txt
     state: file
     content: |
@@ -42,7 +42,7 @@
   tags: [basics, files]
 
 - name: "Example 4: Create file with template variables"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/info.txt
     state: file
     content: |
@@ -59,30 +59,30 @@
 # =============================================================================
 
 - name: "Example 5: Create single directory"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/my-directory
     state: directory
     mode: "0755"
   tags: [basics, directories]
 
 - name: "Example 6: Create nested directories"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/app/config/production
     state: directory
     mode: "0755"
   tags: [directories]
 
 - name: "Example 7: Create directory structure"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/project/{{ item }}
     state: directory
     mode: "0755"
-  with_items:
-    - src
-    - bin
-    - config
-    - logs
-    - data
+  for_each:
+  - src
+  - bin
+  - config
+  - logs
+  - data
   tags: [directories, loops]
 
 # =============================================================================
@@ -90,7 +90,7 @@
 # =============================================================================
 
 - name: "Example 8: Create file with specific permissions"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/private.txt
     state: file
     content: "This is a private file"
@@ -98,7 +98,7 @@
   tags: [permissions]
 
 - name: "Example 9: Create executable script"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/script.sh
     state: file
     content: |
@@ -108,7 +108,7 @@
   tags: [permissions]
 
 - name: "Example 10: Create read-only file"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/readonly.txt
     state: file
     content: "This file is read-only"
@@ -116,7 +116,7 @@
   tags: [permissions]
 
 - name: "Example 11: Create restricted directory"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/private-dir
     state: directory
     mode: "0700"
@@ -127,7 +127,7 @@
 # =============================================================================
 
 - name: "Example 12: Create file with ownership (current user)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/owned-file.txt
     state: file
     content: "File with explicit ownership"
@@ -153,20 +153,20 @@
 # =============================================================================
 
 - name: "Example 14: Touch file (create if doesn't exist)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/marker.txt
     state: touch
     mode: "0644"
   tags: [touch]
 
 - name: "Example 15: Touch file again (updates timestamp)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/marker.txt
     state: touch
   tags: [touch]
 
 - name: "Example 16: Create marker file for idempotency"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/.installed
     state: touch
     mode: "0644"
@@ -177,7 +177,7 @@
 # =============================================================================
 
 - name: "Example 17: Create file to link to"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/original.txt
     state: file
     content: "This is the original file"
@@ -185,21 +185,21 @@
   tags: [symlinks]
 
 - name: "Example 18: Create symbolic link"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/link-to-original.txt
     src: /tmp/mooncake-examples/original.txt
     state: link
   tags: [symlinks]
 
 - name: "Example 19: Create link to directory"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/link-to-config
     src: /tmp/mooncake-examples/app/config
     state: link
   tags: [symlinks]
 
 - name: "Example 20: Create link with force (replace existing)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/forced-link.txt
     src: /tmp/mooncake-examples/original.txt
     state: link
@@ -211,7 +211,7 @@
 # =============================================================================
 
 - name: "Example 21: Create hard link"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/hardlink.txt
     src: /tmp/mooncake-examples/original.txt
     state: hardlink
@@ -230,7 +230,7 @@
 # =============================================================================
 
 - name: "Example 23: Create file to remove"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/to-delete.txt
     state: file
     content: "This file will be deleted"
@@ -238,20 +238,20 @@
   tags: [remove]
 
 - name: "Example 24: Remove file"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/to-delete.txt
     state: absent
   tags: [remove]
 
 - name: "Example 25: Create directory to remove"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/empty-dir-to-delete
     state: directory
     mode: "0755"
   tags: [remove]
 
 - name: "Example 26: Remove empty directory"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/empty-dir-to-delete
     state: absent
   tags: [remove]
@@ -264,7 +264,7 @@
   tags: [remove]
 
 - name: "Example 28: Remove non-empty directory (force)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/non-empty-dir
     state: absent
     force: true
@@ -275,7 +275,7 @@
 # =============================================================================
 
 - name: "Example 29: Create file with default permissions"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/perms-test.txt
     state: file
     content: "Testing permission changes"
@@ -283,7 +283,7 @@
   tags: [perms]
 
 - name: "Example 30: Change file permissions only"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/perms-test.txt
     state: perms
     mode: "0600"
@@ -298,7 +298,7 @@
   tags: [perms]
 
 - name: "Example 32: Recursively change permissions"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/perms-dir
     state: perms
     mode: "0755"
@@ -310,7 +310,7 @@
 # =============================================================================
 
 - name: "Example 33: Create file for backup demo"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/backup-demo.txt
     state: file
     content: "Original content"
@@ -318,7 +318,7 @@
   tags: [backup]
 
 - name: "Example 34: Update file with backup"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/backup-demo.txt
     state: file
     content: "Updated content"
@@ -341,14 +341,14 @@
     log_dir: logs
 
 - name: "Example 36: Create directory with variable"
-  file:
+  file.write:
     path: "{{ app_root }}"
     state: directory
     mode: "0755"
   tags: [variables]
 
 - name: "Example 37: Create config file with variables"
-  file:
+  file.write:
     path: "{{ app_root }}/{{ config_file }}"
     state: file
     content: |
@@ -361,15 +361,15 @@
   tags: [variables]
 
 - name: "Example 38: Create directories from list"
-  file:
+  file.write:
     path: "{{ app_root }}/{{ item }}"
     state: directory
     mode: "0755"
-  with_items:
-    - "{{ data_dir }}"
-    - "{{ log_dir }}"
-    - cache
-    - tmp
+  for_each:
+  - "{{ data_dir }}"
+  - "{{ log_dir }}"
+  - cache
+  - tmp
   tags: [variables, loops]
 
 # =============================================================================
@@ -377,7 +377,7 @@
 # =============================================================================
 
 - name: "Example 39: Create Linux-specific file"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/linux-only.txt
     state: file
     content: "This file exists only on Linux"
@@ -386,7 +386,7 @@
   tags: [conditional]
 
 - name: "Example 40: Create macOS-specific file"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/macos-only.txt
     state: file
     content: "This file exists only on macOS"
@@ -400,32 +400,32 @@
 
 - vars:
     environments:
-      - development
-      - staging
-      - production
+    - development
+    - staging
+    - production
 
 - name: "Example 41: Create config files for each environment"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/configs/{{ item }}.yml
     state: file
     content: |
       environment: {{ item }}
       debug: {{ 'true' if item == 'development' else 'false' }}
     mode: "0644"
-  with_items: "{{ environments }}"
+  for_each: "{{ environments }}"
   tags: [loops]
 
 - vars:
     services:
-      - name: web
-        port: 8080
-      - name: api
-        port: 3000
-      - name: db
-        port: 5432
+    - name: web
+      port: 8080
+    - name: api
+      port: 3000
+    - name: db
+      port: 5432
 
 - name: "Example 42: Create service config files"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/services/{{ item.name }}.conf
     state: file
     content: |
@@ -433,7 +433,7 @@
       port={{ item.port }}
       enabled=true
     mode: "0644"
-  with_items: "{{ services }}"
+  for_each: "{{ services }}"
   tags: [loops]
 
 # =============================================================================
@@ -441,21 +441,21 @@
 # =============================================================================
 
 - name: "Example 43: Setup application directory structure"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/webapp/{{ item }}
     state: directory
     mode: "0755"
-  with_items:
-    - config
-    - logs
-    - data
-    - tmp
-    - uploads
-    - backups
+  for_each:
+  - config
+  - logs
+  - data
+  - tmp
+  - uploads
+  - backups
   tags: [real-world]
 
 - name: "Example 44: Create application configuration"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/webapp/config/app.yml
     state: file
     content: |
@@ -480,7 +480,7 @@
   tags: [real-world]
 
 - name: "Example 45: Create environment-specific configs"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/webapp/config/{{ item }}.yml
     state: file
     content: |
@@ -488,20 +488,20 @@
       debug: {{ 'true' if item == 'development' else 'false' }}
       log_level: {{ 'debug' if item == 'development' else 'info' }}
     mode: "0644"
-  with_items:
-    - development
-    - production
+  for_each:
+  - development
+  - production
   tags: [real-world]
 
 - name: "Example 46: Create initialization marker"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/webapp/.initialized
     state: touch
     mode: "0644"
   tags: [real-world]
 
 - name: "Example 47: Create executable management script"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/webapp/manage.sh
     state: file
     content: |
@@ -534,21 +534,21 @@
 # =============================================================================
 
 - name: "Example 48: Create file (first time - changes)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/idempotent.txt
     state: file
     content: "This content is idempotent"
     mode: "0644"
-  register: first_run
+  as: first_run
   tags: [idempotency]
 
 - name: "Example 49: Create same file again (no changes)"
-  file:
+  file.write:
     path: /tmp/mooncake-examples/idempotent.txt
     state: file
     content: "This content is idempotent"
     mode: "0644"
-  register: second_run
+  as: second_run
   tags: [idempotency]
 
 - name: "Example 50: Show idempotency results"
@@ -584,14 +584,14 @@
 # =============================================================================
 
 - name: "Cleanup: Remove all example files"
-  file:
+  file.write:
     path: /tmp/mooncake-examples
     state: absent
     force: true
   tags: [cleanup]
 
 - name: "Summary"
-  print: |
+  log: |2
 
     File action examples completed!
     Explored 50+ different use cases including:
@@ -604,5 +604,4 @@
       • Recursive operations
       • Template variable usage
       • Idempotency
-
   tags: [always]

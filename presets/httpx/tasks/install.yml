@@ -1,10 +1,10 @@
 - name: Check if httpx is installed
   shell: command -v httpx
-  register: httpx_check
+  as: httpx_check
   failed_when: false
 
 - name: Install httpx (macOS)
-  package:
+  pkg:
     name: httpx
     state: present
   when: brew_available and httpx_check.rc != 0
@@ -25,4 +25,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "httpx installed"
+  log: "httpx installed"

@@ -1,10 +1,10 @@
 - name: Check if mitmproxy is installed
   shell: command -v mitmproxy
-  register: mitmproxy_check
+  as: mitmproxy_check
   failed_when: false
 
 - name: Install mitmproxy via Homebrew
-  package:
+  pkg:
     name: mitmproxy
     state: present
   when: brew_available and mitmproxy_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mitmproxy installed"
+  log: "mitmproxy installed"

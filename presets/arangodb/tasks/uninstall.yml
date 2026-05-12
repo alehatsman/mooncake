@@ -1,8 +1,8 @@
 - name: Uninstall arangodb
-  package:
+  pkg:
     name: arangodb
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "arangodb uninstalled"
+  log: "arangodb uninstalled"

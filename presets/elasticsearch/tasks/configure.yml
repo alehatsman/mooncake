@@ -1,7 +1,7 @@
 # Elasticsearch Configuration Tasks
 
 - name: Ensure data directory exists
-  file:
+  file.write:
     path: "{{ parameters.data_dir }}"
     state: directory
     mode: "0755"
@@ -19,11 +19,11 @@
   failed_when: false
 
 - name: Start Elasticsearch service (Linux)
-  service:
+  os.service:
     name: elasticsearch
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: linux and parameters.start_service
 
 - name: Start Elasticsearch service (macOS)
@@ -32,15 +32,16 @@
 
 - name: Wait for Elasticsearch to be ready
   shell: curl -s http://localhost:{{ parameters.http_port }}/_cluster/health
-  register: elasticsearch_ready
+  as: elasticsearch_ready
   until: elasticsearch_ready.rc == 0
-  retries: 30
+  retry:
+    attempts: 30
   delay: 2
   failed_when: false
   when: parameters.start_service
 
 - name: Display Elasticsearch information
-  print: |
+  log: |
     Elasticsearch is running:
     - HTTP API: http://localhost:{{ parameters.http_port }}
     - Cluster: {{ parameters.cluster_name }}

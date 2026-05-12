@@ -1,10 +1,10 @@
 - name: Check if kotlin is installed
   shell: command -v kotlin
-  register: kotlin_check
+  as: kotlin_check
   failed_when: false
 
 - name: Install kotlin (macOS)
-  package:
+  pkg:
     name: kotlin
     state: present
   when: brew_available and kotlin_check.rc != 0
@@ -26,4 +26,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "kotlin installed"
+  log: "kotlin installed"

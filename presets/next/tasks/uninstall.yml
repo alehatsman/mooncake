@@ -1,6 +1,6 @@
 - name: Check if npm is installed
   shell: command -v npm
-  register: npm_check
+  as: npm_check
   failed_when: false
   when: parameters.state == "absent"
 
@@ -10,7 +10,7 @@
   failed_when: false
 
 - name: Display confirmation
-  print: "Next.js CLI uninstalled"
+  log: "Next.js CLI uninstalled"
   when: parameters.state == "absent"
 
 - name: Verify removal

@@ -1,5 +1,5 @@
 - name: Uninstall zed (macOS)
-  package:
+  pkg:
     name: zed
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "zed uninstalled"
+  log: "zed uninstalled"

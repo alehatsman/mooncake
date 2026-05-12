@@ -1,10 +1,10 @@
 - name: Check if fnm is installed
   shell: command -v fnm
-  register: fnm_check
+  as: fnm_check
   failed_when: false
 
 - name: Install fnm
-  package:
+  pkg:
     name: fnm
     state: present
   when: fnm_check.rc != 0
@@ -16,4 +16,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "fnm installed"
+  log: "fnm installed"

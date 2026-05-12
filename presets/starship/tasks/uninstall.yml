@@ -27,10 +27,10 @@
   failed_when: false
 
 - name: Remove Starship binary (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/starship
     state: absent
-  become: true
+  as_user: root
   when: linux
 
 - name: Verify uninstallation with assert
@@ -40,7 +40,7 @@
       exit_code: 1
 
 - name: Display uninstall confirmation
-  print: |
+  log: |
     Starship uninstalled.
 
     Note: Configuration preserved at ~/.config/starship.toml

@@ -1,19 +1,19 @@
 - name: Check if mvn is installed
   shell: command -v mvn
-  register: maven_check
+  as: maven_check
   failed_when: false
 
 - name: Install maven (macOS)
-  package:
+  pkg:
     name: maven
     state: present
   when: brew_available and maven_check.rc != 0
 
 - name: Install maven (Linux)
-  package:
+  pkg:
     name: maven
     state: present
-  become: true
+  as_user: root
   when: apt_available and maven_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "maven installed"
+  log: "maven installed"

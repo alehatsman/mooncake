@@ -1,10 +1,10 @@
 - name: Check if mypy is installed
   shell: command -v mypy
-  register: mypy_check
+  as: mypy_check
   failed_when: false
 
 - name: Install mypy via Homebrew
-  package:
+  pkg:
     name: mypy
     state: present
   when: brew_available and mypy_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mypy installed"
+  log: "mypy installed"

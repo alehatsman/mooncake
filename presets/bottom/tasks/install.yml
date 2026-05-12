@@ -1,19 +1,19 @@
 - name: Check if btm is installed
   shell: command -v btm
-  register: bottom_check
+  as: bottom_check
   failed_when: false
 
 - name: Install bottom via Homebrew
-  package:
+  pkg:
     name: bottom
     state: present
   when: brew_available and bottom_check.rc != 0
 
 - name: Install bottom via apt
-  package:
+  pkg:
     name: bottom
     state: present
-  become: true
+  as_user: root
   when: apt_available and bottom_check.rc != 0
 
 - name: Install bottom via cargo
@@ -27,4 +27,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "bottom installed"
+  log: "bottom installed"

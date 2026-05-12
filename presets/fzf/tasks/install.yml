@@ -1,13 +1,13 @@
 - name: Check if fzf is installed
   shell: command -v fzf
-  register: fzf_check
+  as: fzf_check
   failed_when: false
 
 - name: Install fzf
-  package:
+  pkg:
     name: fzf
     state: present
-  become: true
+  as_user: root
   when: fzf_check.rc != 0
 
 - name: Verify installation with assert
@@ -17,4 +17,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "fzf installed"
+  log: "fzf installed"

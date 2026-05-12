@@ -1,17 +1,16 @@
 - name: Check if stitch is installed
   shell: command -v stitch
-  register: stitch_check
+  as: stitch_check
   failed_when: false
 
 - name: Install stitch
-  package:
+  pkg:
     name: stitch
     state: present
   when: stitch_check.rc != 0
 
 - name: Verify installation
   shell: stitch --version 2>&1 || stitch -v 2>&1 || echo "installed"
-  register: stitch_version
-
+  as: stitch_version
 - name: Display version
-  print: "stitch installed"
+  log: "stitch installed"

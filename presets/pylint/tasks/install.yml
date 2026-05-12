@@ -1,10 +1,10 @@
 - name: Check if pylint is installed
   shell: command -v pylint
-  register: pylint_check
+  as: pylint_check
   failed_when: false
 
 - name: Install  via Homebrew
-  package:
+  pkg:
     name: pylint
     state: present
   when: brew_available and pylint_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "pylint installed"
+  log: "pylint installed"

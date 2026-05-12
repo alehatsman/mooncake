@@ -2,48 +2,46 @@
 
 - name: Check if Nginx is already installed
   shell: command -v nginx
-  register: nginx_check
+  as: nginx_check
   failed_when: false
 
 # macOS Installation
 - name: Install Nginx via Homebrew (macOS)
-  package:
+  pkg:
     name: nginx
     state: present
   when: (parameters.state == "present") and (os == "darwin") and (nginx_check.rc != 0)
 
 # Linux - Debian/Ubuntu
 - name: Install Nginx (Debian/Ubuntu)
-  package:
+  pkg:
     name: nginx
     state: present
-  become: true
+  as_user: root
   when: (parameters.state == "present") and (os == "linux") and (nginx_check.rc != 0)
 
 # Linux - RHEL/Fedora/CentOS
 - name: Install Nginx (RHEL/Fedora/CentOS)
-  package:
+  pkg:
     name: nginx
     state: present
-  become: true
+  as_user: root
   when: (parameters.state == "present") and (os == "linux") and (nginx_check.rc != 0)
 
 # Linux - Arch
 - name: Install Nginx (Arch)
-  package:
+  pkg:
     name: nginx
     state: present
-  become: true
+  as_user: root
   when: (parameters.state == "present") and (os == "linux") and (nginx_check.rc != 0)
 
 # Verify installation
 - name: Verify Nginx installation
   shell: nginx -v
-  register: nginx_version
-
+  as: nginx_version
 - name: Display Nginx version
-  print: "Nginx installed: {{ nginx_version.stderr }}"
-
+  log: "Nginx installed: {{ nginx_version.stderr }}"
 - name: Verify installation
   assert:
     command:

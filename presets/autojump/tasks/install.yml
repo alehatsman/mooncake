@@ -1,19 +1,19 @@
 - name: Check if autojump is installed
   shell: command -v autojump
-  register: autojump_check
+  as: autojump_check
   failed_when: false
 
 - name: Install autojump via Homebrew
-  package:
+  pkg:
     name: autojump
     state: present
   when: brew_available and autojump_check.rc != 0
 
 - name: Install autojump via apt
-  package:
+  pkg:
     name: autojump
     state: present
-  become: true
+  as_user: root
   when: apt_available and autojump_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "autojump installed"
+  log: "autojump installed"

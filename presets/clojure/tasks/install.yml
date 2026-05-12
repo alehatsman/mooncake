@@ -1,26 +1,24 @@
 - name: Check if clj is installed
   shell: command -v clj
-  register: clojure_check
+  as: clojure_check
   failed_when: false
 
 - name: Install clojure
-  package:
+  pkg:
     name: clojure
     state: present
-  become: true
+  as_user: root
   when: clojure_check.rc != 0
 
 - name: Verify installation
   shell: clj --version 2>&1 || clj -v 2>&1 || echo "installed"
-  register: clojure_version
-  ignore_errors: true
-
+  as: clojure_version
+  continue_on_error: true
 - name: Display version
-  print: "clojure installed"
-
+  log: "clojure installed"
 - name: Verify installation with assert
   assert:
     command:
       cmd: clj --version
       exit_code: 0
-  ignore_errors: true
+  continue_on_error: true

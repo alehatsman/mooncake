@@ -1,10 +1,10 @@
 - name: Check if lazydocker is installed
   shell: command -v lazydocker
-  register: lazydocker_check
+  as: lazydocker_check
   failed_when: false
 
 - name: Install lazydocker (macOS)
-  package:
+  pkg:
     name: lazydocker
     state: present
   when: brew_available and lazydocker_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "lazydocker installed"
+  log: "lazydocker installed"

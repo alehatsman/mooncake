@@ -1,5 +1,5 @@
 - name: Uninstall act (macOS)
-  package:
+  pkg:
     name: act
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "act uninstalled"
+  log: "act uninstalled"

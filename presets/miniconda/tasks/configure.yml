@@ -8,7 +8,7 @@
 
 # Display configuration
 - name: Display Miniconda configuration
-  print: |
+  log: |
     OK Miniconda installed and configured
 
     Installation:

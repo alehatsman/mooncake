@@ -1,8 +1,8 @@
 - name: Uninstall scylladb
-  package:
+  pkg:
     name: scylladb
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "scylladb uninstalled"
+  log: "scylladb uninstalled"

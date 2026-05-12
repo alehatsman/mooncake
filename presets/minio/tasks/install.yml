@@ -2,31 +2,31 @@
 
 - name: Check if MinIO is already installed
   shell: command -v minio
-  register: minio_check
+  as: minio_check
   failed_when: false
 
 # macOS Installation
 - name: Install MinIO via Homebrew (macOS)
-  package:
+  pkg:
     name: minio/stable/minio
     state: present
   when: brew_available and minio_check.rc != 0
 
 # Linux - Download binary
 - name: Download MinIO server (Linux)
-  download:
+  file.download:
     url: https://dl.min.io/server/minio/release/linux-amd64/minio
     dest: /usr/local/bin/minio
     mode: "0755"
-  become: true
+  as_user: root
   when: linux and minio_check.rc != 0
 
 - name: Download MinIO client (mc)
-  download:
+  file.download:
     url: https://dl.min.io/client/mc/release/linux-amd64/mc
     dest: /usr/local/bin/mc
     mode: "0755"
-  become: true
+  as_user: root
   when: linux and minio_check.rc != 0
 
 # Verify installation
@@ -37,4 +37,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "MinIO installed"
+  log: "MinIO installed"

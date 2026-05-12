@@ -1,8 +1,8 @@
 - name: Uninstall tyk
-  package:
+  pkg:
     name: tyk
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "tyk uninstalled"
+  log: "tyk uninstalled"

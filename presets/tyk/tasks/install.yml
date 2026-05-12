@@ -1,17 +1,16 @@
 - name: Check if tyk is installed
   shell: command -v tyk
-  register: tyk_check
+  as: tyk_check
   failed_when: false
 
 - name: Install tyk
-  package:
+  pkg:
     name: tyk
     state: present
   when: tyk_check.rc != 0
 
 - name: Verify installation
   shell: tyk --version 2>&1 || tyk -v 2>&1 || echo "installed"
-  register: tyk_version
-
+  as: tyk_version
 - name: Display version
-  print: "tyk installed"
+  log: "tyk installed"

@@ -1,5 +1,5 @@
 - name: Uninstall kube-bench (macOS)
-  package:
+  pkg:
     name: kube-bench
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "kube-bench uninstalled"
+  log: "kube-bench uninstalled"

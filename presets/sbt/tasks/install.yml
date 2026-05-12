@@ -1,19 +1,19 @@
 - name: Check if sbt is installed
   shell: command -v sbt
-  register: sbt_check
+  as: sbt_check
   failed_when: false
 
 - name: Install sbt (macOS)
-  package:
+  pkg:
     name: sbt
     state: present
   when: brew_available and sbt_check.rc != 0
 
 - name: Install sbt (Linux)
-  package:
+  pkg:
     name: sbt
     state: present
-  become: true
+  as_user: root
   when: apt_available and sbt_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "sbt installed"
+  log: "sbt installed"

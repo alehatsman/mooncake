@@ -2,11 +2,11 @@
 # Handles service cleanup and binary removal
 
 - name: Stop Ollama service (Linux)
-  service:
+  os.service:
     name: ollama
     state: stopped
     enabled: false
-  become: true
+  as_user: root
   when: (parameters.state == "absent") and (os == "linux")
   failed_when: false
 
@@ -18,21 +18,21 @@
   failed_when: false
 
 - name: Uninstall Ollama via package manager
-  package:
+  pkg:
     name: ollama
     state: absent
-  become: true
+  as_user: root
   when: (parameters.state == "absent") and (parameters.method == "package")
   failed_when: false
 
 - name: Remove Ollama binary (script installation)
   shell: rm -f /usr/local/bin/ollama /usr/bin/ollama
-  become: true
+  as_user: root
   when: (parameters.state == "absent") and (parameters.method != "package")
   failed_when: false
 
 - name: Remove Ollama models directory (if force)
-  file:
+  file.write:
     path: "{% if parameters.models_dir %}{{ parameters.models_dir }}{% else %}~/.ollama{% endif %}"
     state: absent
   when: (parameters.state == "absent") and (parameters.force)

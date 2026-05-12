@@ -1,10 +1,10 @@
 - name: Check if yamllint is installed
   shell: command -v yamllint
-  register: yamllint_check
+  as: yamllint_check
   failed_when: false
 
 - name: Install yamllint via Homebrew
-  package:
+  pkg:
     name: yamllint
     state: present
   when: brew_available and yamllint_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "yamllint installed"
+  log: "yamllint installed"

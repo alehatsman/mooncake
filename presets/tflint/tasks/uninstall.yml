@@ -1,15 +1,15 @@
 - name: Uninstall tflint (macOS)
-  package:
+  pkg:
     name: tflint
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall tflint (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/tflint
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "tflint uninstalled"
+  log: "tflint uninstalled"

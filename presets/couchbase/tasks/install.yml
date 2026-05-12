@@ -1,17 +1,16 @@
 - name: Check if couchbase is installed
   shell: command -v couchbase
-  register: couchbase_check
+  as: couchbase_check
   failed_when: false
 
 - name: Install couchbase
-  package:
+  pkg:
     name: couchbase
     state: present
   when: couchbase_check.rc != 0
 
 - name: Verify installation
   shell: couchbase --version 2>&1 || couchbase -v 2>&1 || echo "installed"
-  register: couchbase_version
-
+  as: couchbase_version
 - name: Display version
-  print: "couchbase installed"
+  log: "couchbase installed"

@@ -1,5 +1,5 @@
 - name: Uninstall cargo-watch (macOS)
-  package:
+  pkg:
     name: cargo-watch
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "cargo-watch uninstalled"
+  log: "cargo-watch uninstalled"

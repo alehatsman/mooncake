@@ -1,89 +1,89 @@
 # Kubernetes Tools Uninstallation
 
 - name: Uninstall kubectl (macOS)
-  package:
+  pkg:
     name: kubectl
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall kubectl (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/kubectl
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Uninstall k9s (macOS)
-  package:
+  pkg:
     name: k9s
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall k9s (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/k9s
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Uninstall Helm (macOS)
-  package:
+  pkg:
     name: helm
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall Helm (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/helm
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Uninstall kubectx (macOS)
-  package:
+  pkg:
     name: kubectx
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall kubectx (Linux)
-  file:
+  file.write:
     path: /opt/kubectx
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Remove kubectx symlink (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/kubectx
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Remove kubens symlink (Linux)
-  file:
+  file.write:
     path: /usr/local/bin/kubens
     state: absent
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
 - name: Remove krew directory
-  file:
+  file.write:
     path: ~/.krew
     state: absent
   failed_when: false
 
 - name: Remove kubectl config directory
-  file:
+  file.write:
     path: ~/.kube
     state: absent
   failed_when: false
@@ -107,4 +107,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "Kubernetes tools uninstalled"
+  log: "Kubernetes tools uninstalled"

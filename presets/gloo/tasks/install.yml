@@ -1,10 +1,10 @@
 - name: Check if glooctl is installed
   shell: command -v glooctl
-  register: gloo_check
+  as: gloo_check
   failed_when: false
 
 - name: Install gloo (macOS)
-  package:
+  pkg:
     name: gloo
     state: present
   when: brew_available and gloo_check.rc != 0
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "gloo installed"
+  log: "gloo installed"

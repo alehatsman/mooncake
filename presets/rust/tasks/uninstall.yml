@@ -33,7 +33,7 @@
       exit_code: 1
 
 - name: Print uninstallation complete
-  print: |
+  log: |
     Rust and rustup have been uninstalled.
 
     Restart your terminal for changes to take effect.

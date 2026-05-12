@@ -9,21 +9,21 @@
 
 # Setup
 - name: "Setup: Create test directories"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-{{ item }}
     state: directory
     mode: "0755"
-  with_items: [source, dest]
+  for_each: [source, dest]
   tags: [setup]
 
 # Create source files
 - name: "Setup: Create source files"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-source/{{ item }}
     state: file
     content: "Content of {{ item }}"
     mode: "0644"
-  with_items: [file1.txt, file2.txt, config.yml]
+  for_each: [file1.txt, file2.txt, config.yml]
   tags: [setup]
 
 # =============================================================================
@@ -31,21 +31,21 @@
 # =============================================================================
 
 - name: "Example 1: Simple file copy"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file1.txt
     dest: /tmp/mooncake-copy-dest/file1.txt
     mode: "0644"
   tags: [basics]
 
 - name: "Example 2: Copy with different name"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file2.txt
     dest: /tmp/mooncake-copy-dest/renamed-file.txt
     mode: "0644"
   tags: [basics]
 
 - name: "Example 3: Copy with specific permissions"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/config.yml
     dest: /tmp/mooncake-copy-dest/config-readonly.yml
     mode: "0444"
@@ -56,14 +56,14 @@
 # =============================================================================
 
 - name: "Example 4: Initial copy"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file1.txt
     dest: /tmp/mooncake-copy-dest/backup-test.txt
     mode: "0644"
   tags: [backup]
 
 - name: "Example 5: Update with backup"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-source/file1-updated.txt
     state: file
     content: "Updated content"
@@ -71,7 +71,7 @@
   tags: [backup]
 
 - name: "Example 6: Copy with backup enabled"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file1-updated.txt
     dest: /tmp/mooncake-copy-dest/backup-test.txt
     mode: "0644"
@@ -87,7 +87,7 @@
 # =============================================================================
 
 - name: "Example 8: Copy with force (overwrite)"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file1.txt
     dest: /tmp/mooncake-copy-dest/forced-copy.txt
     mode: "0644"
@@ -105,11 +105,11 @@
     else
       shasum -a 256 /tmp/mooncake-copy-source/file1.txt | awk '{print $1}'
     fi
-  register: file_checksum
+  as: file_checksum
   tags: [checksum]
 
 - name: "Example 10: Display checksum"
-  print: "File checksum: {{ file_checksum.stdout }}"
+  log: "File checksum: {{ file_checksum.stdout }}"
   tags: [checksum]
 
 # Note: Copy action supports checksum verification
@@ -136,28 +136,28 @@
 
 - vars:
     files_to_copy:
-      - name: app.conf
-        mode: "0644"
-      - name: database.conf
-        mode: "0600"
-      - name: script.sh
-        mode: "0755"
+    - name: app.conf
+      mode: "0644"
+    - name: database.conf
+      mode: "0600"
+    - name: script.sh
+      mode: "0755"
 
 - name: "Example 12: Create source files for loop"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-source/{{ item.name }}
     state: file
     content: "Content of {{ item.name }}"
     mode: "{{ item.mode }}"
-  with_items: "{{ files_to_copy }}"
+  for_each: "{{ files_to_copy }}"
   tags: [loops]
 
 - name: "Example 13: Copy multiple files"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/{{ item.name }}
     dest: /tmp/mooncake-copy-dest/{{ item.name }}
     mode: "{{ item.mode }}"
-  with_items: "{{ files_to_copy }}"
+  for_each: "{{ files_to_copy }}"
   tags: [loops]
 
 # =============================================================================
@@ -165,7 +165,7 @@
 # =============================================================================
 
 - name: "Example 14: Copy on Linux only"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-source/linux-specific.txt
     state: file
     content: "Linux only file"
@@ -174,7 +174,7 @@
   tags: [conditional]
 
 - name: "Example 15: Copy Linux file"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/linux-specific.txt
     dest: /tmp/mooncake-copy-dest/linux-specific.txt
     mode: "0644"
@@ -186,15 +186,15 @@
 # =============================================================================
 
 - name: "Example 16: Copy and register result"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file2.txt
     dest: /tmp/mooncake-copy-dest/registered-copy.txt
     mode: "0644"
-  register: copy_result
+  as: copy_result
   tags: [register]
 
 - name: "Example 17: Display copy result"
-  print: "Copy operation changed: {{ copy_result.changed }}"
+  log: "Copy operation changed: {{ copy_result.changed }}"
   tags: [register]
 
 # =============================================================================
@@ -202,21 +202,21 @@
 # =============================================================================
 
 - name: "Example 18: Create deployment files"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-source/deploy/{{ item }}
     state: file
     content: "{{ item }} content"
     mode: "0644"
-  with_items: [app.jar, config.properties, database.yml]
+  for_each: [app.jar, config.properties, database.yml]
   tags: [real-world]
 
 - name: "Example 19: Deploy application files"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/deploy/{{ item }}
     dest: /tmp/mooncake-copy-dest/production/{{ item }}
     mode: "0644"
     backup: true
-  with_items: [app.jar, config.properties, database.yml]
+  for_each: [app.jar, config.properties, database.yml]
   tags: [real-world]
 
 # =============================================================================
@@ -224,23 +224,23 @@
 # =============================================================================
 
 - name: "Example 20: First copy (changes)"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file1.txt
     dest: /tmp/mooncake-copy-dest/idempotent.txt
     mode: "0644"
-  register: first_copy
+  as: first_copy
   tags: [idempotency]
 
 - name: "Example 21: Second copy (no changes)"
-  copy:
+  file.copy:
     src: /tmp/mooncake-copy-source/file1.txt
     dest: /tmp/mooncake-copy-dest/idempotent.txt
     mode: "0644"
-  register: second_copy
+  as: second_copy
   tags: [idempotency]
 
 - name: "Example 22: Show idempotency"
-  print: "First: {{ first_copy.changed }}, Second: {{ second_copy.changed }}"
+  log: "First: {{ first_copy.changed }}, Second: {{ second_copy.changed }}"
   tags: [idempotency]
 
 # =============================================================================
@@ -258,15 +258,15 @@
 # =============================================================================
 
 - name: "Cleanup: Remove test directories"
-  file:
+  file.write:
     path: /tmp/mooncake-copy-{{ item }}
     state: absent
     force: true
-  with_items: [source, dest]
+  for_each: [source, dest]
   tags: [cleanup]
 
 - name: "Summary"
-  print: |
+  log: |2
 
     Copy action examples completed!
     Covered:
@@ -277,5 +277,4 @@
       • Permission handling
       • Loops and conditionals
       • Idempotency
-
   tags: [always]

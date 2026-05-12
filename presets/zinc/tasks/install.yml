@@ -1,10 +1,10 @@
 - name: Check if zinc is installed
   shell: command -v zinc
-  register: zinc_check
+  as: zinc_check
   failed_when: false
 
 - name: Install zinc via Homebrew
-  package:
+  pkg:
     name: zinc
     state: present
   when: brew_available and zinc_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "zinc installed"
+  log: "zinc installed"

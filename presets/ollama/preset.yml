@@ -48,18 +48,18 @@ parameters:
 steps:
   # Installation workflow
   - name: Install Ollama
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Configure Ollama service
-    include: tasks/configure.yml
+    import: tasks/configure.yml
     when: parameters.state == "present"
 
   - name: Pull models
-    include: tasks/models.yml
+    import: tasks/models.yml
     when: parameters.state == "present"
 
   # Uninstallation workflow
   - name: Uninstall Ollama
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

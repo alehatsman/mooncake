@@ -42,9 +42,9 @@ parameters:
 
 steps:
   - name: Install Traefik
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall Traefik
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

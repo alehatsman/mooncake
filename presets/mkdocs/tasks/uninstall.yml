@@ -1,5 +1,5 @@
 - name: Uninstall mkdocs via Homebrew
-  package:
+  pkg:
     name: mkdocs
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "mkdocs uninstalled"
+  log: "mkdocs uninstalled"

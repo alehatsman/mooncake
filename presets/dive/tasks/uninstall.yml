@@ -1,12 +1,11 @@
 - name: Uninstall dive
-  package:
+  pkg:
     name: dive
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "dive uninstalled"
-
+  log: "dive uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

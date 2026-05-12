@@ -1,11 +1,11 @@
 # RabbitMQ Uninstallation Tasks
 
 - name: Stop RabbitMQ service (Linux)
-  service:
+  os.service:
     name: rabbitmq-server
     state: stopped
     enabled: false
-  become: true
+  as_user: root
   when: linux
   failed_when: false
 
@@ -19,22 +19,21 @@
   when: brew_available
 
 - name: Uninstall RabbitMQ (Debian/Ubuntu)
-  package:
+  pkg:
     name: rabbitmq-server
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall RabbitMQ (RHEL/Fedora)
-  package:
+  pkg:
     name: rabbitmq-server
     state: absent
-  become: true
+  as_user: root
   when: dnf_available or yum_available
 
 - name: Display uninstall confirmation
-  print: "RabbitMQ uninstalled. Data directory preserved."
-
+  log: "RabbitMQ uninstalled. Data directory preserved."
 - name: Assert tool is removed
   assert:
     command:

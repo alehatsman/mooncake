@@ -1,10 +1,10 @@
 - name: Check if k3sup is installed
   shell: command -v k3sup
-  register: k3sup_check
+  as: k3sup_check
   failed_when: false
 
 - name: Install k3sup (macOS)
-  package:
+  pkg:
     name: k3sup
     state: present
   when: brew_available and k3sup_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "k3sup installed"
+  log: "k3sup installed"

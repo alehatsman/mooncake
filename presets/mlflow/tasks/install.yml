@@ -1,6 +1,6 @@
 - name: Check if mlflow is installed
   shell: command -v mlflow
-  register: mlflow_check
+  as: mlflow_check
   failed_when: false
 
 - name: Install mlflow via pip3 on Linux

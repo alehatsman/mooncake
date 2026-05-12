@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install datadog-agent
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall datadog-agent
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

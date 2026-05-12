@@ -2,42 +2,42 @@
 
 - name: Check if AWS CLI is already installed
   shell: command -v aws
-  register: aws_check
+  as: aws_check
   failed_when: false
 
 # macOS Installation
 - name: Install AWS CLI via Homebrew via Homebrew
-  package:
+  pkg:
     name: awscli
     state: present
   when: brew_available and aws_check.rc != 0
 
 # Linux - Download and install AWS CLI v2
 - name: Download AWS CLI installer (Linux)
-  download:
+  file.download:
     url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
     dest: /tmp/awscliv2.zip
   when: linux and aws_check.rc != 0 and parameters.version == "2"
 
 - name: Unzip AWS CLI installer (Linux)
-  unarchive:
+  file.unarchive:
     src: /tmp/awscliv2.zip
     dest: /tmp
   when: linux and aws_check.rc != 0 and parameters.version == "2"
 
 - name: Install AWS CLI via apt
   shell: /tmp/aws/install
-  become: true
+  as_user: root
   when: linux and aws_check.rc != 0 and parameters.version == "2"
 
 - name: Clean up installer
-  file:
+  file.write:
     path: /tmp/awscliv2.zip
     state: absent
   when: linux and parameters.version == "2"
 
 - name: Clean up extracted files
-  file:
+  file.write:
     path: /tmp/aws
     state: absent
   when: linux and parameters.version == "2"
@@ -50,11 +50,9 @@
 # Verify installation
 - name: Verify AWS CLI installation
   shell: aws --version
-  register: aws_version
-
+  as: aws_version
 - name: Display AWS CLI version
-  print: "AWS CLI installed: {{ aws_version.stdout }}"
-
+  log: "AWS CLI installed: {{ aws_version.stdout }}"
 - name: Verify installation with assert
   assert:
     command:

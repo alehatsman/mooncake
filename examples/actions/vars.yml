@@ -18,7 +18,7 @@
   tags: [basics]
 
 - name: "Example 2: Use defined variables"
-  print: "Application: {{ app_name }} version {{ version }}"
+  log: "Application: {{ app_name }} version {{ version }}"
   tags: [basics]
 
 # =============================================================================
@@ -51,14 +51,14 @@
 - name: "Example 6: List variables"
   vars:
     packages:
-      - git
-      - vim
-      - curl
-      - wget
+    - git
+    - vim
+    - curl
+    - wget
     ports:
-      - 80
-      - 443
-      - 8080
+    - 80
+    - 443
+    - 8080
   tags: [types]
 
 - name: "Example 7: Dictionary/Object variables"
@@ -87,9 +87,9 @@
           host: "redis.example.com"
           port: 6379
       features:
-        - authentication
-        - api
-        - admin
+      - authentication
+      - api
+      - admin
   tags: [types]
 
 # =============================================================================
@@ -101,7 +101,7 @@
     name: "World"
 
 - name: "Example 9: String interpolation"
-  print: "{{ greeting }}, {{ name }}!"
+  log: "{{ greeting }}, {{ name }}!"
   tags: [usage]
 
 - vars:
@@ -117,7 +117,7 @@
     content: "Configuration data"
 
 - name: "Example 11: Variables in file operations"
-  file:
+  file.write:
     path: /tmp/{{ filename }}
     state: file
     content: "{{ content }}"
@@ -134,7 +134,7 @@
   tags: [scope]
 
 - name: "Example 13: Use global variable"
-  print: "Global: {{ global_var }}"
+  log: "Global: {{ global_var }}"
   tags: [scope]
 
 - name: "Example 14: Update variable"
@@ -143,7 +143,7 @@
   tags: [scope]
 
 - name: "Example 15: Show updated value"
-  print: "Updated: {{ global_var }}"
+  log: "Updated: {{ global_var }}"
   tags: [scope]
 
 # =============================================================================
@@ -152,7 +152,7 @@
 
 # Note: include_vars is a separate action
 - name: "Example 16: Include vars from file (demo)"
-  print: |
+  log: |
     Include variables from external file:
     - name: Load environment variables
       include_vars: ./vars/development.yml
@@ -168,14 +168,14 @@
 # =============================================================================
 
 - name: "Example 17: Use system facts"
-  print: |
+  log: |
     System information:
       OS: {{ os }}
       Architecture: {{ arch }}
   tags: [facts]
 
 - name: "Example 18: Conditional based on OS"
-  print: "This is a {{ os }} system"
+  log: "This is a {{ os }} system"
   tags: [facts]
 
 - name: "Example 19: OS-specific logic"
@@ -184,7 +184,7 @@
   tags: [facts]
 
 - name: "Example 20: Show package manager"
-  print: "Package manager: {{ package_manager }}"
+  log: "Package manager: {{ package_manager }}"
   tags: [facts]
 
 # =============================================================================
@@ -193,27 +193,27 @@
 
 - vars:
     environments:
-      - development
-      - staging
-      - production
+    - development
+    - staging
+    - production
 
 - name: "Example 21: Iterate over list variable"
-  print: "Environment: {{ item }}"
-  with_items: "{{ environments }}"
+  log: "Environment: {{ item }}"
+  for_each: "{{ environments }}"
   tags: [loops]
 
 - vars:
     servers:
-      - name: web-01
-        ip: 192.168.1.10
-      - name: web-02
-        ip: 192.168.1.11
-      - name: db-01
-        ip: 192.168.1.20
+    - name: web-01
+      ip: 192.168.1.10
+    - name: web-02
+      ip: 192.168.1.11
+    - name: db-01
+      ip: 192.168.1.20
 
 - name: "Example 22: Iterate over complex items"
-  print: "Server: {{ item.name }} ({{ item.ip }})"
-  with_items: "{{ servers }}"
+  log: "Server: {{ item.name }} ({{ item.ip }})"
+  for_each: "{{ servers }}"
   tags: [loops]
 
 # =============================================================================
@@ -231,7 +231,7 @@
   tags: [conditional]
 
 - name: "Example 24: Show conditional values"
-  print: |
+  log: |
     Environment: {{ environment }}
     Debug: {{ debug_mode }}
     Log Level: {{ log_level }}
@@ -249,7 +249,7 @@
   tags: [defaults]
 
 - name: "Example 26: Show default values"
-  print: "Server: {{ custom_host }}:{{ custom_port }}"
+  log: "Server: {{ custom_host }}:{{ custom_port }}"
   tags: [defaults]
 
 # =============================================================================
@@ -266,10 +266,10 @@
         provider: "aws"
         region: "us-east-1"
         instances:
-          - type: "t2.micro"
-            count: 2
-          - type: "t2.small"
-            count: 1
+        - type: "t2.micro"
+          count: 2
+        - type: "t2.small"
+          count: 1
       configuration:
         database:
           engine: "postgresql"
@@ -280,7 +280,7 @@
           version: "7"
 
 - name: "Example 27: Access nested variables"
-  print: |
+  log: |
     Deploying: {{ deployment.application.name }} v{{ deployment.application.version }}
     Provider: {{ deployment.infrastructure.provider }}
     Region: {{ deployment.infrastructure.region }}
@@ -309,12 +309,12 @@
         file: "/var/log/myapp/app.log"
         max_size: "100MB"
       features:
-        - "authentication"
-        - "api"
-        - "websockets"
+      - "authentication"
+      - "api"
+      - "websockets"
 
 - name: "Example 28: Generate config file from variables"
-  file:
+  file.write:
     path: /tmp/app-config.yml
     state: file
     content: |
@@ -359,7 +359,7 @@
   tags: [precedence]
 
 - name: "Example 31: Show original"
-  print: "Value: {{ override_test }}"
+  log: "Value: {{ override_test }}"
   tags: [precedence]
 
 - name: "Example 32: Override value"
@@ -368,7 +368,7 @@
   tags: [precedence]
 
 - name: "Example 33: Show overridden"
-  print: "Value: {{ override_test }}"
+  log: "Value: {{ override_test }}"
   tags: [precedence]
 
 # =============================================================================
@@ -399,7 +399,7 @@
   tags: [multi-env]
 
 - name: "Example 35: Use environment config (demo)"
-  print: |
+  log: |
     Environment: {{ env }}
     Debug: {{ config[env].debug }}
     Log Level: {{ config[env].log_level }}
@@ -413,7 +413,7 @@
 # =============================================================================
 
 - name: "Example 36: Best practices"
-  print: |
+  log: |
     Variables Best Practices:
 
     1. Use descriptive names
@@ -455,13 +455,13 @@
 # =============================================================================
 
 - name: "Cleanup: Remove test file"
-  file:
+  file.write:
     path: /tmp/app-config.yml
     state: absent
   tags: [cleanup]
 
 - name: "Cleanup: Remove var test file"
-  file:
+  file.write:
     path: /tmp/config.txt
     state: absent
   tags: [cleanup]
@@ -471,7 +471,7 @@
 # =============================================================================
 
 - name: "Summary"
-  print: |
+  log: |2
 
     Vars action examples completed!
     Covered:
@@ -494,5 +494,4 @@
       • System facts (os, arch) are automatically available
       • Use include_vars to load from external files
       • Variables can be overridden
-
   tags: [always]

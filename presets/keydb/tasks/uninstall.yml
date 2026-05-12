@@ -1,8 +1,8 @@
 - name: Uninstall keydb
-  package:
+  pkg:
     name: keydb
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "keydb uninstalled"
+  log: "keydb uninstalled"

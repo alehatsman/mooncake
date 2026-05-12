@@ -1,9 +1,8 @@
 - name: Update package lists
   shell: echo "apt update"
-  become: true
-
+  as_user: root
 - name: Install packages
   shell: echo "apt install -y git curl wget"
-  become: true
+  as_user: root
   tags:
-    - install
+  - install

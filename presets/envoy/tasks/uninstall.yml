@@ -1,8 +1,8 @@
 - name: Uninstall envoy
-  package:
+  pkg:
     name: envoy
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "envoy uninstalled"
+  log: "envoy uninstalled"

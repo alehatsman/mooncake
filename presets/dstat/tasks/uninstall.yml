@@ -1,8 +1,8 @@
 - name: Uninstall dstat via apt
-  package:
+  pkg:
     name: dstat
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -14,4 +14,4 @@
   when: linux
 
 - name: Display confirmation
-  print: "dstat uninstalled"
+  log: "dstat uninstalled"

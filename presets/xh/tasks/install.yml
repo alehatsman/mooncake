@@ -1,10 +1,10 @@
 - name: Check if xh is installed
   shell: command -v xh
-  register: xh_check
+  as: xh_check
   failed_when: false
 
 - name: Install xh via Homebrew
-  package:
+  pkg:
     name: xh
     state: present
   when: brew_available and xh_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "xh installed"
+  log: "xh installed"

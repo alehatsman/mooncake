@@ -1,5 +1,5 @@
 - name: Uninstall rye (macOS)
-  package:
+  pkg:
     name: rye
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "rye uninstalled"
+  log: "rye uninstalled"

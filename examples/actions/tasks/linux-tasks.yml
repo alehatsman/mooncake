@@ -10,7 +10,6 @@
     else
       echo "Unknown"
     fi
-  register: pkg_mgr
-
+  as: pkg_mgr
 - name: "Linux: Display package manager"
-  print: "Package manager: {{ pkg_mgr.stdout }}"
+  log: "Package manager: {{ pkg_mgr.stdout }}"

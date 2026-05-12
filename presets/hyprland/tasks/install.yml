@@ -14,11 +14,11 @@
       alacritty \
       yazi \
       ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
-  become: true
+  as_user: root
   when: pacman_available
   timeout: 10m
 
 - name: Create screenshots directory
-  file:
+  file.write:
     path: ~/Pictures/screenshots
     state: directory

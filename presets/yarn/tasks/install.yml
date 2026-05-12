@@ -1,10 +1,10 @@
 - name: Check if yarn is installed
   shell: command -v yarn
-  register: yarn_check
+  as: yarn_check
   failed_when: false
 
 - name: Install yarn via Homebrew
-  package:
+  pkg:
     name: yarn
     state: present
   when: brew_available and yarn_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "yarn installed"
+  log: "yarn installed"

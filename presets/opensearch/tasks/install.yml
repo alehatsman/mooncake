@@ -1,10 +1,10 @@
 - name: Check if opensearch is installed
   shell: command -v opensearch || test -d /usr/share/opensearch
-  register: opensearch_check
+  as: opensearch_check
   failed_when: false
 
 - name: Install opensearch via Homebrew (macOS)
-  package:
+  pkg:
     name: opensearch
     state: present
   when: (parameters.state == "present") and (os == "darwin") and (opensearch_check.rc != 0)
@@ -19,11 +19,11 @@
   when: (parameters.state == "present") and (os == "linux") and (opensearch_check.rc != 0)
 
 - name: Create opensearch directory (Linux)
-  file:
+  file.write:
     path: /usr/share/opensearch
     state: directory
     mode: "0755"
-  become: true
+  as_user: root
   when: (parameters.state == "present") and (os == "linux") and (opensearch_check.rc != 0)
 
 - name: Move opensearch files (Linux)
@@ -31,7 +31,7 @@
     cp -r /tmp/opensearch-*/* /usr/share/opensearch/
     ln -sf /usr/share/opensearch/bin/opensearch /usr/local/bin/opensearch
     rm -rf /tmp/opensearch-*
-  become: true
+  as_user: root
   when: (parameters.state == "present") and (os == "linux") and (opensearch_check.rc != 0)
 
 - name: Verify installation with assert
@@ -42,5 +42,5 @@
   when: parameters.state == "present"
 
 - name: Display confirmation
-  print: "opensearch installed"
+  log: "opensearch installed"
   when: parameters.state == "present"

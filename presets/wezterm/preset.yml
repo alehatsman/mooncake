@@ -10,8 +10,8 @@ parameters:
     description: Whether wezterm should be installed or removed
 steps:
   - name: Install wezterm
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall wezterm
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

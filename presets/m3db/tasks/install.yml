@@ -1,18 +1,17 @@
 - name: Check if m3db is installed
   shell: command -v m3db
-  register: m3db_check
+  as: m3db_check
   failed_when: false
 
 - name: Install m3db
-  package:
+  pkg:
     name: m3db
     state: present
   when: m3db_check.rc != 0
 
 - name: Verify installation
   shell: m3db --version 2>&1 || m3db -v 2>&1 || echo "installed"
-  register: m3db_version
-
+  as: m3db_version
 - name: Assert m3db is installed
   assert:
     command:
@@ -20,4 +19,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "m3db installed"
+  log: "m3db installed"

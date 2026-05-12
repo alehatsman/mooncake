@@ -1,13 +1,13 @@
 # Node.js/nvm Uninstallation
 
 - name: Remove nvm directory
-  file:
+  file.write:
     path: "~/.nvm"
     state: absent
   when: parameters.state == "absent"
 
 - name: Remove nvm init file
-  file:
+  file.write:
     path: "~/.nvm_init"
     state: absent
   when: parameters.state == "absent"
@@ -31,7 +31,7 @@
   when: parameters.state == "absent"
 
 - name: Print uninstallation complete
-  print: |
+  log: |
     nvm and Node.js have been uninstalled.
 
     Note: npm global packages were removed with Node.js.

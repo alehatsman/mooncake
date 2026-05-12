@@ -1,15 +1,15 @@
 - name: Uninstall make (macOS)
-  package:
+  pkg:
     name: make
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall make (Linux)
-  package:
+  pkg:
     name: build-essential
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "make uninstalled"
+  log: "make uninstalled"

@@ -3,8 +3,7 @@
 # Check if a command exists
 - name: Check if git is installed
   shell: which git
-  register: git_check
-
+  as: git_check
 - name: Show git location
   shell: echo "Git found at {{ git_check.stdout }}"
   when: git_check.rc == 0
@@ -16,11 +15,9 @@
 # Get current user
 - name: Get current username
   shell: whoami
-  register: current_user
-
-# Use captured output in file operations
+  as: current_user
 - name: Create user-specific config
-  file:
+  file.write:
     path: "/tmp/{{ current_user.stdout }}_config.txt"
     state: file
     content: |
@@ -31,24 +28,22 @@
 # Check OS version
 - name: Get OS version
   shell: uname -r
-  register: os_version
-
+  as: os_version
 - name: Display OS version
   shell: echo "Running kernel version {{ os_version.stdout }}"
 
 # Example with file operations
 - name: Create test file
-  file:
+  file.write:
     path: /tmp/test-register.txt
     state: file
     content: "Test content"
-  register: file_result
-
+  as: file_result
 - name: Show if file was created
   shell: echo "File operation changed={{ file_result.changed }}"
 
 - name: Print summary
-  print:
+  log:
     msg: |
       Register example complete!
       This example showed how to:

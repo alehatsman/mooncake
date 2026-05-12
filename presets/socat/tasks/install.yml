@@ -1,19 +1,19 @@
 - name: Check if socat is installed
   shell: command -v socat
-  register: socat_check
+  as: socat_check
   failed_when: false
 
 - name: Install socat (macOS)
-  package:
+  pkg:
     name: socat
     state: present
   when: brew_available and socat_check.rc != 0
 
 - name: Install socat (Linux)
-  package:
+  pkg:
     name: socat
     state: present
-  become: true
+  as_user: root
   when: apt_available and socat_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "socat installed"
+  log: "socat installed"

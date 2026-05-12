@@ -1,5 +1,5 @@
 - name: Uninstall pylint (macOS)
-  package:
+  pkg:
     name: pylint
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "pylint uninstalled"
+  log: "pylint uninstalled"

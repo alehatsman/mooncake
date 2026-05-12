@@ -1,8 +1,8 @@
 - name: Uninstall argo-rollouts
-  package:
+  pkg:
     name: argo-rollouts
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "argo-rollouts uninstalled"
+  log: "argo-rollouts uninstalled"

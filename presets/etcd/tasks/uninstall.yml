@@ -1,5 +1,5 @@
 - name: Uninstall etcd
-  package:
+  pkg:
     name: etcd
     state: absent
   failed_when: false
@@ -11,4 +11,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "etcd uninstalled"
+  log: "etcd uninstalled"

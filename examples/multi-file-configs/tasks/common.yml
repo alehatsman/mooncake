@@ -1,5 +1,5 @@
 - name: Create project directory
-  file:
+  file.write:
     path: /tmp/{{project_name}}
     state: directory
 

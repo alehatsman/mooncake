@@ -1,19 +1,19 @@
 - name: Check if pulsar is installed
   shell: command -v pulsar
-  register: pulsar_check
+  as: pulsar_check
   failed_when: false
 
 - name: Install pulsar via Homebrew
-  package:
+  pkg:
     name: pulsar
     state: present
   when: brew_available and pulsar_check.rc != 0
 
 - name: Install pulsar via apt
-  package:
+  pkg:
     name: pulsar
     state: present
-  become: true
+  as_user: root
   when: apt_available and pulsar_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "pulsar installed"
+  log: "pulsar installed"

@@ -1,19 +1,19 @@
 - name: Uninstall nats-server via apt
   shell: apt-get remove -y nats-server
   when: apt_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall nats-server via dnf
   shell: dnf remove -y nats-server
   when: dnf_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall nats-server via yum
   shell: yum remove -y nats-server
   when: yum_available
-  become: true
+  as_user: root
   failed_when: false
 
 - name: Uninstall nats-server via Homebrew

@@ -1,10 +1,10 @@
 - name: Check if ts-node is installed
   shell: command -v ts-node
-  register: ts_node_check
+  as: ts_node_check
   failed_when: false
 
 - name: Install ts-node (macOS)
-  package:
+  pkg:
     name: ts-node
     state: present
   when: brew_available and ts_node_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "ts-node installed"
+  log: "ts-node installed"

@@ -1,5 +1,5 @@
 - name: Uninstall m3db
-  package:
+  pkg:
     name: m3db
     state: absent
   failed_when: false
@@ -11,4 +11,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "m3db uninstalled"
+  log: "m3db uninstalled"

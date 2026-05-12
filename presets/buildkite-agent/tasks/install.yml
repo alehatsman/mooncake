@@ -1,21 +1,19 @@
 - name: Check if buildkite-agent is installed
   shell: command -v buildkite-agent
-  register: buildkite_agent_check
+  as: buildkite_agent_check
   failed_when: false
 
 - name: Install buildkite-agent
-  package:
+  pkg:
     name: buildkite-agent
     state: present
   when: buildkite_agent_check.rc != 0
 
 - name: Verify installation
   shell: buildkite-agent --version 2>&1 || buildkite-agent -v 2>&1 || echo "installed"
-  register: buildkite_agent_version
-
+  as: buildkite_agent_version
 - name: Display version
-  print: "buildkite-agent installed"
-
+  log: "buildkite-agent installed"
 - name: Verify installation with assert
   assert:
     command:

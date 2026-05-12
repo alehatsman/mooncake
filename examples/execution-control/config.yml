@@ -23,8 +23,9 @@
       echo "Failed, will retry..." >&2
       exit 1
     fi
-  retries: 3
-  retry_delay: 1s
+  retry:
+    attempts: 3
+    delay: 1s
   failed_when: false  # Ignore failures for demo purposes
 
 - name: Example 3 - Environment variables
@@ -46,20 +47,19 @@
 - name: Example 5 - Custom change detection
   shell: echo "This command always runs but rarely 'changes'"
   changed_when: false
-  register: always_runs
-
+  as: always_runs
 - name: Example 6 - Git-style change detection
   shell: |
     # Simulate git pull
     echo "Already up to date."
-  register: git_result
+  as: git_result
   changed_when: "'Already up to date' not in result.stdout"
 
 - name: Example 7 - Custom failure detection (grep)
   shell: |
     # Grep returns: 0=found, 1=not found, 2+=error
     echo "searching for text" | grep "text" || true
-  register: grep_result
+  as: grep_result
   failed_when: "result.rc >= 2"
 
 - name: Example 8 - Acceptable exit codes
@@ -71,9 +71,9 @@
 - name: Example 9 - Combined timeout and retry
   shell: echo "Robust command with timeout and retry"
   timeout: 10s
-  retries: 2
-  retry_delay: 2s
-
+  retry:
+    attempts: 2
+    delay: 2s
 - name: Example 10 - Full featured command
   shell: |
     echo "Working in: $(pwd)"
@@ -84,9 +84,10 @@
     ENV_TYPE: development
     DEBUG: "true"
   timeout: 30s
-  retries: 1
-  retry_delay: 5s
-  register: result
+  retry:
+    attempts: 1
+    delay: 5s
+  as: result
   changed_when: "result.rc == 0"
   failed_when: "result.rc != 0"
 

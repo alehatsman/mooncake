@@ -1,10 +1,10 @@
 - name: Check if influxdb3 is installed
   shell: command -v influxdb3
-  register: influxdb3_check
+  as: influxdb3_check
   failed_when: false
 
 - name: Install influxdb3 (macOS)
-  package:
+  pkg:
     name: influxdb3
     state: present
   when: brew_available and influxdb3_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "influxdb3 installed"
+  log: "influxdb3 installed"

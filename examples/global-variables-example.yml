@@ -29,7 +29,7 @@ steps:
 
   # Step 3: Global vars can be used in file operations
   - name: Create config file
-    file:
+    file.write:
       path: "/tmp/{{app_name}}.conf"
       content: |
         APP_NAME={{app_name}}

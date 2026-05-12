@@ -2,7 +2,7 @@
 
 - name: Check if Zsh is already installed
   shell: command -v zsh
-  register: zsh_check
+  as: zsh_check
   failed_when: false
 
 # Homebrew Installation
@@ -12,31 +12,31 @@
 
 # Linux Package Manager Installation
 - name: Install Zsh via apt
-  package:
+  pkg:
     name: zsh
     state: present
-  become: true
+  as_user: root
   when: apt_available and zsh_check.rc != 0
 
 - name: Install Zsh via dnf
-  package:
+  pkg:
     name: zsh
     state: present
-  become: true
+  as_user: root
   when: dnf_available and zsh_check.rc != 0
 
 - name: Install Zsh via yum
-  package:
+  pkg:
     name: zsh
     state: present
-  become: true
+  as_user: root
   when: yum_available and zsh_check.rc != 0
 
 - name: Install Zsh via pacman
-  package:
+  pkg:
     name: zsh
     state: present
-  become: true
+  as_user: root
   when: pacman_available and zsh_check.rc != 0
 
 # Verify Zsh installation
@@ -48,15 +48,12 @@
 
 - name: Get Zsh version
   shell: zsh --version
-  register: zsh_version
-
+  as: zsh_version
 - name: Display Zsh version
-  print: "Zsh installed: {{ zsh_version.stdout }}"
-
-# Install Oh My Zsh
+  log: "Zsh installed: {{ zsh_version.stdout }}"
 - name: Check if Oh My Zsh is already installed
   shell: test -d ~/.oh-my-zsh && echo "installed" || echo "not installed"
-  register: ohmyzsh_check
+  as: ohmyzsh_check
   when: parameters.install_ohmyzsh
 
 - name: Install Oh My Zsh
@@ -87,7 +84,7 @@
 # Set as default shell
 - name: Get Zsh path
   shell: which zsh
-  register: zsh_path
+  as: zsh_path
   when: parameters.set_default_shell
 
 - name: Add Zsh to valid shells
@@ -95,7 +92,7 @@
     if ! grep -q "{{ zsh_path.stdout }}" /etc/shells; then
       echo "{{ zsh_path.stdout }}" | sudo tee -a /etc/shells
     fi
-  become: true
+  as_user: root
   when: parameters.set_default_shell and not brew_available
   failed_when: false
 
@@ -105,7 +102,7 @@
   failed_when: false
 
 - name: Display installation summary
-  print: |
+  log: |
     Zsh installed successfully!
     {{ "Oh My Zsh framework installed" if parameters.install_ohmyzsh else "" }}
     {{ "Theme: " + parameters.theme if parameters.install_ohmyzsh else "" }}

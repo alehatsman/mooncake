@@ -1,10 +1,10 @@
 - name: Check if poetry is installed
   shell: command -v poetry
-  register: poetry_check
+  as: poetry_check
   failed_when: false
 
 - name: Install poetry via Homebrew
-  package:
+  pkg:
     name: poetry
     state: present
   when: brew_available and poetry_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "poetry installed"
+  log: "poetry installed"

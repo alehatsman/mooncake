@@ -12,7 +12,7 @@
 
 # A) Inline list (existing behavior — still supported, regression baseline)
 - name: "Inline names list"
-  package:
+  pkg:
     manager: pacman
     state: present
     names: [vim, git, curl]
@@ -21,13 +21,13 @@
 # B) Templated names from in-line vars
 - vars:
     pacman_packages:
-      - vim
-      - git
-      - tmux
-      - ripgrep
+    - vim
+    - git
+    - tmux
+    - ripgrep
 
 - name: "Templated names from vars"
-  package:
+  pkg:
     manager: pacman
     state: present
     names: "{{ pacman_packages }}"

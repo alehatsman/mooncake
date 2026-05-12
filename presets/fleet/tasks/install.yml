@@ -1,17 +1,16 @@
 - name: Check if fleet is installed
   shell: command -v fleet
-  register: fleet_check
+  as: fleet_check
   failed_when: false
 
 - name: Install fleet
-  package:
+  pkg:
     name: fleet
     state: present
   when: fleet_check.rc != 0
 
 - name: Verify installation
   shell: fleet --version 2>&1 || fleet -v 2>&1 || echo "installed"
-  register: fleet_version
-
+  as: fleet_version
 - name: Display version
-  print: "fleet installed"
+  log: "fleet installed"

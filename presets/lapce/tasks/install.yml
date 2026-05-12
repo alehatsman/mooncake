@@ -1,18 +1,17 @@
 - name: Check if lapce is installed
   shell: command -v lapce
-  register: lapce_check
+  as: lapce_check
   failed_when: false
 
 - name: Install lapce
-  package:
+  pkg:
     name: lapce
     state: present
   when: lapce_check.rc != 0
 
 - name: Verify installation
   shell: lapce --version 2>&1 || lapce -v 2>&1 || echo "installed"
-  register: lapce_version
-
+  as: lapce_version
 - name: Assert lapce is installed
   assert:
     command:
@@ -20,4 +19,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "lapce installed"
+  log: "lapce installed"

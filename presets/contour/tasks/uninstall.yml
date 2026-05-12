@@ -1,8 +1,8 @@
 - name: Uninstall contour
-  package:
+  pkg:
     name: contour
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "contour uninstalled"
+  log: "contour uninstalled"

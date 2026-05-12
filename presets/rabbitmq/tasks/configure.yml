@@ -1,11 +1,11 @@
 # RabbitMQ Configuration Tasks
 
 - name: Start RabbitMQ service (Linux)
-  service:
+  os.service:
     name: rabbitmq-server
     state: started
     enabled: true
-  become: true
+  as_user: root
   when: linux and parameters.start_service
 
 - name: Start RabbitMQ service (macOS)
@@ -14,9 +14,10 @@
 
 - name: Wait for RabbitMQ to be ready
   shell: rabbitmqctl status
-  register: rabbitmq_ready
+  as: rabbitmq_ready
   until: rabbitmq_ready.rc == 0
-  retries: 10
+  retry:
+    attempts: 10
   delay: 3
   failed_when: false
   when: parameters.start_service
@@ -24,18 +25,16 @@
 - name: Enable management plugin
   shell: rabbitmq-plugins enable rabbitmq_management
   when: parameters.enable_management and rabbitmq_ready.rc == 0
-  become: true
-
+  as_user: root
 - name: Create admin user
   shell: |
     rabbitmqctl add_user {{ parameters.admin_user }} {{ parameters.admin_password }} 2>/dev/null || true
     rabbitmqctl set_user_tags {{ parameters.admin_user }} administrator
     rabbitmqctl set_permissions -p / {{ parameters.admin_user }} ".*" ".*" ".*"
   when: rabbitmq_ready.rc == 0
-  become: true
-
+  as_user: root
 - name: Display RabbitMQ information
-  print: |
+  log: |
     RabbitMQ is running:
     - AMQP port: {{ parameters.port }}
     - Management UI: http://localhost:{{ parameters.management_port }}

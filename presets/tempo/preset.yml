@@ -1,4 +1,4 @@
-name: tempo  
+name: tempo
 description: Distributed tracing backend
 version: "1.0.0"
 parameters:
@@ -9,8 +9,8 @@ parameters:
     enum: [present, absent]
 steps:
   - name: Install tempo
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall tempo
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

@@ -1,21 +1,19 @@
 - name: Check if mimir is installed
   shell: command -v mimir
-  register: mimir_check
+  as: mimir_check
   failed_when: false
 
 - name: Install mimir
-  package:
+  pkg:
     name: mimir
     state: present
   when: mimir_check.rc != 0
 
 - name: Verify installation
   shell: mimir --version 2>&1 || mimir -v 2>&1 || echo "installed"
-  register: mimir_version
-
+  as: mimir_version
 - name: Display version
-  print: "mimir installed"
-
+  log: "mimir installed"
 - name: Verify installation
   assert:
     command:

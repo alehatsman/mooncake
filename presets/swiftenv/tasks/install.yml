@@ -1,10 +1,10 @@
 - name: Check if swiftenv is installed
   shell: command -v swiftenv
-  register: swiftenv_check
+  as: swiftenv_check
   failed_when: false
 
 - name: Install swiftenv (macOS)
-  package:
+  pkg:
     name: swiftenv
     state: present
   when: brew_available and swiftenv_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "swiftenv installed"
+  log: "swiftenv installed"

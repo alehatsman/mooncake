@@ -1,4 +1,3 @@
----
 # Repository Apply Patchset Examples
 # The repo_apply_patchset action applies multiple patches to multiple files atomically.
 # Perfect for LLM-driven code changes, feature migrations, and coordinated refactoring.
@@ -8,7 +7,7 @@
 # ============================================================================
 
 - name: "Apply single-file patchset inline"
-  repo_apply_patchset:
+  repo.patch:
     patchset: |
       --- a/config.yaml
       +++ b/config.yaml
@@ -20,36 +19,36 @@
   # Result: Updates config.yaml with new database host
 
 - name: "Apply multi-file patchset from file"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/feature-123.patch"
   # Result: Applies all patches in the file to their respective files
 
 - name: "Apply patchset with backup"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/refactor.patch"
     backup: true
   # Result: Creates .bak files before modifying
 
 - name: "Apply patchset in strict mode (rollback on failure)"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/critical-fix.patch"
     strict: true
   # Result: Rolls back ALL changes if any file fails
 
 - name: "Apply patchset in lenient mode (partial success)"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/best-effort.patch"
     strict: false
   # Result: Applies successful patches, skips failures
 
 - name: "Apply patchset with JSON output"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/changes.patch"
     output_file: "./results/patch-results.json"
   # Result: Writes per-file results to JSON file
 
 - name: "Apply patchset to specific base directory"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/update.patch"
     base_dir: "./src"
   # Result: Resolves all file paths relative to ./src
@@ -59,7 +58,7 @@
 # ============================================================================
 
 - name: "Apply coordinated API changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset: |
       --- a/api/routes.js
       +++ b/api/routes.js
@@ -85,7 +84,7 @@
   # Result: Applies related changes across 3 files atomically
 
 - name: "Apply dependency upgrade changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset: |
       --- a/package.json
       +++ b/package.json
@@ -110,7 +109,7 @@
 
 # Use Case 1: Apply LLM-generated code changes
 - name: "Apply AI agent code modifications"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "{{ ai_output_dir }}/changes-{{ timestamp }}.patch"
     base_dir: "./src"
     strict: true
@@ -123,14 +122,13 @@
 
 # Use Case 2: Apply feature branch changes to main
 - name: "Merge feature changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./feature-branches/{{ feature_name }}.patch"
     strict: true
     output_file: "./merge-results/{{ feature_name }}-result.json"
   vars:
     feature_name: "user-authentication"
-  register: merge_result
-
+  as: merge_result
 - name: "Verify merge succeeded"
   assert:
     command:
@@ -140,18 +138,16 @@
 
 # Use Case 3: Apply hotfix to production
 - name: "Apply production hotfix"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "/tmp/hotfixes/{{ ticket_id }}.patch"
     base_dir: "/opt/app"
     strict: true
     backup: true
   vars:
     ticket_id: "PROD-1234"
-  become: true
-
-# Use Case 4: Apply code review suggestions
+  as_user: root
 - name: "Apply reviewer feedback"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./reviews/pr-{{ pr_number }}-changes.patch"
     strict: false  # Allow partial application
     output_file: "./reviews/pr-{{ pr_number }}-results.json"
@@ -160,7 +156,7 @@
 
 # Use Case 5: Batch refactoring
 - name: "Apply automated refactoring"
-  repo_apply_patchset:
+  repo.patch:
     patchset: |
       --- a/src/utils/logger.js
       +++ b/src/utils/logger.js
@@ -178,15 +174,14 @@
 
 # Use Case 6: Apply security patches
 - name: "Apply security vulnerability fixes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./security/CVE-{{ cve_id }}.patch"
     strict: true
     backup: true
     output_file: "./security/CVE-{{ cve_id }}-result.json"
   vars:
     cve_id: "2024-1234"
-  register: security_patch
-
+  as: security_patch
 - name: "Verify security patch"
   assert:
     command:
@@ -196,7 +191,7 @@
 
 # Use Case 7: Progressive rollout with verification
 - name: "Apply canary changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./rollout/canary-{{ version }}.patch"
     base_dir: "/opt/canary-app"
     strict: true
@@ -210,7 +205,7 @@
     cmd: "sleep 300"  # 5 minutes
 
 - name: "Apply production changes if canary succeeded"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./rollout/canary-{{ version }}.patch"
     base_dir: "/opt/production-app"
     strict: true
@@ -228,10 +223,9 @@
   shell:
     cmd: "git diff main > /tmp/feature-changes.patch"
     cwd: "/workspace/dev"
-  register: export_patch
-
+  as: export_patch
 - name: "Apply to production environment"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "/tmp/feature-changes.patch"
     base_dir: "/opt/production"
     strict: true
@@ -242,31 +236,28 @@
 - name: "Check current version"
   shell:
     cmd: "grep VERSION package.json"
-  register: version_check
-
+  as: version_check
 - name: "Apply v2.x migration"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./migrations/v1-to-v2.patch"
   when: "'1.' in version_check.stdout"
 
 - name: "Apply v3.x migration"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./migrations/v2-to-v3.patch"
   when: "'2.' in version_check.stdout"
 
 # Pattern 3: Test-driven patch application
 - name: "Apply code changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./changes/feature.patch"
     backup: true
-  register: patch_result
-
+  as: patch_result
 - name: "Run tests after patching"
   shell:
     cmd: "npm test"
   when: patch_result.changed
-  register: test_result
-
+  as: test_result
 - name: "Rollback if tests fail"
   shell:
     cmd: "git checkout -- ."
@@ -274,50 +265,43 @@
 
 # Pattern 4: Multi-stage application with validation
 - name: "Apply database schema changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./migrations/schema.patch"
     base_dir: "./db"
     strict: true
     output_file: "/tmp/schema-results.json"
-  register: schema_patch
-
+  as: schema_patch
 - name: "Validate schema"
   shell:
     cmd: "psql -f ./db/schema.sql -v ON_ERROR_STOP=1"
   when: schema_patch.changed
 
 - name: "Apply application code changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./migrations/app-code.patch"
     strict: true
   when: schema_patch.changed
 
 # Pattern 5: Loop over multiple patchsets
 - name: "Apply multiple feature patches"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./features/{{ item }}.patch"
     strict: false
     output_file: "./results/{{ item }}-result.json"
   loop:
-    - "feature-auth"
-    - "feature-api"
-    - "feature-ui"
-  register: feature_patches
-
-# ============================================================================
-# ERROR HANDLING AND ROLLBACK
-# ============================================================================
-
-# Idempotent: If patches already applied, reports changed: false
+  - "feature-auth"
+  - "feature-api"
+  - "feature-ui"
+  as: feature_patches
 - name: "Ensure changes are applied"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/idempotent.patch"
     strict: false
   # Safe to run multiple times
 
 # Strict mode with automatic rollback
 - name: "Apply all-or-nothing changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/atomic-changes.patch"
     strict: true  # Rolls back ALL files if ANY fails
     backup: true
@@ -325,7 +309,7 @@
 
 # Lenient mode with partial success
 - name: "Apply best-effort changes"
-  repo_apply_patchset:
+  repo.patch:
     patchset_file: "./patches/partial-ok.patch"
     strict: false  # Apply what succeeds, skip failures
     output_file: "/tmp/results.json"

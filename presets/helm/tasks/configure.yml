@@ -37,16 +37,16 @@
   failed_when: false
 
 - name: Display configuration summary
-  print: |
+  log: |
     Helm configured successfully!
-    
+
     {% if parameters.add_repos | length > 0 %}
     Repositories added: {{ parameters.add_repos | length }}
     {% endif %}
     {% if parameters.install_plugins | length > 0 %}
     Plugins installed: {{ parameters.install_plugins | length }}
     {% endif %}
-    
+
     Usage:
       helm search repo <keyword>
       helm install <name> <chart>

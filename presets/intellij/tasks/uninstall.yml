@@ -1,8 +1,8 @@
 - name: Uninstall intellij
-  package:
+  pkg:
     name: intellij
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "intellij uninstalled"
+  log: "intellij uninstalled"

@@ -1,21 +1,19 @@
 - name: Check if dive is installed
   shell: command -v dive
-  register: dive_check
+  as: dive_check
   failed_when: false
 
 - name: Install dive
-  package:
+  pkg:
     name: dive
     state: present
   when: dive_check.rc != 0
 
 - name: Verify installation
   shell: dive --version 2>&1 || echo "installed"
-  register: dive_version
-
+  as: dive_version
 - name: Display version
-  print: "dive installed: {{ dive_version.stdout }}"
-
+  log: "dive installed: {{ dive_version.stdout }}"
 - name: Verify installation with assert
   assert:
     command:

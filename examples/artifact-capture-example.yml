@@ -4,57 +4,57 @@
 # Example 1: Basic Artifact Capture
 # Captures file changes from template rendering
 - name: "Basic artifact capture"
-  artifact_capture:
+  artifact.capture:
     name: "config-update"
     output_dir: "./artifacts"
     format: "both"  # Generates JSON + Markdown
     steps:
-      - name: "Update application config"
-        template:
-          src: "templates/app.conf.j2"
-          dest: "/etc/myapp/app.conf"
+    - name: "Update application config"
+      file.template:
+        src: "templates/app.conf.j2"
+        dest: "/etc/myapp/app.conf"
 
-      - name: "Update database config"
-        template:
-          src: "templates/db.conf.j2"
-          dest: "/etc/myapp/db.conf"
+    - name: "Update database config"
+      file.template:
+        src: "templates/db.conf.j2"
+        dest: "/etc/myapp/db.conf"
 
 # Example 2: Capture with Content
 # Includes full before/after file content
 - name: "Capture with file content"
-  artifact_capture:
+  artifact.capture:
     name: "code-changes"
     output_dir: "./artifacts"
     format: "json"
     capture_content: true  # Include full file content
     max_diff_size: 524288  # 512KB max per file
     steps:
-      - name: "Refactor authentication module"
-        file_replace:
-          path: "src/auth.js"
-          regex: "var (\\w+) ="
-          replace: "const \\1 ="
+    - name: "Refactor authentication module"
+      text.replace:
+        path: "src/auth.js"
+        regex: "var (\\w+) ="
+        replace: "const \\1 ="
 
-      - name: "Update imports"
-        file_replace:
-          path: "src/auth.js"
-          regex: "require\\('(.+)'\\)"
-          replace: "import \\1 from '\\1'"
+    - name: "Update imports"
+      text.replace:
+        path: "src/auth.js"
+        regex: "require\\('(.+)'\\)"
+        replace: "import \\1 from '\\1'"
 
 # Example 3: Validation with Max Files Constraint
 # Ensures LLM agent doesn't modify too many files
 - name: "Capture with validation"
-  artifact_capture:
+  artifact.capture:
     name: "small-change"
     steps:
-      - name: "Update README"
-        file_replace:
-          path: "README.md"
-          regex: "Version: \\d+\\.\\d+\\.\\d+"
-          replace: "Version: 2.0.0"
+    - name: "Update README"
+      text.replace:
+        path: "README.md"
+        regex: "Version: \\d+\\.\\d+\\.\\d+"
+        replace: "Version: 2.0.0"
 
 - name: "Validate small change"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./artifacts/small-change/changes.json"
     max_files: 3
     max_lines_changed: 100
@@ -62,55 +62,55 @@
 # Example 4: Require Tests
 # Ensures test files are modified when code changes
 - name: "Capture code and test changes"
-  artifact_capture:
+  artifact.capture:
     name: "feature-user-api"
     steps:
-      - name: "Add new user API endpoint"
-        file_insert:
-          path: "src/api/users.js"
-          position: "end"
-          content: |
-            export async function deleteUser(userId) {
-              return await db.users.delete({ id: userId });
-            }
+    - name: "Add new user API endpoint"
+      text.insert:
+        path: "src/api/users.js"
+        position: "end"
+        content: |
+          export async function deleteUser(userId) {
+            return await db.users.delete({ id: userId });
+          }
 
-      - name: "Add test for delete endpoint"
-        file_insert:
-          path: "tests/api/users.test.js"
-          position: "end"
-          content: |
-            test('deleteUser removes user from database', async () => {
-              await deleteUser(123);
-              expect(await db.users.find(123)).toBeNull();
-            });
+    - name: "Add test for delete endpoint"
+      text.insert:
+        path: "tests/api/users.test.js"
+        position: "end"
+        content: |
+          test('deleteUser removes user from database', async () => {
+            await deleteUser(123);
+            expect(await db.users.find(123)).toBeNull();
+          });
 
 - name: "Ensure tests were added"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./artifacts/feature-user-api/changes.json"
     require_tests: true
 
 # Example 5: Path Restrictions
 # Only allow changes to specific directories
 - name: "Capture with path restrictions"
-  artifact_capture:
+  artifact.capture:
     name: "safe-refactor"
     steps:
-      - name: "Refactor utility functions"
-        file_replace:
-          path: "src/utils/format.js"
-          regex: "function (\\w+)\\("
-          replace: "export function \\1("
+    - name: "Refactor utility functions"
+      text.replace:
+        path: "src/utils/format.js"
+        regex: "function (\\w+)\\("
+        replace: "export function \\1("
 
 - name: "Validate only src/ was modified"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./artifacts/safe-refactor/changes.json"
     allowed_paths:
-      - "src/**/*.js"
-      - "src/**/*.ts"
+    - "src/**/*.js"
+    - "src/**/*.ts"
     forbidden_paths:
-      - "src/vendor/**"
-      - "node_modules/**"
-      - "dist/**"
+    - "src/vendor/**"
+    - "node_modules/**"
+    - "dist/**"
 
 # Example 6: Complete LLM Agent Workflow with Rollback
 # Demonstrates capture → validate → test → rollback on failure
@@ -123,35 +123,34 @@
     cmd: "cp -r . {{ backup_dir }}"
 
 - name: "Capture LLM-driven changes"
-  artifact_capture:
+  artifact.capture:
     name: "llm-refactor"
     output_dir: "./ai-artifacts"
     format: "both"
     capture_content: true
     steps:
       # LLM agent makes changes here
-      - name: "Apply LLM-generated patch"
-        repo_apply_patchset:
-          patchset_file: "llm-output/changes.patch"
-          strict: true
+    - name: "Apply LLM-generated patch"
+      repo.patch:
+        patchset_file: "llm-output/changes.patch"
+        strict: true
 
 - name: "Validate change budget"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./ai-artifacts/llm-refactor/changes.json"
     max_files: 20
     max_lines_changed: 1000
     require_tests: true
     forbidden_paths:
-      - "package.json"
-      - "package-lock.json"
-      - ".env*"
-      - "config/production.yml"
-  register: validation
-
+    - "package.json"
+    - "package-lock.json"
+    - ".env*"
+    - "config/production.yml"
+  as: validation
 - name: "Run test suite"
   shell:
     cmd: "npm test"
-  register: tests
+  as: tests
   when: validation is succeeded
 
 - name: "Rollback on failure"
@@ -167,22 +166,22 @@
 # Example 7: Multiple Artifact Captures in Sequence
 # Track changes across multiple LLM iterations
 - name: "LLM iteration 1: Add feature"
-  artifact_capture:
+  artifact.capture:
     name: "iteration-1"
     steps:
-      - file_insert:
-          path: "src/features/export.js"
-          position: "end"
-          content: "export function exportData() { /* TODO */ }"
+    - text.insert:
+        path: "src/features/export.js"
+        position: "end"
+        content: "export function exportData() { /* TODO */ }"
 
 - name: "LLM iteration 2: Implement feature"
-  artifact_capture:
+  artifact.capture:
     name: "iteration-2"
     steps:
-      - file_replace:
-          path: "src/features/export.js"
-          regex: "/\\* TODO \\*/"
-          replace: "return JSON.stringify(data);"
+    - text.replace:
+        path: "src/features/export.js"
+        regex: "/\\* TODO \\*/"
+        replace: "return JSON.stringify(data);"
 
 - name: "Compare iterations"
   shell:
@@ -196,22 +195,22 @@
 # Example 8: Conditional Validation
 # Different constraints based on environment
 - name: "Capture deployment changes"
-  artifact_capture:
+  artifact.capture:
     name: "deploy-{{ environment }}"
     steps:
-      - template:
-          src: "templates/config.yml.j2"
-          dest: "/etc/app/config.yml"
+    - file.template:
+        src: "templates/config.yml.j2"
+        dest: "/etc/app/config.yml"
 
 - name: "Strict validation for production"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./artifacts/deploy-{{ environment }}/changes.json"
     max_files: 5
     max_lines_changed: 50
   when: environment == "production"
 
 - name: "Lenient validation for dev"
-  artifact_validate:
+  artifact.validate:
     artifact_file: "./artifacts/deploy-{{ environment }}/changes.json"
     max_files: 50
     max_lines_changed: 5000
@@ -220,12 +219,12 @@
 # Example 9: Artifact Metadata for LLM Feedback
 # Use artifact JSON to provide feedback to LLM
 - name: "Capture LLM changes"
-  artifact_capture:
+  artifact.capture:
     name: "llm-attempt"
     format: "json"
     steps:
-      - repo_apply_patchset:
-          patchset_file: "llm.patch"
+    - repo.patch:
+        patchset_file: "llm.patch"
 
 - name: "Extract metadata for LLM feedback"
   shell:
@@ -237,10 +236,9 @@
         languages: .summary.files_by_language,
         top_changes: .summary.top_changed_files
       }' ./artifacts/llm-attempt/changes.json
-  register: metadata
-
+  as: metadata
 - name: "Display feedback for LLM"
-  print:
+  log:
     msg: |
       Change Summary:
       {{ metadata.stdout }}
@@ -250,13 +248,13 @@
 # Example 10: Dry Run Mode
 # Preview what would be captured without making changes
 - name: "Preview artifact capture"
-  artifact_capture:
+  artifact.capture:
     name: "preview"
     steps:
-      - file_replace:
-          path: "config.json"
-          regex: '"version": "[^"]+"'
-          replace: '"version": "2.0.0"'
+    - text.replace:
+        path: "config.json"
+        regex: '"version": "[^"]+"'
+        replace: '"version": "2.0.0"'
   when: false  # Skip actual execution
 
 # Notes:

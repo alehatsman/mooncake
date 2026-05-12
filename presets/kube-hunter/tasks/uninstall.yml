@@ -1,5 +1,5 @@
 - name: Uninstall kube-hunter (macOS)
-  package:
+  pkg:
     name: kube-hunter
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "kube-hunter uninstalled"
+  log: "kube-hunter uninstalled"

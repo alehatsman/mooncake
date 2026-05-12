@@ -1,17 +1,16 @@
 - name: Check if squid is installed
   shell: command -v squid
-  register: squid_check
+  as: squid_check
   failed_when: false
 
 - name: Install squid
-  package:
+  pkg:
     name: squid
     state: present
   when: squid_check.rc != 0
 
 - name: Verify installation
   shell: squid --version 2>&1 || squid -v 2>&1 || echo "installed"
-  register: squid_version
-
+  as: squid_version
 - name: Display version
-  print: "squid installed"
+  log: "squid installed"

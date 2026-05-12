@@ -1,5 +1,5 @@
 - name: Uninstall istio (macOS)
-  package:
+  pkg:
     name: istio
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "istio uninstalled"
+  log: "istio uninstalled"

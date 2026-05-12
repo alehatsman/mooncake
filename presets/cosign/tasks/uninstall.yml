@@ -1,12 +1,11 @@
 - name: Uninstall cosign
-  package:
+  pkg:
     name: cosign
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "cosign uninstalled"
-
+  log: "cosign uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

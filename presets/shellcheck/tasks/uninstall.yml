@@ -1,15 +1,15 @@
 - name: Uninstall shellcheck (macOS)
-  package:
+  pkg:
     name: shellcheck
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall shellcheck (Linux)
-  package:
+  pkg:
     name: shellcheck
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "shellcheck uninstalled"
+  log: "shellcheck uninstalled"

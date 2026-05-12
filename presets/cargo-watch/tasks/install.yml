@@ -1,10 +1,10 @@
 - name: Check if cargo-watch is installed
   shell: command -v cargo-watch
-  register: cargo_watch_check
+  as: cargo_watch_check
   failed_when: false
 
 - name: Install cargo-watch via Homebrew
-  package:
+  pkg:
     name: cargo-watch
     state: present
   when: brew_available and cargo_watch_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "cargo-watch installed"
+  log: "cargo-watch installed"

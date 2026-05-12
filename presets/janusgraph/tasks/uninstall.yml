@@ -1,8 +1,8 @@
 - name: Uninstall janusgraph
-  package:
+  pkg:
     name: janusgraph
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "janusgraph uninstalled"
+  log: "janusgraph uninstalled"

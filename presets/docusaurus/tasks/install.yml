@@ -1,6 +1,6 @@
 - name: Check if docusaurus is installed
   shell: command -v docusaurus
-  register: docusaurus_check
+  as: docusaurus_check
   failed_when: false
 
 - name: Install docusaurus via npm
@@ -14,4 +14,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "docusaurus installed"
+  log: "docusaurus installed"

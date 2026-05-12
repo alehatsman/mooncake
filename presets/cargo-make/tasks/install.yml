@@ -1,10 +1,10 @@
 - name: Check if cargo-make is installed
   shell: command -v cargo-make
-  register: cargo_make_check
+  as: cargo_make_check
   failed_when: false
 
 - name: Install cargo-make via Homebrew
-  package:
+  pkg:
     name: cargo-make
     state: present
   when: brew_available and cargo_make_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "cargo-make installed"
+  log: "cargo-make installed"

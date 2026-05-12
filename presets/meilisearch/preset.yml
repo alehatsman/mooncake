@@ -47,9 +47,9 @@ parameters:
 
 steps:
   - name: Install meilisearch
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
 
   - name: Uninstall meilisearch
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

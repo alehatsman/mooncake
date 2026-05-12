@@ -1,5 +1,5 @@
 - name: Uninstall linkerd (macOS)
-  package:
+  pkg:
     name: linkerd
     state: absent
   when: brew_available
@@ -21,4 +21,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "linkerd uninstalled"
+  log: "linkerd uninstalled"

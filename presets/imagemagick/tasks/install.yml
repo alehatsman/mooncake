@@ -1,19 +1,19 @@
 - name: Check if convert is installed
   shell: command -v convert
-  register: imagemagick_check
+  as: imagemagick_check
   failed_when: false
 
 - name: Install imagemagick (macOS)
-  package:
+  pkg:
     name: imagemagick
     state: present
   when: brew_available and imagemagick_check.rc != 0
 
 - name: Install imagemagick (Linux)
-  package:
+  pkg:
     name: imagemagick
     state: present
-  become: true
+  as_user: root
   when: apt_available and imagemagick_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "imagemagick installed"
+  log: "imagemagick installed"

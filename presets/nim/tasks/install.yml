@@ -1,19 +1,19 @@
 - name: Check if nim is installed
   shell: command -v nim
-  register: nim_check
+  as: nim_check
   failed_when: false
 
 - name: Install nim via Homebrew
-  package:
+  pkg:
     name: nim
     state: present
   when: brew_available and nim_check.rc != 0
 
 - name: Install nim via apt
-  package:
+  pkg:
     name: nim
     state: present
-  become: true
+  as_user: root
   when: apt_available and nim_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "nim installed"
+  log: "nim installed"

@@ -1,10 +1,10 @@
 - name: Check if hatch is installed
   shell: command -v hatch
-  register: hatch_check
+  as: hatch_check
   failed_when: false
 
 - name: Install hatch (macOS)
-  package:
+  pkg:
     name: hatch
     state: present
   when: brew_available and hatch_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "hatch installed"
+  log: "hatch installed"

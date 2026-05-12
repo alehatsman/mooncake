@@ -1,8 +1,8 @@
 - name: Uninstall cassandra
-  package:
+  pkg:
     name: cassandra
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "cassandra uninstalled"
+  log: "cassandra uninstalled"

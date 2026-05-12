@@ -1,10 +1,10 @@
 - name: Check if rustup is installed
   shell: command -v rustup
-  register: rustup_check
+  as: rustup_check
   failed_when: false
 
 - name: Install rustup (macOS)
-  package:
+  pkg:
     name: rustup
     state: present
   when: brew_available and rustup_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "rustup installed"
+  log: "rustup installed"

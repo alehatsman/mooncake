@@ -1,10 +1,10 @@
 - name: Check if mkdocs is installed
   shell: command -v mkdocs
-  register: mkdocs_check
+  as: mkdocs_check
   failed_when: false
 
 - name: Install mkdocs via Homebrew
-  package:
+  pkg:
     name: mkdocs
     state: present
   when: brew_available and mkdocs_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mkdocs installed"
+  log: "mkdocs installed"

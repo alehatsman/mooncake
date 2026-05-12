@@ -1,8 +1,8 @@
 - name: Uninstall timescaledb
-  package:
+  pkg:
     name: timescaledb
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "timescaledb uninstalled"
+  log: "timescaledb uninstalled"

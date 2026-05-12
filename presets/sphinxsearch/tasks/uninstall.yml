@@ -1,8 +1,8 @@
 - name: Uninstall sphinxsearch
-  package:
+  pkg:
     name: sphinxsearch
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "sphinxsearch uninstalled"
+  log: "sphinxsearch uninstalled"

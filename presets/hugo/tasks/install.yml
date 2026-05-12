@@ -1,19 +1,19 @@
 - name: Check if hugo is installed
   shell: command -v hugo
-  register: hugo_check
+  as: hugo_check
   failed_when: false
 
 - name: Install hugo (macOS)
-  package:
+  pkg:
     name: hugo
     state: present
   when: brew_available and hugo_check.rc != 0
 
 - name: Install hugo (Linux)
-  package:
+  pkg:
     name: hugo
     state: present
-  become: true
+  as_user: root
   when: apt_available and hugo_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "hugo installed"
+  log: "hugo installed"

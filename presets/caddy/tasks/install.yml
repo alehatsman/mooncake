@@ -2,49 +2,49 @@
 
 - name: Check if Caddy is already installed
   shell: command -v caddy
-  register: caddy_check
+  as: caddy_check
   failed_when: false
 
 # macOS Installation
 - name: Install Caddy via Homebrew via Homebrew
-  package:
+  pkg:
     name: caddy
     state: present
   when: brew_available and caddy_check.rc != 0
 
 # Linux - Debian/Ubuntu
 - name: Install prerequisites (Debian/Ubuntu)
-  package:
+  pkg:
     names:
-      - debian-keyring
-      - debian-archive-keyring
-      - apt-transport-https
-      - curl
+    - debian-keyring
+    - debian-archive-keyring
+    - apt-transport-https
+    - curl
     state: present
-  become: true
+  as_user: root
   when: apt_available and caddy_check.rc != 0
 
 - name: Add Caddy GPG key (Debian/Ubuntu)
   shell: curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  become: true
+  as_user: root
   when: apt_available and caddy_check.rc != 0
 
 - name: Add Caddy repository (Debian/Ubuntu)
   shell: |
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-  become: true
+  as_user: root
   when: apt_available and caddy_check.rc != 0
 
 - name: Update apt cache (Debian/Ubuntu)
   shell: apt-get update
-  become: true
+  as_user: root
   when: apt_available and caddy_check.rc != 0
 
 - name: Install Caddy (Debian/Ubuntu)
-  package:
+  pkg:
     name: caddy
     state: present
-  become: true
+  as_user: root
   when: apt_available and caddy_check.rc != 0
 
 # Linux - Fedora/RHEL
@@ -52,14 +52,14 @@
   shell: |
     dnf install 'dnf-command(copr)' -y
     dnf copr enable @caddy/caddy -y
-  become: true
+  as_user: root
   when: dnf_available and caddy_check.rc != 0
 
 - name: Install Caddy (Fedora/RHEL)
-  package:
+  pkg:
     name: caddy
     state: present
-  become: true
+  as_user: root
   when: dnf_available and caddy_check.rc != 0
 
 - name: Verify installation with assert
@@ -69,4 +69,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "caddy installed"
+  log: "caddy installed"

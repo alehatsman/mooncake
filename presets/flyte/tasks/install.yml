@@ -1,18 +1,17 @@
 - name: Check if flytectl is installed
   shell: command -v flytectl
-  register: flyte_check
+  as: flyte_check
   failed_when: false
 
 - name: Install flyte
-  package:
+  pkg:
     name: flyte
     state: present
   when: flyte_check.rc != 0
 
 - name: Verify installation
   shell: flytectl --version 2>&1 || flytectl -v 2>&1 || echo "installed"
-  register: flyte_version
-
+  as: flyte_version
 - name: Assert flytectl is installed
   assert:
     command:
@@ -20,4 +19,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "flyte installed"
+  log: "flyte installed"

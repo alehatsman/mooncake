@@ -1,17 +1,16 @@
 - name: Check if scylla is installed
   shell: command -v scylla
-  register: scylladb_check
+  as: scylladb_check
   failed_when: false
 
 - name: Install scylladb
-  package:
+  pkg:
     name: scylladb
     state: present
   when: scylladb_check.rc != 0
 
 - name: Verify installation
   shell: scylla --version 2>&1 || scylla -v 2>&1 || echo "installed"
-  register: scylladb_version
-
+  as: scylladb_version
 - name: Display version
-  print: "scylladb installed"
+  log: "scylladb installed"

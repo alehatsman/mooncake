@@ -1,17 +1,16 @@
 - name: Check if tinyproxy is installed
   shell: command -v tinyproxy
-  register: tinyproxy_check
+  as: tinyproxy_check
   failed_when: false
 
 - name: Install tinyproxy
-  package:
+  pkg:
     name: tinyproxy
     state: present
   when: tinyproxy_check.rc != 0
 
 - name: Verify installation
   shell: tinyproxy --version 2>&1 || tinyproxy -v 2>&1 || echo "installed"
-  register: tinyproxy_version
-
+  as: tinyproxy_version
 - name: Display version
-  print: "tinyproxy installed"
+  log: "tinyproxy installed"

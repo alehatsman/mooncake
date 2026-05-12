@@ -1,10 +1,10 @@
 - name: Check if oh-my-posh is installed
   shell: command -v oh-my-posh
-  register: oh_my_posh_check
+  as: oh_my_posh_check
   failed_when: false
 
 - name: Install oh-my-posh via Homebrew
-  package:
+  pkg:
     name: oh-my-posh
     state: present
   when: brew_available and oh_my_posh_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "oh-my-posh installed"
+  log: "oh-my-posh installed"

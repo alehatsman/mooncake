@@ -1,15 +1,15 @@
 - name: Uninstall sbt (macOS)
-  package:
+  pkg:
     name: sbt
     state: absent
   when: brew_available
   failed_when: false
 
 - name: Uninstall sbt (Linux)
-  package:
+  pkg:
     name: sbt
     state: absent
-  become: true
+  as_user: root
   when: apt_available
   failed_when: false
 
@@ -20,4 +20,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "sbt uninstalled"
+  log: "sbt uninstalled"

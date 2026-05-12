@@ -1,19 +1,19 @@
 - name: Check if task is installed
   shell: command -v task
-  register: task_check
+  as: task_check
   failed_when: false
 
 - name: Install task via Homebrew
-  package:
+  pkg:
     name: task
     state: present
   when: brew_available and task_check.rc != 0
 
 - name: Install task via apt
-  package:
+  pkg:
     name: task
     state: present
-  become: true
+  as_user: root
   when: apt_available and task_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "task installed"
+  log: "task installed"

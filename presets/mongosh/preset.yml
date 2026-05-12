@@ -10,8 +10,8 @@ parameters:
     description: Install or remove mongosh
 steps:
   - name: Install mongosh
-    include: tasks/install.yml
+    import: tasks/install.yml
     when: parameters.state == "present"
   - name: Uninstall mongosh
-    include: tasks/uninstall.yml
+    import: tasks/uninstall.yml
     when: parameters.state == "absent"

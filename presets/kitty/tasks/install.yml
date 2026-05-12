@@ -1,18 +1,17 @@
 - name: Check if kitty is installed
   shell: command -v kitty
-  register: kitty_check
+  as: kitty_check
   failed_when: false
 
 - name: Install kitty
-  package:
+  pkg:
     name: kitty
     state: present
   when: kitty_check.rc != 0
 
 - name: Verify installation
   shell: kitty --version 2>&1 || kitty -v 2>&1 || echo "installed"
-  register: kitty_version
-
+  as: kitty_version
 - name: Assert kitty is installed
   assert:
     command:
@@ -20,4 +19,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "kitty installed"
+  log: "kitty installed"

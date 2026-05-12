@@ -1,19 +1,19 @@
 - name: Check if screen is installed
   shell: command -v screen
-  register: screen_check
+  as: screen_check
   failed_when: false
 
 - name: Install screen (macOS)
-  package:
+  pkg:
     name: screen
     state: present
   when: brew_available and screen_check.rc != 0
 
 - name: Install screen (Linux)
-  package:
+  pkg:
     name: screen
     state: present
-  become: true
+  as_user: root
   when: apt_available and screen_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "screen installed"
+  log: "screen installed"

@@ -2,7 +2,7 @@
 
 - name: Check if Tmux is already installed
   shell: command -v tmux
-  register: tmux_check
+  as: tmux_check
   failed_when: false
 
 # macOS Installation
@@ -12,24 +12,24 @@
 
 # Linux Installation
 - name: Install Tmux (Debian/Ubuntu)
-  package:
+  pkg:
     name: tmux
     state: present
-  become: true
+  as_user: root
   when: apt_available and tmux_check.rc != 0
 
 - name: Install Tmux (RHEL/Fedora)
-  package:
+  pkg:
     name: tmux
     state: present
-  become: true
+  as_user: root
   when: dnf_available or yum_available and tmux_check.rc != 0
 
 - name: Install Tmux (Arch)
-  package:
+  pkg:
     name: tmux
     state: present
-  become: true
+  as_user: root
   when: pacman_available and tmux_check.rc != 0
 
 # Verify installation
@@ -41,7 +41,7 @@
 
 # Create Tmux configuration
 - name: Create Tmux configuration
-  file:
+  file.write:
     path: "~/.tmux.conf"
     content: |
       # Tmux configuration
@@ -97,7 +97,7 @@
 # Install Tmux Plugin Manager
 - name: Check if TPM is already installed
   shell: test -d ~/.tmux/plugins/tpm && echo "installed" || echo "not installed"
-  register: tpm_check
+  as: tpm_check
   when: parameters.install_tpm
 
 - name: Install Tmux Plugin Manager
@@ -122,7 +122,7 @@
   when: parameters.install_tpm
 
 - name: Display installation summary
-  print: |
+  log: |
     Tmux installed successfully!
 
     Configuration:

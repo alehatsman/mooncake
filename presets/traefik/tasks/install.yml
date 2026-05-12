@@ -2,7 +2,7 @@
 
 - name: Check if Traefik is already installed
   shell: command -v traefik
-  register: traefik_check
+  as: traefik_check
   failed_when: false
 
 # macOS Installation
@@ -23,14 +23,13 @@
     sudo tar -xzf /tmp/traefik.tar.gz -C /usr/local/bin traefik
     sudo chmod +x /usr/local/bin/traefik
     rm /tmp/traefik.tar.gz
-  become: true
+  as_user: root
   when: linux and traefik_check.rc != 0
 
 # Verify installation
 - name: Verify Traefik installation
   shell: traefik version
-  register: traefik_version
-
+  as: traefik_version
 - name: Assert Traefik is executable
   assert:
     command:
@@ -38,27 +37,25 @@
       exit_code: 0
 
 - name: Display Traefik version
-  print: "Traefik installed: {{ traefik_version.stdout }}"
-
-# Create configuration directory
+  log: "Traefik installed: {{ traefik_version.stdout }}"
 - name: Create Traefik config directory
-  file:
+  file.write:
     path: ~/traefik
     state: directory
     mode: "0755"
 
 # Create configuration file
 - name: Create Traefik configuration
-  file:
+  file.write:
     path: ~/traefik/traefik.yml
     content: |
       # Traefik Configuration
-      
+
       ## API and Dashboard
       api:
         dashboard: {{ "true" if parameters.enable_dashboard else "false" }}
         insecure: true
-      
+
       ## Entry Points
       entryPoints:
         web:
@@ -67,7 +64,7 @@
           address: ":{{ parameters.https_port }}"
         traefik:
           address: ":{{ parameters.dashboard_port }}"
-      
+
       ## Providers
       providers:
         docker:
@@ -75,24 +72,24 @@
         file:
           directory: /etc/traefik/dynamic
           watch: true
-      
+
       ## Logs
       log:
         level: INFO
-      
+
       accessLog: {}
     mode: "0644"
 
 # Create dynamic config directory
 - name: Create dynamic config directory
-  file:
+  file.write:
     path: ~/traefik/dynamic
     state: directory
     mode: "0755"
 
 # Create example dynamic config
 - name: Create example dynamic configuration
-  file:
+  file.write:
     path: ~/traefik/dynamic/example.yml
     content: |
       # Example dynamic configuration
@@ -109,16 +106,16 @@
     mode: "0644"
 
 - name: Display installation summary
-  print: |
+  log: |
     Traefik installed successfully!
-    
+
     Configuration: ~/traefik/traefik.yml
-    
+
     Start Traefik:
       cd ~/traefik && traefik --configFile=traefik.yml
-    
+
     {{ "Dashboard: http://localhost:" + parameters.dashboard_port if parameters.enable_dashboard else "" }}
-    
+
     Entry points:
       - HTTP: {{ parameters.http_port }}
       - HTTPS: {{ parameters.https_port }}

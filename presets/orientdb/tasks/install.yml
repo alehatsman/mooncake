@@ -1,10 +1,10 @@
 - name: Check if orientdb is installed
   shell: command -v orientdb.sh || test -d ~/orientdb
-  register: orientdb_check
+  as: orientdb_check
   failed_when: false
 
 - name: Install orientdb via Homebrew (macOS)
-  package:
+  pkg:
     name: orientdb
     state: present
   when: (parameters.state == "present") and (os == "darwin") and (orientdb_check.rc != 0)
@@ -35,5 +35,5 @@
   when: (parameters.state == "present") and (os == "darwin")
 
 - name: Display confirmation
-  print: "orientdb installed at ~/orientdb"
+  log: "orientdb installed at ~/orientdb"
   when: parameters.state == "present"

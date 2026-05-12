@@ -1,12 +1,11 @@
 - name: Uninstall clojure
-  package:
+  pkg:
     name: clojure
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "clojure uninstalled"
-
+  log: "clojure uninstalled"
 - name: Verify uninstallation with assert
   assert:
     command:

@@ -1,10 +1,10 @@
 - name: Check if flyctl is installed
   shell: command -v flyctl
-  register: fly_check
+  as: fly_check
   failed_when: false
 
 - name: Install flyctl via Homebrew
-  package:
+  pkg:
     name: flyctl
     state: present
   when: brew_available and fly_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "flyctl installed"
+  log: "flyctl installed"

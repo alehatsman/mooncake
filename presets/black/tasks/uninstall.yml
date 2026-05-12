@@ -1,5 +1,5 @@
 - name: Uninstall black via Homebrew
-  package:
+  pkg:
     name: black
     state: absent
   when: brew_available
@@ -17,4 +17,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "black uninstalled"
+  log: "black uninstalled"

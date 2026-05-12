@@ -1,17 +1,17 @@
 - name: Check if syft is installed
   shell: command -v syft
-  register: syft_check
+  as: syft_check
   failed_when: false
 
 - name: Install syft (macOS)
-  package:
+  pkg:
     name: syft
     state: present
   when: brew_available and syft_check.rc != 0
 
 - name: Install syft (Linux)
   shell: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-  become: true
+  as_user: root
   when: linux and syft_check.rc != 0
 
 - name: Verify installation with assert
@@ -21,4 +21,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "syft installed"
+  log: "syft installed"

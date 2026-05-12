@@ -2,31 +2,27 @@
 
 - name: Install {{ item }} via apt
   shell: apt-get install -y {{ item }}
-  with_items: parameters.tools
+  for_each: parameters.tools
   when: apt_available
-  become: true
-
+  as_user: root
 - name: Install {{ item }} via dnf
   shell: dnf install -y {{ item }}
-  with_items: parameters.tools
+  for_each: parameters.tools
   when: dnf_available
-  become: true
-
+  as_user: root
 - name: Install {{ item }} via yum
   shell: yum install -y {{ item }}
-  with_items: parameters.tools
+  for_each: parameters.tools
   when: yum_available
-  become: true
-
+  as_user: root
 - name: Install {{ item }} via pacman
   shell: pacman -S --noconfirm {{ item }}
-  with_items: parameters.tools
+  for_each: parameters.tools
   when: pacman_available
-  become: true
-
+  as_user: root
 - name: Install {{ item }} via Homebrew
   shell: brew install {{ item }}
-  with_items: parameters.tools
+  for_each: parameters.tools
   when: brew_available
 
 - name: Verify bat is installed
@@ -36,7 +32,7 @@
       exit_code: 0
 
 - name: Print installation complete message
-  print: |
+  log: |
     Modern Unix tools installed! Try these commands:
       bat file.txt          # Pretty cat
       rg pattern           # Fast grep

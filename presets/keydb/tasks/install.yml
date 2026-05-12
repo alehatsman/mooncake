@@ -1,17 +1,16 @@
 - name: Check if keydb is installed
   shell: command -v keydb
-  register: keydb_check
+  as: keydb_check
   failed_when: false
 
 - name: Install keydb
-  package:
+  pkg:
     name: keydb
     state: present
   when: keydb_check.rc != 0
 
 - name: Verify installation
   shell: keydb --version 2>&1 || keydb -v 2>&1 || echo "installed"
-  register: keydb_version
-
+  as: keydb_version
 - name: Display version
-  print: "keydb installed"
+  log: "keydb installed"

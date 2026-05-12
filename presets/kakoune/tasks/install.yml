@@ -1,19 +1,19 @@
 - name: Check if kak is installed
   shell: command -v kak
-  register: kakoune_check
+  as: kakoune_check
   failed_when: false
 
 - name: Install kakoune (macOS)
-  package:
+  pkg:
     name: kakoune
     state: present
   when: brew_available and kakoune_check.rc != 0
 
 - name: Install kakoune (Linux)
-  package:
+  pkg:
     name: kakoune
     state: present
-  become: true
+  as_user: root
   when: apt_available and kakoune_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "kakoune installed"
+  log: "kakoune installed"

@@ -9,11 +9,11 @@
 
 # Setup
 - name: "Setup: Create directories"
-  file:
+  file.write:
     path: /tmp/mooncake-unarchive-{{ item }}
     state: directory
     mode: "0755"
-  with_items: [archives, extracted]
+  for_each: [archives, extracted]
   tags: [setup]
 
 # =============================================================================
@@ -51,7 +51,7 @@
 # =============================================================================
 
 - name: "Example 1: Extract .tar.gz archive"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/basic-targz
     mode: "0755"
@@ -64,14 +64,14 @@
   tags: [basics]
 
 - name: "Example 3: Extract .tar archive"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar
     dest: /tmp/mooncake-unarchive-extracted/basic-tar
     mode: "0755"
   tags: [basics]
 
 - name: "Example 4: Extract .zip archive"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.zip
     dest: /tmp/mooncake-unarchive-extracted/basic-zip
     mode: "0755"
@@ -82,7 +82,7 @@
 # =============================================================================
 
 - name: "Example 5: Extract without stripping (default)"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/no-strip
     mode: "0755"
@@ -95,7 +95,7 @@
   tags: [strip]
 
 - name: "Example 7: Extract with strip_components=1"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/strip-1
     strip_components: 1
@@ -113,32 +113,32 @@
 # =============================================================================
 
 - name: "Example 9: Extract with marker file"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/with-marker
     creates: /tmp/mooncake-unarchive-extracted/with-marker/.extracted
     mode: "0755"
-  register: first_extract
+  as: first_extract
   tags: [idempotency]
 
 - name: "Example 10: Create marker file"
-  file:
+  file.write:
     path: /tmp/mooncake-unarchive-extracted/with-marker/.extracted
     state: touch
     mode: "0644"
   tags: [idempotency]
 
 - name: "Example 11: Try to extract again (skipped)"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/with-marker
     creates: /tmp/mooncake-unarchive-extracted/with-marker/.extracted
     mode: "0755"
-  register: second_extract
+  as: second_extract
   tags: [idempotency]
 
 - name: "Example 12: Show idempotency"
-  print: "First: {{ first_extract.changed }}, Second: {{ second_extract.changed }}"
+  log: "First: {{ first_extract.changed }}, Second: {{ second_extract.changed }}"
   tags: [idempotency]
 
 # =============================================================================
@@ -146,7 +146,7 @@
 # =============================================================================
 
 - name: "Example 13: Download and extract pattern (demo)"
-  print: |
+  log: |
     Real-world pattern - Install Node.js:
 
     - name: Download Node.js
@@ -175,18 +175,18 @@
 
 - vars:
     archives:
-      - name: app1
-        file: test-app.tar.gz
-      - name: app2
-        file: test-app.zip
+    - name: app1
+      file: test-app.tar.gz
+    - name: app2
+      file: test-app.zip
 
 - name: "Example 14: Extract multiple archives"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/{{ item.file }}
     dest: /tmp/mooncake-unarchive-extracted/{{ item.name }}
     strip_components: 1
     mode: "0755"
-  with_items: "{{ archives }}"
+  for_each: "{{ archives }}"
   tags: [loops]
 
 # =============================================================================
@@ -194,7 +194,7 @@
 # =============================================================================
 
 - name: "Example 15: Extract on Linux only"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/linux-only
     mode: "0755"
@@ -206,16 +206,16 @@
 # =============================================================================
 
 - name: "Example 16: Extract and register"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/registered
     strip_components: 1
     mode: "0755"
-  register: extract_result
+  as: extract_result
   tags: [register]
 
 - name: "Example 17: Show extract result"
-  print: "Extraction changed: {{ extract_result.changed }}"
+  log: "Extraction changed: {{ extract_result.changed }}"
   tags: [register]
 
 # =============================================================================
@@ -223,7 +223,7 @@
 # =============================================================================
 
 - name: "Example 18: Supported formats summary"
-  print: |
+  log: |
     Supported archive formats:
       • .tar       - Uncompressed tar archives
       • .tar.gz    - Gzip compressed tar archives
@@ -243,14 +243,14 @@
 # =============================================================================
 
 - name: "Example 19: Extract with restrictive permissions"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/restricted
     mode: "0700"
   tags: [permissions]
 
 - name: "Example 20: Extract with standard permissions"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/test-app.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/standard
     mode: "0755"
@@ -270,7 +270,7 @@
   tags: [real-world]
 
 - name: "Example 22: Restore backup"
-  unarchive:
+  file.unarchive:
     src: /tmp/mooncake-unarchive-archives/backup.tar.gz
     dest: /tmp/mooncake-unarchive-extracted/restored
     creates: /tmp/mooncake-unarchive-extracted/restored/.restored
@@ -278,7 +278,7 @@
   tags: [real-world]
 
 - name: "Example 23: Mark restoration complete"
-  file:
+  file.write:
     path: /tmp/mooncake-unarchive-extracted/restored/.restored
     state: touch
     mode: "0644"
@@ -305,15 +305,15 @@
 # =============================================================================
 
 - name: "Cleanup: Remove test directories"
-  file:
+  file.write:
     path: /tmp/mooncake-unarchive-{{ item }}
     state: absent
     force: true
-  with_items: [archives, extracted]
+  for_each: [archives, extracted]
   tags: [cleanup]
 
 - name: "Summary"
-  print: |
+  log: |2
 
     Unarchive action examples completed!
     Covered:
@@ -324,5 +324,4 @@
       • Integration with download
       • Backup restoration patterns
       • Security features
-
   tags: [always]

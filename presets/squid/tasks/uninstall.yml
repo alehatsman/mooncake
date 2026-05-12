@@ -1,8 +1,8 @@
 - name: Uninstall squid
-  package:
+  pkg:
     name: squid
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "squid uninstalled"
+  log: "squid uninstalled"

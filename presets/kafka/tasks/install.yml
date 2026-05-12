@@ -2,7 +2,7 @@
 
 - name: Check if Kafka is already installed
   shell: command -v kafka-server-start 2>/dev/null || command -v kafka-server-start.sh
-  register: kafka_check
+  as: kafka_check
   failed_when: false
 
 # macOS Installation
@@ -18,17 +18,17 @@
     sudo tar -xzf kafka_2.13-3.6.1.tgz
     sudo mv kafka_2.13-3.6.1 /opt/kafka
     sudo rm kafka_2.13-3.6.1.tgz
-  become: true
+  as_user: root
   when: linux and kafka_check.rc != 0
 
 - name: Create Kafka user (Linux)
   shell: sudo useradd -r -s /bin/false kafka || true
-  become: true
+  as_user: root
   when: linux and kafka_check.rc != 0
 
 - name: Set Kafka ownership (Linux)
   shell: sudo chown -R kafka:kafka /opt/kafka
-  become: true
+  as_user: root
   when: linux and kafka_check.rc != 0
 
 - name: Add Kafka to PATH (Linux)
@@ -41,8 +41,7 @@
 # Verify installation
 - name: Verify Kafka installation
   shell: kafka-topics.sh --version 2>&1 || kafka-topics --version 2>&1 || echo "Kafka installed"
-  register: kafka_version
-
+  as: kafka_version
 - name: Assert Kafka is installed
   assert:
     command:
@@ -50,4 +49,4 @@
       exit_code: 0
 
 - name: Display Kafka version
-  print: "Kafka installed: {{ kafka_version.stdout }}"
+  log: "Kafka installed: {{ kafka_version.stdout }}"

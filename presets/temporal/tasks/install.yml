@@ -1,17 +1,16 @@
 - name: Check if temporal is installed
   shell: command -v temporal
-  register: temporal_check
+  as: temporal_check
   failed_when: false
 
 - name: Install temporal
-  package:
+  pkg:
     name: temporal
     state: present
   when: temporal_check.rc != 0
 
 - name: Verify installation
   shell: temporal --version 2>&1 || temporal -v 2>&1 || echo "installed"
-  register: temporal_version
-
+  as: temporal_version
 - name: Display version
-  print: "temporal installed"
+  log: "temporal installed"

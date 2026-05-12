@@ -1,19 +1,19 @@
 - name: Check if ctop is installed
   shell: command -v ctop
-  register: ctop_check
+  as: ctop_check
   failed_when: false
 
 - name: Install ctop via Homebrew
-  package:
+  pkg:
     name: ctop
     state: present
   when: brew_available and ctop_check.rc != 0
 
 - name: Install ctop via apt
-  package:
+  pkg:
     name: ctop
     state: present
-  become: true
+  as_user: root
   when: apt_available and ctop_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "ctop installed"
+  log: "ctop installed"

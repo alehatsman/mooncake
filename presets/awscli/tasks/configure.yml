@@ -1,7 +1,7 @@
 # AWS CLI Configuration Tasks
 
 - name: Ensure AWS config directory exists
-  file:
+  file.write:
     path: ~/.aws
     state: directory
     mode: "0700"
@@ -27,9 +27,9 @@
 
 - name: Verify AWS configuration
   shell: aws sts get-caller-identity
-  register: aws_identity
+  as: aws_identity
   failed_when: false
 
 - name: Display AWS identity
-  print: "AWS Identity: {{ aws_identity.stdout }}"
+  log: "AWS Identity: {{ aws_identity.stdout }}"
   when: aws_identity.rc == 0

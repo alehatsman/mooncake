@@ -1,19 +1,19 @@
 - name: Check if atuin is installed
   shell: command -v atuin
-  register: atuin_check
+  as: atuin_check
   failed_when: false
 
 - name: Install atuin via Homebrew
-  package:
+  pkg:
     name: atuin
     state: present
   when: brew_available and atuin_check.rc != 0
 
 - name: Install atuin via apt
-  package:
+  pkg:
     name: atuin
     state: present
-  become: true
+  as_user: root
   when: apt_available and atuin_check.rc != 0
 
 - name: Install atuin via cargo
@@ -27,4 +27,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "atuin installed"
+  log: "atuin installed"

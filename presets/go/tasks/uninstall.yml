@@ -2,31 +2,31 @@
 
 # macOS Uninstallation
 - name: Uninstall Go via Homebrew (macOS)
-  package:
+  pkg:
     name: go
     state: absent
   when: brew_available
 
 # Linux Uninstallation
 - name: Uninstall Go (Debian/Ubuntu)
-  package:
+  pkg:
     name: golang-go
     state: absent
-  become: true
+  as_user: root
   when: apt_available
 
 - name: Uninstall Go (Fedora/RHEL)
-  package:
+  pkg:
     name: golang
     state: absent
-  become: true
+  as_user: root
   when: dnf_available
 
 - name: Uninstall Go (Arch)
-  package:
+  pkg:
     name: go
     state: absent
-  become: true
+  as_user: root
   when: pacman_available
 
 - name: Verify uninstallation with assert
@@ -36,4 +36,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "Go uninstalled"
+  log: "Go uninstalled"

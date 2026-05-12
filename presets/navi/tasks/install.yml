@@ -1,10 +1,10 @@
 - name: Check if navi is installed
   shell: command -v navi
-  register: navi_check
+  as: navi_check
   failed_when: false
 
 - name: Install navi via Homebrew
-  package:
+  pkg:
     name: navi
     state: present
   when: brew_available and navi_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "navi installed"
+  log: "navi installed"

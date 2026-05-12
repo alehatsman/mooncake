@@ -1,5 +1,5 @@
 - name: Uninstall pdm (macOS)
-  package:
+  pkg:
     name: pdm
     state: absent
   when: (parameters.state == "absent") and (os == "darwin")
@@ -18,5 +18,5 @@
   when: parameters.state == "absent"
 
 - name: Display confirmation
-  print: "pdm uninstalled"
+  log: "pdm uninstalled"
   when: parameters.state == "absent"

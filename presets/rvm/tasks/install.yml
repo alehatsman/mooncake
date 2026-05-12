@@ -1,6 +1,6 @@
 - name: Check if rvm is installed
   shell: command -v rvm
-  register: rvm_check
+  as: rvm_check
   failed_when: false
 
 - name: Install rvm (macOS)
@@ -18,4 +18,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "rvm installed"
+  log: "rvm installed"

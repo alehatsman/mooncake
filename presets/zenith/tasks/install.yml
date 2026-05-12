@@ -1,10 +1,10 @@
 - name: Check if zenith is installed
   shell: command -v zenith
-  register: zenith_check
+  as: zenith_check
   failed_when: false
 
 - name: Install zenith via Homebrew
-  package:
+  pkg:
     name: zenith
     state: present
   when: brew_available and zenith_check.rc != 0
@@ -20,4 +20,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "zenith installed"
+  log: "zenith installed"

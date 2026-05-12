@@ -1,10 +1,10 @@
 - name: Check if nebula is installed
   shell: command -v nebula
-  register: nebula_check
+  as: nebula_check
   failed_when: false
 
 - name: Install nebula via Homebrew
-  package:
+  pkg:
     name: nebula
     state: present
   when: brew_available and nebula_check.rc != 0
@@ -27,4 +27,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "nebula installed"
+  log: "nebula installed"

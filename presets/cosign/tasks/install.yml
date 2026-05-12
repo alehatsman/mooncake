@@ -1,21 +1,19 @@
 - name: Check if cosign is installed
   shell: command -v cosign
-  register: cosign_check
+  as: cosign_check
   failed_when: false
 
 - name: Install cosign
-  package:
+  pkg:
     name: cosign
     state: present
   when: cosign_check.rc != 0
 
 - name: Verify installation
   shell: cosign --version 2>&1 || echo "installed"
-  register: cosign_version
-
+  as: cosign_version
 - name: Display version
-  print: "cosign installed: {{ cosign_version.stdout }}"
-
+  log: "cosign installed: {{ cosign_version.stdout }}"
 - name: Verify installation with assert
   assert:
     command:

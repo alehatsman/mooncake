@@ -1,8 +1,8 @@
 - name: Uninstall kubeflow
-  package:
+  pkg:
     name: kubeflow
     state: absent
   failed_when: false
 
 - name: Display confirmation
-  print: "kubeflow uninstalled"
+  log: "kubeflow uninstalled"

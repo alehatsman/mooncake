@@ -1,10 +1,10 @@
 - name: Check if jenv is installed
   shell: command -v jenv
-  register: jenv_check
+  as: jenv_check
   failed_when: false
 
 - name: Install jenv (macOS)
-  package:
+  pkg:
     name: jenv
     state: present
   when: brew_available and jenv_check.rc != 0
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "jenv installed"
+  log: "jenv installed"

@@ -1,10 +1,10 @@
 - name: Check if manticore is installed
   shell: command -v manticore
-  register: manticore_check
+  as: manticore_check
   failed_when: false
 
 - name: Install manticore via Homebrew
-  package:
+  pkg:
     name: manticore
     state: present
   when: brew_available and manticore_check.rc != 0
@@ -25,4 +25,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "manticore installed"
+  log: "manticore installed"

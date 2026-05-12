@@ -1,16 +1,16 @@
 - name: Check if activemq is installed
   shell: command -v activemq
-  register: activemq_check
+  as: activemq_check
   failed_when: false
 
 - name: Install activemq (macOS)
-  package:
+  pkg:
     name: activemq
     state: present
   when: brew_available and activemq_check.rc != 0
 
 - name: Install activemq (Linux)
-  package:
+  pkg:
     name: activemq
     state: present
   when: linux and activemq_check.rc != 0
@@ -22,4 +22,4 @@
       exit_code: 0
 
 - name: Display confirmation
-  print: "activemq installed"
+  log: "activemq installed"

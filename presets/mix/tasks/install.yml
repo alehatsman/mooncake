@@ -1,19 +1,19 @@
 - name: Check if mix is installed
   shell: command -v mix
-  register: mix_check
+  as: mix_check
   failed_when: false
 
 - name: Install elixir (macOS)
-  package:
+  pkg:
     name: elixir
     state: present
   when: brew_available and mix_check.rc != 0
 
 - name: Install elixir (Linux)
-  package:
+  pkg:
     name: elixir
     state: present
-  become: true
+  as_user: root
   when: apt_available and mix_check.rc != 0
 
 - name: Verify installation with assert
@@ -23,4 +23,4 @@
       exit_code: 0
 
 - name: Display version
-  print: "mix installed"
+  log: "mix installed"

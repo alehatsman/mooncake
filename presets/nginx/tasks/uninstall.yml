@@ -1,10 +1,10 @@
 # Nginx Uninstallation Tasks
 
 - name: Stop Nginx service (Linux)
-  service:
+  os.service:
     name: nginx
     state: stopped
-  become: true
+  as_user: root
   failed_when: false
   when: (parameters.state == "absent") and (os == "linux")
 
@@ -15,7 +15,7 @@
 
 # macOS Uninstallation
 - name: Uninstall Nginx via Homebrew (macOS)
-  package:
+  pkg:
     name: nginx
     state: absent
   when: (parameters.state == "absent") and (os == "darwin")
@@ -23,15 +23,15 @@
 
 # Linux Uninstallation
 - name: Uninstall Nginx (Linux)
-  package:
+  pkg:
     name: nginx
     state: absent
-  become: true
+  as_user: root
   when: (parameters.state == "absent") and (os == "linux")
   failed_when: false
 
 - name: Display uninstall confirmation
-  print: "Nginx has been uninstalled"
+  log: "Nginx has been uninstalled"
   when: parameters.state == "absent"
 
 - name: Assert tool is removed

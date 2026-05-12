@@ -1,5 +1,5 @@
 - name: Uninstall gloo (macOS)
-  package:
+  pkg:
     name: gloo
     state: absent
   when: brew_available
@@ -22,4 +22,4 @@
       exit_code: 1
 
 - name: Display confirmation
-  print: "gloo uninstalled"
+  log: "gloo uninstalled"
