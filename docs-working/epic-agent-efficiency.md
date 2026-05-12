@@ -257,3 +257,17 @@ All 11 specs shipped and verified on Arch Linux (x1, 2026-05-12).
 - spec-13 — S6.2 Single-Step Execution ✅
 - spec-14 — S3.5 Snapshot Diff ✅
 - spec-15 — S4.1 Check Mode ✅
+
+All 15 specs shipped and verified on Arch Linux (x1, 2026-05-12). Released as v0.4.0.
+
+### Fixes (post-v0.4.0)
+- fix: `version` variable wired so `-ldflags` injection takes effect (was hardcoded `0.2.0`)
+- fix: `state: file` / `hardlink` / `perms` missing from JSON schema enum — caused any config mixing `package` + `file` steps to fail validation. Released as v0.4.1 binary on x1.
+
+### Remaining from epic (not yet specced)
+- S2.3 Compact Mode (dot-per-step progress)
+- S2.4 Plan Diff (`mooncake plan --diff`)
+- S4.2–S4.4 Check output format / drift detection / assert-only
+- S5.3 Step-Level Result Cache
+- S5.4 Agent Context Injection
+- S6.4 Explain Mode (`mooncake explain config.yml`)
