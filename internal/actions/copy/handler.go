@@ -343,9 +343,6 @@ func (h *Handler) copyFile(src, dest string, mode os.FileMode, step *config.Step
 		if !security.IsBecomeSupported() {
 			return fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
-		if ec.SudoPass == "" {
-			return fmt.Errorf("step requires sudo but no password provided")
-		}
 		// Use sudo for final move
 		cmd := fmt.Sprintf("mv %q %q", tmpPath, dest)
 		if err := h.executeSudoCommand(cmd, step, ec); err != nil {
@@ -407,9 +404,6 @@ func (h *Handler) chownWithBecome(path, owner, group string, step *config.Step, 
 		return fmt.Errorf("become not supported on %s", runtime.GOOS)
 	}
 
-	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
-	}
 
 	ownerGroup := ""
 	if owner != "" && group != "" {

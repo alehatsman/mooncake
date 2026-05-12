@@ -640,9 +640,6 @@ func (h *Handler) createFileWithBecome(path string, content []byte, mode os.File
 		return fmt.Errorf("become not supported on %s", runtime.GOOS)
 	}
 
-	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
-	}
 
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "mooncake-*")
@@ -672,9 +669,6 @@ func (h *Handler) createDirectoryWithBecome(path string, mode os.FileMode, step 
 		return fmt.Errorf("become not supported on %s", runtime.GOOS)
 	}
 
-	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
-	}
 
 	cmd := fmt.Sprintf("mkdir -p -m %s %s", h.formatMode(mode), path)
 	return h.executeSudoCommand(cmd, step, ec)
@@ -692,9 +686,6 @@ func (h *Handler) removeWithBecome(path string, isDir bool, _ bool, step *config
 		return fmt.Errorf("become not supported on %s", runtime.GOOS)
 	}
 
-	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
-	}
 
 	cmd := fmt.Sprintf("rm -f %s", path)
 	if isDir {
@@ -743,9 +734,6 @@ func (h *Handler) chownWithBecome(path, owner, group string, recurse bool, step 
 		return fmt.Errorf("become not supported on %s", runtime.GOOS)
 	}
 
-	if ec.SudoPass == "" {
-		return fmt.Errorf("step requires sudo but no password provided")
-	}
 
 	ownerGroup := ""
 	if owner != "" && group != "" {

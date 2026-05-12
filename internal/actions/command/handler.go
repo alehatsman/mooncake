@@ -247,11 +247,9 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 		if !security.IsBecomeSupported() {
 			return nil, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
-		if ec.SudoPass == "" {
-			return nil, fmt.Errorf("no sudo password provided. Use --sudo-pass flag or --raw mode for interactive sudo")
-		}
 
-		// Build sudo arguments
+		// Build sudo arguments. Empty SudoPass is OK for passwordless
+		// sudo hosts; sudo will fail with a real error otherwise.
 		args := []string{"-S"}
 		if step.BecomeUser != "" {
 			args = append(args, "-u", step.BecomeUser)

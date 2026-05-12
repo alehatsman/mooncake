@@ -544,9 +544,6 @@ func (p *defaultPerformer) runSudo(command string) error {
 	if !security.IsBecomeSupported() {
 		return errors.New("become not supported on this platform")
 	}
-	if p.sudoPass == "" {
-		return errors.New("step requires sudo but no password provided")
-	}
 	// #nosec G204 — provisioning tool intentionally runs caller-provided commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
 	cmd.Stdin = bytes.NewBufferString(p.sudoPass + "\n")

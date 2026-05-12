@@ -1081,68 +1081,6 @@ func TestHandler_Execute_NonBoolFailedWhenResult(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithBecome(t *testing.T) {
-	// Skip on Windows
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping become test on Windows")
-	}
-
-	// Skip if sudo not available
-	if _, err := os.Stat("/usr/bin/sudo"); os.IsNotExist(err) {
-		t.Skip("sudo not available")
-	}
-
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-	ctx.SudoPass = "" // No password - would fail in real execution
-
-	step := &config.Step{
-		Shell: &config.ShellAction{
-			Cmd: "id",
-		},
-		Become: true,
-	}
-
-	// Should error because no sudo password provided
-	_, err := h.Execute(ctx, step)
-	if err == nil {
-		t.Error("Execute() should error when become is true but no sudo password")
-	}
-	if !strings.Contains(err.Error(), "sudo password") {
-		t.Errorf("Error should mention sudo password, got: %v", err)
-	}
-}
-
-func TestHandler_Execute_WithBecomeUser(t *testing.T) {
-	// Skip on Windows
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping become test on Windows")
-	}
-
-	// Skip if sudo not available
-	if _, err := os.Stat("/usr/bin/sudo"); os.IsNotExist(err) {
-		t.Skip("sudo not available")
-	}
-
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-	ctx.SudoPass = "" // No password
-
-	step := &config.Step{
-		Shell: &config.ShellAction{
-			Cmd: "whoami",
-		},
-		Become:     true,
-		BecomeUser: "nobody",
-	}
-
-	// Should error because no sudo password
-	_, err := h.Execute(ctx, step)
-	if err == nil {
-		t.Error("Execute() should error when become is true but no sudo password")
-	}
-}
-
 func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
 	h := &Handler{}
 	// Use testutil.MockContext which doesn't cast to ExecutionContext
@@ -1362,32 +1300,3 @@ func TestHandler_GetInterpreter(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithStdinAndBecome(t *testing.T) {
-	// Skip on Windows
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping become test on Windows")
-	}
-
-	// Skip if sudo not available
-	if _, err := os.Stat("/usr/bin/sudo"); os.IsNotExist(err) {
-		t.Skip("sudo not available")
-	}
-
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-	ctx.SudoPass = "" // No password
-
-	step := &config.Step{
-		Shell: &config.ShellAction{
-			Cmd:   "cat",
-			Stdin: "test input",
-		},
-		Become: true,
-	}
-
-	// Should error because no sudo password
-	_, err := h.Execute(ctx, step)
-	if err == nil {
-		t.Error("Execute() should error when become is true but no sudo password")
-	}
-}

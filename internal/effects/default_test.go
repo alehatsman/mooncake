@@ -302,14 +302,3 @@ func TestChmod_Changes(t *testing.T) {
 	}
 }
 
-// ----------------------------------------------------------------------
-// Become without password
-// ----------------------------------------------------------------------
-
-func TestBecome_NoPassword_Errors(t *testing.T) {
-	p := NewPerformer(func() actions.Mode { return actions.ModeExecute }, "" /* no password */)
-	got := p.Mkdir(filepath.Join(t.TempDir(), "x"), 0o755, actions.PerformerOpts{Become: true})
-	if got.Err == nil {
-		t.Error("expected error when Become requested without sudo password")
-	}
-}

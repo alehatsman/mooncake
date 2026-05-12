@@ -388,9 +388,6 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 		if !security.IsBecomeSupported() {
 			return 0, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
-		if ec.SudoPass == "" {
-			return 0, fmt.Errorf("step requires sudo but no password provided")
-		}
 		// Use sudo for final move
 		cmd := fmt.Sprintf("mv %q %q", tmpPath, dest)
 		if err := h.executeSudoCommand(cmd, step, ec); err != nil {

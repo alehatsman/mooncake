@@ -245,11 +245,11 @@ func (h *Handler) createShellCommand(cmdCtx context.Context, ctx actions.Context
 		if !security.IsBecomeSupported() {
 			return nil, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
-		if ec.SudoPass == "" {
-			return nil, fmt.Errorf("no sudo password provided")
-		}
 
-		// Build sudo arguments
+		// Build sudo arguments. With an empty SudoPass we still pass
+		// -S; sudo will read the empty newline from stdin. On a host
+		// with passwordless sudo this succeeds; otherwise sudo itself
+		// fails with a clear error.
 		args := []string{"-S"}
 		if step.BecomeUser != "" {
 			args = append(args, "-u", step.BecomeUser)
