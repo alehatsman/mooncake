@@ -1,7 +1,18 @@
 # Spec 15: Check Mode (Non-Destructive Audit)
 
-**Epic:** E4 Check Mode (S4.1–S4.3)  
-**Effort:** L (1–2 days)  
+**Status:** Shipped, then superseded by [Spec 16](spec-16-unify-dryrun-execute.md).
+The `Checker` interface and `--check` flag described below were both
+removed in Spec 16. Their *purpose* — state-aware drift detection — is
+now delivered through the unified `Run(ctx, step)` method in
+`ModePlan` and the `mooncake plan` command. The `--check` flag is kept
+for one release as a deprecated alias that prints a note pointing at
+`mooncake plan`.
+
+This spec is preserved as historical context for the design discussion
+that led into Spec 16.
+
+**Epic:** E4 Check Mode (S4.1–S4.3)
+**Effort:** L (1–2 days)
 **Value:** High — turns mooncake into a safe drift-detection tool; required for production use
 
 ---

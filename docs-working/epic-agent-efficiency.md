@@ -256,7 +256,7 @@ All 11 specs shipped and verified on Arch Linux (x1, 2026-05-12).
 - spec-12 — S1.4 Package Install Summary ✅
 - spec-13 — S6.2 Single-Step Execution ✅
 - spec-14 — S3.5 Snapshot Diff ✅
-- spec-15 — S4.1 Check Mode ✅
+- spec-15 — S4.1 Check Mode ✅ (superseded by spec-16)
 
 All 15 specs shipped and verified on Arch Linux (x1, 2026-05-12). Released as v0.4.0.
 
@@ -264,10 +264,33 @@ All 15 specs shipped and verified on Arch Linux (x1, 2026-05-12). Released as v0
 - fix: `version` variable wired so `-ldflags` injection takes effect (was hardcoded `0.2.0`)
 - fix: `state: file` / `hardlink` / `perms` missing from JSON schema enum — caused any config mixing `package` + `file` steps to fail validation. Released as v0.4.1 binary on x1.
 
+### Batch 4 (complete) — Plan/Apply rework
+- spec-16 — Plan/Apply model: collapsed `Execute`/`DryRun`/`Check` handler
+  trio into a single `Run(ctx, step)` method; introduced `mooncake plan`
+  (state-aware preview) and `mooncake apply` (with `--from-plan` and a
+  three-gate stale-plan policy: host facts + input-file hash + optional
+  age); covers S2.4 Plan Diff foundations, S4.2/S4.3 check output
+  format and drift detection. ✅
+- fix: hermetic preset discovery test ✅
+
+14 commits between `5309066..3683b98`. Every action handler implements
+`Runner`; 17 of 24 handlers do real state inspection. The remaining 7
+are inherently un-checkable (shell/command/wait/print/vars/include_vars/
+preset) and surface meaningful preview info instead. Full test suite
+green throughout.
+
 ### Remaining from epic (not yet specced)
 - S2.3 Compact Mode (dot-per-step progress)
-- S2.4 Plan Diff (`mooncake plan --diff`)
-- S4.2–S4.4 Check output format / drift detection / assert-only
+- S2.4 `mooncake plan --diff` content diffs (foundations laid by spec-16; the
+  `StepInspection.Detail` field + `effects.ContentDiff` for write_file
+  effects are the hooks)
+- S4.4 assert-only mode
 - S5.3 Step-Level Result Cache
 - S5.4 Agent Context Injection
 - S6.4 Explain Mode (`mooncake explain config.yml`)
+
+### Spec-16 follow-ups (deferred, low priority)
+- `unarchive` deep inspection (archive content vs dest tree)
+- `service` unit-file mode compare (currently content-only)
+- spec-17 — Batched package installs + templated `names` (already drafted
+  by user, not yet implemented)

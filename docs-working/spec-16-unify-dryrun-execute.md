@@ -1,324 +1,314 @@
 # Spec 16: Plan/Apply Model (Model X)
 
+**Status:** Shipped — 14 commits between `5309066` and `3683b98` on `master`
 **Epic:** E2 Reliability + E4 Check Mode rework — supersedes/absorbs [Spec 15](spec-15-check-mode.md)
-**Effort:** XL (~2 weeks across all handlers; phased)
+**Effort delivered:** ~2 days of focused work end-to-end
 **Value:** High — collapses three overlapping CLI concepts (plan / --dry-run / --check) into two (`plan` / `apply`), and three handler methods (Execute / DryRun / Check) into one (`Run` + mode)
 
 ---
 
-## Problem
+## Problem (as-was)
 
-Today mooncake exposes three overlapping non-mutating concepts to users:
+Mooncake exposed three overlapping non-mutating concepts:
 
-- **`mooncake plan`** — static YAML expansion. Doesn't touch the target system. Useful for debugging config structure.
-- **`mooncake run --dry-run`** — runs handler `DryRun` per step. Doesn't inspect target state. Logs *intent* only. Can lie (recently shipped: directory mode default mismatch and missing idempotency awareness).
-- **`mooncake run --check`** — runs handler `Check` per step. Inspects target state. Reports drift. The smart one — shipped by Spec 15.
+- **`mooncake plan`** — static YAML expansion. Didn't touch the target system. Useful for debugging config structure.
+- **`mooncake run --dry-run`** — ran handler `DryRun` per step. Didn't inspect target state. Logged *intent* only. Could lie (the bug that started this work: `--dry-run` for `state: directory` printed `mode: 0644` while real Execute used `0755`).
+- **`mooncake run --check`** — ran handler `Check` per step. Inspected target state. Reported drift. The smart one — Spec 15.
 
-Three concepts answering similar questions, at different layers, with inconsistent fidelity. Plus three parallel handler methods (`Execute`, `DryRun`, `Check`) per action that must stay in sync.
-
-Symptoms we know about:
-- `--dry-run` lied about directory modes (`0644` vs the actual `0755`) because `DryRun` and `createDirectory` defaulted differently. Fixed in interim Phase 1.
-- `--dry-run` says "would create" for already-existing paths because it doesn't inspect state.
-- `mooncake plan` doesn't answer the question users most often want — "what would this change?"
-- `Metadata.ImplementsCheck` is decorative; ~10 handlers declare it, only `file` and `package` actually implement `Check`.
-- `--check`'s "exit 1 on drift" is documented but not implemented.
-- `runFromPlan` only threads `--dry-run` through; `--check`, tags, sudo, vars, artifacts dir are dropped.
-
-The root cause: there isn't a single source of truth for "what would happen if I ran this." It's spread across `plan`, `--dry-run`, and `--check` with different semantics each.
+Three concepts answering similar questions, at different layers, with inconsistent fidelity. Plus three parallel handler methods (`Execute`, `DryRun`, `Check`) per action that had to stay in sync. They drifted.
 
 ---
 
-## Goal
+## Outcome (as-shipped)
 
-Two top-level operations. One non-mutating answer to the question "what would change?"
+Two top-level operations, one non-mutating answer to "what would change?"
 
 ```
-mooncake plan         — produce a state-aware plan. Inspects target system. Saveable.
+mooncake plan         — state-aware preview. Inspects target system. Saveable.
 mooncake apply        — execute (auto-plans first, or loads via --from-plan).
+mooncake run          — deprecated alias for `apply`.
+--dry-run / --check   — deprecated flags; print a one-line note pointing at `mooncake plan`.
 ```
 
-Drop `--dry-run` and `--check` flags. Drop `mooncake run`'s current meaning (renamed `apply`) — or keep `run` as an alias for `apply` for one release.
+Per-step output uses a consistent symbol set:
 
-The plan artifact becomes the single source of truth: it carries the step list, per-step `WouldChange` / `Reason` / `Checkable`, optional content diffs, and the variables used to produce it. `apply` consumes a plan (just-built or loaded) and executes.
+| | |
+| - | - |
+| `↑` | would change |
+| `✓` | already in desired state |
+| `-` | skipped (tags / when) |
+| `?` | not checkable (handler can't predict — e.g. shell) |
+
+End-to-end demo:
 
 ```
-$ mooncake plan -c main.yml
-↑ Install neovim          would install
-✓ Set shell to zsh        already /usr/bin/zsh
-↑ Link .zshrc             would change (target differs)
-- Install OpenJDK         skip [when: apt_available]
-? Run migrations          not checkable (shell)
+$ mooncake plan -c ./playbook.yml -v ./vars.yml
+Plan: ./playbook.yml
+Generated: 2026-05-12 22:20:47 on linux/amd64/arch
 
-PLAN SUMMARY  would-change=2  ok=1  skipped=1  not-checkable=1
+↑ Ensure demo directory exists       would create directory
+↑ Drop a config file                  would create file (40 bytes)
+↑ Render a templated config           would create file (55 bytes)
+✓ Print a friendly message            would print: Hello from Spec 16!
+↑ Touch a marker                      would create file
 
-$ mooncake plan -c main.yml --output plan.json
+PLAN SUMMARY  would-change=4  ok=1  skipped=0  not-checkable=0
+```
+
+After `mooncake apply --from-plan plan.json`:
+
+```
+$ mooncake plan -c ./playbook.yml -v ./vars.yml
+✓ Ensure demo directory exists       directory exists with desired mode
+✓ Drop a config file                  file content and mode already match
+✓ Render a templated config           file content and mode already match
+✓ Print a friendly message            would print: Hello from Spec 16!
+↑ Touch a marker                      would update mtime
+PLAN SUMMARY  would-change=1  ok=4  skipped=0  not-checkable=0
+```
+
+Stale-plan policy:
+
+```
+$ echo "" >> playbook.yml
 $ mooncake apply --from-plan plan.json
-```
+refusing to apply stale plan: plan input files have changed since the plan was built
+Use --allow-stale to override.
 
-Exit codes:
-- `plan` returns 0 on success, 1 on error, 2 if `would-change > 0` (`--detailed-exitcode`, Terraform-style; default 0 for ergonomics).
-- `apply` returns 0 on success, non-zero on failure.
+$ mooncake apply --from-plan plan.json --max-plan-age 5s
+refusing to apply stale plan: plan is 59s old; --max-plan-age is 5s
+```
 
 ---
 
-## Design
+## Architecture (as-shipped)
 
-### Two layers
-
-**Compile layer** (`internal/plan/planner.go`): YAML → flat `[]config.Step`. Same as today. Evaluates includes, loops, vars, tag filters, plan-time templating, system facts. No target inspection.
-
-**Inspect layer** (new): walks the compiled steps and asks each handler "would this change?" via the unified `Run(ctx, step)` in `ModePlan`. Annotates each step with `WouldChange`, `Reason`, `Checkable`. Produces the *full* Plan artifact.
-
-A plan today carries `Plan.Steps []config.Step`. After this spec it also carries `Plan.StepInspections []StepInspection` (or per-step inline fields) holding the inspection result for each step.
+### Handler interface
 
 ```go
-type Plan struct {
-    Version, GeneratedAt, RootFile string
-    Steps        []config.Step
-    Inspections  []StepInspection  // parallel to Steps, indexed by ID
-    InitialVars  map[string]any
-    Tags         []string
-    GeneratedOn  HostFacts          // OS/distro/arch at plan time
-}
-
-type StepInspection struct {
-    StepID      string
-    WouldChange bool
-    Checkable   bool
-    Reason      string
-    Detail      any   // optional: diff, current vs desired, etc.
-}
-```
-
-### Mode enum + unified handler
-
-```go
-type Mode int
-const (
-    ModeExecute Mode = iota
-    ModePlan
-)
-
+// internal/actions/handler.go
 type Handler interface {
-    Metadata() Metadata
+    Metadata() ActionMetadata
     Validate(step *config.Step) error
     Run(ctx Context, step *config.Step) (Result, error)
 }
 ```
 
-`Run` in `ModePlan` is today's `Check`, returning a richer `Result`. `Run` in `ModeExecute` is today's `Execute`. Both share up-front state inspection and predicates.
+One method. Execute, DryRun, and the optional Checker interface are gone from the contract. Concrete handlers may retain Execute methods internally for test backward compat — the dispatcher never calls them.
 
-`Result` absorbs `CheckResult`:
+### Mode
 
 ```go
+// internal/actions/mode.go
+type Mode int
+const (
+    ModeExecute Mode = iota
+    ModePlan
+)
+```
+
+`ctx.Mode()` is the source of truth. The legacy `ExecutionContext.DryRun` and `ExecutionContext.CheckMode` bools remain as deprecated accessors (`IsDryRun()`, `IsCheckMode()`) — both return `Mode() == ModePlan`.
+
+### Result extensions
+
+```go
+// internal/executor/result.go
 type Result struct {
     Changed     bool
     WouldChange bool    // set in ModePlan
-    Reason      string  // human description
-    Checkable   bool    // false for shell-style steps
-    StartTime, EndTime time.Time
-    Duration    time.Duration
-    Detail      any
+    Reason      string  // human description: "would create", "already matches", ...
+    Checkable   bool    // false when the action can't predict outcomes (shell)
+    // ... existing fields ...
 }
 ```
 
-`Execute`, `DryRun`, `Check` go away as separate methods. `Checker` interface and `CheckResult` go away.
+The legacy `actions.CheckResult` type has been removed; its fields are folded into `Result`.
 
-### Effect helpers
-
-Side-effect primitives become mode-aware so a single call site decides what to do:
+### Effects package
 
 ```go
-func (ec *ExecutionContext) Mkdir(path string, mode os.FileMode) Effect {
-    info, err := os.Stat(path)
-    alreadyOk := err == nil && info.IsDir() && info.Mode().Perm() == mode
+// internal/actions/performer.go — interface
+type Performer interface {
+    Mode() Mode
+    Mkdir(path string, mode os.FileMode, opts PerformerOpts) Effect
+    WriteFile(path string, content []byte, mode os.FileMode, opts PerformerOpts) Effect
+    Symlink(target, path string, opts PerformerOpts) Effect
+    Hardlink(target, path string, opts PerformerOpts) Effect
+    Touch(path string, mode os.FileMode, opts PerformerOpts) Effect
+    Remove(path string, recursive bool, opts PerformerOpts) Effect
+    Chmod(path string, mode os.FileMode, opts PerformerOpts) Effect
+    Chown(path, owner, group string, opts PerformerOpts) Effect
+}
 
-    switch ec.Mode {
-    case ModeExecute:
-        if alreadyOk { return Effect{AlreadyOk: true} }
-        err := os.MkdirAll(path, mode)
-        return Effect{Performed: err == nil, Err: err}
-    case ModePlan:
-        return Effect{WouldChange: !alreadyOk, AlreadyOk: alreadyOk}
-    }
+// internal/effects/default.go — implementation
+func NewPerformer(modeFn ModeFunc, sudoPass string) actions.Performer { … }
+```
+
+Each primitive inspects current state once, then branches on `Mode()` to either perform the side effect or return a prediction. Sudo is centralized in `runSudo` (one place that knows how to escalate).
+
+Handlers obtain the Performer via `ctx.Effects()`. Filesystem mutations route through it; `os.*` direct calls are gone from migrated handlers.
+
+### Dispatch
+
+```go
+// internal/executor/executor.go
+func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
+    // ... validate ...
+    return dispatchRunner(step, ec, handler)  // single path
 }
 ```
 
-Primitives to wrap: `Mkdir`, `WriteFile`, `Symlink`, `Remove`, `Chmod`, `Chown`, `RunCommand`. ~10 covers every existing handler. Handlers stop calling `os.*` directly.
+The previous `dispatchCheck` function and the Execute/DryRun/Check fallback branches are gone. In `ExecuteStep`, plan-mode dispatch via Runner bypasses lifecycle events (started/completed) and emits only `EventStepChecked` — matching the legacy CheckMode UX so subscribers continue to work.
 
-### CLI
+### Plan struct
 
-- `mooncake plan` — compiles + inspects + prints + optionally saves. The default output mode shows the per-step plan and recap. `--output plan.json` saves a complete plan including inspections.
-- `mooncake apply` — primary execute verb.
-  - Without args: compile + inspect + execute (auto-plan).
-  - `--from-plan path`: load saved plan, execute it (no re-inspect). Forwards all relevant context (sudo, vars, tags, artifacts).
-  - `--confirm`: print plan, prompt before applying (opt-in; useful for production runs).
-- `mooncake run` — alias for `apply` for one release. Logs a deprecation warning.
-- `--dry-run`, `--check` flags — removed (or kept as deprecated aliases for `plan` for one release). Print a deprecation pointer.
-- `mooncake compile` — optional new debug subcommand that's the old `plan` (static expansion, no state inspection). Probably not worth shipping unless someone asks; can be `plan --no-inspect`.
+```go
+// internal/plan/plan.go
+type Plan struct {
+    Version        string
+    GeneratedAt    time.Time
+    GeneratedOn    HostFacts            // os_family / arch / distro_family
+    RootFile       string
+    InputFiles     []string             // every YAML file touched during planning
+    InputFilesHash string               // SHA256 over (sorted paths + contents)
+    Steps          []config.Step
+    Inspections    []StepInspection     // per-step prediction
+    InitialVars    map[string]interface{}
+    Tags           []string
+}
 
-### Stale-plan policy
-
-Saved plans embed host facts and target-state assumptions that decay. Policy:
-
-- A plan records `Plan.GeneratedOn` (facts subset) and `Plan.GeneratedAt`.
-- `apply --from-plan` compares current facts against `Plan.GeneratedOn`. On mismatch (OS, arch, distro), refuses with a clear error unless `--allow-stale`.
-- Optional `--max-plan-age 1h` flag; if exceeded, refuse without explicit override.
-- Saved plans do NOT skip the per-step idempotency check inside `Execute` (handlers already do `if matches { skip }`). So an apply of a slightly stale plan against a target that's already been partially modified will still be safe — the worst case is a few no-op steps, not double-apply.
-
-This keeps Terraform-style apply useful for CI without inviting "applied 3-week-old plan, broke production" footguns.
-
-### Plan-time facts: keep or move?
-
-Today `BuildPlan` calls `facts.Collect()`. After this spec, both compile *and* inspect happen inside `mooncake plan`, so facts collection stays in the planner. The interesting question is: what happens during `apply --from-plan`?
-
-- `apply` does NOT re-collect facts from the saved plan. It uses what's in `Plan.InitialVars`.
-- Stale-plan policy (above) is what guards against fact drift.
-
-### Output formatting
-
-Plan output replaces today's `[DRY-RUN] Would …` and check-mode `▷ ↑ ✓` lines with a single, unified plan format inspired by Spec 15's symbols:
-
-```
-↑ <name>          <reason>          (would change)
-✓ <name>          <reason>          (already in desired state)
-- <name>          <reason>          (skipped — tag/when)
-? <name>          <reason>          (not checkable)
-× <name>          <reason>          (error during inspection)
-
-PLAN SUMMARY  would-change=N  ok=N  skipped=N  not-checkable=N  errors=N
+type StepInspection struct {
+    StepID, ActionType string
+    WouldChange, Checkable, Skipped bool
+    Reason string
+}
 ```
 
-`apply` output is the existing run-time event log (started/completed/changed). Adds a top-of-run plan summary so users see the plan before changes happen (unless `--quiet`).
+### Stale-plan policy (Spec 16 Option F)
+
+`plan.ValidateForApply(p, opts)` runs three independent checks at apply time:
+
+1. Host facts subset match (`os_family` / `arch` / `distro_family`).
+2. Input-files hash match — re-hash the recorded `InputFiles`; refuse on mismatch or missing.
+3. Optional `--max-plan-age` (no default).
+
+Each rejection returns a `*StaleError` with a `Reason` constant (`StaleReasonHostMismatch`, `StaleReasonHashMismatch`, `StaleReasonFileMissing`, `StaleReasonAgeExceeded`). `--allow-stale` demotes all rejections to nil error.
 
 ---
 
-## Migration
+## What shipped (commit-by-commit)
 
-### Phase 1 — Foundation (small, low-risk)
-1. Add `Mode` enum on `ExecutionContext`. Keep `DryRun bool` / `CheckMode bool` mapped to it for one release.
-2. Extend `Result` with `WouldChange`, `Reason`, `Checkable`. `CheckResult` keeps existing definition for now.
-3. Tests: new fields default to zero values; nothing else changes.
-
-**Acceptance:** all existing tests pass; no observable behavior change.
-
-### Phase 2 — Unified `Run` for `file` handler
-1. Add `Runner` interface (`Run(ctx, step) (Result, error)`) as **optional** alongside existing methods. Dispatcher prefers `Run` if implemented; falls back to today's `Execute`/`DryRun`/`Check`.
-2. Implement effect helpers used by `file`: `Mkdir`, `WriteFile`, `Symlink`, `Chmod`, `Chown`, `Remove`. They consult `ec.Mode`.
-3. Implement `file.Run`. Lift `file.Check` logic into `Run`'s `ModePlan` branch. Lift `Execute` mutations into effect-helper calls. Delete `file.Execute`, `file.DryRun`, `file.Check`.
-4. Regression test: drives `Run` through both modes against the same fixture; asserts plan output matches execute behavior. Applied to the directory-mode bug, it would have failed before the interim fix.
-
-**Acceptance:** file handler tests pass; the failing regression test from interim Phase 1 still passes; `--dry-run` and `--check` continue to work (now both engage `ModePlan`).
-
-### Phase 3 — Plan inspection wiring
-1. Extend `Plan` struct with `Inspections []StepInspection` and `GeneratedOn HostFacts`.
-2. After `BuildPlan` finishes compiling, run an inspection pass: for each step, dispatch to handler's `Run` in `ModePlan` and collect the result. Skip if handler hasn't been migrated yet (record `Checkable: false, Reason: "handler not yet migrated"`).
-3. `mooncake plan` prints the new plan format (`↑ ✓ - ? ×` per step + `PLAN SUMMARY`).
-4. `plan --output plan.json` saves the full plan including inspections.
-5. `plan --no-inspect` skips Phase 3's inspection pass (regression escape hatch + the old "compile only" use case).
-
-**Acceptance:** `mooncake plan` shows accurate per-step inspection for `file` steps; other actions show `not checkable` until migrated; saved plan round-trips through `--from-plan`.
-
-### Phase 4 — `apply` command
-1. Rename `run` to `apply`. Keep `run` as a deprecated alias for one release.
-2. `apply` (no args): build plan (with inspection), then execute.
-3. `apply --from-plan path`: load saved plan, validate `GeneratedOn` against current facts, execute. Forward sudo, vars, tags, artifacts dir, etc. (closes the `runFromPlan` gap).
-4. `apply --confirm`: print plan summary, prompt, apply.
-5. Implement stale-plan checks (`--max-plan-age`, `--allow-stale`).
-6. `--dry-run` / `--check` flags: removed (or print deprecation warning pointing to `mooncake plan`).
-
-**Acceptance:** `mooncake apply` works end-to-end for a small playbook; `--from-plan` works with sudo/tags; stale-plan refusal works.
-
-### Phase 5 — Migrate remaining handlers
-One handler per PR. For each: lift `Check` (if it exists) into `Run`'s `ModePlan` branch, fold `Execute` mutations into effect helpers, delete the three old methods.
-
-Order (cheapest first):
-1. `package` (`Check` already exists, surface small)
-2. `link` (small)
-3. `service`
-4. `copy`
-5. `template`
-6. `download`
-7. `unarchive`
-8. `command`
-9. `shell` (special: `Run` in `ModePlan` always returns `{Checkable: false, Reason: "shell steps not checkable"}`)
-10. Remaining actions (`include_vars`, `vars`, `print`, `assert`, etc. — mostly already runtime-only or compile-only; assess case by case)
-
-Each migration deletes the three old methods. After all handlers are migrated, the `Handler` interface drops `Execute`/`DryRun`/the optional `Checker`.
-
-**Acceptance:** all handlers implement `Run`; `Execute`/`DryRun`/`Checker` removed from public interface; full test suite green.
-
-### Phase 6 — Cleanup
-1. Drop `IsDryRun()` / `IsCheckMode()` accessors.
-2. Drop `CheckResult` type.
-3. Drop `ec.DryRun` / `ec.CheckMode` bool fields.
-4. Drop `Metadata.ImplementsCheck` / `Metadata.SupportsDryRun` (now meaningless).
-5. Remove `mooncake run` alias (or keep — minor maintenance).
-6. Remove `--dry-run` / `--check` deprecation shims.
-
-Each phase is independently shippable. Phase 1 ships first as a no-op foundation. Phase 2 ships the unified `file` handler. Phase 3 ships the new `plan` UX (the user-visible win). Phase 4 ships the new `apply` UX. Phase 5 spreads across multiple PRs over weeks.
+| Commit | Phase | Summary |
+| ------ | ----- | ------- |
+| `87b407d` | 1+2 | Foundation (Mode, Result extensions) + Runner interface + effects package + file handler migration |
+| `788f387` | (fix) | Hermetic `TestDiscoverAllPresets_EmptyDirectories` |
+| `a00d422` | 3 | Plan inspection pass + new `mooncake plan` UX (symbols + summary + save) |
+| `b5f0859` | 4 | `mooncake apply` command + stale-plan policy + `--from-plan` threading fix |
+| `93d7425` | 5/1 | Migrate package handler to Runner |
+| `c1e232a` | 5/2 | Migrate template handler |
+| `fb0911d` | 5/3 | Migrate copy handler |
+| `e9a226f` | 5/4 | Six trivial migrations (shell, command, assert, print, vars, include_vars) |
+| `5de49fc` | 5/5 | Nine wrappers (service, download, unarchive, repo_*, artifact_*, preset) |
+| `181ecc0` | 5/6 | Final five (file_replace family + wait) |
+| `5839bed` | 6 | Drop deprecated handler surface (Execute/DryRun/Checker/CheckResult/dispatchCheck) |
+| `6dff1e2` | 7-10 | Quality state inspection upgrades for 9 handlers |
+| `ffe48ca` | (UX) | Preview text for shell/command/wait/print |
+| `3683b98` | (tests) | Production-quality fixes + 12 new `run_test.go` files |
 
 ---
 
-## Resolved Design Decisions
+## Handler inventory (post-migration)
 
-- **Effect helpers location:** new `internal/effects` package exposing a
-  `Performer` interface, with `ExecutionContext` (or a thin wrapper)
-  implementing it. Keeps the surface testable in isolation and avoids
-  bloating `ExecutionContext`.
-- **`Effect` return shape:** carries the action kind it represents
-  (`Action string` — `"mkdir"`, `"write_file"`, etc.) plus `Performed`,
-  `WouldChange`, `AlreadyOk`, `Err`, and a free-form `Detail any` for
-  future diff payloads.
-- **Become/sudo integration:** effect helpers accept become options
-  (`Opts{Become, BecomeUser}`) and dispatch to sudo internally. Handlers
-  read `step.Become` and pass it through; they do not shell out
-  themselves.
-- **Dispatcher migration strategy:** shim path. Add a `Runner` interface
-  alongside the existing `Handler`/`Checker`; dispatcher prefers `Run`
-  when implemented and falls back to `Execute`/`DryRun`/`Check` otherwise.
-  After all handlers migrate (Phase 5), the legacy path and shim are
-  removed in Phase 6.
-- **Stale-plan policy:** facts subset + YAML hash + optional age limit
-  (option F). Plan stores `{generated_at, generated_on: {os_family, arch,
-  distro_family}, input_files_hash}`. Apply refuses on facts or hash
-  mismatch. `--allow-stale` overrides both. `--max-plan-age` is opt-in
-  for CI; no default.
-
-## Open Questions
-
-1. **Keep `mooncake run` as alias?** Probably yes for one release, then
-   drop. Or keep indefinitely — costs nothing.
-2. **Auto-prompt on `apply`?** Terraform prompts unless `-auto-approve`.
-   Mooncake's audience is probably scripts/CI; default no-prompt, opt in
-   with `--confirm`. Worth confirming.
-3. **Diff output.** `--diff` for content diffs on file/template/copy.
-   Worth a follow-up spec after Phase 4 lands; the
-   `StepInspection.Detail` field is the hook.
-4. **JSONL agent output.** `EventStepChecked` becomes `EventStepInspected`
-   or similar. Decide naming once Phase 3 lands.
-5. **`--detailed-exitcode` on `plan`.** Terraform-style: exit 2 if drift,
-   1 on error, 0 if no change. Default off; opt-in for CI. Add in Phase 3.
+| Handler | Plan-mode quality | Notes |
+| ------- | ----------------- | ----- |
+| `file` | full state inspection via Performer | drift-proof |
+| `package` | queries pkg manager for installed status | works on apt/dnf/pacman/zypper/apk/brew/etc. |
+| `template` | renders template, byte-compares to dest via Performer | drift-proof |
+| `copy` | byte-compares src to dest via Performer | drift-proof; mtime no longer preserved |
+| `file_replace` / `file_insert` / `file_delete_range` / `file_patch_apply` | in-memory transform + diff vs original | drift-proof |
+| `service` | queries `systemctl is-active`/`is-enabled`; compares unit/dropin content | Linux-only inspection; non-Linux reports not-checkable honestly |
+| `download` | checksum / size compare on existing dest | force=true bypass works |
+| `repo_apply_patchset` | applies in-memory, compares per file | drift-proof |
+| `unarchive` | `creates:` marker check | deep archive content compare not implemented (see Limitations) |
+| `assert` / `artifact_validate` | delegates Execute (read-only) | failures surface as plan failures |
+| `repo_search` / `repo_tree` | delegates Execute (read-only) | |
+| `print` | renders message, surfaces first-line preview | no mutation |
+| `shell` / `command` | not-checkable, surfaces rendered command in Reason | inherently unpredictable |
+| `wait` | inspects current state for `file_exists` / `file_absent`; surfaces target for http/port/git_clean/command | |
+| `artifact_capture` | always WouldChange (not idempotent) | inner-step count surfaced |
+| `vars` / `include_vars` / `preset` | usually expanded at plan time by the planner | trivial wrappers for the rare cases that reach the executor |
 
 ---
 
-## Acceptance Criteria (overall)
+## CLI
 
-1. `mooncake plan` and `mooncake apply` exist and replace `mooncake run` + `--dry-run` + `--check`.
-2. `mooncake plan` inspects target state and reports per-step `WouldChange` with accurate symbols and summary.
-3. `mooncake apply --from-plan` works end-to-end with full context (sudo, tags, vars, artifacts).
-4. Stale-plan policy prevents applying plans built on a different host or older than `--max-plan-age`.
-5. Handler interface has one method (`Run`); `Execute`/`DryRun`/`Checker` removed.
-6. Effect helpers route mutations through `ec.Mode`.
-7. Regression test from interim Phase 1 (`TestHandler_DryRun_ReportsCorrectDefaultMode`) — and its successors — pass.
-8. Test suite green throughout the migration; each phase independently shippable.
+| Command | Behavior |
+| ------- | -------- |
+| `mooncake plan -c file.yml [-v vars.yml] [-o plan.json] [--no-inspect] [--show-origins]` | Compile YAML + state-inspect each step. Print symbol+reason per step + PLAN SUMMARY. Optional save. `--no-inspect` reverts to old static-only behavior. |
+| `mooncake apply -c file.yml [-v vars.yml] [...]` | Build plan + execute. Same flag surface as the old `run` command. |
+| `mooncake apply --from-plan plan.json [--allow-stale] [--max-plan-age 1h]` | Load saved plan; validate stale-plan policy; execute. |
+| `mooncake run …` | Deprecated alias for `apply`. Prints note. |
+| `--dry-run`, `--check` (on `apply`/`run`) | Deprecated. Print notes pointing at `mooncake plan`. |
 
 ---
 
-## Out of Scope
+## Test coverage
 
-- Changing the YAML surface or step schema.
-- Adding new actions.
-- Parallel/dependency-aware execution.
-- Plan-time content diffs (`--diff` flag is a follow-up spec).
-- Remote state / locking. Mooncake runs locally; not Terraform-scale.
+`run_test.go` mode-parity tests in 15 handlers:
+
+```
+internal/actions/{file,package,template,copy}/run_test.go
+internal/actions/{file_replace,file_insert,file_delete_range,file_patch_apply}/run_test.go
+internal/actions/{shell,command,wait,print}/run_test.go
+internal/actions/{download,service,unarchive}/run_test.go
+internal/actions/{artifact_capture,repo_apply_patchset}/run_test.go
+```
+
+Each drives `Run` through both modes against the same fixture and asserts the plan prediction matches what execute would do — the structural answer to the original directory-mode bug.
+
+Plus integration coverage:
+- `internal/effects/default_test.go` — Performer primitives with mode-parity regression
+- `internal/executor/inspect_test.go` — `InspectPlan` happy path + tolerant when in plan mode
+- `internal/plan/validate_test.go` — all four stale-plan reject reasons + hash determinism
+- `internal/executor/context_test.go` — `Mode()` derives correctly from legacy bools
+
+Full suite green. No regressions from pre-Spec-16 baseline (one pre-existing failure was fixed along the way as `788f387`).
+
+---
+
+## Limitations & follow-ups
+
+These are honest about what we ship and what we don't:
+
+1. **`unarchive` deep inspection.** Without a `creates:` marker, plan always reports would-extract. Proper inspection would mean opening the archive and walking it against the destination tree (tar / tar.gz / zip / etc.). Format-specific, not done. Workaround: set `creates:` to a known post-extraction path — the standard idempotency pattern.
+
+2. **`service` unit file mode.** The plan-mode inspection compares unit/dropin file *content* but not file *mode*. Execute applies the mode anyway; plan may miss mode-only drift.
+
+3. **`copy` no longer preserves mtime.** The byte-compare idempotency check via `Performer.WriteFile` is strictly more correct than the legacy size+mtime heuristic, but the destination file's mtime is now the apply timestamp instead of the source's. Nothing else in the codebase depended on this.
+
+4. **`shell` / `command` are not-checkable by design.** The plan output surfaces the *rendered command text* via `WouldChange + Reason`, which is the best we can do without running the command. Users who want predictable idempotency on shell steps should use `creates:` / `unless:` (already honored by the executor before dispatch).
+
+5. **External Handler authors.** The `Handler` interface change (Execute → Run) is a breaking change for any handler implementations outside this repo. Mooncake is pre-1.0; flagged in the relevant commit message.
+
+6. **Diff output.** `mooncake plan --diff` for showing line-level diffs of would-be changes is a follow-up. The `StepInspection.Detail` field (and `effects.ContentDiff` for write_file effects) are the hooks.
+
+---
+
+## Original design rationale (preserved)
+
+The drift between Execute and the non-mutating preview paths was a structural defect — the type system didn't enforce agreement, and tests didn't catch it because they tested each method in isolation. Spec 16's fix: one entry point per handler, one `Performer` interface that routes mutations by `Mode()`. Drift becomes impossible by construction.
+
+For the user-facing CLI shape, Terraform's `plan` / `apply` model — single non-mutating preview, single execute verb — proved more usable than the three-axis (plan + --dry-run + --check) maze it replaced. Ansible converges on the same idea with `--check`.
+
+---
+
+## Resolved decisions (formerly Open Questions)
+
+- **Effect helpers location:** `internal/effects` package; types in `internal/actions/performer.go`. ✓
+- **`Effect` shape:** carries `Action` constant, `Path`, `Reason`, `Performed`, `WouldChange`, `AlreadyOk`, `Err`, `Detail`. ✓
+- **Become/sudo:** Performer reads `PerformerOpts{Become}`; helpers escalate internally via `runSudo`. ✓
+- **Shim vs hard cut:** shim during migration (Phase 5 added handlers one PR at a time); hard cut in Phase 6 after all migrated. ✓
+- **Stale-plan policy:** facts subset + YAML hash + optional age (Option F). ✓
+- **`mooncake run` alias:** kept for one release with deprecation note. ✓
+- **`--dry-run` / `--check` flags:** kept for one release with deprecation notes. ✓
+- **Plan UX format:** `↑ ✓ - ?` symbols + `PLAN SUMMARY` recap. ✓
