@@ -97,3 +97,28 @@ func applyEnhancedDescription(actionName, fieldName string, prop *Property) {
 		}
 	}
 }
+
+// FieldOverrides hand-tunes specific (action, field) pairs whose JSON Schema
+// type isn't directly derivable from the Go struct (e.g. union types
+// supported by custom UnmarshalYAML).
+//
+// Applied after the reflection-based property extraction.
+var FieldOverrides = map[string]func(prop *Property){
+	"package.names": func(prop *Property) {
+		// Accept either a list of package names or a single template
+		// expression that resolves to a list at execute time.
+		prop.Type = ""
+		prop.Items = nil
+		prop.OneOf = []*Property{
+			{Type: "array", Items: &Property{Type: "string"}},
+			{Type: "string"},
+		}
+	},
+}
+
+// applyFieldOverride applies any registered override for (action, field).
+func applyFieldOverride(actionName, fieldName string, prop *Property) {
+	if override, ok := FieldOverrides[actionName+"."+fieldName]; ok {
+		override(prop)
+	}
+}

@@ -420,6 +420,12 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 	def.Properties = props
 	def.Required = required
 
+	// Apply structural field overrides (e.g. union types). These are
+	// independent of validation strictness.
+	for fieldName, prop := range props {
+		applyFieldOverride(meta.Name, fieldName, prop)
+	}
+
 	// Apply known enums, patterns, and descriptions if enabled
 	if g.opts.StrictValidation {
 		for fieldName, prop := range props {

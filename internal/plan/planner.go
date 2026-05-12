@@ -903,24 +903,19 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 }
 
 // evaluateItemsExpression evaluates a with_items expression
-// Supports both direct variable references (items) and dot notation (parameters.items)
+// Supports direct variable references ("items"), dot notation
+// ("parameters.items"), and rendered list/scalar literals via the shared
+// resolver in internal/template.
 func (p *Planner) evaluateItemsExpression(expr string, vars map[string]interface{}) ([]interface{}, error) {
-	// First, try direct variable lookup for simple cases (e.g., "items")
-	if val, ok := vars[expr]; ok {
-		return convertToSlice(val, expr)
-	}
-
-	// If not found directly, use expression evaluator to support dot notation (e.g., "parameters.items")
-	evaluator := expression.NewExprEvaluator()
-	result, err := evaluator.Evaluate(expr, vars)
+	items, err := template.ResolveList(expr, vars, expression.NewExprEvaluator())
 	if err != nil {
 		return nil, fmt.Errorf("with_items expression %q evaluation failed: %w", expr, err)
 	}
-
-	return convertToSlice(result, expr)
+	return items, nil
 }
 
-// convertToSlice converts a value to []interface{} slice
+// convertToSlice converts a value to []interface{}. Retained for backward
+// compatibility with existing tests; new code should use template.ResolveList.
 func convertToSlice(val interface{}, expr string) ([]interface{}, error) {
 	switch v := val.(type) {
 	case []interface{}:

@@ -294,12 +294,59 @@ type Download struct {
 // Supports apt, dnf, yum, pacman, zypper, apk (Linux), brew, port (macOS), choco, scoop (Windows).
 type Package struct {
 	Name         string   `yaml:"name" json:"name,omitempty"`                     // Package name (single package)
-	Names        []string `yaml:"names" json:"names,omitempty"`                   // Multiple packages
+	Names        []string `yaml:"-" json:"names,omitempty"`                       // Multiple packages (literal list)
+	NamesExpr    string   `yaml:"-" json:"-"`                                     // Templated names expression (set when YAML `names:` is a scalar)
 	State        string   `yaml:"state" json:"state,omitempty"`                   // present|absent|latest (default: present)
 	Manager      string   `yaml:"manager" json:"manager,omitempty"`               // Package manager to use (auto-detected if empty)
 	UpdateCache  bool     `yaml:"update_cache" json:"update_cache,omitempty"`     // Update package cache before operation
 	Upgrade      bool     `yaml:"upgrade" json:"upgrade,omitempty"`               // Upgrade all packages (ignores name/names)
 	Extra        []string `yaml:"extra" json:"extra,omitempty"`                   // Extra arguments to pass to package manager
+}
+
+// UnmarshalYAML decodes Package and supports `names:` as either a list of
+// strings or a single scalar (template expression). The scalar form is
+// stashed in NamesExpr for late resolution at execute time.
+func (p *Package) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type rawPackage struct {
+		Name        string      `yaml:"name"`
+		Names       interface{} `yaml:"names"`
+		State       string      `yaml:"state"`
+		Manager     string      `yaml:"manager"`
+		UpdateCache bool        `yaml:"update_cache"`
+		Upgrade     bool        `yaml:"upgrade"`
+		Extra       []string    `yaml:"extra"`
+	}
+	var raw rawPackage
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	p.Name = raw.Name
+	p.State = raw.State
+	p.Manager = raw.Manager
+	p.UpdateCache = raw.UpdateCache
+	p.Upgrade = raw.Upgrade
+	p.Extra = raw.Extra
+
+	switch v := raw.Names.(type) {
+	case nil:
+		// no names
+	case string:
+		p.NamesExpr = v
+	case []interface{}:
+		names := make([]string, 0, len(v))
+		for i, item := range v {
+			s, ok := item.(string)
+			if !ok {
+				return fmt.Errorf("package.names[%d]: expected string, got %T", i, item)
+			}
+			names = append(names, s)
+		}
+		p.Names = names
+	default:
+		return fmt.Errorf("package.names: expected list or string, got %T", raw.Names)
+	}
+	return nil
 }
 
 // ServiceAction represents a service management operation in a configuration step.

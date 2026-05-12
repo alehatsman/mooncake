@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Package action
+
+- **Batched installs/removes** - The `package` action now issues a single
+  manager invocation per step instead of one per name. A step with
+  `names: [a, b, c]` runs `pacman -S --noconfirm --needed a b c` (or the
+  equivalent for apt/dnf/yum/zypper/apk/brew/port/choco/scoop) once, rather
+  than three sequential subprocesses. Pacman additionally gains `--needed` so
+  redundant reinstall work is skipped.
+- **Templated `names`** - `names` now accepts a single template expression
+  in addition to an inline YAML list. Combined with `include_vars`, the full
+  list can live in a dedicated data file:
+  ```yaml
+  - include_vars: ./packages.yml
+  - package:
+      manager: pacman
+      state: present
+      names: "{{ pacman_packages }}"
+    become: true
+  ```
+  The expression may resolve to a typed slice (`[]string` /
+  `[]interface{}`), a YAML/JSON list literal, or a whitespace/comma-separated
+  scalar.
+
 ## v0.3 - Current
 
 ### Breaking Changes
