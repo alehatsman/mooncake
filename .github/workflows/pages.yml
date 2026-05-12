@@ -42,7 +42,9 @@ jobs:
         run: go build -o out/mooncake ./cmd
 
       - name: Generate JSON Schema
-        run: ./out/mooncake schema generate --format json --output _site/schema.json --strict
+        run: |
+          mkdir -p _site
+          ./out/mooncake schema generate --format json --output _site/schema.json --strict
 
       - name: Create index.html
         run: |
