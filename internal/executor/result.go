@@ -54,6 +54,22 @@ type Result struct {
 	// Template steps: true if output file was created or content changed.
 	Changed bool `json:"changed"`
 
+	// WouldChange indicates that a plan-mode (non-mutating) inspection
+	// predicts the step would change the system if executed.
+	// Set by handlers running in ModePlan (Spec 16). Mirrors today's
+	// CheckResult.WouldChange and is the eventual replacement.
+	WouldChange bool `json:"would_change,omitempty"`
+
+	// Reason is a short human-readable description of the result, e.g.
+	// "would create directory", "already matches", "content differs".
+	// Populated alongside WouldChange and Changed.
+	Reason string `json:"reason,omitempty"`
+
+	// Checkable indicates whether the action supports plan-mode inspection.
+	// False for actions like shell where no prediction is possible (the
+	// command must run to know its effect). Set by handlers in ModePlan.
+	Checkable bool `json:"checkable,omitempty"`
+
 	// Skipped is reserved for future use to indicate skipped steps.
 	// Currently not set by any step type.
 	Skipped bool `json:"skipped"`

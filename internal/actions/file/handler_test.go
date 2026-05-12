@@ -1349,6 +1349,78 @@ func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
 	}
 }
 
+// TestHandler_DryRun_ReportsCorrectDefaultMode verifies that the dry-run
+// preview reports the same default mode the real Execute path would apply:
+// 0755 for directories, 0644 for files.
+//
+// Regression: DryRun previously hardcoded defaultFileMode (0644) for all
+// states, so it lied about directories — Execute would create them 0755
+// while the preview said 0644.
+func TestHandler_DryRun_ReportsCorrectDefaultMode(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name     string
+		step     *config.Step
+		wantMode string
+	}{
+		{
+			name: "directory without explicit mode defaults to 0755",
+			step: &config.Step{
+				File: &config.File{
+					Path:  "/tmp/testdir",
+					State: "directory",
+				},
+			},
+			wantMode: "0755",
+		},
+		{
+			name: "file without explicit mode defaults to 0644",
+			step: &config.Step{
+				File: &config.File{
+					Path:    "/tmp/test.txt",
+					Content: "hello",
+				},
+			},
+			wantMode: "0644",
+		},
+		{
+			name: "directory respects explicit mode",
+			step: &config.Step{
+				File: &config.File{
+					Path:  "/tmp/testdir",
+					State: "directory",
+					Mode:  "0700",
+				},
+			},
+			wantMode: "0700",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ec := mockExecutionContext()
+
+			if err := h.DryRun(ec, tt.step); err != nil {
+				t.Fatalf("DryRun() error = %v", err)
+			}
+
+			log := ec.Logger.(*testutil.MockLogger)
+			needle := "mode: " + tt.wantMode
+			found := false
+			for _, msg := range log.Logs {
+				if strings.Contains(msg, needle) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("DryRun log missing %q; got logs: %v", needle, log.Logs)
+			}
+		})
+	}
+}
+
 func TestHandler_parseFileMode(t *testing.T) {
 	h := &Handler{}
 

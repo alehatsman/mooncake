@@ -4,6 +4,8 @@ package executor
 import (
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/filetree"
@@ -38,6 +40,15 @@ func NewExecutionStats() *ExecutionStats {
 		Changed:  new(int),
 	}
 }
+
+// Mode and its constants live in the actions package; re-exported here
+// for backward source compatibility during the Spec 16 migration.
+type Mode = actions.Mode
+
+const (
+	ModeExecute = actions.ModeExecute
+	ModePlan    = actions.ModePlan
+)
 
 // ExecutionContext holds all state needed to execute a step or sequence of steps.
 //
@@ -94,10 +105,16 @@ type ExecutionContext struct {
 
 	// DryRun when true prevents any system changes (preview mode).
 	// Commands are not executed, files are not created, templates are not rendered.
+	//
+	// Deprecated: prefer ec.Mode() == ModePlan. Spec 16 collapses DryRun
+	// and CheckMode into a single non-mutating mode; this field remains
+	// during the migration but will be removed in a later phase.
 	DryRun bool
 
 	// CheckMode when true queries state without making changes.
 	// Handlers implementing actions.Checker report would-change/ok; others report not-checkable.
+	//
+	// Deprecated: prefer ec.Mode() == ModePlan. See DryRun above.
 	CheckMode bool
 
 	// Stats holds shared execution statistics counters.
@@ -184,6 +201,24 @@ func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface
 			Data:      data,
 		})
 	}
+}
+
+// Mode returns the current dispatch mode. Derived from the legacy DryRun and
+// CheckMode bools during the Spec 16 migration: either ModeExecute (mutating)
+// or ModePlan (any non-mutating preview/check).
+func (ec *ExecutionContext) Mode() Mode {
+	if ec.DryRun || ec.CheckMode {
+		return ModePlan
+	}
+	return ModeExecute
+}
+
+// Effects returns a Performer that routes filesystem and command
+// primitives by the current Mode. Handlers should call this instead of
+// calling os.* directly so that ModePlan vs ModeExecute is decided in one
+// place (Spec 16). The returned Performer is cheap to construct.
+func (ec *ExecutionContext) Effects() actions.Performer {
+	return effects.NewPerformer(ec.Mode, ec.SudoPass)
 }
 
 // HandleDryRun executes dry-run logging if in dry-run mode.

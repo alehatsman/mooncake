@@ -2,6 +2,10 @@
 package testutil
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -16,6 +20,10 @@ type MockContext struct {
 	Log       logger.Logger
 	StepID    string
 	DryRun    bool
+	// Performer, if set, is returned by Effects(). Tests exercising the
+	// Spec-16 Run path inject a fake or real Performer here. When nil,
+	// Effects() returns a no-op Performer that records nothing.
+	Performer actions.Performer
 }
 
 func (m *MockContext) GetVariables() map[string]interface{} {
@@ -53,6 +61,27 @@ func (m *MockContext) IsDryRun() bool {
 	return m.DryRun
 }
 
+// Mode reports ModePlan when DryRun is true, ModeExecute otherwise.
+// Mirrors ExecutionContext.Mode() so tests against MockContext behave the
+// same way handlers see in production. See Spec 16.
+func (m *MockContext) Mode() actions.Mode {
+	if m.DryRun {
+		return actions.ModePlan
+	}
+	return actions.ModeExecute
+}
+
+// Effects returns a no-op Performer that records calls but does not
+// touch the filesystem. Tests that exercise effect calls in handlers
+// should replace this with a real or fake Performer as needed; the
+// default just exists to satisfy the Context interface.
+func (m *MockContext) Effects() actions.Performer {
+	if m.Performer != nil {
+		return m.Performer
+	}
+	return noopPerformer{mode: m.Mode()}
+}
+
 // MockPublisher implements events.Publisher for testing
 type MockPublisher struct {
 	Events []events.Event
@@ -80,24 +109,24 @@ type MockLogger struct {
 	Logs []string
 }
 
-func (m *MockLogger) Infof(format string, _ ...interface{}) {
-	m.Logs = append(m.Logs, format)
+func (m *MockLogger) Infof(format string, args ...interface{}) {
+	m.Logs = append(m.Logs, fmt.Sprintf(format, args...))
 }
 
-func (m *MockLogger) Debugf(format string, _ ...interface{}) {
-	m.Logs = append(m.Logs, format)
+func (m *MockLogger) Debugf(format string, args ...interface{}) {
+	m.Logs = append(m.Logs, fmt.Sprintf(format, args...))
 }
 
-func (m *MockLogger) Errorf(format string, _ ...interface{}) {
-	m.Logs = append(m.Logs, format)
+func (m *MockLogger) Errorf(format string, args ...interface{}) {
+	m.Logs = append(m.Logs, fmt.Sprintf(format, args...))
 }
 
-func (m *MockLogger) Codef(format string, _ ...interface{}) {
-	m.Logs = append(m.Logs, format)
+func (m *MockLogger) Codef(format string, args ...interface{}) {
+	m.Logs = append(m.Logs, fmt.Sprintf(format, args...))
 }
 
-func (m *MockLogger) Textf(format string, _ ...interface{}) {
-	m.Logs = append(m.Logs, format)
+func (m *MockLogger) Textf(format string, args ...interface{}) {
+	m.Logs = append(m.Logs, fmt.Sprintf(format, args...))
 }
 
 func (m *MockLogger) Mooncake() {
@@ -138,4 +167,38 @@ func NewMockContext() *MockContext {
 		StepID:    "step-1",
 		DryRun:    false,
 	}
+}
+
+// noopPerformer satisfies actions.Performer without touching the
+// filesystem. Used by MockContext.Effects() when no real Performer is
+// injected. Every call returns an Effect with no Performed / WouldChange
+// / Err — the test should set MockContext.Performer to something more
+// useful when it needs realistic behavior.
+type noopPerformer struct{ mode actions.Mode }
+
+func (p noopPerformer) Mode() actions.Mode { return p.mode }
+
+func (p noopPerformer) Mkdir(path string, _ os.FileMode, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionMkdir, Path: path}
+}
+func (p noopPerformer) WriteFile(path string, _ []byte, _ os.FileMode, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionWriteFile, Path: path}
+}
+func (p noopPerformer) Symlink(_, path string, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionSymlink, Path: path}
+}
+func (p noopPerformer) Hardlink(_, path string, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionHardlink, Path: path}
+}
+func (p noopPerformer) Touch(path string, _ os.FileMode, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionTouch, Path: path}
+}
+func (p noopPerformer) Remove(path string, _ bool, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionRemove, Path: path}
+}
+func (p noopPerformer) Chmod(path string, _ os.FileMode, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionChmod, Path: path}
+}
+func (p noopPerformer) Chown(path, _, _ string, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionChown, Path: path}
 }

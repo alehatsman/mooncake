@@ -179,3 +179,47 @@ func TestExecutionContext_IsDryRun_EdgeCases(t *testing.T) {
 		})
 	}
 }
+
+// TestExecutionContext_Mode verifies that the Mode accessor derives the
+// right Spec-16 Mode from the legacy DryRun and CheckMode bools.
+func TestExecutionContext_Mode(t *testing.T) {
+	tests := []struct {
+		name      string
+		dryRun    bool
+		checkMode bool
+		want      Mode
+	}{
+		{"neither flag → ModeExecute", false, false, ModeExecute},
+		{"dry-run only → ModePlan", true, false, ModePlan},
+		{"check-mode only → ModePlan", false, true, ModePlan},
+		{"both flags → ModePlan", true, true, ModePlan},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := &ExecutionContext{
+				DryRun:    tt.dryRun,
+				CheckMode: tt.checkMode,
+			}
+			if got := ctx.Mode(); got != tt.want {
+				t.Errorf("Mode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMode_String(t *testing.T) {
+	tests := []struct {
+		mode Mode
+		want string
+	}{
+		{ModeExecute, "execute"},
+		{ModePlan, "plan"},
+		{Mode(99), "unknown"},
+	}
+	for _, tt := range tests {
+		if got := tt.mode.String(); got != tt.want {
+			t.Errorf("Mode(%d).String() = %q, want %q", tt.mode, got, tt.want)
+		}
+	}
+}

@@ -3,6 +3,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -101,6 +102,35 @@ func (m *mockContext) GetEvaluator() expression.Evaluator {
 
 func (m *mockContext) IsDryRun() bool {
 	return m.dryRun
+}
+
+func (m *mockContext) Mode() Mode {
+	if m.dryRun {
+		return ModePlan
+	}
+	return ModeExecute
+}
+
+func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }
+
+// testNoopPerformer satisfies Performer for actions_test without
+// touching the filesystem.
+type testNoopPerformer struct{ mode Mode }
+
+func (p testNoopPerformer) Mode() Mode { return p.mode }
+func (p testNoopPerformer) Mkdir(string, os.FileMode, PerformerOpts) Effect {
+	return Effect{}
+}
+func (p testNoopPerformer) WriteFile(string, []byte, os.FileMode, PerformerOpts) Effect {
+	return Effect{}
+}
+func (p testNoopPerformer) Symlink(string, string, PerformerOpts) Effect    { return Effect{} }
+func (p testNoopPerformer) Hardlink(string, string, PerformerOpts) Effect   { return Effect{} }
+func (p testNoopPerformer) Touch(string, os.FileMode, PerformerOpts) Effect { return Effect{} }
+func (p testNoopPerformer) Remove(string, bool, PerformerOpts) Effect       { return Effect{} }
+func (p testNoopPerformer) Chmod(string, os.FileMode, PerformerOpts) Effect { return Effect{} }
+func (p testNoopPerformer) Chown(string, string, string, PerformerOpts) Effect {
+	return Effect{}
 }
 
 // mockPublisher implements events.Publisher for testing

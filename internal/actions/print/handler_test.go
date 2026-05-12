@@ -1,6 +1,7 @@
 package print
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -65,6 +66,40 @@ func (m *mockContext) GetEvaluator() expression.Evaluator {
 
 func (m *mockContext) IsDryRun() bool {
 	return false
+}
+
+func (m *mockContext) Mode() actions.Mode { return actions.ModeExecute }
+
+func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
+
+// printNoopPerformer is a stub Performer for tests in this package; the
+// print action doesn't call effect helpers but the interface requires it.
+type printNoopPerformer struct{}
+
+func (printNoopPerformer) Mode() actions.Mode { return actions.ModeExecute }
+func (printNoopPerformer) Mkdir(string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) WriteFile(string, []byte, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Symlink(string, string, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Hardlink(string, string, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Touch(string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Remove(string, bool, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Chmod(string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Chown(string, string, string, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
 }
 
 // mockPublisher implements events.Publisher for testing

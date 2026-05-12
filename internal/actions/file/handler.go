@@ -34,6 +34,17 @@ const (
 	stateHardlink                 = "hardlink"
 )
 
+// defaultModeFor returns the mode applied when a file step omits an explicit
+// `mode:`. Both Execute and DryRun must consult this so the preview matches
+// what is actually performed. See spec-16-unify-dryrun-execute for the
+// longer-term plan to remove the parallel paths entirely.
+func defaultModeFor(state string) os.FileMode {
+	if state == "directory" {
+		return defaultDirMode
+	}
+	return defaultFileMode
+}
+
 // Handler implements the Handler interface for file actions.
 type Handler struct{}
 
@@ -183,7 +194,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		state = actionTypeFile
 	}
 
-	mode := h.parseFileMode(file.Mode, defaultFileMode)
+	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
 
 	switch state {
 	case "directory":
@@ -304,7 +315,7 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 // State handler methods will be added below...
 
 func (h *Handler) createDirectory(ctx actions.Context, ec *executor.ExecutionContext, file *config.File, renderedPath string, result *executor.Result, step *config.Step) error {
-	mode := h.parseFileMode(file.Mode, defaultDirMode)
+	mode := h.parseFileMode(file.Mode, defaultModeFor("directory"))
 
 	// Check if directory already exists
 	if _, err := os.Stat(renderedPath); os.IsNotExist(err) {
@@ -343,7 +354,7 @@ func (h *Handler) createDirectory(ctx actions.Context, ec *executor.ExecutionCon
 }
 
 func (h *Handler) createOrUpdateFile(ctx actions.Context, ec *executor.ExecutionContext, file *config.File, renderedPath string, result *executor.Result, step *config.Step) error {
-	mode := h.parseFileMode(file.Mode, defaultFileMode)
+	mode := h.parseFileMode(file.Mode, defaultModeFor(actionTypeFile))
 
 	// Render content
 	renderedContent, err := ctx.GetTemplate().Render(file.Content, ctx.GetVariables())
@@ -452,7 +463,7 @@ func (h *Handler) removeFileOrDirectory(ctx actions.Context, ec *executor.Execut
 }
 
 func (h *Handler) touchFile(ctx actions.Context, ec *executor.ExecutionContext, file *config.File, renderedPath string, result *executor.Result, step *config.Step) error {
-	mode := h.parseFileMode(file.Mode, defaultFileMode)
+	mode := h.parseFileMode(file.Mode, defaultModeFor("touch"))
 
 	// Check if file exists
 	_, err := os.Stat(renderedPath)
@@ -626,7 +637,7 @@ func (h *Handler) createHardlink(ctx actions.Context, ec *executor.ExecutionCont
 }
 
 func (h *Handler) setPermissions(ctx actions.Context, ec *executor.ExecutionContext, file *config.File, renderedPath string, result *executor.Result, step *config.Step) error {
-	mode := h.parseFileMode(file.Mode, defaultFileMode)
+	mode := h.parseFileMode(file.Mode, defaultModeFor("perms"))
 
 	// Get current permissions
 	fileInfo, err := os.Stat(renderedPath)

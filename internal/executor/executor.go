@@ -438,6 +438,13 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 			return fmt.Errorf("%s", errMsg)
 		}
 
+		// Spec 16: prefer Runner if the handler implements it. Runner
+		// is the unified Execute / DryRun / Check replacement; the legacy
+		// branches below are the shim for handlers that haven't migrated.
+		if runner, ok := handler.(actions.Runner); ok {
+			return dispatchRunner(step, ec, runner)
+		}
+
 		// Handle check mode — query without writing
 		if ec.CheckMode {
 			return dispatchCheck(step, ec, actionType, handler)
@@ -581,7 +588,27 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		return nil
 	}
 
-	// In check mode, bypass started/completed events and go straight to Check()
+	// Plan-mode bypass: when the step would run in ModePlan (check or
+	// dry-run) AND the handler implements Spec 16's Runner, skip the
+	// started/completed lifecycle events and emit only EventStepChecked.
+	// Spec 16 unifies --check and --dry-run under one non-mutating mode;
+	// both should render via the check formatter for Runner handlers.
+	//
+	// Legacy --check (non-Runner handlers) keeps its existing bypass
+	// flow below.
+	if hasStepName && step.Include == nil {
+		actionType := step.DetermineActionType()
+		if handler, ok := actions.Get(actionType); ok {
+			if runner, isRunner := handler.(actions.Runner); isRunner && ec.Mode() == actions.ModePlan {
+				*ec.Stats.Global++
+				ec.CurrentStepID = generateStepID(step, ec)
+				return dispatchRunner(step, ec, runner)
+			}
+		}
+	}
+
+	// In check mode, bypass started/completed events and go straight to
+	// the check path for legacy (non-Runner) handlers.
 	if ec.CheckMode && hasStepName && step.Include == nil {
 		*ec.Stats.Global++
 		stepID := generateStepID(step, ec)
@@ -1003,6 +1030,68 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+// dispatchRunner invokes a Spec 16 Runner handler. The handler's Run
+// method decides what to do based on ec.Mode(); this function handles
+// the result plumbing (CurrentResult, register, events, stats) that
+// previously lived in the Execute / DryRun / Check branches of
+// DispatchStepAction.
+//
+// In ModePlan it emits EventStepChecked (matching the legacy Check
+// flow) so existing subscribers continue to work; in ModeExecute it
+// relies on the surrounding ExecuteStep to emit started/completed.
+func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runner) error {
+	result, err := runner.Run(ec, &step)
+
+	// Capture the result on the context whether or not Run errored,
+	// matching the existing Execute behavior so callers can read
+	// stdout/stderr from failed shell-like steps.
+	if r, ok := result.(*Result); ok {
+		ec.CurrentResult = r
+	} else {
+		ec.CurrentResult = NewResult()
+	}
+	if err != nil {
+		return err
+	}
+
+	if ec.Mode() == actions.ModePlan {
+		actionType := step.DetermineActionType()
+		name := step.Name
+		if name == "" {
+			name = actionType
+		}
+		// Read Spec-16 fields off the concrete Result; legacy callers
+		// may pass a *Result with WouldChange/Reason/Checkable set.
+		var wouldChange, checkable bool
+		var reason string
+		if r, ok := result.(*Result); ok {
+			wouldChange = r.WouldChange
+			checkable = r.Checkable
+			reason = r.Reason
+		}
+		ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
+			StepID:      ec.CurrentStepID,
+			Name:        name,
+			Action:      actionType,
+			WouldChange: wouldChange,
+			Checkable:   checkable,
+			Reason:      reason,
+			Level:       ec.Level,
+		})
+		if wouldChange {
+			*ec.Stats.Changed++
+		}
+		*ec.Stats.Executed++
+		return nil
+	}
+
+	// ModeExecute: register result if requested.
+	if step.Register != "" && ec.CurrentResult != nil {
+		ec.CurrentResult.RegisterTo(ec.Variables, step.Register)
+	}
+	return nil
 }
 
 // dispatchCheck calls the handler's Check() method if it implements actions.Checker,
