@@ -274,6 +274,20 @@ export interface FileWriteAction {
 }
 
 /**
+ * Idempotently clone or update a git repository at a specific ref
+ * @category network
+ */
+export interface GitCloneAction {
+  depth?: number;
+  dest: string;
+  force?: boolean;
+  recurse_submodules?: boolean;
+  ref?: string;
+  repo: string;
+  update?: boolean;
+}
+
+/**
  * Import steps from another file
  */
 export interface ImportAction {
@@ -753,6 +767,10 @@ export interface Step {
    * Manage files, directories, links, and permissions
    */
   "file.write"?: FileWriteAction;
+  /**
+   * Idempotently clone or update a git repository at a specific ref
+   */
+  "git.clone"?: GitCloneAction;
   /**
    * Display messages to the user
    */

@@ -318,6 +318,18 @@ type Download struct {
 	Retries  int               `yaml:"retries" json:"retries,omitempty"`       // Number of retry attempts
 }
 
+// GitClone represents a git clone-or-update operation in a configuration step.
+// Idempotent: if dest is already a git repo at the requested ref, no change.
+type GitClone struct {
+	Repo              string `yaml:"repo" json:"repo"`                                                     // Remote URL (required)
+	Dest              string `yaml:"dest" json:"dest" plan:"path"`                                         // Local destination path (required)
+	Ref               string `yaml:"ref" json:"ref,omitempty"`                                             // Branch, tag, or commit SHA (optional; default: remote HEAD)
+	Depth             int    `yaml:"depth" json:"depth,omitempty"`                                         // Shallow clone depth (0 = full)
+	RecurseSubmodules bool   `yaml:"recurse_submodules" json:"recurse_submodules,omitempty"`               // Init + update submodules
+	Update            bool   `yaml:"update" json:"update,omitempty"`                                       // If dest exists: fetch + checkout ref (default false → noop)
+	Force             bool   `yaml:"force" json:"force,omitempty"`                                         // Discard local changes when updating (git reset --hard)
+}
+
 // Package represents a package management operation (install/remove/update packages).
 // Supports apt, dnf, yum, pacman, zypper, apk (Linux), brew, port (macOS), choco, scoop (Windows).
 type Package struct {
@@ -758,6 +770,7 @@ type Step struct {
 	RepoSearch       *RepoSearch             `yaml:"repo.search"       json:"repo.search,omitempty"       action:"repo.search"`
 	RepoTree         *RepoTree               `yaml:"repo.tree"         json:"repo.tree,omitempty"         action:"repo.tree"`
 	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch"        json:"repo.patch,omitempty"        action:"repo.patch"`
+	GitClone         *GitClone               `yaml:"git.clone"         json:"git.clone,omitempty"         action:"git.clone"`
 	ArtifactCapture  *ArtifactCapture        `yaml:"artifact.capture"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
 	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate" json:"artifact.validate,omitempty" action:"artifact.validate"`
 	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
@@ -1027,6 +1040,7 @@ func (s *Step) Clone() *Step {
 		RepoSearch:       s.RepoSearch,
 		RepoTree:         s.RepoTree,
 		RepoPatch:        s.RepoPatch,
+		GitClone:         s.GitClone,
 		ArtifactCapture:  s.ArtifactCapture,
 		ArtifactValidate: s.ArtifactValidate,
 		Shell:            s.Shell,
