@@ -725,3 +725,57 @@ func TestStep_DetermineActionType(t *testing.T) {
 		})
 	}
 }
+
+// TestStep_DetermineActionType_AllFields verifies that every action field
+// tagged with `action:` returns the correct type string and that countActions
+// returns 1 for each. This is the compile-time-checked table of all 28 actions.
+func TestStep_DetermineActionType_AllFields(t *testing.T) {
+	strEmpty := ""
+	emptyVars := map[string]interface{}{}
+
+	cases := []struct {
+		key  string
+		step Step
+	}{
+		{"file.write", Step{FileWrite: &File{Path: "/tmp/x"}}},
+		{"file.template", Step{FileTemplate: &Template{Src: "s", Dest: "d"}}},
+		{"file.copy", Step{FileCopy: &Copy{Src: "s", Dest: "d"}}},
+		{"file.download", Step{FileDownload: &Download{URL: "http://x", Dest: "/tmp/x"}}},
+		{"file.unarchive", Step{FileUnarchive: &Unarchive{Src: "x.tar.gz", Dest: "/tmp"}}},
+		{"text.replace", Step{TextReplace: &FileReplace{Path: "/f", Pattern: "a", Replace: "b"}}},
+		{"text.insert", Step{TextInsert: &FileInsert{Path: "/f", Anchor: "x", Position: "after", Content: "y"}}},
+		{"text.delete_range", Step{TextDeleteRange: &FileDeleteRange{Path: "/f", StartAnchor: "a", EndAnchor: "b"}}},
+		{"text.patch", Step{TextPatch: &FilePatchApply{Path: "/f", Patch: "diff"}}},
+		{"pkg", Step{Pkg: &Package{Name: "nginx"}}},
+		{"tool", Step{Tool: &Tool{Name: "jq", Version: "1.7", Backend: "github-release"}}},
+		{"os.service", Step{OsService: &ServiceAction{Name: "nginx"}}},
+		{"container.image", Step{ContainerImage: &ContainerImage{Name: "ubuntu"}}},
+		{"container", Step{Container: &Container{Image: "ubuntu"}}},
+		{"cmd", Step{Cmd: &CommandAction{Argv: []string{"ls"}}}},
+		{"repo.search", Step{RepoSearch: &RepoSearch{Pattern: "foo"}}},
+		{"repo.tree", Step{RepoTree: &RepoTree{}}},
+		{"repo.patch", Step{RepoPatch: &RepoApplyPatchset{Patchset: "diff"}}},
+		{"artifact.capture", Step{ArtifactCapture: &ArtifactCapture{Name: "cap"}}},
+		{"artifact.validate", Step{ArtifactValidate: &ArtifactValidate{ArtifactFile: "/f"}}},
+		{"shell", Step{Shell: shellActionPtr("echo")}},
+		{"assert", Step{Assert: &Assert{Command: &AssertCommand{Cmd: "true"}}}},
+		{"wait", Step{Wait: &WaitAction{Condition: "file_exists", Path: &strEmpty}}},
+		{"log", Step{Log: &PrintAction{Msg: "hi"}}},
+		{"use", Step{Use: &PresetInvocation{Name: "p"}}},
+		{"import", Step{Import: &strEmpty}},
+		{"vars.load", Step{VarsLoad: &strEmpty}},
+		{"vars", Step{Vars: &emptyVars}},
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.key, func(t *testing.T) {
+			if got := c.step.DetermineActionType(); got != c.key {
+				t.Errorf("DetermineActionType() = %q, want %q", got, c.key)
+			}
+			if got := c.step.countActions(); got != 1 {
+				t.Errorf("countActions() = %d for %q, want 1", got, c.key)
+			}
+		})
+	}
+}

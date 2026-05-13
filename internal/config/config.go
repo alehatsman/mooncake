@@ -131,6 +131,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 )
 
 // RunConfig represents the root configuration structure.
@@ -163,7 +164,7 @@ type ParsedConfig struct {
 
 // File represents a file or directory operation in a configuration step.
 type File struct {
-	Path    string `yaml:"path" json:"path"`
+	Path    string `yaml:"path" json:"path" plan:"path"`
 	State   string `yaml:"state" json:"state,omitempty"`      // file|directory|absent|link|hardlink|touch|perms
 	Content string `yaml:"content" json:"content,omitempty"`
 	Mode    string `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
@@ -173,7 +174,7 @@ type File struct {
 	Group string `yaml:"group" json:"group,omitempty"` // Groupname or GID
 
 	// Link operations
-	Src string `yaml:"src" json:"src,omitempty"` // Source path for link/copy operations
+	Src string `yaml:"src" json:"src,omitempty" plan:"path"` // Source path for link/copy operations
 
 	// Behavior flags
 	Force   bool `yaml:"force" json:"force,omitempty"`     // Overwrite existing files
@@ -183,8 +184,8 @@ type File struct {
 
 // Template represents a template rendering operation in a configuration step.
 type Template struct {
-	Src  string                  `yaml:"src" json:"src"`
-	Dest string                  `yaml:"dest" json:"dest"`
+	Src  string                  `yaml:"src" json:"src" plan:"path"`
+	Dest string                  `yaml:"dest" json:"dest" plan:"path"`
 	Vars *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 	Mode string                  `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
@@ -259,8 +260,8 @@ type CommandAction struct {
 
 // Copy represents a file copy operation in a configuration step.
 type Copy struct {
-	Src      string `yaml:"src" json:"src"`                       // Source file path
-	Dest     string `yaml:"dest" json:"dest"`                     // Destination file path
+	Src      string `yaml:"src" json:"src" plan:"path"`                       // Source file path
+	Dest     string `yaml:"dest" json:"dest" plan:"path"`                     // Destination file path
 	Mode     string `yaml:"mode" json:"mode,omitempty"`           // Octal file permissions (e.g., "0644", "0755")
 	Owner    string `yaml:"owner" json:"owner,omitempty"`         // Username or UID
 	Group    string `yaml:"group" json:"group,omitempty"`         // Groupname or GID
@@ -271,10 +272,10 @@ type Copy struct {
 
 // Unarchive represents an archive extraction operation in a configuration step.
 type Unarchive struct {
-	Src             string `yaml:"src" json:"src"`                                     // Source archive path
-	Dest            string `yaml:"dest" json:"dest"`                                   // Destination directory
+	Src             string `yaml:"src" json:"src" plan:"path"`                                     // Source archive path
+	Dest            string `yaml:"dest" json:"dest" plan:"path"`                                   // Destination directory
 	StripComponents int    `yaml:"strip_components" json:"strip_components,omitempty"` // Number of leading path components to strip
-	Creates         string `yaml:"creates" json:"creates,omitempty"`                   // Skip if this path exists (idempotency marker)
+	Creates         string `yaml:"creates" json:"creates,omitempty" plan:"path"`                   // Skip if this path exists (idempotency marker)
 	Mode            string `yaml:"mode" json:"mode,omitempty"`                         // Octal directory permissions (e.g., "0755")
 }
 
@@ -307,7 +308,7 @@ type Tool struct {
 // Download represents a file download operation in a configuration step.
 type Download struct {
 	URL      string            `yaml:"url" json:"url"`                         // Remote URL (required)
-	Dest     string            `yaml:"dest" json:"dest"`                       // Destination path (required)
+	Dest     string            `yaml:"dest" json:"dest" plan:"path"`           // Destination path (required)
 	Checksum string            `yaml:"checksum" json:"checksum,omitempty"`     // Expected SHA256 or MD5 checksum
 	Mode     string            `yaml:"mode" json:"mode,omitempty"`             // Octal file permissions (e.g., "0644")
 	Timeout  string            `yaml:"timeout" json:"timeout,omitempty"`       // Maximum download time (e.g., "30s", "5m")
@@ -389,9 +390,9 @@ type ServiceAction struct {
 
 // ServiceUnit represents a systemd unit file or launchd plist configuration.
 type ServiceUnit struct {
-	Dest        string `yaml:"dest" json:"dest,omitempty"`                         // Unit file path (auto-detected if empty)
+	Dest        string `yaml:"dest" json:"dest,omitempty" plan:"path"`             // Unit file path (auto-detected if empty)
 	Content     string `yaml:"content" json:"content,omitempty"`                   // Inline content
-	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
+	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty" plan:"path"` // Template file path
 	Mode        string `yaml:"mode" json:"mode,omitempty"`                         // File permissions (default: "0644")
 }
 
@@ -400,7 +401,7 @@ type ServiceUnit struct {
 type ServiceDropin struct {
 	Name        string `yaml:"name" json:"name"`                                   // Drop-in file name (e.g., "10-mooncake.conf")
 	Content     string `yaml:"content" json:"content,omitempty"`                   // Inline content
-	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty"`         // Template file path
+	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty" plan:"path"` // Template file path
 }
 
 // ContainerImage represents a container image management operation.
@@ -452,7 +453,7 @@ type AssertCommand struct {
 
 // AssertFile verifies file existence, content, or properties.
 type AssertFile struct {
-	Path     string  `yaml:"path" json:"path"`                         // File path (required)
+	Path     string  `yaml:"path" json:"path" plan:"path"`             // File path (required)
 	Exists   *bool   `yaml:"exists" json:"exists,omitempty"`           // Verify existence (true) or non-existence (false)
 	Content  *string `yaml:"content" json:"content,omitempty"`         // Expected exact content
 	Contains *string `yaml:"contains" json:"contains,omitempty"`       // Expected substring
@@ -477,7 +478,7 @@ type AssertHTTP struct {
 
 // AssertFileSHA256 verifies a file's SHA256 checksum matches the expected value.
 type AssertFileSHA256 struct {
-	Path     string `yaml:"path" json:"path"`         // File path (required)
+	Path     string `yaml:"path" json:"path" plan:"path"` // File path (required)
 	Checksum string `yaml:"checksum" json:"checksum"` // Expected SHA256 checksum (required)
 }
 
@@ -547,7 +548,7 @@ type PrintAction struct {
 // FileReplace represents an in-place text replacement operation in a file.
 // Supports both literal and regex-based search-and-replace patterns.
 type FileReplace struct {
-	Path         string        `yaml:"path" json:"path"`                                 // Target file path (required)
+	Path         string        `yaml:"path" json:"path" plan:"path"`                     // Target file path (required)
 	Pattern      string        `yaml:"pattern" json:"pattern"`                           // Search pattern (required)
 	Replace      string        `yaml:"replace" json:"replace"`                           // Replacement text (required)
 	Count        *int          `yaml:"count" json:"count,omitempty"`                     // Max replacements (null = all)
@@ -566,7 +567,7 @@ type ReplaceFlags struct {
 // FileInsert represents an anchor-based text insertion operation in a file.
 // Inserts content before or after a matched anchor pattern.
 type FileInsert struct {
-	Path          string `yaml:"path" json:"path"`                               // Target file path (required)
+	Path          string `yaml:"path" json:"path" plan:"path"`                   // Target file path (required)
 	Anchor        string `yaml:"anchor" json:"anchor"`                           // Anchor pattern to match (required)
 	Position      string `yaml:"position" json:"position"`                       // Insert position: "before" or "after" (required)
 	Content       string `yaml:"content" json:"content"`                         // Content to insert (required)
@@ -578,7 +579,7 @@ type FileInsert struct {
 // FileDeleteRange represents a range deletion operation between two anchor patterns.
 // Deletes all lines between (and optionally including) start and end anchors.
 type FileDeleteRange struct {
-	Path        string `yaml:"path" json:"path"`                       // Target file path (required)
+	Path        string `yaml:"path" json:"path" plan:"path"`           // Target file path (required)
 	StartAnchor string `yaml:"start_anchor" json:"start_anchor"`       // Start anchor pattern (required)
 	EndAnchor   string `yaml:"end_anchor" json:"end_anchor"`           // End anchor pattern (required)
 	Regex       bool   `yaml:"regex" json:"regex,omitempty"`           // Treat anchors as regex (default: false)
@@ -589,9 +590,9 @@ type FileDeleteRange struct {
 // FilePatchApply represents a unified diff patch application operation.
 // Applies a unified diff patch to a file with validation and safety checks.
 type FilePatchApply struct {
-	Path       string `yaml:"path" json:"path"`                           // Target file path (required)
+	Path       string `yaml:"path" json:"path" plan:"path"`               // Target file path (required)
 	Patch      string `yaml:"patch" json:"patch,omitempty"`               // Inline patch content (patch or patch_file required)
-	PatchFile  string `yaml:"patch_file" json:"patch_file,omitempty"`     // Path to patch file (patch or patch_file required)
+	PatchFile  string `yaml:"patch_file" json:"patch_file,omitempty" plan:"path"` // Path to patch file (patch or patch_file required)
 	Backup     bool   `yaml:"backup" json:"backup,omitempty"`             // Create .bak before modify
 	ContextLines *int  `yaml:"context_lines" json:"context_lines,omitempty"` // Required matching context lines (default: 3)
 	Strict     bool   `yaml:"strict" json:"strict,omitempty"`             // Strict mode: fail if any hunk fails (default: true)
@@ -604,8 +605,8 @@ type RepoSearch struct {
 	Pattern    string   `yaml:"pattern" json:"pattern"`                         // Search pattern (required)
 	Regex      bool     `yaml:"regex" json:"regex,omitempty"`                   // Use regex mode (default: true)
 	Glob       string   `yaml:"glob" json:"glob,omitempty"`                     // File glob pattern (e.g., "**/*.{ts,js}")
-	Path       string   `yaml:"path" json:"path,omitempty"`                     // Search path (default: current directory)
-	OutputFile string   `yaml:"output_file" json:"output_file,omitempty"`       // Output JSON file path
+	Path       string   `yaml:"path" json:"path,omitempty" plan:"path"`         // Search path (default: current directory)
+	OutputFile string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
 	MaxResults *int     `yaml:"max_results" json:"max_results,omitempty"`       // Maximum number of results (null = unlimited)
 	IgnoreDirs []string `yaml:"ignore_dirs" json:"ignore_dirs,omitempty"`       // Directories to ignore (e.g., [".git", "node_modules"])
 }
@@ -613,10 +614,10 @@ type RepoSearch struct {
 // RepoTree represents a repository tree generation operation.
 // Generates a JSON representation of the directory structure.
 type RepoTree struct {
-	Path       string   `yaml:"path" json:"path,omitempty"`                     // Root path (default: current directory)
+	Path       string   `yaml:"path" json:"path,omitempty" plan:"path"`         // Root path (default: current directory)
 	MaxDepth   *int     `yaml:"max_depth" json:"max_depth,omitempty"`           // Maximum directory depth (null = unlimited)
 	ExcludeDirs []string `yaml:"exclude_dirs" json:"exclude_dirs,omitempty"`    // Directories to exclude (e.g., ["node_modules", ".git"])
-	OutputFile string   `yaml:"output_file" json:"output_file,omitempty"`       // Output JSON file path
+	OutputFile string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
 	IncludeFiles bool    `yaml:"include_files" json:"include_files,omitempty"`  // Include files in tree (default: true)
 }
 
@@ -624,19 +625,19 @@ type RepoTree struct {
 // Applies multiple patches to multiple files in a single atomic operation.
 type RepoApplyPatchset struct {
 	Patchset     string   `yaml:"patchset" json:"patchset,omitempty"`                 // Inline patchset content (patchset or patchset_file required)
-	PatchsetFile string   `yaml:"patchset_file" json:"patchset_file,omitempty"`       // Path to patchset file (patchset or patchset_file required)
-	BaseDir      string   `yaml:"base_dir" json:"base_dir,omitempty"`                 // Base directory for relative paths (default: current directory)
+	PatchsetFile string   `yaml:"patchset_file" json:"patchset_file,omitempty" plan:"path"` // Path to patchset file (patchset or patchset_file required)
+	BaseDir      string   `yaml:"base_dir" json:"base_dir,omitempty" plan:"path"`     // Base directory for relative paths (default: current directory)
 	Backup       bool     `yaml:"backup" json:"backup,omitempty"`                     // Create .bak files before modifications
 	Strict       bool     `yaml:"strict" json:"strict,omitempty"`                     // Strict mode: rollback all if any file fails (default: true)
 	DryRun       bool     `yaml:"dry_run" json:"dry_run,omitempty"`                   // Test patchset without applying
-	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty"`           // Output JSON file with results
+	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file with results
 }
 
 // ArtifactCapture wraps steps and captures all file changes with enhanced metadata.
 // Designed for LLM agent loops to provide structured output for decision-making.
 type ArtifactCapture struct {
 	Name             string   `yaml:"name" json:"name"`                                         // Artifact name (required)
-	OutputDir        string   `yaml:"output_dir" json:"output_dir,omitempty"`                   // Output directory (default: "./artifacts")
+	OutputDir        string   `yaml:"output_dir" json:"output_dir,omitempty" plan:"path"`       // Output directory (default: "./artifacts")
 	Format           string   `yaml:"format" json:"format,omitempty"`                           // Output format: "json", "markdown", "both" (default: "both")
 	CaptureContent   bool     `yaml:"capture_content" json:"capture_content,omitempty"`         // Include before/after file content (default: false)
 	MaxDiffSize      int      `yaml:"max_diff_size" json:"max_diff_size,omitempty"`             // Max diff size in bytes (default: 1MB)
@@ -654,7 +655,7 @@ type WaitAction struct {
 	Interval  string `yaml:"interval" json:"interval,omitempty"` // Poll interval (default: "1s")
 
 	// Condition-specific fields
-	Path           *string `yaml:"path" json:"path,omitempty"`                         // For file_exists, file_absent
+	Path           *string `yaml:"path" json:"path,omitempty" plan:"path"`             // For file_exists, file_absent
 	AllowUntracked *bool   `yaml:"allow_untracked" json:"allow_untracked,omitempty"`   // For git_clean (default: false)
 	Cmd            *string `yaml:"cmd" json:"cmd,omitempty"`                           // For command
 	ExitCode       *int    `yaml:"exit_code" json:"exit_code,omitempty"`               // For command (default: 0)
@@ -667,7 +668,7 @@ type WaitAction struct {
 // ArtifactValidate validates artifacts against constraints (change budgets).
 // Designed for LLM agent loops to enforce guardrails on file modifications.
 type ArtifactValidate struct {
-	ArtifactFile    string   `yaml:"artifact_file" json:"artifact_file"`                     // Path to artifact JSON file (required)
+	ArtifactFile    string   `yaml:"artifact_file" json:"artifact_file" plan:"path"`         // Path to artifact JSON file (required)
 	MaxFiles        *int     `yaml:"max_files" json:"max_files,omitempty"`                   // Maximum number of files changed
 	MaxLinesChanged *int     `yaml:"max_lines_changed" json:"max_lines_changed,omitempty"`   // Maximum total lines changed
 	MaxFileSize     *int     `yaml:"max_file_size" json:"max_file_size,omitempty"`           // Maximum individual file size in bytes
@@ -719,34 +720,34 @@ type Step struct {
 	//   artifact.* — artifact capture / validation
 	// Flat keys (shell, assert, wait, vars, log, use, import) are foundational
 	// or control-flow primitives that do not warrant a namespace.
-	FileWrite       *File                   `yaml:"file.write" json:"file.write,omitempty"`
-	FileTemplate    *Template               `yaml:"file.template" json:"file.template,omitempty"`
-	FileCopy        *Copy                   `yaml:"file.copy" json:"file.copy,omitempty"`
-	FileDownload    *Download               `yaml:"file.download" json:"file.download,omitempty"`
-	FileUnarchive   *Unarchive              `yaml:"file.unarchive" json:"file.unarchive,omitempty"`
-	TextReplace     *FileReplace            `yaml:"text.replace" json:"text.replace,omitempty"`
-	TextInsert      *FileInsert             `yaml:"text.insert" json:"text.insert,omitempty"`
-	TextDeleteRange *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty"`
-	TextPatch       *FilePatchApply         `yaml:"text.patch" json:"text.patch,omitempty"`
-	Pkg             *Package                `yaml:"pkg" json:"pkg,omitempty"`
-	Tool            *Tool                   `yaml:"tool" json:"tool,omitempty"`
-	OsService       *ServiceAction          `yaml:"os.service" json:"os.service,omitempty"`
-	ContainerImage  *ContainerImage         `yaml:"container.image" json:"container.image,omitempty"`
-	Container       *Container              `yaml:"container" json:"container,omitempty"`
-	Cmd             *CommandAction          `yaml:"cmd" json:"cmd,omitempty"`
-	RepoSearch      *RepoSearch             `yaml:"repo.search" json:"repo.search,omitempty"`
-	RepoTree        *RepoTree               `yaml:"repo.tree" json:"repo.tree,omitempty"`
-	RepoPatch       *RepoApplyPatchset      `yaml:"repo.patch" json:"repo.patch,omitempty"`
-	ArtifactCapture *ArtifactCapture        `yaml:"artifact.capture" json:"artifact.capture,omitempty"`
-	ArtifactValidate *ArtifactValidate      `yaml:"artifact.validate" json:"artifact.validate,omitempty"`
-	Shell           *ShellAction            `yaml:"shell" json:"shell,omitempty"`
-	Assert          *Assert                 `yaml:"assert" json:"assert,omitempty"`
-	Wait            *WaitAction             `yaml:"wait" json:"wait,omitempty"`
-	Log             *PrintAction            `yaml:"log" json:"log,omitempty"`
-	Use             *PresetInvocation       `yaml:"use" json:"use,omitempty"`
-	Import          *string                 `yaml:"import" json:"import,omitempty"`
-	VarsLoad        *string                 `yaml:"vars.load" json:"vars.load,omitempty"`
-	Vars            *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
+	FileWrite        *File                   `yaml:"file.write"        json:"file.write,omitempty"        action:"file.write"`
+	FileTemplate     *Template               `yaml:"file.template"     json:"file.template,omitempty"     action:"file.template"`
+	FileCopy         *Copy                   `yaml:"file.copy"         json:"file.copy,omitempty"         action:"file.copy"`
+	FileDownload     *Download               `yaml:"file.download"     json:"file.download,omitempty"     action:"file.download"`
+	FileUnarchive    *Unarchive              `yaml:"file.unarchive"    json:"file.unarchive,omitempty"    action:"file.unarchive"`
+	TextReplace      *FileReplace            `yaml:"text.replace"      json:"text.replace,omitempty"      action:"text.replace"`
+	TextInsert       *FileInsert             `yaml:"text.insert"       json:"text.insert,omitempty"       action:"text.insert"`
+	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty" action:"text.delete_range"`
+	TextPatch        *FilePatchApply         `yaml:"text.patch"        json:"text.patch,omitempty"        action:"text.patch"`
+	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
+	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
+	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
+	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
+	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
+	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
+	RepoSearch       *RepoSearch             `yaml:"repo.search"       json:"repo.search,omitempty"       action:"repo.search"`
+	RepoTree         *RepoTree               `yaml:"repo.tree"         json:"repo.tree,omitempty"         action:"repo.tree"`
+	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch"        json:"repo.patch,omitempty"        action:"repo.patch"`
+	ArtifactCapture  *ArtifactCapture        `yaml:"artifact.capture"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
+	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate" json:"artifact.validate,omitempty" action:"artifact.validate"`
+	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
+	Assert           *Assert                 `yaml:"assert"            json:"assert,omitempty"            action:"assert"`
+	Wait             *WaitAction             `yaml:"wait"              json:"wait,omitempty"              action:"wait"`
+	Log              *PrintAction            `yaml:"log"               json:"log,omitempty"               action:"log"`
+	Use              *PresetInvocation       `yaml:"use"               json:"use,omitempty"               action:"use"`
+	Import           *string                 `yaml:"import"            json:"import,omitempty"            action:"import"`
+	VarsLoad         *string                 `yaml:"vars.load"         json:"vars.load,omitempty"         action:"vars.load"`
+	Vars             *map[string]interface{} `yaml:"vars"              json:"vars,omitempty"              action:"vars"`
 
 	// Privilege escalation (spec-21: collapsed from become/become_user).
 	// Empty = current user; "root" = sudo to root; "<name>" = sudo to <name>.
@@ -901,184 +902,45 @@ type LoopContext struct {
 	Depth          int         `yaml:"depth,omitempty" json:"depth,omitempty"` // Directory depth for filetree items
 }
 
+var stepType = reflect.TypeOf(Step{})
+
+// actionFieldIndices holds the struct field indices of all Step fields tagged
+// with `action:`, computed once at package init. Declaration order determines
+// DetermineActionType priority for the (invalid) case of multiple set fields.
+var actionFieldIndices = func() []int {
+	var idx []int
+	for i := 0; i < stepType.NumField(); i++ {
+		if _, ok := stepType.Field(i).Tag.Lookup("action"); ok {
+			idx = append(idx, i)
+		}
+	}
+	return idx
+}()
+
+// ActionFieldIndices returns the cached action field indices for use by
+// external packages (e.g. the planner's renderActionTemplates).
+func ActionFieldIndices() []int { return actionFieldIndices }
+
 // countActions returns the number of non-nil action fields in this step.
 func (s *Step) countActions() int {
-	count := 0
-	if s.FileWrite != nil {
-		count++
+	rv := reflect.ValueOf(s).Elem()
+	n := 0
+	for _, i := range actionFieldIndices {
+		if !rv.Field(i).IsNil() {
+			n++
+		}
 	}
-	if s.FileTemplate != nil {
-		count++
-	}
-	if s.FileCopy != nil {
-		count++
-	}
-	if s.FileDownload != nil {
-		count++
-	}
-	if s.FileUnarchive != nil {
-		count++
-	}
-	if s.TextReplace != nil {
-		count++
-	}
-	if s.TextInsert != nil {
-		count++
-	}
-	if s.TextDeleteRange != nil {
-		count++
-	}
-	if s.TextPatch != nil {
-		count++
-	}
-	if s.Pkg != nil {
-		count++
-	}
-	if s.Tool != nil {
-		count++
-	}
-	if s.OsService != nil {
-		count++
-	}
-	if s.ContainerImage != nil {
-		count++
-	}
-	if s.Container != nil {
-		count++
-	}
-	if s.Cmd != nil {
-		count++
-	}
-	if s.RepoSearch != nil {
-		count++
-	}
-	if s.RepoTree != nil {
-		count++
-	}
-	if s.RepoPatch != nil {
-		count++
-	}
-	if s.ArtifactCapture != nil {
-		count++
-	}
-	if s.ArtifactValidate != nil {
-		count++
-	}
-	if s.Shell != nil {
-		count++
-	}
-	if s.Assert != nil {
-		count++
-	}
-	if s.Wait != nil {
-		count++
-	}
-	if s.Log != nil {
-		count++
-	}
-	if s.Use != nil {
-		count++
-	}
-	if s.Import != nil {
-		count++
-	}
-	if s.VarsLoad != nil {
-		count++
-	}
-	if s.Vars != nil {
-		count++
-	}
-	return count
+	return n
 }
 
 // DetermineActionType returns the action type for this step based on which action field is populated.
 // Returned strings are the modern dot-namespaced YAML keys (spec-21).
-//
-//nolint:gocyclo // Dispatcher over ~25 action types; complexity grows linearly with action count and is structurally simple.
 func (s *Step) DetermineActionType() string {
-	if s.Shell != nil {
-		return "shell"
-	}
-	if s.Cmd != nil {
-		return "cmd"
-	}
-	if s.FileWrite != nil {
-		return "file.write"
-	}
-	if s.TextReplace != nil {
-		return "text.replace"
-	}
-	if s.TextInsert != nil {
-		return "text.insert"
-	}
-	if s.TextDeleteRange != nil {
-		return "text.delete_range"
-	}
-	if s.TextPatch != nil {
-		return "text.patch"
-	}
-	if s.FileTemplate != nil {
-		return "file.template"
-	}
-	if s.FileCopy != nil {
-		return "file.copy"
-	}
-	if s.FileUnarchive != nil {
-		return "file.unarchive"
-	}
-	if s.FileDownload != nil {
-		return "file.download"
-	}
-	if s.Pkg != nil {
-		return "pkg"
-	}
-	if s.Tool != nil {
-		return "tool"
-	}
-	if s.OsService != nil {
-		return "os.service"
-	}
-	if s.ContainerImage != nil {
-		return "container.image"
-	}
-	if s.Container != nil {
-		return "container"
-	}
-	if s.Assert != nil {
-		return "assert"
-	}
-	if s.Use != nil {
-		return "use"
-	}
-	if s.Log != nil {
-		return "log"
-	}
-	if s.Vars != nil {
-		return "vars"
-	}
-	if s.VarsLoad != nil {
-		return "vars.load"
-	}
-	if s.Import != nil {
-		return "import"
-	}
-	if s.RepoSearch != nil {
-		return "repo.search"
-	}
-	if s.RepoTree != nil {
-		return "repo.tree"
-	}
-	if s.RepoPatch != nil {
-		return "repo.patch"
-	}
-	if s.Wait != nil {
-		return "wait"
-	}
-	if s.ArtifactCapture != nil {
-		return "artifact.capture"
-	}
-	if s.ArtifactValidate != nil {
-		return "artifact.validate"
+	rv := reflect.ValueOf(s).Elem()
+	for _, i := range actionFieldIndices {
+		if !rv.Field(i).IsNil() {
+			return stepType.Field(i).Tag.Get("action")
+		}
 	}
 	if s.ForEach != nil || s.ForEachFile != nil {
 		return "loop"

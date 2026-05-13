@@ -294,6 +294,95 @@ if err != nil {
 	}
 }
 
+func TestPongo2Renderer_RenderPreserving(t *testing.T) {
+	r, err := NewPongo2Renderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name  string
+		tmpl  string
+		vars  map[string]interface{}
+		want  string
+	}{
+		{
+			name: "defined variable renders normally",
+			tmpl: "Hello {{ name }}",
+			vars: map[string]interface{}{"name": "World"},
+			want: "Hello World",
+		},
+		{
+			name: "undefined variable preserved",
+			tmpl: "{{ undefined_var }}",
+			vars: map[string]interface{}{},
+			want: "{{ undefined_var }}",
+		},
+		{
+			name: "mixed: defined renders, undefined preserved",
+			tmpl: "{{ preset_dir }}/{{ registered_result.path }}/config.j2",
+			vars: map[string]interface{}{"preset_dir": "/home/user/.mooncake"},
+			want: "/home/user/.mooncake/{{ registered_result.path }}/config.j2",
+		},
+		{
+			name: "nil vars map treated as empty",
+			tmpl: "{{ missing }}",
+			vars: nil,
+			want: "{{ missing }}",
+		},
+		{
+			name: "pongo2 builtin true not intercepted",
+			tmpl: "{% if true %}yes{% endif %}",
+			vars: map[string]interface{}{},
+			want: "yes",
+		},
+		{
+			name: "pongo2 builtin false not intercepted",
+			tmpl: "{% if false %}yes{% else %}no{% endif %}",
+			vars: map[string]interface{}{},
+			want: "no",
+		},
+		{
+			name: "filter on undefined root preserved",
+			tmpl: "{{ result.stdout | trim }}",
+			vars: map[string]interface{}{},
+			want: "{{ result.stdout | trim }}",
+		},
+		{
+			name: "multiple undefined vars each preserved",
+			tmpl: "{{ a }} and {{ b }}",
+			vars: map[string]interface{}{},
+			want: "{{ a }} and {{ b }}",
+		},
+		{
+			name: "static text unchanged",
+			tmpl: "no templates here",
+			vars: map[string]interface{}{},
+			want: "no templates here",
+		},
+		{
+			// Templates with {%  %} control tags fall back to regular Render
+			// so that loop variables (e.g. {{ i }}) resolve correctly.
+			name: "control tags fall back to regular render",
+			tmpl: "{% for i in items %}{{ i }}{% endfor %}",
+			vars: map[string]interface{}{"items": []string{"a", "b"}},
+			want: "ab",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := r.RenderPreserving(tt.tmpl, tt.vars)
+			if err != nil {
+				t.Fatalf("RenderPreserving() error = %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("RenderPreserving() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPongo2Renderer_ExecuteErrors(t *testing.T) {
 renderer, err := NewPongo2Renderer()
 if err != nil {

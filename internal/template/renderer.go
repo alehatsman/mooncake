@@ -4,9 +4,22 @@ package template
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/flosch/pongo2/v6"
+)
+
+var (
+	// templateExprRe matches {{ expr }} blocks, excluding {% %} control tags.
+	templateExprRe = regexp.MustCompile(`\{\{[^%{][^}]*\}\}`)
+	// rootVarRe extracts the root identifier from a {{ expr }} block.
+	rootVarRe = regexp.MustCompile(`\{\{-?\s*([a-zA-Z_][a-zA-Z0-9_]*)`)
+	// pongo2Builtins are names resolved from pongo2's internal context, not user vars.
+	pongo2Builtins = map[string]bool{
+		"true": true, "false": true, "none": true, "pongo2": true,
+	}
 )
 
 var (
@@ -19,6 +32,12 @@ var (
 // Renderer defines the interface for template rendering.
 type Renderer interface {
 	Render(template string, variables map[string]interface{}) (string, error)
+	// RenderPreserving renders like Render but preserves {{ expr }} placeholders
+	// for any root variable not present in variables, rather than silently
+	// substituting empty string. Use this for plan-time rendering where
+	// execute-time variables (registered results from previous steps) are
+	// not yet in scope.
+	RenderPreserving(template string, variables map[string]interface{}) (string, error)
 }
 
 // Pongo2Renderer implements Renderer using the pongo2 template engine.
@@ -76,6 +95,46 @@ func (r *Pongo2Renderer) expandUserFilter(in *pongo2.Value, _ *pongo2.Value) (*p
 	}
 
 	return pongo2.AsValue(path), nil
+}
+
+// RenderPreserving renders a template string with the given variables, preserving
+// {{ expr }} placeholders for any root variable not present in variables.
+// If the template contains any {%  %} control tags (for loops, if blocks, etc.),
+// it falls back to regular Render — control tags introduce loop variables that
+// are not in the user vars map and must not be intercepted.
+func (r *Pongo2Renderer) RenderPreserving(tmpl string, vars map[string]interface{}) (string, error) {
+	if vars == nil {
+		vars = make(map[string]interface{})
+	}
+	if strings.Contains(tmpl, "{%") {
+		return r.Render(tmpl, vars)
+	}
+	type entry struct{ placeholder, original string }
+	var sentinels []entry
+	n := 0
+
+	modified := templateExprRe.ReplaceAllStringFunc(tmpl, func(expr string) string {
+		m := rootVarRe.FindStringSubmatch(expr)
+		if len(m) < 2 || pongo2Builtins[m[1]] {
+			return expr
+		}
+		if _, ok := vars[m[1]]; ok {
+			return expr
+		}
+		ph := fmt.Sprintf("__PRSV_%d__", n)
+		n++
+		sentinels = append(sentinels, entry{ph, expr})
+		return ph
+	})
+
+	rendered, err := r.Render(modified, vars)
+	if err != nil {
+		return "", err
+	}
+	for _, s := range sentinels {
+		rendered = strings.ReplaceAll(rendered, s.placeholder, s.original)
+	}
+	return rendered, nil
 }
 
 // Render renders a template string with the given variables.

@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -644,164 +645,124 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 	return step, nil
 }
 
-// renderActionTemplates renders templates in a step's action fields
-//nolint:gocyclo,dupl // Complexity necessary for handling all action types; similar patterns are intentional
+// renderActionTemplates renders plan-time templates for the step's active action field.
+// Uses RenderPreserving so templates referencing execute-time variables are
+// preserved as {{ expr }} in plan output rather than silently replaced with "".
+// All 28 action structs are covered automatically via walkAndRender.
 func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext) error {
-	if step.Shell != nil {
-		// Make a deep copy of Shell to avoid modifying shared pointer
-		shellCopy := *step.Shell
-		step.Shell = &shellCopy
-
-		// Render shell command
-		command, err := p.template.Render(step.Shell.Cmd, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render shell command: %w", err)
-		}
-		step.Shell.Cmd = command
+	render := func(s string) (string, error) {
+		return p.template.RenderPreserving(s, ctx.Variables)
 	}
 
-	if step.FileWrite != nil {
-		// Make a deep copy of File to avoid modifying shared pointer
-		fileCopy := *step.FileWrite
-		step.FileWrite = &fileCopy
-
-		// Render file fields
-		path, err := p.template.Render(step.FileWrite.Path, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render file path: %w", err)
+	rv := reflect.ValueOf(step).Elem()
+	for _, i := range config.ActionFieldIndices() {
+		fv := rv.Field(i)
+		if fv.IsNil() {
+			continue
 		}
-		step.FileWrite.Path = path
+		if fv.Type().Elem().Kind() != reflect.Struct {
+			continue
+		}
+		// Shallow-copy the action struct. walkAndRender deep-copies nested
+		// pointer-to-struct fields before mutating them.
+		orig := fv.Elem()
+		cp := reflect.New(orig.Type())
+		cp.Elem().Set(orig)
+		fv.Set(cp)
+		if err := walkAndRender(cp.Elem(), render, ctx.CurrentDir); err != nil {
+			return fmt.Errorf("step %q: %w", step.Name, err)
+		}
+		break
+	}
+	return nil
+}
 
-		if step.FileWrite.Content != "" {
-			content, err := p.template.Render(step.FileWrite.Content, ctx.Variables)
+// walkAndRender recursively renders all string fields of an action struct using
+// RenderPreserving. Fields tagged plan:"path" are additionally resolved to
+// absolute paths using currentDir. Nested pointer-to-struct fields are
+// deep-copied before mutation to avoid touching the original config.
+// Handles: string, *string, *struct (deep copy + recurse), []string, map[string]string.
+func walkAndRender(rv reflect.Value, render func(string) (string, error), currentDir string) error {
+	rt := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		fv := rv.Field(i)
+		sf := rt.Field(i)
+		isPath := sf.Tag.Get("plan") == "path"
+
+		switch fv.Kind() {
+		case reflect.String:
+			if fv.String() == "" {
+				continue
+			}
+			rendered, err := render(fv.String())
 			if err != nil {
-				return fmt.Errorf("failed to render file content: %w", err)
+				return fmt.Errorf("%s: %w", sf.Name, err)
 			}
-			step.FileWrite.Content = content
-		}
-	}
-
-	if step.FileTemplate != nil {
-		// Make a deep copy of Template to avoid modifying shared pointer
-		templateCopy := *step.FileTemplate
-		step.FileTemplate = &templateCopy
-
-		// Render and resolve template fields
-		src, err := p.template.Render(step.FileTemplate.Src, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render template src: %w", err)
-		}
-		// Resolve relative path to absolute based on current directory
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(ctx.CurrentDir, src)
-		}
-		step.FileTemplate.Src = src
-
-		dest, err := p.template.Render(step.FileTemplate.Dest, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render template dest: %w", err)
-		}
-		step.FileTemplate.Dest = dest
-	}
-
-	if step.FileCopy != nil {
-		// Make a deep copy of Copy to avoid modifying shared pointer
-		copyCopy := *step.FileCopy
-		step.FileCopy = &copyCopy
-
-		// Render and resolve source path
-		src, err := p.template.Render(step.FileCopy.Src, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render copy src: %w", err)
-		}
-		// Resolve relative path to absolute based on current directory
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(ctx.CurrentDir, src)
-		}
-		step.FileCopy.Src = src
-
-		// Render destination path
-		dest, err := p.template.Render(step.FileCopy.Dest, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render copy dest: %w", err)
-		}
-		step.FileCopy.Dest = dest
-	}
-
-	if step.FileUnarchive != nil {
-		// Make a deep copy of Unarchive to avoid modifying shared pointer
-		unarchiveCopy := *step.FileUnarchive
-		step.FileUnarchive = &unarchiveCopy
-
-		// Render and resolve source path
-		src, err := p.template.Render(step.FileUnarchive.Src, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render unarchive src: %w", err)
-		}
-		// Resolve relative path to absolute based on current directory
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(ctx.CurrentDir, src)
-		}
-		step.FileUnarchive.Src = src
-
-		// Render destination path
-		dest, err := p.template.Render(step.FileUnarchive.Dest, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render unarchive dest: %w", err)
-		}
-		step.FileUnarchive.Dest = dest
-	}
-
-	if step.FileWrite != nil && step.FileWrite.Src != "" {
-		// Make a deep copy of File to avoid modifying shared pointer (already done above)
-		// Just need to resolve the Src field if it's a link operation
-
-		// Render and resolve source path
-		src, err := p.template.Render(step.FileWrite.Src, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render file src: %w", err)
-		}
-		// Resolve relative path to absolute based on current directory
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(ctx.CurrentDir, src)
-		}
-		step.FileWrite.Src = src
-	}
-
-	if step.OsService != nil {
-		// Make a deep copy of Service to avoid modifying shared pointer
-		serviceCopy := *step.OsService
-		step.OsService = &serviceCopy
-
-		// Resolve unit.src_template if present
-		if serviceCopy.Unit != nil && serviceCopy.Unit.SrcTemplate != "" {
-			rendered, err := p.template.Render(serviceCopy.Unit.SrcTemplate, ctx.Variables)
-			if err != nil {
-				return fmt.Errorf("failed to render service unit src_template: %w", err)
+			if isPath && !filepath.IsAbs(rendered) {
+				rendered = filepath.Join(currentDir, rendered)
 			}
-			// Resolve relative path to absolute based on current directory
-			if !filepath.IsAbs(rendered) {
-				rendered = filepath.Join(ctx.CurrentDir, rendered)
-			}
-			serviceCopy.Unit.SrcTemplate = rendered
-		}
+			fv.SetString(rendered)
 
-		// Resolve dropin.src_template if present
-		if serviceCopy.Dropin != nil && serviceCopy.Dropin.SrcTemplate != "" {
-			rendered, err := p.template.Render(serviceCopy.Dropin.SrcTemplate, ctx.Variables)
-			if err != nil {
-				return fmt.Errorf("failed to render service dropin src_template: %w", err)
+		case reflect.Pointer:
+			if fv.IsNil() {
+				continue
 			}
-			// Resolve relative path to absolute based on current directory
-			if !filepath.IsAbs(rendered) {
-				rendered = filepath.Join(ctx.CurrentDir, rendered)
+			switch fv.Type().Elem().Kind() {
+			case reflect.String:
+				if fv.Elem().String() == "" {
+					continue
+				}
+				rendered, err := render(fv.Elem().String())
+				if err != nil {
+					return fmt.Errorf("%s: %w", sf.Name, err)
+				}
+				if isPath && !filepath.IsAbs(rendered) {
+					rendered = filepath.Join(currentDir, rendered)
+				}
+				cp := reflect.New(fv.Type().Elem())
+				cp.Elem().SetString(rendered)
+				fv.Set(cp)
+			case reflect.Struct:
+				orig := fv.Elem()
+				cp := reflect.New(orig.Type())
+				cp.Elem().Set(orig)
+				fv.Set(cp)
+				if err := walkAndRender(cp.Elem(), render, currentDir); err != nil {
+					return err
+				}
 			}
-			serviceCopy.Dropin.SrcTemplate = rendered
-		}
 
-		step.OsService = &serviceCopy
+		case reflect.Slice:
+			if fv.Type().Elem().Kind() != reflect.String {
+				continue
+			}
+			for j := 0; j < fv.Len(); j++ {
+				if fv.Index(j).String() == "" {
+					continue
+				}
+				rendered, err := render(fv.Index(j).String())
+				if err != nil {
+					return fmt.Errorf("%s[%d]: %w", sf.Name, j, err)
+				}
+				fv.Index(j).SetString(rendered)
+			}
+
+		case reflect.Map:
+			if fv.Type().Key().Kind() != reflect.String || fv.Type().Elem().Kind() != reflect.String {
+				continue
+			}
+			for _, k := range fv.MapKeys() {
+				if fv.MapIndex(k).String() == "" {
+					continue
+				}
+				rendered, err := render(fv.MapIndex(k).String())
+				if err != nil {
+					return fmt.Errorf("%s[%s]: %w", sf.Name, k.String(), err)
+				}
+				fv.SetMapIndex(k, reflect.ValueOf(rendered))
+			}
+		}
 	}
-
 	return nil
 }
 
