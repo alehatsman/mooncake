@@ -30,9 +30,18 @@ func unixClient(socket string) *http.Client {
 func startTestServer(t *testing.T) (cfg Config, client *http.Client, stop func()) {
 	t.Helper()
 
+	// Use a short-prefix temp dir for the socket to stay within the 104-byte
+	// UNIX_PATH_MAX on macOS. t.TempDir() embeds the full test name, which
+	// pushes long test names past the limit and causes net.Listen to fail.
+	socketDir, err := os.MkdirTemp("", "mc")
+	if err != nil {
+		t.Fatalf("MkdirTemp: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(socketDir) })
+
 	tmp := t.TempDir()
 	cfg = Config{
-		SocketPath: filepath.Join(tmp, "agentd.sock"),
+		SocketPath: filepath.Join(socketDir, "s.sock"),
 		StateDir:   filepath.Join(tmp, "state"),
 		LogLevel:   "error",
 	}
