@@ -279,17 +279,16 @@ are inherently un-checkable (shell/command/wait/print/vars/include_vars/
 preset) and surface meaningful preview info instead. Full test suite
 green throughout.
 
-### Remaining from epic (not yet specced)
-- S2.3 Compact Mode (dot-per-step progress)
-- S2.4 `mooncake plan --diff` content diffs (foundations laid by spec-16; the
-  `StepInspection.Detail` field + `effects.ContentDiff` for write_file
-  effects are the hooks)
-- S4.4 assert-only mode
-- S5.3 Step-Level Result Cache
-- S5.4 Agent Context Injection
-- S6.4 Explain Mode (`mooncake explain config.yml`)
+### Remaining from epic
 
-### Spec-16 follow-ups (deferred, low priority)
-- `unarchive` deep inspection (archive content vs dest tree)
-- `service` unit-file mode compare (currently content-only)
+- S2.4 `mooncake plan --diff` content diffs — **specced as spec-35**, ready to implement
+- S4.4 assert-only mode — **under consideration** (orthogonal to plan --diff; runs assert steps live to verify current state)
+
+### Will not implement
+- S2.3 Compact Mode — quiet + verbose already cover the meaningful range
+- S5.3 Step-Level Result Cache — cache invalidation complexity, low ROI
+- S5.4 Agent Context Injection — agent can call `mooncake last` itself
+- S6.4 Explain Mode — requires LLM integration or poor hand-rolled summarizer
+- `unarchive` deep inspection — narrow use case, high complexity
+- `service` unit-file mode compare — low value, deferred indefinitely
 - spec-17 — Batched package installs + templated `names` ✅ (shipped: `aaeab28`, `98ea196`)
