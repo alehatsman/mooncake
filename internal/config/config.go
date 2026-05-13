@@ -587,6 +587,20 @@ type FileDeleteRange struct {
 	Backup      bool   `yaml:"backup" json:"backup,omitempty"`         // Create .bak before modify
 }
 
+// TextLine represents an "ensure this line is present/absent in this file"
+// operation, optionally anchored by regex and/or positioned with
+// insert_after / insert_before. Idempotent: a second run produces a
+// byte-identical file.
+type TextLine struct {
+	Path         string `yaml:"path" json:"path" plan:"path"`                       // Target file path (required)
+	Line         string `yaml:"line" json:"line,omitempty"`                         // The line content (required for state=present; optional for state=absent if regexp given)
+	State        string `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
+	Regexp       string `yaml:"regexp" json:"regexp,omitempty"`                     // Anchor regex: matched line is replaced (present) or removed (absent)
+	InsertAfter  string `yaml:"insert_after" json:"insert_after,omitempty"`         // Regex; if regexp doesn't match, insert `line` after this anchor
+	InsertBefore string `yaml:"insert_before" json:"insert_before,omitempty"`       // Regex; if regexp doesn't match, insert `line` before this anchor
+	Backup       bool   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
+}
+
 // FilePatchApply represents a unified diff patch application operation.
 // Applies a unified diff patch to a file with validation and safety checks.
 type FilePatchApply struct {
@@ -745,6 +759,7 @@ type Step struct {
 	FileCopy         *Copy                   `yaml:"file.copy"         json:"file.copy,omitempty"         action:"file.copy"`
 	FileDownload     *Download               `yaml:"file.download"     json:"file.download,omitempty"     action:"file.download"`
 	FileUnarchive    *Unarchive              `yaml:"file.unarchive"    json:"file.unarchive,omitempty"    action:"file.unarchive"`
+	TextLine         *TextLine               `yaml:"text.line"         json:"text.line,omitempty"         action:"text.line"`
 	TextReplace      *FileReplace            `yaml:"text.replace"      json:"text.replace,omitempty"      action:"text.replace"`
 	TextInsert       *FileInsert             `yaml:"text.insert"       json:"text.insert,omitempty"       action:"text.insert"`
 	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty" action:"text.delete_range"`
@@ -1014,6 +1029,7 @@ func (s *Step) Clone() *Step {
 		FileCopy:         s.FileCopy,
 		FileDownload:     s.FileDownload,
 		FileUnarchive:    s.FileUnarchive,
+		TextLine:         s.TextLine,
 		TextReplace:      s.TextReplace,
 		TextInsert:       s.TextInsert,
 		TextDeleteRange:  s.TextDeleteRange,

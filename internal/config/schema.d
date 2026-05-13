@@ -503,6 +503,20 @@ export interface TextInsertAction {
 }
 
 /**
+ * Ensure a line is present or absent in a file (lineinfile-equivalent)
+ * @category file
+ */
+export interface TextLineAction {
+  backup?: boolean;
+  insert_after?: string;
+  insert_before?: string;
+  line?: string;
+  path: string;
+  regexp?: string;
+  state?: string;
+}
+
+/**
  * Apply unified diff patches to files
  * @category file
  */
@@ -789,6 +803,10 @@ export interface Step {
    * Insert text before or after anchor patterns in files
    */
   "text.insert"?: TextInsertAction;
+  /**
+   * Ensure a line is present or absent in a file (lineinfile-equivalent)
+   */
+  "text.line"?: TextLineAction;
   /**
    * Apply unified diff patches to files
    */
