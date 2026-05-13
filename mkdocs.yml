@@ -71,10 +71,6 @@ plugins:
   - tags                   # Tag support
 
 # Exclude development/internal content from build (gitignore-style patterns)
-exclude_docs: |
-  _llm/
-  _reports/
-  proposals/
 
 # Navigation structure
 nav:
