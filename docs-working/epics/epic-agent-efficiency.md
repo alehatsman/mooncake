@@ -292,5 +292,4 @@ green throughout.
 ### Spec-16 follow-ups (deferred, low priority)
 - `unarchive` deep inspection (archive content vs dest tree)
 - `service` unit-file mode compare (currently content-only)
-- spec-17 — Batched package installs + templated `names` (already drafted
-  by user, not yet implemented)
+- spec-17 — Batched package installs + templated `names` ✅ (shipped: `aaeab28`, `98ea196`)
