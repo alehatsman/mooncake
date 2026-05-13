@@ -613,7 +613,7 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 	}
 
 	// Check if step should be skipped by tags
-	skipped := p.shouldSkipByTags(step.Tags, ctx.Tags)
+	skipped := !utils.MatchesTags(step.Tags, ctx.Tags)
 
 	// Render action templates
 	err := p.renderActionTemplates(&step, ctx)
@@ -815,40 +815,9 @@ func (p *Planner) formatIncludeChain() string {
 	for i, frame := range p.includeStack {
 		parts[i] = fmt.Sprintf("%s:%d", frame.FilePath, frame.Line)
 	}
-	chain := ""
-	for i, part := range parts {
-		if i > 0 {
-			chain += " -> "
-		}
-		chain += part
-	}
-	return chain
+	return strings.Join(parts, " -> ")
 }
 
-// shouldSkipByTags checks if a step should be skipped based on tag filtering
-func (p *Planner) shouldSkipByTags(stepTags []string, filterTags []string) bool {
-	// If no filter tags specified, don't skip
-	if len(filterTags) == 0 {
-		return false
-	}
-
-	// If step has no tags, skip it (tags filter is active)
-	if len(stepTags) == 0 {
-		return true
-	}
-
-	// Check if any step tag matches any filter tag
-	for _, filterTag := range filterTags {
-		for _, stepTag := range stepTags {
-			if stepTag == filterTag {
-				return false // Match found, don't skip
-			}
-		}
-	}
-
-	// No match found, skip
-	return true
-}
 
 // copyContextWithLoopVars creates a new context with loop variables added
 func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config.LoopContext) *ExpansionContext {

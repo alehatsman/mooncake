@@ -38,12 +38,8 @@
 //
 // # Action Dispatch
 //
-// Actions are dispatched through two paths:
-//
-//  1. Handler-based (new): Look up handler in actions.Registry, call handler.Execute()
-//  2. Legacy: Direct executor methods (HandleShell, HandleFile, etc.)
-//
-// The executor prefers handlers when available, falling back to legacy for non-migrated actions.
+// All 28 actions are registered in actions.Registry. Each action is dispatched
+// by looking up its handler via actions.Get(actionType) and calling handler.Execute().
 //
 // # Idempotency
 //
@@ -245,32 +241,11 @@ func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 }
 
 // ShouldSkipByTags determines if a step should be skipped based on tag filtering.
-// Returns true if the step should be skipped, false otherwise.
 //
 // INTERNAL: This function is exported for testing purposes only and is not part of
 // the public API. It may change or be removed in future versions without notice.
 func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
-	// If no tags filter specified, execute all steps
-	if len(ec.Tags) == 0 {
-		return false
-	}
-
-	// If step has no tags and tags filter is specified, skip it
-	if len(step.Tags) == 0 {
-		return true
-	}
-
-	// Check if step has any of the requested tags
-	for _, stepTag := range step.Tags {
-		for _, filterTag := range ec.Tags {
-			if stepTag == filterTag {
-				return false // Found a match, don't skip
-			}
-		}
-	}
-
-	// No matching tags found, skip the step
-	return true
+	return !utils.MatchesTags(step.Tags, ec.Tags)
 }
 
 // CheckIdempotencyConditions evaluates creates and unless conditions for shell steps.
