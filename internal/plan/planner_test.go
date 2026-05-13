@@ -507,6 +507,115 @@ steps:
 	}
 }
 
+// TestPlanner_IncludeTagsPropagate verifies that tags on an `- import: ...`
+// step flow down to every included step, so `--tags <name>` on the CLI
+// actually selects included work. Before the fix, included steps had no
+// tags and were filtered out by any non-empty --tags filter.
+func TestPlanner_IncludeTagsPropagate(t *testing.T) {
+	tmpDir := t.TempDir()
+	mainConfig := filepath.Join(tmpDir, "main.yml")
+	innerConfig := filepath.Join(tmpDir, "inner.yml")
+
+	mainContent := `version: "1.0"
+steps:
+  - import: inner.yml
+    tags: [wsl, windows]
+`
+	innerContent := `- name: untagged inner step
+  shell: echo a
+- name: tagged inner step
+  shell: echo b
+  tags: [extra]
+`
+	if err := os.WriteFile(mainConfig, []byte(mainContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(innerConfig, []byte(innerContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := planner.BuildPlan(PlannerConfig{ConfigPath: mainConfig})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(plan.Steps) != 2 {
+		t.Fatalf("expected 2 steps, got %d", len(plan.Steps))
+	}
+
+	hasTag := func(tags []string, want string) bool {
+		for _, t := range tags {
+			if t == want {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Step 1 had no tags — should inherit both parent tags.
+	if !hasTag(plan.Steps[0].Tags, "wsl") || !hasTag(plan.Steps[0].Tags, "windows") {
+		t.Errorf("step 0 missing inherited tags; got %v", plan.Steps[0].Tags)
+	}
+	// Step 2 had `extra` — should keep it AND gain parent's.
+	if !hasTag(plan.Steps[1].Tags, "extra") {
+		t.Errorf("step 1 lost its own tag; got %v", plan.Steps[1].Tags)
+	}
+	if !hasTag(plan.Steps[1].Tags, "wsl") || !hasTag(plan.Steps[1].Tags, "windows") {
+		t.Errorf("step 1 missing inherited tags; got %v", plan.Steps[1].Tags)
+	}
+}
+
+// TestPlanner_IncludeTagsPropagate_TransitiveAndFilter verifies tags flow
+// across multi-level imports and that --tags filtering works against the
+// inherited tags.
+func TestPlanner_IncludeTagsPropagate_TransitiveAndFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	mainConfig := filepath.Join(tmpDir, "main.yml")
+	midConfig := filepath.Join(tmpDir, "mid.yml")
+	leafConfig := filepath.Join(tmpDir, "leaf.yml")
+
+	if err := os.WriteFile(mainConfig, []byte(`version: "1.0"
+steps:
+  - import: mid.yml
+    tags: [grand]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(midConfig, []byte(`- import: leaf.yml
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(leafConfig, []byte(`- name: leaf step
+  shell: echo leaf
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// With --tags grand, the deeply-nested leaf step should be selected.
+	plan, err := planner.BuildPlan(PlannerConfig{
+		ConfigPath: mainConfig,
+		Tags:       []string{"grand"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(plan.Steps))
+	}
+	if plan.Steps[0].Skipped {
+		t.Errorf("leaf step skipped under matching --tags filter; tags=%v", plan.Steps[0].Tags)
+	}
+}
+
 func TestPlanner_WithFileTree_InvalidPath(t *testing.T) {
 	// Create a temporary config file with invalid path
 	tmpDir := t.TempDir()

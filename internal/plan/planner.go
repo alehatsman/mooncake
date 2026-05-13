@@ -371,32 +371,60 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 		Tags:       ctx.Tags,
 	}
 
-	// If the include step has a 'when' condition, propagate it to all included steps
-	// This ensures that if include is conditional, all its steps inherit that condition
+	// Tags propagate BEFORE expansion. The per-step `Skipped` flag (set by
+	// --tags filtering during compilePlanStep) reads the step's own Tags —
+	// so an inherited tag has to be present on the step before that runs.
+	// Tag propagation never affects plan-time control flow; only execute-
+	// time filtering.
+	if len(step.Tags) > 0 {
+		for i := range includedConfig.Steps {
+			includedConfig.Steps[i].Tags = mergeTags(includedConfig.Steps[i].Tags, step.Tags)
+		}
+	}
+
+	// When propagates AFTER expansion, by patching each emitted plan step.
+	// Doing this post-expansion is deliberate: it lets `vars.load` steps in
+	// the included file fire unconditionally at plan time so that any
+	// subsequent for_each in the same file has the variables it needs.
+	// Doing it pre-expansion would skip vars.load on the wrong OS and the
+	// dependent for_each would then blow up evaluating a missing variable.
 	if step.When != "" {
-		// Read and modify included steps to add parent's when condition
 		stepsBeforeExpand := len(plan.Steps)
-		err = p.expandSteps(includedConfig.Steps, newCtx, plan, stepIndex)
-		if err != nil {
+		if err := p.expandSteps(includedConfig.Steps, newCtx, plan, stepIndex); err != nil {
 			return err
 		}
-
-		// Apply the include's when condition to all newly added steps
-		parentWhen := step.When
 		for i := stepsBeforeExpand; i < len(plan.Steps); i++ {
-			// If step already has a when condition, combine with AND logic
 			if plan.Steps[i].When != "" {
-				combined := "(" + parentWhen + ") && (" + plan.Steps[i].When + ")"
-				plan.Steps[i].When = combined
+				plan.Steps[i].When = "(" + step.When + ") && (" + plan.Steps[i].When + ")"
 			} else {
-				plan.Steps[i].When = parentWhen
+				plan.Steps[i].When = step.When
 			}
 		}
 		return nil
 	}
 
-	// Recursively expand included steps (no when condition to propagate)
 	return p.expandSteps(includedConfig.Steps, newCtx, plan, stepIndex)
+}
+
+// mergeTags returns the union of a and b, preserving order and de-duplicating.
+func mergeTags(a, b []string) []string {
+	out := make([]string, 0, len(a)+len(b))
+	seen := make(map[string]struct{}, len(a)+len(b))
+	for _, t := range a {
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	for _, t := range b {
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out
 }
 
 // expandForEach expands a step's for_each loop. Accepts both scalar
