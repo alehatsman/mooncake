@@ -1208,9 +1208,21 @@
           "description": "Load variables from YAML files",
           "$ref": "#/definitions/vars.load"
         },
-        "wait": {
-          "description": "Poll a condition until it becomes true or times out",
-          "$ref": "#/definitions/wait"
+        "wait.command": {
+          "description": "Wait for a shell command to exit with the expected code",
+          "$ref": "#/definitions/wait.command"
+        },
+        "wait.file": {
+          "description": "Wait for a file or directory to exist (optionally containing a substring)",
+          "$ref": "#/definitions/wait.file"
+        },
+        "wait.http": {
+          "description": "Wait for an HTTP endpoint to return an accepted status",
+          "$ref": "#/definitions/wait.http"
+        },
+        "wait.port": {
+          "description": "Wait for a TCP port to accept connections",
+          "$ref": "#/definitions/wait.port"
         },
         "when": {
           "type": "string",
@@ -1361,7 +1373,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -1510,7 +1537,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -1659,7 +1701,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -1808,7 +1865,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -1957,7 +2029,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -2106,7 +2193,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -2255,7 +2357,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -2404,7 +2521,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -2553,7 +2685,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -2702,7 +2849,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -2851,7 +3013,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3000,7 +3177,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3149,7 +3341,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3298,7 +3505,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3447,7 +3669,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3596,7 +3833,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3745,7 +3997,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -3894,7 +4161,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4050,7 +4332,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4199,7 +4496,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4348,7 +4660,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4497,7 +4824,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4646,7 +4988,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4795,7 +5152,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -4951,7 +5323,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -5100,7 +5487,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -5249,7 +5651,22 @@
               },
               {
                 "required": [
-                  "wait"
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
                 ]
               }
             ]
@@ -5257,11 +5674,11 @@
         },
         {
           "required": [
-            "wait"
+            "wait.command"
           ],
           "properties": {
-            "wait": {
-              "$ref": "#/definitions/wait"
+            "wait.command": {
+              "$ref": "#/definitions/wait.command"
             }
           },
           "not": {
@@ -5399,6 +5816,513 @@
               {
                 "required": [
                   "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "wait.file"
+          ],
+          "properties": {
+            "wait.file": {
+              "$ref": "#/definitions/wait.file"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "wait.http"
+          ],
+          "properties": {
+            "wait.http": {
+              "$ref": "#/definitions/wait.http"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "wait.port"
+          ],
+          "properties": {
+            "wait.port": {
+              "$ref": "#/definitions/wait.port"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
                 ]
               }
             ]
@@ -5695,51 +6619,120 @@
         "variables.loaded"
       ]
     },
-    "wait": {
+    "wait.command": {
       "type": "object",
-      "description": "Poll a condition until it becomes true or times out",
+      "description": "Wait for a shell command to exit with the expected code",
       "properties": {
-        "allow_untracked": {
-          "type": "boolean"
-        },
         "cmd": {
-          "type": "string"
-        },
-        "condition": {
           "type": "string",
           "minLength": 1
         },
-        "exit_code": {
+        "expect_exit": {
           "type": "integer"
         },
-        "host": {
+        "poll_interval": {
           "type": "string"
         },
-        "interval": {
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        }
+      },
+      "required": [
+        "cmd"
+      ],
+      "additionalProperties": false,
+      "x-category": "command",
+      "x-supports-dry-run": true
+    },
+    "wait.file": {
+      "type": "object",
+      "description": "Wait for a file or directory to exist (optionally containing a substring)",
+      "properties": {
+        "contains": {
           "type": "string"
         },
         "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "poll_interval": {
           "type": "string"
         },
-        "port": {
-          "type": "integer"
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "wait.http": {
+      "type": "object",
+      "description": "Wait for an HTTP endpoint to return an accepted status",
+      "properties": {
+        "body_contains": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "method": {
+          "type": "string"
+        },
+        "poll_interval": {
+          "type": "string"
         },
         "status": {
-          "type": "integer"
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
         },
         "timeout": {
           "type": "string",
           "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         },
         "url": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
-        "condition"
+        "url"
       ],
       "additionalProperties": false,
-      "x-category": "system",
+      "x-category": "network",
+      "x-supports-dry-run": true
+    },
+    "wait.port": {
+      "type": "object",
+      "description": "Wait for a TCP port to accept connections",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "poll_interval": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        }
+      },
+      "required": [
+        "port"
+      ],
+      "additionalProperties": false,
+      "x-category": "network",
       "x-supports-dry-run": true
     }
   }

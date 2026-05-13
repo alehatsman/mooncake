@@ -444,81 +444,62 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 	return def, nil
 }
 
+// actionStructByName maps action YAML keys to a zero value of their
+// underlying config struct. Used by getActionStruct to reflect each
+// action's properties when generating JSON Schema.
+var actionStructByName = map[string]any{
+	"shell":             &config.ShellAction{},
+	"cmd":               &config.CommandAction{},
+	"file.write":        &config.File{},
+	"file.template":     &config.Template{},
+	"file.copy":         &config.Copy{},
+	"file.download":     &config.Download{},
+	"tool":              &config.Tool{},
+	"file.unarchive":    &config.Unarchive{},
+	"pkg":               &config.Package{},
+	"os.service":        &config.ServiceAction{},
+	"container.image":   &config.ContainerImage{},
+	"container":         &config.Container{},
+	"assert":            &config.Assert{},
+	"use":               &config.PresetInvocation{},
+	"log":               &config.PrintAction{},
+	"text.replace":      &config.FileReplace{},
+	"text.insert":       &config.FileInsert{},
+	"text.delete_range": &config.FileDeleteRange{},
+	"text.patch":        &config.FilePatchApply{},
+	"repo.search":       &config.RepoSearch{},
+	"repo.tree":         &config.RepoTree{},
+	"repo.patch":        &config.RepoApplyPatchset{},
+	"wait.port":         &config.WaitPort{},
+	"wait.http":         &config.WaitHTTP{},
+	"wait.file":         &config.WaitFile{},
+	"wait.command":      &config.WaitCommand{},
+}
+
 // getActionStruct returns the reflect.Type for an action's config struct.
 func getActionStruct(actionName string) (reflect.Type, error) {
-	var actionStruct interface{}
+	if v, ok := actionStructByName[actionName]; ok {
+		t := reflect.TypeOf(v)
+		if t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+		return t, nil
+	}
 
 	switch actionName {
-	case "shell":
-		actionStruct = &config.ShellAction{}
-	case "cmd":
-		actionStruct = &config.CommandAction{}
-	case "file.write":
-		actionStruct = &config.File{}
-	case "file.template":
-		actionStruct = &config.Template{}
-	case "file.copy":
-		actionStruct = &config.Copy{}
-	case "file.download":
-		actionStruct = &config.Download{}
-	case "tool":
-		actionStruct = &config.Tool{}
-	case "file.unarchive":
-		actionStruct = &config.Unarchive{}
-	case "pkg":
-		actionStruct = &config.Package{}
-	case "os.service":
-		actionStruct = &config.ServiceAction{}
-	case "container.image":
-		actionStruct = &config.ContainerImage{}
-	case "container":
-		actionStruct = &config.Container{}
-	case "assert":
-		actionStruct = &config.Assert{}
-	case "use":
-		actionStruct = &config.PresetInvocation{}
-	case "log":
-		actionStruct = &config.PrintAction{}
-	case "text.replace":
-		actionStruct = &config.FileReplace{}
-	case "text.insert":
-		actionStruct = &config.FileInsert{}
-	case "text.delete_range":
-		actionStruct = &config.FileDeleteRange{}
-	case "text.patch":
-		actionStruct = &config.FilePatchApply{}
-	case "repo.search":
-		actionStruct = &config.RepoSearch{}
-	case "repo.tree":
-		actionStruct = &config.RepoTree{}
-	case "repo.patch":
-		actionStruct = &config.RepoApplyPatchset{}
-	case "wait":
-		actionStruct = &config.WaitAction{}
 	case "artifact.capture":
-		// Handled as special case in generateActionDefinition
 		return nil, fmt.Errorf("artifact.capture uses custom definition (circular reference)")
 	case "artifact.validate":
-		// Handled as special case in generateActionDefinition
 		return nil, fmt.Errorf("artifact.validate uses custom definition")
 	case "vars":
-		// vars is a map[string]interface{} directly in Step
 		return nil, fmt.Errorf("vars action uses inline map definition")
 	case "vars.load":
-		// vars.load is a string directly in Step
 		return nil, fmt.Errorf("vars.load action uses inline string definition")
 	case "import":
-		// import is a string directly in Step
 		return nil, fmt.Errorf("import action uses inline string definition")
 	default:
 		return nil, fmt.Errorf("unknown action: %s", actionName)
 	}
-
-	t := reflect.TypeOf(actionStruct)
-	if t.Kind() == reflect.Pointer {
-		t = t.Elem()
-	}
-	return t, nil
 }
 
 // MarshalJSON converts the schema to JSON.

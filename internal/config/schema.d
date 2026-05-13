@@ -580,21 +580,50 @@ export interface VarsLoadAction {
 }
 
 /**
- * Poll a condition until it becomes true or times out
+ * Wait for a shell command to exit with the expected code
+ * @category command
+ */
+export interface WaitCommandAction {
+  cmd: string;
+  expect_exit?: number;
+  poll_interval?: string;
+  timeout?: string;
+}
+
+/**
+ * Wait for a file or directory to exist (optionally containing a substring)
  * @category system
  */
-export interface WaitAction {
-  allow_untracked?: boolean;
-  cmd?: string;
-  condition: string;
-  exit_code?: number;
-  host?: string;
-  interval?: string;
-  path?: string;
-  port?: number;
-  status?: number;
+export interface WaitFileAction {
+  contains?: string;
+  path: string;
+  poll_interval?: string;
   timeout?: string;
-  url?: string;
+}
+
+/**
+ * Wait for an HTTP endpoint to return an accepted status
+ * @category network
+ */
+export interface WaitHttpAction {
+  body_contains?: string;
+  headers?: Record<string, any>;
+  method?: string;
+  poll_interval?: string;
+  status?: number[];
+  timeout?: string;
+  url: string;
+}
+
+/**
+ * Wait for a TCP port to accept connections
+ * @category network
+ */
+export interface WaitPortAction {
+  host?: string;
+  poll_interval?: string;
+  port: number;
+  timeout?: string;
 }
 
 /**
@@ -786,9 +815,22 @@ export interface Step {
    */
   "vars.load"?: VarsLoadAction;
   /**
-   * Poll a condition until it becomes true or times out
+   * Wait for a shell command to exit with the expected code
    */
-  wait?: WaitAction;
+  "wait.command"?: WaitCommandAction;
+  /**
+   * Wait for a file or directory to exist (optionally containing a
+   * substring)
+   */
+  "wait.file"?: WaitFileAction;
+  /**
+   * Wait for an HTTP endpoint to return an accepted status
+   */
+  "wait.http"?: WaitHttpAction;
+  /**
+   * Wait for a TCP port to accept connections
+   */
+  "wait.port"?: WaitPortAction;
 }
 
 /**

@@ -647,22 +647,42 @@ type ArtifactCapture struct {
 	Steps            []Step   `yaml:"steps" json:"steps"`                                       // Steps to execute and capture (required)
 }
 
-// WaitAction polls a condition until it becomes true or times out.
-// Useful for agent synchronization and waiting for external conditions.
-type WaitAction struct {
-	Condition string `yaml:"condition" json:"condition"` // Condition type: file_exists, file_absent, git_clean, command, http, port (required)
-	Timeout   string `yaml:"timeout" json:"timeout,omitempty"`   // Timeout duration (default: "30s")
-	Interval  string `yaml:"interval" json:"interval,omitempty"` // Poll interval (default: "1s")
+// WaitPort waits for a TCP port to accept connections.
+// Useful for orchestrating service start → port open → next step.
+type WaitPort struct {
+	Host         string `yaml:"host" json:"host,omitempty"`                   // Host to dial (default: "localhost")
+	Port         int    `yaml:"port" json:"port"`                             // TCP port (required)
+	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
+	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between dial attempts (default: "1s")
+}
 
-	// Condition-specific fields
-	Path           *string `yaml:"path" json:"path,omitempty" plan:"path"`             // For file_exists, file_absent
-	AllowUntracked *bool   `yaml:"allow_untracked" json:"allow_untracked,omitempty"`   // For git_clean (default: false)
-	Cmd            *string `yaml:"cmd" json:"cmd,omitempty"`                           // For command
-	ExitCode       *int    `yaml:"exit_code" json:"exit_code,omitempty"`               // For command (default: 0)
-	URL            *string `yaml:"url" json:"url,omitempty"`                           // For http
-	Status         *int    `yaml:"status" json:"status,omitempty"`                     // For http (default: 200)
-	Port           *int    `yaml:"port" json:"port,omitempty"`                         // For port
-	Host           *string `yaml:"host" json:"host,omitempty"`                         // For port (default: "localhost")
+// WaitHTTP waits for an HTTP endpoint to return one of the accepted
+// status codes, optionally with a substring match on the body.
+type WaitHTTP struct {
+	URL          string            `yaml:"url" json:"url"`                                 // Target URL (required)
+	Method       string            `yaml:"method" json:"method,omitempty"`                 // HTTP method (default: "GET")
+	Status       []int             `yaml:"status" json:"status,omitempty"`                 // Accepted status codes (default: [200])
+	BodyContains string            `yaml:"body_contains" json:"body_contains,omitempty"`   // Optional substring required in body
+	Headers      map[string]string `yaml:"headers" json:"headers,omitempty"`               // Optional request headers
+	Timeout      string            `yaml:"timeout" json:"timeout,omitempty"`               // Total timeout duration (default: "60s")
+	PollInterval string            `yaml:"poll_interval" json:"poll_interval,omitempty"`   // Time between requests (default: "1s")
+}
+
+// WaitFile waits for a filesystem path to exist, optionally containing
+// a substring in its contents.
+type WaitFile struct {
+	Path         string `yaml:"path" json:"path" plan:"path"`                 // File or directory path (required)
+	Contains     string `yaml:"contains" json:"contains,omitempty"`           // Optional substring required in file contents
+	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
+	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between checks (default: "1s")
+}
+
+// WaitCommand waits for a shell command to exit with the expected code.
+type WaitCommand struct {
+	Cmd          string `yaml:"cmd" json:"cmd"`                               // Shell command (required)
+	ExpectExit   int    `yaml:"expect_exit" json:"expect_exit,omitempty"`     // Expected exit code (default: 0)
+	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
+	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between attempts (default: "1s")
 }
 
 // ArtifactValidate validates artifacts against constraints (change budgets).
@@ -742,7 +762,10 @@ type Step struct {
 	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate" json:"artifact.validate,omitempty" action:"artifact.validate"`
 	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
 	Assert           *Assert                 `yaml:"assert"            json:"assert,omitempty"            action:"assert"`
-	Wait             *WaitAction             `yaml:"wait"              json:"wait,omitempty"              action:"wait"`
+	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
+	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
+	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
+	WaitCommand      *WaitCommand            `yaml:"wait.command"      json:"wait.command,omitempty"      action:"wait.command"`
 	Log              *PrintAction            `yaml:"log"               json:"log,omitempty"               action:"log"`
 	Use              *PresetInvocation       `yaml:"use"               json:"use,omitempty"               action:"use"`
 	Import           *string                 `yaml:"import"            json:"import,omitempty"            action:"import"`
@@ -1008,7 +1031,10 @@ func (s *Step) Clone() *Step {
 		ArtifactValidate: s.ArtifactValidate,
 		Shell:            s.Shell,
 		Assert:           s.Assert,
-		Wait:             s.Wait,
+		WaitPort:         s.WaitPort,
+		WaitHTTP:         s.WaitHTTP,
+		WaitFile:         s.WaitFile,
+		WaitCommand:      s.WaitCommand,
 		Log:              s.Log,
 		Use:              s.Use,
 		Import:           s.Import,

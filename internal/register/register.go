@@ -36,7 +36,10 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/tool"
 	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"
-	_ "github.com/alehatsman/mooncake/internal/actions/wait"
+	_ "github.com/alehatsman/mooncake/internal/actions/wait_command"
+	_ "github.com/alehatsman/mooncake/internal/actions/wait_file"
+	_ "github.com/alehatsman/mooncake/internal/actions/wait_http"
+	_ "github.com/alehatsman/mooncake/internal/actions/wait_port"
 
 	// All handlers migrated! 🎉
 )
