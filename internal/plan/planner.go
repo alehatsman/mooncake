@@ -698,7 +698,7 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 			if err != nil {
 				return fmt.Errorf("%s: %w", sf.Name, err)
 			}
-			if isPath && !filepath.IsAbs(rendered) {
+			if isPath && !filepath.IsAbs(rendered) && !strings.HasPrefix(rendered, "~/") && rendered != "~" {
 				rendered = filepath.Join(currentDir, rendered)
 			}
 			fv.SetString(rendered)
