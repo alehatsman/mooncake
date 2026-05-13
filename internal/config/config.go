@@ -404,6 +404,38 @@ type ServiceDropin struct {
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty" plan:"path"` // Template file path
 }
 
+// OsUser represents a declarative OS user account. Idempotent at the
+// field level: each setting is compared with current state and only
+// drifting fields are modified.
+type OsUser struct {
+	Name         string   `yaml:"name" json:"name"`                                       // Username (required)
+	State        string   `yaml:"state" json:"state,omitempty"`                           // present|absent (default: present)
+	UID          *int     `yaml:"uid" json:"uid,omitempty"`                               // Numeric UID (optional)
+	GID          *int     `yaml:"gid" json:"gid,omitempty"`                               // Primary GID (numeric); takes precedence over group name
+	Group        string   `yaml:"group" json:"group,omitempty"`                           // Primary group by name (alternative to gid)
+	Shell        string   `yaml:"shell" json:"shell,omitempty"`                           // Login shell
+	Home         string   `yaml:"home" json:"home,omitempty" plan:"path"`                 // Home directory
+	CreateHome   *bool    `yaml:"create_home" json:"create_home,omitempty"`               // Create home dir on create (default: true unless system=true)
+	Groups       []string `yaml:"groups" json:"groups,omitempty"`                         // Supplementary groups
+	AppendGroups *bool    `yaml:"append_groups" json:"append_groups,omitempty"`           // Append to existing supplementary groups (default: true). False replaces.
+	Comment      string   `yaml:"comment" json:"comment,omitempty"`                       // GECOS field
+	System       bool     `yaml:"system" json:"system,omitempty"`                         // Create as system user (uid < UID_MIN, no home by default)
+	RemoveHome   bool     `yaml:"remove_home" json:"remove_home,omitempty"`               // When state=absent, also remove home directory
+}
+
+// OsSSHKey represents authorized_keys management for a user.
+// Idempotency is per-key by algorithm + base64-encoded public material;
+// the comment is descriptive and doesn't participate in identity.
+type OsSSHKey struct {
+	User      string   `yaml:"user" json:"user"`                                          // Target user (required); home dir is resolved via getent
+	Key       string   `yaml:"key" json:"key,omitempty"`                                  // Single public key (key or keys required)
+	Keys      []string `yaml:"keys" json:"keys,omitempty"`                                // Multiple public keys
+	State     string   `yaml:"state" json:"state,omitempty"`                              // present|absent (default: present)
+	Options   []string `yaml:"options" json:"options,omitempty"`                          // Optional per-line options (e.g. "no-port-forwarding")
+	Path      string   `yaml:"path" json:"path,omitempty" plan:"path"`                    // Override authorized_keys location (default: ~user/.ssh/authorized_keys)
+	Exclusive bool     `yaml:"exclusive" json:"exclusive,omitempty"`                      // When state=present and keys is set: remove any keys not in the supplied list
+}
+
 // ContainerImage represents a container image management operation.
 // Ensures an image reference is present (or absent) in local storage of
 // the selected container runtime (podman/docker).
@@ -752,6 +784,8 @@ type Step struct {
 	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
 	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
 	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
+	OsUser           *OsUser                 `yaml:"os.user"           json:"os.user,omitempty"           action:"os.user"`
+	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
 	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
@@ -1021,6 +1055,8 @@ func (s *Step) Clone() *Step {
 		Pkg:              s.Pkg,
 		Tool:             s.Tool,
 		OsService:        s.OsService,
+		OsUser:           s.OsUser,
+		OsSSHKey:         s.OsSSHKey,
 		ContainerImage:   s.ContainerImage,
 		Container:        s.Container,
 		Cmd:              s.Cmd,
