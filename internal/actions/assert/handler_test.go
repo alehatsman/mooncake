@@ -537,6 +537,9 @@ func TestHandler_Execute_FileAssertion_Content(t *testing.T) {
 }
 
 func TestHandler_Execute_FileAssertion_Mode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS — Go reports 0666 for any writable file")
+	}
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)

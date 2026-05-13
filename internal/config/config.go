@@ -191,14 +191,15 @@ type Template struct {
 }
 
 // ShellAction represents a structured shell command execution in a configuration step.
-// Supports both simple string form and structured object form for backward compatibility.
+// Supports both simple string form and structured object form.
 type ShellAction struct {
 	// Cmd is the command to execute (required)
 	Cmd string `yaml:"cmd,omitempty" json:"cmd,omitempty"`
 
-	// Interpreter specifies the shell interpreter to use
-	// Supported values: "bash", "sh", "pwsh", "cmd"
-	// Default: "bash" on Unix, "pwsh" on Windows
+	// Interpreter specifies the shell interpreter binary to invoke.
+	// Default: "bash" on Unix, "powershell" on Windows.
+	// Any executable on PATH is accepted (bash, sh, zsh, pwsh, powershell, cmd, nu, ...).
+	// On Windows, "cmd" dispatches with /c; everything else uses -Command.
 	Interpreter string `yaml:"interpreter,omitempty" json:"interpreter,omitempty"`
 
 	// Stdin provides input to the command
@@ -208,6 +209,18 @@ type ShellAction struct {
 	// When false, output is only streamed (not stored in result)
 	// Default: true
 	Capture *bool `yaml:"capture,omitempty" json:"capture,omitempty"`
+
+	// RunAsAdmin asserts that the current process is running elevated on Windows.
+	// If true and the process is not elevated, the step fails before exec.
+	// The handler does NOT attempt to elevate (no programmatic UAC prompt).
+	// Ignored on non-Windows platforms — use `become: true` for sudo.
+	RunAsAdmin bool `yaml:"run_as_admin,omitempty" json:"run_as_admin,omitempty"`
+
+	// ErrorAction sets $ErrorActionPreference for PowerShell interpreters
+	// (powershell, pwsh). Common values: Stop, Continue, SilentlyContinue.
+	// Default: "Stop" (any non-zero error aborts the script).
+	// Ignored for non-PowerShell interpreters.
+	ErrorAction string `yaml:"error_action,omitempty" json:"error_action,omitempty"`
 
 	// Note: env, cwd, timeout are in Step-level fields for consistency
 	// Note: this enables reuse across shell/command actions

@@ -56,7 +56,7 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 
 	info, err := os.Stat(path)
 	switch {
-	case err == nil && info.IsDir() && info.Mode().Perm() == mode:
+	case err == nil && info.IsDir() && modeMatches(info.Mode(), mode):
 		e.AlreadyOk = true
 		e.Reason = "directory exists with desired mode"
 		return e
@@ -115,7 +115,7 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 		existing, readErr := os.ReadFile(path)
 		if readErr != nil {
 			e.Reason = "existing file unreadable; would overwrite"
-		} else if bytes.Equal(existing, content) && info.Mode().Perm() == mode {
+		} else if bytes.Equal(existing, content) && modeMatches(info.Mode(), mode) {
 			e.AlreadyOk = true
 			e.Reason = "file content and mode already match"
 			return e
@@ -438,7 +438,7 @@ func (p *defaultPerformer) Chmod(path string, mode os.FileMode, opts actions.Per
 	case err != nil:
 		e.Err = fmt.Errorf("stat %s: %w", path, err)
 		return e
-	case info.Mode().Perm() == mode:
+	case modeMatches(info.Mode(), mode):
 		e.AlreadyOk = true
 		e.Reason = "mode already " + mode.String()
 		return e

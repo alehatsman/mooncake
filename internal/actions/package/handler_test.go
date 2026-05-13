@@ -450,10 +450,9 @@ func TestHandler_DeterminePackageManager_AutoDetect(t *testing.T) {
 		}
 	case "windows":
 		if err != nil {
-			// On Windows, choco or scoop might not be installed
-			t.Logf("Auto-detect on Windows error: %v (may be expected if choco/scoop not installed)", err)
-		} else if manager != "choco" && manager != "scoop" {
-			t.Errorf("determinePackageManager() = %v, want 'choco' or 'scoop' on Windows", manager)
+			t.Logf("Auto-detect on Windows error: %v (may be expected if winget/choco/scoop not installed)", err)
+		} else if manager != "winget" && manager != "choco" && manager != "scoop" {
+			t.Errorf("determinePackageManager() = %v, want 'winget', 'choco', or 'scoop' on Windows", manager)
 		} else {
 			t.Logf("Auto-detected package manager on Windows: %s", manager)
 		}
@@ -786,6 +785,26 @@ func TestHandler_BuildUpgradeCommand(t *testing.T) {
 					cmd[2] == "*"
 			},
 		},
+		{
+			name:    "winget upgrade all",
+			manager: "winget",
+			extra:   nil,
+			check: func(cmd []string) bool {
+				if cmd[0] != "winget" || cmd[1] != "upgrade" || cmd[2] != "--all" {
+					return false
+				}
+				// Must include silent + accept flags so the call doesn't hang.
+				want := map[string]bool{
+					"--silent":                       true,
+					"--accept-package-agreements":    true,
+					"--accept-source-agreements":     true,
+				}
+				for _, arg := range cmd {
+					delete(want, arg)
+				}
+				return len(want) == 0
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -793,6 +812,100 @@ func TestHandler_BuildUpgradeCommand(t *testing.T) {
 			cmd := h.buildUpgradeCommand(tt.manager, tt.extra)
 			if !tt.check(cmd) {
 				t.Errorf("buildUpgradeCommand() = %v, check failed", cmd)
+			}
+		})
+	}
+}
+
+// TestBuildWingetCommand covers the per-package winget command builder used
+// by installPackages and removePackages. winget can't batch with --id, so we
+// build one of these per package rather than one command for the whole set.
+func TestBuildWingetCommand(t *testing.T) {
+	tests := []struct {
+		name  string
+		verb  string
+		pkg   string
+		extra []string
+		check func([]string) bool
+	}{
+		{
+			name: "install bakes in --exact, --silent, agreement flags, --id",
+			verb: "install",
+			pkg:  "Microsoft.PowerShell",
+			check: func(cmd []string) bool {
+				if cmd[0] != "winget" || cmd[1] != "install" {
+					return false
+				}
+				required := map[string]bool{
+					"--exact":                        true,
+					"--silent":                       true,
+					"--accept-package-agreements":    true,
+					"--accept-source-agreements":     true,
+				}
+				for _, arg := range cmd {
+					delete(required, arg)
+				}
+				if len(required) > 0 {
+					return false
+				}
+				// --id <pkg> must be at the end so caller-supplied extras can't
+				// trample the package identifier.
+				return cmd[len(cmd)-2] == "--id" && cmd[len(cmd)-1] == "Microsoft.PowerShell"
+			},
+		},
+		{
+			name:  "extras land between standard flags and --id",
+			verb:  "install",
+			pkg:   "Git.Git",
+			extra: []string{"--source", "winget"},
+			check: func(cmd []string) bool {
+				// Find --source and verify --id comes after it.
+				sourceIdx, idIdx := -1, -1
+				for i, arg := range cmd {
+					switch arg {
+					case "--source":
+						sourceIdx = i
+					case "--id":
+						idIdx = i
+					}
+				}
+				return sourceIdx >= 0 && idIdx > sourceIdx && cmd[idIdx+1] == "Git.Git"
+			},
+		},
+		{
+			name: "uninstall omits agreement flags (no install happening)",
+			verb: "uninstall",
+			pkg:  "Mozilla.Firefox",
+			check: func(cmd []string) bool {
+				for _, arg := range cmd {
+					if arg == "--accept-package-agreements" || arg == "--accept-source-agreements" {
+						return false
+					}
+				}
+				return cmd[0] == "winget" && cmd[1] == "uninstall" && cmd[len(cmd)-1] == "Mozilla.Firefox"
+			},
+		},
+		{
+			name: "upgrade includes agreement flags",
+			verb: "upgrade",
+			pkg:  "Git.Git",
+			check: func(cmd []string) bool {
+				hasAgree := false
+				for _, arg := range cmd {
+					if arg == "--accept-package-agreements" {
+						hasAgree = true
+					}
+				}
+				return hasAgree && cmd[0] == "winget" && cmd[1] == "upgrade" && cmd[len(cmd)-1] == "Git.Git"
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := buildWingetCommand(tt.verb, tt.pkg, tt.extra)
+			if !tt.check(cmd) {
+				t.Errorf("buildWingetCommand(%q, %q, %v) = %v — check failed", tt.verb, tt.pkg, tt.extra, cmd)
 			}
 		})
 	}
@@ -1090,11 +1203,10 @@ func TestHandler_DetectWindowsPackageManager(t *testing.T) {
 	h := &Handler{}
 	manager, err := h.detectWindowsPackageManager()
 
-	// Should find choco or scoop on Windows
 	if err != nil {
-		t.Logf("detectWindowsPackageManager() error: %v (may be expected if choco/scoop not installed)", err)
-	} else if manager != "choco" && manager != "scoop" {
-		t.Errorf("detectWindowsPackageManager() = %q, want 'choco' or 'scoop'", manager)
+		t.Logf("detectWindowsPackageManager() error: %v (may be expected if winget/choco/scoop not installed)", err)
+	} else if manager != "winget" && manager != "choco" && manager != "scoop" {
+		t.Errorf("detectWindowsPackageManager() = %q, want 'winget', 'choco', or 'scoop'", manager)
 	} else {
 		t.Logf("Detected Windows package manager: %s", manager)
 	}

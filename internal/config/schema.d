@@ -436,12 +436,21 @@ export interface ShellAction {
    */
   cmd?: string;
   /**
-   * Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh
-   * on Windows
-   * 
-   * @values bash | sh | pwsh | cmd
+   * Windows + PowerShell only — sets $ErrorActionPreference (Stop,
+   * Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere.
    */
-  interpreter?: "bash" | "sh" | "pwsh" | "cmd";
+  error_action?: string;
+  /**
+   * Shell interpreter binary (any executable on PATH). Default: bash on
+   * Unix, powershell on Windows. On Windows, 'cmd' dispatches with /c,
+   * others with -Command.
+   */
+  interpreter?: string;
+  /**
+   * Windows only — assert the mooncake process is elevated; fail the
+   * step if it isn't. Does not attempt UAC. Ignored on Unix.
+   */
+  run_as_admin?: boolean;
   /**
    * Input to provide to the command via stdin
    */
@@ -463,12 +472,21 @@ export interface ShellActionAction {
    */
   cmd?: string;
   /**
-   * Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh
-   * on Windows
-   * 
-   * @values bash | sh | pwsh | cmd
+   * Windows + PowerShell only — sets $ErrorActionPreference (Stop,
+   * Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere.
    */
-  interpreter?: "bash" | "sh" | "pwsh" | "cmd";
+  error_action?: string;
+  /**
+   * Shell interpreter binary (any executable on PATH). Default: bash on
+   * Unix, powershell on Windows. On Windows, 'cmd' dispatches with /c,
+   * others with -Command.
+   */
+  interpreter?: string;
+  /**
+   * Windows only — assert the mooncake process is elevated; fail the
+   * step if it isn't. Does not attempt UAC. Ignored on Unix.
+   */
+  run_as_admin?: boolean;
   /**
    * Input to provide to the command via stdin
    */

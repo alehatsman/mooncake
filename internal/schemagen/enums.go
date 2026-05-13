@@ -12,8 +12,8 @@ var KnownEnums = map[string][]string{
 	// pkg action enums
 	"pkg.state": {"present", "absent", "latest"},
 
-	// shell action enums
-	"shell.interpreter": {"bash", "sh", "pwsh", "cmd"},
+	// shell.interpreter is intentionally unconstrained: any executable on
+	// PATH is valid (bash, sh, zsh, pwsh, powershell, cmd, nu, ...).
 }
 
 // KnownPatterns maps field names to regex patterns for validation.
@@ -70,10 +70,12 @@ var EnhancedDescriptions = map[string]map[string]string{
 		"group": "File group (groupname or GID)",
 	},
 	"shell": {
-		"cmd":         "Shell command to execute (required)",
-		"interpreter": "Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh on Windows",
-		"stdin":       "Input to provide to the command via stdin",
-		"capture":     "Capture command output (default: true). When false, output is only streamed",
+		"cmd":           "Shell command to execute (required)",
+		"interpreter":   "Shell interpreter binary (any executable on PATH). Default: bash on Unix, powershell on Windows. On Windows, 'cmd' dispatches with /c, others with -Command.",
+		"stdin":         "Input to provide to the command via stdin",
+		"capture":       "Capture command output (default: true). When false, output is only streamed",
+		"run_as_admin":  "Windows only — assert the mooncake process is elevated; fail the step if it isn't. Does not attempt UAC. Ignored on Unix.",
+		"error_action":  "Windows + PowerShell only — sets $ErrorActionPreference (Stop, Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere.",
 	},
 	"pkg": {
 		"name":         "Package name (single package)",

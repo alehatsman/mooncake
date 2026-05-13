@@ -304,9 +304,10 @@ func TestHandler_Execute_WithEnvironment(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
+	// PowerShell exposes process env vars via $env:NAME; bash uses $NAME.
 	var cmd string
 	if runtime.GOOS == "windows" {
-		cmd = "echo %TEST_VAR%"
+		cmd = "echo $env:TEST_VAR"
 	} else {
 		cmd = "echo $TEST_VAR"
 	}
@@ -340,7 +341,7 @@ func TestHandler_Execute_WithEnvironmentTemplate(t *testing.T) {
 
 	var cmd string
 	if runtime.GOOS == "windows" {
-		cmd = "echo %TEST_VAR%"
+		cmd = "echo $env:TEST_VAR"
 	} else {
 		cmd = "echo $TEST_VAR"
 	}
@@ -371,12 +372,9 @@ func TestHandler_Execute_WithWorkingDirectory(t *testing.T) {
 
 	tmpDir := os.TempDir()
 
-	var cmd string
-	if runtime.GOOS == "windows" {
-		cmd = "cd"
-	} else {
-		cmd = "pwd"
-	}
+	// `pwd` is a PowerShell alias for Get-Location, so it works on both
+	// platforms — no OS branch needed.
+	cmd := "pwd"
 
 	step := &config.Step{
 		Shell: &config.ShellAction{
@@ -406,12 +404,9 @@ func TestHandler_Execute_WithWorkingDirectoryTemplate(t *testing.T) {
 		"work_dir": tmpDir,
 	}
 
-	var cmd string
-	if runtime.GOOS == "windows" {
-		cmd = "cd"
-	} else {
-		cmd = "pwd"
-	}
+	// `pwd` is a PowerShell alias for Get-Location, so it works on both
+	// platforms — no OS branch needed.
+	cmd := "pwd"
 
 	step := &config.Step{
 		Shell: &config.ShellAction{
@@ -569,17 +564,21 @@ func TestHandler_Execute_WithStdin(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
-	var cmd string
+	// PowerShell's default cmdlets don't echo stdin cleanly. Force cmd.exe
+	// on Windows so `more` reads stdin and prints it back.
+	var cmd, interpreter string
 	if runtime.GOOS == "windows" {
 		cmd = "more"
+		interpreter = "cmd"
 	} else {
 		cmd = "cat"
 	}
 
 	step := &config.Step{
 		Shell: &config.ShellAction{
-			Cmd:   cmd,
-			Stdin: "test input",
+			Cmd:         cmd,
+			Stdin:       "test input",
+			Interpreter: interpreter,
 		},
 	}
 
@@ -601,17 +600,20 @@ func TestHandler_Execute_WithStdinTemplate(t *testing.T) {
 		"input_text": "rendered input",
 	}
 
-	var cmd string
+	// Same reason as WithStdin: pin cmd.exe on Windows so `more` echoes stdin.
+	var cmd, interpreter string
 	if runtime.GOOS == "windows" {
 		cmd = "more"
+		interpreter = "cmd"
 	} else {
 		cmd = "cat"
 	}
 
 	step := &config.Step{
 		Shell: &config.ShellAction{
-			Cmd:   cmd,
-			Stdin: "{{ input_text }}",
+			Cmd:         cmd,
+			Stdin:       "{{ input_text }}",
+			Interpreter: interpreter,
 		},
 	}
 
@@ -821,7 +823,10 @@ func TestHandler_Execute_WithCapture(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			step := &config.Step{
 				Shell: &config.ShellAction{
-					Cmd:     "echo test output",
+					// Quoted so PowerShell treats it as a single string;
+					// otherwise `echo a b` becomes two output objects on
+					// separate lines and the substring check fails.
+					Cmd:     `echo "test output"`,
 					Capture: tt.capture,
 				},
 			}
@@ -1132,10 +1137,8 @@ func TestHandler_Execute_StderrCapture(t *testing.T) {
 }
 
 func TestHandler_Execute_MultilineCommand(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping multiline test on Windows")
-	}
-
+	// PowerShell handles multi-line scripts via -Command; bash via -c. Both
+	// see the script as a single string and execute each line in sequence.
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
@@ -1242,61 +1245,6 @@ func TestHandler_Execute_EventEmission(t *testing.T) {
 	}
 }
 
-func TestHandler_GetInterpreter(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name        string
-		interpreter string
-		wantDefault string
-	}{
-		{
-			name:        "explicit bash",
-			interpreter: "bash",
-			wantDefault: "bash",
-		},
-		{
-			name:        "explicit sh",
-			interpreter: "sh",
-			wantDefault: "sh",
-		},
-		{
-			name:        "explicit pwsh",
-			interpreter: "pwsh",
-			wantDefault: "pwsh",
-		},
-		{
-			name:        "default on unix",
-			interpreter: "",
-			wantDefault: "bash", // or pwsh on windows
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shellAction := &config.ShellAction{
-				Interpreter: tt.interpreter,
-			}
-
-			got := h.getInterpreter(shellAction)
-
-			if tt.interpreter != "" {
-				// Explicit interpreter should match
-				if got != tt.interpreter {
-					t.Errorf("getInterpreter() = %v, want %v", got, tt.interpreter)
-				}
-			} else {
-				// Default should be bash on unix, pwsh on windows
-				if runtime.GOOS == "windows" {
-					if got != "pwsh" {
-						t.Errorf("getInterpreter() = %v, want 'pwsh' on Windows", got)
-					}
-				} else {
-					if got != "bash" {
-						t.Errorf("getInterpreter() = %v, want 'bash' on Unix", got)
-					}
-				}
-			}
-		})
-	}
-}
+// Interpreter dispatch is now platform-specific and lives in exec_unix.go /
+// exec_windows.go. End-to-end coverage of the default-interpreter behavior is
+// in the platform-tagged tests; nothing left to test from handler.go.

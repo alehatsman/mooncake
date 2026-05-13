@@ -530,6 +530,9 @@ func TestHandler_Execute_ForceCopy(t *testing.T) {
 }
 
 func TestHandler_Execute_WithMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS")
+	}
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1090,6 +1093,9 @@ func TestHandler_formatMode(t *testing.T) {
 }
 
 func TestHandler_parseUserID(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows uses string SIDs (S-1-5-...), not numeric UIDs — POSIX-only code path")
+	}
 	h := &Handler{}
 
 	// Test with numeric UID

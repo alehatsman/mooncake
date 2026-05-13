@@ -3,6 +3,7 @@ package file
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -42,6 +43,9 @@ func newRunContext(t *testing.T, plan bool) *executor.ExecutionContext {
 // steps while createDirectory used defaultDirMode (0755). This test
 // fails on that class of bug by construction.
 func TestRun_DirectoryModeParity(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX directory modes have no meaning on NTFS — Go reports 0777 for any directory")
+	}
 	for _, tc := range []struct {
 		name string
 		mode string // empty = use default

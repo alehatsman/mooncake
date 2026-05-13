@@ -184,10 +184,19 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		DistroFamily: systemFacts.Distribution,
 	}
 
-	// Create expansion context
+	// Create expansion context. CurrentDir must be absolute so that path
+	// expansion in walkAndRender produces absolute paths — otherwise the
+	// template/copy/file handlers re-join against their own (possibly
+	// different) CurrentDir at execute time and the path doubles.
+	currentDir := filepath.Dir(cfg.ConfigPath)
+	if !filepath.IsAbs(currentDir) {
+		if abs, absErr := filepath.Abs(currentDir); absErr == nil {
+			currentDir = abs
+		}
+	}
 	ctx := &ExpansionContext{
 		Variables:  variables,
-		CurrentDir: filepath.Dir(cfg.ConfigPath),
+		CurrentDir: currentDir,
 		Tags:       cfg.Tags,
 	}
 

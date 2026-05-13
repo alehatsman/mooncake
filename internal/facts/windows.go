@@ -13,11 +13,11 @@ func collectWindowsFacts(f *Facts) {
 	f.Disks = detectWindowsDisks()
 	f.GPUs = detectWindowsGPUs()
 
-	// Detect package manager
-	if _, err := exec.LookPath("choco"); err == nil {
-		f.PackageManager = "choco"
-	} else if _, err := exec.LookPath("winget"); err == nil {
+	// Detect package manager. Order: winget (ships with Win11) → choco → scoop.
+	if _, err := exec.LookPath("winget"); err == nil {
 		f.PackageManager = "winget"
+	} else if _, err := exec.LookPath("choco"); err == nil {
+		f.PackageManager = "choco"
 	} else if _, err := exec.LookPath("scoop"); err == nil {
 		f.PackageManager = "scoop"
 	}

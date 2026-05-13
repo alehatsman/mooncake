@@ -1,12 +1,15 @@
 // Package shell implements the shell action handler.
 //
 // The shell action executes shell commands with support for:
-// - Multiple interpreters (bash, sh, pwsh, cmd)
-// - Sudo/become privilege escalation
-// - Environment variables and working directory
-// - Timeout and retry logic
-// - Stdin, stdout, stderr handling
-// - Result overrides (changed_when, failed_when)
+//   - Cross-platform interpreter dispatch (defaults: bash on Unix, powershell on Windows)
+//   - Sudo/become privilege escalation (Unix); run_as_admin assertion (Windows)
+//   - Environment variables and working directory
+//   - Timeout and retry logic
+//   - Stdin, stdout, stderr handling
+//   - Result overrides (changed_when, failed_when)
+//
+// Platform-specific exec.Cmd construction lives in exec_unix.go and
+// exec_windows.go via the Handler.buildCommand method.
 package shell
 
 import (
@@ -17,7 +20,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -26,7 +28,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/security"
 )
 
 // Handler implements the Handler interface for shell actions.
@@ -183,8 +184,8 @@ func (h *Handler) executeShellCommand(ctx actions.Context, step *config.Step, re
 		defer cancel()
 	}
 
-	// Create command
-	command, err := h.createShellCommand(cmdCtx, ctx, step, renderedCommand)
+	// Create command (platform-specific dispatch lives in exec_{unix,windows}.go)
+	command, err := h.buildCommand(cmdCtx, ctx, step, renderedCommand)
 	if err != nil {
 		return result, err
 	}
@@ -215,76 +216,6 @@ func (h *Handler) setupCommandContext(step *config.Step) (context.Context, conte
 	}
 
 	return cmdCtx, cancel, nil
-}
-
-// getInterpreter determines the shell interpreter to use
-func (h *Handler) getInterpreter(shellAction *config.ShellAction) string {
-	if shellAction.Interpreter != "" {
-		return shellAction.Interpreter
-	}
-
-	if runtime.GOOS == "windows" {
-		return "pwsh"
-	}
-	return "bash"
-}
-
-// createShellCommand creates the exec.Cmd with or without sudo
-func (h *Handler) createShellCommand(cmdCtx context.Context, ctx actions.Context, step *config.Step, renderedCommand string) (*exec.Cmd, error) {
-	interpreter := h.getInterpreter(step.Shell)
-
-	// Get ExecutionContext to access SudoPass
-	// This is a bit of a hack - we need to access the concrete type
-	// In a future refactor, we could add GetSudoPass() to the Context interface
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return nil, fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return nil, fmt.Errorf("become not supported on %s", runtime.GOOS)
-		}
-
-		// Build sudo arguments. With an empty SudoPass we still pass
-		// -S; sudo will read the empty newline from stdin. On a host
-		// with passwordless sudo this succeeds; otherwise sudo itself
-		// fails with a clear error.
-		args := []string{"-S"}
-		if step.AsUser != "" {
-			args = append(args, "-u", step.AsUser)
-		}
-		args = append(args, "--", interpreter, "-c", renderedCommand)
-
-		// #nosec G204 - This is a provisioning tool designed to execute shell commands
-		command := exec.CommandContext(cmdCtx, "sudo", args...)
-
-		// Handle stdin
-		if step.Shell.Stdin != "" {
-			renderedStdin, err := ctx.GetTemplate().Render(step.Shell.Stdin, ctx.GetVariables())
-			if err != nil {
-				return nil, fmt.Errorf("failed to render stdin: %w", err)
-			}
-			command.Stdin = bytes.NewBuffer([]byte(ec.Svc.SudoPass + "\n" + renderedStdin))
-		} else {
-			command.Stdin = bytes.NewBuffer([]byte(ec.Svc.SudoPass + "\n"))
-		}
-		return command, nil
-	}
-
-	// #nosec G204 - This is a provisioning tool designed to execute shell commands
-	command := exec.CommandContext(cmdCtx, interpreter, "-c", renderedCommand)
-
-	// Handle stdin for non-sudo commands
-	if step.Shell.Stdin != "" {
-		renderedStdin, err := ctx.GetTemplate().Render(step.Shell.Stdin, ctx.GetVariables())
-		if err != nil {
-			return nil, fmt.Errorf("failed to render stdin: %w", err)
-		}
-		command.Stdin = bytes.NewBufferString(renderedStdin)
-	}
-
-	return command, nil
 }
 
 // configureCommandEnvironment sets environment variables and working directory

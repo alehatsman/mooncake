@@ -26,6 +26,26 @@ type mockExecutionContext struct {
 	Template template.Renderer
 }
 
+// echoArgv returns an argv that prints the given strings on this platform.
+// On Windows, echo is a cmd.exe builtin (not a standalone .exe), so we shell
+// out via cmd /c. The cmd action runs argv directly via exec.Cmd with no
+// shell, so [\"echo\", ...] would ENOENT on Windows.
+func echoArgv(parts ...string) []string {
+	if runtime.GOOS == "windows" {
+		return append([]string{"cmd", "/c", "echo"}, parts...)
+	}
+	return append([]string{"echo"}, parts...)
+}
+
+// failingLsArgv returns argv for a command that will fail with a non-zero
+// exit because the path doesn't exist. Used to test exit-code propagation.
+func failingLsArgv() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd", "/c", "dir", "C:\\does-not-exist-12345"}
+	}
+	return []string{"ls", "/nonexistent/path/12345"}
+}
+
 // newMockExecutionContext creates a mock that can be cast to *executor.ExecutionContext
 func newMockExecutionContext() *executor.ExecutionContext {
 	tmpl, err := template.NewPongo2Renderer()
@@ -84,7 +104,7 @@ func TestHandler_Validate(t *testing.T) {
 			name: "valid command",
 			step: &config.Step{
 				Cmd: &config.CommandAction{
-					Argv: []string{"echo", "hello"},
+					Argv: echoArgv("hello"),
 				},
 			},
 			wantErr: false,
@@ -148,7 +168,7 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 	}{
 		{
 			name:   "echo command",
-			argv:   []string{"echo", "hello"},
+			argv:   echoArgv("hello"),
 			wantRC: 0,
 			checkOut: func(out string) bool {
 				return strings.Contains(out, "hello")
@@ -157,7 +177,7 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 		},
 		{
 			name:   "command with template variable",
-			argv:   []string{"echo", "{{ message }}"},
+			argv:   echoArgv("{{ message }}"),
 			wantRC: 0,
 			variables: map[string]interface{}{
 				"message": "world",
@@ -175,7 +195,7 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 		},
 		{
 			name:    "command that fails",
-			argv:    []string{"ls", "/nonexistent/path/12345"},
+			argv:    failingLsArgv(),
 			wantRC:  1, // Could be 1 or 2 depending on system
 			wantErr: true,
 		},
@@ -404,7 +424,7 @@ func TestHandler_Execute_WithTimeout_Success(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		Timeout: "5s",
 	}
@@ -426,7 +446,7 @@ func TestHandler_Execute_WithInvalidTimeout(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		Timeout: "invalid",
 	}
@@ -451,7 +471,7 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 	// Command that always fails
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"ls", "/nonexistent/path/12345"},
+			Argv: failingLsArgv(),
 		},
 		Retry: &config.RetryPolicy{Attempts: 2},
 	}
@@ -476,7 +496,7 @@ func TestHandler_Execute_WithRetryDelay(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"ls", "/nonexistent/path/12345"},
+			Argv: failingLsArgv(),
 		},
 		Retry: &config.RetryPolicy{Attempts: 2, Delay: "100ms"},
 	}
@@ -506,31 +526,31 @@ func TestHandler_Execute_WithChangedWhen(t *testing.T) {
 	}{
 		{
 			name:        "always changed (default)",
-			argv:        []string{"echo", "hello"},
+			argv:        echoArgv("hello"),
 			changedWhen: "",
 			wantChanged: true,
 		},
 		{
 			name:        "changed when rc is 0",
-			argv:        []string{"echo", "hello"},
+			argv:        echoArgv("hello"),
 			changedWhen: "rc == 0",
 			wantChanged: true,
 		},
 		{
 			name:        "not changed when stdout doesn't contain text",
-			argv:        []string{"echo", "hello"},
+			argv:        echoArgv("hello"),
 			changedWhen: "has(stdout, 'goodbye')",
 			wantChanged: false,
 		},
 		{
 			name:        "changed when stdout contains text",
-			argv:        []string{"echo", "hello"},
+			argv:        echoArgv("hello"),
 			changedWhen: "has(stdout, 'hello')",
 			wantChanged: true,
 		},
 		{
 			name:        "never changed",
-			argv:        []string{"echo", "hello"},
+			argv:        echoArgv("hello"),
 			changedWhen: "false",
 			wantChanged: false,
 		},
@@ -572,35 +592,35 @@ func TestHandler_Execute_WithFailedWhen(t *testing.T) {
 	}{
 		{
 			name:       "success by default",
-			argv:       []string{"echo", "hello"},
+			argv:       echoArgv("hello"),
 			failedWhen: "",
 			wantFailed: false,
 			wantErr:    false,
 		},
 		{
 			name:       "success even with rc=0",
-			argv:       []string{"echo", "hello"},
+			argv:       echoArgv("hello"),
 			failedWhen: "rc != 0",
 			wantFailed: false,
 			wantErr:    false,
 		},
 		{
 			name:       "fail when stdout contains text",
-			argv:       []string{"echo", "ERROR"},
+			argv:       echoArgv("ERROR"),
 			failedWhen: "has(stdout, 'ERROR')",
 			wantFailed: true,
 			wantErr:    true,
 		},
 		{
 			name:       "success when stdout doesn't contain text",
-			argv:       []string{"echo", "SUCCESS"},
+			argv:       echoArgv("SUCCESS"),
 			failedWhen: "has(stdout, 'ERROR')",
 			wantFailed: false,
 			wantErr:    false,
 		},
 		{
 			name:       "always fail",
-			argv:       []string{"echo", "hello"},
+			argv:       echoArgv("hello"),
 			failedWhen: "true",
 			wantFailed: true,
 			wantErr:    true,
@@ -641,7 +661,7 @@ func TestHandler_Execute_FailedCommand_WithFailedWhen(t *testing.T) {
 	// Command that fails
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"ls", "/nonexistent/path/12345"},
+			Argv: failingLsArgv(),
 		},
 		FailedWhen: "rc > 10", // Only fail if return code > 10
 	}
@@ -733,7 +753,7 @@ func TestHandler_DryRun(t *testing.T) {
 			name: "simple command",
 			step: &config.Step{
 				Cmd: &config.CommandAction{
-					Argv: []string{"echo", "hello"},
+					Argv: echoArgv("hello"),
 				},
 			},
 			wantErr: false,
@@ -742,7 +762,7 @@ func TestHandler_DryRun(t *testing.T) {
 			name: "command with template",
 			step: &config.Step{
 				Cmd: &config.CommandAction{
-					Argv: []string{"echo", "{{ message }}"},
+					Argv: echoArgv("{{ message }}"),
 				},
 			},
 			wantErr: false,
@@ -825,7 +845,7 @@ func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "{{ missing_var }}"},
+			Argv: echoArgv("{{ missing_var }}"),
 		},
 	}
 
@@ -842,7 +862,7 @@ func TestHandler_Execute_InvalidArgvTemplate(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "{{ invalid.syntax"},
+			Argv: echoArgv("{{ invalid.syntax"),
 		},
 	}
 
@@ -858,7 +878,7 @@ func TestHandler_Execute_InvalidEnvTemplate(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		Env: map[string]string{
 			"TEST": "{{ invalid.syntax",
@@ -877,7 +897,7 @@ func TestHandler_Execute_InvalidCwdTemplate(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		Cwd: "{{ invalid.syntax",
 	}
@@ -911,7 +931,7 @@ func TestHandler_Execute_InvalidChangedWhenExpression(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		ChangedWhen: "invalid expression syntax",
 	}
@@ -928,7 +948,7 @@ func TestHandler_Execute_InvalidFailedWhenExpression(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		FailedWhen: "invalid expression syntax",
 	}
@@ -945,7 +965,7 @@ func TestHandler_Execute_NonBoolChangedWhenResult(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		ChangedWhen: "42", // Evaluates to int, not bool
 	}
@@ -962,7 +982,7 @@ func TestHandler_Execute_NonBoolFailedWhenResult(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 		FailedWhen: "'string'", // Evaluates to string, not bool
 	}
@@ -980,7 +1000,7 @@ func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "hello"},
+			Argv: echoArgv("hello"),
 		},
 	}
 
@@ -1030,7 +1050,7 @@ func TestHandler_Execute_MultipleArgv(t *testing.T) {
 
 	step := &config.Step{
 		Cmd: &config.CommandAction{
-			Argv: []string{"echo", "arg1", "arg2", "arg3"},
+			Argv: echoArgv("arg1", "arg2", "arg3"),
 		},
 	}
 
@@ -1057,12 +1077,12 @@ func TestHandler_Execute_ResultRc(t *testing.T) {
 	}{
 		{
 			name:   "success command",
-			argv:   []string{"echo", "hello"},
+			argv:   echoArgv("hello"),
 			wantRC: 0,
 		},
 		{
 			name:   "failing command",
-			argv:   []string{"ls", "/nonexistent12345"},
+			argv:   failingLsArgv(),
 			wantRC: 1, // or 2 on some systems
 		},
 	}

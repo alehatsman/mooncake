@@ -952,15 +952,17 @@
           "type": "string",
           "description": "Shell command to execute (required)"
         },
+        "error_action": {
+          "type": "string",
+          "description": "Windows + PowerShell only — sets $ErrorActionPreference (Stop, Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere."
+        },
         "interpreter": {
           "type": "string",
-          "description": "Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh on Windows",
-          "enum": [
-            "bash",
-            "sh",
-            "pwsh",
-            "cmd"
-          ]
+          "description": "Shell interpreter binary (any executable on PATH). Default: bash on Unix, powershell on Windows. On Windows, 'cmd' dispatches with /c, others with -Command."
+        },
+        "run_as_admin": {
+          "type": "boolean",
+          "description": "Windows only — assert the mooncake process is elevated; fail the step if it isn't. Does not attempt UAC. Ignored on Unix."
         },
         "stdin": {
           "type": "string",
@@ -989,15 +991,17 @@
           "type": "string",
           "description": "Shell command to execute (required)"
         },
+        "error_action": {
+          "type": "string",
+          "description": "Windows + PowerShell only — sets $ErrorActionPreference (Stop, Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere."
+        },
         "interpreter": {
           "type": "string",
-          "description": "Shell interpreter (bash, sh, pwsh, cmd). Default: bash on Unix, pwsh on Windows",
-          "enum": [
-            "bash",
-            "sh",
-            "pwsh",
-            "cmd"
-          ]
+          "description": "Shell interpreter binary (any executable on PATH). Default: bash on Unix, powershell on Windows. On Windows, 'cmd' dispatches with /c, others with -Command."
+        },
+        "run_as_admin": {
+          "type": "boolean",
+          "description": "Windows only — assert the mooncake process is elevated; fail the step if it isn't. Does not attempt UAC. Ignored on Unix."
         },
         "stdin": {
           "type": "string",

@@ -35,6 +35,7 @@ const (
 	pmPort   = "port"
 	pmChoco  = "choco"
 	pmScoop  = "scoop"
+	pmWinget = "winget"
 )
 
 // State constants
@@ -261,16 +262,18 @@ func (h *Handler) detectMacOSPackageManager() (string, error) {
 }
 
 // detectWindowsPackageManager detects the package manager on Windows.
+// Order: winget (ships with Win11) → choco → scoop.
 func (h *Handler) detectWindowsPackageManager() (string, error) {
-	// Check for choco
+	if _, err := exec.LookPath(pmWinget); err == nil {
+		return pmWinget, nil
+	}
 	if _, err := exec.LookPath(pmChoco); err == nil {
 		return pmChoco, nil
 	}
-	// Check for scoop
 	if _, err := exec.LookPath(pmScoop); err == nil {
 		return pmScoop, nil
 	}
-	return "", fmt.Errorf("no supported package manager found (install Chocolatey or Scoop)")
+	return "", fmt.Errorf("no supported package manager found (install winget, Chocolatey, or Scoop)")
 }
 
 // buildPackageList builds a list of packages from name and names fields.
@@ -397,6 +400,32 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 		return result, nil
 	}
 
+	// winget doesn't batch with --id, so each package gets its own call.
+	if manager == pmWinget {
+		verb := "install"
+		if upgrade {
+			verb = "upgrade"
+		}
+		for _, pkg := range toInstall {
+			cmdArgs := buildWingetCommand(verb, pkg, extra)
+			ec.Svc.Logger.Infof("  Installing package: %s", pkg)
+			ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+
+			output, execErr := h.runCmd(ec, become, cmdArgs)
+			if execErr != nil {
+				ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+				return nil, fmt.Errorf("failed to install package %q: %w", pkg, execErr)
+			}
+		}
+		result.SetChanged(true)
+		ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
+			Manager:        manager,
+			Installed:      toInstall,
+			AlreadyPresent: existingPkgs,
+		})
+		return result, nil
+	}
+
 	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, extra)
 	ec.Svc.Logger.Infof("  Installing packages: %s", strings.Join(toInstall, ", "))
 	ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
@@ -444,6 +473,27 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 	if len(toRemove) == 0 {
 		ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
 			Manager: manager,
+		})
+		return result, nil
+	}
+
+	// winget doesn't batch with --id, so each package gets its own call.
+	if manager == pmWinget {
+		for _, pkg := range toRemove {
+			cmdArgs := buildWingetCommand("uninstall", pkg, extra)
+			ec.Svc.Logger.Infof("  Removing package: %s", pkg)
+			ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+
+			output, execErr := h.runCmd(ec, become, cmdArgs)
+			if execErr != nil {
+				ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+				return nil, fmt.Errorf("failed to remove package %q: %w", pkg, execErr)
+			}
+		}
+		result.SetChanged(true)
+		ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
+			Manager: manager,
+			Removed: toRemove,
 		})
 		return result, nil
 	}
@@ -511,6 +561,10 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 		checkCmd = []string{pmChoco, "list", "--local-only", pkg}
 	case pmScoop:
 		checkCmd = []string{pmScoop, "list", pkg}
+	case pmWinget:
+		// winget list --exact --id <pkg> exits non-zero if the package is
+		// not installed. --disable-interactivity prevents any prompt.
+		checkCmd = []string{pmWinget, "list", "--exact", "--id", pkg, "--disable-interactivity"}
 	default:
 		return false, fmt.Errorf("unsupported package manager: %s", manager)
 	}
@@ -556,6 +610,10 @@ func (h *Handler) buildBatchInstallCommand(manager string, pkgs []string, upgrad
 }
 
 // installCommandBase returns the manager-specific install command prefix.
+//
+// Note: winget is intentionally absent here. winget does not batch multiple
+// packages in a single invocation when using --id (the safe, exact-match
+// flag), so installPackages handles it per-package via buildWingetCommand.
 func installCommandBase(manager string) []string {
 	switch manager {
 	case pmApt:
@@ -582,6 +640,25 @@ func installCommandBase(manager string) []string {
 	return nil
 }
 
+// buildWingetCommand builds a per-package winget command for the given verb
+// (install, uninstall, upgrade, list). Caller is responsible for invoking it
+// once per package because winget --id only accepts a single ID per call.
+//
+// Standard automation flags are baked in: --exact (require ID match),
+// --silent (no UI), and for install/upgrade --accept-package-agreements +
+// --accept-source-agreements so the call doesn't hang waiting for EULA
+// acceptance. Extra args are appended before --id so they can override
+// behaviour without trampling the package identifier.
+func buildWingetCommand(verb, pkg string, extra []string) []string {
+	cmd := []string{pmWinget, verb, "--exact", "--silent"}
+	if verb == "install" || verb == "upgrade" {
+		cmd = append(cmd, "--accept-package-agreements", "--accept-source-agreements")
+	}
+	cmd = append(cmd, extra...)
+	cmd = append(cmd, "--id", pkg)
+	return cmd
+}
+
 // buildRemoveCommand builds the remove command for a single package.
 //
 // Retained for backward compatibility with tests; production code paths use
@@ -603,6 +680,7 @@ func (h *Handler) buildBatchRemoveCommand(manager string, pkgs []string, extra [
 }
 
 // removeCommandBase returns the manager-specific remove command prefix.
+// winget is handled per-package via buildWingetCommand (see installCommandBase).
 func removeCommandBase(manager string) []string {
 	switch manager {
 	case pmApt:
@@ -655,6 +733,8 @@ func (h *Handler) buildUpgradeCommand(manager string, extra []string) []string {
 		cmd = []string{pmChoco, "upgrade", "all", "-y"}
 	case pmScoop:
 		cmd = []string{pmScoop, "update", "*"}
+	case pmWinget:
+		cmd = []string{pmWinget, "upgrade", "--all", "--silent", "--accept-package-agreements", "--accept-source-agreements"}
 	}
 
 	// Add extra arguments

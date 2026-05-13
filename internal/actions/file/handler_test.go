@@ -907,6 +907,9 @@ func TestHandler_Execute_HardlinkIdempotent(t *testing.T) {
 }
 
 func TestHandler_Execute_SetPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS (Go's os.Chmod is a no-op there)")
+	}
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -959,6 +962,9 @@ func TestHandler_Execute_SetPermissions(t *testing.T) {
 }
 
 func TestHandler_Execute_PermissionsIdempotent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode idempotency check is meaningless on NTFS")
+	}
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -991,6 +997,9 @@ func TestHandler_Execute_PermissionsIdempotent(t *testing.T) {
 }
 
 func TestHandler_Execute_WithMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS")
+	}
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1516,6 +1525,9 @@ func TestHandler_formatMode(t *testing.T) {
 }
 
 func TestHandler_parseUserID(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows uses string SIDs, not numeric UIDs — this code path is POSIX-only")
+	}
 	h := &Handler{}
 
 	// Test with numeric UID
@@ -1567,6 +1579,9 @@ func TestHandler_parseGroupID(t *testing.T) {
 }
 
 func TestHandler_Execute_DirectoryWithMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS")
+	}
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1918,8 +1933,11 @@ func TestHandler_Execute_ResultTiming(t *testing.T) {
 		t.Error("EndTime should be set")
 	}
 
-	if execResult.Duration <= 0 {
-		t.Error("Duration should be positive")
+	// Windows' default timer resolution is ~15ms — a small file write can
+	// complete within a single tick, leaving Duration == 0. Only negative
+	// values are an actual bug.
+	if execResult.Duration < 0 {
+		t.Errorf("Duration should be non-negative, got %v", execResult.Duration)
 	}
 
 	if execResult.EndTime.Before(execResult.StartTime) {

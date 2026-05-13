@@ -9,8 +9,22 @@
 **Mooncake** = Declarative config management tool (Go). "Docker for AI agents" - safe execution runtime with idempotency guarantees.
 
 - **Audience**: AI agent developers, platform engineers
-- **Status**: Production-ready, 13 actions migrated ✅
+- **Status**: Pre-release / sideproject / learning vehicle. **Not production**.
 - **Platforms**: Linux (full), macOS (full), Windows (stubs)
+
+### Reshape freely — no backwards compatibility
+
+This project is a learning / demo / pre-release sideproject. **There are no
+shipped users to protect.** When in doubt:
+
+- Break APIs, rename fields, change defaults, restructure modules.
+- Do NOT add deprecation shims, compatibility wrappers, `// removed` comments,
+  or feature flags to preserve old behavior.
+- Do NOT carry forward dead code "in case it's needed later."
+- Delete instead of marking unused. Replace instead of layering.
+
+The cost of a backwards-compat shim is permanent; the cost of changing a call
+site once is trivial. Always pay the trivial cost.
 
 ## Documentation Map
 
