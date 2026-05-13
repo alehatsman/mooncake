@@ -1,7 +1,7 @@
 # Spec 34 — Typed Variable Context
 
-**Status**: Draft  
-**File**: `internal/executor/context.go`, `internal/executor/variables.go` (new)
+**Status**: Implemented (commit `8074812`)  
+**Files**: `internal/executor/scope.go` (new), `internal/executor/context.go`, `internal/executor/result.go`
 
 ---
 
@@ -241,3 +241,26 @@ grow. The current code works correctly; this is a correctness-at-scale improveme
 
 **Phase 3** (larger): Introduce `VariableScope`, wire `ExecutionContext.Scope`,
 migrate all 140 sites. Run in a worktree; chase compile errors.
+
+---
+
+## Implementation Notes
+
+All three phases implemented in commit `8074812`.
+
+**Deviations from proposal:**
+
+- `scope.go` used as the new file (not `variables.go`).
+- Merge priority in `ToMap()` is `Facts < Metrics < User < Results < Loop` — user vars
+  override facts (Ansible-style). The proposal draft said Facts > User but the implemented
+  order matches Ansible, which is what users expect.
+- Shadow warning added: `MergeUserVars()` emits `[WARNING]` via `Infof` when a user var
+  key collides with a fact or metric key. Logger interface has no `Warnf`.
+- `//nolint:unused` applied to `markStepFailed`, `handleVars`, `shouldSkipByTags`,
+  `parseFileMode` — golangci-lint doesn't count `export_test.go` references.
+
+**gosec fixes included in the same commit:**
+
+- G302: lockfile permissions tightened from `0o644` to `0o600`.
+- G304: added to the global gosec exclusion list in `Makefile` — mooncake is a
+  file-management tool; operating on user-specified paths is intentional.
