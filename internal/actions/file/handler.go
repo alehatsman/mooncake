@@ -863,8 +863,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if ctx.Mode() == actions.ModePlan {
 		result.WouldChange = primary.WouldChange
 		result.Reason = primary.Reason
-		// AlreadyOk in plan mode is still a "no-change" outcome; surface it
-		// as a non-changing successful result.
+		result.Detail = primary.Detail
 		return result, nil
 	}
 

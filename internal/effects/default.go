@@ -121,7 +121,7 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 			return e
 		} else if !bytes.Equal(existing, content) {
 			e.Reason = fmt.Sprintf("content differs (%d -> %d bytes)", len(existing), len(content))
-			e.Detail = newContentDiff(existing, content)
+			e.Detail = newContentDiff(path, existing, content)
 		} else {
 			e.Reason = fmt.Sprintf("would chmod %s -> %s", info.Mode().Perm(), mode)
 		}
@@ -177,18 +177,21 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 // ContentDiff is a small structured summary attached to Effect.Detail
 // for WriteFile when content would change.
 type ContentDiff struct {
-	OldSize int    `json:"old_size"`
-	NewSize int    `json:"new_size"`
-	OldHash string `json:"old_hash"`
-	NewHash string `json:"new_hash"`
+	OldSize     int    `json:"old_size"`
+	NewSize     int    `json:"new_size"`
+	OldHash     string `json:"old_hash"`
+	NewHash     string `json:"new_hash"`
+	// UnifiedDiff is the unified diff text. Empty for binary files or new files.
+	UnifiedDiff string `json:"unified_diff,omitempty"`
 }
 
-func newContentDiff(oldB, newB []byte) ContentDiff {
+func newContentDiff(path string, oldB, newB []byte) ContentDiff {
 	return ContentDiff{
-		OldSize: len(oldB),
-		NewSize: len(newB),
-		OldHash: shortHash(oldB),
-		NewHash: shortHash(newB),
+		OldSize:     len(oldB),
+		NewSize:     len(newB),
+		OldHash:     shortHash(oldB),
+		NewHash:     shortHash(newB),
+		UnifiedDiff: unifiedDiff(path, oldB, newB),
 	}
 }
 

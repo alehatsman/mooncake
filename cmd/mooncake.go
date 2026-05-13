@@ -13,6 +13,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
@@ -398,6 +399,7 @@ func planCommand(c *cli.Context) error {
 	outputPath := c.String("output")
 	format := c.String("format")
 	showOrigins := c.Bool("show-origins")
+	showDiff := c.Bool("diff")
 	noInspect := c.Bool("no-inspect")
 
 	// Parse tags
@@ -459,7 +461,7 @@ func planCommand(c *cli.Context) error {
 	case outputFormatYAML:
 		return formatPlanYAML(planData)
 	case outputFormatText:
-		return formatPlanText(planData, showOrigins)
+		return formatPlanText(planData, showOrigins, showDiff)
 	default:
 		return fmt.Errorf("unsupported format: %s (use text, json, or yaml)", format)
 	}
@@ -500,7 +502,7 @@ func planSymbol(ins plan.StepInspection, stepSkipped bool) string {
 	}
 }
 
-func formatPlanText(p *plan.Plan, showOrigins bool) error {
+func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 	fmt.Printf("Plan: %s\n", p.RootFile)
 	hostBits := []string{}
 	if p.GeneratedOn.OsFamily != "" {
@@ -546,6 +548,15 @@ func formatPlanText(p *plan.Plan, showOrigins bool) error {
 		}
 		fmt.Println(line)
 
+		if showDiff && sym == "↑" {
+			if udiff := extractUnifiedDiff(ins.Detail); udiff != "" {
+				for _, dl := range strings.Split(strings.TrimRight(udiff, "\n"), "\n") {
+					fmt.Printf("  %s\n", dl)
+				}
+				fmt.Println()
+			}
+		}
+
 		switch sym {
 		case "↑":
 			wouldChange++
@@ -569,6 +580,20 @@ func formatPlanText(p *plan.Plan, showOrigins bool) error {
 	fmt.Printf("PLAN SUMMARY  would-change=%d  ok=%d  skipped=%d  not-checkable=%d\n",
 		wouldChange, ok, skipped, notCheckable)
 	return nil
+}
+
+// extractUnifiedDiff pulls the unified diff string out of a StepInspection.Detail
+// value, which may be an effects.ContentDiff (in-memory) or map[string]interface{}
+// (decoded from saved JSON plan).
+func extractUnifiedDiff(detail any) string {
+	switch v := detail.(type) {
+	case effects.ContentDiff:
+		return v.UnifiedDiff
+	case map[string]interface{}:
+		s, _ := v["unified_diff"].(string)
+		return s
+	}
+	return ""
 }
 
 func agentRunCommand(c *cli.Context) error {
@@ -774,6 +799,12 @@ func createApp() *cli.App {
 						Name:  "no-inspect",
 						Value: false,
 						Usage: "Skip the per-step state inspection pass (Spec 16). With this flag, plan output reflects only static YAML expansion — no would-change predictions.",
+					},
+					&cli.BoolFlag{
+						Name:    "diff",
+						Aliases: []string{"d"},
+						Value:   false,
+						Usage:   "Show unified diff for file steps that would change content",
 					},
 					&cli.StringFlag{
 						Name:    "output",

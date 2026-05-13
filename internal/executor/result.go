@@ -79,6 +79,10 @@ type Result struct {
 	// that can be accessed in templates and registered results.
 	Data map[string]interface{} `json:"data,omitempty"`
 
+	// Detail holds action-specific plan-mode data (e.g. effects.ContentDiff).
+	// Only populated in ModePlan. Not serialised into registered results.
+	Detail any `json:"-"`
+
 	// Timing information
 	StartTime time.Time     `json:"start_time,omitempty"`
 	EndTime   time.Time     `json:"end_time,omitempty"`

@@ -38,6 +38,8 @@ type StepInspection struct {
 	// Skipped reflects when/tag filtering decisions made at plan time.
 	// Skipped steps have WouldChange=false and Reason explains why.
 	Skipped bool `json:"skipped,omitempty" yaml:"skipped,omitempty"`
+	// Detail carries action-specific plan data (e.g. effects.ContentDiff for file writes).
+	Detail any `json:"detail,omitempty" yaml:"detail,omitempty"`
 }
 
 // HostFacts captures the minimum set of facts needed to detect a

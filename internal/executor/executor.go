@@ -950,10 +950,12 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		// may pass a *Result with WouldChange/Reason/Checkable set.
 		var wouldChange, checkable bool
 		var reason string
+		var detail any
 		if r, ok := result.(*Result); ok {
 			wouldChange = r.WouldChange
 			checkable = r.Checkable
 			reason = r.Reason
+			detail = r.Detail
 		}
 		ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
 			StepID:      ec.CurrentStepID,
@@ -962,6 +964,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			WouldChange: wouldChange,
 			Checkable:   checkable,
 			Reason:      reason,
+			Detail:      detail,
 			Level:       ec.Level,
 		})
 		if wouldChange {

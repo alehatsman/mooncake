@@ -345,4 +345,6 @@ type StepCheckedData struct {
 	Reason      string `json:"reason,omitempty"`
 	Level       int    `json:"level"`
 	Depth       int    `json:"depth,omitempty"`
+	// Detail carries action-specific plan data (e.g. effects.ContentDiff).
+	Detail any `json:"detail,omitempty"`
 }

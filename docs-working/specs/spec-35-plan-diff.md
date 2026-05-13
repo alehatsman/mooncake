@@ -1,6 +1,6 @@
 # Spec 35 — `mooncake plan --diff`
 
-**Status**: Draft  
+**Status**: Implemented (commit TBD)  
 **Epic**: Agent Efficiency S2.4  
 
 ---
@@ -59,12 +59,18 @@ type ContentDiff struct {
 ```
 
 Populate `UnifiedDiff` in `newContentDiff()` — already has `oldB` and `newB` in
-scope. No diff library is in go.mod. Two options:
-- Add `github.com/sergi/go-diff` (BSD-3, widely used, ~1K stars)
-- Write a minimal unified diff using `diff/lcs` from stdlib `slices` package (Go 1.21+)
+scope. Use `github.com/pmezard/go-difflib/difflib` (added to go.mod):
 
-The stdlib approach avoids a new dependency and is sufficient for text files.
-Use `strings.Split` on newlines, compute LCS, emit `@@` hunks.
+```go
+diff := difflib.UnifiedDiff{
+    A:        difflib.SplitLines(string(oldB)),
+    B:        difflib.SplitLines(string(newB)),
+    FromFile: path,
+    ToFile:   path + " (proposed)",
+    Context:  3,
+}
+text, _ := difflib.GetUnifiedDiffString(diff)
+```
 
 Cap diff output: if the diff exceeds 4000 bytes, truncate with a
 `[...truncated N lines...]` marker. Large diffs in plan output are noise.

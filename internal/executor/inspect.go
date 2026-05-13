@@ -61,6 +61,7 @@ func (c *inspectionCollector) OnEvent(e events.Event) {
 			WouldChange: d.WouldChange,
 			Checkable:   d.Checkable,
 			Reason:      d.Reason,
+			Detail:      d.Detail,
 		}
 	case events.EventStepSkipped:
 		d, ok := e.Data.(events.StepSkippedData)
