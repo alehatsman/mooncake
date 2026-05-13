@@ -11,7 +11,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 // Handler implements the Handler interface for vars actions.
@@ -61,17 +60,8 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		logger.Debugf("  %v: %v", k, v)
 	}
 
-	// Merge variables into context
-	// Note: We need to modify the context's variables directly
-	// The Context interface doesn't provide a SetVariables method
-	// so we access it through the underlying ExecutionContext
-	variables := ctx.GetVariables()
-	mergedVars := utils.MergeVariables(variables, *vars)
-
-	// Update the variables map in place
-	for k, v := range mergedVars {
-		variables[k] = v
-	}
+	// Merge variables into context via the typed interface
+	ctx.MergeUserVars(*vars)
 
 	// Emit variables.set event
 	keys := make([]string, 0, len(*vars))
@@ -109,11 +99,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	ctx.GetLogger().Infof("  [DRY-RUN] Would set %d variables", len(*vars))
 
 	// Still set variables in dry-run mode so subsequent steps can use them
-	variables := ctx.GetVariables()
-	mergedVars := utils.MergeVariables(variables, *vars)
-	for k, v := range mergedVars {
-		variables[k] = v
-	}
+	ctx.MergeUserVars(*vars)
 
 	return nil
 }

@@ -50,7 +50,7 @@ func TestCheckIdempotencyConditions_Creates_FileExists(t *testing.T) {
 			Template: renderer,
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
@@ -85,7 +85,7 @@ func TestCheckIdempotencyConditions_Creates_FileNotExists(t *testing.T) {
 			Template: renderer,
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	shouldSkip, _, err := executor.CheckIdempotencyConditions(step, ec)
@@ -116,14 +116,14 @@ func TestCheckIdempotencyConditions_Creates_WithTemplateVariable(t *testing.T) {
 	if err != nil {
 		panic("Failed to create renderer: " + err.Error())
 	}
+	scope := executor.NewVariableScope()
+	scope.User["output_file"] = tmpFile.Name()
 	ec := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Template: renderer,
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables: map[string]interface{}{
-			"output_file": tmpFile.Name(),
-		},
+		Scope: scope,
 	}
 
 	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
@@ -154,7 +154,7 @@ func TestCheckIdempotencyConditions_Unless_CommandSucceeds(t *testing.T) {
 		Svc: &executor.RunServices{
 			Template: renderer,
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
@@ -188,7 +188,7 @@ func TestCheckIdempotencyConditions_Unless_CommandFails(t *testing.T) {
 		Svc: &executor.RunServices{
 			Template: renderer,
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	shouldSkip, _, err := executor.CheckIdempotencyConditions(step, ec)
@@ -219,13 +219,13 @@ func TestCheckIdempotencyConditions_Unless_WithTemplateVariable(t *testing.T) {
 	if err != nil {
 		panic("Failed to create renderer: " + err.Error())
 	}
+	scope := executor.NewVariableScope()
+	scope.User["marker_file"] = tmpFile.Name()
 	ec := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Template: renderer,
 		},
-		Variables: map[string]interface{}{
-			"marker_file": tmpFile.Name(),
-		},
+		Scope: scope,
 	}
 
 	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
@@ -266,7 +266,7 @@ func TestCheckIdempotencyConditions_BothConditions(t *testing.T) {
 			Template: renderer,
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
@@ -297,7 +297,7 @@ func TestCheckIdempotencyConditions_NoConditions(t *testing.T) {
 			Template: renderer,
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	shouldSkip, _, err := executor.CheckIdempotencyConditions(step, ec)
@@ -338,7 +338,7 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 			Logger:    logger.NewConsoleLogger(logger.InfoLevel),
 			Stats:     executor.NewExecutionStats(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 	}
 
 	err = executor.ExecuteStep(step, ec)

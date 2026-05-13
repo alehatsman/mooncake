@@ -123,6 +123,15 @@ func (m *mockContext) Mode() Mode {
 
 func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }
 
+func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
+	if m.variables == nil {
+		m.variables = make(map[string]interface{})
+	}
+	for k, v := range vars {
+		m.variables[k] = v
+	}
+}
+
 // testNoopPerformer satisfies Performer for actions_test without
 // touching the filesystem.
 type testNoopPerformer struct{ mode Mode }

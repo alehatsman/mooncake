@@ -88,7 +88,9 @@ fmt: ## Format code with gofmt
 .PHONY: scan
 scan: lint ## Run security scans (gosec + govulncheck)
 	@echo "Running gosec security scan..."
-	@gosec -exclude-generated -exclude=G104,G115,G117,G204,G301,G306,G702,G703,G704 ./...
+	@gosec -exclude-generated -exclude=G104,G115,G117,G204,G301,G304,G306,G702,G703,G704 ./...
+	# G304 excluded: mooncake is a file-management tool; operating on user-specified
+	# paths is intentional and all paths are resolved via PathExpander before use.
 	@echo ""
 	@echo "Running govulncheck..."
 	@govulncheck ./...

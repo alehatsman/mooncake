@@ -38,6 +38,10 @@ func TestExecutionContext_Copy(t *testing.T) {
 	fileTreeWalker := filetree.NewWalker(pathExpander)
 	testLogger := logger.NewTestLogger()
 
+	scope := &executor.VariableScope{
+		User:    map[string]interface{}{"key1": "value1", "key2": "value2"},
+		Results: make(map[string]executor.RegisteredResult),
+	}
 	original := executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Logger:   testLogger,
@@ -47,10 +51,7 @@ func TestExecutionContext_Copy(t *testing.T) {
 			PathUtil: pathExpander,
 			FileTree: fileTreeWalker,
 		},
-		Variables: map[string]interface{}{
-			"key1": "value1",
-			"key2": "value2",
-		},
+		Scope:        scope,
 		CurrentDir:   "/work",
 		CurrentFile:  "/work/config.yml",
 		Level:        1,
@@ -74,17 +75,17 @@ func TestExecutionContext_Copy(t *testing.T) {
 		t.Errorf("Copy() SudoPass = %v, want %v", copied.Svc.SudoPass, original.Svc.SudoPass)
 	}
 
-	// Verify variables are deep copied
-	if len(copied.Variables) != len(original.Variables) {
-		t.Errorf("Copy() Variables length = %v, want %v", len(copied.Variables), len(original.Variables))
+	// Verify scope user vars are deep copied
+	if len(copied.Scope.User) != len(original.Scope.User) {
+		t.Errorf("Copy() Scope.User length = %v, want %v", len(copied.Scope.User), len(original.Scope.User))
 	}
 
-	// Modify copied variables
-	copied.Variables["key1"] = "modified"
+	// Modify copied scope user vars
+	copied.Scope.User["key1"] = "modified"
 
 	// Original should be unchanged
-	if original.Variables["key1"] == "modified" {
-		t.Error("Copy() should deep copy variables")
+	if original.Scope.User["key1"] == "modified" {
+		t.Error("Copy() should deep copy Scope.User")
 	}
 
 	// Verify dependencies are shared (not deep copied)
@@ -103,9 +104,11 @@ func TestExecutionContext_Copy(t *testing.T) {
 }
 
 func TestAddGlobalVariables(t *testing.T) {
-	vars := make(map[string]interface{})
+	scope := executor.NewVariableScope()
 
-	executor.AddGlobalVariables(vars)
+	executor.AddGlobalVariables(scope)
+
+	vars := scope.ToMap()
 
 	// Should add os and arch
 	if vars["os"] == nil {
@@ -131,13 +134,13 @@ func TestHandleVars(t *testing.T) {
 		"new_key": "new_value",
 	}
 
+	scope := executor.NewVariableScope()
+	scope.User["existing_key"] = "existing_value"
 	ec := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Logger: testLogger,
 		},
-		Variables: map[string]interface{}{
-			"existing_key": "existing_value",
-		},
+		Scope: scope,
 	}
 
 	step := config.Step{
@@ -151,13 +154,13 @@ func TestHandleVars(t *testing.T) {
 	}
 
 	// Verify new variable was added
-	if ec.Variables["new_key"] != "new_value" {
-		t.Errorf("executor.HandleVars() new_key = %v, want 'new_value'", ec.Variables["new_key"])
+	if ec.Scope.User["new_key"] != "new_value" {
+		t.Errorf("executor.HandleVars() new_key = %v, want 'new_value'", ec.Scope.User["new_key"])
 	}
 
 	// Verify existing variable is preserved
-	if ec.Variables["existing_key"] != "existing_value" {
-		t.Errorf("executor.HandleVars() existing_key = %v, want 'existing_value'", ec.Variables["existing_key"])
+	if ec.Scope.User["existing_key"] != "existing_value" {
+		t.Errorf("executor.HandleVars() existing_key = %v, want 'existing_value'", ec.Scope.User["existing_key"])
 	}
 }
 
@@ -208,6 +211,8 @@ func TestHandleWhenExpression(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			scope := executor.NewVariableScope()
+			scope.User = tt.vars
 			ec := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
 					Logger:    testLogger,
@@ -215,7 +220,7 @@ func TestHandleWhenExpression(t *testing.T) {
 					Redactor:  security.NewRedactor(),
 					Evaluator: evaluator,
 				},
-				Variables: tt.vars,
+				Scope: scope,
 			}
 
 			step := config.Step{
@@ -419,11 +424,12 @@ func TestMergeVariables(t *testing.T) {
 func TestMarkStepFailed(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	result := executor.NewResult()
+	scope := executor.NewVariableScope()
 	ec := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Logger: testLogger,
 		},
-		Variables: make(map[string]interface{}),
+		Scope: scope,
 	}
 	step := config.Step{
 		Name: "test",
@@ -438,8 +444,8 @@ func TestMarkStepFailed(t *testing.T) {
 	if result.Rc != 1 {
 		t.Errorf("executor.MarkStepFailed() Rc = %v, want 1", result.Rc)
 	}
-	if ec.Variables["result"] == nil {
-		t.Error("executor.MarkStepFailed() should register result")
+	if _, ok := scope.Results["result"]; !ok {
+		t.Error("executor.MarkStepFailed() should register result in Scope.Results")
 	}
 }
 
@@ -488,7 +494,7 @@ func TestCheckSkipConditions(t *testing.T) {
 					Template:  renderer,
 					Evaluator: evaluator,
 				},
-				Variables: make(map[string]interface{}),
+				Scope: executor.NewVariableScope(),
 			}
 			step := config.Step{
 				When:    tt.when,
@@ -507,7 +513,8 @@ func TestCheckSkipConditions(t *testing.T) {
 }
 
 func TestGetStepDisplayName(t *testing.T) {
-	ec := &executor.ExecutionContext{Variables: make(map[string]interface{})}
+	scope := executor.NewVariableScope()
+	ec := &executor.ExecutionContext{Scope: scope}
 	step := config.Step{Name: "My Step"}
 
 	name, hasName := executor.GetStepDisplayName(step, ec)
@@ -516,7 +523,7 @@ func TestGetStepDisplayName(t *testing.T) {
 	}
 
 	// Test with item
-	ec.Variables["item"] = "item_value"
+	ec.Scope.User["item"] = "item_value"
 	name, hasName = executor.GetStepDisplayName(step, ec)
 	if name != "item_value" || !hasName {
 		t.Errorf("executor.GetStepDisplayName() with item = (%v, %v), want (item_value, true)", name, hasName)
@@ -544,7 +551,7 @@ func TestExecuteStep_WithShell(t *testing.T) {
 			Stats:     executor.NewExecutionStats(),
 			Redactor:  security.NewRedactor(),
 		},
-		Variables:  make(map[string]interface{}),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: os.TempDir(),
 	}
 
@@ -584,7 +591,7 @@ func TestExecuteStep_Skipped(t *testing.T) {
 			PathUtil:  pathExpander,
 			Stats:     executor.NewExecutionStats(),
 		},
-		Variables:  make(map[string]interface{}),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: os.TempDir(),
 	}
 
@@ -626,7 +633,7 @@ func TestExecuteSteps(t *testing.T) {
 			Stats:     executor.NewExecutionStats(),
 			Redactor:  security.NewRedactor(),
 		},
-		Variables:   make(map[string]interface{}),
+		Scope:       executor.NewVariableScope(),
 		CurrentDir:  os.TempDir(),
 		CurrentFile: "test.yml",
 	}
@@ -694,7 +701,7 @@ func TestDispatchStepAction(t *testing.T) {
 					PathUtil:  pathExpander,
 					Redactor:  security.NewRedactor(),
 				},
-				Variables:  make(map[string]interface{}),
+				Scope:      executor.NewVariableScope(),
 				CurrentDir: tmpDir,
 			}
 

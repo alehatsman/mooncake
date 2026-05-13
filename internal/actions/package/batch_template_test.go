@@ -222,7 +222,7 @@ func TestHandler_Validate_NamesExpr(t *testing.T) {
 func TestHandler_ResolveNamesExpr(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"pkgs_slice":  []string{"a", "b", "c"},
 		"pkgs_iface":  []interface{}{"x", "y"},
 		"pkgs_scalar": "alpha beta gamma",
@@ -262,7 +262,7 @@ func TestHandler_ResolveNamesExpr(t *testing.T) {
 func TestHandler_Execute_TemplatedNames(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"pkgs": []string{"a", "b"},
 	}
 	step := &config.Step{

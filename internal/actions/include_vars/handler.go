@@ -13,7 +13,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 // Handler implements the Handler interface for include_vars actions.
@@ -76,12 +75,8 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("failed to read variables from %s: %w", expandedPath, err)
 	}
 
-	// Merge variables into context
-	variables := ctx.GetVariables()
-	mergedVars := utils.MergeVariables(variables, vars)
-	for k, v := range mergedVars {
-		variables[k] = v
-	}
+	// Merge variables into context via the typed interface
+	ctx.MergeUserVars(vars)
 
 	// Emit variables.loaded event
 	keys := make([]string, 0, len(vars))
@@ -134,11 +129,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	ctx.GetLogger().Infof("  [DRY-RUN] Would load %d variables from: %s", len(vars), expandedPath)
 
 	// Still load variables in dry-run mode so subsequent steps can use them
-	variables := ctx.GetVariables()
-	mergedVars := utils.MergeVariables(variables, vars)
-	for k, v := range mergedVars {
-		variables[k] = v
-	}
+	ctx.MergeUserVars(vars)
 
 	return nil
 }

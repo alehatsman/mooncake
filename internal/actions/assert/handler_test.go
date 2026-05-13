@@ -41,7 +41,7 @@ func newMockExecutionContext() *executor.ExecutionContext {
 			SudoPass: "",
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 		CurrentDir: tmpDir,
 	}
@@ -323,7 +323,7 @@ func TestHandler_Execute_CommandAssertion_WithTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
 
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"expected_code": 5,
 	}
 
@@ -785,7 +785,7 @@ func TestHandler_Execute_FileAssertion_WithTemplate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"file_path":       testFile,
 		"expected_string": "Hello",
 	}
@@ -1263,7 +1263,7 @@ func TestHandler_Execute_HTTPAssertion_WithTemplate(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"server_url":    server.URL,
 		"expected_text": "Hello",
 		"custom_header": "Bearer token123",

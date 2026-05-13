@@ -102,7 +102,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render service name
-	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.Variables)
+	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.GetVariables())
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func HandleService(step config.Step, ec *executor.ExecutionContext) error {
 	}
 
 	// Render service name
-	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.Variables)
+	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.GetVariables())
 	if err != nil {
 		return &executor.RenderError{Field: "service.name", Cause: err}
 	}
@@ -185,7 +185,7 @@ func HandleService(step config.Step, ec *executor.ExecutionContext) error {
 func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec *executor.ExecutionContext) (string, error) {
 	if srcTemplate != "" {
 		// Expand and render template file
-		srcPath, expandErr := ec.Svc.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.Variables)
+		srcPath, expandErr := ec.Svc.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.GetVariables())
 		if expandErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: expandErr}
 		}
@@ -203,7 +203,7 @@ func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 		}
 
 		// Render template
-		content, renderErr := ec.Svc.Template.Render(string(templateData), ec.Variables)
+		content, renderErr := ec.Svc.Template.Render(string(templateData), ec.GetVariables())
 		if renderErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: renderErr}
 		}
@@ -212,7 +212,7 @@ func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 
 	if inlineContent != "" {
 		// Render inline content
-		content, renderErr := ec.Svc.Template.Render(inlineContent, ec.Variables)
+		content, renderErr := ec.Svc.Template.Render(inlineContent, ec.GetVariables())
 		if renderErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".content", Cause: renderErr}
 		}
@@ -320,7 +320,7 @@ func handleSystemdService(serviceName string, serviceAction *config.ServiceActio
 
 	// Register result if specified
 	if step.As != "" {
-		result.RegisterTo(ec.Variables, step.As)
+		ec.RegisterResult(result, step.As)
 	}
 
 	if changed {
@@ -800,7 +800,7 @@ func handleLaunchdService(serviceName string, serviceAction *config.ServiceActio
 
 	// Register result if specified
 	if step.As != "" {
-		result.RegisterTo(ec.Variables, step.As)
+		ec.RegisterResult(result, step.As)
 	}
 
 	if changed {
@@ -1161,7 +1161,7 @@ func markStepFailed(result *executor.Result, step config.Step, ec *executor.Exec
 	result.Failed = true
 	result.Rc = 1
 	if step.As != "" {
-		result.RegisterTo(ec.Variables, step.As)
+		ec.RegisterResult(result, step.As)
 	}
 }
 
@@ -1208,7 +1208,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("service action requires service configuration")
 	}
 
-	renderedName, err := ec.Svc.Template.Render(svc.Name, ec.Variables)
+	renderedName, err := ec.Svc.Template.Render(svc.Name, ec.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render service name: %w", err)
 	}

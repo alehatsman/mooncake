@@ -112,7 +112,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
-	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.Variables, ec.CurrentDir)
+	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.GetVariables(), ec.CurrentDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand artifact_capture steps: %w", err)
 	}
@@ -193,7 +193,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		metadata.Plan = &artifacts.EmbeddedPlan{
 			StepCount:   len(capture.Steps),
 			Steps:       capture.Steps,
-			InitialVars: ec.Variables, // Capture initial variables for reproducibility
+			InitialVars: ec.GetVariables(), // Capture initial variables for reproducibility
 		}
 		ec.Svc.Logger.Debugf("Embedded plan with %d steps in artifact", len(capture.Steps))
 	} else {
@@ -257,7 +257,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 			artifactDir, len(capture.Steps))
 		return nil
 	}
-	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.Variables, ec.CurrentDir)
+	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.GetVariables(), ec.CurrentDir)
 	if err != nil {
 		ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, expansion failed)",
 			artifactDir, len(capture.Steps))

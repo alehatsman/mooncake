@@ -34,7 +34,7 @@ func newMockExecutionContext() *executor.ExecutionContext {
 			SudoPass: "",
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 	}
 }

@@ -66,7 +66,7 @@ func TestMarkStepFailed(t *testing.T) {
 		Name: "Test Step",
 	}
 	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	MarkStepFailed(result, step, ec)
@@ -89,9 +89,9 @@ func TestMarkStepFailed_WithRegister(t *testing.T) {
 		As:   "myresult",
 	}
 
-	variables := make(map[string]interface{})
+	scope := NewVariableScope()
 	ec := &ExecutionContext{
-		Variables: variables,
+		Scope: scope,
 	}
 
 	MarkStepFailed(result, step, ec)
@@ -100,8 +100,8 @@ func TestMarkStepFailed_WithRegister(t *testing.T) {
 		t.Error("Failed should be true")
 	}
 
-	// Check that result was registered
-	if _, ok := variables["myresult"]; !ok {
+	// Check that result was registered in Scope.Results
+	if _, ok := scope.Results["myresult"]; !ok {
 		t.Error("Result should be registered to 'myresult'")
 	}
 }
@@ -114,67 +114,69 @@ func TestMarkStepFailed_NoRegister(t *testing.T) {
 		As:   "", // No register
 	}
 
-	variables := make(map[string]interface{})
+	scope := NewVariableScope()
 	ec := &ExecutionContext{
-		Variables: variables,
+		Scope: scope,
 	}
 
 	MarkStepFailed(result, step, ec)
 
-	// Should have no registered variables
-	if len(variables) != 0 {
-		t.Errorf("Should have no registered variables, got %d", len(variables))
+	// Should have no registered results
+	if len(scope.Results) != 0 {
+		t.Errorf("Should have no registered results, got %d", len(scope.Results))
 	}
 }
 
 // TestAddGlobalVariables tests global variable injection
 func TestAddGlobalVariables(t *testing.T) {
-	variables := make(map[string]interface{})
+	scope := NewVariableScope()
 
-	AddGlobalVariables(variables)
+	AddGlobalVariables(scope)
 
 	// Should have added facts
-	if len(variables) == 0 {
-		t.Error("AddGlobalVariables should add facts to variables")
+	vars := scope.ToMap()
+	if len(vars) == 0 {
+		t.Error("AddGlobalVariables should add facts to scope")
 	}
 
 	// Check for common facts
 	expectedFacts := []string{"os", "arch", "hostname"}
 	for _, fact := range expectedFacts {
-		if _, ok := variables[fact]; !ok {
-			t.Errorf("Expected fact %q to be in variables", fact)
+		if _, ok := vars[fact]; !ok {
+			t.Errorf("Expected fact %q to be in scope variables", fact)
 		}
 	}
 }
 
 // TestAddGlobalVariables_Existing tests adding to existing variables
 func TestAddGlobalVariables_Existing(t *testing.T) {
-	variables := map[string]interface{}{
-		"existing": "value",
-	}
+	scope := NewVariableScope()
+	scope.User["existing"] = "value"
 
-	AddGlobalVariables(variables)
+	AddGlobalVariables(scope)
 
-	// Should keep existing variables
-	if variables["existing"] != "value" {
+	vars := scope.ToMap()
+
+	// Custom var should remain
+	if vars["existing"] != "value" {
 		t.Error("Existing variables should be preserved")
 	}
 
 	// Should have added new facts
-	if len(variables) <= 1 {
+	if len(vars) <= 1 {
 		t.Error("Should have added facts in addition to existing variables")
 	}
 }
 
 // TestAddGlobalVariables_Idempotent tests multiple calls
 func TestAddGlobalVariables_Idempotent(t *testing.T) {
-	variables := make(map[string]interface{})
+	scope := NewVariableScope()
 
-	AddGlobalVariables(variables)
-	firstCount := len(variables)
+	AddGlobalVariables(scope)
+	firstCount := len(scope.ToMap())
 
-	AddGlobalVariables(variables)
-	secondCount := len(variables)
+	AddGlobalVariables(scope)
+	secondCount := len(scope.ToMap())
 
 	// Should have same count (overwrites, not adds)
 	if firstCount != secondCount {

@@ -140,8 +140,7 @@ func (l *Lock) Save(path string) error {
 
 	// Acquire flock on the lockfile itself. Use the target path; create
 	// it if missing so flock has something to grab.
-	// #nosec G304 -- Lockfile path is derived from the applied config dir
-	fl, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o644)
+	fl, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return fmt.Errorf("open lockfile for flock: %w", err)
 	}

@@ -119,6 +119,11 @@ type Context interface {
 	//   - Creating temporary files (include step ID to avoid conflicts)
 	//   - Logging (though step ID is usually added automatically)
 	GetCurrentStepID() string
+
+	// MergeUserVars merges the provided key-value pairs into the user variable scope.
+	// Use this instead of mutating the map returned by GetVariables() directly,
+	// so that the write goes to the correct typed bucket (Scope.User when available).
+	MergeUserVars(vars map[string]interface{})
 }
 
 // Result represents the outcome of an action execution.

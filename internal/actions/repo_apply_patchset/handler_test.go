@@ -35,7 +35,7 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 			PathUtil: pathutil.NewPathExpander(tmpl),
 			Mode: actions.ModeApply,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: mockCtx.StepID,
 		CurrentDir: tmpDir,
 	}

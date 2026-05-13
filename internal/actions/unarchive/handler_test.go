@@ -35,7 +35,7 @@ func mockExecutionContext() *executor.ExecutionContext {
 			PathUtil: pathutil.NewPathExpander(tmpl),
 			Mode: actions.ModeApply,
 		},
-		Variables: ctx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: ctx.StepID,
 		CurrentDir: "/tmp",
 	}
@@ -849,8 +849,8 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	createTestTarArchive(t, tarPath)
 
 	ec := mockExecutionContext()
-	ec.Variables["archive_name"] = "test.tar"
-	ec.Variables["extract_base"] = tmpDir
+	ec.Scope.User["archive_name"] = "test.tar"
+	ec.Scope.User["extract_base"] = tmpDir
 
 	step := &config.Step{
 		FileUnarchive: &config.Unarchive{

@@ -57,10 +57,10 @@ func TestGetStepDisplayName_WithFileTreeItem(t *testing.T) {
 				Name: "Test Step",
 			}
 
+			scope := NewVariableScope()
+			scope.User["item"] = tt.item
 			ec := &ExecutionContext{
-				Variables: map[string]interface{}{
-					"item": tt.item,
-				},
+				Scope: scope,
 			}
 
 			displayName, isCustom := GetStepDisplayName(step, ec)
@@ -85,7 +85,7 @@ func TestGetStepDisplayName_NoFileTree(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	displayName, isCustom := GetStepDisplayName(step, ec)
@@ -111,14 +111,14 @@ func TestHandleVars_MergeExisting(t *testing.T) {
 		Vars: &vars,
 	}
 
+	scope := NewVariableScope()
+	scope.User["existing_key"] = "existing_value"
 	ec := &ExecutionContext{
 		Svc: &RunServices{
 			Logger: testLogger,
 			Mode:   actions.ModeApply,
 		},
-		Variables: map[string]interface{}{
-			"existing_key": "existing_value",
-		},
+		Scope: scope,
 	}
 
 	err := HandleVars(step, ec)
@@ -127,10 +127,10 @@ func TestHandleVars_MergeExisting(t *testing.T) {
 	}
 
 	// Both old and new should exist
-	if ec.Variables["existing_key"] != "existing_value" {
+	if ec.Scope.User["existing_key"] != "existing_value" {
 		t.Error("Existing variables should be preserved")
 	}
-	if ec.Variables["new_key"] != "new_value" {
+	if ec.Scope.User["new_key"] != "new_value" {
 		t.Error("New variables should be added")
 	}
 }
@@ -175,13 +175,15 @@ func TestHandleWhenExpression_BooleanLogic(t *testing.T) {
 				When: tt.when,
 			}
 
+			scope := NewVariableScope()
+			scope.User = tt.variables
 			ec := &ExecutionContext{
 				Svc: &RunServices{
 					Evaluator: expression.NewGovaluateEvaluator(),
 					Template:  mustNewRenderer(),
 					Logger:    logger.NewTestLogger(),
 				},
-				Variables: tt.variables,
+				Scope: scope,
 			}
 
 			shouldSkip, err := HandleWhenExpression(step, ec)
@@ -212,7 +214,7 @@ func TestCheckIdempotencyConditions_Creates(t *testing.T) {
 			Logger:   logger.NewTestLogger(),
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables:     make(map[string]interface{}),
+		Scope:         NewVariableScope(),
 		CurrentResult: NewResult(),
 		CurrentDir:    "/tmp",
 	}
@@ -245,7 +247,7 @@ func TestMarkStepFailed_Idempotent(t *testing.T) {
 	result := NewResult()
 	step := config.Step{Name: "Test"}
 	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	MarkStepFailed(result, step, ec)
@@ -259,23 +261,30 @@ func TestMarkStepFailed_Idempotent(t *testing.T) {
 	}
 }
 
-// TestAddGlobalVariables_NonDestructive tests that it doesn't remove existing vars
+// TestAddGlobalVariables_NonDestructive tests that it populates facts without losing user vars
 func TestAddGlobalVariables_NonDestructive(t *testing.T) {
-	variables := map[string]interface{}{
-		"custom_var": "custom_value",
-		"os":         "should_be_overwritten",
+	scope := NewVariableScope()
+	scope.User["custom_var"] = "custom_value"
+
+	AddGlobalVariables(scope)
+
+	// Custom user var should remain
+	if scope.User["custom_var"] != "custom_value" {
+		t.Error("Custom user variables should be preserved")
 	}
 
-	AddGlobalVariables(variables)
-
-	// Custom var should remain
-	if variables["custom_var"] != "custom_value" {
-		t.Error("Custom variables should be preserved")
+	// Facts should be populated
+	if scope.Facts == nil {
+		t.Error("Facts should be populated after AddGlobalVariables")
 	}
 
-	// OS should be overwritten with actual value
-	if variables["os"] == "should_be_overwritten" {
-		t.Error("System facts should overwrite existing values")
+	// System facts like os/arch should be available via ToMap
+	vars := scope.ToMap()
+	if vars["os"] == nil {
+		t.Error("System facts (os) should be available via ToMap")
+	}
+	if vars["custom_var"] != "custom_value" {
+		t.Error("User vars should still be visible via ToMap")
 	}
 }
 
@@ -308,7 +317,7 @@ func TestCheckIdempotencyConditions_UnlessSuccess(t *testing.T) {
 			Logger:   logger.NewTestLogger(),
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables:     make(map[string]interface{}),
+		Scope:         NewVariableScope(),
 		CurrentResult: NewResult(),
 		CurrentDir:    "/tmp",
 	}
@@ -341,7 +350,7 @@ func TestCheckIdempotencyConditions_UnlessFail(t *testing.T) {
 			Logger:   logger.NewTestLogger(),
 			PathUtil: pathutil.NewPathExpander(renderer),
 		},
-		Variables:     make(map[string]interface{}),
+		Scope:         NewVariableScope(),
 		CurrentResult: NewResult(),
 		CurrentDir:    "/tmp",
 	}
@@ -364,7 +373,7 @@ func TestGetStepDisplayName_NoName(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	displayName, hasName := GetStepDisplayName(step, ec)
@@ -382,10 +391,10 @@ func TestGetStepDisplayName_WithItem(t *testing.T) {
 		Name: "Test",
 	}
 
+	scope := NewVariableScope()
+	scope.User["item"] = "test-item"
 	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"item": "test-item",
-		},
+		Scope: scope,
 	}
 
 	displayName, hasName := GetStepDisplayName(step, ec)
@@ -403,14 +412,14 @@ func TestGetStepDisplayName_FileTreeItemPath(t *testing.T) {
 		Name: "Test",
 	}
 
+	scope := NewVariableScope()
+	scope.User["item"] = filetree.Item{
+		Name:  "",
+		IsDir: false,
+		Path:  "/some/file.txt",
+	}
 	ec := &ExecutionContext{
-		Variables: map[string]interface{}{
-			"item": filetree.Item{
-				Name:  "",
-				IsDir: false,
-				Path:  "/some/file.txt",
-			},
-		},
+		Scope: scope,
 	}
 
 	displayName, hasName := GetStepDisplayName(step, ec)
@@ -434,7 +443,7 @@ func TestHandleWhenExpression_NilResult(t *testing.T) {
 			Template:  mustNewRenderer(),
 			Logger:    logger.NewTestLogger(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	shouldSkip, err := HandleWhenExpression(step, ec)
@@ -460,7 +469,7 @@ func TestHandleWhenExpression_NonBool(t *testing.T) {
 			Template:  mustNewRenderer(),
 			Logger:    logger.NewTestLogger(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	_, err := HandleWhenExpression(step, ec)
@@ -482,7 +491,7 @@ func TestCheckSkipConditions_WhenFalse(t *testing.T) {
 			Template:  renderer,
 			Logger:    logger.NewTestLogger(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	shouldSkip, reason, err := CheckSkipConditions(step, ec)

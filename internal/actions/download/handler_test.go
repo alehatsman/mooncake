@@ -37,7 +37,7 @@ func mockExecutionContext() *executor.ExecutionContext {
 			PathUtil: pathutil.NewPathExpander(tmpl),
 			Mode: actions.ModeApply,
 		},
-		Variables: ctx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: ctx.StepID,
 		CurrentDir: "/tmp",
 	}
@@ -762,8 +762,8 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	destPath := filepath.Join(tmpDir, "templated.txt")
 
 	ec := mockExecutionContext()
-	ec.Variables["filename"] = "myfile.txt"
-	ec.Variables["destdir"] = tmpDir
+	ec.Scope.User["filename"] = "myfile.txt"
+	ec.Scope.User["destdir"] = tmpDir
 
 	step := &config.Step{
 		FileDownload: &config.Download{
@@ -869,7 +869,7 @@ func TestHandler_DryRun(t *testing.T) {
 			setup: func(ec *executor.ExecutionContext, tmpDir string) {
 				destPath := filepath.Join(tmpDir, "existing.txt")
 				os.WriteFile(destPath, []byte("existing"), 0644)
-				ec.Variables["tmpdir"] = tmpDir
+				ec.Scope.User["tmpdir"] = tmpDir
 			},
 			wantErr: false,
 		},

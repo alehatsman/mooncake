@@ -135,8 +135,9 @@ steps:
 
 // mockExecutionContext creates a mock ExecutionContext for testing
 func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionContext {
-	if variables == nil {
-		variables = make(map[string]interface{})
+	scope := executor.NewVariableScope()
+	if variables != nil {
+		scope.User = variables
 	}
 
 	return &executor.ExecutionContext{
@@ -147,7 +148,7 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 			Evaluator: expression.NewExprEvaluator(),
 			Mode: actions.ModeApply,
 		},
-		Variables: variables,
+		Scope:      scope,
 		CurrentDir: ".",
 	}
 }
@@ -504,15 +505,15 @@ func TestSavedContext_Restore(t *testing.T) {
 	saved := captureContext(ec)
 
 	// Modify context (simulate preset execution)
-	ec.Variables["original"] = "modified"
-	ec.Variables["new_var"] = "new_value"
+	ec.Scope.User["original"] = "modified"
+	ec.Scope.User["new_var"] = "new_value"
 	parametersNamespace := map[string]interface{}{
 		"parameters": map[string]interface{}{
 			"param1": "value1",
 		},
 	}
 	for k, v := range parametersNamespace {
-		ec.Variables[k] = v
+		ec.Scope.User[k] = v
 	}
 	ec.CurrentDir = "/modified/dir"
 	ec.PresetBaseDir = "/modified/preset"
@@ -521,16 +522,16 @@ func TestSavedContext_Restore(t *testing.T) {
 	saved.restore(ec, parametersNamespace)
 
 	// Verify restoration
-	if len(ec.Variables) != 1 {
-		t.Errorf("Variables count after restore = %d, want 1", len(ec.Variables))
+	if len(ec.Scope.User) != 1 {
+		t.Errorf("Scope.User count after restore = %d, want 1", len(ec.Scope.User))
 	}
-	if ec.Variables["original"] != "value" {
-		t.Errorf("Variable 'original' = %v, want 'value'", ec.Variables["original"])
+	if ec.Scope.User["original"] != "value" {
+		t.Errorf("Variable 'original' = %v, want 'value'", ec.Scope.User["original"])
 	}
-	if _, exists := ec.Variables["parameters"]; exists {
+	if _, exists := ec.Scope.User["parameters"]; exists {
 		t.Error("'parameters' namespace should be removed")
 	}
-	if _, exists := ec.Variables["new_var"]; exists {
+	if _, exists := ec.Scope.User["new_var"]; exists {
 		t.Error("'new_var' should be removed")
 	}
 	if ec.CurrentDir != "/original/dir" {

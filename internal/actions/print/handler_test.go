@@ -71,6 +71,15 @@ func (m *mockContext) Mode() actions.Mode { return actions.ModeApply }
 
 func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
 
+func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
+	if m.variables == nil {
+		m.variables = make(map[string]interface{})
+	}
+	for k, v := range vars {
+		m.variables[k] = v
+	}
+}
+
 // printNoopPerformer is a stub Performer for tests in this package; the
 // print action doesn't call effect helpers but the interface requires it.
 type printNoopPerformer struct{}

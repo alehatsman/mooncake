@@ -35,7 +35,7 @@ func captureContext(ec *executor.ExecutionContext) *savedContext {
 		currentDir:    ec.CurrentDir,
 		presetBaseDir: ec.PresetBaseDir,
 	}
-	for k, v := range ec.Variables {
+	for k, v := range ec.Scope.User {
 		saved.variables[k] = v
 	}
 	return saved
@@ -44,14 +44,14 @@ func captureContext(ec *executor.ExecutionContext) *savedContext {
 // restoreContext restores the execution context to the saved state,
 // removing any keys added during preset execution.
 func (s *savedContext) restore(ec *executor.ExecutionContext, parametersNamespace map[string]interface{}) {
-	// Remove parameters namespace
+	// Remove parameters namespace from scope user vars
 	for k := range parametersNamespace {
-		delete(ec.Variables, k)
+		delete(ec.Scope.User, k)
 	}
-	// Restore original variables (in case steps modified them)
-	ec.Variables = make(map[string]interface{})
+	// Restore original user variables
+	ec.Scope.User = make(map[string]interface{})
 	for k, v := range s.variables {
-		ec.Variables[k] = v
+		ec.Scope.User[k] = v
 	}
 	// Restore original directories
 	ec.CurrentDir = s.currentDir
@@ -131,7 +131,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Merge parameters namespace into variables
 	for k, v := range parametersNamespace {
-		ec.Variables[k] = v
+		ec.Scope.User[k] = v
 	}
 
 	// Set PresetBaseDir to preset base directory for template path resolution
@@ -147,7 +147,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
-	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.Variables, presetBaseDir)
+	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.GetVariables(), presetBaseDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
 	}
@@ -216,7 +216,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 
 	// Merge parameters for full expansion
 	variables := make(map[string]interface{})
-	for k, v := range ec.Variables {
+	for k, v := range ec.GetVariables() {
 		variables[k] = v
 	}
 	for k, v := range parametersNamespace {

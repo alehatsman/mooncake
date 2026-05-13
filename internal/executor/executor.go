@@ -133,32 +133,27 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 	return fmt.Sprintf("step-%d", *ec.Svc.Stats.Global)
 }
 
-func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
+func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) { //nolint:unused
 	result.Failed = true
 	result.Rc = 1
 	if step.As != "" {
-		result.RegisterTo(ec.Variables, step.As)
+		ec.Scope.Results[step.As] = result.ToRegisteredResult()
 	}
 }
 
-// AddGlobalVariables injects system facts and live metrics into the
-// variables map so that templates and `when:` expressions can read them.
+// AddGlobalVariables populates scope.Facts and scope.Metrics from the system.
 // Facts (capabilities, configuration) come from facts.Collect; metrics
 // (live CPU/GPU/memory/load/network) come from metrics.Collect with
 // per-metric TTL caching. Keys across the two are disjoint by contract —
 // see metrics.disjoint_test.go.
-func AddGlobalVariables(variables map[string]interface{}) {
-	for k, v := range facts.Collect().ToMap() {
-		variables[k] = v
-	}
+func AddGlobalVariables(scope *VariableScope) {
+	scope.Facts = facts.Collect()
 	if m, _, err := metrics.Collect(nil); err == nil {
-		for k, v := range m.ToMap() {
-			variables[k] = v
-		}
+		scope.Metrics = m
 	}
 }
 
-func handleVars(step config.Step, ec *ExecutionContext) error {
+func handleVars(step config.Step, ec *ExecutionContext) error { //nolint:unused
 	ec.Svc.Logger.Debugf("Handling vars: %+v", step.Vars)
 
 	if step.Vars == nil {
@@ -175,7 +170,7 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 		NewDryRunLogger(ec.Svc.Logger).LogVariableSet(len(*vars))
 	}
 
-	ec.Variables = utils.MergeVariables(ec.Variables, *vars)
+	ec.MergeUserVars(*vars)
 
 	// Emit variables.set event
 	keys := make([]string, 0, len(*vars))
@@ -194,16 +189,17 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
-	ec.Svc.Logger.Debugf("variables: %v", ec.Variables)
+	vars := ec.GetVariables()
+	ec.Svc.Logger.Debugf("variables: %v", vars)
 
-	whenExpression, err := ec.Svc.Template.Render(whenString, ec.Variables)
+	whenExpression, err := ec.Svc.Template.Render(whenString, vars)
 	if err != nil {
 		return false, &RenderError{Field: "when", Cause: err}
 	}
 
 	ec.Svc.Logger.Debugf("whenExpression: %v", whenExpression)
 
-	evalResult, err := ec.Svc.Evaluator.Evaluate(whenExpression, ec.Variables)
+	evalResult, err := ec.Svc.Evaluator.Evaluate(whenExpression, vars)
 	if err != nil {
 		return false, &EvaluationError{Expression: whenExpression, Cause: err}
 	}
@@ -226,19 +222,20 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !boolResult, nil
 }
 
-func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
+func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool { //nolint:unused
 	return !utils.MatchesTags(step.Tags, ec.Svc.Tags)
 }
 
 func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+	vars := ec.GetVariables()
 	// Check creates condition
 	if step.UnlessExists != nil {
-		path, err := ec.Svc.Template.Render(*step.UnlessExists, ec.Variables)
+		path, err := ec.Svc.Template.Render(*step.UnlessExists, vars)
 		if err != nil {
 			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
 
-		expandedPath, err := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
+		expandedPath, err := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, vars)
 		if err != nil {
 			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
@@ -251,7 +248,7 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 
 	// Check unless condition
 	if step.UnlessCommand != nil {
-		command, err := ec.Svc.Template.Render(*step.UnlessCommand, ec.Variables)
+		command, err := ec.Svc.Template.Render(*step.UnlessCommand, vars)
 		if err != nil {
 			return false, "", &RenderError{Field: "unless command", Cause: err}
 		}
@@ -305,8 +302,9 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 }
 
 func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
+	vars := ec.GetVariables()
 	// For with_filetree, show hierarchical structure
-	if item, ok := ec.Variables["item"].(filetree.Item); ok {
+	if item, ok := vars["item"].(filetree.Item); ok {
 		// For directories, show as headers with trailing slash
 		if item.IsDir {
 			if item.Path == "" {
@@ -331,7 +329,7 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	}
 
 	// For with_items, show the item value
-	if item, ok := ec.Variables["item"]; ok {
+	if item, ok := vars["item"]; ok {
 		return fmt.Sprintf("%v", item), true
 	}
 
@@ -433,7 +431,7 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 			failedResult := NewResult()
 			failedResult.Failed = true
 			failedResult.Rc = 1
-			failedResult.RegisterTo(ec.Variables, step.As)
+			ec.Scope.Results[step.As] = failedResult.ToRegisteredResult()
 		}
 		return nil
 	}
@@ -633,17 +631,14 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 		// If step has loop context (from planner), restore loop variables
 		// This ensures when conditions can reference item, index, first, last
 		if step.LoopContext != nil {
-			ec.Variables["item"] = step.LoopContext.Item
-			ec.Variables["index"] = step.LoopContext.Index
-			ec.Variables["first"] = step.LoopContext.First
-			ec.Variables["last"] = step.LoopContext.Last
+			ec.Scope.Loop = &LoopContext{
+				Item:  step.LoopContext.Item,
+				Index: step.LoopContext.Index,
+				First: step.LoopContext.First,
+				Last:  step.LoopContext.Last,
+			}
 		} else {
-			// Clear loop variables for steps without loop context
-			// to prevent stale values from previous loop iterations
-			delete(ec.Variables, "item")
-			delete(ec.Variables, "index")
-			delete(ec.Variables, "first")
-			delete(ec.Variables, "last")
+			ec.Scope.Loop = nil
 		}
 
 		if err := ExecuteStep(step, ec); err != nil {
@@ -865,9 +860,13 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 		Redactor:       redactor,
 		EventPublisher: publisher,
 	}
+	scope := &VariableScope{
+		User:    variables,
+		Results: make(map[string]RegisteredResult),
+	}
 	executionContext := ExecutionContext{
 		Svc:          svc,
-		Variables:    variables,
+		Scope:        scope,
 		CurrentDir:   configDir,
 		CurrentFile:  "",
 		Level:        0,
@@ -974,12 +973,12 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 
 	// ModeApply: register result if requested.
 	if step.As != "" && ec.CurrentResult != nil {
-		ec.CurrentResult.RegisterTo(ec.Variables, step.As)
+		ec.Scope.Results[step.As] = ec.CurrentResult.ToRegisteredResult()
 	}
 	return nil
 }
 
-func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
+func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode { //nolint:unused
 	if modeStr == "" {
 		return defaultMode
 	}

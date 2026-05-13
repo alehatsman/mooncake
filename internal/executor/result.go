@@ -140,6 +140,57 @@ func (r *Result) RegisterTo(variables map[string]interface{}, name string) {
 	variables[name] = r.ToMap()
 }
 
+// RegisteredResult is a snapshot of a Result stored in VariableScope.Results.
+// It is a flat copy — no pointer aliasing — so the scope can be safely cloned.
+type RegisteredResult struct {
+	Stdout     string
+	Stderr     string
+	Rc         int
+	Failed     bool
+	Changed    bool
+	Skipped    bool
+	DurationMs int64
+	Data       map[string]interface{}
+}
+
+// ToRegisteredResult converts a *Result into a RegisteredResult snapshot.
+func (r *Result) ToRegisteredResult() RegisteredResult {
+	var data map[string]interface{}
+	if r.Data != nil {
+		data = make(map[string]interface{}, len(r.Data))
+		for k, v := range r.Data {
+			data[k] = v
+		}
+	}
+	return RegisteredResult{
+		Stdout:     r.Stdout,
+		Stderr:     r.Stderr,
+		Rc:         r.Rc,
+		Failed:     r.Failed,
+		Changed:    r.Changed,
+		Skipped:    r.Skipped,
+		DurationMs: r.Duration.Milliseconds(),
+		Data:       data,
+	}
+}
+
+// ToMap converts a RegisteredResult to map[string]interface{} for template engines.
+func (r RegisteredResult) ToMap() map[string]interface{} {
+	m := map[string]interface{}{
+		"stdout":      r.Stdout,
+		"stderr":      r.Stderr,
+		"rc":          r.Rc,
+		"failed":      r.Failed,
+		"changed":     r.Changed,
+		"skipped":     r.Skipped,
+		"duration_ms": r.DurationMs,
+	}
+	for k, v := range r.Data {
+		m[k] = v
+	}
+	return m
+}
+
 // --- actions.Result interface implementation ---
 // These methods allow Result to be used as an actions.Result,
 // avoiding circular import dependencies between executor and actions packages.

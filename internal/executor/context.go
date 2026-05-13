@@ -67,21 +67,32 @@ type RunServices struct {
 	SudoPass       string
 }
 
+// LoopContext holds the current loop iteration state for a step executing
+// inside a with_items or with_filetree loop. It is stored in VariableScope.Loop
+// so ToMap() can inject item/index/first/last without polluting the User map.
+type LoopContext struct {
+	Item  interface{}
+	Index int
+	First bool
+	Last  bool
+}
+
 // ExecutionContext holds per-scope state for a step sequence.
 // Cloned when entering nested scopes (includes, loops); Svc is shared.
 //
 // Field categories:
 //   - Svc: shared services and run configuration — pointer, never copied
-//   - Variables, CurrentDir, *: per-scope state — copied on Clone
+//   - Scope, CurrentDir, *: per-scope state — copied on Clone
 //   - CurrentStepID, CurrentResult: per-step state — not copied on Clone
 type ExecutionContext struct {
 	// Svc holds all shared services and run-level configuration.
 	// All nested contexts share the same *RunServices pointer.
 	Svc *RunServices
 
-	// Variables contains template variables available to steps.
-	// Shallow-copied on Clone so nested contexts have their own variable scope.
-	Variables map[string]interface{}
+	// Scope holds all variable categories in typed sections.
+	// It is the authoritative source for variables.
+	// Use NewVariableScope() to create a ready scope.
+	Scope *VariableScope
 
 	// CurrentDir is the directory containing the current config file.
 	CurrentDir string
@@ -111,16 +122,10 @@ type ExecutionContext struct {
 }
 
 // Clone creates a new ExecutionContext for a nested execution scope (include or loop).
-// Svc is shared by pointer; Variables is shallow-copied; per-step fields are reset.
+// Svc is shared by pointer; Scope is deep-cloned (User+Results); per-step fields are reset.
 func (ec *ExecutionContext) Clone() ExecutionContext {
-	newVariables := make(map[string]interface{}, len(ec.Variables))
-	for k, v := range ec.Variables {
-		newVariables[k] = v
-	}
-
-	return ExecutionContext{
+	cloned := ExecutionContext{
 		Svc:           ec.Svc,
-		Variables:     newVariables,
 		CurrentDir:    ec.CurrentDir,
 		PresetBaseDir: ec.PresetBaseDir,
 		CurrentFile:   ec.CurrentFile,
@@ -129,6 +134,8 @@ func (ec *ExecutionContext) Clone() ExecutionContext {
 		TotalSteps:    ec.TotalSteps,
 		// CurrentStepID and CurrentResult intentionally omitted — per-step state
 	}
+	cloned.Scope = ec.Scope.Clone()
+	return cloned
 }
 
 // EmitEvent publishes an event to all subscribers
@@ -170,9 +177,27 @@ func (ec *ExecutionContext) GetLogger() logger.Logger {
 	return ec.Svc.Logger
 }
 
-// GetVariables returns the execution variables.
+// GetVariables returns all variables merged into a flat map for template/expression engines.
 func (ec *ExecutionContext) GetVariables() map[string]interface{} {
-	return ec.Variables
+	return ec.Scope.ToMap()
+}
+
+// MergeUserVars merges the provided key-value pairs into the user variable scope.
+// Logs a warning for any key that shadows a system fact or metric.
+func (ec *ExecutionContext) MergeUserVars(vars map[string]interface{}) {
+	if ec.Svc != nil {
+		for _, k := range ec.Scope.shadowedKeys(vars) {
+			ec.Svc.Logger.Infof("[WARNING] variable %q shadows a system fact or metric and will override it", k)
+		}
+	}
+	for k, v := range vars {
+		ec.Scope.User[k] = v
+	}
+}
+
+// RegisterResult registers a Result under the given name for use in subsequent steps.
+func (ec *ExecutionContext) RegisterResult(r *Result, name string) {
+	ec.Scope.Results[name] = r.ToRegisteredResult()
 }
 
 // GetEventPublisher returns the event publisher.

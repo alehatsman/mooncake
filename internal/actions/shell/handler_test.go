@@ -35,7 +35,7 @@ func newMockExecutionContext() *executor.ExecutionContext {
 			SudoPass: "",
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 	}
 }
@@ -202,7 +202,7 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := newMockExecutionContext()
 			if tt.variables != nil {
-				ctx.Variables = tt.variables
+				ctx.Scope.User = tt.variables
 			}
 
 			step := &config.Step{
@@ -334,7 +334,7 @@ func TestHandler_Execute_WithEnvironment(t *testing.T) {
 func TestHandler_Execute_WithEnvironmentTemplate(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"env_value": "rendered_value",
 	}
 
@@ -402,7 +402,7 @@ func TestHandler_Execute_WithWorkingDirectoryTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	tmpDir := os.TempDir()
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"work_dir": tmpDir,
 	}
 
@@ -597,7 +597,7 @@ func TestHandler_Execute_WithStdin(t *testing.T) {
 func TestHandler_Execute_WithStdinTemplate(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
-	ctx.Variables = map[string]interface{}{
+	ctx.Scope.User = map[string]interface{}{
 		"input_text": "rendered input",
 	}
 

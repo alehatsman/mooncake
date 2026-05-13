@@ -43,7 +43,10 @@ func newToolCtx(t *testing.T, cwd string) *executor.ExecutionContext {
 			Mode: actions.ModeApply,
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: map[string]interface{}{"os": "linux", "arch": "amd64"},
+		Scope: &executor.VariableScope{
+			User:    map[string]interface{}{"os": "linux", "arch": "amd64"},
+			Results: make(map[string]executor.RegisteredResult),
+		},
 		CurrentDir: cwd,
 	}
 }

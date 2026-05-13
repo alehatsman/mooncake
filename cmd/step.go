@@ -84,6 +84,7 @@ func stepCommand() *cli.Command {
 			if c.Bool("dry-run") {
 				mode = actions.ModePlan
 			}
+			scope := executor.NewVariableScope()
 			ec := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
 					Logger:         log,
@@ -96,12 +97,12 @@ func stepCommand() *cli.Command {
 					Redactor:       redactor,
 					EventPublisher: publisher,
 				},
-				Variables:  make(map[string]interface{}),
+				Scope:      scope,
 				CurrentDir: cwd,
 				Level:      0,
 			}
 
-			executor.AddGlobalVariables(ec.Variables)
+			executor.AddGlobalVariables(ec.Scope)
 
 			start := time.Now()
 			execErr := executor.DispatchStepAction(step, ec)

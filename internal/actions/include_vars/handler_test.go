@@ -228,6 +228,10 @@ func TestHandler_Execute(t *testing.T) {
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.existingVars
 
+			scope := executor.NewVariableScope()
+			for k, v := range tt.existingVars {
+				scope.User[k] = v
+			}
 			ctx := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
 					Template: mockCtx.Tmpl,
@@ -235,7 +239,7 @@ func TestHandler_Execute(t *testing.T) {
 					Logger: mockCtx.Log,
 					PathUtil: pathExpander,
 				},
-				Variables: mockCtx.Variables,
+				Scope: scope,
 				CurrentDir: filepath.Dir(tmpFile.Name()),
 			}
 
@@ -265,7 +269,7 @@ func TestHandler_Execute(t *testing.T) {
 
 			// Check variables were loaded correctly
 			for key, want := range tt.wantVars {
-				got, exists := ctx.Variables[key]
+				got, exists := ctx.GetVariables()[key]
 				if !exists {
 					t.Errorf("Variable %q not loaded", key)
 					continue
@@ -368,6 +372,10 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			mockCtx := testutil.NewMockContext()
 			mockCtx.Variables = tt.setupVars
 
+			scope := executor.NewVariableScope()
+			for k, v := range tt.setupVars {
+				scope.User[k] = v
+			}
 			ctx := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
 					Template: mockCtx.Tmpl,
@@ -375,7 +383,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 					Logger: mockCtx.Log,
 					PathUtil: pathExpander,
 				},
-				Variables: mockCtx.Variables,
+				Scope: scope,
 				CurrentDir: "/tmp",
 			}
 
@@ -404,7 +412,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			}
 
 			// Verify variable was loaded
-			if got, exists := ctx.Variables["test"]; !exists || got != "value" {
+			if got, exists := ctx.GetVariables()["test"]; !exists || got != "value" {
 				t.Errorf("Variable 'test' = %v, want 'value'", got)
 			}
 
@@ -438,7 +446,7 @@ func TestHandler_Execute_FileNotFound(t *testing.T) {
 			Logger: mockCtx.Log,
 			PathUtil: pathExpander,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 
@@ -480,7 +488,7 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 			Logger: mockCtx.Log,
 			PathUtil: pathExpander,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentDir: filepath.Dir(tmpFile.Name()),
 	}
 
@@ -511,7 +519,7 @@ func TestHandler_Execute_NilIncludeVars(t *testing.T) {
 			Logger: mockCtx.Log,
 			PathUtil: pathExpander,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 
@@ -560,7 +568,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 			Logger: mockCtx.Log,
 			PathUtil: pathExpander,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentDir: filepath.Dir(tmpFile.Name()),
 	}
 
@@ -583,7 +591,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 
 	// Check variable was still loaded
-	if got, exists := ctx.Variables["foo"]; !exists || got != "bar" {
+	if got, exists := ctx.GetVariables()["foo"]; !exists || got != "bar" {
 		t.Errorf("Variable 'foo' = %v, want 'bar'", got)
 	}
 }
@@ -690,6 +698,10 @@ func TestHandler_DryRun(t *testing.T) {
 			mockCtx.Variables = tt.existingVars
 			mockCtx.CurrentMode = actions.ModePlan
 
+			scope := executor.NewVariableScope()
+			for k, v := range tt.existingVars {
+				scope.User[k] = v
+			}
 			ctx := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
 					Template: mockCtx.Tmpl,
@@ -698,7 +710,7 @@ func TestHandler_DryRun(t *testing.T) {
 					PathUtil: pathExpander,
 					Mode: actions.ModePlan,
 				},
-				Variables: mockCtx.Variables,
+				Scope: scope,
 				CurrentDir: "/tmp",
 			}
 
@@ -718,7 +730,7 @@ func TestHandler_DryRun(t *testing.T) {
 
 			// In dry-run mode, variables should still be loaded if file exists
 			for key, want := range tt.wantVars {
-				got, exists := ctx.Variables[key]
+				got, exists := ctx.GetVariables()[key]
 				if !exists {
 					t.Errorf("Variable %q not loaded in dry-run", key)
 					continue
@@ -757,7 +769,7 @@ func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 			PathUtil: pathExpander,
 			Mode: actions.ModePlan,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 
@@ -812,7 +824,7 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 			PathUtil: pathExpander,
 			Mode: actions.ModePlan,
 		},
-		Variables: mockCtx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 

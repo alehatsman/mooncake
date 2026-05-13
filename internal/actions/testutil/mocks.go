@@ -34,6 +34,12 @@ func (m *MockContext) SetVariable(key string, value interface{}) {
 	m.Variables[key] = value
 }
 
+func (m *MockContext) MergeUserVars(vars map[string]interface{}) {
+	for k, v := range vars {
+		m.Variables[k] = v
+	}
+}
+
 func (m *MockContext) GetTemplate() template.Renderer {
 	return m.Tmpl
 }

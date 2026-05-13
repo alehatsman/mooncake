@@ -203,7 +203,7 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 // event. The file may grow during reading (worker still appending) — we
 // stop at EOF; the caller continues tailing from the hub.
 func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, path string) error {
-	f, err := os.Open(path) //nolint:gosec // path is server-controlled (eventsPath derived from runID)
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}

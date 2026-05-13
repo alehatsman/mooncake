@@ -274,13 +274,13 @@ func (h *Handler) pollCondition(ctx context.Context, check func() (bool, error),
 // createFileExistsChecker creates a file existence checker.
 func (h *Handler) createFileExistsChecker(path string, ec *executor.ExecutionContext, shouldExist bool) (func() (bool, error), error) {
 	// Render path with variables
-	renderedPath, err := ec.Svc.Template.Render(path, ec.Variables)
+	renderedPath, err := ec.Svc.Template.Render(path, ec.GetVariables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.path", Cause: err}
 	}
 
 	// Expand path
-	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(renderedPath, ec.CurrentDir, ec.Variables)
+	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(renderedPath, ec.CurrentDir, ec.GetVariables())
 	if expandErr != nil {
 		return nil, &executor.FileOperationError{
 			Operation: "expand path",
@@ -346,7 +346,7 @@ func (h *Handler) createGitCleanChecker(wait *config.WaitAction, ec *executor.Ex
 // createCommandChecker creates a command success checker.
 func (h *Handler) createCommandChecker(wait *config.WaitAction, ec *executor.ExecutionContext) (func() (bool, error), error) {
 	// Render command with variables
-	cmd, err := ec.Svc.Template.Render(*wait.Cmd, ec.Variables)
+	cmd, err := ec.Svc.Template.Render(*wait.Cmd, ec.GetVariables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.cmd", Cause: err}
 	}
@@ -380,7 +380,7 @@ func (h *Handler) createCommandChecker(wait *config.WaitAction, ec *executor.Exe
 // createHTTPChecker creates an HTTP endpoint checker.
 func (h *Handler) createHTTPChecker(wait *config.WaitAction, ec *executor.ExecutionContext) (func() (bool, error), error) {
 	// Render URL with variables
-	url, err := ec.Svc.Template.Render(*wait.URL, ec.Variables)
+	url, err := ec.Svc.Template.Render(*wait.URL, ec.GetVariables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.url", Cause: err}
 	}
@@ -412,7 +412,7 @@ func (h *Handler) createPortChecker(wait *config.WaitAction, ec *executor.Execut
 	host := "localhost"
 	if wait.Host != nil {
 		// Render host with variables
-		renderedHost, err := ec.Svc.Template.Render(*wait.Host, ec.Variables)
+		renderedHost, err := ec.Svc.Template.Render(*wait.Host, ec.GetVariables())
 		if err != nil {
 			return nil, &executor.RenderError{Field: "wait.host", Cause: err}
 		}

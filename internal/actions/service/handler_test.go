@@ -35,7 +35,7 @@ func newMockExecutionContext() *executor.ExecutionContext {
 			SudoPass: "",
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: make(map[string]interface{}),
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 	}
 }
@@ -296,7 +296,7 @@ func TestHandler_DryRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := newMockExecutionContext()
-			ctx.Variables["service_name"] = "nginx"
+			ctx.Scope.User["service_name"] = "nginx"
 
 			err := h.DryRun(ctx, tt.step)
 			if (err != nil) != tt.wantErr {
@@ -576,7 +576,7 @@ func TestParseFileMode(t *testing.T) {
 
 func TestRenderTemplateOrContent_InlineContent(t *testing.T) {
 	ctx := newMockExecutionContext()
-	ctx.Variables["key"] = "value"
+	ctx.Scope.User["key"] = "value"
 
 	content, err := renderTemplateOrContent("", "static content", "test", ctx)
 	if err != nil {
@@ -590,7 +590,7 @@ func TestRenderTemplateOrContent_InlineContent(t *testing.T) {
 
 func TestRenderTemplateOrContent_InlineContentWithTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
-	ctx.Variables["key"] = "rendered_value"
+	ctx.Scope.User["key"] = "rendered_value"
 
 	content, err := renderTemplateOrContent("", "{{ key }}", "test", ctx)
 	if err != nil {
@@ -680,8 +680,8 @@ func TestHandleService_PlatformSupport(t *testing.T) {
 
 func TestHandleService_TemplateRendering(t *testing.T) {
 	ctx := newMockExecutionContext()
-	ctx.Variables["svc_name"] = "nginx"
-	ctx.Variables["svc_state"] = "started"
+	ctx.Scope.User["svc_name"] = "nginx"
+	ctx.Scope.User["svc_state"] = "started"
 
 	step := config.Step{
 		OsService: &config.ServiceAction{
@@ -759,16 +759,11 @@ func TestMarkStepFailed(t *testing.T) {
 		t.Errorf("markStepFailed() should set Rc to 1, got %d", result.Rc)
 	}
 
-	// Check that result was registered
-	if val, ok := ctx.Variables["test_result"]; !ok {
+	// Check that result was registered in Scope.Results
+	if reg, ok := ctx.Scope.Results["test_result"]; !ok {
 		t.Error("markStepFailed() should register result")
-	} else {
-		resultMap, ok := val.(map[string]interface{})
-		if !ok {
-			t.Error("Registered result should be a map")
-		} else if !resultMap["failed"].(bool) {
-			t.Error("Registered result should have failed=true")
-		}
+	} else if !reg.Failed {
+		t.Error("Registered result should have Failed=true")
 	}
 }
 

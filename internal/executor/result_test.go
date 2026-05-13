@@ -208,3 +208,41 @@ func TestResult_Status_Priority(t *testing.T) {
 	}
 }
 
+func TestResult_ToRegisteredResult(t *testing.T) {
+	customData := map[string]interface{}{"key": "val"}
+	r := Result{
+		Stdout:   "out",
+		Stderr:   "err",
+		Rc:       2,
+		Changed:  true,
+		Failed:   false,
+		Skipped:  false,
+		Duration: 42 * time.Millisecond,
+		Data:     customData,
+	}
+
+	rr := r.ToRegisteredResult()
+
+	if rr.Stdout != "out" {
+		t.Errorf("Stdout = %q, want %q", rr.Stdout, "out")
+	}
+	if rr.Stderr != "err" {
+		t.Errorf("Stderr = %q, want %q", rr.Stderr, "err")
+	}
+	if rr.Rc != 2 {
+		t.Errorf("Rc = %d, want 2", rr.Rc)
+	}
+	if !rr.Changed {
+		t.Error("Changed should be true")
+	}
+	if rr.Failed {
+		t.Error("Failed should be false")
+	}
+	if rr.DurationMs != 42 {
+		t.Errorf("DurationMs = %d, want 42", rr.DurationMs)
+	}
+	if rr.Data["key"] != "val" {
+		t.Errorf("Data[key] = %v, want val", rr.Data["key"])
+	}
+}
+

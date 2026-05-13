@@ -27,7 +27,7 @@ func TestHandleVars(t *testing.T) {
 			Logger: testLogger,
 			Mode:   actions.ModeApply,
 		},
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	err := HandleVars(step, ec)
@@ -36,11 +36,11 @@ func TestHandleVars(t *testing.T) {
 	}
 
 	// Check variables were set
-	if ec.Variables["key1"] != "value1" {
-		t.Errorf("Variables[key1] = %v, want 'value1'", ec.Variables["key1"])
+	if ec.Scope.User["key1"] != "value1" {
+		t.Errorf("Scope.User[key1] = %v, want 'value1'", ec.Scope.User["key1"])
 	}
-	if ec.Variables["key2"] != 42 {
-		t.Errorf("Variables[key2] = %v, want 42", ec.Variables["key2"])
+	if ec.Scope.User["key2"] != 42 {
+		t.Errorf("Scope.User[key2] = %v, want 42", ec.Scope.User["key2"])
 	}
 }
 
@@ -61,7 +61,7 @@ func TestHandleVars_DryRun(t *testing.T) {
 			Logger: testLogger,
 			Mode:   actions.ModePlan,
 		},
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	err := HandleVars(step, ec)
@@ -70,7 +70,7 @@ func TestHandleVars_DryRun(t *testing.T) {
 	}
 
 	// Variables should still be set in dry-run mode
-	if ec.Variables["test"] != "value" {
+	if ec.Scope.User["test"] != "value" {
 		t.Error("Variables should be set even in dry-run mode")
 	}
 }
@@ -89,7 +89,7 @@ func TestHandleVars_EmptyVars(t *testing.T) {
 		Svc: &RunServices{
 			Logger: testLogger,
 		},
-		Variables: make(map[string]interface{}),
+		Scope: NewVariableScope(),
 	}
 
 	err := HandleVars(step, ec)
@@ -150,13 +150,15 @@ func TestHandleWhenExpression(t *testing.T) {
 				When: tt.when,
 			}
 
+			scope := NewVariableScope()
+			scope.User = tt.variables
 			ec := &ExecutionContext{
 				Svc: &RunServices{
 					Evaluator: expression.NewGovaluateEvaluator(),
 					Template:  mustNewRenderer(),
 					Logger:    logger.NewTestLogger(),
 				},
-				Variables: tt.variables,
+				Scope: scope,
 			}
 
 			shouldSkip, err := HandleWhenExpression(step, ec)
@@ -184,15 +186,15 @@ func TestHandleWhenExpression_WithTemplate(t *testing.T) {
 		When: "deploy == true",
 	}
 
+	scope := NewVariableScope()
+	scope.User["deploy"] = true
 	ec := &ExecutionContext{
 		Svc: &RunServices{
 			Evaluator: expression.NewGovaluateEvaluator(),
 			Template:  mustNewRenderer(),
 			Logger:    logger.NewTestLogger(),
 		},
-		Variables: map[string]interface{}{
-			"deploy": true,
-		},
+		Scope: scope,
 	}
 
 	shouldSkip, err := HandleWhenExpression(step, ec)
@@ -245,7 +247,7 @@ func TestCheckIdempotencyConditions(t *testing.T) {
 					Template:  mustNewRenderer(),
 					Logger:    logger.NewTestLogger(),
 				},
-				Variables:     make(map[string]interface{}),
+				Scope:         NewVariableScope(),
 				CurrentResult: tt.result,
 			}
 
@@ -295,7 +297,7 @@ func TestCheckSkipConditions(t *testing.T) {
 					Template:  mustNewRenderer(),
 					Logger:    logger.NewTestLogger(),
 				},
-				Variables:     make(map[string]interface{}),
+				Scope:         NewVariableScope(),
 				CurrentResult: tt.result,
 			}
 

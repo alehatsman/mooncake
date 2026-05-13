@@ -26,7 +26,10 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 			Mode: planMode(plan),
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: map[string]interface{}{"who": "world"},
+		Scope: &executor.VariableScope{
+			User:    map[string]interface{}{"who": "world"},
+			Results: make(map[string]executor.RegisteredResult),
+		},
 		CurrentDir: "/tmp",
 	}
 }

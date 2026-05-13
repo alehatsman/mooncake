@@ -15,6 +15,10 @@ import (
 
 // Helper to create ExecutionContext for testing
 func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor.ExecutionContext {
+	scope := executor.NewVariableScope()
+	for k, v := range ctx.Variables {
+		scope.User[k] = v
+	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Logger: ctx.Log,
@@ -23,7 +27,7 @@ func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor
 			PathUtil: pathutil.NewPathExpander(ctx.Tmpl),
 			EventPublisher: ctx.Publisher,
 		},
-		Variables: ctx.Variables,
+		Scope: scope,
 		CurrentDir: tmpDir,
 		CurrentStepID: ctx.StepID,
 	}

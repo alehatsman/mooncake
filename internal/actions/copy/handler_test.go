@@ -38,7 +38,7 @@ func mockExecutionContext() *executor.ExecutionContext {
 			PathUtil: pathutil.NewPathExpander(tmpl),
 			Mode: actions.ModeApply,
 		},
-		Variables: ctx.Variables,
+		Scope: executor.NewVariableScope(),
 		CurrentStepID: ctx.StepID,
 		CurrentDir: "/tmp",
 	}
@@ -691,9 +691,9 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	}
 
 	ec := mockExecutionContext()
-	ec.Variables["srcfile"] = "source.txt"
-	ec.Variables["destfile"] = "dest.txt"
-	ec.Variables["tmpdir"] = tmpDir
+	ec.Scope.User["srcfile"] = "source.txt"
+	ec.Scope.User["destfile"] = "dest.txt"
+	ec.Scope.User["tmpdir"] = tmpDir
 
 	step := &config.Step{
 		FileCopy: &config.Copy{

@@ -27,7 +27,7 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 			Mode: planMode(plan),
 			Stats: executor.NewExecutionStats(),
 		},
-		Variables: map[string]interface{}{},
+		Scope: executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 }
