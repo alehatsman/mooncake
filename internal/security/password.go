@@ -137,8 +137,10 @@ type PasswordConfig struct {
 	InsecureCLI    bool
 }
 
-// ResolvePassword resolves the sudo password based on configuration
-// Priority: Interactive > File > Env > CLI (if --insecure-sudo-pass)
+// ResolvePassword resolves the sudo password based on configuration.
+// When -K/--ask-become-pass is set and SUDO_ASKPASS is exported, the askpass
+// helper is preferred over a TTY prompt (matches sudo's -A behavior, lets the
+// user wire up a GUI prompt for non-TTY contexts like editor terminals).
 func ResolvePassword(cfg PasswordConfig) (string, error) {
 	// Count active password methods
 	methodCount := 0
@@ -162,8 +164,12 @@ func ResolvePassword(cfg PasswordConfig) (string, error) {
 		return "", nil
 	}
 
-	// Interactive has highest priority
+	// Interactive: prefer SUDO_ASKPASS if available, else fall back to TTY
 	if cfg.AskInteractive {
+		if askpassPath := os.Getenv("SUDO_ASKPASS"); askpassPath != "" {
+			provider := &EnvPasswordProvider{ProgramPath: askpassPath}
+			return provider.GetPassword()
+		}
 		provider := &InteractivePasswordProvider{}
 		return provider.GetPassword()
 	}
@@ -180,12 +186,6 @@ func ResolvePassword(cfg PasswordConfig) (string, error) {
 			return "", fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
 		}
 		provider := &CLIPasswordProvider{Password: cfg.CLIPassword}
-		return provider.GetPassword()
-	}
-
-	// Check for SUDO_ASKPASS environment variable as fallback
-	if askpassPath := os.Getenv("SUDO_ASKPASS"); askpassPath != "" {
-		provider := &EnvPasswordProvider{ProgramPath: askpassPath}
 		return provider.GetPassword()
 	}
 

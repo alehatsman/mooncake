@@ -313,10 +313,24 @@ func TestEnvPasswordProvider_ProgramFails(t *testing.T) {
 	}
 }
 
-// Note: SUDO_ASKPASS fallback is currently unreachable in ResolvePassword
-// because the function returns early when no method is specified.
-// This test is commented out until that code path is either fixed or removed.
-//
-// func TestResolvePassword_SudoAskpassEnv(t *testing.T) {
-//   // Test would go here
-// }
+// TestResolvePassword_AskInteractiveUsesAskpass verifies that when AskInteractive
+// is set and SUDO_ASKPASS points to an executable, the askpass helper is invoked
+// in place of the TTY prompt.
+func TestResolvePassword_AskInteractiveUsesAskpass(t *testing.T) {
+	tmpDir := t.TempDir()
+	askpassScript := tmpDir + "/askpass.sh"
+	scriptContent := "#!/bin/sh\necho hunter2\n"
+	if err := os.WriteFile(askpassScript, []byte(scriptContent), 0700); err != nil {
+		t.Fatalf("Failed to create askpass script: %v", err)
+	}
+
+	t.Setenv("SUDO_ASKPASS", askpassScript)
+
+	password, err := ResolvePassword(PasswordConfig{AskInteractive: true})
+	if err != nil {
+		t.Fatalf("ResolvePassword returned error: %v", err)
+	}
+	if password != "hunter2" {
+		t.Fatalf("expected password from askpass helper, got %q", password)
+	}
+}
