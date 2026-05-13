@@ -7,7 +7,7 @@
 playbook hits: reactive triggers, structured error handling, and secrets
 that don't leak into logs.
 
-**Source:** `VISION_ACTIONS.md` §6.1, §6.2, §6.7.
+**Design principles:** `docs-working/action-design-principles.md`
 
 **Note:** `transaction:` blocks (§6.8) are split into their own spec
 (spec 30) because they depend on the extended ABI's `Reverse` method

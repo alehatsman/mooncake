@@ -7,7 +7,7 @@
 agent-touched than identity/pkg/git, but the absence of these is
 visible in every preset that does heavy systems work.
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-1 priorities §7.6, §7.9).
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

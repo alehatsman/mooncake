@@ -153,7 +153,7 @@ func (r *Pongo2Renderer) RenderPreserving(tmpl string, vars map[string]interface
 ```
 
 **Scope of `RenderPreserving`:** used only in the plan-time render closure
-passed to `PlanRenderInPlace`. Execute-time handlers call `Render` — at execute
+passed to `walkAndRender`. Execute-time handlers call `Render` — at execute
 time all referenced variables should be in scope, and an undefined variable
 is a user error, not a deferred reference.
 
@@ -237,150 +237,148 @@ identically — `reflect.Value.IsNil()` works for any pointer kind.
 
 ---
 
-### Component 2 — `PlanRenderer` interface drives `renderActionTemplates`
+### Component 2 — Generic string-field walker replaces `renderActionTemplates`
 
-**What plan-time rendering is for:** `compilePlanStep` is called on every
-step. It calls `renderActionTemplates` so that plan output shows resolved
-values — file paths with variables substituted, loop items expanded — instead
-of raw `{{ }}` strings. It is NOT about correctness at execute time (handlers
-re-render at execute time); it is about display quality and early syntax-error
-detection.
+**Design principle (from Terraform):** Plan output should distinguish "known now" from "known after execution" — never show empty string for a missing variable. With `RenderPreserving` in place, we can walk every string field of every action struct automatically. No per-action registration, no opt-in interface, no boilerplate.
 
-**With `RenderPreserving` in place,** all 28 actions can safely implement
-plan-time rendering. Templates referencing execute-time variables are
-preserved as `{{ }}` in plan output and resolved correctly at execute time.
-The restriction "only render fields the planner structurally needs" no longer
-applies.
-
-Add an optional interface to `internal/config/`:
+**`plan:"path"` struct tag** marks fields that hold file paths and need relative→absolute resolution at plan time. This is required for executor correctness: the executor receives compiled plan steps with no knowledge of the source config file's directory. A relative path in a compiled step cannot be resolved at execute time.
 
 ```go
-// PlanRenderer is implemented by action structs whose string fields should
-// be resolved at plan time for plan output display. The method is called on
-// an already-deep-copied action struct — implementations may mutate the
-// receiver in place. Implementations with nested pointer fields must
-// deep-copy those fields themselves before mutating (see ServiceAction).
-//
-// render wraps RenderPreserving: undefined variables are preserved as
-// {{ expr }} rather than replaced with empty string.
-//
-// currentDir is the config file's directory for relative-to-absolute
-// path resolution: if !filepath.IsAbs(p) { p = filepath.Join(currentDir, p) }
-//
-// Implementing types (keep current):
-//   ShellAction, File, Template, Copy, Unarchive, ServiceAction
-type PlanRenderer interface {
-    PlanRenderInPlace(render func(string) (string, error), currentDir string) error
+// Example tags — applied to path fields across all action structs
+type Template struct {
+    Src  string `yaml:"src"  json:"src"  plan:"path"`
+    Dest string `yaml:"dest" json:"dest" plan:"path"`
+    Mode string `yaml:"mode" json:"mode,omitempty"`    // render only, not a path
+}
+
+type Copy struct {
+    Src  string `yaml:"src"  json:"src"  plan:"path"`
+    Dest string `yaml:"dest" json:"dest" plan:"path"`
+    // ...
 }
 ```
 
-Implementing `PlanRenderer` is opt-in. No registration. Not implementing it
-is unambiguous: plan output shows the raw template string for that action's
-fields. This is correct behavior — not a bug.
+Fields tagged `plan:"path"` are: rendered with `RenderPreserving`, then `filepath.Join(currentDir, rendered)` applied if the result is not already absolute.
 
-**Action struct implementations** (same 6 as current `renderActionTemplates`
-coverage, ServiceAction fixed):
+**`walkAndRender`** — package-level function in `internal/plan/`:
 
 ```go
-func (a *ShellAction) PlanRenderInPlace(render func(string) (string, error), _ string) error {
-    cmd, err := render(a.Cmd)
-    if err != nil { return fmt.Errorf("shell.cmd: %w", err) }
-    a.Cmd = cmd
-    return nil
-}
-
-func (a *File) PlanRenderInPlace(render func(string) (string, error), dir string) error {
-    path, err := render(a.Path)
-    if err != nil { return fmt.Errorf("file.write.path: %w", err) }
-    a.Path = path
-    if a.Content != "" {
-        content, err := render(a.Content)
-        if err != nil { return fmt.Errorf("file.write.content: %w", err) }
-        a.Content = content
-    }
-    if a.Src != "" {
-        src, err := render(a.Src)
-        if err != nil { return fmt.Errorf("file.write.src: %w", err) }
-        if !filepath.IsAbs(src) { src = filepath.Join(dir, src) }
-        a.Src = src
-    }
-    return nil
-}
-
-func (a *Template) PlanRenderInPlace(render func(string) (string, error), dir string) error {
-    src, err := render(a.Src)
-    if err != nil { return fmt.Errorf("file.template.src: %w", err) }
-    if !filepath.IsAbs(src) { src = filepath.Join(dir, src) }
-    a.Src = src
-    dest, err := render(a.Dest)
-    if err != nil { return fmt.Errorf("file.template.dest: %w", err) }
-    a.Dest = dest
-    return nil
-}
-
-// Copy and Unarchive follow the same pattern as Template (src+dest with path resolution).
-
-// ServiceAction — fixes the nested pointer bug
-func (a *ServiceAction) PlanRenderInPlace(render func(string) (string, error), dir string) error {
-    if a.Unit != nil && a.Unit.SrcTemplate != "" {
-        unitCopy := *a.Unit        // deep copy — fixes shallow copy bug
-        a.Unit = &unitCopy
-        rendered, err := render(unitCopy.SrcTemplate)
-        if err != nil { return fmt.Errorf("os.service.unit.src_template: %w", err) }
-        if !filepath.IsAbs(rendered) { rendered = filepath.Join(dir, rendered) }
-        a.Unit.SrcTemplate = rendered
-    }
-    if a.Dropin != nil && a.Dropin.SrcTemplate != "" {
-        dropinCopy := *a.Dropin
-        a.Dropin = &dropinCopy
-        rendered, err := render(dropinCopy.SrcTemplate)
-        if err != nil { return fmt.Errorf("os.service.dropin.src_template: %w", err) }
-        if !filepath.IsAbs(rendered) { rendered = filepath.Join(dir, rendered) }
-        a.Dropin.SrcTemplate = rendered
+// walkAndRender recursively renders all string fields of an action struct
+// using RenderPreserving. Fields tagged plan:"path" are additionally resolved
+// to absolute paths using currentDir. Nested pointer-to-struct fields are
+// deep-copied before mutation to avoid touching the original config.
+func walkAndRender(rv reflect.Value, render func(string) (string, error), currentDir string) error {
+    rt := rv.Type()
+    for i := 0; i < rv.NumField(); i++ {
+        fv := rv.Field(i)
+        sf := rt.Field(i)
+        switch fv.Kind() {
+        case reflect.String:
+            if fv.String() == "" { continue }
+            rendered, err := render(fv.String())
+            if err != nil { return fmt.Errorf("%s: %w", sf.Name, err) }
+            if sf.Tag.Get("plan") == "path" && !filepath.IsAbs(rendered) {
+                rendered = filepath.Join(currentDir, rendered)
+            }
+            fv.SetString(rendered)
+        case reflect.Ptr:
+            if fv.IsNil() { continue }
+            switch fv.Type().Elem().Kind() {
+            case reflect.String:
+                if fv.Elem().String() == "" { continue }
+                rendered, err := render(fv.Elem().String())
+                if err != nil { return fmt.Errorf("%s: %w", sf.Name, err) }
+                if sf.Tag.Get("plan") == "path" && !filepath.IsAbs(rendered) {
+                    rendered = filepath.Join(currentDir, rendered)
+                }
+                cp := reflect.New(fv.Type().Elem())
+                cp.Elem().SetString(rendered)
+                fv.Set(cp)
+            case reflect.Struct:
+                orig := fv.Elem()
+                cp := reflect.New(orig.Type())
+                cp.Elem().Set(orig)
+                fv.Set(cp)
+                if err := walkAndRender(cp.Elem(), render, currentDir); err != nil { return err }
+            }
+        case reflect.Slice:
+            if fv.Type().Elem().Kind() != reflect.String { continue }
+            for j := 0; j < fv.Len(); j++ {
+                if fv.Index(j).String() == "" { continue }
+                rendered, err := render(fv.Index(j).String())
+                if err != nil { return fmt.Errorf("%s[%d]: %w", sf.Name, j, err) }
+                fv.Index(j).SetString(rendered)
+            }
+        case reflect.Map:
+            if fv.Type().Key().Kind() != reflect.String || fv.Type().Elem().Kind() != reflect.String { continue }
+            for _, k := range fv.MapKeys() {
+                if fv.MapIndex(k).String() == "" { continue }
+                rendered, err := render(fv.MapIndex(k).String())
+                if err != nil { return fmt.Errorf("%s[%s]: %w", sf.Name, k.String(), err) }
+                fv.SetMapIndex(k, reflect.ValueOf(rendered))
+            }
+        }
     }
     return nil
 }
 ```
 
-**New `renderActionTemplates` in planner** — uses `RenderPreserving`:
+Handles: `string`, `*string`, `*struct` (with deep copy + recursion), `[]string`, `map[string]string`. Skips everything else silently.
+
+**New `renderActionTemplates`:**
 
 ```go
 func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext) error {
-    // render wraps RenderPreserving: undefined variables are preserved as
-    // {{ expr }} placeholders rather than silently replaced with "".
     render := func(s string) (string, error) {
         return p.template.RenderPreserving(s, ctx.Variables)
     }
-
     rv := reflect.ValueOf(step).Elem()
     for _, i := range config.ActionFieldIndices() {
         fv := rv.Field(i)
-        if fv.IsNil() {
-            continue
-        }
-        if fv.Type().Elem().Kind() != reflect.Struct {
-            continue // *string/*map fields (import, vars.load, vars) — no plan-time rendering
-        }
-        renderer, ok := fv.Interface().(config.PlanRenderer)
-        if !ok {
-            continue // action does not implement PlanRenderer — plan output shows raw template
-        }
-        // Generic shallow deep-copy of the action struct.
-        // PlanRenderInPlace implementations with nested pointers (ServiceAction)
-        // are responsible for deep-copying their nested fields themselves.
+        if fv.IsNil() { continue }
+        if fv.Type().Elem().Kind() != reflect.Struct { continue }
+        // Shallow-copy the action struct. walkAndRender deep-copies nested
+        // pointer fields before mutating them.
         orig := fv.Elem()
         cp := reflect.New(orig.Type())
         cp.Elem().Set(orig)
         fv.Set(cp)
-
-        if err := cp.Interface().(config.PlanRenderer).PlanRenderInPlace(render, ctx.CurrentDir); err != nil {
+        if err := walkAndRender(cp.Elem(), render, ctx.CurrentDir); err != nil {
             return fmt.Errorf("step %q: %w", step.Name, err)
         }
-        break // exactly one action field is non-nil per valid step
+        break
     }
     return nil
 }
 ```
+
+No `PlanRenderer` interface check. Every struct action is walked. Coverage is automatic and complete for all 28 actions.
+
+**`PlanRenderer` interface deleted.** `internal/config/plan_renderer.go` removed. The 6 manual implementations (`ShellAction.PlanRenderInPlace`, `File.PlanRenderInPlace`, etc.) are gone.
+
+**Fields with `plan:"path"` tag (complete list):**
+
+| Struct | Fields |
+|---|---|
+| `File` | `Path`, `Src` |
+| `Template` | `Src`, `Dest` |
+| `Copy` | `Src`, `Dest` |
+| `Unarchive` | `Src`, `Dest`, `Creates` |
+| `Download` | `Dest` |
+| `ServiceUnit` | `Dest`, `SrcTemplate` |
+| `ServiceDropin` | `SrcTemplate` |
+| `FileReplace` | `Path` |
+| `FileInsert` | `Path` |
+| `FileDeleteRange` | `Path` |
+| `FilePatchApply` | `Path`, `PatchFile` |
+| `RepoSearch` | `Path`, `OutputFile` |
+| `RepoTree` | `Path`, `OutputFile` |
+| `RepoApplyPatchset` | `PatchsetFile`, `BaseDir`, `OutputFile` |
+| `ArtifactCapture` | `OutputDir` |
+| `ArtifactValidate` | `ArtifactFile` |
+| `WaitAction` | `Path` (`*string`) |
+| `AssertFile` | `Path` |
+| `AssertFileSHA256` | `Path` |
 
 ### `Clone()` — no change
 
@@ -397,7 +395,7 @@ correct enforcement mechanism — no improvement needed.
 | `countActions` | 90-line if-chain | 10-line reflection loop |
 | `DetermineActionType` | 90-line if-chain | 10-line reflection loop |
 | `Clone` | struct literal | **unchanged** |
-| `renderActionTemplates` | 160-line if-chain, 7/28 covered, silent clobber bug, OsService shallow copy bug | generic loop, coverage explicit, `RenderPreserving` fixes clobber, OsService fixed |
+| `renderActionTemplates` | 160-line if-chain, 7/28 covered, silent clobber bug, OsService shallow copy bug | generic recursive walker, all 28 actions covered, `plan:"path"` tag drives path resolution, `PlanRenderer` interface deleted |
 
 ---
 
@@ -406,14 +404,15 @@ correct enforcement mechanism — no improvement needed.
 1. Add field to `Step` with `action:"key"` tag → `countActions` and
    `DetermineActionType` automatically correct.
 2. Add field to `Clone()` struct literal → compile error if missed.
-3. Optionally implement `PlanRenderInPlace` on the action struct for better
-   plan output. No consequence if omitted — plan output shows raw templates.
+3. Add `plan:"path"` tags to any path fields on the action struct →
+   `walkAndRender` handles rendering and path resolution automatically.
+   No other registration or boilerplate required.
 
 ---
 
 ## Design implications of `RenderPreserving`
 
-`RenderPreserving` changes the nature of `PlanRenderer` in a fundamental way.
+`RenderPreserving` changes what plan-time rendering can safely do.
 
 **Before `RenderPreserving`:**
 Plan-time rendering was only safe for fields that reference variables
@@ -427,23 +426,20 @@ There is no unsafe plan-time rendering. Undefined variables are preserved.
 Every action's string fields can be rendered at plan time without risk.
 
 **This means the 21 "skipped" actions are no longer correctly skipped — they
-are merely not yet implemented.** The distinction matters:
+are merely not yet covered.** The distinction matters:
 
-- Previously: adding `PlanRenderInPlace` to `cmd` would be wrong (might clobber `{{ registered.stdout }}`)
-- After: adding `PlanRenderInPlace` to `cmd` is purely additive — better plan output, zero correctness risk
+- Previously: rendering `cmd` fields would be wrong (might clobber `{{ registered.stdout }}`)
+- After: `walkAndRender` covers `cmd` and every other action automatically — better plan output, zero correctness risk
 
 **Coverage strategy after this spec:**
 
-The 6 actions implemented here match current `renderActionTemplates` coverage
-— they are the actions whose path fields affect plan output most visibly.
-The remaining 22 can be added incrementally, one struct at a time, with no
-risk and no dependencies. Each addition is isolated: add the method, add a
-test, done. There is no wrong time to add one.
-
-The ceiling is full coverage: all 28 actions render all their string fields
-at plan time. Users see fully-resolved plan output where variables are in
-scope, and preserved `{{ expr }}` where they are not. This is strictly better
-than the current state for every action.
+`walkAndRender` covers all 28 actions automatically — no per-action work
+required. Path fields that need absolute resolution get `plan:"path"` tags;
+all other string fields are rendered with `RenderPreserving`. The ceiling is
+reached immediately: all 28 actions render all their string fields at plan
+time. Users see fully-resolved plan output where variables are in scope, and
+preserved `{{ expr }}` where they are not. This is strictly better than the
+current state for every action.
 
 **Execute-time rendering is unchanged.** Handlers call `Render` (not
 `RenderPreserving`). At execute time, all variables should be in scope. If a
@@ -467,13 +463,13 @@ code changes elsewhere. Run `go build`.
 Run `go test ./...`. Add a table-driven test that sets each action field on a
 `Step` and verifies `DetermineActionType()` returns the tag value.
 
-**Step 3** — Add `PlanRenderer` interface to `internal/config/`. Implement
-`PlanRenderInPlace` on `ShellAction`, `File`, `Template`, `Copy`, `Unarchive`,
-`ServiceAction`. These match current coverage; no behavior change yet.
+**Step 3** — Add `plan:"path"` struct tags to all path fields listed in the
+table above (across `internal/config/config.go`). No behavior change yet —
+tags are inert until Step 4.
 
-**Step 4** — Replace `renderActionTemplates` body with the generic reflection
-loop using `RenderPreserving`. Run `go test ./...`. Existing tests for the 6
-converted actions verify correctness.
+**Step 4** — Replace `renderActionTemplates` body with `walkAndRender`. Add
+`walkAndRender` as a package-level function in `internal/plan/planner.go`.
+Delete `internal/config/plan_renderer.go`. Run `go test ./...`.
 
 **Step 5** — Clean up `//nolint:gocyclo` and `//nolint:dupl` suppressions
 on the deleted if-chains.
@@ -488,7 +484,9 @@ Steps 0–2 are completely independent. Steps 3–4 depend on Step 0 (need
 - [ ] `RenderPreserving`: defined vars render, undefined vars preserved as `{{ expr }}`, mixed templates work, pongo2 builtins not intercepted
 - [ ] `DetermineActionType` returns the `action:` tag value for all 28 fields (table-driven test)
 - [ ] `countActions` correctly counts all 28 field types
-- [ ] `renderActionTemplates` uses `RenderPreserving` in the render closure
-- [ ] `ServiceAction` deep copy: original `ServiceUnit` / `ServiceDropin` structs not mutated after plan compile
+- [ ] `renderActionTemplates` uses `walkAndRender` with `RenderPreserving`; all 28 action structs covered automatically
+- [ ] `plan:"path"` fields are resolved to absolute paths; non-path string fields are rendered only
+- [ ] `ServiceAction` nested structs (`Unit`, `Dropin`) are deep-copied before mutation
+- [ ] No `PlanRenderer` interface or implementations remain
 - [ ] `go test ./...` passes
 - [ ] No `//nolint:gocyclo` or `//nolint:dupl` remaining on the deleted functions

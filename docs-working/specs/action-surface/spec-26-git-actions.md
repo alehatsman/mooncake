@@ -7,7 +7,7 @@
 few steps. Today: shell-out to git, lose idempotency, fight with
 credentials. First-class git actions fix this for the common 80%.
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-1 priority §7.4).
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

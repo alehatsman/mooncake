@@ -3,13 +3,13 @@
 > Roadmap for the iterations that follow spec-21's v2 cutover. Working doc —
 > iterate here before formalizing individual specs.
 
-**North star (from [VISION_ACTIONS.md](../VISION_ACTIONS.md)):** Mooncake's
+**North star (from [action-design-principles.md](../action-design-principles.md)):** Mooncake's
 action surface IS the product. Spec-21 locked in the modern surface
 (dot-namespaced action keys, modern framework keywords, `ForEachField`,
 `AsUser`, `Retry`). Everything after is buildout on top of that surface.
 
 **Constraint:** stay tight. ~30 Tier-1 actions total — not 200. Each action
-must satisfy the 11 design principles in `VISION_ACTIONS.md` §3
+must satisfy the 11 design principles in `action-design-principles.md` §1
 (idempotent, plannable, snapshot-aware, reversible, typed, secure-by-default,
 …).
 
@@ -30,7 +30,7 @@ container  container.image
 tool   (spec-19)
 ```
 
-Holes from `VISION_ACTIONS.md` §2 still wide open:
+Holes from the action surface holes still wide open:
 - No `pkg.install` / `pkg.remove` / `pkg.repo` (the *batched* `pkg` exists,
   but the imperative surface for adding repos isn't there)
 - No `os.user` / `os.group` / `os.ssh_key` / `os.cron` / `os.systemd` /
@@ -88,10 +88,10 @@ mechanics can be sorted independently of the actions themselves.
 
 Other follow-ups deferred (don't have specs yet):
 - AI-translation CLI for Ansible playbooks (per `VISION.md` §5 / §8 of
-  `VISION_ACTIONS.md`)
+  `action-design-principles.md`)
 - `mooncake hub` — control plane (separate epic; see `VISION.md` §8)
 - `mooncake guard` — agent sandbox runtime (separate epic; `VISION.md` §7)
-- Action versioning (per-action `@v` pins; `VISION_ACTIONS.md` §9 Q2)
+- Action versioning (per-action `@v` pins; `action-design-principles.md` §3)
 
 ---
 

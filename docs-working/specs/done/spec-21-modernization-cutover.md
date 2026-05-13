@@ -17,7 +17,7 @@ dot-namespaced YAML keys before any further expansion. Without this,
 every subsequent spec would have carried the cost of mixed v1/v2
 conventions forever.
 
-**Companion docs:** `VISION.md`, `VISION_ACTIONS.md`.
+**Companion docs:** `VISION.md`, `docs-working/action-design-principles.md`.
 
 **Backward compatibility:** None. Clean break. No aliases, no deprecation
 period, no migrator tool. Users on existing YAML stay on `v1.x`; `v2.0`
@@ -39,7 +39,7 @@ ad-hoc flat names (`file_replace`, `repo_apply_patchset`,
    cleanly is now, before the install base grows.
 2. **Scaling surface area.** As we add Tier-1 actions (`pkg.install`,
    `os.user`, `text.line`, `git.clone`, `wait.port`, etc. — see
-   `VISION_ACTIONS.md` §5), the existing flat keys clash with the natural
+   `docs-working/action-design-principles.md` §5), the existing flat keys clash with the natural
    dot-namespaced names of the new ones. Adding `pkg.install` while keeping
    `package` is incoherent.
 
@@ -79,7 +79,7 @@ to dot-namespaced action keys and modern framework keywords, in one release.
 ## Decisions locked
 
 These are not up for re-litigation inside this spec; they were settled in
-`VISION_ACTIONS.md` and during the brainstorm.
+`docs-working/action-design-principles.md` and during the brainstorm.
 
 1. **No legacy aliases. Ever.** Single canonical name per action.
 2. **Dot-namespaced names for actions that touch the world** (file, text,
@@ -682,7 +682,7 @@ should land before Spec 21 merges, to avoid dual-surface confusion.
 ---
 
 *This spec is the cutover that unblocks the rest of the
-`VISION_ACTIONS.md` roadmap. Treat it as a single atomic project — partial
+`docs-working/action-design-principles.md` roadmap. Treat it as a single atomic project — partial
 landings produce a worse state than either the v1 surface or the v2 surface
 alone.*
 

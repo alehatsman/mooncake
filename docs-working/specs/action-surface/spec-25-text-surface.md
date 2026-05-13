@@ -8,7 +8,7 @@ INI section" gap that today forces users into shell pipelines or
 template-the-whole-file. `text.line` alone replaces 30% of `shell: sed`
 in the wild.
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-1 priorities §7.3, §7.8).
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

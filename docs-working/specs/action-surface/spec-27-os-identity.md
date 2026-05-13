@@ -8,7 +8,7 @@ and today it's an ugly mix of `shell: useradd`, `shell: usermod`,
 manual `~/.ssh/authorized_keys` editing. First-class identity actions
 fix this once.
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-1 priority §7.5).
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

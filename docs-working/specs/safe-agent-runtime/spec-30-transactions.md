@@ -7,7 +7,7 @@
 safety substrate" pitch (see `VISION.md` §7). A `transaction:` that
 auto-rolls-back makes "let the agent try" actually safe.
 
-**Source:** `VISION_ACTIONS.md` §6.8.
+**Design principles:** `docs-working/action-design-principles.md`
 
 **Depends on:** spec 22 (extended Handler ABI — specifically `Reverse`).
 

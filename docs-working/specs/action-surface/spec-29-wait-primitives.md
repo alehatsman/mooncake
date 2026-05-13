@@ -9,7 +9,7 @@ is the canonical orchestration. Today's polymorphic `wait` action
 works but its shape is opaque; the per-domain split mirrors the
 modern action surface convention and makes Diff/Cost natural.
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-1 priority §7.7).
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

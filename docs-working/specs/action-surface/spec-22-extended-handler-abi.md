@@ -6,7 +6,7 @@
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
 agent-safety pitch, policy gating, and structural diffs for richer UIs.
 
-**Source:** `VISION_ACTIONS.md` §4.
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

@@ -8,7 +8,7 @@ extends *beyond* the Tier-1 kernel without ballooning the main binary
 or polluting the schema. Even modest community adoption depends on
 having a sensible plugin shape.
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-2), §9 Q1.
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

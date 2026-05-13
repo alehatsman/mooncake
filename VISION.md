@@ -413,7 +413,48 @@ These are real forks. Worth deciding intentionally rather than drifting.
 
 ---
 
-## 12. Open questions worth brainstorming further
+## 12. Development streams
+
+The three rings and three wedges above map to five parallel development
+streams. Each stream is independently useful and has a distinct audience.
+Stream 1 is the infrastructure layer that all others depend on.
+
+```
+Stream 1: Action Surface          ← kernel completeness; serves all wedges
+Stream 2: Safe Agent Runtime      ← "Docker for AI agents" wedge (§4.2)
+Stream 3: Fleet & Cluster Mgmt    ← platform team wedge (§4.3)
+Stream 4: Developer Experience    ← solo developer wedge (§4.1); the funnel
+Stream 5: Ecosystem               ← ring 3 (economy): marketplace, plugins, integrations
+```
+
+**Stream 1 — Action Surface**: Complete the typed mutation vocabulary. Extended
+handler ABI (`Diff`, `Reverse`, `Cost`) unblocks streams 2 and 3. New actions:
+`pkg.*`, `text.*`, `git.*`, `os.*`, `wait.*`. Tier-2 plugin model so the
+community fills the long tail without forking.
+
+**Stream 2 — Safe Agent Runtime**: The most defensible wedge. AI agents get no
+shell — only the Mooncake ABI. Covers: `on_change` triggers, `try/catch/finally`,
+`!secret` refs, `transaction:` blocks with automatic reverse-on-failure, policy
+DSL, plan signing, per-action quotas, egress policy, deterministic replay.
+
+**Stream 3 — Fleet & Cluster Management**: GitOps for software state at fleet
+scale. The same guarantees on one node, fanned out to N nodes. Node registry,
+fleet plans with rollout strategies, continuous drift detection, AI-assisted
+remediation. See `docs-working/epics/epic-cluster-management.md`.
+
+**Stream 4 — Developer Experience**: The funnel. `mooncake doctor`, drift
+detection UX, multi-machine sync, TUI dashboard. Gets solo devs adopting
+Mooncake, who then bring it to work via streams 2 and 3.
+
+**Stream 5 — Ecosystem**: WASM plugins, preset marketplace, GitHub Actions
+integration, IDE extensions. Converts Mooncake from a tool into a standard.
+
+For current spec assignments, status, and work order see
+[`docs-working/streams.md`](docs-working/streams.md).
+
+---
+
+## 13. Open questions worth brainstorming further
 
 These are the unknowns I'd want to pull on next:
 
@@ -443,7 +484,7 @@ These are the unknowns I'd want to pull on next:
 
 ---
 
-## 13. One-paragraph elevator pitch (working draft)
+## 14. One-paragraph elevator pitch (working draft)
 
 > Mooncake is the safe execution runtime for AI-driven system configuration.
 > It's a single Go binary today, with idempotent typed actions, dry-run, and

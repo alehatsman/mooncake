@@ -9,7 +9,7 @@ missing is the rest of the package-management story: adding/removing
 repositories, listing installed packages for inventory, and tightening
 the imperative cases (forced reinstall, holds, autoremove).
 
-**Source:** `VISION_ACTIONS.md` §5 (Tier-1 priorities §7.1, §7.2).
+**Design principles:** `docs-working/action-design-principles.md`
 
 ---
 

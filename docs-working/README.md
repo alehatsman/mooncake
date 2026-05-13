@@ -4,32 +4,39 @@ Working documents — specs, epics, and notes. Not canonical docs; those live in
 
 ## Structure
 
-| Directory | Contents |
+| Path | Contents |
 |---|---|
-| `specs/` | Active draft specs |
-| `specs/done/` | Shipped specs (read-only reference) |
-| `epics/` | Epic-level planning docs — groups of related specs, future work |
-| `analysis/` | Code quality audits, one-off investigations, research notes |
-| `deferred/` | Deferred notes and reference material not yet specced |
+| `streams.md` | Stream overview — goals, audiences, dependencies, what to work on next |
+| `specs/action-surface/` | Stream 1: typed action library (spec-17, 22, 24–29, 32) |
+| `specs/safe-agent-runtime/` | Stream 2: LLM execution safety (spec-23, 30) |
+| `specs/fleet-cluster/` | Stream 3: declarative cluster management (future specs) |
+| `specs/developer-experience/` | Stream 4: solo dev UX (future specs) |
+| `specs/ecosystem/` | Stream 5: plugins, marketplace, integrations (spec-31) |
+| `specs/done/` | Shipped specs — read-only reference |
+| `epics/` | Epic-level planning docs |
+| `analysis/` | Code quality audits, one-off investigations |
+| `deferred/` | Deferred notes not yet specced |
 
-## Active specs (specs/)
+See **[streams.md](./streams.md)** for the full stream breakdown, dependencies, and recommended work order.
+See **[action-design-principles.md](./action-design-principles.md)** for the 11 non-negotiable design rules for any new action.
 
-| # | File | Topic | Epic | Status |
-|---|---|---|---|---|
-| 17 | spec-17-package-batch-and-template.md | Batched packages + templated names | E8 | partial |
-| 22 | spec-22-extended-handler-abi.md | Extended handler ABI (Diff/Reverse/Cost) | E9.1 | not started |
-| 23 | spec-23-framework-primitives.md | `on_change`, `try/catch`, `!secret` refs | E9.2 | not started |
-| 24 | spec-24-pkg-surface.md | `pkg.install` / `pkg.remove` / `pkg.repo` | E9.3 | not started |
-| 25 | spec-25-text-surface.md | `text.line`, structural patches | E9.3 | not started |
-| 26 | spec-26-git-actions.md | `git.clone`, `git.checkout`, `git.config` | E9.3 | not started |
-| 27 | spec-27-os-identity.md | `os.user`, `os.group`, `os.ssh_key` | E9.3 | not started |
-| 28 | spec-28-os-scheduling.md | `os.cron`, `os.firewall`, `os.mount`, `os.sysctl` | E9.3 | not started |
-| 29 | spec-29-wait-primitives.md | `wait.port`, `wait.http`, `wait.file` | E9.3 | not started |
-| 30 | spec-30-transactions.md | `transaction:` blocks with reverse-on-failure | E9.4 | not started |
-| 31 | spec-31-tier2-plugin-model.md | Tier-2 plugin model (`notify.*` proof of concept) | E9.5 | not started |
-| 32 | spec-32-step-action-dispatch.md | Collapse step action dispatch | structural | partial |
+## Active specs by stream
 
-Note: spec-22 is a blocking dependency for specs 23–30.
+**Stream 1 — Action Surface**
+32 dispatch · 22 extended-handler-abi · 17 package-batch · 24 pkg-surface ·
+25 text-surface · 26 git-actions · 27 os-identity · 28 os-scheduling · 29 wait-primitives
+
+**Stream 2 — Safe Agent Runtime** *(needs spec-22 first)*
+23 framework-primitives · 30 transactions
+
+**Stream 3 — Fleet & Cluster Management**
+*(no numbered specs yet — see epics/epic-cluster-management.md)*
+
+**Stream 4 — Developer Experience**
+*(no specs yet)*
+
+**Stream 5 — Ecosystem**
+31 tier2-plugin-model
 
 ## Shipped specs (specs/done/)
 
