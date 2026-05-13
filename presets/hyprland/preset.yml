@@ -17,10 +17,8 @@ parameters:
     description: Default terminal emulator
 
 steps:
-  - name: Install Hyprland
-    import: tasks/install.yml
+  - import: tasks/install.yml
     when: parameters.state == "present"
 
-  - name: Uninstall Hyprland
-    import: tasks/uninstall.yml
+  - import: tasks/uninstall.yml
     when: parameters.state == "absent"
