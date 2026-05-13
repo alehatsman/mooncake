@@ -133,12 +133,7 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 	return fmt.Sprintf("step-%d", *ec.Stats.Global)
 }
 
-// MarkStepFailed marks a result as failed and registers it if needed.
-// The caller is responsible for returning an appropriate error.
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func MarkStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
+func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
 	result.Failed = true
 	result.Rc = 1
 	if step.As != "" {
@@ -163,11 +158,7 @@ func AddGlobalVariables(variables map[string]interface{}) {
 	}
 }
 
-// HandleVars processes the vars field of a step, rendering templates and merging into the execution context.
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func HandleVars(step config.Step, ec *ExecutionContext) error {
+func handleVars(step config.Step, ec *ExecutionContext) error {
 	ec.Logger.Debugf("Handling vars: %+v", step.Vars)
 
 	if step.Vars == nil {
@@ -200,12 +191,7 @@ func HandleVars(step config.Step, ec *ExecutionContext) error {
 	return nil
 }
 
-// HandleWhenExpression evaluates the when condition and returns whether the step should be skipped.
-// Returns (shouldSkip bool, error).
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
+func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
 	ec.Logger.Debugf("variables: %v", ec.Variables)
@@ -240,20 +226,11 @@ func HandleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !boolResult, nil
 }
 
-// ShouldSkipByTags determines if a step should be skipped based on tag filtering.
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func ShouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
+func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
 	return !utils.MatchesTags(step.Tags, ec.Tags)
 }
 
-// CheckIdempotencyConditions evaluates creates and unless conditions for shell steps.
-// Returns (shouldSkip bool, reason string, error)
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check creates condition
 	if step.UnlessExists != nil {
 		path, err := ec.Template.Render(*step.UnlessExists, ec.Variables)
@@ -292,24 +269,7 @@ func CheckIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 	return false, "", nil
 }
 
-// CheckSkipConditions evaluates whether a step should be skipped based on conditional
-// expressions and tag filters.
-//
-// It first checks if the step was marked as skipped during planning (via step.Skipped field).
-// This happens when tag filtering is applied during the planning phase.
-//
-// Next, it evaluates the step's "when" condition (if present), which is an expression
-// that must evaluate to true for the step to execute. If the condition evaluates to false,
-// the step is skipped with reason "when".
-//
-// Returns:
-//   - shouldSkip: true if the step should be skipped
-//   - skipReason: "when" or "tags" indicating why the step was skipped (empty if not skipped)
-//   - error: any error encountered while evaluating conditions
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
+func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check if step was marked as skipped during planning (tag filtering)
 	// The planner already evaluated tags and set step.Skipped - we trust that decision.
 	// No need to recalculate at runtime (performance and single-source-of-truth).
@@ -319,7 +279,7 @@ func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 
 	// Check when condition
 	if step.When != "" {
-		shouldSkip, err := HandleWhenExpression(step, ec)
+		shouldSkip, err := handleWhenExpression(step, ec)
 		if err != nil {
 			// In plan mode the variable set may not include results from
 			// previous steps (nothing actually ran), so a when expression
@@ -344,20 +304,7 @@ func CheckSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 	return false, "", nil
 }
 
-// GetStepDisplayName determines the display name to show for a step in logs and output.
-//
-// The function follows a priority order to determine the name:
-//  1. If executing within a with_filetree loop, uses action + destination path
-//  2. If executing within a with_items loop, uses the string representation of the item
-//  3. Otherwise, uses the step's configured Name field
-//
-// Returns:
-//   - displayName: the name to display for this step
-//   - hasName: true if a name was found, false if the step is anonymous
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func GetStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
+func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 	// For with_filetree, show hierarchical structure
 	if item, ok := ec.Variables["item"].(filetree.Item); ok {
 		// For directories, show as headers with trailing slash
@@ -504,14 +451,14 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Check if step should be skipped (when conditions, tags)
-	shouldSkip, skipReason, err := CheckSkipConditions(step, ec)
+	shouldSkip, skipReason, err := checkSkipConditions(step, ec)
 	if err != nil {
 		return err
 	}
 
 	// Check idempotency conditions (creates, unless) - ONLY for shell/command steps
 	if !shouldSkip && (step.Shell != nil || step.Cmd != nil) {
-		idempotencySkip, idempotencyReason, err := CheckIdempotencyConditions(step, ec)
+		idempotencySkip, idempotencyReason, err := checkIdempotencyConditions(step, ec)
 		if err != nil {
 			return err
 		}
@@ -522,7 +469,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Determine step display name
-	stepName, hasStepName := GetStepDisplayName(step, ec)
+	stepName, hasStepName := getStepDisplayName(step, ec)
 
 	// Handle skipped steps
 	if shouldSkip {
@@ -1035,12 +982,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	return nil
 }
 
-// ParseFileMode parses a mode string (e.g., "0644") into os.FileMode.
-// Returns default mode if mode is empty or invalid.
-//
-// INTERNAL: This function is exported for testing purposes only and is not part of
-// the public API. It may change or be removed in future versions without notice.
-func ParseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
+func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	if modeStr == "" {
 		return defaultMode
 	}
