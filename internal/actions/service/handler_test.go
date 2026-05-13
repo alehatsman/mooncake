@@ -25,16 +25,18 @@ func newMockExecutionContext() *executor.ExecutionContext {
 		panic("Failed to create renderer: " + err.Error())
 	}
 	return &executor.ExecutionContext{
-		Variables:      make(map[string]interface{}),
-		Template:       tmpl,
-		Evaluator:      expression.NewExprEvaluator(),
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		Logger:         &testutil.MockLogger{Logs: []string{}},
-		EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-		Redactor:       security.NewRedactor(),
-		SudoPass:       "",
-		CurrentStepID:  "step-1",
-		Stats:          executor.NewExecutionStats(),
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: expression.NewExprEvaluator(),
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Logger: &testutil.MockLogger{Logs: []string{}},
+			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
+			Redactor: security.NewRedactor(),
+			SudoPass: "",
+			Stats: executor.NewExecutionStats(),
+		},
+		Variables: make(map[string]interface{}),
+		CurrentStepID: "step-1",
 	}
 }
 
@@ -303,7 +305,7 @@ func TestHandler_DryRun(t *testing.T) {
 
 			if !tt.wantErr {
 				// Check that something was logged
-				mockLog := ctx.Logger.(*testutil.MockLogger)
+				mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 				if len(mockLog.Logs) == 0 {
 					t.Error("DryRun() should log something")
 				}
@@ -635,7 +637,7 @@ func TestRenderTemplateOrContent_InvalidTemplate(t *testing.T) {
 // TestHandleService_PlatformSupport tests that the service handler dispatches correctly by platform
 func TestHandleService_PlatformSupport(t *testing.T) {
 	ctx := newMockExecutionContext()
-	ctx.SudoPass = "test" // Provide sudo password to get past initial checks
+	ctx.Svc.SudoPass = "test" // Provide sudo password to get past initial checks
 
 	step := config.Step{
 		OsService: &config.ServiceAction{
@@ -702,7 +704,7 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 	}
 
 	ctx := newMockExecutionContext()
-	ctx.SudoPass = "" // No password provided
+	ctx.Svc.SudoPass = "" // No password provided
 
 	step := config.Step{
 		OsService: &config.ServiceAction{

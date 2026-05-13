@@ -92,7 +92,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Render destination path
-	renderedDest, err := ec.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -237,7 +237,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render destination path
-	renderedDest, err := ec.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		renderedDest = downloadAction.Dest
 	}
@@ -405,7 +405,7 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
-	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -436,7 +436,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	renderedDest, err := ec.PathUtil.ExpandPath(d.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(d.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand dest path: %w", err)
 	}

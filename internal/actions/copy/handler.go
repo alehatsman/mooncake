@@ -82,12 +82,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Render paths
-	renderedSrc, err := ec.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ctx.GetVariables())
+	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
 
-	renderedDest, err := ec.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -222,12 +222,12 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render paths
-	renderedSrc, err := ec.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ctx.GetVariables())
+	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		renderedSrc = copyAction.Src
 	}
 
-	renderedDest, err := ec.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		renderedDest = copyAction.Dest
 	}
@@ -460,7 +460,7 @@ func (h *Handler) parseGroupID(group string) (int, error) {
 func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
-	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -519,11 +519,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	src, err := ec.PathUtil.ExpandPath(cp.Src, ec.CurrentDir, ctx.GetVariables())
+	src, err := ec.Svc.PathUtil.ExpandPath(cp.Src, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
-	dest, err := ec.PathUtil.ExpandPath(cp.Dest, ec.CurrentDir, ctx.GetVariables())
+	dest, err := ec.Svc.PathUtil.ExpandPath(cp.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}

@@ -27,15 +27,17 @@ func mockExecutionContext() *executor.ExecutionContext {
 		panic("Failed to create renderer: " + err.Error())
 	}
 	return &executor.ExecutionContext{
-		Variables:      ctx.Variables,
-		Template:       tmpl,
-		Evaluator:      ctx.GetEvaluator(),
-		Logger:         ctx.Log,
-		EventPublisher: ctx.Publisher,
-		CurrentStepID:  ctx.StepID,
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		CurrentDir:     "/tmp",
-		CurrentMode:    actions.ModeApply,
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: ctx.GetEvaluator(),
+			Logger: ctx.Log,
+			EventPublisher: ctx.Publisher,
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Mode: actions.ModeApply,
+		},
+		Variables: ctx.Variables,
+		CurrentStepID: ctx.StepID,
+		CurrentDir: "/tmp",
 	}
 }
 
@@ -398,7 +400,7 @@ func TestHandler_Execute_TarArchive(t *testing.T) {
 	}
 
 	// Check event was published
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(pub.Events))
 		return
@@ -471,7 +473,7 @@ func TestHandler_Execute_TarGzArchive(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(pub.Events))
 		return
@@ -536,7 +538,7 @@ func TestHandler_Execute_ZipArchive(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(pub.Events))
 		return
@@ -614,7 +616,7 @@ func TestHandler_Execute_StripComponents(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	data := pub.Events[0].Data.(events.ArchiveExtractedData)
 	if data.StripComponents != 2 {
 		t.Errorf("StripComponents = %d, want 2", data.StripComponents)
@@ -885,7 +887,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	createTestTarArchive(t, tarPath)
 
 	ec := mockExecutionContext()
-	ec.EventPublisher = nil
+	ec.Svc.EventPublisher = nil
 
 	step := &config.Step{
 		FileUnarchive: &config.Unarchive{
@@ -1008,7 +1010,7 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			// Check that something was logged
-			log := ec.Logger.(*testutil.MockLogger)
+			log := ec.Svc.Logger.(*testutil.MockLogger)
 			if len(log.Logs) == 0 {
 				t.Error("DryRun() should log something")
 			}
@@ -1042,7 +1044,7 @@ func TestHandler_DryRun_IdempotentCheck(t *testing.T) {
 	}
 
 	// Check log message mentions skip
-	log := ec.Logger.(*testutil.MockLogger)
+	log := ec.Svc.Logger.(*testutil.MockLogger)
 	hasSkipMessage := false
 	for _, msg := range log.Logs {
 		if strings.Contains(msg, "skip") || strings.Contains(msg, "exists") {
@@ -1421,7 +1423,7 @@ func TestHandler_Execute_EmptyArchive(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(pub.Events))
 		return

@@ -129,7 +129,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		intervalDuration = minInterval
 	}
 
-	ec.Logger.Infof("Waiting for condition: %s (timeout: %s, interval: %s)", wait.Condition, timeout, interval)
+	ec.Svc.Logger.Infof("Waiting for condition: %s (timeout: %s, interval: %s)", wait.Condition, timeout, interval)
 
 	// Create timeout context
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
@@ -165,7 +165,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return result, err
 	}
 
-	ec.Logger.Infof("Condition met after %s (%d iterations)", elapsed.Round(time.Millisecond), iterations)
+	ec.Svc.Logger.Infof("Condition met after %s (%d iterations)", elapsed.Round(time.Millisecond), iterations)
 	return result, nil
 }
 
@@ -186,37 +186,37 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		interval = wait.Interval
 	}
 
-	ec.Logger.Infof("  [DRY-RUN] Would wait for condition: %s (timeout: %s, interval: %s)", wait.Condition, timeout, interval)
+	ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for condition: %s (timeout: %s, interval: %s)", wait.Condition, timeout, interval)
 
 	switch wait.Condition {
 	case conditionFileExists:
-		ec.Logger.Infof("  [DRY-RUN] Would wait for file to exist: %s", *wait.Path)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for file to exist: %s", *wait.Path)
 	case conditionFileAbsent:
-		ec.Logger.Infof("  [DRY-RUN] Would wait for file to be absent: %s", *wait.Path)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for file to be absent: %s", *wait.Path)
 	case conditionGitClean:
 		if wait.AllowUntracked != nil && *wait.AllowUntracked {
-			ec.Logger.Infof("  [DRY-RUN] Would wait for git working tree to be clean (untracked files allowed)")
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for git working tree to be clean (untracked files allowed)")
 		} else {
-			ec.Logger.Infof("  [DRY-RUN] Would wait for git working tree to be clean (no untracked files)")
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for git working tree to be clean (no untracked files)")
 		}
 	case conditionCommand:
 		exitCode := 0
 		if wait.ExitCode != nil {
 			exitCode = *wait.ExitCode
 		}
-		ec.Logger.Infof("  [DRY-RUN] Would wait for command success: %s (exit code: %d)", *wait.Cmd, exitCode)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for command success: %s (exit code: %d)", *wait.Cmd, exitCode)
 	case conditionHTTP:
 		status := 200
 		if wait.Status != nil {
 			status = *wait.Status
 		}
-		ec.Logger.Infof("  [DRY-RUN] Would wait for HTTP %s (status: %d)", *wait.URL, status)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for HTTP %s (status: %d)", *wait.URL, status)
 	case conditionPort:
 		host := "localhost"
 		if wait.Host != nil {
 			host = *wait.Host
 		}
-		ec.Logger.Infof("  [DRY-RUN] Would wait for port to be open: %s:%d", host, *wait.Port)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would wait for port to be open: %s:%d", host, *wait.Port)
 	}
 
 	return nil
@@ -274,13 +274,13 @@ func (h *Handler) pollCondition(ctx context.Context, check func() (bool, error),
 // createFileExistsChecker creates a file existence checker.
 func (h *Handler) createFileExistsChecker(path string, ec *executor.ExecutionContext, shouldExist bool) (func() (bool, error), error) {
 	// Render path with variables
-	renderedPath, err := ec.Template.Render(path, ec.Variables)
+	renderedPath, err := ec.Svc.Template.Render(path, ec.Variables)
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.path", Cause: err}
 	}
 
 	// Expand path
-	expandedPath, expandErr := ec.PathUtil.ExpandPath(renderedPath, ec.CurrentDir, ec.Variables)
+	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(renderedPath, ec.CurrentDir, ec.Variables)
 	if expandErr != nil {
 		return nil, &executor.FileOperationError{
 			Operation: "expand path",
@@ -346,7 +346,7 @@ func (h *Handler) createGitCleanChecker(wait *config.WaitAction, ec *executor.Ex
 // createCommandChecker creates a command success checker.
 func (h *Handler) createCommandChecker(wait *config.WaitAction, ec *executor.ExecutionContext) (func() (bool, error), error) {
 	// Render command with variables
-	cmd, err := ec.Template.Render(*wait.Cmd, ec.Variables)
+	cmd, err := ec.Svc.Template.Render(*wait.Cmd, ec.Variables)
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.cmd", Cause: err}
 	}
@@ -380,7 +380,7 @@ func (h *Handler) createCommandChecker(wait *config.WaitAction, ec *executor.Exe
 // createHTTPChecker creates an HTTP endpoint checker.
 func (h *Handler) createHTTPChecker(wait *config.WaitAction, ec *executor.ExecutionContext) (func() (bool, error), error) {
 	// Render URL with variables
-	url, err := ec.Template.Render(*wait.URL, ec.Variables)
+	url, err := ec.Svc.Template.Render(*wait.URL, ec.Variables)
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.url", Cause: err}
 	}
@@ -412,7 +412,7 @@ func (h *Handler) createPortChecker(wait *config.WaitAction, ec *executor.Execut
 	host := "localhost"
 	if wait.Host != nil {
 		// Render host with variables
-		renderedHost, err := ec.Template.Render(*wait.Host, ec.Variables)
+		renderedHost, err := ec.Svc.Template.Render(*wait.Host, ec.Variables)
 		if err != nil {
 			return nil, &executor.RenderError{Field: "wait.host", Cause: err}
 		}

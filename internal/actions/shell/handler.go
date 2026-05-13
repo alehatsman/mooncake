@@ -265,9 +265,9 @@ func (h *Handler) createShellCommand(cmdCtx context.Context, ctx actions.Context
 			if err != nil {
 				return nil, fmt.Errorf("failed to render stdin: %w", err)
 			}
-			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n" + renderedStdin))
+			command.Stdin = bytes.NewBuffer([]byte(ec.Svc.SudoPass + "\n" + renderedStdin))
 		} else {
-			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
+			command.Stdin = bytes.NewBuffer([]byte(ec.Svc.SudoPass + "\n"))
 		}
 		return command, nil
 	}

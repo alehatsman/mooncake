@@ -154,20 +154,20 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		if exitCode == 0 {
 			exitCode = 0 // Default expected exit code
 		}
-		ec.Logger.Infof("  [DRY-RUN] Would assert command exit code: %s (expected: %d)", cmd, exitCode)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would assert command exit code: %s (expected: %d)", cmd, exitCode)
 	} else if assert.File != nil {
 		path := assert.File.Path
 		if assert.File.Exists != nil {
 			exists := *assert.File.Exists
-			ec.Logger.Infof("  [DRY-RUN] Would assert file exists: %s (expected: %v)", path, exists)
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file exists: %s (expected: %v)", path, exists)
 		} else if assert.File.Contains != nil {
-			ec.Logger.Infof("  [DRY-RUN] Would assert file contains: %s", path)
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file contains: %s", path)
 		} else if assert.File.Content != nil {
-			ec.Logger.Infof("  [DRY-RUN] Would assert file content equals: %s", path)
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file content equals: %s", path)
 		} else if assert.File.Mode != nil {
-			ec.Logger.Infof("  [DRY-RUN] Would assert file mode: %s (expected: %s)", path, *assert.File.Mode)
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file mode: %s (expected: %s)", path, *assert.File.Mode)
 		} else {
-			ec.Logger.Infof("  [DRY-RUN] Would assert file: %s", path)
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file: %s", path)
 		}
 	} else if assert.HTTP != nil {
 		url := assert.HTTP.URL
@@ -179,22 +179,22 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		if status == 0 {
 			status = 200
 		}
-		ec.Logger.Infof("  [DRY-RUN] Would assert HTTP %s %s (expected status: %d)", method, url, status)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would assert HTTP %s %s (expected status: %d)", method, url, status)
 	} else if assert.FileSHA256 != nil {
 		path := assert.FileSHA256.Path
 		checksum := assert.FileSHA256.Checksum
-		ec.Logger.Infof("  [DRY-RUN] Would assert file SHA256: %s (expected: %s)", path, checksum)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file SHA256: %s (expected: %s)", path, checksum)
 	} else if assert.GitClean != nil {
 		if assert.GitClean.AllowUntracked {
-			ec.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (untracked files allowed)")
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (untracked files allowed)")
 		} else {
-			ec.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (no untracked files)")
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (no untracked files)")
 		}
 	} else if assert.GitDiff != nil {
 		if assert.GitDiff.Cached {
-			ec.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (cached/staged changes)")
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (cached/staged changes)")
 		} else {
-			ec.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (working tree)")
+			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (working tree)")
 		}
 	}
 
@@ -204,7 +204,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 // executeAssertCommand executes a command assertion.
 func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *executor.ExecutionContext) (string, string, error) {
 	// Render command with variables
-	cmd, err := ec.Template.Render(assertCmd.Cmd, ec.Variables)
+	cmd, err := ec.Svc.Template.Render(assertCmd.Cmd, ec.Variables)
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.command.cmd", Cause: err}
 	}
@@ -212,7 +212,7 @@ func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *exec
 	// Default expected exit code to 0
 	expectedExitCode := assertCmd.ExitCode
 
-	ec.Logger.Debugf("Asserting command exit code: %s (expected: %d)", cmd, expectedExitCode)
+	ec.Svc.Logger.Debugf("Asserting command exit code: %s (expected: %d)", cmd, expectedExitCode)
 
 	// Execute command
 	// #nosec G204 -- Command from user config is intentional functionality
@@ -257,13 +257,13 @@ func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *exec
 // executeAssertFile executes a file assertion.
 func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.ExecutionContext) (string, string, error) {
 	// Render path with variables
-	path, err := ec.Template.Render(assertFile.Path, ec.Variables)
+	path, err := ec.Svc.Template.Render(assertFile.Path, ec.Variables)
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.file.path", Cause: err}
 	}
 
 	// Expand path (handle ~ and relative paths)
-	expandedPath, expandErr := ec.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
+	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
 	if expandErr != nil {
 		return "", "", &executor.FileOperationError{
 			Operation: "expand path",
@@ -322,7 +322,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 			}
 		}
 
-		expectedSubstr, renderErr := ec.Template.Render(*assertFile.Contains, ec.Variables)
+		expectedSubstr, renderErr := ec.Svc.Template.Render(*assertFile.Contains, ec.Variables)
 		if renderErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.file.contains", Cause: renderErr}
 		}
@@ -352,7 +352,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 			}
 		}
 
-		expectedContent, renderErr := ec.Template.Render(*assertFile.Content, ec.Variables)
+		expectedContent, renderErr := ec.Svc.Template.Render(*assertFile.Content, ec.Variables)
 		if renderErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.file.content", Cause: renderErr}
 		}
@@ -429,7 +429,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 // executeAssertHTTP executes an HTTP assertion.
 func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.ExecutionContext) (string, string, error) {
 	// Render URL with variables
-	url, err := ec.Template.Render(assertHTTP.URL, ec.Variables)
+	url, err := ec.Svc.Template.Render(assertHTTP.URL, ec.Variables)
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.http.url", Cause: err}
 	}
@@ -446,7 +446,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 		expectedStatus = 200
 	}
 
-	ec.Logger.Debugf("Asserting HTTP %s %s (expected status: %d)", method, url, expectedStatus)
+	ec.Svc.Logger.Debugf("Asserting HTTP %s %s (expected status: %d)", method, url, expectedStatus)
 
 	// Create HTTP client with timeout
 	client := &http.Client{}
@@ -466,7 +466,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 	// Create request body if provided
 	var bodyReader io.Reader
 	if assertHTTP.Body != nil {
-		body, bodyErr := ec.Template.Render(*assertHTTP.Body, ec.Variables)
+		body, bodyErr := ec.Svc.Template.Render(*assertHTTP.Body, ec.Variables)
 		if bodyErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.http.body", Cause: bodyErr}
 		}
@@ -485,7 +485,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// Add headers
 	for key, value := range assertHTTP.Headers {
-		renderedValue, headerErr := ec.Template.Render(value, ec.Variables)
+		renderedValue, headerErr := ec.Svc.Template.Render(value, ec.Variables)
 		if headerErr != nil {
 			return "", "", &executor.RenderError{Field: fmt.Sprintf("assert.http.headers.%s", key), Cause: headerErr}
 		}
@@ -506,7 +506,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			ec.Logger.Debugf("failed to close response body: %v", closeErr)
+			ec.Svc.Logger.Debugf("failed to close response body: %v", closeErr)
 		}
 	}()
 
@@ -534,7 +534,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// Check body contains
 	if assertHTTP.Contains != nil {
-		expectedSubstr, containsErr := ec.Template.Render(*assertHTTP.Contains, ec.Variables)
+		expectedSubstr, containsErr := ec.Svc.Template.Render(*assertHTTP.Contains, ec.Variables)
 		if containsErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.http.contains", Cause: containsErr}
 		}
@@ -555,7 +555,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// Check exact body match
 	if assertHTTP.BodyEquals != nil {
-		expectedBody, bodyEqualsErr := ec.Template.Render(*assertHTTP.BodyEquals, ec.Variables)
+		expectedBody, bodyEqualsErr := ec.Svc.Template.Render(*assertHTTP.BodyEquals, ec.Variables)
 		if bodyEqualsErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.http.body_equals", Cause: bodyEqualsErr}
 		}
@@ -590,13 +590,13 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 // executeAssertFileSHA256 verifies a file's SHA256 checksum.
 func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec *executor.ExecutionContext) (string, string, error) {
 	// Render path with variables
-	path, err := ec.Template.Render(assertSHA.Path, ec.Variables)
+	path, err := ec.Svc.Template.Render(assertSHA.Path, ec.Variables)
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.file_sha256.path", Cause: err}
 	}
 
 	// Expand path (handle ~ and relative paths)
-	expandedPath, expandErr := ec.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
+	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
 	if expandErr != nil {
 		return "", "", &executor.FileOperationError{
 			Operation: "expand path",
@@ -606,7 +606,7 @@ func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec
 	}
 
 	// Render expected checksum with variables
-	expectedChecksum, err := ec.Template.Render(assertSHA.Checksum, ec.Variables)
+	expectedChecksum, err := ec.Svc.Template.Render(assertSHA.Checksum, ec.Variables)
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.file_sha256.checksum", Cause: err}
 	}
@@ -614,7 +614,7 @@ func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec
 	// Normalize checksum (remove "sha256:" prefix if present)
 	expectedChecksum = strings.TrimPrefix(strings.ToLower(expectedChecksum), "sha256:")
 
-	ec.Logger.Debugf("Asserting file SHA256: %s (expected: %s)", path, expectedChecksum)
+	ec.Svc.Logger.Debugf("Asserting file SHA256: %s (expected: %s)", path, expectedChecksum)
 
 	// Read file content
 	content, readErr := os.ReadFile(expandedPath) // #nosec G304 -- Path from user config is intentional
@@ -649,7 +649,7 @@ func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec
 
 // executeAssertGitClean verifies the git working tree is clean.
 func (h *Handler) executeAssertGitClean(assertGit *config.AssertGitClean, ec *executor.ExecutionContext) (string, string, error) {
-	ec.Logger.Debugf("Asserting git working tree is clean (allow_untracked: %v)", assertGit.AllowUntracked)
+	ec.Svc.Logger.Debugf("Asserting git working tree is clean (allow_untracked: %v)", assertGit.AllowUntracked)
 
 	// Check if we're in a git repository
 	// #nosec G204 -- Git command is controlled and safe
@@ -712,7 +712,7 @@ func (h *Handler) executeAssertGitClean(assertGit *config.AssertGitClean, ec *ex
 // executeAssertGitDiff verifies the git diff matches expected output.
 func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *executor.ExecutionContext) (string, string, error) {
 	// Render expected diff with variables
-	expectedDiff, err := ec.Template.Render(assertDiff.ExpectedDiff, ec.Variables)
+	expectedDiff, err := ec.Svc.Template.Render(assertDiff.ExpectedDiff, ec.Variables)
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.git_diff.expected_diff", Cause: err}
 	}
@@ -720,7 +720,7 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 	// Normalize expected diff (trim whitespace)
 	expectedDiff = strings.TrimSpace(expectedDiff)
 
-	ec.Logger.Debugf("Asserting git diff matches expected (cached: %v)", assertDiff.Cached)
+	ec.Svc.Logger.Debugf("Asserting git diff matches expected (cached: %v)", assertDiff.Cached)
 
 	// Check if we're in a git repository
 	// #nosec G204 -- Git command is controlled and safe
@@ -746,7 +746,7 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 
 	// Add file filter if specified
 	if assertDiff.Files != nil {
-		files, renderErr := ec.Template.Render(*assertDiff.Files, ec.Variables)
+		files, renderErr := ec.Svc.Template.Render(*assertDiff.Files, ec.Variables)
 		if renderErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.git_diff.files", Cause: renderErr}
 		}

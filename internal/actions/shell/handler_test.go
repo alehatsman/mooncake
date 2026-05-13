@@ -25,16 +25,18 @@ func newMockExecutionContext() *executor.ExecutionContext {
 		panic("Failed to create renderer: " + err.Error())
 	}
 	return &executor.ExecutionContext{
-		Variables:      make(map[string]interface{}),
-		Template:       tmpl,
-		Evaluator:      expression.NewExprEvaluator(),
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		Logger:         &testutil.MockLogger{Logs: []string{}},
-		EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-		Redactor:       security.NewRedactor(),
-		SudoPass:       "",
-		CurrentStepID:  "step-1",
-		Stats:          executor.NewExecutionStats(),
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: expression.NewExprEvaluator(),
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Logger: &testutil.MockLogger{Logs: []string{}},
+			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
+			Redactor: security.NewRedactor(),
+			SudoPass: "",
+			Stats: executor.NewExecutionStats(),
+		},
+		Variables: make(map[string]interface{}),
+		CurrentStepID: "step-1",
 	}
 }
 
@@ -912,7 +914,7 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			// Check that something was logged
-			mockLog := ctx.Logger.(*testutil.MockLogger)
+			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 			if len(mockLog.Logs) == 0 {
 				t.Error("DryRun() should log something")
 			}
@@ -937,7 +939,7 @@ func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
 	}
 
 	// Should log a message indicating template would fail
-	mockLog := ctx.Logger.(*testutil.MockLogger)
+	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 	if len(mockLog.Logs) == 0 {
 		t.Error("DryRun() should log something")
 	}
@@ -1222,7 +1224,7 @@ func TestHandler_Execute_EventEmission(t *testing.T) {
 		t.Fatalf("Execute() error = %v", err)
 	}
 
-	mockPub := ctx.EventPublisher.(*testutil.MockPublisher)
+	mockPub := ctx.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(mockPub.Events) == 0 {
 		t.Error("Execute() should emit events")
 	}

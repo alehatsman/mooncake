@@ -64,7 +64,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("failed to read artifact file: %w", err)
 	}
 
-	ec.Logger.Infof("Validating artifact '%s' with %d file changes", metadata.Name, len(metadata.Files))
+	ec.Svc.Logger.Infof("Validating artifact '%s' with %d file changes", metadata.Name, len(metadata.Files))
 
 	// Run validations
 	violations := make([]artifacts.ValidationViolation, 0)
@@ -177,7 +177,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Write updated metadata back to file
 	if err := writeArtifactMetadata(validate.ArtifactFile, metadata); err != nil {
-		ec.Logger.Debugf("Failed to update artifact metadata: %v", err)
+		ec.Svc.Logger.Debugf("Failed to update artifact metadata: %v", err)
 	}
 
 	// Create result
@@ -186,15 +186,15 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	if len(violations) > 0 {
 		// Validation failed
-		ec.Logger.Errorf("Artifact validation failed with %d violations:", len(violations))
+		ec.Svc.Logger.Errorf("Artifact validation failed with %d violations:", len(violations))
 		for i, v := range violations {
-			ec.Logger.Errorf("  %d. %s: %s", i+1, v.Constraint, v.Message)
+			ec.Svc.Logger.Errorf("  %d. %s: %s", i+1, v.Constraint, v.Message)
 		}
 		return nil, fmt.Errorf("artifact validation failed: %d constraint violations", len(violations))
 	}
 
 	// Validation passed
-	ec.Logger.Infof("Artifact validation passed: %d files, %d lines changed",
+	ec.Svc.Logger.Infof("Artifact validation passed: %d files, %d lines changed",
 		len(metadata.Files), metadata.Summary.TotalLinesChanged)
 	result.Stdout = fmt.Sprintf("Validation passed: %d files checked", len(metadata.Files))
 
@@ -230,7 +230,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		constraints = append(constraints, fmt.Sprintf("forbidden_paths=%d", len(validate.ForbiddenPaths)))
 	}
 
-	ec.Logger.Infof("  [DRY-RUN] Would validate artifact '%s' (constraints: %s)",
+	ec.Svc.Logger.Infof("  [DRY-RUN] Would validate artifact '%s' (constraints: %s)",
 		validate.ArtifactFile, strings.Join(constraints, ", "))
 
 	return nil

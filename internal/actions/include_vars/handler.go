@@ -65,7 +65,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Expand path (handles ~, variables, relative paths)
-	expandedPath, err := ec.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
+	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -119,7 +119,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		return fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	expandedPath, err := ec.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
+	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		expandedPath = *includeVars
 	}

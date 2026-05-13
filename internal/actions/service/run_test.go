@@ -20,13 +20,15 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 		t.Fatal(err)
 	}
 	return &executor.ExecutionContext{
-		Variables:   map[string]interface{}{},
-		Template:    r,
-		PathUtil:    pathutil.NewPathExpander(r),
-		Logger:      logger.NewLogger(logger.ErrorLevel),
-		CurrentDir:  "/tmp",
-		CurrentMode: planMode(plan),
-		Stats:       executor.NewExecutionStats(),
+		Svc: &executor.RunServices{
+			Template: r,
+			PathUtil: pathutil.NewPathExpander(r),
+			Logger: logger.NewLogger(logger.ErrorLevel),
+			Mode: planMode(plan),
+			Stats: executor.NewExecutionStats(),
+		},
+		Variables: map[string]interface{}{},
+		CurrentDir: "/tmp",
 	}
 }
 

@@ -16,14 +16,16 @@ import (
 // Helper to create ExecutionContext for testing
 func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor.ExecutionContext {
 	return &executor.ExecutionContext{
-		Variables:      ctx.Variables,
-		CurrentDir:     tmpDir,
-		Logger:         ctx.Log,
-		CurrentMode:    ctx.CurrentMode,
-		Template:       ctx.Tmpl,
-		PathUtil:       pathutil.NewPathExpander(ctx.Tmpl),
-		EventPublisher: ctx.Publisher,
-		CurrentStepID:  ctx.StepID,
+		Svc: &executor.RunServices{
+			Logger: ctx.Log,
+			Mode: ctx.CurrentMode,
+			Template: ctx.Tmpl,
+			PathUtil: pathutil.NewPathExpander(ctx.Tmpl),
+			EventPublisher: ctx.Publisher,
+		},
+		Variables: ctx.Variables,
+		CurrentDir: tmpDir,
+		CurrentStepID: ctx.StepID,
 	}
 }
 

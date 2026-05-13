@@ -229,12 +229,14 @@ func TestHandler_Execute(t *testing.T) {
 			mockCtx.Variables = tt.existingVars
 
 			ctx := &executor.ExecutionContext{
-				Variables:      mockCtx.Variables,
-				Template:       mockCtx.Tmpl,
-				EventPublisher: mockCtx.Publisher,
-				Logger:         mockCtx.Log,
-				PathUtil:       pathExpander,
-				CurrentDir:     filepath.Dir(tmpFile.Name()),
+				Svc: &executor.RunServices{
+					Template: mockCtx.Tmpl,
+					EventPublisher: mockCtx.Publisher,
+					Logger: mockCtx.Log,
+					PathUtil: pathExpander,
+				},
+				Variables: mockCtx.Variables,
+				CurrentDir: filepath.Dir(tmpFile.Name()),
 			}
 
 			step := &config.Step{
@@ -367,12 +369,14 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			mockCtx.Variables = tt.setupVars
 
 			ctx := &executor.ExecutionContext{
-				Variables:      mockCtx.Variables,
-				Template:       mockCtx.Tmpl,
-				EventPublisher: mockCtx.Publisher,
-				Logger:         mockCtx.Log,
-				PathUtil:       pathExpander,
-				CurrentDir:     "/tmp",
+				Svc: &executor.RunServices{
+					Template: mockCtx.Tmpl,
+					EventPublisher: mockCtx.Publisher,
+					Logger: mockCtx.Log,
+					PathUtil: pathExpander,
+				},
+				Variables: mockCtx.Variables,
+				CurrentDir: "/tmp",
 			}
 
 			step := &config.Step{
@@ -428,12 +432,14 @@ func TestHandler_Execute_FileNotFound(t *testing.T) {
 	mockCtx := testutil.NewMockContext()
 
 	ctx := &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       mockCtx.Tmpl,
-		EventPublisher: mockCtx.Publisher,
-		Logger:         mockCtx.Log,
-		PathUtil:       pathExpander,
-		CurrentDir:     "/tmp",
+		Svc: &executor.RunServices{
+			Template: mockCtx.Tmpl,
+			EventPublisher: mockCtx.Publisher,
+			Logger: mockCtx.Log,
+			PathUtil: pathExpander,
+		},
+		Variables: mockCtx.Variables,
+		CurrentDir: "/tmp",
 	}
 
 	step := &config.Step{
@@ -468,12 +474,14 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 	mockCtx := testutil.NewMockContext()
 
 	ctx := &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       mockCtx.Tmpl,
-		EventPublisher: mockCtx.Publisher,
-		Logger:         mockCtx.Log,
-		PathUtil:       pathExpander,
-		CurrentDir:     filepath.Dir(tmpFile.Name()),
+		Svc: &executor.RunServices{
+			Template: mockCtx.Tmpl,
+			EventPublisher: mockCtx.Publisher,
+			Logger: mockCtx.Log,
+			PathUtil: pathExpander,
+		},
+		Variables: mockCtx.Variables,
+		CurrentDir: filepath.Dir(tmpFile.Name()),
 	}
 
 	step := &config.Step{
@@ -497,12 +505,14 @@ func TestHandler_Execute_NilIncludeVars(t *testing.T) {
 	mockCtx := testutil.NewMockContext()
 
 	ctx := &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       mockCtx.Tmpl,
-		EventPublisher: mockCtx.Publisher,
-		Logger:         mockCtx.Log,
-		PathUtil:       pathExpander,
-		CurrentDir:     "/tmp",
+		Svc: &executor.RunServices{
+			Template: mockCtx.Tmpl,
+			EventPublisher: mockCtx.Publisher,
+			Logger: mockCtx.Log,
+			PathUtil: pathExpander,
+		},
+		Variables: mockCtx.Variables,
+		CurrentDir: "/tmp",
 	}
 
 	step := &config.Step{
@@ -544,12 +554,14 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	mockCtx := testutil.NewMockContext()
 
 	ctx := &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       mockCtx.Tmpl,
-		EventPublisher: nil, // No publisher
-		Logger:         mockCtx.Log,
-		PathUtil:       pathExpander,
-		CurrentDir:     filepath.Dir(tmpFile.Name()),
+		Svc: &executor.RunServices{
+			Template: mockCtx.Tmpl,
+			EventPublisher: nil, // No publisher,
+			Logger: mockCtx.Log,
+			PathUtil: pathExpander,
+		},
+		Variables: mockCtx.Variables,
+		CurrentDir: filepath.Dir(tmpFile.Name()),
 	}
 
 	step := &config.Step{
@@ -679,13 +691,15 @@ func TestHandler_DryRun(t *testing.T) {
 			mockCtx.CurrentMode = actions.ModePlan
 
 			ctx := &executor.ExecutionContext{
-				Variables:      mockCtx.Variables,
-				Template:       mockCtx.Tmpl,
-				EventPublisher: mockCtx.Publisher,
-				Logger:         mockCtx.Log,
-				PathUtil:       pathExpander,
-				CurrentDir:     "/tmp",
-				CurrentMode:    actions.ModePlan,
+				Svc: &executor.RunServices{
+					Template: mockCtx.Tmpl,
+					EventPublisher: mockCtx.Publisher,
+					Logger: mockCtx.Log,
+					PathUtil: pathExpander,
+					Mode: actions.ModePlan,
+				},
+				Variables: mockCtx.Variables,
+				CurrentDir: "/tmp",
 			}
 
 			step := &config.Step{
@@ -736,13 +750,15 @@ func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
 	mockCtx.CurrentMode = actions.ModePlan
 
 	ctx := &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       mockCtx.Tmpl,
-		EventPublisher: mockCtx.Publisher,
-		Logger:         mockCtx.Log,
-		PathUtil:       pathExpander,
-		CurrentDir:     "/tmp",
-		CurrentMode:    actions.ModePlan,
+		Svc: &executor.RunServices{
+			Template: mockCtx.Tmpl,
+			EventPublisher: mockCtx.Publisher,
+			Logger: mockCtx.Log,
+			PathUtil: pathExpander,
+			Mode: actions.ModePlan,
+		},
+		Variables: mockCtx.Variables,
+		CurrentDir: "/tmp",
 	}
 
 	step := &config.Step{
@@ -789,13 +805,15 @@ func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
 	mockCtx.CurrentMode = actions.ModePlan
 
 	ctx := &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       mockCtx.Tmpl,
-		EventPublisher: mockCtx.Publisher,
-		Logger:         mockCtx.Log,
-		PathUtil:       pathExpander,
-		CurrentDir:     "/tmp",
-		CurrentMode:    actions.ModePlan,
+		Svc: &executor.RunServices{
+			Template: mockCtx.Tmpl,
+			EventPublisher: mockCtx.Publisher,
+			Logger: mockCtx.Log,
+			PathUtil: pathExpander,
+			Mode: actions.ModePlan,
+		},
+		Variables: mockCtx.Variables,
+		CurrentDir: "/tmp",
 	}
 
 	// Use a path with undefined variable (will fail expansion)

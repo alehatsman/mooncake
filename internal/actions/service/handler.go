@@ -102,27 +102,27 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render service name
-	renderedName, err := ec.Template.Render(serviceAction.Name, ec.Variables)
+	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.Variables)
 	if err != nil {
 		return err
 	}
 
 	// Log what would be done
-	ec.Logger.Infof("  [DRY-RUN] Would manage service: %s", renderedName)
+	ec.Svc.Logger.Infof("  [DRY-RUN] Would manage service: %s", renderedName)
 	if serviceAction.State != "" {
-		ec.Logger.Infof("    State: %s", serviceAction.State)
+		ec.Svc.Logger.Infof("    State: %s", serviceAction.State)
 	}
 	if serviceAction.Enabled != nil {
-		ec.Logger.Infof("    Enabled: %v", *serviceAction.Enabled)
+		ec.Svc.Logger.Infof("    Enabled: %v", *serviceAction.Enabled)
 	}
 	if serviceAction.Unit != nil {
-		ec.Logger.Infof("    Unit file: managed")
+		ec.Svc.Logger.Infof("    Unit file: managed")
 	}
 	if serviceAction.Dropin != nil {
-		ec.Logger.Infof("    Drop-in: %s", serviceAction.Dropin.Name)
+		ec.Svc.Logger.Infof("    Drop-in: %s", serviceAction.Dropin.Name)
 	}
 	if serviceAction.DaemonReload {
-		ec.Logger.Infof("    Daemon reload: yes")
+		ec.Svc.Logger.Infof("    Daemon reload: yes")
 	}
 
 	return nil
@@ -141,7 +141,7 @@ func HandleService(step config.Step, ec *executor.ExecutionContext) error {
 	}
 
 	// Render service name
-	renderedName, err := ec.Template.Render(serviceAction.Name, ec.Variables)
+	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.Variables)
 	if err != nil {
 		return &executor.RenderError{Field: "service.name", Cause: err}
 	}
@@ -185,7 +185,7 @@ func HandleService(step config.Step, ec *executor.ExecutionContext) error {
 func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec *executor.ExecutionContext) (string, error) {
 	if srcTemplate != "" {
 		// Expand and render template file
-		srcPath, expandErr := ec.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.Variables)
+		srcPath, expandErr := ec.Svc.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.Variables)
 		if expandErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: expandErr}
 		}
@@ -203,7 +203,7 @@ func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 		}
 
 		// Render template
-		content, renderErr := ec.Template.Render(string(templateData), ec.Variables)
+		content, renderErr := ec.Svc.Template.Render(string(templateData), ec.Variables)
 		if renderErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: renderErr}
 		}
@@ -212,7 +212,7 @@ func renderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 
 	if inlineContent != "" {
 		// Render inline content
-		content, renderErr := ec.Template.Render(inlineContent, ec.Variables)
+		content, renderErr := ec.Svc.Template.Render(inlineContent, ec.Variables)
 		if renderErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".content", Cause: renderErr}
 		}
@@ -324,9 +324,9 @@ func handleSystemdService(serviceName string, serviceAction *config.ServiceActio
 	}
 
 	if changed {
-		ec.Logger.Infof("  Service %s: %s", serviceName, strings.Join(operations, ", "))
+		ec.Svc.Logger.Infof("  Service %s: %s", serviceName, strings.Join(operations, ", "))
 	} else {
-		ec.Logger.Debugf("  Service %s: no changes needed", serviceName)
+		ec.Svc.Logger.Debugf("  Service %s: no changes needed", serviceName)
 	}
 
 	return nil
@@ -351,7 +351,7 @@ func manageSystemdUnitFile(serviceName string, unit *config.ServiceUnit, step co
 	// #nosec G304 - This is a provisioning tool that manages service unit files
 	existingContent, readErr := os.ReadFile(unitPath)
 	if readErr == nil && string(existingContent) == content {
-		ec.Logger.Debugf("  Unit file %s already up to date", unitPath)
+		ec.Svc.Logger.Debugf("  Unit file %s already up to date", unitPath)
 		return false, nil
 	}
 
@@ -360,7 +360,7 @@ func manageSystemdUnitFile(serviceName string, unit *config.ServiceUnit, step co
 		return false, err
 	}
 
-	ec.Logger.Debugf("  Unit file written: %s", unitPath)
+	ec.Svc.Logger.Debugf("  Unit file written: %s", unitPath)
 	return true, nil
 }
 
@@ -384,7 +384,7 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 	// #nosec G304 - This is a provisioning tool that manages service drop-in files
 	existingContent, readErr := os.ReadFile(dropinPath)
 	if readErr == nil && string(existingContent) == content {
-		ec.Logger.Debugf("  Drop-in file %s already up to date", dropinPath)
+		ec.Svc.Logger.Debugf("  Drop-in file %s already up to date", dropinPath)
 		return false, nil
 	}
 
@@ -406,13 +406,13 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 		return false, err
 	}
 
-	ec.Logger.Debugf("  Drop-in file written: %s", dropinPath)
+	ec.Svc.Logger.Debugf("  Drop-in file written: %s", dropinPath)
 	return true, nil
 }
 
 // systemdDaemonReload executes systemctl daemon-reload.
 func systemdDaemonReload(step config.Step, ec *executor.ExecutionContext) error {
-	ec.Logger.Debugf("  Running systemctl daemon-reload")
+	ec.Svc.Logger.Debugf("  Running systemctl daemon-reload")
 
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
@@ -422,14 +422,14 @@ func systemdDaemonReload(step config.Step, ec *executor.ExecutionContext) error 
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
 		}
 		cmd = exec.Command("sudo", "-S", "systemctl", "daemon-reload")
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		cmd = exec.Command("systemctl", "daemon-reload")
 	}
@@ -461,13 +461,13 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 	switch desiredState {
 	case ServiceStateStarted:
 		if currentState == "active" {
-			ec.Logger.Debugf("  Service %s already active", serviceName)
+			ec.Svc.Logger.Debugf("  Service %s already active", serviceName)
 			return false, nil
 		}
 		action = "start"
 	case ServiceStateStopped:
 		if currentState == "inactive" || currentState == "failed" {
-			ec.Logger.Debugf("  Service %s already stopped", serviceName)
+			ec.Svc.Logger.Debugf("  Service %s already stopped", serviceName)
 			return false, nil
 		}
 		action = "stop"
@@ -483,7 +483,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 	}
 
 	// Execute systemctl command
-	ec.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
+	ec.Svc.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
@@ -492,7 +492,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
@@ -500,7 +500,7 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 		}
 		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
 		cmd = exec.Command("sudo", "-S", "systemctl", action, serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
 		cmd = exec.Command("systemctl", action, serviceName)
@@ -525,14 +525,14 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 func getSystemdServiceState(serviceName string, step config.Step, ec *executor.ExecutionContext) (string, error) {
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return "", &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
 		}
 		cmd = exec.Command("sudo", "-S", "systemctl", "is-active", serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		cmd = exec.Command("systemctl", "is-active", serviceName)
 	}
@@ -540,7 +540,7 @@ func getSystemdServiceState(serviceName string, step config.Step, ec *executor.E
 	output, _ := cmd.Output() // Ignore error, is-active returns non-zero for inactive services
 	state := strings.TrimSpace(string(output))
 
-	ec.Logger.Debugf("  Service %s current state: %s", serviceName, state)
+	ec.Svc.Logger.Debugf("  Service %s current state: %s", serviceName, state)
 	return state, nil
 }
 
@@ -553,7 +553,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 	}
 
 	if isEnabled == shouldBeEnabled {
-		ec.Logger.Debugf("  Service %s enabled status already correct: %v", serviceName, isEnabled)
+		ec.Svc.Logger.Debugf("  Service %s enabled status already correct: %v", serviceName, isEnabled)
 		return false, nil
 	}
 
@@ -565,7 +565,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 		action = "disable"
 	}
 
-	ec.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
+	ec.Svc.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
@@ -574,7 +574,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
@@ -582,7 +582,7 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 		}
 		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
 		cmd = exec.Command("sudo", "-S", "systemctl", action, serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
 		cmd = exec.Command("systemctl", action, serviceName)
@@ -607,14 +607,14 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 func isSystemdServiceEnabled(serviceName string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
 		}
 		cmd = exec.Command("sudo", "-S", "systemctl", "is-enabled", serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		cmd = exec.Command("systemctl", "is-enabled", serviceName)
 	}
@@ -623,7 +623,7 @@ func isSystemdServiceEnabled(serviceName string, step config.Step, ec *executor.
 	status := strings.TrimSpace(string(output))
 
 	isEnabled := status == "enabled" || status == "static" || status == "indirect"
-	ec.Logger.Debugf("  Service %s enabled status: %s (treated as enabled: %v)", serviceName, status, isEnabled)
+	ec.Svc.Logger.Debugf("  Service %s enabled status: %s (treated as enabled: %v)", serviceName, status, isEnabled)
 
 	return isEnabled, nil
 }
@@ -654,7 +654,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 		}
 	}
 
-	if ec.SudoPass == "" {
+	if ec.Svc.SudoPass == "" {
 		return &executor.SetupError{
 			Component: "sudo",
 			Issue:     "no password provided. Use --sudo-pass flag",
@@ -680,7 +680,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 	// Use sudo to copy temp file to target location
 	// #nosec G204 - This is a provisioning tool that needs to copy files with elevated privileges
 	cmd := exec.Command("sudo", "-S", "cp", tmpPath, path)
-	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		exitCode := 1
@@ -696,7 +696,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 	// Set file permissions with sudo
 	// #nosec G204 - This is a provisioning tool that needs to set file permissions with elevated privileges
 	cmd = exec.Command("sudo", "-S", "chmod", fmt.Sprintf("%o", mode), path)
-	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		exitCode := 1
@@ -804,9 +804,9 @@ func handleLaunchdService(serviceName string, serviceAction *config.ServiceActio
 	}
 
 	if changed {
-		ec.Logger.Infof("  Service %s: %s", serviceName, strings.Join(operations, ", "))
+		ec.Svc.Logger.Infof("  Service %s: %s", serviceName, strings.Join(operations, ", "))
 	} else {
-		ec.Logger.Debugf("  Service %s: no changes needed", serviceName)
+		ec.Svc.Logger.Debugf("  Service %s: no changes needed", serviceName)
 	}
 
 	return nil
@@ -849,7 +849,7 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 	// #nosec G304 - This is a provisioning tool that reads plist files from validated paths
 	existingContent, readErr := os.ReadFile(plistPath)
 	if readErr == nil && string(existingContent) == content {
-		ec.Logger.Debugf("  Plist file %s already up to date", plistPath)
+		ec.Svc.Logger.Debugf("  Plist file %s already up to date", plistPath)
 		return false, nil
 	}
 
@@ -865,7 +865,7 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 		return false, err
 	}
 
-	ec.Logger.Debugf("  Plist file written: %s", plistPath)
+	ec.Svc.Logger.Debugf("  Plist file written: %s", plistPath)
 	return true, nil
 }
 
@@ -873,14 +873,14 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return false, &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
 		}
 		cmd = exec.Command("sudo", "-S", "launchctl", "print", serviceID)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		cmd = exec.Command("launchctl", "print", serviceID)
 	}
@@ -889,15 +889,15 @@ func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *executor.Exe
 	if err != nil {
 		// Service not loaded (launchctl print returns error if not loaded)
 		if strings.Contains(string(output), "Could not find service") {
-			ec.Logger.Debugf("  Service %s is not loaded", serviceID)
+			ec.Svc.Logger.Debugf("  Service %s is not loaded", serviceID)
 			return false, nil
 		}
 		// Other errors
-		ec.Logger.Debugf("  Error checking service status: %v", err)
+		ec.Svc.Logger.Debugf("  Error checking service status: %v", err)
 		return false, nil
 	}
 
-	ec.Logger.Debugf("  Service %s is loaded", serviceID)
+	ec.Svc.Logger.Debugf("  Service %s is loaded", serviceID)
 	return true, nil
 }
 
@@ -920,7 +920,7 @@ func manageLaunchdServiceState(serviceName, serviceID, plistPath, domain string,
 
 	case ServiceStateStopped:
 		if !isLoaded {
-			ec.Logger.Debugf("  Service %s already stopped (not loaded)", serviceName)
+			ec.Svc.Logger.Debugf("  Service %s already stopped (not loaded)", serviceName)
 			return false, nil
 		}
 		// Kill the service
@@ -974,13 +974,13 @@ func manageLaunchdServiceEnabled(serviceID, plistPath, domain string, shouldBeEn
 	}
 
 	// Already in desired state
-	ec.Logger.Debugf("  Service %s already in desired enabled state: %v", serviceID, shouldBeEnabled)
+	ec.Svc.Logger.Debugf("  Service %s already in desired enabled state: %v", serviceID, shouldBeEnabled)
 	return false, nil
 }
 
 // executeLaunchctlCommand executes a launchctl command with proper error handling
 func executeLaunchctlCommand(command, domain, plistPath string, step config.Step, ec *executor.ExecutionContext, idempotencyCheck []string, successMsg, errorMsg string) error {
-	ec.Logger.Debugf("  Running launchctl %s %s %s", command, domain, plistPath)
+	ec.Svc.Logger.Debugf("  Running launchctl %s %s %s", command, domain, plistPath)
 
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
@@ -990,7 +990,7 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
@@ -998,7 +998,7 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 		}
 		// #nosec G204 - This is a provisioning tool that manages launchd services with validated commands
 		cmd = exec.Command("sudo", "-S", "launchctl", command, domain, plistPath)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		// #nosec G204 - This is a provisioning tool that manages launchd services with validated commands
 		cmd = exec.Command("launchctl", command, domain, plistPath)
@@ -1010,7 +1010,7 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 		outputStr := string(output)
 		for _, check := range idempotencyCheck {
 			if strings.Contains(outputStr, check) {
-				ec.Logger.Debugf("  %s", successMsg)
+				ec.Svc.Logger.Debugf("  %s", successMsg)
 				return nil
 			}
 		}
@@ -1063,7 +1063,7 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 	}
 	args = append(args, serviceID)
 
-	ec.Logger.Debugf("  Running launchctl %s", strings.Join(args, " "))
+	ec.Svc.Logger.Debugf("  Running launchctl %s", strings.Join(args, " "))
 
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
@@ -1073,7 +1073,7 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
@@ -1084,7 +1084,7 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 		sudoArgs = append(sudoArgs, args...)
 		// #nosec G204 - This is a provisioning tool that manages launchd services with validated commands
 		cmd = exec.Command("sudo", sudoArgs...)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		cmd = exec.Command("launchctl", args...)
 	}
@@ -1106,7 +1106,7 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 
 // launchdKill stops a service using launchctl kill
 func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionContext) error {
-	ec.Logger.Debugf("  Running launchctl kill SIGTERM %s", serviceID)
+	ec.Svc.Logger.Debugf("  Running launchctl kill SIGTERM %s", serviceID)
 
 	var cmd *exec.Cmd
 	if step.ShouldBecome() {
@@ -1116,14 +1116,14 @@ func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionConte
 				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 			}
 		}
-		if ec.SudoPass == "" {
+		if ec.Svc.SudoPass == "" {
 			return &executor.SetupError{
 				Component: "sudo",
 				Issue:     "no password provided. Use --sudo-pass flag",
 			}
 		}
 		cmd = exec.Command("sudo", "-S", "launchctl", "kill", "SIGTERM", serviceID)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		cmd = exec.Command("launchctl", "kill", "SIGTERM", serviceID)
 	}
@@ -1132,7 +1132,7 @@ func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionConte
 	if err != nil {
 		// It's okay if service is not running
 		if strings.Contains(string(output), "Could not find") || strings.Contains(string(output), "not running") {
-			ec.Logger.Debugf("  Service not running")
+			ec.Svc.Logger.Debugf("  Service not running")
 			return nil
 		}
 		exitCode := 1
@@ -1208,7 +1208,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("service action requires service configuration")
 	}
 
-	renderedName, err := ec.Template.Render(svc.Name, ec.Variables)
+	renderedName, err := ec.Svc.Template.Render(svc.Name, ec.Variables)
 	if err != nil {
 		return result, fmt.Errorf("failed to render service name: %w", err)
 	}

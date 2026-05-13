@@ -262,13 +262,13 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 
 		// Handle stdin: sudo password comes first, then user stdin if provided
 		if step.Cmd.Stdin != "" {
-			renderedStdin, err := ec.Template.Render(step.Cmd.Stdin, ec.Variables)
+			renderedStdin, err := ec.Svc.Template.Render(step.Cmd.Stdin, ec.Variables)
 			if err != nil {
 				return nil, fmt.Errorf("failed to render stdin: %w", err)
 			}
-			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n" + renderedStdin))
+			command.Stdin = bytes.NewBuffer([]byte(ec.Svc.SudoPass + "\n" + renderedStdin))
 		} else {
-			command.Stdin = bytes.NewBuffer([]byte(ec.SudoPass + "\n"))
+			command.Stdin = bytes.NewBuffer([]byte(ec.Svc.SudoPass + "\n"))
 		}
 		return command, nil
 	}
@@ -279,7 +279,7 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 
 	// Handle stdin for non-sudo commands
 	if step.Cmd.Stdin != "" {
-		renderedStdin, err := ec.Template.Render(step.Cmd.Stdin, ec.Variables)
+		renderedStdin, err := ec.Svc.Template.Render(step.Cmd.Stdin, ec.Variables)
 		if err != nil {
 			return nil, fmt.Errorf("failed to render stdin: %w", err)
 		}

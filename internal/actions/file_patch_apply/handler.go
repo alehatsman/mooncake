@@ -109,7 +109,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}()
 
 	// Expand and render path
-	renderedPath, err := ec.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -131,7 +131,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		patchContent = renderedPatch
 	} else {
 		// Read patch from file
-		renderedPatchFile, pathErr := ec.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.GetVariables())
+		renderedPatchFile, pathErr := ec.Svc.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.GetVariables())
 		if pathErr != nil {
 			return result, fmt.Errorf("failed to expand patch_file path: %w", pathErr)
 		}
@@ -233,7 +233,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render path
-	renderedPath, err := ec.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render path: %v", err)
 		renderedPath = fpa.Path
@@ -481,7 +481,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
-	renderedPath, err := ec.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -498,7 +498,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		patchContent = rendered
 	} else {
-		renderedPatchFile, pferr := ec.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.GetVariables())
+		renderedPatchFile, pferr := ec.Svc.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.GetVariables())
 		if pferr != nil {
 			return result, fmt.Errorf("failed to expand patch_file path: %w", pferr)
 		}

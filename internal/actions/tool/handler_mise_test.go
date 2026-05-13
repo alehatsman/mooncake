@@ -36,13 +36,15 @@ func newToolCtx(t *testing.T, cwd string) *executor.ExecutionContext {
 		t.Fatal(err)
 	}
 	return &executor.ExecutionContext{
-		Variables:   map[string]interface{}{"os": "linux", "arch": "amd64"},
-		Template:    r,
-		PathUtil:    pathutil.NewPathExpander(r),
-		Logger:      logger.NewLogger(logger.ErrorLevel),
-		CurrentDir:  cwd,
-		CurrentMode: actions.ModeApply,
-		Stats:       executor.NewExecutionStats(),
+		Svc: &executor.RunServices{
+			Template: r,
+			PathUtil: pathutil.NewPathExpander(r),
+			Logger: logger.NewLogger(logger.ErrorLevel),
+			Mode: actions.ModeApply,
+			Stats: executor.NewExecutionStats(),
+		},
+		Variables: map[string]interface{}{"os": "linux", "arch": "amd64"},
+		CurrentDir: cwd,
 	}
 }
 
@@ -157,7 +159,7 @@ func TestHandler_MiseRun_PlanMode_AlreadyInstalled(t *testing.T) {
 	})
 
 	ctx := newToolCtx(t, cwd)
-	ctx.CurrentMode = actions.ModePlan
+	ctx.Svc.Mode = actions.ModePlan
 
 	step := &config.Step{
 		Tool: &config.Tool{Name: "node", Version: "24.0.0", Backend: BackendMise},
@@ -179,7 +181,7 @@ func TestHandler_MiseRun_PlanMode_NotInstalled(t *testing.T) {
 	withFakeMise(t, &fakeMiseRunner{}) // empty whichResponses
 
 	ctx := newToolCtx(t, cwd)
-	ctx.CurrentMode = actions.ModePlan
+	ctx.Svc.Mode = actions.ModePlan
 
 	step := &config.Step{
 		Tool: &config.Tool{Name: "node", Version: "24.0.0", Backend: BackendMise},

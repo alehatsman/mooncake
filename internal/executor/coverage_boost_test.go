@@ -112,11 +112,13 @@ func TestHandleVars_MergeExisting(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Logger: testLogger,
+		Svc: &RunServices{
+			Logger: testLogger,
+			Mode:   actions.ModeApply,
+		},
 		Variables: map[string]interface{}{
 			"existing_key": "existing_value",
 		},
-		CurrentMode: actions.ModeApply,
 	}
 
 	err := HandleVars(step, ec)
@@ -174,9 +176,11 @@ func TestHandleWhenExpression_BooleanLogic(t *testing.T) {
 			}
 
 			ec := &ExecutionContext{
-				Evaluator: expression.NewGovaluateEvaluator(),
-				Template:  mustNewRenderer(),
-				Logger:    logger.NewTestLogger(),
+				Svc: &RunServices{
+					Evaluator: expression.NewGovaluateEvaluator(),
+					Template:  mustNewRenderer(),
+					Logger:    logger.NewTestLogger(),
+				},
 				Variables: tt.variables,
 			}
 
@@ -203,11 +207,13 @@ func TestCheckIdempotencyConditions_Creates(t *testing.T) {
 	renderer := mustNewRenderer()
 
 	ec := &ExecutionContext{
-		Template:      renderer,
-		Logger:        logger.NewTestLogger(),
+		Svc: &RunServices{
+			Template: renderer,
+			Logger:   logger.NewTestLogger(),
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
 		Variables:     make(map[string]interface{}),
 		CurrentResult: NewResult(),
-		PathUtil:      pathutil.NewPathExpander(renderer),
 		CurrentDir:    "/tmp",
 	}
 
@@ -276,7 +282,9 @@ func TestAddGlobalVariables_NonDestructive(t *testing.T) {
 // TestEmitEvent_WithNilPublisher tests EmitEvent doesn't panic with nil publisher
 func TestEmitEvent_WithNilPublisher(t *testing.T) {
 	ec := &ExecutionContext{
-		EventPublisher: nil, // Nil publisher
+		Svc: &RunServices{
+			EventPublisher: nil, // Nil publisher
+		},
 	}
 
 	// Should not panic
@@ -295,11 +303,13 @@ func TestCheckIdempotencyConditions_UnlessSuccess(t *testing.T) {
 
 	renderer := mustNewRenderer()
 	ec := &ExecutionContext{
-		Template:      renderer,
-		Logger:        logger.NewTestLogger(),
+		Svc: &RunServices{
+			Template: renderer,
+			Logger:   logger.NewTestLogger(),
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
 		Variables:     make(map[string]interface{}),
 		CurrentResult: NewResult(),
-		PathUtil:      pathutil.NewPathExpander(renderer),
 		CurrentDir:    "/tmp",
 	}
 
@@ -326,11 +336,13 @@ func TestCheckIdempotencyConditions_UnlessFail(t *testing.T) {
 
 	renderer := mustNewRenderer()
 	ec := &ExecutionContext{
-		Template:      renderer,
-		Logger:        logger.NewTestLogger(),
+		Svc: &RunServices{
+			Template: renderer,
+			Logger:   logger.NewTestLogger(),
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
 		Variables:     make(map[string]interface{}),
 		CurrentResult: NewResult(),
-		PathUtil:      pathutil.NewPathExpander(renderer),
 		CurrentDir:    "/tmp",
 	}
 
@@ -417,9 +429,11 @@ func TestHandleWhenExpression_NilResult(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  mustNewRenderer(),
-		Logger:    logger.NewTestLogger(),
+		Svc: &RunServices{
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Template:  mustNewRenderer(),
+			Logger:    logger.NewTestLogger(),
+		},
 		Variables: make(map[string]interface{}),
 	}
 
@@ -441,9 +455,11 @@ func TestHandleWhenExpression_NonBool(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  mustNewRenderer(),
-		Logger:    logger.NewTestLogger(),
+		Svc: &RunServices{
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Template:  mustNewRenderer(),
+			Logger:    logger.NewTestLogger(),
+		},
 		Variables: make(map[string]interface{}),
 	}
 
@@ -461,9 +477,11 @@ func TestCheckSkipConditions_WhenFalse(t *testing.T) {
 
 	renderer := mustNewRenderer()
 	ec := &ExecutionContext{
-		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  renderer,
-		Logger:    logger.NewTestLogger(),
+		Svc: &RunServices{
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Template:  renderer,
+			Logger:    logger.NewTestLogger(),
+		},
 		Variables: make(map[string]interface{}),
 	}
 

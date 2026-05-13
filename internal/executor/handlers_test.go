@@ -23,9 +23,11 @@ func TestHandleVars(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Logger:    testLogger,
+		Svc: &RunServices{
+			Logger: testLogger,
+			Mode:   actions.ModeApply,
+		},
 		Variables: make(map[string]interface{}),
-		CurrentMode: actions.ModeApply,
 	}
 
 	err := HandleVars(step, ec)
@@ -55,9 +57,11 @@ func TestHandleVars_DryRun(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Logger:    testLogger,
+		Svc: &RunServices{
+			Logger: testLogger,
+			Mode:   actions.ModePlan,
+		},
 		Variables: make(map[string]interface{}),
-		CurrentMode: actions.ModePlan,
 	}
 
 	err := HandleVars(step, ec)
@@ -82,7 +86,9 @@ func TestHandleVars_EmptyVars(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Logger:    testLogger,
+		Svc: &RunServices{
+			Logger: testLogger,
+		},
 		Variables: make(map[string]interface{}),
 	}
 
@@ -145,9 +151,11 @@ func TestHandleWhenExpression(t *testing.T) {
 			}
 
 			ec := &ExecutionContext{
-				Evaluator: expression.NewGovaluateEvaluator(),
-				Template:  mustNewRenderer(),
-				Logger:    logger.NewTestLogger(),
+				Svc: &RunServices{
+					Evaluator: expression.NewGovaluateEvaluator(),
+					Template:  mustNewRenderer(),
+					Logger:    logger.NewTestLogger(),
+				},
 				Variables: tt.variables,
 			}
 
@@ -177,9 +185,11 @@ func TestHandleWhenExpression_WithTemplate(t *testing.T) {
 	}
 
 	ec := &ExecutionContext{
-		Evaluator: expression.NewGovaluateEvaluator(),
-		Template:  mustNewRenderer(),
-		Logger:    logger.NewTestLogger(),
+		Svc: &RunServices{
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Template:  mustNewRenderer(),
+			Logger:    logger.NewTestLogger(),
+		},
 		Variables: map[string]interface{}{
 			"deploy": true,
 		},
@@ -230,9 +240,11 @@ func TestCheckIdempotencyConditions(t *testing.T) {
 			}
 
 			ec := &ExecutionContext{
-				Evaluator:     expression.NewGovaluateEvaluator(),
-				Template:      mustNewRenderer(),
-				Logger:        logger.NewTestLogger(),
+				Svc: &RunServices{
+					Evaluator: expression.NewGovaluateEvaluator(),
+					Template:  mustNewRenderer(),
+					Logger:    logger.NewTestLogger(),
+				},
 				Variables:     make(map[string]interface{}),
 				CurrentResult: tt.result,
 			}
@@ -278,9 +290,11 @@ func TestCheckSkipConditions(t *testing.T) {
 			}
 
 			ec := &ExecutionContext{
-				Evaluator:     expression.NewGovaluateEvaluator(),
-				Template:      mustNewRenderer(),
-				Logger:        logger.NewTestLogger(),
+				Svc: &RunServices{
+					Evaluator: expression.NewGovaluateEvaluator(),
+					Template:  mustNewRenderer(),
+					Logger:    logger.NewTestLogger(),
+				},
 				Variables:     make(map[string]interface{}),
 				CurrentResult: tt.result,
 			}

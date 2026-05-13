@@ -103,7 +103,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Get base directory
 	baseDir := ec.CurrentDir
 	if raps.BaseDir != "" {
-		renderedBaseDir, err := ec.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
+		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand base_dir: %w", err)
 		}
@@ -121,7 +121,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		patchsetContent = renderedPatchset
 	} else {
 		// Read patchset from file
-		renderedPatchsetFile, pathErr := ec.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.GetVariables())
+		renderedPatchsetFile, pathErr := ec.Svc.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.GetVariables())
 		if pathErr != nil {
 			return result, fmt.Errorf("failed to expand patchset_file path: %w", pathErr)
 		}
@@ -154,7 +154,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Write output file if specified
 	if raps.OutputFile != "" {
-		outputPath, pathErr := ec.PathUtil.ExpandPath(raps.OutputFile, ec.CurrentDir, ctx.GetVariables())
+		outputPath, pathErr := ec.Svc.PathUtil.ExpandPath(raps.OutputFile, ec.CurrentDir, ctx.GetVariables())
 		if pathErr != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", pathErr)
 		}
@@ -207,7 +207,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	// Get base directory
 	baseDir := ec.CurrentDir
 	if raps.BaseDir != "" {
-		renderedBaseDir, err := ec.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
+		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
 		if err != nil {
 			ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render base_dir: %v", err)
 			baseDir = raps.BaseDir
@@ -621,7 +621,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	baseDir := ec.CurrentDir
 	if raps.BaseDir != "" {
-		renderedBaseDir, err := ec.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
+		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand base_dir: %w", err)
 		}
@@ -636,7 +636,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		patchsetContent = rendered
 	} else {
-		renderedFile, ferr := ec.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.GetVariables())
+		renderedFile, ferr := ec.Svc.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.GetVariables())
 		if ferr != nil {
 			return result, fmt.Errorf("failed to expand patchset_file: %w", ferr)
 		}

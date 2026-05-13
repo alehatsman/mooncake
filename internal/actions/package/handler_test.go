@@ -24,16 +24,18 @@ func newMockExecutionContext() *executor.ExecutionContext {
 		panic("Failed to create renderer: " + err.Error())
 	}
 	return &executor.ExecutionContext{
-		Variables:      make(map[string]interface{}),
-		Template:       tmpl,
-		Evaluator:      expression.NewExprEvaluator(),
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		Logger:         &testutil.MockLogger{Logs: []string{}},
-		EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-		Redactor:       security.NewRedactor(),
-		SudoPass:       "",
-		CurrentStepID:  "step-1",
-		Stats:          executor.NewExecutionStats(),
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: expression.NewExprEvaluator(),
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Logger: &testutil.MockLogger{Logs: []string{}},
+			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
+			Redactor: security.NewRedactor(),
+			SudoPass: "",
+			Stats: executor.NewExecutionStats(),
+		},
+		Variables: make(map[string]interface{}),
+		CurrentStepID: "step-1",
 	}
 }
 
@@ -312,7 +314,7 @@ func TestHandler_DryRun(t *testing.T) {
 				return
 			}
 
-			mockLog := ctx.Logger.(*testutil.MockLogger)
+			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 			if tt.checkLog != nil && !tt.checkLog(mockLog.Logs) {
 				t.Errorf("DryRun() log check failed, logs: %v", mockLog.Logs)
 			}
@@ -913,7 +915,7 @@ func TestHandler_DryRun_WithExplicitManager(t *testing.T) {
 		t.Errorf("DryRun() error = %v, want nil", err)
 	}
 
-	mockLog := ctx.Logger.(*testutil.MockLogger)
+	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 	if len(mockLog.Logs) == 0 {
 		t.Error("DryRun() should log something")
 	}
@@ -935,7 +937,7 @@ func TestHandler_DryRun_UpgradeOperation(t *testing.T) {
 		t.Errorf("DryRun() error = %v, want nil", err)
 	}
 
-	mockLog := ctx.Logger.(*testutil.MockLogger)
+	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 	if len(mockLog.Logs) == 0 {
 		t.Error("DryRun() should log upgrade operation")
 	}
@@ -958,7 +960,7 @@ func TestHandler_DryRun_UpdateCache(t *testing.T) {
 		t.Errorf("DryRun() error = %v, want nil", err)
 	}
 
-	mockLog := ctx.Logger.(*testutil.MockLogger)
+	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 	if len(mockLog.Logs) == 0 {
 		t.Error("DryRun() should log cache update")
 	}
@@ -1127,7 +1129,7 @@ func TestHandler_DryRun_StateOperations(t *testing.T) {
 				t.Errorf("DryRun() error = %v, want nil", err)
 			}
 
-			mockLog := ctx.Logger.(*testutil.MockLogger)
+			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 			if len(mockLog.Logs) == 0 {
 				t.Error("DryRun() should log operation")
 			}

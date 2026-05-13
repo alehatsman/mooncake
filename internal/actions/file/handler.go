@@ -129,7 +129,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Expand path
-	renderedPath, err := ec.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -186,7 +186,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		return fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	renderedPath, err := ec.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		renderedPath = file.Path
 	}
@@ -446,7 +446,7 @@ func (h *Handler) createSymlink(ctx actions.Context, ec *executor.ExecutionConte
 	}
 
 	// Expand src path
-	expandedSrc, err := ec.PathUtil.ExpandPath(renderedSrc, ec.CurrentDir, ctx.GetVariables())
+	expandedSrc, err := ec.Svc.PathUtil.ExpandPath(renderedSrc, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return fmt.Errorf("failed to expand src path: %w", err)
 	}
@@ -509,7 +509,7 @@ func (h *Handler) createHardlink(ctx actions.Context, ec *executor.ExecutionCont
 	}
 
 	// Expand src path
-	expandedSrc, err := ec.PathUtil.ExpandPath(renderedSrc, ec.CurrentDir, ctx.GetVariables())
+	expandedSrc, err := ec.Svc.PathUtil.ExpandPath(renderedSrc, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return fmt.Errorf("failed to expand src path: %w", err)
 	}
@@ -799,7 +799,7 @@ func (h *Handler) executeSudoFileOperation(tmpPath, destPath string, mode os.Fil
 func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
 	// #nosec G204 - This is a provisioning tool designed to execute commands
 	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
-	cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -827,7 +827,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	renderedPath, err := ec.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -969,7 +969,7 @@ func (h *Handler) resolveLinkSrc(ctx actions.Context, ec *executor.ExecutionCont
 	if err != nil {
 		return "", fmt.Errorf("failed to render src: %w", err)
 	}
-	expanded, err := ec.PathUtil.ExpandPath(rendered, ec.CurrentDir, ctx.GetVariables())
+	expanded, err := ec.Svc.PathUtil.ExpandPath(rendered, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return "", fmt.Errorf("failed to expand src path: %w", err)
 	}

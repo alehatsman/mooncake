@@ -116,12 +116,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Render paths
-	renderedSrc, err := ec.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.GetVariables())
+	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
 
-	renderedDest, err := ec.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -129,7 +129,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Render creates path if specified
 	var renderedCreates string
 	if unarchiveAction.Creates != "" {
-		renderedCreates, err = ec.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.GetVariables())
+		renderedCreates, err = ec.Svc.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.GetVariables())
 		if err != nil {
 			return nil, fmt.Errorf("failed to expand creates path: %w", err)
 		}
@@ -235,19 +235,19 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render paths
-	renderedSrc, err := ec.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.GetVariables())
+	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		renderedSrc = unarchiveAction.Src
 	}
 
-	renderedDest, err := ec.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		renderedDest = unarchiveAction.Dest
 	}
 
 	// Check if creates path exists
 	if unarchiveAction.Creates != "" {
-		renderedCreates, err := ec.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.GetVariables())
+		renderedCreates, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.GetVariables())
 		if err == nil {
 			if _, statErr := os.Stat(renderedCreates); statErr == nil {
 				ctx.GetLogger().Infof("  [DRY-RUN] Would skip extraction: creates path exists: %s", renderedCreates)
@@ -592,7 +592,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result.Checkable = true
 
 	if ua.Creates != "" {
-		renderedCreates, err := ec.PathUtil.ExpandPath(ua.Creates, ec.CurrentDir, ctx.GetVariables())
+		renderedCreates, err := ec.Svc.PathUtil.ExpandPath(ua.Creates, ec.CurrentDir, ctx.GetVariables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand creates path: %w", err)
 		}

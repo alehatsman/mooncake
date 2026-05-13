@@ -31,17 +31,19 @@ func newMockExecutionContext() *executor.ExecutionContext {
 	}
 	tmpDir, _ := os.MkdirTemp("", "assert-test-*")
 	return &executor.ExecutionContext{
-		Variables:      make(map[string]interface{}),
-		Template:       tmpl,
-		Evaluator:      expression.NewExprEvaluator(),
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		Logger:         &testutil.MockLogger{Logs: []string{}},
-		EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-		Redactor:       security.NewRedactor(),
-		SudoPass:       "",
-		CurrentStepID:  "step-1",
-		Stats:          executor.NewExecutionStats(),
-		CurrentDir:     tmpDir,
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: expression.NewExprEvaluator(),
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Logger: &testutil.MockLogger{Logs: []string{}},
+			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
+			Redactor: security.NewRedactor(),
+			SudoPass: "",
+			Stats: executor.NewExecutionStats(),
+		},
+		Variables: make(map[string]interface{}),
+		CurrentStepID: "step-1",
+		CurrentDir: tmpDir,
 	}
 }
 
@@ -211,7 +213,7 @@ func TestHandler_Execute_CommandAssertion_Success(t *testing.T) {
 			}
 
 			// Check for passed event
-			pub := ctx.EventPublisher.(*testutil.MockPublisher)
+			pub := ctx.Svc.EventPublisher.(*testutil.MockPublisher)
 			if len(pub.Events) == 0 {
 				t.Error("Expected EventAssertPassed to be emitted")
 			} else {
@@ -283,7 +285,7 @@ func TestHandler_Execute_CommandAssertion_Failure(t *testing.T) {
 			}
 
 			// Check for failed event
-			pub := ctx.EventPublisher.(*testutil.MockPublisher)
+			pub := ctx.Svc.EventPublisher.(*testutil.MockPublisher)
 			if len(pub.Events) == 0 {
 				t.Error("Expected EventAssertFailed to be emitted")
 			} else {
@@ -1353,7 +1355,7 @@ func TestHandler_DryRun_Command(t *testing.T) {
 			}
 
 			// Check that something was logged
-			mockLog := ctx.Logger.(*testutil.MockLogger)
+			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 			if len(mockLog.Logs) == 0 {
 				t.Error("DryRun() should log something")
 			}
@@ -1420,7 +1422,7 @@ func TestHandler_DryRun_File(t *testing.T) {
 			}
 
 			// Check that something was logged
-			mockLog := ctx.Logger.(*testutil.MockLogger)
+			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 			if len(mockLog.Logs) == 0 {
 				t.Error("DryRun() should log something")
 			}
@@ -1468,7 +1470,7 @@ func TestHandler_DryRun_HTTP(t *testing.T) {
 			}
 
 			// Check that something was logged
-			mockLog := ctx.Logger.(*testutil.MockLogger)
+			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
 			if len(mockLog.Logs) == 0 {
 				t.Error("DryRun() should log something")
 			}

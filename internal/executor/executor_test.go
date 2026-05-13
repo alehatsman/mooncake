@@ -39,6 +39,14 @@ func TestExecutionContext_Copy(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 
 	original := executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Logger:   testLogger,
+			SudoPass: "secret",
+			Template: renderer,
+			Evaluator: evaluator,
+			PathUtil: pathExpander,
+			FileTree: fileTreeWalker,
+		},
 		Variables: map[string]interface{}{
 			"key1": "value1",
 			"key2": "value2",
@@ -48,12 +56,6 @@ func TestExecutionContext_Copy(t *testing.T) {
 		Level:        1,
 		CurrentIndex: 2,
 		TotalSteps:   10,
-		Logger:       testLogger,
-		SudoPass:     "secret",
-		Template:     renderer,
-		Evaluator:    evaluator,
-		PathUtil:     pathExpander,
-		FileTree:     fileTreeWalker,
 	}
 
 	copied := original.Clone()
@@ -68,8 +70,8 @@ func TestExecutionContext_Copy(t *testing.T) {
 	if copied.Level != original.Level {
 		t.Errorf("Copy() Level = %v, want %v", copied.Level, original.Level)
 	}
-	if copied.SudoPass != original.SudoPass {
-		t.Errorf("Copy() SudoPass = %v, want %v", copied.SudoPass, original.SudoPass)
+	if copied.Svc.SudoPass != original.Svc.SudoPass {
+		t.Errorf("Copy() SudoPass = %v, want %v", copied.Svc.SudoPass, original.Svc.SudoPass)
 	}
 
 	// Verify variables are deep copied
@@ -86,16 +88,16 @@ func TestExecutionContext_Copy(t *testing.T) {
 	}
 
 	// Verify dependencies are shared (not deep copied)
-	if copied.Template != original.Template {
+	if copied.Svc.Template != original.Svc.Template {
 		t.Error("Copy() should share Template dependency")
 	}
-	if copied.Evaluator != original.Evaluator {
+	if copied.Svc.Evaluator != original.Svc.Evaluator {
 		t.Error("Copy() should share Evaluator dependency")
 	}
-	if copied.PathUtil != original.PathUtil {
+	if copied.Svc.PathUtil != original.Svc.PathUtil {
 		t.Error("Copy() should share PathUtil dependency")
 	}
-	if copied.FileTree != original.FileTree {
+	if copied.Svc.FileTree != original.Svc.FileTree {
 		t.Error("Copy() should share FileTree dependency")
 	}
 }
@@ -130,10 +132,12 @@ func TestHandleVars(t *testing.T) {
 	}
 
 	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Logger: testLogger,
+		},
 		Variables: map[string]interface{}{
 			"existing_key": "existing_value",
 		},
-		Logger: testLogger,
 	}
 
 	step := config.Step{
@@ -205,11 +209,13 @@ func TestHandleWhenExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ec := &executor.ExecutionContext{
+				Svc: &executor.RunServices{
+					Logger:    testLogger,
+					Template:  renderer,
+					Redactor:  security.NewRedactor(),
+					Evaluator: evaluator,
+				},
 				Variables: tt.vars,
-				Logger:    testLogger,
-				Template:  renderer,
-				Redactor:  security.NewRedactor(),
-				Evaluator: evaluator,
 			}
 
 			step := config.Step{
@@ -354,8 +360,10 @@ func TestShouldSkipByTags(t *testing.T) {
 				Tags: tt.stepTags,
 			}
 			ec := &executor.ExecutionContext{
-				Tags: tt.filterTags,
-				Redactor: security.NewRedactor(),
+				Svc: &executor.RunServices{
+					Tags:     tt.filterTags,
+					Redactor: security.NewRedactor(),
+				},
 			}
 
 			got := executor.ShouldSkipByTags(step, ec)
@@ -412,12 +420,14 @@ func TestMarkStepFailed(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	result := executor.NewResult()
 	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Logger: testLogger,
+		},
 		Variables: make(map[string]interface{}),
-		Logger:    testLogger,
 	}
 	step := config.Step{
-		Name:     "test",
-		As: "result",
+		Name: "test",
+		As:   "result",
 	}
 
 	executor.MarkStepFailed(result, step, ec)
@@ -473,10 +483,12 @@ func TestCheckSkipConditions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ec := &executor.ExecutionContext{
+				Svc: &executor.RunServices{
+					Logger:    testLogger,
+					Template:  renderer,
+					Evaluator: evaluator,
+				},
 				Variables: make(map[string]interface{}),
-				Logger:    testLogger,
-				Template:  renderer,
-				Evaluator: evaluator,
 			}
 			step := config.Step{
 				When:    tt.when,
@@ -514,9 +526,6 @@ func TestGetStepDisplayName(t *testing.T) {
 
 
 
-
-
-
 func TestExecuteStep_WithShell(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer, err := template.NewPongo2Renderer()
@@ -527,14 +536,16 @@ func TestExecuteStep_WithShell(t *testing.T) {
 	pathExpander := pathutil.NewPathExpander(renderer)
 
 	ec := &executor.ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		Stats: executor.NewExecutionStats(),
-		Redactor:            security.NewRedactor(),
+		Svc: &executor.RunServices{
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+			PathUtil:  pathExpander,
+			Stats:     executor.NewExecutionStats(),
+			Redactor:  security.NewRedactor(),
+		},
+		Variables:  make(map[string]interface{}),
+		CurrentDir: os.TempDir(),
 	}
 
 	shellCmd := "echo test"
@@ -548,11 +559,11 @@ func TestExecuteStep_WithShell(t *testing.T) {
 		t.Errorf("executor.ExecuteStep() error = %v", err)
 	}
 
-	if *ec.Stats.Global != 1 {
-		t.Errorf("GlobalStepsExecuted = %d, want 1", *ec.Stats.Global)
+	if *ec.Svc.Stats.Global != 1 {
+		t.Errorf("GlobalStepsExecuted = %d, want 1", *ec.Svc.Stats.Global)
 	}
-	if *ec.Stats.Executed != 1 {
-		t.Errorf("StatsExecuted = %d, want 1", *ec.Stats.Executed)
+	if *ec.Svc.Stats.Executed != 1 {
+		t.Errorf("StatsExecuted = %d, want 1", *ec.Svc.Stats.Executed)
 	}
 }
 
@@ -566,13 +577,15 @@ func TestExecuteStep_Skipped(t *testing.T) {
 	pathExpander := pathutil.NewPathExpander(renderer)
 
 	ec := &executor.ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		Stats: executor.NewExecutionStats(),
+		Svc: &executor.RunServices{
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+			PathUtil:  pathExpander,
+			Stats:     executor.NewExecutionStats(),
+		},
+		Variables:  make(map[string]interface{}),
+		CurrentDir: os.TempDir(),
 	}
 
 	shellCmd := "echo test"
@@ -587,11 +600,11 @@ func TestExecuteStep_Skipped(t *testing.T) {
 		t.Errorf("executor.ExecuteStep() error = %v", err)
 	}
 
-	if *ec.Stats.Global != 0 {
-		t.Errorf("GlobalStepsExecuted = %d, want 0 for skipped step", *ec.Stats.Global)
+	if *ec.Svc.Stats.Global != 0 {
+		t.Errorf("GlobalStepsExecuted = %d, want 0 for skipped step", *ec.Svc.Stats.Global)
 	}
-	if *ec.Stats.Skipped != 1 {
-		t.Errorf("StatsSkipped = %d, want 1", *ec.Stats.Skipped)
+	if *ec.Svc.Stats.Skipped != 1 {
+		t.Errorf("StatsSkipped = %d, want 1", *ec.Svc.Stats.Skipped)
 	}
 }
 
@@ -605,15 +618,17 @@ func TestExecuteSteps(t *testing.T) {
 	pathExpander := pathutil.NewPathExpander(renderer)
 
 	ec := &executor.ExecutionContext{
-		Variables:           make(map[string]interface{}),
-		Logger:              testLogger,
-		Template:            renderer,
-		Evaluator:           evaluator,
-		PathUtil:            pathExpander,
-		CurrentDir:          os.TempDir(),
-		CurrentFile:         "test.yml",
-		Stats: executor.NewExecutionStats(),
-		Redactor:            security.NewRedactor(),
+		Svc: &executor.RunServices{
+			Logger:    testLogger,
+			Template:  renderer,
+			Evaluator: evaluator,
+			PathUtil:  pathExpander,
+			Stats:     executor.NewExecutionStats(),
+			Redactor:  security.NewRedactor(),
+		},
+		Variables:   make(map[string]interface{}),
+		CurrentDir:  os.TempDir(),
+		CurrentFile: "test.yml",
 	}
 
 	shellCmd1 := "echo step1"
@@ -628,12 +643,10 @@ func TestExecuteSteps(t *testing.T) {
 		t.Errorf("executor.ExecuteSteps() error = %v", err)
 	}
 
-	if *ec.Stats.Global != 2 {
-		t.Errorf("GlobalStepsExecuted = %d, want 2", *ec.Stats.Global)
+	if *ec.Svc.Stats.Global != 2 {
+		t.Errorf("GlobalStepsExecuted = %d, want 2", *ec.Svc.Stats.Global)
 	}
 }
-
-
 
 
 
@@ -674,13 +687,15 @@ func TestDispatchStepAction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ec := &executor.ExecutionContext{
+				Svc: &executor.RunServices{
+					Logger:    testLogger,
+					Template:  renderer,
+					Evaluator: evaluator,
+					PathUtil:  pathExpander,
+					Redactor:  security.NewRedactor(),
+				},
 				Variables:  make(map[string]interface{}),
-				Logger:     testLogger,
-				Template:   renderer,
-				Evaluator:  evaluator,
-				PathUtil:   pathExpander,
 				CurrentDir: tmpDir,
-				Redactor:   security.NewRedactor(),
 			}
 
 			err = executor.DispatchStepAction(tt.step, ec)
@@ -709,17 +724,6 @@ func TestDryRunLogger(t *testing.T) {
 
 
 
-
-
-
 func strPtr(s string) *string {
 	return &s
 }
-
-
-
-
-
-
-
-

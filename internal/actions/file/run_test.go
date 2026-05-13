@@ -24,12 +24,14 @@ func newRunContext(t *testing.T, plan bool) *executor.ExecutionContext {
 	}
 	stats := executor.NewExecutionStats()
 	return &executor.ExecutionContext{
-		Variables:   map[string]interface{}{},
-		Template:    renderer,
-		PathUtil:    pathutil.NewPathExpander(renderer),
-		CurrentDir:  "/tmp",
-		CurrentMode: planMode(plan),
-		Stats:       stats,
+		Svc: &executor.RunServices{
+			Template: renderer,
+			PathUtil: pathutil.NewPathExpander(renderer),
+			Mode: planMode(plan),
+			Stats: stats,
+		},
+		Variables: map[string]interface{}{},
+		CurrentDir: "/tmp",
 	}
 }
 

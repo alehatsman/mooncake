@@ -140,13 +140,15 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 	}
 
 	return &executor.ExecutionContext{
-		Variables:      variables,
-		Template:       mustNewRenderer(),
-		EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-		Logger:         &testutil.MockLogger{Logs: []string{}},
-		Evaluator:      expression.NewExprEvaluator(),
-		CurrentDir:     ".",
-		CurrentMode:    actions.ModeApply,
+		Svc: &executor.RunServices{
+			Template: mustNewRenderer(),
+			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
+			Logger: &testutil.MockLogger{Logs: []string{}},
+			Evaluator: expression.NewExprEvaluator(),
+			Mode: actions.ModeApply,
+		},
+		Variables: variables,
+		CurrentDir: ".",
 	}
 }
 
@@ -418,7 +420,7 @@ func TestHandler_DryRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &Handler{}
 			ec := mockExecutionContext(nil)
-			ec.CurrentMode = actions.ModePlan
+			ec.Svc.Mode = actions.ModePlan
 
 			step := &config.Step{
 				Name: "Test dry-run",
@@ -432,7 +434,7 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			if tt.checkLogs {
-				logger := ec.Logger.(*testutil.MockLogger)
+				logger := ec.Svc.Logger.(*testutil.MockLogger)
 				if len(logger.Logs) == 0 {
 					t.Error("DryRun() should log something")
 				}

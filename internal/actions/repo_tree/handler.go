@@ -111,7 +111,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Expand and render path
-	renderedPath, err := ec.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -158,7 +158,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Write output to file if specified
 	if rt.OutputFile != "" {
-		outputPath, err := ec.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.GetVariables())
+		outputPath, err := ec.Svc.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.GetVariables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", err)
 		}
@@ -210,7 +210,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		rootPath = "."
 	}
 
-	renderedPath, err := ec.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render path: %v", err)
 		renderedPath = rootPath
@@ -225,7 +225,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	if rt.OutputFile != "" {
-		outputPath, _ := ec.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.GetVariables())
+		outputPath, _ := ec.Svc.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.GetVariables())
 		ctx.GetLogger().Infof("            Output file: %s", outputPath)
 	}
 

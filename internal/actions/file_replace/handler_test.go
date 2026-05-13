@@ -25,15 +25,17 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 	}
 
 	return &executor.ExecutionContext{
-		Variables:      mockCtx.Variables,
-		Template:       tmpl,
-		Evaluator:      mockCtx.GetEvaluator(),
-		Logger:         mockCtx.Log,
-		EventPublisher: mockCtx.Publisher,
-		CurrentStepID:  mockCtx.StepID,
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		CurrentDir:     tmpDir,
-		CurrentMode:    actions.ModeApply,
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: mockCtx.GetEvaluator(),
+			Logger: mockCtx.Log,
+			EventPublisher: mockCtx.Publisher,
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Mode: actions.ModeApply,
+		},
+		Variables: mockCtx.Variables,
+		CurrentStepID: mockCtx.StepID,
+		CurrentDir: tmpDir,
 	}
 }
 
@@ -479,7 +481,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 func TestHandler_DryRun(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
-	ctx.CurrentMode = actions.ModePlan
+	ctx.Svc.Mode = actions.ModePlan
 
 	step := &config.Step{
 		TextReplace: &config.FileReplace{

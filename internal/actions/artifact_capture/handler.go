@@ -100,12 +100,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("failed to create artifact directory: %w", err)
 	}
 
-	ec.Logger.Infof("Capturing artifacts to: %s", artifactDir)
+	ec.Svc.Logger.Infof("Capturing artifacts to: %s", artifactDir)
 
 	// Create file change tracker and subscribe to events
 	tracker := newFileChangeTracker()
-	trackerID := ec.EventPublisher.Subscribe(tracker)
-	defer ec.EventPublisher.Unsubscribe(trackerID)
+	trackerID := ec.Svc.EventPublisher.Subscribe(tracker)
+	defer ec.Svc.EventPublisher.Unsubscribe(trackerID)
 
 	// Use planner to expand includes, loops, and other plan-time directives
 	planner, err := plan.NewPlanner()
@@ -117,7 +117,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("failed to expand artifact_capture steps: %w", err)
 	}
 
-	ec.Logger.Infof("Executing %d steps within artifact capture", len(expandedSteps))
+	ec.Svc.Logger.Infof("Executing %d steps within artifact capture", len(expandedSteps))
 
 	// Emit artifact capture start event
 	ec.EmitEvent(events.EventArtifactCaptureStart, events.ArtifactCaptureData{
@@ -130,7 +130,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	anyChanged := false
 	startTime := time.Now()
 	for i, expandedStep := range expandedSteps {
-		ec.Logger.Debugf("Executing artifact capture step %d/%d: %s", i+1, len(expandedSteps), expandedStep.Name)
+		ec.Svc.Logger.Debugf("Executing artifact capture step %d/%d: %s", i+1, len(expandedSteps), expandedStep.Name)
 
 		if err := executor.ExecuteStep(expandedStep, ec); err != nil {
 			return nil, fmt.Errorf("artifact_capture step %d failed: %w", i+1, err)
@@ -146,7 +146,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Collect file changes from tracker
 	fileChanges := tracker.GetFileChanges()
 
-	ec.Logger.Infof("Captured %d file changes", len(fileChanges))
+	ec.Svc.Logger.Infof("Captured %d file changes", len(fileChanges))
 
 	// Enhance file changes with detailed metadata
 	detailedChanges := make([]artifacts.DetailedFileChange, 0, len(fileChanges))
@@ -195,10 +195,10 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 			Steps:       capture.Steps,
 			InitialVars: ec.Variables, // Capture initial variables for reproducibility
 		}
-		ec.Logger.Debugf("Embedded plan with %d steps in artifact", len(capture.Steps))
+		ec.Svc.Logger.Debugf("Embedded plan with %d steps in artifact", len(capture.Steps))
 	} else {
 		metadata.PlanSummary = fmt.Sprintf("%d steps executed", len(capture.Steps))
-		ec.Logger.Debugf("Plan summary: %d steps (not embedded, exceeds max %d)", len(capture.Steps), maxPlanSteps)
+		ec.Svc.Logger.Debugf("Plan summary: %d steps (not embedded, exceeds max %d)", len(capture.Steps), maxPlanSteps)
 	}
 
 	// Write output files based on format
@@ -206,14 +206,14 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		if err := writeJSONArtifact(artifactDir, metadata); err != nil {
 			return nil, fmt.Errorf("failed to write JSON artifact: %w", err)
 		}
-		ec.Logger.Infof("Written JSON artifact: %s/changes.json", artifactDir)
+		ec.Svc.Logger.Infof("Written JSON artifact: %s/changes.json", artifactDir)
 	}
 
 	if format == "markdown" || format == "both" {
 		if err := writeMarkdownSummary(artifactDir, metadata); err != nil {
 			return nil, fmt.Errorf("failed to write markdown summary: %w", err)
 		}
-		ec.Logger.Infof("Written markdown summary: %s/SUMMARY.md", artifactDir)
+		ec.Svc.Logger.Infof("Written markdown summary: %s/SUMMARY.md", artifactDir)
 	}
 
 	// Create result
@@ -230,7 +230,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		DurationMs:   duration.Milliseconds(),
 	})
 
-	ec.Logger.Infof("Artifact capture complete: %d files changed", len(fileChanges))
+	ec.Svc.Logger.Infof("Artifact capture complete: %d files changed", len(fileChanges))
 
 	return result, nil
 }
@@ -253,13 +253,13 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	// Expand steps to get count
 	planner, err := plan.NewPlanner()
 	if err != nil {
-		ec.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, planner creation failed)",
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, planner creation failed)",
 			artifactDir, len(capture.Steps))
 		return nil
 	}
 	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.Variables, ec.CurrentDir)
 	if err != nil {
-		ec.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, expansion failed)",
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, expansion failed)",
 			artifactDir, len(capture.Steps))
 		return nil
 	}
@@ -269,7 +269,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		format = defaultFormat
 	}
 
-	ec.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (steps: %d, format: %s)",
+	ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (steps: %d, format: %s)",
 		artifactDir, len(expandedSteps), format)
 
 	return nil

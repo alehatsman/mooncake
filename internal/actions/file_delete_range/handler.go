@@ -111,7 +111,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}()
 
 	// Expand and render path
-	renderedPath, err := ec.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -209,7 +209,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	}
 
 	// Render path
-	renderedPath, err := ec.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render path: %v", err)
 		renderedPath = fdr.Path
@@ -363,7 +363,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
-	renderedPath, err := ec.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}

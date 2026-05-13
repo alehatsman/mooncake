@@ -97,16 +97,16 @@ func TestResult_SetData(t *testing.T) {
 	// No assertions - this is a TODO/placeholder method
 }
 
-// TestExecutionContext_ModeRoundtrip verifies CurrentMode is reported
+// TestExecutionContext_ModeRoundtrip verifies Mode is reported
 // by Mode() unchanged.
 func TestExecutionContext_ModeRoundtrip(t *testing.T) {
-	ctx := &ExecutionContext{CurrentMode: actions.ModePlan}
+	ctx := &ExecutionContext{Svc: &RunServices{Mode: actions.ModePlan}}
 	if ctx.Mode() != actions.ModePlan {
-		t.Error("Mode() should return ModePlan when CurrentMode is ModePlan")
+		t.Error("Mode() should return ModePlan when Mode is ModePlan")
 	}
-	ctx.CurrentMode = actions.ModeApply
+	ctx.Svc.Mode = actions.ModeApply
 	if ctx.Mode() != actions.ModeApply {
-		t.Error("Mode() should return ModeApply when CurrentMode is ModeApply")
+		t.Error("Mode() should return ModeApply when Mode is ModeApply")
 	}
 }
 

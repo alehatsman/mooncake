@@ -29,15 +29,17 @@ func mockExecutionContext() *executor.ExecutionContext {
 		panic("Failed to create renderer: " + err.Error())
 	}
 	return &executor.ExecutionContext{
-		Variables:      ctx.Variables,
-		Template:       tmpl,
-		Evaluator:      ctx.GetEvaluator(),
-		Logger:         ctx.Log,
-		EventPublisher: ctx.Publisher,
-		CurrentStepID:  ctx.StepID,
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		CurrentDir:     "/tmp",
-		CurrentMode:    actions.ModeApply,
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: ctx.GetEvaluator(),
+			Logger: ctx.Log,
+			EventPublisher: ctx.Publisher,
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Mode: actions.ModeApply,
+		},
+		Variables: ctx.Variables,
+		CurrentStepID: ctx.StepID,
+		CurrentDir: "/tmp",
 	}
 }
 
@@ -228,7 +230,7 @@ func TestHandler_Execute_BasicDownload(t *testing.T) {
 	}
 
 	// Check event was published
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(pub.Events))
 		return
@@ -801,7 +803,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	destPath := filepath.Join(tmpDir, "nopub.txt")
 
 	ec := mockExecutionContext()
-	ec.EventPublisher = nil
+	ec.Svc.EventPublisher = nil
 
 	step := &config.Step{
 		FileDownload: &config.Download{
@@ -948,7 +950,7 @@ func TestHandler_DryRun(t *testing.T) {
 			}
 
 			// Check that something was logged
-			log := ec.Logger.(*testutil.MockLogger)
+			log := ec.Svc.Logger.(*testutil.MockLogger)
 			if len(log.Logs) == 0 {
 				t.Error("DryRun() should log something")
 			}
@@ -989,7 +991,7 @@ func TestHandler_DryRun_IdempotentCheck(t *testing.T) {
 	}
 
 	// Check log message mentions already downloaded
-	log := ec.Logger.(*testutil.MockLogger)
+	log := ec.Svc.Logger.(*testutil.MockLogger)
 	hasIdempotentMessage := false
 	for _, msg := range log.Logs {
 		if strings.Contains(msg, "already downloaded") || strings.Contains(msg, "correct checksum") {

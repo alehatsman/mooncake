@@ -340,11 +340,11 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, bec
 		return nil
 	}
 
-	ec.Logger.Debugf("  Updating package cache: %s", strings.Join(cmdArgs, " "))
+	ec.Svc.Logger.Debugf("  Updating package cache: %s", strings.Join(cmdArgs, " "))
 
 	output, err := h.runCmd(ec, become, cmdArgs)
 	if err != nil {
-		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 		return fmt.Errorf("failed to update package cache: %w", err)
 	}
 
@@ -357,7 +357,7 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 	if become {
 		// #nosec G204 - sudo wrapping for privilege escalation
 		cmd = exec.Command("sudo", append([]string{"-S"}, cmdArgs...)...)
-		cmd.Stdin = bytes.NewBufferString(ec.SudoPass + "\n")
+		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
 	} else {
 		// #nosec G204 - Package manager commands are validated
 		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
@@ -381,7 +381,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 		}
 
 		if installed && !upgrade {
-			ec.Logger.Debugf("  Package %q is already installed", pkg)
+			ec.Svc.Logger.Debugf("  Package %q is already installed", pkg)
 			existingPkgs = append(existingPkgs, pkg)
 			continue
 		}
@@ -398,12 +398,12 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 	}
 
 	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, extra)
-	ec.Logger.Infof("  Installing packages: %s", strings.Join(toInstall, ", "))
-	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+	ec.Svc.Logger.Infof("  Installing packages: %s", strings.Join(toInstall, ", "))
+	ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
 	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
-		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 		return nil, fmt.Errorf("failed to install packages %v: %w", toInstall, execErr)
 	}
 
@@ -434,7 +434,7 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 		}
 
 		if !installed {
-			ec.Logger.Debugf("  Package %q is not installed", pkg)
+			ec.Svc.Logger.Debugf("  Package %q is not installed", pkg)
 			continue
 		}
 
@@ -449,12 +449,12 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 	}
 
 	cmdArgs := h.buildBatchRemoveCommand(manager, toRemove, extra)
-	ec.Logger.Infof("  Removing packages: %s", strings.Join(toRemove, ", "))
-	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+	ec.Svc.Logger.Infof("  Removing packages: %s", strings.Join(toRemove, ", "))
+	ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
 	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
-		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 		return nil, fmt.Errorf("failed to remove packages %v: %w", toRemove, execErr)
 	}
 
@@ -473,12 +473,12 @@ func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, 
 	result := executor.NewResult()
 
 	cmdArgs := h.buildUpgradeCommand(manager, pkg.Extra)
-	ec.Logger.Infof("  Upgrading all packages")
-	ec.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
+	ec.Svc.Logger.Infof("  Upgrading all packages")
+	ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
 	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
-		ec.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
+		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
 		return nil, fmt.Errorf("failed to upgrade packages: %w", execErr)
 	}
 
@@ -515,7 +515,7 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 		return false, fmt.Errorf("unsupported package manager: %s", manager)
 	}
 
-	ec.Logger.Debugf("    Checking if installed: %s", strings.Join(checkCmd, " "))
+	ec.Svc.Logger.Debugf("    Checking if installed: %s", strings.Join(checkCmd, " "))
 
 	// Execute the check command
 	cmd := exec.Command(checkCmd[0], checkCmd[1:]...) // #nosec G204 -- checkCmd built from validated package managers

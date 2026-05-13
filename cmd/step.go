@@ -85,18 +85,20 @@ func stepCommand() *cli.Command {
 				mode = actions.ModePlan
 			}
 			ec := &executor.ExecutionContext{
-				Variables:      make(map[string]interface{}),
-				CurrentDir:     cwd,
-				Level:          0,
-				Logger:         log,
-				CurrentMode:    mode,
-				Stats:          executor.NewExecutionStats(),
-				Template:       renderer,
-				Evaluator:      evaluator,
-				PathUtil:       pathExpander,
-				FileTree:       fileTreeWalker,
-				Redactor:       redactor,
-				EventPublisher: publisher,
+				Svc: &executor.RunServices{
+					Logger:         log,
+					Mode:           mode,
+					Stats:          executor.NewExecutionStats(),
+					Template:       renderer,
+					Evaluator:      evaluator,
+					PathUtil:       pathExpander,
+					FileTree:       fileTreeWalker,
+					Redactor:       redactor,
+					EventPublisher: publisher,
+				},
+				Variables:  make(map[string]interface{}),
+				CurrentDir: cwd,
+				Level:      0,
 			}
 
 			executor.AddGlobalVariables(ec.Variables)

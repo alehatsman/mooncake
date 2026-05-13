@@ -47,113 +47,79 @@ type Mode = actions.Mode
 
 const (
 	ModeApply = actions.ModeApply
-	ModePlan    = actions.ModePlan
+	ModePlan  = actions.ModePlan
 )
 
-// ExecutionContext holds all state needed to execute a step or sequence of steps.
-//
-// The context is designed to be copied when entering nested execution scopes (includes, loops).
-// Most fields are copied by value, but certain fields use pointers to maintain shared state
-// across the entire execution tree.
+// RunServices holds the shared, immutable-after-construction services and
+// configuration for a mooncake run. One instance is created per run and
+// referenced by all nested ExecutionContexts via pointer.
+type RunServices struct {
+	Template       template.Renderer
+	Evaluator      expression.Evaluator
+	PathUtil       *pathutil.PathExpander
+	FileTree       *filetree.Walker
+	Redactor       *security.Redactor
+	EventPublisher events.Publisher
+	Logger         logger.Logger
+	Stats          *ExecutionStats
+	Mode           actions.Mode
+	Tags           []string
+	SudoPass       string
+}
+
+// ExecutionContext holds per-scope state for a step sequence.
+// Cloned when entering nested scopes (includes, loops); Svc is shared.
 //
 // Field categories:
-//   - Configuration: Variables, CurrentDir, CurrentFile (copied on nested contexts)
-//   - Display state: Level, CurrentIndex, TotalSteps (modified for each scope)
-//   - Execution settings: Logger, SudoPass, Tags, DryRun (shared across contexts)
-//   - Global counters: Pointers that accumulate across all contexts
-//   - Dependencies: Shared service instances
+//   - Svc: shared services and run configuration — pointer, never copied
+//   - Variables, CurrentDir, *: per-scope state — copied on Clone
+//   - CurrentStepID, CurrentResult: per-step state — not copied on Clone
 type ExecutionContext struct {
+	// Svc holds all shared services and run-level configuration.
+	// All nested contexts share the same *RunServices pointer.
+	Svc *RunServices
+
 	// Variables contains template variables available to steps.
-	// Copied on context copy so nested contexts can have their own variables (e.g., loop items).
+	// Shallow-copied on Clone so nested contexts have their own variable scope.
 	Variables map[string]interface{}
 
 	// CurrentDir is the directory containing the current config file.
-	// Used for resolving relative paths in include, template src, etc.
 	CurrentDir string
 
 	// PresetBaseDir is the root directory of the currently executing preset.
-	// When set, template paths are resolved relative to this directory instead of CurrentDir.
-	// This ensures templates in presets work correctly even when included from task subdirectories.
 	PresetBaseDir string
 
 	// CurrentFile is the absolute path to the current config file being executed.
-	// Used for error messages and debugging.
 	CurrentFile string
 
 	// Level tracks nesting depth for display indentation.
-	// 0 = root config, increments by 1 for each include or loop level.
 	Level int
 
 	// CurrentIndex is the 0-based index of the current step within the current scope.
-	// Resets to 0 when entering includes or loops.
 	CurrentIndex int
 
 	// TotalSteps is the number of steps in the current execution scope.
-	// Updated when entering includes or loops to reflect the new scope size.
 	TotalSteps int
 
-	// Logger handles all output, configured with padding based on Level.
-	Logger logger.Logger
-
-	// SudoPass is the password used for steps with become: true.
-	// Empty string if not provided via --sudo-pass flag.
-	SudoPass string
-
-	// Tags filters which steps execute (empty = all steps execute).
-	// Steps without matching tags are skipped when this is non-empty.
-	Tags []string
-
-	// CurrentMode is the dispatch mode for this context. ModeApply
-	// performs side effects; ModePlan inspects state and returns
-	// predictions without mutating. Read via ec.Mode().
-	CurrentMode actions.Mode
-
-	// Stats holds shared execution statistics counters.
-	// SHARED via pointer - all contexts update the same counters.
-	Stats *ExecutionStats
-
-	// Template renders template strings with variable substitution.
-	// SHARED across all contexts - same instance used everywhere.
-	Template template.Renderer
-
-	// Evaluator evaluates when condition expressions.
-	// SHARED across all contexts - same instance used everywhere.
-	Evaluator expression.Evaluator
-
-	// PathUtil expands paths with tilde and variable substitution.
-	// SHARED across all contexts - same instance used everywhere.
-	PathUtil *pathutil.PathExpander
-
-	// FileTree walks directory trees for with_filetree.
-	// SHARED across all contexts - same instance used everywhere.
-	FileTree *filetree.Walker
-
-	// Redactor redacts sensitive values (passwords) from log output.
-	// SHARED across all contexts - same instance used everywhere.
-	Redactor *security.Redactor
-
-	// EventPublisher publishes execution events to subscribers.
-	// SHARED across all contexts - same instance used everywhere.
-	EventPublisher events.Publisher
-
 	// CurrentStepID is the unique identifier for the currently executing step.
-	// Used for correlating events from the same step execution.
+	// Not copied on Clone — resets per step.
 	CurrentStepID string
 
 	// CurrentResult holds the result of the currently executing step.
-	// Handlers should set this to provide result data to event emission.
+	// Not copied on Clone — resets per step.
 	CurrentResult *Result
 }
 
 // Clone creates a new ExecutionContext for a nested execution scope (include or loop).
-// Variables map is shallow copied, display fields are copied by value, and pointer fields remain shared across all contexts.
+// Svc is shared by pointer; Variables is shallow-copied; per-step fields are reset.
 func (ec *ExecutionContext) Clone() ExecutionContext {
-	newVariables := make(map[string]interface{})
+	newVariables := make(map[string]interface{}, len(ec.Variables))
 	for k, v := range ec.Variables {
 		newVariables[k] = v
 	}
 
 	return ExecutionContext{
+		Svc:           ec.Svc,
 		Variables:     newVariables,
 		CurrentDir:    ec.CurrentDir,
 		PresetBaseDir: ec.PresetBaseDir,
@@ -161,31 +127,14 @@ func (ec *ExecutionContext) Clone() ExecutionContext {
 		Level:         ec.Level,
 		CurrentIndex:  ec.CurrentIndex,
 		TotalSteps:    ec.TotalSteps,
-		Logger:        ec.Logger,
-		SudoPass:      ec.SudoPass,
-		Tags:          ec.Tags,
-		CurrentMode:   ec.CurrentMode,
-
-		// Share the same statistics pointer
-		Stats: ec.Stats,
-
-		// Share the same dependency instances
-		Template:  ec.Template,
-		Evaluator: ec.Evaluator,
-		PathUtil:  ec.PathUtil,
-		FileTree:  ec.FileTree,
-		Redactor:  ec.Redactor,
-
-		// Share the same event publisher
-		EventPublisher: ec.EventPublisher,
-		CurrentStepID:  ec.CurrentStepID,
+		// CurrentStepID and CurrentResult intentionally omitted — per-step state
 	}
 }
 
 // EmitEvent publishes an event to all subscribers
 func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface{}) {
-	if ec.EventPublisher != nil {
-		ec.EventPublisher.Publish(events.Event{
+	if ec.Svc.EventPublisher != nil {
+		ec.Svc.EventPublisher.Publish(events.Event{
 			Type:      eventType,
 			Timestamp: time.Now(),
 			Data:      data,
@@ -195,34 +144,30 @@ func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface
 
 // Mode returns the current dispatch mode (ModeApply or ModePlan).
 func (ec *ExecutionContext) Mode() Mode {
-	return ec.CurrentMode
+	return ec.Svc.Mode
 }
 
 // Effects returns a Performer that routes filesystem and command
-// primitives by the current Mode. Handlers should call this instead of
-// calling os.* directly so that ModePlan vs ModeApply is decided in
-// one place. The returned Performer is cheap to construct.
+// primitives by the current Mode.
 func (ec *ExecutionContext) Effects() actions.Performer {
-	return effects.NewPerformer(ec.Mode, ec.SudoPass)
+	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass)
 }
 
 // --- actions.Context interface implementation ---
-// These methods allow ExecutionContext to be used as an actions.Context,
-// avoiding circular import dependencies between executor and actions packages.
 
 // GetTemplate returns the template renderer.
 func (ec *ExecutionContext) GetTemplate() template.Renderer {
-	return ec.Template
+	return ec.Svc.Template
 }
 
 // GetEvaluator returns the expression evaluator.
 func (ec *ExecutionContext) GetEvaluator() expression.Evaluator {
-	return ec.Evaluator
+	return ec.Svc.Evaluator
 }
 
 // GetLogger returns the logger.
 func (ec *ExecutionContext) GetLogger() logger.Logger {
-	return ec.Logger
+	return ec.Svc.Logger
 }
 
 // GetVariables returns the execution variables.
@@ -232,7 +177,7 @@ func (ec *ExecutionContext) GetVariables() map[string]interface{} {
 
 // GetEventPublisher returns the event publisher.
 func (ec *ExecutionContext) GetEventPublisher() events.Publisher {
-	return ec.EventPublisher
+	return ec.Svc.EventPublisher
 }
 
 // GetCurrentStepID returns the current step ID.

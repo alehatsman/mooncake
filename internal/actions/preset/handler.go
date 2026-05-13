@@ -87,7 +87,7 @@ func displayPresetHelp(ec *executor.ExecutionContext, _, baseDir string) {
 	}
 
 	// Display README content via logger
-	ec.Logger.Infof("\n%s", string(data))
+	ec.Svc.Logger.Infof("\n%s", string(data))
 }
 
 // Validate validates the preset action configuration.
@@ -123,7 +123,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		StepsCount: len(expandedSteps),
 	})
 
-	ec.Logger.Infof("Expanding preset '%s' into %d steps", invocation.Name, len(expandedSteps))
+	ec.Svc.Logger.Infof("Expanding preset '%s' into %d steps", invocation.Name, len(expandedSteps))
 
 	// Save current context for restoration
 	saved := captureContext(ec)
@@ -152,12 +152,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
 	}
 
-	ec.Logger.Infof("Preset '%s' expanded to %d steps (after include expansion)", invocation.Name, len(fullyExpandedSteps))
+	ec.Svc.Logger.Infof("Preset '%s' expanded to %d steps (after include expansion)", invocation.Name, len(fullyExpandedSteps))
 
 	// Execute fully expanded steps
 	anyChanged := false
 	for i, expandedStep := range fullyExpandedSteps {
-		ec.Logger.Debugf("Executing preset step %d/%d: %s", i+1, len(fullyExpandedSteps), expandedStep.Name)
+		ec.Svc.Logger.Debugf("Executing preset step %d/%d: %s", i+1, len(fullyExpandedSteps), expandedStep.Name)
 
 		if err := executor.ExecuteStep(expandedStep, ec); err != nil {
 			return nil, fmt.Errorf("preset '%s' step %d failed: %w", invocation.Name, i+1, err)
@@ -182,7 +182,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		Changed:    anyChanged,
 	})
 
-	ec.Logger.Infof("Preset '%s' completed: changed=%v", invocation.Name, anyChanged)
+	ec.Svc.Logger.Infof("Preset '%s' completed: changed=%v", invocation.Name, anyChanged)
 
 	// Display README if preset has state=present and execution succeeded
 	if invocation.With != nil {
@@ -210,7 +210,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	expandedSteps, parametersNamespace, presetBaseDir, err := presets.ExpandPreset(invocation)
 	if err != nil {
 		// If expansion fails, show error
-		ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (expansion failed: %v)", invocation.Name, err)
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (expansion failed: %v)", invocation.Name, err)
 		return nil
 	}
 
@@ -227,14 +227,14 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	planner, err := plan.NewPlanner()
 	if err != nil {
 		// Show initial count if planner creation fails
-		ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, planner creation failed)",
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, planner creation failed)",
 			invocation.Name, len(expandedSteps))
 		return nil
 	}
 	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, variables, presetBaseDir)
 	if err != nil {
 		// Show initial count if full expansion fails
-		ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, full expansion failed)",
+		ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, full expansion failed)",
 			invocation.Name, len(expandedSteps))
 		return nil
 	}
@@ -244,7 +244,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		paramCount = len(invocation.With)
 	}
 
-	ec.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (parameters: %d, steps: %d)",
+	ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (parameters: %d, steps: %d)",
 		invocation.Name, paramCount, len(fullyExpandedSteps))
 
 	return nil

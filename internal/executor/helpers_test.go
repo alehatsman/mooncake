@@ -44,8 +44,10 @@ func TestGenerateStepID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			global := tt.global
 			ec := &ExecutionContext{
-				Stats: &ExecutionStats{
-					Global: &global,
+				Svc: &RunServices{
+					Stats: &ExecutionStats{
+						Global: &global,
+					},
 				},
 			}
 
@@ -83,8 +85,8 @@ func TestMarkStepFailed_WithRegister(t *testing.T) {
 	result.Stdout = "test output"
 
 	step := config.Step{
-		Name:     "Test Step",
-		As: "myresult",
+		Name: "Test Step",
+		As:   "myresult",
 	}
 
 	variables := make(map[string]interface{})
@@ -108,8 +110,8 @@ func TestMarkStepFailed_WithRegister(t *testing.T) {
 func TestMarkStepFailed_NoRegister(t *testing.T) {
 	result := NewResult()
 	step := config.Step{
-		Name:     "Test Step",
-		As: "", // No register
+		Name: "Test Step",
+		As:   "", // No register
 	}
 
 	variables := make(map[string]interface{})
@@ -195,7 +197,7 @@ func TestExecutionContext_EmitEvent_WithPublisher(t *testing.T) {
 
 	// Note: This test is conceptual - actual implementation depends on publisher interface
 	// For now, just test that EmitEvent doesn't panic
-	ec := &ExecutionContext{}
+	ec := &ExecutionContext{Svc: &RunServices{}}
 
 	ec.EmitEvent("test_event", map[string]interface{}{"key": "value"})
 

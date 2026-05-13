@@ -27,15 +27,17 @@ func mockExecutionContext() *executor.ExecutionContext {
 		panic("Failed to create renderer: " + err.Error())
 	}
 	return &executor.ExecutionContext{
-		Variables:      ctx.Variables,
-		Template:       tmpl,
-		Evaluator:      ctx.GetEvaluator(),
-		Logger:         ctx.Log,
-		EventPublisher: ctx.Publisher,
-		CurrentStepID:  ctx.StepID,
-		PathUtil:       pathutil.NewPathExpander(tmpl),
-		CurrentDir:     "/tmp",
-		CurrentMode:    actions.ModeApply,
+		Svc: &executor.RunServices{
+			Template: tmpl,
+			Evaluator: ctx.GetEvaluator(),
+			Logger: ctx.Log,
+			EventPublisher: ctx.Publisher,
+			PathUtil: pathutil.NewPathExpander(tmpl),
+			Mode: actions.ModeApply,
+		},
+		Variables: ctx.Variables,
+		CurrentStepID: ctx.StepID,
+		CurrentDir: "/tmp",
 	}
 }
 
@@ -249,7 +251,7 @@ func TestHandler_Execute_CreateFile(t *testing.T) {
 	}
 
 	// Check event was published
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(pub.Events))
 		return
@@ -304,7 +306,7 @@ func TestHandler_Execute_UpdateFile(t *testing.T) {
 	}
 
 	// Check event type
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventFileUpdated {
@@ -380,7 +382,7 @@ func TestHandler_Execute_CreateDirectory(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventDirCreated {
@@ -456,7 +458,7 @@ func TestHandler_Execute_RemoveFile(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventFileRemoved {
@@ -501,7 +503,7 @@ func TestHandler_Execute_RemoveDirectory(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventDirRemoved {
@@ -655,7 +657,7 @@ func TestHandler_Execute_CreateSymlink(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventLinkCreated {
@@ -853,7 +855,7 @@ func TestHandler_Execute_CreateHardlink(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventLinkCreated {
@@ -947,7 +949,7 @@ func TestHandler_Execute_SetPermissions(t *testing.T) {
 	}
 
 	// Check event
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) > 0 {
 		event := pub.Events[0]
 		if event.Type != events.EventPermissionsChanged {
@@ -1135,7 +1137,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	filePath := filepath.Join(tmpDir, "test.txt")
 
 	ec := mockExecutionContext()
-	ec.EventPublisher = nil
+	ec.Svc.EventPublisher = nil
 
 	step := &config.Step{
 		FileWrite: &config.File{
@@ -1320,7 +1322,7 @@ func TestHandler_DryRun(t *testing.T) {
 
 			// Check that something was logged (if no error expected)
 			if !tt.wantErr {
-				log := ec.Logger.(*testutil.MockLogger)
+				log := ec.Svc.Logger.(*testutil.MockLogger)
 				if len(log.Logs) == 0 {
 					t.Error("DryRun() should log something")
 				}
@@ -1405,7 +1407,7 @@ func TestHandler_DryRun_ReportsCorrectDefaultMode(t *testing.T) {
 				t.Fatalf("DryRun() error = %v", err)
 			}
 
-			log := ec.Logger.(*testutil.MockLogger)
+			log := ec.Svc.Logger.(*testutil.MockLogger)
 			needle := "mode: " + tt.wantMode
 			found := false
 			for _, msg := range log.Logs {
@@ -1814,7 +1816,7 @@ func TestHandler_DryRun_InvalidPathTemplate(t *testing.T) {
 	}
 
 	// Check that something was still logged
-	log := ec.Logger.(*testutil.MockLogger)
+	log := ec.Svc.Logger.(*testutil.MockLogger)
 	if len(log.Logs) == 0 {
 		t.Error("DryRun() should log something even on path expansion error")
 	}
@@ -1960,7 +1962,7 @@ func TestHandler_Execute_MultipleEvents(t *testing.T) {
 	}
 
 	// Verify both events were published
-	pub := ec.EventPublisher.(*testutil.MockPublisher)
+	pub := ec.Svc.EventPublisher.(*testutil.MockPublisher)
 	if len(pub.Events) != 2 {
 		t.Errorf("Expected 2 events, got %d", len(pub.Events))
 		return
@@ -1984,7 +1986,7 @@ func TestHandler_CreateDirectoryWithBecome(t *testing.T) {
 
 	h := &Handler{}
 	ec := mockExecutionContext()
-	ec.SudoPass = "test-password"
+	ec.Svc.SudoPass = "test-password"
 
 	tmpDir := t.TempDir()
 	dirPath := filepath.Join(tmpDir, "become-dir")
@@ -2010,7 +2012,7 @@ func TestHandler_CreateFileWithBecome(t *testing.T) {
 
 	h := &Handler{}
 	ec := mockExecutionContext()
-	ec.SudoPass = "test-password"
+	ec.Svc.SudoPass = "test-password"
 
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "become-file.txt")
@@ -2044,7 +2046,7 @@ func TestHandler_RemoveWithBecome(t *testing.T) {
 	}
 
 	ec := mockExecutionContext()
-	ec.SudoPass = "test-password"
+	ec.Svc.SudoPass = "test-password"
 
 	step := &config.Step{
 		FileWrite: &config.File{
@@ -2118,7 +2120,7 @@ func TestHandler_ChownWithBecome(t *testing.T) {
 	}
 
 	ec := mockExecutionContext()
-	ec.SudoPass = "test-password"
+	ec.Svc.SudoPass = "test-password"
 
 	step := &config.Step{
 		FileWrite: &config.File{

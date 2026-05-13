@@ -130,7 +130,7 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 	if step.ID != "" {
 		return step.ID
 	}
-	return fmt.Sprintf("step-%d", *ec.Stats.Global)
+	return fmt.Sprintf("step-%d", *ec.Svc.Stats.Global)
 }
 
 func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) {
@@ -159,7 +159,7 @@ func AddGlobalVariables(variables map[string]interface{}) {
 }
 
 func handleVars(step config.Step, ec *ExecutionContext) error {
-	ec.Logger.Debugf("Handling vars: %+v", step.Vars)
+	ec.Svc.Logger.Debugf("Handling vars: %+v", step.Vars)
 
 	if step.Vars == nil {
 		return fmt.Errorf("vars is nil in step")
@@ -168,11 +168,11 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 	vars := step.Vars
 
 	for k, v := range *vars {
-		ec.Logger.Debugf("  %v: %v", k, v)
+		ec.Svc.Logger.Debugf("  %v: %v", k, v)
 	}
 
 	if ec.Mode() == actions.ModePlan {
-		NewDryRunLogger(ec.Logger).LogVariableSet(len(*vars))
+		NewDryRunLogger(ec.Svc.Logger).LogVariableSet(len(*vars))
 	}
 
 	ec.Variables = utils.MergeVariables(ec.Variables, *vars)
@@ -194,21 +194,21 @@ func handleVars(step config.Step, ec *ExecutionContext) error {
 func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
-	ec.Logger.Debugf("variables: %v", ec.Variables)
+	ec.Svc.Logger.Debugf("variables: %v", ec.Variables)
 
-	whenExpression, err := ec.Template.Render(whenString, ec.Variables)
+	whenExpression, err := ec.Svc.Template.Render(whenString, ec.Variables)
 	if err != nil {
 		return false, &RenderError{Field: "when", Cause: err}
 	}
 
-	ec.Logger.Debugf("whenExpression: %v", whenExpression)
+	ec.Svc.Logger.Debugf("whenExpression: %v", whenExpression)
 
-	evalResult, err := ec.Evaluator.Evaluate(whenExpression, ec.Variables)
+	evalResult, err := ec.Svc.Evaluator.Evaluate(whenExpression, ec.Variables)
 	if err != nil {
 		return false, &EvaluationError{Expression: whenExpression, Cause: err}
 	}
 
-	ec.Logger.Debugf("evalResult: %v", evalResult)
+	ec.Svc.Logger.Debugf("evalResult: %v", evalResult)
 
 	// Handle nil or non-bool results
 	if evalResult == nil {
@@ -227,18 +227,18 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 }
 
 func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool {
-	return !utils.MatchesTags(step.Tags, ec.Tags)
+	return !utils.MatchesTags(step.Tags, ec.Svc.Tags)
 }
 
 func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	// Check creates condition
 	if step.UnlessExists != nil {
-		path, err := ec.Template.Render(*step.UnlessExists, ec.Variables)
+		path, err := ec.Svc.Template.Render(*step.UnlessExists, ec.Variables)
 		if err != nil {
 			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
 
-		expandedPath, err := ec.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
+		expandedPath, err := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables)
 		if err != nil {
 			return false, "", &RenderError{Field: "creates path", Cause: err}
 		}
@@ -251,7 +251,7 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 
 	// Check unless condition
 	if step.UnlessCommand != nil {
-		command, err := ec.Template.Render(*step.UnlessCommand, ec.Variables)
+		command, err := ec.Svc.Template.Render(*step.UnlessCommand, ec.Variables)
 		if err != nil {
 			return false, "", &RenderError{Field: "unless command", Cause: err}
 		}
@@ -385,8 +385,8 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 }
 
 func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReason string) {
-	if ec.Stats.Skipped != nil {
-		*ec.Stats.Skipped++
+	if ec.Svc.Stats.Skipped != nil {
+		*ec.Svc.Stats.Skipped++
 	}
 	stepID := generateStepID(step, ec)
 	depth := 0
@@ -403,8 +403,8 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 }
 
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
-	if ec.Stats.Failed != nil {
-		*ec.Stats.Failed++
+	if ec.Svc.Stats.Failed != nil {
+		*ec.Svc.Stats.Failed++
 	}
 	failedData := events.StepFailedData{
 		StepID:       stepID,
@@ -428,7 +428,7 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 	ec.EmitEvent(events.EventStepFailed, failedData)
 
 	if step.ContinueOnError {
-		ec.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
+		ec.Svc.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
 		if step.As != "" {
 			failedResult := NewResult()
 			failedResult.Failed = true
@@ -437,7 +437,7 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 		}
 		return nil
 	}
-	ec.Logger.Errorf("%v", stepErr)
+	ec.Svc.Logger.Errorf("%v", stepErr)
 	return stepErr
 }
 
@@ -491,7 +491,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		actionType := step.DetermineActionType()
 		if handler, ok := actions.Get(actionType); ok {
 			if runner, isRunner := handler.(actions.Runner); isRunner && ec.Mode() == actions.ModePlan {
-				*ec.Stats.Global++
+				*ec.Svc.Stats.Global++
 				ec.CurrentStepID = generateStepID(step, ec)
 				return dispatchRunner(step, ec, runner)
 			}
@@ -505,7 +505,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	if ec.Mode() == actions.ModePlan && hasStepName && step.Import == nil {
 		actionType := step.DetermineActionType()
 		if _, ok := actions.Get(actionType); !ok {
-			*ec.Stats.Global++
+			*ec.Svc.Stats.Global++
 			stepID := generateStepID(step, ec)
 			ec.CurrentStepID = stepID
 			ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
@@ -516,28 +516,28 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 				Reason:    "unknown action",
 				Level:     ec.Level,
 			})
-			*ec.Stats.Executed++
+			*ec.Svc.Stats.Executed++
 			return nil
 		}
 	}
 
 	// Debug: show tags for non-skipped steps
 	if len(step.Tags) > 0 {
-		ec.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
+		ec.Svc.Logger.Debugf("  tags: [%s]", strings.Join(step.Tags, ", "))
 	}
 
 	// Debug: show action for unnamed steps
 	if step.Name == "" {
 		if step.Vars != nil {
-			ec.Logger.Debugf("Setting variables")
+			ec.Svc.Logger.Debugf("Setting variables")
 		} else if step.VarsLoad != nil {
-			ec.Logger.Debugf("Loading variables from %s", *step.VarsLoad)
+			ec.Svc.Logger.Debugf("Loading variables from %s", *step.VarsLoad)
 		}
 	}
 
 	// Increment global step counter for non-skipped steps
-	if ec.Stats.Global != nil {
-		*ec.Stats.Global++
+	if ec.Svc.Stats.Global != nil {
+		*ec.Svc.Stats.Global++
 	}
 
 	// Generate step ID and store in context for event correlation
@@ -555,7 +555,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		StepID:     stepID,
 		Name:       stepName,
 		Level:      ec.Level,
-		GlobalStep: *ec.Stats.Global,
+		GlobalStep: *ec.Svc.Stats.Global,
 		Action:     step.ActionType,
 		Tags:       step.Tags,
 		When:       step.When,
@@ -580,8 +580,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Update executed statistics
-	if ec.Stats.Executed != nil {
-		*ec.Stats.Executed++
+	if ec.Svc.Stats.Executed != nil {
+		*ec.Svc.Stats.Executed++
 	}
 
 	// Get result data if handler provided it
@@ -591,8 +591,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		changed = ec.CurrentResult.Changed
 		resultData = ec.CurrentResult.ToMap()
 	}
-	if changed && ec.Stats.Changed != nil {
-		*ec.Stats.Changed++
+	if changed && ec.Svc.Stats.Changed != nil {
+		*ec.Svc.Stats.Changed++
 	}
 
 	// Emit step.completed event
@@ -615,7 +615,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 // ExecuteSteps executes a sequence of configuration steps within the given execution context.
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
-	ec.Logger.Debugf("Executing: %v", ec.CurrentFile)
+	ec.Svc.Logger.Debugf("Executing: %v", ec.CurrentFile)
 
 	// Set total steps for this execution context
 	ec.TotalSteps = len(steps)
@@ -846,19 +846,11 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 	statsFailed := 0
 	statsChanged := 0
 
-	executionContext := ExecutionContext{
-		Variables:    variables,
-		CurrentDir:   configDir,
-		CurrentFile:  "",
-		Level:        0,
-		CurrentIndex: 0,
-		TotalSteps:   len(steps),
-		Logger:       log.WithPadLevel(0),
-		SudoPass:     sudoPass,
-		Tags:         []string{}, // Not used - tag filtering done by planner (step.Skipped)
-		CurrentMode:  mode,
-
-		// Statistics tracking
+	svc := &RunServices{
+		Logger:   log.WithPadLevel(0),
+		SudoPass: sudoPass,
+		Tags:     []string{}, // tag filtering done by planner (step.Skipped)
+		Mode:     mode,
 		Stats: &ExecutionStats{
 			Global:   &globalExecuted,
 			Executed: &statsExecuted,
@@ -866,16 +858,21 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 			Failed:   &statsFailed,
 			Changed:  &statsChanged,
 		},
-
-		// Inject dependencies
-		Template:  renderer,
-		Evaluator: evaluator,
-		PathUtil:  pathExpander,
-		FileTree:  fileTreeWalker,
-		Redactor:  redactor,
-
-		// Event publisher
+		Template:       renderer,
+		Evaluator:      evaluator,
+		PathUtil:       pathExpander,
+		FileTree:       fileTreeWalker,
+		Redactor:       redactor,
 		EventPublisher: publisher,
+	}
+	executionContext := ExecutionContext{
+		Svc:          svc,
+		Variables:    variables,
+		CurrentDir:   configDir,
+		CurrentFile:  "",
+		Level:        0,
+		CurrentIndex: 0,
+		TotalSteps:   len(steps),
 	}
 
 	// Execute pre-expanded steps
@@ -969,9 +966,9 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			Level:       ec.Level,
 		})
 		if wouldChange {
-			*ec.Stats.Changed++
+			*ec.Svc.Stats.Changed++
 		}
-		*ec.Stats.Executed++
+		*ec.Svc.Stats.Executed++
 		return nil
 	}
 
