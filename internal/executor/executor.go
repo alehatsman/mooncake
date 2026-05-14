@@ -972,6 +972,13 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			return err
 		}
 	}
+	// spec-23 §3: resolve any `!secret env:FOO` markers to their actual
+	// values just before the handler sees them. No-op in plan mode —
+	// markers stay so plan output redaction can rewrite them as
+	// `"!secret env:FOO"` rather than leaking the value.
+	if err := resolveStepSecrets(&step, ec); err != nil {
+		return err
+	}
 	result, err := runner.Run(ec, &step)
 
 	// Capture the result on the context whether or not Run errored,

@@ -64,6 +64,13 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		return nil, nil, err
 	}
 
+	// spec-23 §3: rewrite `!secret <ref>` tagged scalars to sentinel-
+	// marker strings BEFORE downstream decode. Action-struct fields are
+	// typed `string`; the marker flows through naturally and the executor
+	// later swaps it for the resolved value (or the plan-output redactor
+	// rewrites it as `!secret <ref>` for JSON serialization).
+	substituteSecretTags(&rootNode)
+
 	// Build location map from yaml.Node tree
 	locationMap := buildLocationMap(&rootNode)
 
