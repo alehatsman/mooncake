@@ -791,6 +791,117 @@
       "x-category": "system",
       "x-supports-dry-run": true
     },
+    "os.ssh_key": {
+      "type": "object",
+      "description": "Manage authorized_keys entries for a user (idempotent per-key)",
+      "properties": {
+        "exclusive": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "user"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux",
+        "darwin"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "os.user": {
+      "type": "object",
+      "description": "Declaratively manage a system user account",
+      "properties": {
+        "append_groups": {
+          "type": "boolean"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "create_home": {
+          "type": "boolean"
+        },
+        "gid": {
+          "type": "integer"
+        },
+        "group": {
+          "type": "string"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "home": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remove_home": {
+          "type": "boolean"
+        },
+        "shell": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "system": {
+          "type": "boolean"
+        },
+        "uid": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0"
+    },
     "pkg": {
       "type": "object",
       "description": "Manage system packages (install/remove/update)",
@@ -1160,6 +1271,14 @@
           "description": "Manage services across platforms (systemd, launchd, Windows)",
           "$ref": "#/definitions/os.service"
         },
+        "os.ssh_key": {
+          "description": "Manage authorized_keys entries for a user (idempotent per-key)",
+          "$ref": "#/definitions/os.ssh_key"
+        },
+        "os.user": {
+          "description": "Declaratively manage a system user account",
+          "$ref": "#/definitions/os.user"
+        },
         "pkg": {
           "description": "Manage system packages (install/remove/update)",
           "$ref": "#/definitions/pkg"
@@ -1363,6 +1482,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -1533,6 +1662,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -1711,6 +1850,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -1881,6 +2030,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -2059,6 +2218,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -2229,6 +2398,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -2407,6 +2586,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -2577,6 +2766,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -2755,6 +2954,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -2925,6 +3134,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -3103,6 +3322,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -3273,6 +3502,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -3451,6 +3690,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -3625,6 +3874,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -3795,6 +4054,384 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.ssh_key"
+          ],
+          "properties": {
+            "os.ssh_key": {
+              "$ref": "#/definitions/os.ssh_key"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.user"
+          ],
+          "properties": {
+            "os.user": {
+              "$ref": "#/definitions/os.user"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
                 ]
               },
               {
@@ -3978,6 +4615,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -4148,6 +4795,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -4326,6 +4983,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -4496,6 +5163,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -4681,6 +5358,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -4851,6 +5538,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -5029,6 +5726,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -5199,6 +5906,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -5377,6 +6094,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -5551,6 +6278,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -5721,6 +6458,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -5906,6 +6653,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -6076,6 +6833,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -6254,6 +7021,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -6424,6 +7201,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {
@@ -6602,6 +7389,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -6776,6 +7573,16 @@
               },
               {
                 "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -6946,6 +7753,16 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
                 ]
               },
               {

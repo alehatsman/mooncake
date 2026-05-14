@@ -458,6 +458,8 @@ var actionStructByName = map[string]any{
 	"file.unarchive":    &config.Unarchive{},
 	"pkg":               &config.Package{},
 	"os.service":        &config.ServiceAction{},
+	"os.user":           &config.OsUser{},
+	"os.ssh_key":        &config.OsSSHKey{},
 	"container.image":   &config.ContainerImage{},
 	"container":         &config.Container{},
 	"assert":            &config.Assert{},

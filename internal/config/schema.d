@@ -342,6 +342,45 @@ export interface OsServiceAction {
 }
 
 /**
+ * Manage authorized_keys entries for a user (idempotent per-key)
+ * 
+ * @platforms linux, darwin
+ * @category system
+ */
+export interface OsSshKeyAction {
+  exclusive?: boolean;
+  key?: string;
+  keys?: string[];
+  options?: string[];
+  path?: string;
+  state?: string;
+  user: string;
+}
+
+/**
+ * Declaratively manage a system user account
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsUserAction {
+  append_groups?: boolean;
+  comment?: string;
+  create_home?: boolean;
+  gid?: number;
+  group?: string;
+  groups?: string[];
+  home?: string;
+  name: string;
+  remove_home?: boolean;
+  shell?: string;
+  state?: string;
+  system?: boolean;
+  uid?: number;
+}
+
+/**
  * Manage system packages (install/remove/update)
  * 
  * @platforms linux, darwin, windows, freebsd
@@ -811,6 +850,14 @@ export interface Step {
    * Manage services across platforms (systemd, launchd, Windows)
    */
   "os.service"?: OsServiceAction;
+  /**
+   * Manage authorized_keys entries for a user (idempotent per-key)
+   */
+  "os.ssh_key"?: OsSshKeyAction;
+  /**
+   * Declaratively manage a system user account
+   */
+  "os.user"?: OsUserAction;
   /**
    * Manage system packages (install/remove/update)
    */
