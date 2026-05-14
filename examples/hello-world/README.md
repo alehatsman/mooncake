@@ -69,6 +69,8 @@ Running on darwin/arm64
 
 ## Next Steps
 
-→ Browse [`../variables-and-facts/`](../variables-and-facts/) for custom
-  variables and the full system-facts reference.
+→ See [`../README.md`](../README.md) for the curated learning path
+  through all examples.
+→ Next stop: [`../variables-and-facts/`](../variables-and-facts/) for
+  custom variables and the full system-facts reference.
 → Run `mooncake init` in a new directory to scaffold your own project.

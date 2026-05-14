@@ -10,11 +10,16 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+	"io"
+
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/presets"
+	"github.com/alehatsman/mooncake/internal/recommend"
 	"github.com/alehatsman/mooncake/internal/registry"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
@@ -237,6 +242,18 @@ It does not delete the preset files from disk.`,
 						Usage: "Allow --sudo-pass flag (WARNING: password visible in shell history)",
 					},
 				},
+			},
+			{
+				Name:  "recommend",
+				Usage: "Suggest presets based on detected facts (OS / package manager)",
+				Description: "Reads system facts and prints a curated list of presets that " +
+					"make sense for your profile. Results are filtered to presets discoverable " +
+					"in your local search paths.",
+				Flags: []cli.Flag{
+					&cli.IntFlag{Name: "limit", Aliases: []string{"n"}, Value: 8, Usage: "Maximum number of recommendations"},
+					&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Value: "text", Usage: "Output format: text or json"},
+				},
+				Action: recommendPresetsAction,
 			},
 		},
 		Action: interactiveSelectorAction,
@@ -1350,4 +1367,69 @@ func registryRemoveAction(c *cli.Context) error {
 
 	fmt.Printf("Registry '%s' removed.\n", name)
 	return nil
+}
+
+// recommendPresetsAction implements `mooncake presets recommend`.
+func recommendPresetsAction(c *cli.Context) error {
+	f := facts.Collect()
+	profile := recommend.ProfileFrom(f)
+	arch := ""
+	if f != nil {
+		arch = f.Arch
+	}
+
+	// Build a set of preset names the user can actually install — drop
+	// recommendations the local environment can't satisfy.
+	known := map[string]bool{}
+	if discovered, err := presets.DiscoverAllPresets(); err == nil {
+		for _, p := range discovered {
+			known[p.Name] = true
+		}
+	}
+
+	names := recommend.Recommend(profile, known, c.Int("limit"))
+
+	if c.String("format") == outputFormatJSON {
+		out := struct {
+			Profile     recommend.Profile `json:"profile"`
+			Recommended []string          `json:"recommended"`
+		}{Profile: profile, Recommended: names}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(out)
+	}
+
+	printRecommendText(os.Stdout, profile, arch, names)
+	return nil
+}
+
+func printRecommendText(out io.Writer, p recommend.Profile, arch string, names []string) {
+	fmt.Fprintf(out, "Detected: %s/%s", valueOrDash(p.OS), valueOrDash(arch))
+	if p.PackageManager != "" {
+		fmt.Fprintf(out, "  package_manager=%s", p.PackageManager)
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out)
+
+	if len(names) == 0 {
+		fmt.Fprintln(out, "No recommendations available — none of the curated presets")
+		fmt.Fprintln(out, "are discoverable in your local preset search paths.")
+		fmt.Fprintln(out, "Try `mooncake presets update` to fetch from configured registries.")
+		return
+	}
+
+	fmt.Fprintln(out, "Recommended presets for your profile:")
+	for _, name := range names {
+		fmt.Fprintf(out, "  %s\n", name)
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Install with:  mooncake presets info <name>")
+	fmt.Fprintln(out, "               mooncake presets install <name>")
+}
+
+func valueOrDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
 }

@@ -218,7 +218,7 @@ func TestCreateApp(t *testing.T) {
 	}
 
 	// Test commands exist
-	expectedCommands := []string{"init", "doctor", "presets", "docs", "schema", "snapshot", "last", "mcp", "step", "tool", "apply", "plan", "facts", "metrics", "actions", "validate", "agent", "agentd", "runs"}
+	expectedCommands := []string{"init", "doctor", "presets", "docs", "schema", "snapshot", "history", "mcp", "step", "tool", "apply", "plan", "facts", "metrics", "actions", "validate", "agent", "agentd", "runs"}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}
@@ -248,7 +248,7 @@ func TestPresetsCommand(t *testing.T) {
 	}
 
 	// Test subcommands exist
-	expectedSubcommands := []string{"search", "update", "registry", "add", "list", "info", "install", "status", "uninstall"}
+	expectedSubcommands := []string{"search", "update", "registry", "add", "list", "info", "install", "status", "uninstall", "recommend"}
 	if len(cmd.Subcommands) != len(expectedSubcommands) {
 		t.Errorf("cmd.Subcommands length = %d, expected %d", len(cmd.Subcommands), len(expectedSubcommands))
 	}
@@ -2007,6 +2007,7 @@ func TestPresetsSubcommandActions(t *testing.T) {
 		"install":   true,
 		"status":    true,
 		"uninstall": true,
+		"recommend": true,
 	}
 
 	for _, subcmd := range cmd.Subcommands {

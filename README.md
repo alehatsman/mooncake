@@ -107,7 +107,8 @@ Quick links:
 
 ### Local Examples
 
-Try the examples in the [`examples/`](examples/) directory:
+The [`examples/`](examples/) directory has a curated learning path —
+see **[examples/README.md](examples/README.md)** for the ordered tour.
 
 ```bash
 # Clone and try
@@ -117,8 +118,8 @@ cd mooncake
 # Run Hello World
 mooncake apply --config examples/hello-world/config.yml
 
-# Browse all examples
-ls examples/
+# Browse the curated path
+cat examples/README.md
 ```
 
 ## Common Use Cases
