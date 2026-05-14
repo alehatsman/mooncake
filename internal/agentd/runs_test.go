@@ -213,6 +213,94 @@ func TestRunEventsReplayMatchesJSONL(t *testing.T) {
 	}
 }
 
+// TestRunEvents_SubscribeImmediatelyAfterSubmit guards two races discovered
+// in spec-49 live testing on Windows:
+//
+//  1. worker.Submit() now pre-registers the run's SSE hub before pushing to
+//     the queue. Without this, a controller fast enough to subscribe between
+//     POST /v1/runs returning and the worker's executeRun getting scheduled
+//     found GetHub(id)==nil and runEventsHandler bailed silently.
+//
+//  2. streamJSONL now treats a missing events.jsonl as "no replay needed"
+//     instead of erroring out. Without this, the handler returned early
+//     (dropping the live hub tail it had already subscribed to) whenever
+//     the worker hadn't yet appended the first event.
+//
+// Both races are masked on Linux by fast scheduling; both are
+// reproducible by using a sleep-y plan that delays the worker's first
+// event write. We submit, subscribe immediately, and assert the stream
+// delivers at least the run.started + run.completed events.
+func TestRunEvents_SubscribeImmediatelyAfterSubmit(t *testing.T) {
+	_, client, stop := startTestServer(t)
+	defer stop()
+
+	// Use a plan with a small artificial delay so the worker reliably
+	// hasn't written the first event by the time we GET /events. Without
+	// the delay this test would still pass on fast machines but wouldn't
+	// reliably catch a regression of either race.
+	dir := t.TempDir()
+	planPath := filepath.Join(dir, "plan.yml")
+	plan := `- name: slow_first_step
+  shell: sleep 0.25 && echo go
+- name: trivial
+  log:
+    msg: hi
+`
+	if err := os.WriteFile(planPath, []byte(plan), 0o644); err != nil {
+		t.Fatalf("write plan: %v", err)
+	}
+
+	sub := submitRun(t, client, planPath)
+
+	// Subscribe immediately. The worker is almost certainly still queued
+	// at this point; events.jsonl does not exist yet.
+	resp, err := client.Get("http://unix/v1/runs/" + sub.RunID + "/events")
+	if err != nil {
+		t.Fatalf("GET events: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	// Read with a deadline so a regression (handler returns immediately
+	// with no events) fails fast instead of hanging.
+	type readResult struct {
+		body []byte
+		err  error
+	}
+	doneCh := make(chan readResult, 1)
+	go func() {
+		b, err := io.ReadAll(resp.Body)
+		doneCh <- readResult{body: b, err: err}
+	}()
+
+	var body []byte
+	select {
+	case r := <-doneCh:
+		if r.err != nil {
+			t.Fatalf("read events: %v", r.err)
+		}
+		body = r.body
+	case <-time.After(10 * time.Second):
+		t.Fatal("SSE stream didn't terminate within 10s — handler likely hung")
+	}
+
+	// Sanity: stream must contain at least run.started and run.completed.
+	// A regression that returns 0 bytes (the original Windows symptom)
+	// would fail here with a clear message.
+	if len(body) == 0 {
+		t.Fatal("SSE stream returned 0 bytes — hub/JSONL race regressed")
+	}
+	s := string(body)
+	if !strings.Contains(s, `"type":"run.started"`) {
+		t.Errorf("missing run.started event in stream:\n%s", s)
+	}
+	if !strings.Contains(s, `"type":"run.completed"`) {
+		t.Errorf("missing run.completed event in stream:\n%s", s)
+	}
+}
+
 func TestSubscriberCloseFlushBeforeTerminalRecord(t *testing.T) {
 	// Worker ordering invariant: by the time GET /v1/runs/{id} returns a
 	// terminal status, all events must already be on disk in events.jsonl.

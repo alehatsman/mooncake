@@ -93,6 +93,51 @@ func TestMultiplexer_ControlKinds(t *testing.T) {
 	}
 }
 
+// TestFormatEvent_EmptyStdoutRendersAsBlank guards against a regression
+// where an empty step.stdout/stderr line printed the literal event type
+// instead of preserving the blank line. Live caught on Windows where
+// PowerShell formatters emit empty separators between table rows.
+func TestFormatEvent_EmptyStdoutRendersAsBlank(t *testing.T) {
+	tests := []struct {
+		name string
+		ev   transport.Event
+		want string
+	}{
+		{
+			name: "empty stdout line",
+			ev: transport.Event{
+				Type: "step.stdout",
+				Data: json.RawMessage(`{"line":""}`),
+			},
+			want: "      ",
+		},
+		{
+			name: "empty stderr line",
+			ev: transport.Event{
+				Type: "step.stderr",
+				Data: json.RawMessage(`{"line":""}`),
+			},
+			want: "      ",
+		},
+		{
+			name: "non-empty stdout still indents",
+			ev: transport.Event{
+				Type: "step.stdout",
+				Data: json.RawMessage(`{"line":"hello"}`),
+			},
+			want: "      hello",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := formatEvent(tt.ev)
+			if got != tt.want {
+				t.Errorf("formatEvent = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestMultiplexer_LineAtomicityUnderConcurrency stresses the internal mutex.
 // Without serialization the [host] prefix can split across writes, breaking
 // `grep -F '[host]'`. We blast events from many goroutines and assert every

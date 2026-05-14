@@ -369,9 +369,13 @@ func fleetApplyAction(c *cli.Context) error {
 	if peersFilter == "" && machine != "" {
 		peersFilter = machine
 	}
-	selected := selectPeers(cfgPeers.Peers, peersFilter)
+	selected, unknown := selectPeers(cfgPeers.Peers, peersFilter)
 	if len(selected) == 0 {
-		return cli.Exit("fleet apply: no peers matched filter "+peersFilter, 1)
+		msg := "fleet apply: no peers matched filter " + peersFilter
+		if len(unknown) > 0 {
+			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
+		}
+		return cli.Exit(msg, 1)
 	}
 
 	// Resolve vars files relative to plan-dir, absolute on the controller.
@@ -404,12 +408,14 @@ func fleetApplyAction(c *cli.Context) error {
 
 	w := c.App.Writer
 
-	// Filter out non-agentd transports up-front; the orchestrator only
-	// targets peers it can actually drive. Skipped peers get a banner line.
+	// Filter out non-agentd transports up-front. Skipped peers are reported
+	// after the orchestrator banner so the output order is consistent:
+	// banner → unknown-peer warning → skips → per-peer events → summary.
 	agentdPeers := make([]fleet.Peer, 0, len(selected))
+	var skipped []fleet.Peer
 	for _, p := range selected {
 		if p.Transport != fleet.TransportAgentd {
-			fmt.Fprintf(w, "[%s] skipped: transport %q not supported (agentd only)\n", p.Name, p.Transport)
+			skipped = append(skipped, p)
 			continue
 		}
 		agentdPeers = append(agentdPeers, p)
@@ -425,6 +431,12 @@ func fleetApplyAction(c *cli.Context) error {
 	useColor := fleet.ShouldColor(w, c.Bool("no-color"))
 	mux := fleet.NewMultiplexer(w, peerNames, useColor)
 	mux.Banner(fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)))
+	if len(unknown) > 0 {
+		mux.Banner("warning: unknown peer name(s) in --peers filter: " + strings.Join(unknown, ", "))
+	}
+	for _, p := range skipped {
+		mux.Banner(fmt.Sprintf("skipped %s: transport %q not supported (agentd only)", p.Name, p.Transport))
+	}
 
 	// One event channel feeds the single Multiplexer. Buffer ~64 events per
 	// peer to keep producers off the critical path during bursty step.stdout
@@ -540,26 +552,37 @@ func fleetApplyAction(c *cli.Context) error {
 }
 
 // selectPeers filters peers by a comma-separated name list. An empty filter
-// returns all peers. Names not present in the config are silently skipped;
-// callers should check the result length.
-func selectPeers(peers []fleet.Peer, filter string) []fleet.Peer {
+// returns all peers and no unknowns. Names from the filter that don't match
+// any peer are returned in `unknown` so callers can warn the user (typos in
+// --peers used to silently no-op).
+func selectPeers(peers []fleet.Peer, filter string) (matched []fleet.Peer, unknown []string) {
 	if filter == "" {
-		out := make([]fleet.Peer, len(peers))
-		copy(out, peers)
-		return out
+		matched = make([]fleet.Peer, len(peers))
+		copy(matched, peers)
+		return matched, nil
 	}
-	wanted := make(map[string]struct{})
-	for _, n := range strings.Split(filter, ",") {
-		n = strings.TrimSpace(n)
-		if n != "" {
-			wanted[n] = struct{}{}
-		}
-	}
-	var out []fleet.Peer
+	known := make(map[string]struct{}, len(peers))
 	for _, p := range peers {
-		if _, ok := wanted[p.Name]; ok {
-			out = append(out, p)
+		known[p.Name] = struct{}{}
+	}
+	seen := make(map[string]struct{})
+	for _, raw := range strings.Split(filter, ",") {
+		n := strings.TrimSpace(raw)
+		if n == "" {
+			continue
+		}
+		if _, dup := seen[n]; dup {
+			continue
+		}
+		seen[n] = struct{}{}
+		if _, ok := known[n]; !ok {
+			unknown = append(unknown, n)
 		}
 	}
-	return out
+	for _, p := range peers {
+		if _, ok := seen[p.Name]; ok {
+			matched = append(matched, p)
+		}
+	}
+	return matched, unknown
 }

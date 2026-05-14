@@ -238,13 +238,5 @@ func SavePeers(path string, cfg *Config) error {
 	return nil
 }
 
-func userConfigDir() (string, error) {
-	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return d, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("locate home dir: %w", err)
-	}
-	return filepath.Join(home, ".config"), nil
-}
+// userConfigDir is defined per-platform in path_unix.go and
+// path_windows.go.
