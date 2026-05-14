@@ -43,8 +43,22 @@ func NewWorker(store *Store, log *slog.Logger) *Worker {
 	}
 }
 
-// Submit enqueues a run for execution. Non-blocking up to the channel buffer.
+// Submit enqueues a run for execution. Non-blocking up to the channel
+// buffer.
+//
+// A hub is created and registered eagerly here, before the worker dequeues
+// the run. Without this, a controller that subscribes to /v1/runs/{id}/events
+// between submit and worker pickup would see GetHub(id)==nil, the SSE
+// handler would bail, and the controller would see a 0-byte stream — a
+// race that's masked on Linux by fast scheduling and exposed on Windows
+// where worker pickup latency is hundreds of milliseconds. Spec-49.
 func (w *Worker) Submit(runID string) {
+	w.hubMu.Lock()
+	if _, exists := w.hubs[runID]; !exists {
+		w.hubs[runID] = NewHub()
+	}
+	w.hubMu.Unlock()
+
 	w.mu.Lock()
 	w.queueDepth++
 	w.mu.Unlock()
@@ -105,9 +119,17 @@ func (w *Worker) executeRun(runID string) {
 		return
 	}
 
-	hub := NewHub()
+	// Hub was pre-registered by Submit() so subscribers attaching between
+	// submit and worker pickup don't race. Look it up here; only create a
+	// new one as a defensive fallback (shouldn't happen for runs that came
+	// through Submit, but Reconcile()-style paths might call executeRun
+	// directly in the future).
 	w.hubMu.Lock()
-	w.hubs[runID] = hub
+	hub, ok := w.hubs[runID]
+	if !ok {
+		hub = NewHub()
+		w.hubs[runID] = hub
+	}
 	w.hubMu.Unlock()
 	defer func() {
 		w.hubMu.Lock()

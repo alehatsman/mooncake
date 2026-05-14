@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/agentd"
@@ -18,11 +19,11 @@ func agentdCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "system",
-				Usage: "Run in system mode (socket /run/mooncake, state /var/lib/mooncake). Default: per-user.",
+				Usage: "Run in system mode (Unix: /run/mooncake, /var/lib/mooncake. Windows: %ProgramData%\\Mooncake\\). Default: per-user.",
 			},
 			&cli.StringFlag{
 				Name:  "socket",
-				Usage: "Override the unix socket path",
+				Usage: "Unix socket path. Pass --socket=\"\" to disable the unix listener (TCP-only mode, requires --bind).",
 			},
 			&cli.StringFlag{
 				Name:  "state-dir",
@@ -30,7 +31,7 @@ func agentdCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:  "bind",
-				Usage: "TCP bind address for fleet access (e.g. 0.0.0.0:7878). Empty disables TCP.",
+				Usage: "TCP bind address for fleet access (e.g. 0.0.0.0:7878). Empty disables TCP unless --socket=\"\" forces TCP-only mode.",
 			},
 			&cli.StringFlag{
 				Name:  "token-file",
@@ -55,8 +56,11 @@ func agentdRun(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if v := c.String("socket"); v != "" {
-		cfg.SocketPath = v
+	// --socket: when the flag is explicitly set we honor its literal value
+	// (including the empty string, which disables the unix listener).
+	// When the flag isn't passed at all, we keep the platform default.
+	if c.IsSet("socket") {
+		cfg.SocketPath = c.String("socket")
 	}
 	if v := c.String("state-dir"); v != "" {
 		cfg.StateDir = v
@@ -71,6 +75,15 @@ func agentdRun(c *cli.Context) error {
 		cfg.MaxSyncBytes = v
 	}
 	cfg.LogLevel = c.String("log-level")
+
+	// Windows convenience: if the user didn't ask for either listener
+	// explicitly, default to TCP-only on loopback. Spec-49 §"CLI changes".
+	// Loopback (not 0.0.0.0) so first-time launches don't unexpectedly
+	// accept LAN traffic before a firewall rule is in place.
+	if runtime.GOOS == "windows" && !c.IsSet("socket") && !c.IsSet("bind") {
+		cfg.SocketPath = ""
+		cfg.BindAddr = "127.0.0.1:7878"
+	}
 
 	// Load (or create) the bearer token when TCP is enabled. The unix
 	// listener is gated by filesystem perms and doesn't need it.

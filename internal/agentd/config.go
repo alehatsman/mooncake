@@ -1,6 +1,9 @@
 // Package agentd implements the mooncake host daemon: a long-running process
 // that exposes mooncake's kernel (facts, MCP tools, plan execution) over a
-// local unix-socket HTTP API. See VISION.md §5 / §6.2.
+// local HTTP API. The daemon serves on a unix socket by default (gated by
+// filesystem perms) and optionally on a TCP listener with bearer-token
+// auth. On Windows where AF_UNIX is supported but uncommon, the daemon
+// can also run TCP-only. See VISION.md §5 / §6.2.
 package agentd
 
 import (
@@ -16,13 +19,19 @@ const DefaultMaxSyncBytes int64 = 100 << 20 // 100 MiB
 
 type Config struct {
 	SystemMode bool
+
+	// SocketPath is the unix socket listener path. Empty disables the
+	// unix listener (BindAddr is then required). On platforms that don't
+	// support AF_UNIX in your environment, set SocketPath="" and use
+	// BindAddr for TCP-only operation.
 	SocketPath string
-	StateDir   string
-	LogLevel   string
+
+	StateDir string
+	LogLevel string
 
 	// BindAddr is the TCP listener address (e.g. "0.0.0.0:7878"). Empty
-	// disables TCP — the daemon serves only over the unix socket. The TCP
-	// listener is bearer-auth-gated by Token; the unix socket is not.
+	// disables TCP. The TCP listener is bearer-auth-gated by Token; the
+	// unix socket is not.
 	BindAddr string
 
 	// TokenPath is where the bearer token file lives. Read by
@@ -39,16 +48,13 @@ type Config struct {
 	MaxSyncBytes int64
 }
 
+// Default returns the platform-appropriate per-user (or per-system) config.
+// Unix: XDG-aware paths. Windows: %LOCALAPPDATA%\Mooncake\. The bodies live
+// in config_unix.go / config_windows.go behind build tags so this function
+// is platform-neutral.
 func Default(systemMode bool) (Config, error) {
 	if systemMode {
-		return Config{
-			SystemMode:   true,
-			SocketPath:   "/run/mooncake/agentd.sock",
-			StateDir:     "/var/lib/mooncake/agentd",
-			LogLevel:     "info",
-			TokenPath:    "/etc/mooncake/agentd.token",
-			MaxSyncBytes: DefaultMaxSyncBytes,
-		}, nil
+		return systemModeDefaults(), nil
 	}
 
 	socketDir := userSocketDir()
@@ -69,49 +75,23 @@ func Default(systemMode bool) (Config, error) {
 	}, nil
 }
 
-func userSocketDir() string {
-	if d := os.Getenv("XDG_RUNTIME_DIR"); d != "" {
-		return d
-	}
-	return fmt.Sprintf("/tmp/mooncake-%d", os.Getuid())
-}
-
-func userStateDir() (string, error) {
-	if d := os.Getenv("XDG_STATE_HOME"); d != "" {
-		return d, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("locate home dir: %w", err)
-	}
-	return filepath.Join(home, ".local", "state"), nil
-}
-
-func userConfigDir() (string, error) {
-	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return d, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("locate home dir: %w", err)
-	}
-	return filepath.Join(home, ".config"), nil
-}
-
 // SyncedRoot is the absolute path under which PUT /v1/files writes scope
 // subtrees. Sibling of <state_dir>/runs/.
 func (c Config) SyncedRoot() string {
 	return filepath.Join(c.StateDir, "synced")
 }
 
+// Validate checks the config's internal consistency. The daemon needs at
+// least one listener; permitted shapes are (a) unix-only, (b) TCP-only, or
+// (c) both. TCP requires a token.
 func (c Config) Validate() error {
-	if c.SocketPath == "" {
-		return errors.New("socket_path is empty")
+	if c.SocketPath == "" && c.BindAddr == "" {
+		return errors.New("at least one of socket_path or bind_addr must be set")
 	}
 	if c.StateDir == "" {
 		return errors.New("state_dir is empty")
 	}
-	if !filepath.IsAbs(c.SocketPath) {
+	if c.SocketPath != "" && !filepath.IsAbs(c.SocketPath) {
 		return fmt.Errorf("socket_path must be absolute: %s", c.SocketPath)
 	}
 	if !filepath.IsAbs(c.StateDir) {
@@ -128,10 +108,15 @@ func (c Config) Validate() error {
 	return nil
 }
 
+// EnsureDirs makes the parent directories the daemon will write into. The
+// socket dir is only created when SocketPath is set (TCP-only mode skips
+// it entirely).
 func (c Config) EnsureDirs() error {
-	socketDir := filepath.Dir(c.SocketPath)
-	if err := os.MkdirAll(socketDir, 0o700); err != nil {
-		return fmt.Errorf("create socket dir %s: %w", socketDir, err)
+	if c.SocketPath != "" {
+		socketDir := filepath.Dir(c.SocketPath)
+		if err := os.MkdirAll(socketDir, 0o700); err != nil {
+			return fmt.Errorf("create socket dir %s: %w", socketDir, err)
+		}
 	}
 	if err := os.MkdirAll(c.StateDir, 0o700); err != nil {
 		return fmt.Errorf("create state dir %s: %w", c.StateDir, err)

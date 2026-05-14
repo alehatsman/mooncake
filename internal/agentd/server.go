@@ -14,10 +14,10 @@ import (
 	"github.com/alehatsman/mooncake/internal/mcp"
 )
 
-// Server is an HTTP daemon exposing mooncake over `/v1/...`. It always
-// listens on a unix socket (filesystem-perm-gated). When `cfg.BindAddr` is
-// set, it additionally listens on a TCP address protected by bearer-token
-// auth.
+// Server is an HTTP daemon exposing mooncake over `/v1/...`. It listens
+// on a unix socket (filesystem-perm-gated) when `cfg.SocketPath` is set
+// and/or on a TCP address (bearer-auth-gated) when `cfg.BindAddr` is set.
+// At least one of the two must be configured; Validate() enforces this.
 type Server struct {
 	cfg       Config
 	log       *slog.Logger
@@ -87,8 +87,9 @@ func New(cfg Config, log *slog.Logger, version string) (*Server, error) {
 }
 
 // Serve binds the configured listeners and serves HTTP until ctx is
-// canceled. The unix socket is always opened. The TCP listener is opened
-// only when cfg.BindAddr is set, and is bearer-auth-gated.
+// canceled. The unix socket is opened only when cfg.SocketPath is set;
+// the TCP listener is opened only when cfg.BindAddr is set. Both are
+// optional individually but at least one must be configured.
 //
 // The caller is responsible for cancelling ctx (typically on SIGTERM/SIGINT)
 // and then waiting for Serve to return.
@@ -98,25 +99,32 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 	go s.worker.Run()
 
-	unixLn, err := net.Listen("unix", s.cfg.SocketPath)
-	if err != nil {
-		return fmt.Errorf("listen %s: %w", s.cfg.SocketPath, err)
-	}
-	if err := os.Chmod(s.cfg.SocketPath, 0o600); err != nil {
-		_ = unixLn.Close()
-		return fmt.Errorf("chmod socket: %w", err)
-	}
-	s.unixLn = unixLn
-	s.unixSrv = &http.Server{
-		Handler:           s.buildHandler(false),
-		ReadHeaderTimeout: 10 * time.Second,
+	if s.cfg.SocketPath != "" {
+		unixLn, err := net.Listen("unix", s.cfg.SocketPath)
+		if err != nil {
+			return fmt.Errorf("listen %s: %w", s.cfg.SocketPath, err)
+		}
+		// chmod(0o600) is a documented no-op on Windows. Skip it there
+		// so the build is honest about what we rely on; %LOCALAPPDATA%
+		// already has user-private ACLs by default.
+		if err := chmodSocket(s.cfg.SocketPath); err != nil {
+			_ = unixLn.Close()
+			return fmt.Errorf("chmod socket: %w", err)
+		}
+		s.unixLn = unixLn
+		s.unixSrv = &http.Server{
+			Handler:           s.buildHandler(false),
+			ReadHeaderTimeout: 10 * time.Second,
+		}
 	}
 
 	if s.cfg.BindAddr != "" {
 		tcpLn, err := net.Listen("tcp", s.cfg.BindAddr)
 		if err != nil {
-			_ = unixLn.Close()
-			_ = os.Remove(s.cfg.SocketPath)
+			if s.unixLn != nil {
+				_ = s.unixLn.Close()
+				_ = os.Remove(s.cfg.SocketPath)
+			}
 			return fmt.Errorf("listen %s: %w", s.cfg.BindAddr, err)
 		}
 		s.tcpLn = tcpLn
@@ -137,14 +145,16 @@ func (s *Server) Serve(ctx context.Context) error {
 	)
 
 	errCh := make(chan error, 2)
-	go func() {
-		err := s.unixSrv.Serve(unixLn)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- fmt.Errorf("unix serve: %w", err)
-			return
-		}
-		errCh <- nil
-	}()
+	if s.unixSrv != nil {
+		go func() {
+			err := s.unixSrv.Serve(s.unixLn)
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errCh <- fmt.Errorf("unix serve: %w", err)
+				return
+			}
+			errCh <- nil
+		}()
+	}
 	if s.tcpSrv != nil {
 		go func() {
 			err := s.tcpSrv.Serve(s.tcpLn)
@@ -200,14 +210,19 @@ func (s *Server) shutdown() error {
 	// Drain in-flight runs. v1 has no cancellation, so this may block until
 	// the current plan finishes.
 	s.worker.Shutdown()
-	_ = os.Remove(s.cfg.SocketPath)
+	if s.cfg.SocketPath != "" {
+		_ = os.Remove(s.cfg.SocketPath)
+	}
 	return errors.Join(errs...)
 }
 
 // claimSocket implements the standard "is anyone home?" dance: if the socket
 // path already exists, try to dial it; if dial succeeds, another daemon owns
-// it. Otherwise the file is stale and we remove it.
+// it. Otherwise the file is stale and we remove it. No-op in TCP-only mode.
 func (s *Server) claimSocket() error {
+	if s.cfg.SocketPath == "" {
+		return nil
+	}
 	info, err := os.Stat(s.cfg.SocketPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil

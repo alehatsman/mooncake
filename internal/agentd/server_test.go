@@ -299,6 +299,104 @@ func TestServerRefusesIfAlreadyBound(t *testing.T) {
 	}
 }
 
+// TestServe_TCPOnly boots agentd in TCP-only mode (SocketPath="") and
+// asserts: the daemon answers /v1/version over TCP with the right bearer,
+// and no socket file is created on disk. This is the contract that lets
+// `mooncake agentd` run on Windows where AF_UNIX is supported but not the
+// default deployment shape. Spec-49 §G2.
+func TestServe_TCPOnly(t *testing.T) {
+	// Grab a free port the OS-friendly way: bind+close.
+	probe, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("probe listen: %v", err)
+	}
+	addr := probe.Addr().String()
+	_ = probe.Close()
+
+	stateDir := t.TempDir()
+	cfg := Config{
+		// SocketPath intentionally left empty — TCP-only.
+		StateDir:     stateDir,
+		BindAddr:     addr,
+		Token:        "test-tcp-token",
+		LogLevel:     "error",
+		MaxSyncBytes: DefaultMaxSyncBytes,
+	}
+	srv, err := New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), "tcp-only-test")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- srv.Serve(ctx) }()
+	t.Cleanup(func() { cancel(); <-done })
+
+	// Wait for TCP listener to come up.
+	deadline := time.Now().Add(2 * time.Second)
+	var conn net.Conn
+	for time.Now().Before(deadline) {
+		conn, err = net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if err == nil {
+			_ = conn.Close()
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatalf("TCP listener never came up: %v", err)
+	}
+
+	// Hit /v1/version with the right token.
+	req, _ := http.NewRequest(http.MethodGet, "http://"+addr+"/v1/version", nil)
+	req.Header.Set("Authorization", "Bearer test-tcp-token")
+	c := &http.Client{Timeout: 2 * time.Second}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatalf("GET /v1/version: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status=%d body=%q", resp.StatusCode, body)
+	}
+	var payload map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode version: %v", err)
+	}
+	if payload["hostname"] == nil {
+		t.Errorf("hostname missing from /v1/version: %v", payload)
+	}
+
+	// Critical: no socket file should exist anywhere in stateDir or its
+	// parent — TCP-only mode must not create one. We can't easily check
+	// "anywhere on disk", so we look at the obvious places.
+	for _, p := range []string{
+		stateDir + "/agentd.sock",
+		"./agentd.sock", // would happen if we MkdirAll("." + filepath.Dir(""))
+	} {
+		if _, err := os.Stat(p); err == nil {
+			t.Errorf("TCP-only mode created socket file at %s", p)
+		}
+	}
+}
+
+// TestServe_RejectsBothListenersEmpty — defense in depth. Validate()
+// catches this, but New() should too if anyone bypasses Validate. We
+// confirm New refuses the no-listener config.
+func TestServe_RejectsBothListenersEmpty(t *testing.T) {
+	cfg := Config{
+		StateDir: t.TempDir(),
+		LogLevel: "error",
+	}
+	_, err := New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), "test")
+	if err == nil {
+		t.Fatal("want error for no-listener config, got nil")
+	}
+	if !strings.Contains(err.Error(), "socket_path or bind_addr") {
+		t.Errorf("err = %v, want 'at least one of socket_path or bind_addr'", err)
+	}
+}
+
 func keys(m map[string]any) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
