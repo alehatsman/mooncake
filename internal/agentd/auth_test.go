@@ -17,6 +17,10 @@ import (
 // HTTP client targeting TCP, the unix-socket client for comparison, and a
 // stop function.
 func startTestServerTCP(t *testing.T) (cfg Config, tcpClient, unixHTTPClient *http.Client, stop func()) {
+	return startTestServerTCPWithLimit(t, DefaultMaxSyncBytes)
+}
+
+func startTestServerTCPWithLimit(t *testing.T, maxBytes int64) (cfg Config, tcpClient, unixHTTPClient *http.Client, stop func()) {
 	t.Helper()
 
 	// Resolve a free TCP port without holding it open.
@@ -40,7 +44,7 @@ func startTestServerTCP(t *testing.T) (cfg Config, tcpClient, unixHTTPClient *ht
 		LogLevel:     "error",
 		BindAddr:     addr,
 		Token:        "test-token-secret",
-		MaxSyncBytes: DefaultMaxSyncBytes,
+		MaxSyncBytes: maxBytes,
 	}
 	srv, err := New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), "test")
 	if err != nil {
