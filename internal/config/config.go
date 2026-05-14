@@ -1139,6 +1139,28 @@ type Step struct {
 	// Children DO NOT inherit the parent's outputs scope.
 	OnChange []Step `yaml:"on_change,omitempty" json:"on_change,omitempty"`
 
+	// Transaction (spec-30) declares a sequence of steps that apply
+	// all-or-nothing. If any child fails during apply, the executor
+	// runs Reverse() on each previously-applied child in LIFO order,
+	// leaving the system at pre-transaction state. Plan-time check
+	// refuses to plan a transaction containing an irreversible step
+	// unless AllowIrreversible is true.
+	//
+	// If Transaction is set, no action field on this Step may be set —
+	// the Step is a compound transaction node, not a leaf action.
+	Transaction []Step `yaml:"transaction,omitempty" json:"transaction,omitempty"`
+
+	// OnRollback (spec-30) — sibling to OnChange. Steps that run after
+	// the transaction's rollback finishes (successful or partial), for
+	// notification / cleanup. Must be empty if Transaction is empty.
+	OnRollback []Step `yaml:"on_rollback,omitempty" json:"on_rollback,omitempty"`
+
+	// AllowIrreversible (spec-30) opts the transaction in to including
+	// steps whose handler does not implement actions.Reverser, or that
+	// declare themselves irreversible at apply time. Default false so
+	// plans that mix in a `shell:` step fail loudly at plan time.
+	AllowIrreversible bool `yaml:"allow_irreversible,omitempty" json:"allow_irreversible,omitempty"`
+
 	// Plan metadata (populated during plan expansion, omitted in config files)
 	ID             string        `yaml:"id,omitempty" json:"id,omitempty"`
 	ActionType     string        `yaml:"action_type,omitempty" json:"action_type,omitempty"`
@@ -1153,6 +1175,12 @@ type Step struct {
 	// on the parent's `changed` outcome, and by events/runlog to surface
 	// the parent→child relationship to consumers.
 	TriggeredBy string `yaml:"triggered_by,omitempty" json:"triggered_by,omitempty"`
+
+	// TxnParent carries the ID of the parent transaction Step when this
+	// Step was expanded from a Transaction child. Mirrors TriggeredBy's
+	// shape; populated by the planner. Used by the executor (PR B) to
+	// track which steps belong to which open transaction.
+	TxnParent string `yaml:"txn_parent,omitempty" json:"txn_parent,omitempty"`
 }
 
 // ForEachField holds the value of a Step's `for_each` keyword. It supports
@@ -1338,6 +1366,21 @@ func (s *Step) ValidateHasAction() error {
 
 // Validate checks that the step configuration is valid.
 func (s *Step) Validate() error {
+	// spec-30 transaction-shape rules. A Step with a Transaction is a
+	// compound node; it cannot also carry a leaf action (the children
+	// carry actions). OnRollback only makes sense paired with a
+	// Transaction.
+	if len(s.Transaction) > 0 && s.countActions() > 0 {
+		return fmt.Errorf("Step %s: cannot combine transaction: with an action field", s.Name)
+	}
+	if len(s.OnRollback) > 0 && len(s.Transaction) == 0 {
+		return fmt.Errorf("Step %s: on_rollback requires transaction: on the same step", s.Name)
+	}
+	if len(s.Transaction) > 0 {
+		// Compound Step — no action discriminator required/allowed.
+		return nil
+	}
+
 	err := s.ValidateHasAction()
 	if err != nil {
 		return err
@@ -1420,7 +1463,11 @@ func (s *Step) Clone() *Step {
 		ForEachFile:      s.ForEachFile,
 		Tags:             append([]string(nil), s.Tags...),
 		As:               s.As,
-		OnChange:         append([]Step(nil), s.OnChange...),
+		OnChange:          append([]Step(nil), s.OnChange...),
+		Transaction:       append([]Step(nil), s.Transaction...),
+		OnRollback:        append([]Step(nil), s.OnRollback...),
+		AllowIrreversible: s.AllowIrreversible,
+		TxnParent:         s.TxnParent,
 		ID:               s.ID,
 		ActionType:       s.ActionType,
 		Origin:           s.Origin,
