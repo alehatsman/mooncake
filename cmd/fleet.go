@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -263,8 +264,16 @@ func fleetApplyCommand() *cli.Command {
 				Usage: "Vars file to load (relative to plan-dir or absolute); may be repeated",
 			},
 			&cli.StringSliceFlag{
-				Name:  "tag",
-				Usage: "Forward this tag to the daemon's run-submit (filters steps); may be repeated",
+				Name: "peer-filter",
+				Usage: "Filter peers by `key=value` (v1: tag=<x>). " +
+					"Commas within one flag = AND; repeating the flag = OR. " +
+					"Intersected with --peers. Example: --peer-filter tag=os=darwin",
+			},
+			&cli.StringSliceFlag{
+				Name: "step-filter",
+				Usage: "Filter steps to run on each peer by `key=value` (v1: tag=<x>); " +
+					"forwarded to daemon. Multiple values OR together. " +
+					"Example: --step-filter tag=deploy",
 			},
 			&cli.IntFlag{
 				Name:  "parallel",
@@ -379,6 +388,27 @@ func fleetApplyAction(c *cli.Context) error {
 		return cli.Exit(msg, 1)
 	}
 
+	// --peer-filter applies on top of the --peers name filter.
+	peerFilterGroups, err := parseFilterFlags(c.StringSlice("peer-filter"))
+	if err != nil {
+		return cli.Exit("fleet apply: "+err.Error(), 2)
+	}
+	if err := validatePeerFilterKeys(peerFilterGroups); err != nil {
+		return cli.Exit("fleet apply: "+err.Error(), 2)
+	}
+	if len(peerFilterGroups) > 0 {
+		filtered := make([]fleet.Peer, 0, len(selected))
+		for _, p := range selected {
+			if peerMatchesFilters(p, peerFilterGroups) {
+				filtered = append(filtered, p)
+			}
+		}
+		if len(filtered) == 0 {
+			return cli.Exit("fleet apply: --peer-filter selected 0 of "+strconv.Itoa(len(selected))+" peer(s); nothing to do", 1)
+		}
+		selected = filtered
+	}
+
 	// Resolve vars files relative to plan-dir, absolute on the controller.
 	// When the machine convention is active, prepend conventional vars files
 	// (variables.yml + vars/<machine>.yml) when they exist on disk.
@@ -405,7 +435,10 @@ func fleetApplyAction(c *cli.Context) error {
 	}
 
 	maxSync := c.Int64("max-sync-size")
-	tags := c.StringSlice("tag")
+	tags, err := extractStepFilterTags(c.StringSlice("step-filter"))
+	if err != nil {
+		return cli.Exit("fleet apply: "+err.Error(), 2)
+	}
 
 	w := c.App.Writer
 
@@ -491,12 +524,19 @@ func fleetApplyAction(c *cli.Context) error {
 				defer func() { <-sem }()
 			}
 			client := transport.New(p.Name, p.Addr, p.Token)
+			// Per-peer vars-file list: overlay resolution (vars/common.yml,
+			// vars/by-tag/<tag>.yml per peer tag, vars/by-host/<name>.yml)
+			// comes first; explicit --vars-file args come last so they
+			// override on key collision — matching mooncake's existing
+			// later-wins var-file semantics.
+			overlayVars := fleet.ResolveVarsFiles(planDir, p)
+			peerVars := append(append([]string{}, overlayVars...), varsAbs...)
 			results[i], errs[i] = fleet.Apply(applyCtx, fleet.ApplyOptions{
 				PeerName:     p.Name,
 				Peer:         client,
 				PlanDir:      planDir,
 				PlanPath:     planAbs,
-				VarsFiles:    varsAbs,
+				VarsFiles:    peerVars,
 				Tags:         tags,
 				ControllerID: controllerID,
 				MaxSyncBytes: maxSync,
@@ -586,4 +626,134 @@ func selectPeers(peers []fleet.Peer, filter string) (matched []fleet.Peer, unkno
 		}
 	}
 	return matched, unknown
+}
+
+// filterTerm is a single `key=value` predicate inside a --peer-filter or
+// --step-filter expression. v1 only accepts key="tag"; the parser is generic
+// so the planned extension (spec-49 extended-filter-keys) lands as a
+// validator change.
+type filterTerm struct {
+	key   string
+	value string
+}
+
+// parseFilterFlags converts the raw string slice from cli.StringSlice into
+// AND-groups. Each flag value contributes one group; commas inside a value
+// separate AND-terms within that group. The peer/step must match every term
+// in at least one group.
+//
+//	--peer-filter tag=a,tag=b                       → [[a, b]]            (a AND b)
+//	--peer-filter tag=a --peer-filter tag=b         → [[a], [b]]          (a OR b)
+//	--peer-filter tag=a,tag=b --peer-filter tag=c   → [[a, b], [c]]       ((a AND b) OR c)
+func parseFilterFlags(args []string) ([][]filterTerm, error) {
+	var groups [][]filterTerm
+	for _, arg := range args {
+		var group []filterTerm
+		for _, raw := range strings.Split(arg, ",") {
+			tok := strings.TrimSpace(raw)
+			if tok == "" {
+				continue
+			}
+			eq := strings.IndexByte(tok, '=')
+			if eq < 0 {
+				return nil, fmt.Errorf("invalid filter %q: expected key=value", tok)
+			}
+			key := strings.TrimSpace(tok[:eq])
+			val := strings.TrimSpace(tok[eq+1:])
+			if key == "" || val == "" {
+				return nil, fmt.Errorf("invalid filter %q: key and value must be non-empty", tok)
+			}
+			group = append(group, filterTerm{key: key, value: val})
+		}
+		if len(group) > 0 {
+			groups = append(groups, group)
+		}
+	}
+	return groups, nil
+}
+
+// validatePeerFilterKeys rejects any --peer-filter key not supported in v1.
+// v1 supports only "tag". Extending keys (name=, os=, role=) is the subject
+// of the planned follow-up spec.
+func validatePeerFilterKeys(groups [][]filterTerm) error {
+	for _, g := range groups {
+		for _, t := range g {
+			if t.key != "tag" {
+				return fmt.Errorf(
+					"unsupported --peer-filter key %q (v1 supports only tag=<x>; "+
+						"name/os/role keys land in spec-50)", t.key)
+			}
+		}
+	}
+	return nil
+}
+
+// peerMatchesFilters reports whether p satisfies any of the AND-groups in
+// groups. An empty groups slice matches everything.
+func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm) bool {
+	if len(groups) == 0 {
+		return true
+	}
+	tagSet := make(map[string]struct{}, len(p.Tags))
+	for _, t := range p.Tags {
+		tagSet[t] = struct{}{}
+	}
+	for _, g := range groups {
+		all := true
+		for _, t := range g {
+			switch t.key {
+			case "tag":
+				if _, ok := tagSet[t.value]; !ok {
+					all = false
+				}
+			default:
+				// validatePeerFilterKeys should have rejected this; treat
+				// defensively as a non-match rather than panic.
+				all = false
+			}
+			if !all {
+				break
+			}
+		}
+		if all {
+			return true
+		}
+	}
+	return false
+}
+
+// extractStepFilterTags flattens --step-filter values into the tag list the
+// daemon's executor consumes. Only tag=<x> is accepted in v1; AND/OR within
+// step-filter has no daemon-side analogue (the executor unions tags), so all
+// values dedupe into a flat list.
+func extractStepFilterTags(args []string) ([]string, error) {
+	var out []string
+	seen := make(map[string]struct{})
+	for _, arg := range args {
+		for _, raw := range strings.Split(arg, ",") {
+			tok := strings.TrimSpace(raw)
+			if tok == "" {
+				continue
+			}
+			eq := strings.IndexByte(tok, '=')
+			if eq < 0 {
+				return nil, fmt.Errorf("invalid --step-filter %q: expected key=value", tok)
+			}
+			key := strings.TrimSpace(tok[:eq])
+			val := strings.TrimSpace(tok[eq+1:])
+			if val == "" {
+				return nil, fmt.Errorf("invalid --step-filter %q: empty value", tok)
+			}
+			if key != "tag" {
+				return nil, fmt.Errorf(
+					"unsupported --step-filter key %q (v1 supports only tag=<x>)", key)
+			}
+			if _, dup := seen[val]; dup {
+				continue
+			}
+			seen[val] = struct{}{}
+			out = append(out, val)
+		}
+	}
+	return out, nil
 }
