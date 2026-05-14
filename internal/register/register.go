@@ -28,6 +28,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/os_ssh_key"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_user"
 	_ "github.com/alehatsman/mooncake/internal/actions/package"
+	_ "github.com/alehatsman/mooncake/internal/actions/pkg_repo"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"
 	_ "github.com/alehatsman/mooncake/internal/actions/print"
 	_ "github.com/alehatsman/mooncake/internal/actions/repo_apply_patchset"
