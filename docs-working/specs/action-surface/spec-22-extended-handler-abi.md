@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** Draft
+**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phases 3-8 (per-handler implementations of Permissions, Diff, Reverse, Cost; planner/MCP wiring; docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -249,10 +249,15 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
 
 ## Tasks (phased)
 
-1. **Phase 1** — types and interfaces only. Add to `handler.go`. No
-   behavior change. `go build ./...` clean.
-2. **Phase 2** — registry helpers + default fallbacks. Add tests showing
-   that handlers WITHOUT new methods still work end-to-end.
+1. **Phase 1** ✅ — types and interfaces (`Diff`, `CostEstimate`,
+   `PermissionSet`, `ResourceRef`, `Operation`, `DiffLine`; `Differ`,
+   `Reverser`, `Coster`, `Permitter`). Landed in
+   `internal/actions/handler_abi.go`. No behavior change.
+2. **Phase 2** ✅ — registry helpers + safe defaults (`ResolveDiffer`,
+   `ResolveReverser`, `ResolveCoster`, `ResolvePermitter`, plus the
+   `Is*` capability checks). Landed in `internal/actions/registry_abi.go`
+   + 8 unit tests in `handler_abi_test.go` proving every default and the
+   "native implementation wins" contract.
 3. **Phase 3** — implement `Permissions()` on handlers from the priorities
    table (10 handlers). Wire preflight into executor. Add tests.
 4. **Phase 4** — implement `Diff()` on the file/text/pkg/service
