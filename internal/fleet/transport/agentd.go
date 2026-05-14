@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -93,11 +94,14 @@ func readSmallBody(resp *http.Response) ([]byte, error) {
 // Version is a subset of agentd's /v1/version response covering the fields
 // the controller needs.
 type Version struct {
-	Version    string `json:"version"`
-	DaemonPID  int    `json:"daemon_pid"`
-	Hostname   string `json:"hostname"`
-	SyncedRoot string `json:"synced_root"`
-	SystemMode bool   `json:"system_mode"`
+	Version     string `json:"version"`
+	DaemonPID   int    `json:"daemon_pid"`
+	Hostname    string `json:"hostname"`
+	SyncedRoot  string `json:"synced_root"`
+	SystemMode  bool   `json:"system_mode"`
+	UptimeSec   int64  `json:"uptime_sec"`
+	QueueDepth  int    `json:"queue_depth"`
+	RunsRunning int    `json:"runs_running"`
 }
 
 // GetVersion fetches /v1/version. Used by the controller to learn the
@@ -262,6 +266,77 @@ func (c *Client) GetRun(ctx context.Context, runID string) (*RunRecord, error) {
 		return nil, c.wrap("GET /v1/runs/"+runID+": decode", err)
 	}
 	return &rec, nil
+}
+
+// ListRuns fetches recent run records from /v1/runs?limit=N. Returns the
+// runs newest-first. Used by `fleet status` to determine the last run
+// outcome per peer; spec-46 §"wire calls per peer".
+//
+// limit <= 0 sends no `limit` query and asks the daemon for its default.
+// In practice callers want 1 (most recent) or a small bounded window.
+func (c *Client) ListRuns(ctx context.Context, limit int) ([]RunRecord, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	u := c.BaseURL + "/v1/runs"
+	if limit > 0 {
+		u += "?limit=" + strconv.Itoa(limit)
+	}
+	req, err := c.authReq(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("GET /v1/runs", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("GET /v1/runs: read body", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.httpErr("GET /v1/runs", resp.StatusCode, body)
+	}
+	// Daemon shape: {"runs": [...]}. The records have more fields than
+	// RunRecord exposes (tags, vars_files, base_dir, daemon_pid). They
+	// decode into the subset we care about.
+	var resp2 struct {
+		Runs []RunRecord `json:"runs"`
+	}
+	if err := json.Unmarshal(body, &resp2); err != nil {
+		return nil, c.wrap("GET /v1/runs: decode", err)
+	}
+	return resp2.Runs, nil
+}
+
+// GetFacts fetches /v1/facts. Returns the raw facts map — caller picks
+// the keys it needs. The daemon doesn't yet support ?fields= filtering,
+// so we transfer the full payload (typically a few KB) and let the caller
+// cherry-pick os / arch / os_version / etc.
+func (c *Client) GetFacts(ctx context.Context) (map[string]any, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/facts", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("GET /v1/facts", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("GET /v1/facts: read body", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.httpErr("GET /v1/facts", resp.StatusCode, body)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, c.wrap("GET /v1/facts: decode", err)
+	}
+	return out, nil
 }
 
 // SubmitRequest mirrors the daemon's submitRequest JSON shape. PlanPath
