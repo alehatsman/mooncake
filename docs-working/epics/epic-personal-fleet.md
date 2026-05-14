@@ -245,12 +245,12 @@ has exactly one answer.
 
 All six have draft specs under [`docs-working/specs/personal-fleet/`](../specs/personal-fleet/).
 
-- **P1** → [spec-39: Fleet Network Transport + File Sync + `fleet apply`](../specs/personal-fleet/spec-39-fleet-transport-and-sync.md)
-- **P2** → [spec-40: SSH Bootstrap Transport](../specs/personal-fleet/spec-40-ssh-bootstrap-transport.md)
-- **P3** → [spec-41: Fleet Discovery — mDNS + SSH Config + Static Peers](../specs/personal-fleet/spec-41-fleet-discovery.md)
-- **P4** → [spec-42: `fleet status`, `fleet logs`, `fleet facts`](../specs/personal-fleet/spec-42-fleet-status-and-logs.md)
-- **P5** → [spec-43: `fleet bootstrap` UX + Pairing](../specs/personal-fleet/spec-43-fleet-bootstrap-ux.md)
-- **P6** → [spec-44: Per-Host Overlays + Tag Selectors](../specs/personal-fleet/spec-44-per-host-overlays-and-tags.md)
+- **P1** → [spec-43: Fleet Network Transport + File Sync + `fleet apply`](../specs/personal-fleet/spec-43-fleet-transport-and-sync.md)
+- **P2** → [spec-44: SSH Bootstrap Transport](../specs/personal-fleet/spec-44-ssh-bootstrap-transport.md)
+- **P3** → [spec-45: Fleet Discovery — mDNS + SSH Config + Static Peers](../specs/personal-fleet/spec-45-fleet-discovery.md)
+- **P4** → [spec-46: `fleet status`, `fleet logs`, `fleet facts`](../specs/personal-fleet/spec-46-fleet-status-and-logs.md)
+- **P5** → [spec-47: `fleet bootstrap` UX + Pairing](../specs/personal-fleet/spec-47-fleet-bootstrap-ux.md)
+- **P6** → [spec-48: Per-Host Overlays + Tag Selectors](../specs/personal-fleet/spec-48-per-host-overlays-and-tags.md)
 
 The sketches below remain for context; the specs are authoritative on
 scope and design details.

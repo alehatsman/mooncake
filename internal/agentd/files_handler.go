@@ -23,7 +23,7 @@ import (
 //	PUT  /v1/files?scope=<s>&path=<p>   X-Sha256 optional
 //	HEAD /v1/files?scope=<s>&path=<p>&sha256=<hex>
 //
-// See spec-39 for the full contract.
+// See spec-43 for the full contract.
 
 // Limits and validation rules.
 const (

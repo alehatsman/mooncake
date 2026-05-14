@@ -4,15 +4,15 @@
 **Status:** Draft
 **Effort:** S (~3 days)
 **Value:** Medium — the "at-a-glance" command that lets you check on the
-fleet between applies. Reuses spec-39 transport almost entirely; this is
+fleet between applies. Reuses spec-43 transport almost entirely; this is
 mostly CLI surface.
-**Depends on:** spec-39 (transport + peers.toml).
+**Depends on:** spec-43 (transport + peers.toml).
 
 ---
 
 ## Problem
 
-After spec-39 ships, a controller can apply plans across peers. It cannot:
+After spec-43 ships, a controller can apply plans across peers. It cannot:
 
 1. See **what's healthy** without running an apply.
 2. **Reattach** to a run that's already in flight (e.g. left running when
@@ -37,7 +37,7 @@ machine rather than four. Status answers "is everything good"; logs answers
   simultaneously, multiplexed.
 - **G4** `mooncake fleet facts <host>` pretty-prints the peer's facts.
 - **G5** Every command exits cleanly on `^C`; remote runs are not affected
-  (consistent with spec-39's cancellation story).
+  (consistent with spec-43's cancellation story).
 
 **Non-goals:**
 
@@ -48,7 +48,7 @@ machine rather than four. Status answers "is everything good"; logs answers
   not in v1 — use `mooncake runs` over SSH if you need that. Could add
   later.
 - TUI dashboards. Plain stdout only in v1, consistent with the
-  log-multiplexing decision in spec-39.
+  log-multiplexing decision in spec-43.
 
 ---
 
@@ -57,8 +57,8 @@ machine rather than four. Status answers "is everything good"; logs answers
 **Reused:**
 
 - `peers.toml` + transport client (`internal/fleet/transport/agentd.go`)
-  from spec-39.
-- Multiplexer (`internal/fleet/multiplex.go`) from spec-39 — same writer,
+  from spec-43.
+- Multiplexer (`internal/fleet/multiplex.go`) from spec-43 — same writer,
   same color logic; the input source is different but the output format is
   identical.
 - agentd endpoints: `GET /v1/version`, `GET /v1/facts`, `GET /v1/runs`,
@@ -212,7 +212,7 @@ this question on a personal fleet.
 ### Task 3 — `fleet logs` subcommand
 
 1. `logs <peer>` resolves latest run (or honors explicit run id).
-2. Reuse the SSE consumer from spec-39's transport client. Reuse the
+2. Reuse the SSE consumer from spec-43's transport client. Reuse the
    multiplexer for output (even with one peer, the `[host]` prefix is
    useful and the code path is shared).
 3. `--all` opens one stream per peer; same multiplexer.

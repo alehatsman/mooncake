@@ -5,14 +5,14 @@
 **Effort:** M (~1 week)
 **Value:** High — turns "how do I add my four boxes" from a manual TOML-
 editing chore into `mooncake fleet init` plus answering some prompts.
-**Depends on:** spec-39 (peers.toml format, peer transport). Bootstrap UX
-(spec-43) builds on this.
+**Depends on:** spec-43 (peers.toml format, peer transport). Bootstrap UX
+(spec-47) builds on this.
 
 ---
 
 ## Problem
 
-After spec-39, peers are managed by hand-edited `~/.config/mooncake/peers.toml`.
+After spec-43, peers are managed by hand-edited `~/.config/mooncake/peers.toml`.
 Fine for one peer. Painful for four. Worse, the user has to know each peer's
 IP/hostname, bearer token, and tags before they can start.
 
@@ -58,8 +58,8 @@ These compose under one command: `mooncake fleet init`.
 
 **Reused:**
 
-- `peers.toml` format + loader from spec-39.
-- agentd's existing TCP listener and `GET /v1/version` from spec-39 (used
+- `peers.toml` format + loader from spec-43.
+- agentd's existing TCP listener and `GET /v1/version` from spec-43 (used
   to validate that a discovered peer is actually mooncake).
 
 **Extended:**
@@ -74,7 +74,7 @@ These compose under one command: `mooncake fleet init`.
 | mDNS responder/query lib wrapper | `internal/fleet/discovery/mdns.go` |
 | SSH-config parser | `internal/fleet/discovery/sshconfig.go` |
 | Discovery aggregator | `internal/fleet/discovery/aggregate.go` |
-| `fleet init` CLI command | `cmd/fleet.go` (extends spec-39 scaffold) |
+| `fleet init` CLI command | `cmd/fleet.go` (extends spec-43 scaffold) |
 
 ---
 
@@ -126,7 +126,7 @@ Parse `~/.ssh/config` for `Host <name>` entries:
 - Extract `HostName`, `User`, `Port`.
 - For each host, surface as a candidate `(name, addr, transport=ssh-bootstrap)`.
   The init flow treats these as **bootstrap candidates** rather than
-  agentd-ready peers — selecting one runs spec-40 bootstrap.
+  agentd-ready peers — selecting one runs spec-44 bootstrap.
 
 Use `github.com/kevinburke/ssh_config` or write a small parser inline.
 ssh_config is ~300 LOC and handles `Match` blocks; we only need `Host`
@@ -215,10 +215,10 @@ paths offered in v1:
    into the prompt. Default.
 2. **SSH pull**: `--ssh-fetch user@host` SSHes in, reads the token file,
    uses it. Optional.
-3. **Bootstrap**: `mooncake fleet bootstrap` (spec-40) handles end-to-end.
+3. **Bootstrap**: `mooncake fleet bootstrap` (spec-44) handles end-to-end.
 
 For init flow v1, only path 1 is implemented; paths 2 and 3 are deferred to
-spec-43 (bootstrap UX). Initial workflow assumes the user can `cat` the
+spec-47 (bootstrap UX). Initial workflow assumes the user can `cat` the
 file on each peer.
 
 ---
@@ -226,7 +226,7 @@ file on each peer.
 ## Wire shape for `GET /v1/version` (extend)
 
 To make verification meaningful, the daemon's version response gains a
-`hostname` and `synced_root` field (the latter required by spec-39 anyway):
+`hostname` and `synced_root` field (the latter required by spec-43 anyway):
 
 ```json
 {

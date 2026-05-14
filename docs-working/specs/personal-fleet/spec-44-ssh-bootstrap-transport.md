@@ -6,14 +6,14 @@
 **Value:** High — eliminates the bootstrap-step manual work. A fresh box
 joins the fleet in one command from the controller. After this spec, P5
 (`mooncake fleet bootstrap`) is just the UX wrapper.
-**Depends on:** spec-39 (peer transport + peers.toml) for the post-install
+**Depends on:** spec-43 (peer transport + peers.toml) for the post-install
 hand-off.
 
 ---
 
 ## Problem
 
-After spec-39 ships, agentd-managed peers work great — but each peer has to
+After spec-43 ships, agentd-managed peers work great — but each peer has to
 be set up by hand once: install mooncake, write a systemd / launchd unit,
 start the daemon, read the auto-generated token, paste it into the
 controller's `peers.toml`. That's the kind of step that kills a "5-minute
@@ -30,7 +30,7 @@ $ mooncake fleet bootstrap user@new-box
 
 SSH is the right transport for this one task because it sidesteps the
 chicken-and-egg of "you can't agentd-transport to a box that doesn't have
-agentd." It's NOT the everyday transport — that remains spec-39's
+agentd." It's NOT the everyday transport — that remains spec-43's
 agentd+HTTP flow.
 
 ---
@@ -66,7 +66,7 @@ agentd+HTTP flow.
 
 **Reused:**
 
-- `peers.toml` format and loader from spec-39.
+- `peers.toml` format and loader from spec-43.
 - The agentd binary itself — no changes to the daemon for this spec.
 - Existing systemd unit and launchd plist templates if any exist; otherwise
   authored here.
@@ -81,7 +81,7 @@ agentd+HTTP flow.
 | launchd plist template | `init/com.mooncake.agentd.plist` |
 | Linux install script | `init/install-linux.sh` (or generated inline) |
 | macOS install script | `init/install-darwin.sh` |
-| CLI: `mooncake fleet bootstrap` | `cmd/fleet.go` (extends spec-39 scaffold) |
+| CLI: `mooncake fleet bootstrap` | `cmd/fleet.go` (extends spec-43 scaffold) |
 
 ---
 
@@ -212,7 +212,7 @@ cat /var/lib/mooncake/agentd/agentd.token
 ```
 
 (Or wherever the daemon's `TokenPath` resolved to in `--system` mode. Default
-in system mode is `/etc/mooncake/agentd.token` per spec-39 conventions.)
+in system mode is `/etc/mooncake/agentd.token` per spec-43 conventions.)
 
 ### Step 8: Update `peers.toml`
 
@@ -332,4 +332,4 @@ each failure path.
    gap; resolve in a separate spec or punt to manual re-bootstrap.
 3. **Token rotation.** If a peer's token leaks, we need a way to rotate it
    that doesn't require a full re-bootstrap. Out of scope here; flag for
-   spec-43 or a dedicated `fleet rotate-token` spec.
+   spec-47 or a dedicated `fleet rotate-token` spec.

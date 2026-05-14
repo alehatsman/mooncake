@@ -4,9 +4,9 @@
 **Status:** Draft
 **Effort:** S (~2–3 days)
 **Value:** High — the "add a new box in 60 seconds" demo moment. This spec
-is thin: it stitches spec-40 (SSH bootstrap transport) and spec-41 (discovery)
+is thin: it stitches spec-44 (SSH bootstrap transport) and spec-45 (discovery)
 together behind a polished CLI surface.
-**Depends on:** spec-40 (SSH driver), spec-41 (discovery), spec-39 (peers.toml).
+**Depends on:** spec-44 (SSH driver), spec-45 (discovery), spec-43 (peers.toml).
 
 ---
 
@@ -14,8 +14,8 @@ together behind a polished CLI surface.
 
 Specs 40 and 41 give us the parts:
 
-- spec-40 can install mooncake on a fresh box via SSH and bring up agentd.
-- spec-41 can list candidates (mDNS + SSH config + peers.toml).
+- spec-44 can install mooncake on a fresh box via SSH and bring up agentd.
+- spec-45 can list candidates (mDNS + SSH config + peers.toml).
 
 What's missing is the **one-command flow** that goes from "I just got a
 new box" to "it's part of my fleet, I just ran `fleet apply` against it."
@@ -27,7 +27,7 @@ provisioned peers.
 ## Goals
 
 - **G1** `mooncake fleet bootstrap <user@host>` runs the full
-  install-and-pair sequence (delegates to spec-40), then prints a
+  install-and-pair sequence (delegates to spec-44), then prints a
   ready-to-run "Try: mooncake fleet apply ..." hint.
 - **G2** `mooncake fleet pair <addr> [--token-via ssh|stdin|file]` adds a
   peer that is ALREADY running agentd. Three token paths:
@@ -51,15 +51,15 @@ provisioned peers.
 
 ## Reuse map
 
-Everything that does the actual work is in spec-40 and spec-41. This spec
+Everything that does the actual work is in spec-44 and spec-45. This spec
 is mostly CLI plumbing.
 
 **Reused:**
 
-- spec-40 SSH driver and orchestrated install (`internal/fleet/bootstrap.go`).
-- spec-41 SSH config parser (for resolving `user@host` aliases).
-- spec-39 `peers.toml` writer.
-- spec-41 candidate aggregator (for `--from-init` mode).
+- spec-44 SSH driver and orchestrated install (`internal/fleet/bootstrap.go`).
+- spec-45 SSH config parser (for resolving `user@host` aliases).
+- spec-43 `peers.toml` writer.
+- spec-45 candidate aggregator (for `--from-init` mode).
 
 **New:**
 
@@ -67,8 +67,8 @@ is mostly CLI plumbing.
 |---|---|
 | `mooncake fleet bootstrap` CLI | `cmd/fleet.go` |
 | `mooncake fleet pair` CLI | `cmd/fleet.go` |
-| Token-pull-over-SSH helper | `internal/fleet/transport/ssh.go` (extends spec-40) |
-| Peers.toml upsert helper | `internal/fleet/peers.go` (extends spec-39) |
+| Token-pull-over-SSH helper | `internal/fleet/transport/ssh.go` (extends spec-44) |
+| Peers.toml upsert helper | `internal/fleet/peers.go` (extends spec-43) |
 
 ---
 
@@ -86,8 +86,8 @@ mooncake fleet bootstrap <user@host> [flags]
   --dry-run           Show what would happen, change nothing
 ```
 
-Calls spec-40 `Bootstrap()` then upserts the peer in `peers.toml`.
-Output is the spec-40 progress line series plus a trailing pair of
+Calls spec-44 `Bootstrap()` then upserts the peer in `peers.toml`.
+Output is the spec-44 progress line series plus a trailing pair of
 banner lines.
 
 ### `pair`
@@ -116,7 +116,7 @@ wrote ~/.config/mooncake/peers.toml (added macbook)
 
 ### Composability with `init`
 
-`mooncake fleet init` (spec-41) presents candidates; selecting an mDNS
+`mooncake fleet init` (spec-45) presents candidates; selecting an mDNS
 candidate with `--bootstrap` for an SSH-only candidate dispatches to
 `fleet bootstrap`. Operator can also drive these one-by-one manually if
 they prefer.
@@ -143,7 +143,7 @@ writes via temp + rename. Other entries untouched.
 ### Task 1 — `pair` command
 
 1. New subcommand in `cmd/fleet.go`.
-2. Parse `--token-via`. For `ssh:`: use spec-40 SSH driver,
+2. Parse `--token-via`. For `ssh:`: use spec-44 SSH driver,
    `Run("cat <token_path>")`, take the trimmed stdout.
 3. Verify by calling `GET /v1/version` with `Authorization: Bearer <token>`.
 4. Upsert into peers.toml.
@@ -151,10 +151,10 @@ writes via temp + rename. Other entries untouched.
 ### Task 2 — `bootstrap` command
 
 1. New subcommand in `cmd/fleet.go`.
-2. Delegates the eight-step sequence to spec-40 `Bootstrap()`.
-3. On success: reads back the token from spec-40's return value, upserts
+2. Delegates the eight-step sequence to spec-44 `Bootstrap()`.
+3. On success: reads back the token from spec-44's return value, upserts
    into peers.toml.
-4. On failure: prints the failure mode from spec-40's documented table,
+4. On failure: prints the failure mode from spec-44's documented table,
    exits with non-zero.
 
 ### Task 3 — Peers.toml upsert helper

@@ -7,7 +7,7 @@
 Without this, a personal fleet of mixed Linux + macOS boxes either needs
 hand-conditional plans or one plan per box. With this, one plan with a
 small overlay per peer covers the realistic differences.
-**Depends on:** spec-39 (controller-side plan walking, peers.toml with
+**Depends on:** spec-43 (controller-side plan walking, peers.toml with
 `tags`). Nothing in agentd changes.
 
 ---
@@ -62,10 +62,10 @@ This spec adds both — strictly controller-side. No daemon changes.
 - Existing var-file merging in `executor.Start`'s `VarsFiles` parameter
   (later overrides earlier — see `runs_handler.go:18-20`). The runs
   submit handler already accepts `vars_files`.
-- spec-39 `peers.toml` with `tags` field.
-- spec-39 plan-dir walker — extended to also walk `vars/by-host/` and
+- spec-43 `peers.toml` with `tags` field.
+- spec-43 plan-dir walker — extended to also walk `vars/by-host/` and
   `vars/by-tag/` as part of the recursive mirror.
-- spec-41 peer hostname (from `GET /v1/version.hostname`) — needed to
+- spec-45 peer hostname (from `GET /v1/version.hostname`) — needed to
   resolve overlays.
 
 **New:**
@@ -139,7 +139,7 @@ If overlay files grow large or contain sensitive secrets, the operator can:
 - Use `--peers <name>` to limit fan-out; the unused overlay files are
   inert.
 
-A future content-addressed sync (per the spec-39 follow-up) would
+A future content-addressed sync (per the spec-43 follow-up) would
 naturally skip uploading overlay files unchanged across reruns.
 
 ---
@@ -162,8 +162,8 @@ Semantics:
   `=` for display, but matching is exact-string.)
 - Multiple values separated by `,` within one `--tag` flag → AND.
 - Multiple `--tag` flags → OR.
-- No `--tag` → all peers (current spec-39 behavior).
-- `--peers <name,...>` already exists from spec-39; it's compatible:
+- No `--tag` → all peers (current spec-43 behavior).
+- `--peers <name,...>` already exists from spec-43; it's compatible:
   intersect with the tag-selected set.
 
 Print the resolved set before applying:
@@ -226,7 +226,7 @@ mention as a future follow-up if the convention catches on.
 ## Open questions
 
 1. **What if the peer's `name` contains characters illegal in a filename?**
-   spec-39 restricts `name` to `[a-zA-Z0-9._-]{1,64}`; safe. If we ever
+   spec-43 restricts `name` to `[a-zA-Z0-9._-]{1,64}`; safe. If we ever
    loosen that, we need a sanitization step here.
 2. **Tag namespace pollution.** `os=darwin` vs `darwin` (bare) — two
    different conventions. We don't enforce; the operator picks. Document

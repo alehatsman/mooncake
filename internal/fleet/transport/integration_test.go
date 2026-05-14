@@ -187,7 +187,7 @@ func TestIntegration_RoundTrip(t *testing.T) {
 }
 
 // TestIntegration_BadTokenRejected sanity-checks that the bearer middleware
-// from spec-39 PR1 actually gates the TCP listener.
+// from spec-43 PR1 actually gates the TCP listener.
 func TestIntegration_BadTokenRejected(t *testing.T) {
 	addr, _, _, stop := startAgentdTCP(t)
 	defer stop()

@@ -3,7 +3,7 @@ package transport
 // Thin shell-out wrapper around system `ssh` and `scp`. Used by
 // `mooncake fleet bootstrap` to install agentd on a fresh box.
 //
-// TODO(spec-40 PR9): replace with native `golang.org/x/crypto/ssh` for
+// TODO(spec-44 PR9): replace with native `golang.org/x/crypto/ssh` for
 // proper auth + known-hosts handling without a forked subprocess. Today
 // we trust the user's environment (ssh-agent, ~/.ssh/config,
 // ~/.ssh/known_hosts) to do the right thing; shelling out gets us all

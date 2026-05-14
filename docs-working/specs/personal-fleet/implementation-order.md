@@ -89,7 +89,7 @@ Every PR should land green on these:
 | Path sandbox bypass in `PUT /v1/files` | PR2 | Explicit symlink rejection, `filepath.Clean` + prefix check, dedicated security test (try `../../etc/passwd`, symlink to `/etc/`) |
 | SSE multiplexer races under load | PR6 | Goroutine-leak tests with `goleak`; deterministic tests using a fake clock |
 | `fleet apply` partial-failure UX | PR5/PR6 | Continue-others-by-default per the epic; print a final summary line with per-peer result counts |
-| Bootstrap leaves partial state on failure | PR10 | Document the per-step rollback table from spec-40; tests for at least the upload-failed and start-failed paths |
+| Bootstrap leaves partial state on failure | PR10 | Document the per-step rollback table from spec-44; tests for at least the upload-failed and start-failed paths |
 | zeroconf instability on macOS | PR12 | Smoke-test on actual macOS hardware before merge; have hashicorp/mdns as a documented fallback |
 | TOML comment preservation in peers.toml | PR11 | Pick `pelletier/go-toml/v2` from the start; don't roll our own writer |
 
@@ -115,7 +115,7 @@ yet.
 
 ## Where this doc fits
 
-- Specs (`spec-39` through `spec-44`) own the *what* and *how*.
+- Specs (`spec-43` through `spec-48`) own the *what* and *how*.
 - This doc owns the *in what order*.
 - The epic (`epic-personal-fleet.md`) owns the *why*.
 

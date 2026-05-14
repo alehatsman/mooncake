@@ -102,7 +102,7 @@ type Version struct {
 
 // GetVersion fetches /v1/version. Used by the controller to learn the
 // peer's SyncedRoot (needed to compute the plan_path it later submits) and
-// for liveness checks in spec-42's fleet status.
+// for liveness checks in spec-46's fleet status.
 func (c *Client) GetVersion(ctx context.Context) (*Version, error) {
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()

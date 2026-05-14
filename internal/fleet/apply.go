@@ -282,7 +282,7 @@ func terminalStatus(ev transport.Event) (string, bool) {
 // formatEvent renders one event as a single `[peer] message` line. The
 // formatter is intentionally simple in PR5 — it covers run.* / step.*
 // events with a human-friendly summary and falls back to a compact-JSON
-// debug line for everything else. PR6 / spec-42 can iterate on visual
+// debug line for everything else. PR6 / spec-46 can iterate on visual
 // polish (colors, padding, etc.).
 func formatEvent(peer string, ev transport.Event) string {
 	prefix := "[" + peer + "] "

@@ -15,7 +15,7 @@ import (
 
 // Transport identifies how the controller reaches a peer. Only `agentd`
 // (HTTP+SSE over the bind addr) is implemented in PR3; `ssh` is reserved
-// for spec-40 / spec-43.
+// for spec-44 / spec-47.
 type Transport string
 
 const (

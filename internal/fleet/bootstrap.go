@@ -42,10 +42,10 @@ type BootstrapResult struct {
 
 // Bootstrap installs mooncake on a remote box reachable via SSH and
 // registers it as an agentd peer. This is the minimal version of
-// spec-40/43:
+// spec-44/43:
 //
 //   - SSH over the system `ssh`/`scp` binaries (TODO: native).
-//   - No systemd unit / launchd plist (TODO: spec-40 PR10).
+//   - No systemd unit / launchd plist (TODO: spec-44 PR10).
 //   - Foreground daemon launched via nohup. Dies on reboot.
 //   - Linux x86_64 only validated; macOS arm64/x86_64 should also work
 //     since the daemon code paths are POSIX, but not certified.

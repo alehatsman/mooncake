@@ -44,10 +44,10 @@ The epic settled the architectural question (file sync into `<state_dir>/synced/
 
 **Non-goals (deferred to other specs):**
 
-- Discovery (mDNS, SSH-config import) — spec-41.
-- SSH transport / bootstrap — spec-40 / spec-43.
-- Per-host overlays, tag selectors — spec-44.
-- Fleet status, log reattach — spec-42.
+- Discovery (mDNS, SSH-config import) — spec-45.
+- SSH transport / bootstrap — spec-44 / spec-47.
+- Per-host overlays, tag selectors — spec-48.
+- Fleet status, log reattach — spec-46.
 - Run cancellation — out of scope; needs context plumbing through the
   executor and every action handler.
 - TLS — assume LAN / Tailscale / WireGuard. Reconsider later.

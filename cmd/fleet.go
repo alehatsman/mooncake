@@ -36,7 +36,7 @@ func fleetBootstrapCommand() *cli.Command {
 		Name:      "bootstrap",
 		Usage:     "Install mooncake on a remote box via SSH and register it as a peer",
 		ArgsUsage: "<user@host>",
-		Description: "Minimal bootstrap (spec-40/43 PR9-11 cut down to the essentials):\n" +
+		Description: "Minimal bootstrap (spec-44/43 PR9-11 cut down to the essentials):\n" +
 			" - SCPs the local mooncake binary to the target via system ssh/scp.\n" +
 			" - Starts agentd in the foreground via nohup (no systemd/launchd yet).\n" +
 			" - Reads the freshly minted token and upserts a [[peers]] entry.\n" +
