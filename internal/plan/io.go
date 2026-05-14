@@ -62,20 +62,22 @@ func SavePlanToFile(p *Plan, filePath string) (err error) {
 }
 
 // redactSecretMarkers rewrites the sentinel-marker form used in-memory
-// (security.SentinelPrefix + "<ref>") to the human-readable
-// `!secret <ref>` form used in serialized plan output. Works on raw
-// bytes after marshal so it covers JSON, YAML, and any future
-// serialization format without per-format hooks.
+// (security.SentinelPrefix + "<ref>") to a human-readable form in
+// serialized plan output. Works on raw bytes after marshal so it
+// covers JSON, YAML, and any future serialization format without
+// per-format hooks.
 //
-// Note (v1): the rendered output keeps the *ref* (e.g. `env:APP_TOKEN`)
-// so the user can debug "which secret was that supposed to be?". The
-// spec acceptance criteria §247 want bare `!secret`; keeping the ref
-// is a deliberate v1 deviation that prioritizes debuggability. Refs are
-// not values — they don't leak credentials.
+// Default output matches spec-23 §247 — bare `!secret` with the ref
+// stripped. Operators debugging "which secret was supposed to be
+// there?" can set MOONCAKE_SHOW_SECRET_REFS=1 to keep the ref in the
+// output as `!secret <ref>`. Refs are not values and don't leak
+// credentials, but keeping them out of plan output by default avoids
+// any surprise when plans get shared in bug reports or attached to PRs.
 func redactSecretMarkers(in []byte) []byte {
 	if !bytes.Contains(in, []byte(security.SentinelPrefix)) {
 		return in
 	}
+	showRef := os.Getenv("MOONCAKE_SHOW_SECRET_REFS") == "1"
 	// strings.Replace-style pass: find every marker, take chars until the
 	// next stop char (quote or newline in JSON/YAML output), rewrite.
 	s := string(in)
@@ -100,8 +102,12 @@ func redactSecretMarkers(in []byte) []byte {
 		}
 		ref := s[:end]
 		s = s[end:]
-		out.WriteString("!secret ")
-		out.WriteString(ref)
+		if showRef {
+			out.WriteString("!secret ")
+			out.WriteString(ref)
+		} else {
+			out.WriteString("!secret")
+		}
 	}
 }
 
