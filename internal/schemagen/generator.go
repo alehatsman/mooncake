@@ -183,6 +183,28 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "(plan metadata) Parent step ID when expanded from an on_change child",
 		},
+		"transaction": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Sequence of steps that apply all-or-nothing; failure runs Reverse() on prior steps in LIFO order (spec-30)",
+		},
+		"on_rollback": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Steps that run after a transaction's rollback finishes (spec-30)",
+		},
+		"allow_irreversible": {
+			Type:        "boolean",
+			Description: "Allow a transaction to include steps without Reverser support (spec-30)",
+		},
+		"txn_parent": {
+			Type:        "string",
+			Description: "(plan metadata) Parent transaction step ID when expanded from a transaction child",
+		},
 	}
 
 	for name, prop := range universalFields {
@@ -228,13 +250,16 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 	// (import is a special string field, not a registered action)
 	actionNames = append(actionNames, "import")
 
+	// Add "transaction" (spec-30) as a oneOf branch: a step with
+	// transaction: set is a compound node, not a leaf action. Treated
+	// like "import" — special-cased rather than registered as an action.
+	actionNames = append(actionNames, "transaction")
+
 	// Sort action names for deterministic schema generation
 	sort.Strings(actionNames)
 
 	// Generate oneOf constraints to ensure only one action per step
-	if g.opts.StrictValidation {
-		def.OneOf = g.generateOneOfConstraints(actionNames)
-	}
+	def.OneOf = g.generateOneOfConstraints(actionNames)
 
 	return def, nil
 }
@@ -288,14 +313,22 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 		// object forms — preserve that here, otherwise the oneOf branch
 		// rejects valid `shell: echo hello` (scalar) input.
 		var actionProp *Property
-		if actionName == "shell" || actionName == "use" {
+		switch actionName {
+		case "shell", "use":
 			actionProp = &Property{
 				OneOf: []*Property{
 					{Type: "string"},
 					{Ref: fmt.Sprintf("#/definitions/%s", actionName)},
 				},
 			}
-		} else {
+		case "transaction":
+			// spec-30: transaction: is a top-level compound-step shape,
+			// not an action. The property's full shape is declared in
+			// universalFields above (array of #/definitions/step). The
+			// oneOf branch here just asserts the property exists; the
+			// universalFields entry constrains its shape.
+			actionProp = &Property{}
+		default:
 			actionProp = &Property{
 				Ref: fmt.Sprintf("#/definitions/%s", actionName),
 			}

@@ -283,6 +283,14 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 
 // expandStep dispatches a single step to the appropriate expansion handler
 func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan, stepIndex int) error {
+	// spec-30: Transaction compound step. The step itself emits a
+	// transaction-parent plan entry (no action; carries the children's
+	// linkage); children expand as sibling steps tagged with TxnParent.
+	// All reversibility checking happens here at plan time.
+	if len(step.Transaction) > 0 {
+		return p.expandTransaction(step, ctx, plan, stepIndex)
+	}
+
 	// Handle include directives
 	if step.Import != nil {
 		return p.expandInclude(step, ctx, plan, stepIndex)

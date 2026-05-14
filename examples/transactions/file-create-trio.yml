@@ -1,0 +1,47 @@
+# All-or-nothing transactions via `transaction:` (spec-30, PR A —
+# parser + plan-time reversibility check).
+#
+# A `transaction:` step wraps a sequence of children that the planner
+# verifies are all reversible. If any handler in the transaction does
+# not implement actions.Reverser, the plan fails with a clear error
+# pointing at the offending step.
+#
+# What works today (PR A):
+#   - `mooncake plan` accepts and inspects transaction blocks
+#   - Reversibility check rejects irreversible children unless
+#     `allow_irreversible: true` is set
+#   - `mooncake apply` runs the children sequentially (no auto-revert
+#     wiring yet — that ships in PR B once spec-22 phase 5 covers more
+#     handlers)
+#
+# What ships in PR B:
+#   - Forward apply with success commit
+#   - Rollback on failure: previously-applied steps Reverse() in LIFO
+#     order, leaving the system byte-identical to pre-transaction state
+#   - `on_rollback:` sugar
+#   - `step.reversed` events
+#
+# Why these three steps? spec-22 phase 5 slice A ships Reverse() on
+# file.write for the create-only case — newly-created files / dirs get
+# deleted on revert. Each child here creates a fresh file, so the
+# rollback path (PR B) will be exercised cleanly.
+
+version: "1.0"
+
+steps:
+  - name: provision three demo files atomically
+    transaction:
+      - name: create a
+        file.write:
+          path: /tmp/mc-txn-demo-a
+          content: alpha
+
+      - name: create b
+        file.write:
+          path: /tmp/mc-txn-demo-b
+          content: beta
+
+      - name: create c
+        file.write:
+          path: /tmp/mc-txn-demo-c
+          content: gamma
