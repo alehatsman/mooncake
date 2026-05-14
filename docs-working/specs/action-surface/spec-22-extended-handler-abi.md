@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phases 3-8 (per-handler implementations of Permissions, Diff, Reverse, Cost; planner/MCP wiring; docs) still draft.
+**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phase 3 partially shipped — `file.write` declares `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries; 9 priority handlers remaining. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -258,8 +258,17 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
    `Is*` capability checks). Landed in `internal/actions/registry_abi.go`
    + 8 unit tests in `handler_abi_test.go` proving every default and the
    "native implementation wins" contract.
-3. **Phase 3** — implement `Permissions()` on handlers from the priorities
-   table (10 handlers). Wire preflight into executor. Add tests.
+3. **Phase 3** 🟡 — `Permissions()` per-handler + executor preflight.
+   - ✅ `file.write` declares Sudo for system paths +
+     FilesystemWrite=[path]. `internal/actions/file/handler.go:Permissions`.
+   - ✅ Executor preflight wired into `dispatchRunner` →
+     `internal/executor/preflight.go`. Fails fast on Sudo+non-root
+     +no-AsUser; checks RequiredBinaries via `exec.LookPath`;
+     Network is informational only.
+   - ⏳ 9 handlers remaining: `file.template`, `file.copy`,
+     `file.download`, `file.unarchive`, `text.replace/insert/
+     delete_range/patch`, `pkg`, `os.service`. Each is roughly 20-30
+     LOC + tests, following the file.write pattern.
 4. **Phase 4** — implement `Diff()` on the file/text/pkg/service
    handlers. Wire into `mooncake plan --format json` and `--diff
    structural`. Snapshot tests for diff output stability.
