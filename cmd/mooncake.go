@@ -760,6 +760,7 @@ func createApp() *cli.App {
 			lastCommand(),
 			mcpCommand(),
 			agentdCommand(),
+			fleetCommand(),
 			stepCommand(),
 			toolCommand(),
 			{
