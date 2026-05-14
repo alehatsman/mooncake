@@ -1,26 +1,24 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `e32144b`, 2026-05-15, revision 7).
+(master @ `b019805`, 2026-05-15, revision 8).
 
-> **What changed since revision 6**: **Spec-22 phase 4 (`Diff()`) is
-> fully complete** — phase 4a (`file.write`, `7cfc706`), 4b
-> (`file.template` + `file.copy`, `86c386d`), 4c (text.\* family,
-> `1a40f51`), 4d (`pkg` + `os.service`, `97a3ffa`), and 4e
-> (`file.download` + `file.unarchive`, `e32144b`) close out the file
-> family + text + pkg + os.service. **Spec-23 also gained two of three
-> sections**: §1 `on_change` reactive triggers (`66881fc`) and §3
-> `!secret` tag with env provider (`d6d704d`); only §2
-> `try`/`catch`/`finally` is still drafted. Plus a `git.clone`
-> shallow-update fix (`abcb270`). New worktrees in flight:
-> **`dx-bundle`** (spec-51 + fleet-discover + spec-50 cooldown
-> bundle), **`spec-22-phase4f`** (next phase-4 increment — likely
-> extending `Diff()` beyond the priority handler families or
-> beginning planner/MCP wiring), and **`tier2-secrets`** (Stream 5
-> work — likely a tier-2 plugin secret provider building on the
-> just-shipped `!secret` env provider). The agent-safety wedge is the
-> primary track and is moving fast — seven merges across two short
-> sessions.
+> **What changed since revision 7**: **DX bundle shipped** (`bd61319`)
+> — **spec-51 (local-apply overlay parity, `4d6b2a1`)** and a **simple
+> `mooncake fleet discover` (spec-45 simple, `f49930b`)** that probes
+> hosts from `peers.toml` + `~/.ssh/config` against `/v1/version`
+> without mDNS or any new daemon work. Spec-50 (extended filter keys)
+> wasn't in the bundle — left for another round. Plus a **`!secret`
+> plan-output redaction polish** (`b019805`) — `!secret` refs are now
+> redacted in plan output by default, closing a gap in the spec-23 §3
+> surface. **The single biggest in-flight move is
+> `worktree-spec-22-phase5`** — **`Reverse()`**, the primitive between
+> today and the spec-30 `transaction:` demo (still no commits in that
+> worktree; agent is in deep exploratory mode). Idle/cleanup-pending:
+> `dx-bundle` and `plan-redact-polish` (both already merged into
+> master). The earlier `spec-22-phase4f` and `tier2-secrets` worktrees
+> are gone — phase 4f folded into the JSON-Diff follow-up (`bb082a1`);
+> tier2-secrets stalled or was absorbed elsewhere.
 
 ---
 
@@ -43,7 +41,7 @@ The typed mutation vocabulary. Ships everywhere.
 | 37 | Step output capture (collision + plan-mode) | drafted |
 | 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
 | 32 | Collapse step action dispatch | not started |
-| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅ (types + sub-interfaces + safe defaults), 3a–3d ✅ (`Permissions()` across all 5/5 priority handler families), 4a–4e ✅ (`Diff()` across `file.write`, `file.template`, `file.copy`, `file.download`, `file.unarchive`, text.* family, `pkg`, `os.service`). **Phases 3 and 4 both fully complete.** Phase 4f in flight in `worktree-spec-22-phase4f` (likely beyond-priority handlers or planner/MCP wiring). Phases 5–8 (Reverse, Cost, planner/MCP wiring, docs) still draft. |
+| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅, 3a–3d ✅ (`Permissions()`), 4a–4e ✅ (`Diff()` across all 5/5 priority handler families), plus phase 4 follow-up (`bb082a1`) wiring `Diff()` into JSON plan output. **Phases 3 + 4 fully complete.** **Phase 5 (`Reverse()`) in flight in `worktree-spec-22-phase5`** — the headline primitive that unblocks spec-30 `transaction:` blocks. Phases 6–8 (`Cost`, planner/MCP wiring, docs) still draft. |
 
 **Verdict**: very wide, and the ABI is finally landing. Action breadth no
 longer the bottleneck — `Reverse()` is. Phase 3 needs to finish, then
@@ -53,7 +51,7 @@ phases 4–6 (Diff/Reverse/Cost) unblock spec-30.
 
 | Spec | Topic | State |
 |---|---|---|
-| 22 | Extended Handler ABI | 🟡 in progress (see Stream 1) — phases 3 + 4 complete; phase 5 (`Reverse()`) is the next gate, then phase 6 (`Cost()`) and 7–8 (wiring + docs) |
+| 22 | Extended Handler ABI | 🟡 in progress (see Stream 1) — phases 3 + 4 complete; **phase 5 (`Reverse()`) in flight in `worktree-spec-22-phase5`**; phase 6 (`Cost()`) and 7–8 (wiring + docs) still draft |
 | 23 | Framework primitives (`on_change`, `try/catch/finally`, `!secret`) | **§1 (`on_change`) ✅**, **§3 (`!secret`) ✅**, **§2 (`try/catch/finally`) still drafted** — semantically overlaps with spec-30 transactions, design must align |
 | 30 | `transaction:` blocks with auto-reverse | drafted, blocked on 22 phase 5 (`Reverse()`) |
 
@@ -85,8 +83,9 @@ Personal Fleet (sub-stream): **12/14 PRs shipped end-to-end** as of
 
 | Spec | Topic | State |
 |---|---|---|
-| 50 | Extended filter keys (`os=`, `name=`, `role=`) for `--peer-filter`/`--step-filter` | Draft, S–M effort. Generalises spec-48's `tag=`-only DSL |
-| 51 | Local-apply overlay parity — `mooncake apply` auto-loads `vars/by-host/<hostname>.yml` | Draft, XS effort. Closes asymmetry where overlays only work via `fleet apply` |
+| 50 | Extended filter keys (`os=`, `name=`, `role=`) for `--peer-filter`/`--step-filter` | Draft. Generalises spec-48's `tag=`-only DSL |
+| 51 | Local-apply overlay parity — `mooncake apply` auto-loads `vars/by-host/<hostname>.yml` | ✅ shipped (`4d6b2a1`) — DX bundle |
+| 45 simple | `mooncake fleet discover` — probe `peers.toml` + `~/.ssh/config` against `/v1/version` | ✅ shipped (`f49930b`) — DX bundle. Pragmatic subset of spec-45 (no mDNS, no `fleet init`, no daemon changes) |
 
 Sidecars merged this cycle: **spec-49 agentd-on-Windows** (TCP-only mode,
 SSE race fixes), a fleet polish PR (output + peer-filter UX + Windows
@@ -98,9 +97,12 @@ config paths), and a `--plan-dir` flag.
 Enterprise sub-stream (C1–C5 hub epics): **zero specs**, deferred. Per
 `next-priorities`, intentionally not now.
 
-**Verdict**: the bulk of recent activity. Closest stream to "lovable v1"
-for its target audience. The remaining gap (real bootstrap + mDNS +
-`fleet init`) is well-scoped.
+**Verdict**: closest stream to "lovable v1" for its target audience.
+**`mooncake fleet discover` (the simple form from spec-45)** just
+shipped — probes hosts from `peers.toml` + `~/.ssh/config` against
+`/v1/version` and prints a status table; no mDNS, no `fleet init`
+ceremony, no new daemon work. The remaining gap (mDNS + interactive
+`fleet init`) is pure polish and explicitly deferred.
 
 ### Stream 4 — Developer Experience  *(the funnel)*
 
@@ -189,32 +191,36 @@ overlays land naturally. No hub, no SaaS, peer-to-peer over LAN.
 **What's shipped**: agentd with TCP listener + bearer auth + SSE hub +
 sandboxed file sync + `/v1/files` PUT/HEAD endpoints ✅, controller-side
 multiplexed `fleet apply` ✅, **`fleet status`** with `--json` ✅, **`fleet
-logs` + `fleet facts`** ✅, parallel multi-peer multiplexer with `^C`
-banner ✅, `peers.toml` + `controller_id` ✅, **native SSH driver** (crypto/ssh
-+ pkg/sftp, ssh-agent → IdentityFiles → clear-error auth chain,
+logs` + `fleet facts`** ✅, **`mooncake fleet discover`** (spec-45 simple
+— probes `peers.toml` + `~/.ssh/config` against `/v1/version`,
+table-rendered) ✅, parallel multi-peer multiplexer with `^C` banner ✅,
+`peers.toml` + `controller_id` ✅, **native SSH driver** (crypto/ssh +
+pkg/sftp, ssh-agent → IdentityFiles → clear-error auth chain,
 known_hosts verification) ✅, **full `mooncake fleet bootstrap`** with
 spec-44 8-step orchestration, embedded systemd unit + launchd plist,
 two-stage SFTP install, daemon-reload + 10s `/v1/version` startup probe,
 idempotent re-bootstrap via version-match short-circuit ✅, **per-host
-overlays + tag selectors** ✅, Windows agentd ✅.
+overlays + tag selectors** ✅, **local-apply overlay parity** (spec-51
+— `mooncake apply` now auto-loads `vars/by-host/<hostname>.yml` like
+`fleet apply` does) ✅, Windows agentd ✅.
 
-**Gap**: mDNS discovery ⏳. `fleet init` interactive flow ⏳. The
-ordered-phase `mooncake apply <machine>` UX (Windows+WSL) ⏳ — filed as
-a user request. Two PR 14 follow-ups drafted but not yet sequenced:
-**spec-50** (extended filter keys: `os=`, `name=`, `role=`) and
-**spec-51** (local-apply overlay parity).
+**Gap**: mDNS auto-advertise ⏳ (the simple discover doesn't need it,
+but the larger spec-45 still does). Interactive `fleet init` flow ⏳.
+The ordered-phase `mooncake apply <machine>` UX (Windows+WSL) ⏳ —
+filed as a user request. **Spec-50** (extended filter keys: `os=`,
+`name=`, `role=`) drafted but not yet shipped.
 
-**Distance to ideal**: ~92% to the v1 "Friday-evening demo" success
+**Distance to ideal**: ~95% to the v1 "Friday-evening demo" success
 criteria from the epic. **Phase A and Phase B both complete**; Phase C
-1/3. `fleet apply` + `fleet status` + `fleet logs` + per-host overlays +
-native SSH + full bootstrap (`mooncake fleet bootstrap user@new-box` now
-actually does the 60-second story the epic promises) all work end-to-end
-against the real WSL + Windows testbed.
+1/3 plus the simple-discover bonus. `fleet apply` + `fleet status` +
+`fleet logs` + `fleet discover` + per-host overlays + native SSH + full
+bootstrap + local-apply overlay parity all work end-to-end against the
+real WSL + Windows testbed.
 
-**Notable**: this is the stream with the most velocity right now — six
-PRs and two bug fixes landed since the previous report. The "Friday-
-evening demo" success criteria are essentially met sans mDNS auto-discovery
-and the interactive `fleet init`.
+**Notable**: continued highest-velocity stream — three more PRs in this
+cycle (spec-51, spec-45-simple, the DX bundle merge). The "Friday-
+evening demo" success criteria are essentially met sans the polish
+items (mDNS auto-advertise and the interactive `fleet init`).
 
 ### D. Secure AI execution layer (base for agent harnesses)
 
@@ -246,17 +252,19 @@ all of this as agent tools.
   preflight — sudo and required-binary checks fail fast with typed
   errors agents can catch. **Spec-22 phase 3 fully complete.**
 - **`Diff()` declaration** ✅ across all 5/5 priority handler families
-  (phases 4a–4e, including `file.download` + `file.unarchive`).
+  (phases 4a–4e, including `file.download` + `file.unarchive`) plus the
+  phase 4 follow-up wiring `Diff()` into JSON plan output (`bb082a1`).
   Structural deltas a UI or LLM can branch on without parsing prose.
   **Spec-22 phase 4 fully complete.**
 - **`on_change:` reactive triggers** ✅ (spec-23 §1) — a step re-runs
   when a watched step changes a thing.
 - **`!secret` tag + env provider** ✅ (spec-23 §3) — secrets pulled
-  from env, masked in logs, never written to disk.
+  from env, masked in logs, and now also **redacted from plan output
+  by default** (`b019805` polish), never written to disk.
 
 **Gap**:
 
-- **`Reverse()`**: not implemented yet. Spec-22 phase 5. **The headline primitive — the next gate for the agent-safety demo.**
+- **`Reverse()`**: **🟡 in flight in `worktree-spec-22-phase5`**. Spec-22 phase 5. **The headline primitive — the last gate between today and the agent-safety demo.**
 - **`Cost()`**: not implemented yet. Spec-22 phase 6.
 - **Planner / MCP wiring of `Diff` + `Cost`**: not implemented yet. Spec-22 phase 7.
 - **`transaction:` blocks**: not started. Spec-30, needs `Reverse()`. The killer demo.
@@ -268,61 +276,66 @@ all of this as agent tools.
 - **Deterministic replay**: implicit via run audit but no `replay` command.
 - **Cost / risk classifier**: not specced.
 
-**Distance to ideal**: ~60%, up from ~45%. The agent *interface* is real,
-the ABI contract is in the tree, `Permissions` + `Diff` are both shipped
-across all 5/5 priority handler families, `on_change` and `!secret` are
-live in the executor and security layer. **Only `Reverse()` stands
-between today and the `transaction:` demo** that closes the README's
-agent-safety pitch. **The next single biggest leverage
-move in the whole codebase is shipping `Reverse()` on `file.write`.**
+**Distance to ideal**: ~65%, up from ~60%. `Diff` is now wired into JSON
+plan output (so agents can branch on structural deltas without parsing
+prose). **`Reverse()` is in flight** in `worktree-spec-22-phase5` —
+which means the project is actively pulling the last load-bearing
+primitive into the tree. Once it ships and spec-30 `transaction:`
+follows, the README's agent-safety claim becomes a falsifiable demo.
 
 ---
 
 ## 3. The honest strategic picture
 
 Mooncake has built the **kernel** (Stream 1: production-quality), the
-**fleet runtime** (Stream 3: 12/14, **Phase B complete**, live-tested),
-and the **DX funnel** (Stream 4: shipped). The **agent safety layer**
-is the primary track: spec-22 phases 3 and 4 are both fully shipped
+**fleet runtime** (Stream 3: 12/14, **Phase B complete**, plus the
+simple `fleet discover` bonus from this cycle, live-tested), and the
+**DX funnel** (Stream 4: shipped). The **agent safety layer** is the
+primary track: spec-22 phases 3 and 4 are both fully shipped
 (`Permissions()` and `Diff()` across all 5/5 priority handler
-families), spec-23 §1 (`on_change`) and §3 (`!secret`) are live in
-master, and four parallel worktrees are in flight (phase 4f, dx-bundle,
-tier2-secrets, progress-update). Stream 5 (`tier2-secrets`) also just
-opened, breaking the "explicitly deferred" line. The strategic gap is
-no longer "does any agent-safety code exist" but **"how fast does
-`Reverse()` + `transaction:` ship."**
+families, with `Diff` now wired into JSON plan output), spec-23 §1
+(`on_change`) and §3 (`!secret`) are live in master, and **`Reverse()`
+(phase 5) is in flight right now** in `worktree-spec-22-phase5`. The
+strategic gap is no longer "does any agent-safety code exist" — it's
+**"how soon does spec-30 ship after `Reverse()` lands."**
 
-`analysis/top-5-priorities-2026-05.md` (filed 2026-05-14) names the
-ordering explicitly:
+`analysis/top-5-priorities-2026-05.md` (filed 2026-05-14) named the
+ordering. As of rev8 the picture is:
 
-1. **Spec-22** (the strategic blocker) — phases 1+2+3a+3b shipped; 3c in
-   flight; 4–8 still draft.
+1. **Spec-22** — phases 1+2 ✅, phase 3 ✅ (Permissions across all 5/5
+   families), phase 4 ✅ (Diff across all 5/5 families + JSON plan
+   output wiring), **phase 5 (Reverse) 🟡 in flight**, phases 6–8 still
+   draft.
 2. **Spec-30** — `transaction:` blocks. The killer demo. Starts the
    moment `Reverse()` works on `file.write`.
 3. **Personal-fleet PR 8** — `fleet logs` + `fleet facts`. ✅ shipped.
 4. **Personal-fleet PR 9 + PR 10** — native SSH driver + systemd/launchd
-   installer. **Both ✅ shipped 2026-05-15.** PR 11 (`fleet bootstrap`
-   CLI) auto-promoted from 🟡 lite to ✅ full.
-5. **Spec-23** — framework primitives. `on_change` + `!secret` are
-   parallelisable with spec-22 work.
+   installer. **Both ✅ shipped.** PR 11 auto-promoted from 🟡 lite to ✅.
+5. **Spec-23** — framework primitives. §1 (`on_change`) ✅, §3
+   (`!secret`) ✅, §2 (`try/catch/finally`) drafted.
+
+Plus three bonuses delivered outside the top-5: **spec-51 (local-apply
+overlay parity) ✅**, **spec-45 simple (`mooncake fleet discover`) ✅**
+(the small DX win proposed mid-conversation; landed as the smallest
+useful subset of spec-45), and the **DX bundle merge** that packaged
+them.
 
 `next-priorities-2026-05.md` recommends **finish-then-pivot**. Track B
 (personal-fleet close-out) is effectively done — only Phase C polish
-(mDNS, `fleet init`), the spec-50 + spec-51 follow-ups, and the
-`mooncake apply <machine>` request remain. The pivot has fully happened
-and Track A is **mid-flight at speed**: phases 3 and 4 of spec-22 are
-done, spec-23 §1+§3 are done, six merges have landed in two sessions,
-and the only thing standing between today and the README's promise is
-**spec-22 phase 5 — `Reverse()`**. Once that lands and spec-30
-`transaction:` blocks ship on top of it, the agent-safety pitch becomes
-a falsifiable demo: *"agent edits 4 files, third fails, mooncake
-auto-reverts the first two."*
+(mDNS auto-advertise, interactive `fleet init`), spec-50 (extended
+filter keys), and the `mooncake apply <machine>` request remain. The
+pivot has fully happened and Track A is **mid-flight at speed**: phases
+3 and 4 of spec-22 are done, spec-23 §1+§3 are done, ten merges have
+landed across three sessions, and **`Reverse()` is in flight right
+now**. Once it lands and spec-30 `transaction:` blocks ship on top of
+it, the agent-safety pitch becomes a falsifiable demo: *"agent edits 4
+files, third fails, mooncake auto-reverts the first two."*
 
 The unfair-advantage statement the VISION leaves open (§13.10) gets
 answered when `transaction:` ships: **"plan + snapshot + reverse +
-deterministic replay, all typed."** *"Agent edited 4 files, third failed,
-mooncake auto-reverted the first two"* becomes a falsifiable claim once
-spec-22 phase 5 (`Reverse()`) and spec-30 land.
+deterministic replay, all typed."** Once `Reverse()` lands, the answer
+to that question becomes load-bearing.
 
-The strategic question is no longer *"will the pivot happen"* — it's
-*"how soon does `Reverse()` get to `file.write`."*
+The strategic question is no longer *"will the pivot happen"* or *"how
+soon does `Reverse()` start"* — it's *"how soon does spec-30 ship after
+`Reverse()` merges."*
