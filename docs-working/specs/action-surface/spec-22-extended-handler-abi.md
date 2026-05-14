@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-3 shipped. All 11 priority handlers declare `Permissions()` and the executor preflights Sudo + RequiredBinaries. Phase 4 underway — `file.write`, `file.template`, `file.copy`, plus the four text.* handlers (`text.replace`, `text.insert`, `text.delete_range`, `text.patch`) implement `Differ`. Shared `FileSnapshot` Before/After payload + helpers (`SnapshotPath`/`FileResource`/`HashFile`/`DiffSinglePathMutation`/`ExpandPath`) live in `internal/actions/file/diff.go`. 7/11 priority handlers done; 4 remaining (`file.download`, `file.unarchive`, `pkg`, `os.service`). `--diff structural` CLI wiring + per-step `diff:` in JSON plan output deferred to phase 4d. Phases 5-8 still draft.
+**Status:** 🟡 In progress. Phases 1-3 shipped. All 11 priority handlers declare `Permissions()` and the executor preflights Sudo + RequiredBinaries. Phase 4 underway — `file.write`, `file.template`, `file.copy`, the four text.* handlers, plus `pkg` and `os.service` all implement `Differ`. **9/11 priority handlers done; 2 remaining (`file.download`, `file.unarchive`).** Shared file-family helpers in `internal/actions/file/diff.go`; `PkgSnapshot` + `ServiceSnapshot` typed payloads in their respective packages. `--diff structural` CLI wiring + per-step `diff:` in JSON plan output deferred to phase 4e. Phases 5-8 still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -312,14 +312,30 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      correctly excluded from the Resource ref (mirrors the spec-22
      PermissionSet contract that already excludes PatchFile from
      FilesystemWrite).
-   - ⏳ 4 priority handlers remaining: `file.download` (needs
+   - ✅ `pkg` implements `Differ` —
+     `internal/actions/package/diff.go` introduces `PkgSnapshot`
+     (Names + State + Manager). Before is nil (no package-manager
+     query in Diff). Operation derived from State:
+     present/""→create, absent→delete, latest→update. Resource.Kind
+     = ResourcePackage. Identifier shows the first name plus a
+     "(+N more)" suffix when the step targets multiple packages.
+     6 unit tests including the state-to-Operation matrix and
+     multi-name handling.
+   - ✅ `os.service` implements `Differ` —
+     `internal/actions/service/diff.go` introduces `ServiceSnapshot`
+     (Name + State + Enabled + DaemonReload). Before nil; Operation
+     always OpUpdate because every service intent is a mutation.
+     Resource.Kind = ResourceService. 7 unit tests including a
+     dedicated lock-in that Before stays nil under all state
+     variants.
+   - ⏳ 2 priority handlers remaining: `file.download` (needs
      Network-fetch design — use declared checksum, no actual fetch
-     in Diff), `file.unarchive` (needs a directory-tree snapshot
-     shape), `pkg`, `os.service`.
+     in Diff) and `file.unarchive` (needs a directory-tree snapshot
+     shape).
    - ⏳ Lines (unified-diff-style breakdown) still empty across all
-     handlers; will wire `effects.ContentDiff` in phase 4d.
+     handlers; will wire `effects.ContentDiff` in phase 4e.
    - ⏳ `mooncake plan --format json` per-step `diff:` field and
-     `--diff structural` CLI flag — phase 4d.
+     `--diff structural` CLI flag — phase 4e.
 5. **Phase 5** — implement `Reverse()` on the same handlers. Snapshot-
    integration tests: apply then reverse should restore prior state.
 6. **Phase 6** — implement `Cost()` on the same handlers. Surface in
