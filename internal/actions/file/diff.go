@@ -64,7 +64,7 @@ func (h *Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, er
 	state := normalizeState(file.State)
 
 	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
-	before := snapshotPath(renderedPath)
+	before := SnapshotPath(renderedPath)
 
 	switch state {
 	case actionTypeFile:
@@ -83,7 +83,7 @@ func (h *Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, er
 		// Unknown / future state: degrade to a coarse update Diff so
 		// consumers still get a typed answer instead of an error.
 		return actions.Diff{
-			Resource:  fileResource(renderedPath),
+			Resource:  FileResource(renderedPath),
 			Operation: actions.OpUpdate,
 			Before:    before,
 		}, nil
@@ -113,20 +113,28 @@ func normalizeState(s string) string {
 	return s
 }
 
-func fileResource(path string) actions.ResourceRef {
+// FileResource constructs an actions.ResourceRef of kind ResourceFile
+// pointing at path. Exported so sibling handlers (file.template,
+// file.copy, file.download, file.unarchive) reuse one canonical
+// ResourceRef shape instead of redeclaring it per package.
+func FileResource(path string) actions.ResourceRef {
 	return actions.ResourceRef{
 		Kind:       actions.ResourceFile,
 		Identifier: path,
 	}
 }
 
-// snapshotPath stats the path and returns a *FileSnapshot describing
+// SnapshotPath stats the path and returns a *FileSnapshot describing
 // what's there. Always returns a non-nil snapshot — when the path
 // doesn't exist, Exists=false (the caller treats this as the "Before"
 // for an OpCreate). Errors during stat (permission denied etc.) are
 // swallowed and reported as Exists=false; the runtime-error path
 // remains as the backstop if Apply later tries and fails.
-func snapshotPath(path string) *FileSnapshot {
+//
+// Exported so sibling handlers that write to a single Dest file
+// (file.template, file.copy, file.download) reuse the same Before-
+// snapshot logic.
+func SnapshotPath(path string) *FileSnapshot {
 	snap := &FileSnapshot{Path: path}
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -153,7 +161,7 @@ func snapshotPath(path string) *FileSnapshot {
 		// Hash only regular files; reading non-regular paths
 		// (devices, FIFOs, sockets) could block or fail. Errors
 		// during read also degrade to "no sha256 known".
-		if h, err := hashFile(path); err == nil {
+		if h, err := HashFile(path); err == nil {
 			snap.Sha256 = h
 		}
 	default:
@@ -162,7 +170,11 @@ func snapshotPath(path string) *FileSnapshot {
 	return snap
 }
 
-func hashFile(path string) (string, error) {
+// HashFile computes lowercase-hex sha256 of the file at path. Returns
+// ("", err) on read failure. Exported so sibling handlers can compute
+// After.Sha256 from an on-disk source (e.g. file.copy reads Src to
+// predict whether content matches Dest).
+func HashFile(path string) (string, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // intentional: we read the target file
 	if err != nil {
 		return "", err
@@ -199,7 +211,7 @@ func (h *Handler) diffFile(ctx actions.Context, file *config.File, path string, 
 	}
 
 	return actions.Diff{
-		Resource:  fileResource(path),
+		Resource:  FileResource(path),
 		Operation: op,
 		Before:    before,
 		After:     after,
@@ -213,7 +225,7 @@ func diffAbsent(path string, before *FileSnapshot) actions.Diff {
 		op = actions.OpNoop
 	}
 	return actions.Diff{
-		Resource:  fileResource(path),
+		Resource:  FileResource(path),
 		Operation: op,
 		Before:    before,
 		// After is nil for delete — the path will not exist post-apply.
@@ -239,7 +251,7 @@ func diffDirectory(path string, mode os.FileMode, before *FileSnapshot) actions.
 	}
 
 	return actions.Diff{
-		Resource:  fileResource(path),
+		Resource:  FileResource(path),
 		Operation: op,
 		Before:    before,
 		After:     after,
@@ -261,7 +273,7 @@ func diffTouch(path string, mode os.FileMode, before *FileSnapshot) actions.Diff
 		op = actions.OpCreate
 	}
 	return actions.Diff{
-		Resource:  fileResource(path),
+		Resource:  FileResource(path),
 		Operation: op,
 		Before:    before,
 		After:     after,
@@ -280,7 +292,7 @@ func (h *Handler) diffLink(ctx actions.Context, file *config.File, path, state s
 		// still sees something structured, plus the error so callers can
 		// distinguish "couldn't resolve src" from "no change".
 		return actions.Diff{
-			Resource:  fileResource(path),
+			Resource:  FileResource(path),
 			Operation: actions.OpUpdate,
 			Before:    before,
 		}, err
@@ -306,7 +318,7 @@ func (h *Handler) diffLink(ctx actions.Context, file *config.File, path, state s
 	}
 
 	return actions.Diff{
-		Resource:  fileResource(path),
+		Resource:  FileResource(path),
 		Operation: op,
 		Before:    before,
 		After:     after,
@@ -337,7 +349,7 @@ func diffPerms(path string, mode os.FileMode, before *FileSnapshot) actions.Diff
 	}
 
 	return actions.Diff{
-		Resource:  fileResource(path),
+		Resource:  FileResource(path),
 		Operation: op,
 		Before:    before,
 		After:     after,

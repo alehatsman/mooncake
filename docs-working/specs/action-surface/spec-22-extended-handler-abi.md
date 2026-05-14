@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-3 shipped. All 11 priority handlers declare `Permissions()` and the executor preflights Sudo + RequiredBinaries. Phase 4 underway — `file.write` implements `Differ` end-to-end (`FileSnapshot` typed payload + 17 unit tests across every state transition). `--diff structural` CLI wiring + per-step `diff:` in JSON plan output are deferred to phase 4b. Phases 5-8 (Reverse, Cost, MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-3 shipped. All 11 priority handlers declare `Permissions()` and the executor preflights Sudo + RequiredBinaries. Phase 4 underway — `file.write`, `file.template`, and `file.copy` implement `Differ` end-to-end with the shared `FileSnapshot` Before/After payload (`internal/actions/file/diff.go` exports `SnapshotPath`/`FileResource`/`HashFile` for sibling reuse). 3/11 priority handlers done; 8 remaining (`file.download`, `file.unarchive`, the 4 `text.*` handlers, `pkg`, `os.service`). `--diff structural` CLI wiring + per-step `diff:` in JSON plan output deferred to phase 4c. Phases 5-8 still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -281,26 +281,33 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      (every backend — systemd, launchd, Windows SCM — needs root).
    - ✅ 11/11 priority handlers done. Phase complete.
 4. **Phase 4** 🟡 — `Diff()` per-handler + plan-output wiring.
-   - ✅ `file.write` implements `Differ` end-to-end →
-     `internal/actions/file/diff.go`. Returns a structured
-     `actions.Diff` with `ResourceFile` kind, `*FileSnapshot`
-     Before/After payloads (path, exists, kind, size, sha256, mode,
-     target), and Operation in {create, update, delete, noop}.
-     Covers every state: `file`/`absent`/`directory`/`touch`/
-     `link`/`hardlink`/`perms`. Template-rendered content used for
-     After Sha256 so `{{ var }}` substitutions classify correctly.
-   - ✅ 17 unit tests in `diff_test.go` lock in the Operation matrix
-     for every state × FS condition (missing/matching/differing).
-   - ⏳ 10 priority handlers remaining: `file.template`, `file.copy`,
-     `file.download`, `file.unarchive`, the four `text.*` handlers,
-     `pkg`, `os.service`. Each follows the same FileSnapshot-style
-     pattern (or per-handler typed payload).
-   - ⏳ Lines (unified-diff-style breakdown) intentionally empty in
-     4a. Phase 4b will wire `effects.ContentDiff` (existing text-mode
-     line-diff) into the typed `[]DiffLine` shape so structural and
-     text-mode diffs stay in sync.
+   - ✅ Shared `FileSnapshot` payload + `SnapshotPath` / `FileResource`
+     / `HashFile` helpers exported from `internal/actions/file/diff.go`.
+     Sibling file-family handlers reuse them; no per-package
+     re-implementation of stat/hash/Sha256 logic.
+   - ✅ `file.write` implements `Differ` end-to-end. Covers every
+     state: `file`/`absent`/`directory`/`touch`/`link`/`hardlink`/
+     `perms`. Template-rendered content used for After Sha256.
+     17 unit tests across the state × FS-condition matrix.
+   - ✅ `file.template` implements `Differ` —
+     `internal/actions/template/diff.go`. Renders the Src template
+     against the current variable scope, hashes the rendered bytes
+     for After.Sha256. Render errors propagate so plan-time catches
+     `{{ }}` mistakes. 7 unit tests.
+   - ✅ `file.copy` implements `Differ` —
+     `internal/actions/copy/diff.go`. Hashes Src directly (no
+     template render) for After.Sha256. Missing Src degrades to
+     OpUpdate with empty Sha256 (Diff is read-only; runtime EACCES
+     remains the backstop). 7 unit tests.
+   - ⏳ 8 priority handlers remaining: `file.download`,
+     `file.unarchive`, four `text.*` handlers, `pkg`, `os.service`.
+     `file.unarchive` needs a directory-tree snapshot shape;
+     `file.download` needs Network-fetch design (use declared
+     checksum, no actual fetch in Diff).
+   - ⏳ Lines (unified-diff-style breakdown) still empty across all
+     handlers; will wire `effects.ContentDiff` in phase 4c.
    - ⏳ `mooncake plan --format json` per-step `diff:` field and
-     `--diff structural` CLI flag — phase 4b.
+     `--diff structural` CLI flag — phase 4c.
 5. **Phase 5** — implement `Reverse()` on the same handlers. Snapshot-
    integration tests: apply then reverse should restore prior state.
 6. **Phase 6** — implement `Cost()` on the same handlers. Surface in
