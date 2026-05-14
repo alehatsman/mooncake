@@ -650,8 +650,12 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 
 // StartConfig contains configuration for starting a mooncake execution.
 type StartConfig struct {
-	ConfigFilePath   string
-	VarsFilePath     string
+	ConfigFilePath string
+	// VarsFilePaths are loaded in order; later files override earlier on key
+	// collision. Mirrors how `mooncake apply -v a.yml -v b.yml` reads on
+	// the CLI and how `vars_files: ["a.yml", "b.yml"]` works in the agentd
+	// /v1/runs payload.
+	VarsFilePaths    []string
 	SudoPass         string // Sudo password provided directly (use SudoPassFile for better security)
 	SudoPassFile     string
 	AskBecomePass    bool
@@ -700,23 +704,27 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		return err
 	}
 
-	// Load variables if specified
-	var variables map[string]interface{}
-	if startConfig.VarsFilePath != "" {
-		expandedPath, expandErr := pathExpander.ExpandPath(startConfig.VarsFilePath, currentDir, nil)
+	// Load variables from each file in order; later files win on collision.
+	variables := make(map[string]interface{})
+	for _, path := range startConfig.VarsFilePaths {
+		if path == "" {
+			continue
+		}
+		expandedPath, expandErr := pathExpander.ExpandPath(path, currentDir, nil)
 		if expandErr != nil {
 			return &RenderError{Field: "vars file path", Cause: expandErr}
 		}
 
 		log.Debugf("Reading variables from file: %v", expandedPath)
-		variables, err = config.ReadVariables(expandedPath)
+		vars, err := config.ReadVariables(expandedPath)
 		if err != nil {
-			log.Debugf("Failed to read variables: %v", err)
-			variables = make(map[string]interface{})
+			log.Debugf("Failed to read variables from %s: %v", expandedPath, err)
+			continue
 		}
-		log.Debugf("Read variables: %v", variables)
-	} else {
-		variables = make(map[string]interface{})
+		log.Debugf("Read variables: %v", vars)
+		for k, v := range vars {
+			variables[k] = v
+		}
 	}
 
 	// Expand config file path

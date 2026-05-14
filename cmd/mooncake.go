@@ -72,10 +72,10 @@ func applyFlags() []cli.Flag {
 			Aliases: []string{"c"},
 			Usage:   "Path to configuration file",
 		},
-		&cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:    "vars",
 			Aliases: []string{"v"},
-			Usage:   "Path to variables file",
+			Usage:   "Path to a variables file. Repeat to layer multiple files; later wins on key collision.",
 		},
 		&cli.StringFlag{
 			Name:    "log-level",
@@ -223,7 +223,7 @@ func run(c *cli.Context) error {
 	// Execute with event publisher
 	return executor.Start(executor.StartConfig{
 		ConfigFilePath:   c.String("config"),
-		VarsFilePath:     c.String("vars"),
+		VarsFilePaths:    c.StringSlice("vars"),
 		SudoPass:         c.String("sudo-pass"),
 		SudoPassFile:     c.String("sudo-pass-file"),
 		AskBecomePass:    c.Bool("ask-become-pass"),
@@ -395,7 +395,7 @@ func writeFactsJSON(f *facts.Facts, path string) error {
 
 func planCommand(c *cli.Context) error {
 	configPath := c.String("config")
-	varsPath := c.String("vars")
+	varsPaths := c.StringSlice("vars")
 	outputPath := c.String("output")
 	format := c.String("format")
 	showOrigins := c.Bool("show-origins")
@@ -405,16 +405,20 @@ func planCommand(c *cli.Context) error {
 	// Parse tags
 	tags := parseTags(c.String("tags"))
 
-	// Load variables if specified
-	var variables map[string]interface{}
-	if varsPath != "" {
+	// Load variables from each file in order; later files override earlier
+	// on key collision. Matches `apply -v a.yml -v b.yml` semantics.
+	variables := make(map[string]interface{})
+	for _, varsPath := range varsPaths {
+		if varsPath == "" {
+			continue
+		}
 		vars, err := config.ReadVariables(varsPath)
 		if err != nil {
-			return fmt.Errorf("failed to read variables: %w", err)
+			return fmt.Errorf("failed to read variables from %s: %w", varsPath, err)
 		}
-		variables = vars
-	} else {
-		variables = make(map[string]interface{})
+		for k, v := range vars {
+			variables[k] = v
+		}
 	}
 
 	// Build plan (planner will inject system facts automatically)
@@ -774,10 +778,10 @@ func createApp() *cli.App {
 						Required: true,
 						Usage:    "Path to configuration file",
 					},
-					&cli.StringFlag{
+					&cli.StringSliceFlag{
 						Name:    "vars",
 						Aliases: []string{"v"},
-						Usage:   "Path to variables file",
+						Usage:   "Path to a variables file. Repeat to layer multiple files; later wins on key collision.",
 					},
 					&cli.StringFlag{
 						Name:    "tags",
@@ -934,10 +938,10 @@ func createApp() *cli.App {
 						Required: true,
 						Usage:    "Path to configuration file",
 					},
-					&cli.StringFlag{
+					&cli.StringSliceFlag{
 						Name:    "vars",
 						Aliases: []string{"v"},
-						Usage:   "Path to variables file",
+						Usage:   "Path to a variables file. Repeat to layer multiple files; later wins on key collision.",
 					},
 					&cli.StringFlag{
 						Name:    "format",

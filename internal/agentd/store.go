@@ -29,6 +29,7 @@ const (
 type Run struct {
 	ID         string     `json:"id"`
 	PlanPath   string     `json:"plan_path"`
+	VarsFiles  []string   `json:"vars_files,omitempty"`
 	Goal       string     `json:"goal,omitempty"`
 	BaseDir    string     `json:"base_dir"`
 	Status     RunStatus  `json:"status"`
@@ -50,9 +51,10 @@ func (r *Run) IsTerminal() bool {
 
 // SubmitReq is the input to Store.Create.
 type SubmitReq struct {
-	PlanPath string
-	Goal     string
-	BaseDir  string
+	PlanPath  string
+	VarsFiles []string
+	Goal      string
+	BaseDir   string
 }
 
 // ListFilter scopes Store.List output.
@@ -136,6 +138,7 @@ func (s *Store) Create(req SubmitReq) (*Run, error) {
 	run := &Run{
 		ID:        id,
 		PlanPath:  req.PlanPath,
+		VarsFiles: req.VarsFiles,
 		Goal:      req.Goal,
 		BaseDir:   req.BaseDir,
 		Status:    StatusQueued,

@@ -15,8 +15,11 @@ import (
 
 type submitRequest struct {
 	PlanPath string `json:"plan_path"`
-	Goal     string `json:"goal,omitempty"`
-	BaseDir  string `json:"base_dir,omitempty"`
+	// VarsFiles are loaded in order; later files override earlier on key
+	// collision. Mirrors `mooncake apply -v a.yml -v b.yml`.
+	VarsFiles []string `json:"vars_files,omitempty"`
+	Goal      string   `json:"goal,omitempty"`
+	BaseDir   string   `json:"base_dir,omitempty"`
 }
 
 type submitResponse struct {
@@ -74,10 +77,33 @@ func (s *Server) submitRunHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Validate each vars file path: absolute, regular, statable.
+	for i, vp := range req.VarsFiles {
+		if !filepath.IsAbs(vp) {
+			writeError(w, http.StatusBadRequest, "relative_vars_file",
+				fmt.Sprintf("vars_files[%d] %q must be absolute", i, vp))
+			return
+		}
+		cleaned := filepath.Clean(vp)
+		vi, statErr := os.Stat(cleaned)
+		if statErr != nil {
+			writeError(w, http.StatusBadRequest, "vars_file_not_found",
+				fmt.Sprintf("vars_files[%d]: %v", i, statErr))
+			return
+		}
+		if !vi.Mode().IsRegular() {
+			writeError(w, http.StatusBadRequest, "vars_file_not_file",
+				fmt.Sprintf("vars_files[%d] %q is not a regular file", i, vp))
+			return
+		}
+		req.VarsFiles[i] = cleaned
+	}
+
 	run, err := s.store.Create(SubmitReq{
-		PlanPath: planPath,
-		Goal:     req.Goal,
-		BaseDir:  baseDir,
+		PlanPath:  planPath,
+		VarsFiles: req.VarsFiles,
+		Goal:      req.Goal,
+		BaseDir:   baseDir,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "store_create_failed", err.Error())

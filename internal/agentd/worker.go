@@ -144,6 +144,7 @@ func (w *Worker) executeRun(runID string) {
 	internalLog := logger.NewLogger(logger.ErrorLevel)
 	execErr := executor.Start(executor.StartConfig{
 		ConfigFilePath: run.PlanPath,
+		VarsFilePaths:  run.VarsFiles,
 	}, internalLog, publisher)
 
 	// CRITICAL ORDER: drain publisher → close publisher → close sink → write

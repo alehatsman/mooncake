@@ -133,8 +133,7 @@ func TestStart_WithVarsFile(t *testing.T) {
 
 	cfg := executor.StartConfig{
 		ConfigFilePath: configPath,
-		VarsFilePath:   varsPath,
-		
+		VarsFilePaths:  []string{varsPath},
 	}
 
 	testLogger := logger.NewTestLogger()

@@ -243,15 +243,15 @@ func TestStartConfig(t *testing.T) {
 	// Test that executor.StartConfig struct can be created
 	config := executor.StartConfig{
 		ConfigFilePath: "/tmp/config.yml",
-		VarsFilePath:   "/tmp/vars.yml",
+		VarsFilePaths:  []string{"/tmp/vars.yml"},
 		SudoPass:       "password",
 	}
 
 	if config.ConfigFilePath != "/tmp/config.yml" {
 		t.Errorf("ConfigFilePath = %v, want '/tmp/config.yml'", config.ConfigFilePath)
 	}
-	if config.VarsFilePath != "/tmp/vars.yml" {
-		t.Errorf("VarsFilePath = %v, want '/tmp/vars.yml'", config.VarsFilePath)
+	if len(config.VarsFilePaths) != 1 || config.VarsFilePaths[0] != "/tmp/vars.yml" {
+		t.Errorf("VarsFilePaths = %v, want ['/tmp/vars.yml']", config.VarsFilePaths)
 	}
 	if config.SudoPass != "password" {
 		t.Errorf("SudoPass = %v, want 'password'", config.SudoPass)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -604,6 +605,8 @@ func TestRunCommandFlags(t *testing.T) {
 		switch f := flag.(type) {
 		case *cli.StringFlag:
 			flagNames[f.Name] = true
+		case *cli.StringSliceFlag:
+			flagNames[f.Name] = true
 		case *cli.BoolFlag:
 			flagNames[f.Name] = true
 		case *cli.IntFlag:
@@ -644,6 +647,8 @@ func TestPlanCommandFlags(t *testing.T) {
 	for _, flag := range planCmd.Flags {
 		switch f := flag.(type) {
 		case *cli.StringFlag:
+			flagNames[f.Name] = true
+		case *cli.StringSliceFlag:
 			flagNames[f.Name] = true
 		case *cli.BoolFlag:
 			flagNames[f.Name] = true
@@ -713,6 +718,8 @@ func TestValidateCommandFlags(t *testing.T) {
 		switch f := flag.(type) {
 		case *cli.StringFlag:
 			flagNames[f.Name] = true
+		case *cli.StringSliceFlag:
+			flagNames[f.Name] = true
 		}
 	}
 
@@ -733,6 +740,8 @@ func TestPresetsCommandFlags(t *testing.T) {
 	for _, flag := range cmd.Flags {
 		switch f := flag.(type) {
 		case *cli.StringFlag:
+			flagNames[f.Name] = true
+		case *cli.StringSliceFlag:
 			flagNames[f.Name] = true
 		case *cli.BoolFlag:
 			flagNames[f.Name] = true
@@ -769,6 +778,8 @@ func TestPresetsInstallSubcommandFlags(t *testing.T) {
 		switch f := flag.(type) {
 		case *cli.StringFlag:
 			flagNames[f.Name] = true
+		case *cli.StringSliceFlag:
+			flagNames[f.Name] = true
 		case *cli.BoolFlag:
 			flagNames[f.Name] = true
 		}
@@ -803,6 +814,8 @@ func TestPresetsUninstallSubcommandFlags(t *testing.T) {
 	for _, flag := range uninstallCmd.Flags {
 		switch f := flag.(type) {
 		case *cli.StringFlag:
+			flagNames[f.Name] = true
+		case *cli.StringSliceFlag:
 			flagNames[f.Name] = true
 		case *cli.BoolFlag:
 			flagNames[f.Name] = true
@@ -1402,7 +1415,7 @@ func TestPlanCommandInvalidVarsFile(t *testing.T) {
 				Name: "plan",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "config", Required: true},
-					&cli.StringFlag{Name: "vars"},
+					&cli.StringSliceFlag{Name: "vars"},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
 				Action: planCommand,
@@ -1414,6 +1427,77 @@ func TestPlanCommandInvalidVarsFile(t *testing.T) {
 
 	if err == nil {
 		t.Errorf("planCommand with invalid vars file should return error")
+	}
+}
+
+// TestPlanCommand_MultipleVarsFiles verifies that --vars accepts multiple
+// files and that they're merged in order (later wins). Before the fix to
+// make --vars a StringSliceFlag, only the last -v was honored — earlier
+// files were silently dropped.
+func TestPlanCommand_MultipleVarsFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yml")
+	outputPath := filepath.Join(tmpDir, "plan.json")
+	varsA := filepath.Join(tmpDir, "a.yml")
+	varsB := filepath.Join(tmpDir, "b.yml")
+
+	if err := os.WriteFile(configPath, []byte(`steps:
+  - name: noop
+    shell: "true"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(varsA, []byte("ONLY_A: from_a\nSHARED: a_value\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(varsB, []byte("ONLY_B: from_b\nSHARED: b_value\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	app := &cli.App{
+		Name: "test",
+		Commands: []*cli.Command{
+			{
+				Name: "plan",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "config", Required: true},
+					&cli.StringSliceFlag{Name: "vars"},
+					&cli.StringFlag{Name: "output"},
+					&cli.StringFlag{Name: "format", Value: "json"},
+				},
+				Action: planCommand,
+			},
+		},
+	}
+
+	err := app.Run([]string{
+		"test", "plan",
+		"--config", configPath,
+		"--vars", varsA,
+		"--vars", varsB,
+		"--output", outputPath,
+	})
+	if err != nil {
+		t.Fatalf("planCommand returned: %v", err)
+	}
+
+	// Read the saved plan and verify the merged vars landed in InitialVars.
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read plan: %v", err)
+	}
+	body := string(data)
+	for _, want := range []string{
+		`"ONLY_A": "from_a"`,
+		`"ONLY_B": "from_b"`,
+		`"SHARED": "b_value"`, // b wins (later)
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("plan output missing %q\nfull output:\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, `"SHARED": "a_value"`) {
+		t.Error("plan output kept a's SHARED value; b should have overridden it")
 	}
 }
 
