@@ -14,18 +14,25 @@ import (
 	"github.com/alehatsman/mooncake/internal/mcp"
 )
 
-// Server is a unix-socket HTTP daemon exposing mooncake over `/v1/...`.
+// Server is an HTTP daemon exposing mooncake over `/v1/...`. It always
+// listens on a unix socket (filesystem-perm-gated). When `cfg.BindAddr` is
+// set, it additionally listens on a TCP address protected by bearer-token
+// auth.
 type Server struct {
 	cfg       Config
 	log       *slog.Logger
 	version   string
+	hostname  string
 	startedAt time.Time
 
-	mcp      *mcp.Server
-	store    *Store
-	worker   *Worker
-	httpSrv  *http.Server
-	listener net.Listener
+	mcp    *mcp.Server
+	store  *Store
+	worker *Worker
+
+	unixSrv *http.Server
+	unixLn  net.Listener
+	tcpSrv  *http.Server
+	tcpLn   net.Listener
 }
 
 func New(cfg Config, log *slog.Logger, version string) (*Server, error) {
@@ -58,10 +65,20 @@ func New(cfg Config, log *slog.Logger, version string) (*Server, error) {
 
 	worker := NewWorker(store, log)
 
+	// Cache hostname at startup. os.Hostname() is cheap, but caching makes
+	// the version handler trivial and dodges a rare-but-possible error path
+	// inside a request handler.
+	hn, err := os.Hostname()
+	if err != nil {
+		log.Warn("read hostname", "err", err)
+		hn = ""
+	}
+
 	return &Server{
 		cfg:       cfg,
 		log:       log,
 		version:   version,
+		hostname:  hn,
 		startedAt: time.Now(),
 		mcp:       mcpSrv,
 		store:     store,
@@ -69,72 +86,122 @@ func New(cfg Config, log *slog.Logger, version string) (*Server, error) {
 	}, nil
 }
 
-// Serve binds the unix socket and serves HTTP until ctx is canceled. The
-// caller is responsible for cancelling ctx (typically on SIGTERM/SIGINT) and
-// then waiting for Serve to return.
+// Serve binds the configured listeners and serves HTTP until ctx is
+// canceled. The unix socket is always opened. The TCP listener is opened
+// only when cfg.BindAddr is set, and is bearer-auth-gated.
+//
+// The caller is responsible for cancelling ctx (typically on SIGTERM/SIGINT)
+// and then waiting for Serve to return.
 func (s *Server) Serve(ctx context.Context) error {
 	if err := s.claimSocket(); err != nil {
 		return err
 	}
 	go s.worker.Run()
 
-	ln, err := net.Listen("unix", s.cfg.SocketPath)
+	unixLn, err := net.Listen("unix", s.cfg.SocketPath)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", s.cfg.SocketPath, err)
 	}
 	if err := os.Chmod(s.cfg.SocketPath, 0o600); err != nil {
-		_ = ln.Close()
+		_ = unixLn.Close()
 		return fmt.Errorf("chmod socket: %w", err)
 	}
-	s.listener = ln
-
-	mux := s.routes()
-	handler := requestIDMiddleware(
-		recoverMiddleware(s.log)(
-			accessLogMiddleware(s.log)(mux),
-		),
-	)
-
-	s.httpSrv = &http.Server{
-		Handler:           handler,
+	s.unixLn = unixLn
+	s.unixSrv = &http.Server{
+		Handler:           s.buildHandler(false),
 		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	if s.cfg.BindAddr != "" {
+		tcpLn, err := net.Listen("tcp", s.cfg.BindAddr)
+		if err != nil {
+			_ = unixLn.Close()
+			_ = os.Remove(s.cfg.SocketPath)
+			return fmt.Errorf("listen %s: %w", s.cfg.BindAddr, err)
+		}
+		s.tcpLn = tcpLn
+		s.tcpSrv = &http.Server{
+			Handler:           s.buildHandler(true),
+			ReadHeaderTimeout: 10 * time.Second,
+		}
 	}
 
 	s.log.Info("agentd listening",
 		"socket", s.cfg.SocketPath,
+		"bind", s.cfg.BindAddr,
 		"state_dir", s.cfg.StateDir,
+		"synced_root", s.cfg.SyncedRoot(),
 		"system_mode", s.cfg.SystemMode,
+		"hostname", s.hostname,
 		"pid", os.Getpid(),
 	)
 
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
 	go func() {
-		err := s.httpSrv.Serve(ln)
+		err := s.unixSrv.Serve(unixLn)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- err
+			errCh <- fmt.Errorf("unix serve: %w", err)
 			return
 		}
 		errCh <- nil
 	}()
+	if s.tcpSrv != nil {
+		go func() {
+			err := s.tcpSrv.Serve(s.tcpLn)
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errCh <- fmt.Errorf("tcp serve: %w", err)
+				return
+			}
+			errCh <- nil
+		}()
+	}
 
 	select {
 	case <-ctx.Done():
 		return s.shutdown()
 	case err := <-errCh:
+		// One listener errored — bring everything down.
+		_ = s.shutdown()
 		return err
 	}
+}
+
+// buildHandler composes the middleware stack for a listener. requireAuth=true
+// is used on the TCP listener; the unix socket relies on filesystem perms
+// (0600) instead.
+func (s *Server) buildHandler(requireAuth bool) http.Handler {
+	h := http.Handler(s.routes())
+	h = accessLogMiddleware(s.log)(h)
+	h = recoverMiddleware(s.log)(h)
+	if requireAuth {
+		h = bearerAuthMiddleware(s.cfg.Token)(h)
+	}
+	// requestIDMiddleware outermost so panics and access logs carry the id.
+	h = requestIDMiddleware(h)
+	return h
 }
 
 func (s *Server) shutdown() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	s.log.Info("agentd shutting down")
-	err := s.httpSrv.Shutdown(shutdownCtx)
+
+	var errs []error
+	if s.unixSrv != nil {
+		if err := s.unixSrv.Shutdown(shutdownCtx); err != nil {
+			errs = append(errs, fmt.Errorf("unix shutdown: %w", err))
+		}
+	}
+	if s.tcpSrv != nil {
+		if err := s.tcpSrv.Shutdown(shutdownCtx); err != nil {
+			errs = append(errs, fmt.Errorf("tcp shutdown: %w", err))
+		}
+	}
 	// Drain in-flight runs. v1 has no cancellation, so this may block until
 	// the current plan finishes.
 	s.worker.Shutdown()
 	_ = os.Remove(s.cfg.SocketPath)
-	return err
+	return errors.Join(errs...)
 }
 
 // claimSocket implements the standard "is anyone home?" dance: if the socket
@@ -173,6 +240,8 @@ func (s *Server) routes() *http.ServeMux {
 	mux.HandleFunc("GET /v1/runs", s.listRunsHandler)
 	mux.HandleFunc("GET /v1/runs/{id}", s.getRunHandler)
 	mux.HandleFunc("GET /v1/runs/{id}/events", s.runEventsHandler)
+	mux.HandleFunc("PUT /v1/files", s.putFileHandler)
+	mux.HandleFunc("HEAD /v1/files", s.headFileHandler)
 	mux.HandleFunc("/", notFoundHandler)
 	return mux
 }

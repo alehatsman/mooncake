@@ -99,7 +99,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestVersionEndpoint(t *testing.T) {
-	_, client, stop := startTestServer(t)
+	cfg, client, stop := startTestServer(t)
 	defer stop()
 
 	resp, err := client.Get("http://unix/v1/version")
@@ -120,6 +120,12 @@ func TestVersionEndpoint(t *testing.T) {
 	}
 	if body.SystemMode {
 		t.Errorf("system_mode should be false in test")
+	}
+	if body.Hostname == "" {
+		t.Errorf("hostname is empty; expected os.Hostname() to populate it")
+	}
+	if body.SyncedRoot != filepath.Join(cfg.StateDir, "synced") {
+		t.Errorf("synced_root = %q, want %q", body.SyncedRoot, filepath.Join(cfg.StateDir, "synced"))
 	}
 }
 

@@ -98,8 +98,15 @@ cmdaemon manages everything at and below the OS (hardware, BMC, provisioning,
 WLM). Mooncake manages everything above the OS (software state, config, tools).
 They are complementary, not competing.
 
-**No numbered specs yet** — see `epics/epic-cluster-management.md` for the
-full breakdown. Proposed sub-epics:
+**Two flavors, same kernel:**
+
+- **Enterprise** (`epics/epic-cluster-management.md`) — central hub, RBAC,
+  drift heatmaps, AI remediation. For platform teams running 50–10k nodes.
+- **Personal Fleet** (`epics/epic-personal-fleet.md`) — peer-to-peer, no hub,
+  trust-on-first-use. For solo devs running their own 1–10 boxes. The DX
+  funnel that gets devs onto Mooncake before they bring it to work.
+
+**Enterprise sub-epics:**
 
 | Sub-epic | Topic |
 |---|---|
@@ -109,9 +116,20 @@ full breakdown. Proposed sub-epics:
 | C4 | AI-assisted remediation — hub + agent loop generates fix plans on drift |
 | C5 | RBAC + approval gates — who can run what on what nodes |
 
-**Key architectural decision before speccing:** where does the hub live? Same
-binary (`mooncake hub`)? Separate service? SQLite first, Postgres when
-multi-tenant? Decide before writing C1 spec.
+**Personal-fleet specs** (under `specs/personal-fleet/`):
+
+| Spec | Topic |
+|---|---|
+| [39](specs/personal-fleet/spec-39-fleet-transport-and-sync.md) (P1) | agentd network transport + file sync to `<state_dir>/synced/` + `fleet apply` with multiplexed SSE logs |
+| [40](specs/personal-fleet/spec-40-ssh-bootstrap-transport.md) (P2) | SSH bootstrap transport — install mooncake + agentd on a fresh box |
+| [41](specs/personal-fleet/spec-41-fleet-discovery.md) (P3) | Discovery — mDNS + SSH-config import + static `peers.toml` |
+| [42](specs/personal-fleet/spec-42-fleet-status-and-logs.md) (P4) | `mooncake fleet status` / `logs` / `facts` |
+| [43](specs/personal-fleet/spec-43-fleet-bootstrap-ux.md) (P5) | `mooncake fleet bootstrap` + `pair` — wraps spec-40 |
+| [44](specs/personal-fleet/spec-44-per-host-overlays-and-tags.md) (P6) | Per-host overlays + tag selectors |
+
+**Key architectural decision before speccing the enterprise side:** where does
+the hub live? Same binary (`mooncake hub`)? Separate service? SQLite first,
+Postgres when multi-tenant? Decide before writing C1 spec.
 
 ---
 
@@ -124,14 +142,16 @@ and 3.
 **Audience:** Individual developers managing personal machines, dotfiles, dev
 environments.
 
-**No active specs** — this stream is mostly UX and CLI work, not new actions.
+**Flagship epic:** [`epics/epic-personal-fleet.md`](epics/epic-personal-fleet.md)
+— "multi-machine sync" made concrete: `mooncake fleet apply` across your own
+1–10 boxes, interleaved logs in your terminal, peer-to-peer, no hub. Sits at
+the intersection of Stream 4 (this stream) and Stream 3 (fleet plumbing).
 
-**Future work (not yet specced):**
+**Other future work (not yet specced):**
 
 - `mooncake doctor` — interactive: "your nvim config is 14 days stale vs git; pull?"
 - `mooncake init dotfiles` — scaffolded repo + first run
 - Drift detection UX — "your dev box no longer matches your committed config"
-- Multi-machine sync — same config across laptop / desktop / VPS with per-host overrides
 - TUI dashboard — what's installed, what's missing, what's drifted
 - `mooncake share <preset>` — push a preset to the marketplace
 

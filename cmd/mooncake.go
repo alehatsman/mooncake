@@ -806,6 +806,7 @@ func createApp() *cli.App {
 			historyCommand(),
 			mcpCommand(),
 			agentdCommand(),
+			fleetCommand(),
 			stepCommand(),
 			toolCommand(),
 			{

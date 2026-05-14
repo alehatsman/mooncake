@@ -3,6 +3,7 @@ package agentd
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"log/slog"
 	"net/http"
@@ -83,6 +84,27 @@ func accessLogMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 				"bytes", rec.bytes,
 				"duration_ms", time.Since(start).Milliseconds(),
 			)
+		})
+	}
+}
+
+// bearerAuthMiddleware rejects requests whose Authorization header does not
+// match `Bearer <token>` exactly. Constant-time compare keeps the response
+// time independent of where the mismatch occurs in the string.
+//
+// Used on the TCP listener only. The unix socket relies on filesystem
+// permissions (0600) for access control.
+func bearerAuthMiddleware(token string) func(http.Handler) http.Handler {
+	expected := []byte("Bearer " + token)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			got := []byte(r.Header.Get("Authorization"))
+			if subtle.ConstantTimeCompare(got, expected) != 1 {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="mooncake-agentd"`)
+				writeError(w, http.StatusUnauthorized, "unauthorized", "bearer token required")
+				return
+			}
+			next.ServeHTTP(w, r)
 		})
 	}
 }

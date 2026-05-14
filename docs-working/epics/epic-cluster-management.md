@@ -2,6 +2,12 @@
 
 > Status: brainstorming / future epic. Not a roadmap. Iterate here before
 > moving to formal specs under `docs-working/`.
+>
+> **Sibling epic:** [`epic-personal-fleet.md`](epic-personal-fleet.md) covers
+> the same primitives at the *solo-developer* scale (1–10 personal machines,
+> peer-to-peer, no hub). This doc is the *platform-team* version (central hub,
+> RBAC, drift heatmaps, AI remediation). They share agentd and the wire
+> protocol; they diverge on control plane and trust model.
 
 ---
 
