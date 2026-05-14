@@ -48,6 +48,25 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). os.service
+// always declares Sudo: every supported backend (systemd via systemctl,
+// launchd via launchctl, Windows SCM via sc.exe / Set-Service) needs
+// elevated privileges to start/stop/enable units and reload
+// configuration. Unconditional because the action TYPE is the
+// indicator — even a status-only `state: started` check on a system
+// service requires the right to introspect via the managing daemon.
+//
+// Network is false: service-manager operations are all local.
+// FilesystemWrite is empty: unit-file mutations go to
+// /etc/systemd/system/, ~/Library/LaunchAgents/, etc. — paths the
+// user doesn't address directly via step.OsService.Path (which
+// doesn't exist). RequiredBinaries left empty because the handler
+// detects the backend; demanding a specific binary on PATH would
+// break cross-platform support.
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{Sudo: true}
+}
+
 // Validate validates the service action configuration.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.OsService == nil {
