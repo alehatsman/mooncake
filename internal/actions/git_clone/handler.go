@@ -81,7 +81,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return planResult(state, repo, ref, g.Update), nil
 	}
 
-	return apply(ctx, g, repo, ref, dest, state)
+	env, cleanup, err := credentialEnv(ctx, g.Credentials)
+	if err != nil {
+		return nil, fmt.Errorf("git.clone: credentials: %w", err)
+	}
+	defer cleanup()
+
+	return apply(ctx, g, repo, ref, dest, state, env)
 }
 
 // destState describes whether the dest path is missing, a non-git
@@ -110,7 +116,7 @@ func inspectDest(dest string) (destState, error) {
 		return destState{exists: true, isGitDir: false}, nil
 	}
 
-	sha, err := captureGit(dest, "rev-parse", "HEAD")
+	sha, err := captureGit(dest, nil, "rev-parse", "HEAD")
 	if err != nil {
 		return destState{exists: true, isGitDir: true}, nil
 	}
@@ -140,7 +146,7 @@ func planResult(state destState, repo, ref string, update bool) *executor.Result
 	return r
 }
 
-func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, state destState) (actions.Result, error) {
+func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, state destState, env []string) (actions.Result, error) {
 	result := executor.NewResult()
 	result.Data = map[string]any{
 		"repo": repo,
@@ -154,7 +160,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 
 	switch {
 	case !state.exists:
-		if err := runClone(ctx, g, repo, ref, dest); err != nil {
+		if err := runClone(ctx, g, repo, ref, dest, env); err != nil {
 			result.SetFailed(true)
 			return result, err
 		}
@@ -163,7 +169,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 		// dest is already a git repo, update disabled — no-op.
 		result.SetChanged(false)
 	default:
-		changed, err := runUpdate(g, ref, dest, state.headSHA)
+		changed, err := runUpdate(g, ref, dest, state.headSHA, env)
 		if err != nil {
 			result.SetFailed(true)
 			return result, err
@@ -171,7 +177,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 		result.SetChanged(changed)
 	}
 
-	finalSHA, err := captureGit(dest, "rev-parse", "HEAD")
+	finalSHA, err := captureGit(dest, nil, "rev-parse", "HEAD")
 	if err != nil {
 		return result, fmt.Errorf("git.clone: read final sha: %w", err)
 	}
@@ -182,7 +188,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 	return result, nil
 }
 
-func runClone(ctx actions.Context, g *config.GitClone, repo, ref, dest string) error {
+func runClone(ctx actions.Context, g *config.GitClone, repo, ref, dest string, env []string) error {
 	args := []string{"clone"}
 	if g.Depth > 0 {
 		args = append(args, "--depth", strconv.Itoa(g.Depth))
@@ -193,19 +199,19 @@ func runClone(ctx actions.Context, g *config.GitClone, repo, ref, dest string) e
 	args = append(args, repo, dest)
 
 	ctx.GetLogger().Debugf("git.clone: %s", strings.Join(args, " "))
-	if err := runGit("", args...); err != nil {
+	if err := runGit("", env, args...); err != nil {
 		return fmt.Errorf("git.clone: %w", err)
 	}
 
 	if ref != "" {
-		if err := checkout(dest, ref, g.Force); err != nil {
+		if err := checkout(dest, ref, g.Force, env); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func runUpdate(g *config.GitClone, ref, dest, beforeSHA string) (bool, error) {
+func runUpdate(g *config.GitClone, ref, dest, beforeSHA string, env []string) (bool, error) {
 	if !g.Force {
 		dirty, err := isDirty(dest)
 		if err != nil {
@@ -220,59 +226,70 @@ func runUpdate(g *config.GitClone, ref, dest, beforeSHA string) (bool, error) {
 	if g.Depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(g.Depth))
 	}
-	if err := runGit(dest, fetchArgs...); err != nil {
+	if err := runGit(dest, env, fetchArgs...); err != nil {
 		return false, fmt.Errorf("git.clone: fetch: %w", err)
 	}
 
 	if ref != "" {
-		if err := checkout(dest, ref, g.Force); err != nil {
+		if err := checkout(dest, ref, g.Force, env); err != nil {
 			return false, err
 		}
 	} else {
 		// No ref pinned — fast-forward current branch from upstream.
-		if err := runGit(dest, "merge", "--ff-only", "@{u}"); err != nil {
+		if err := runGit(dest, env, "merge", "--ff-only", "@{u}"); err != nil {
 			return false, fmt.Errorf("git.clone: fast-forward: %w", err)
 		}
 	}
 
 	if g.RecurseSubmodules {
-		if err := runGit(dest, "submodule", "update", "--init", "--recursive"); err != nil {
+		if err := runGit(dest, env, "submodule", "update", "--init", "--recursive"); err != nil {
 			return false, fmt.Errorf("git.clone: submodule update: %w", err)
 		}
 	}
 
-	afterSHA, err := captureGit(dest, "rev-parse", "HEAD")
+	afterSHA, err := captureGit(dest, nil, "rev-parse", "HEAD")
 	if err != nil {
 		return false, fmt.Errorf("git.clone: read HEAD after update: %w", err)
 	}
 	return strings.TrimSpace(afterSHA) != beforeSHA, nil
 }
 
-func checkout(dest, ref string, force bool) error {
+func checkout(dest, ref string, force bool, env []string) error {
 	args := []string{"checkout"}
 	if force {
 		args = append(args, "--force")
 	}
 	args = append(args, ref)
-	if err := runGit(dest, args...); err != nil {
+	if err := runGit(dest, env, args...); err != nil {
 		return fmt.Errorf("git.clone: checkout %s: %w", ref, err)
 	}
 	return nil
 }
 
 func isDirty(dest string) (bool, error) {
-	out, err := captureGit(dest, "status", "--porcelain")
+	out, err := captureGit(dest, nil, "status", "--porcelain")
 	if err != nil {
 		return false, fmt.Errorf("git.clone: status: %w", err)
 	}
 	return strings.TrimSpace(out) != "", nil
 }
 
-func runGit(cwd string, args ...string) error {
+// gitRunner is overridable by tests so credential-env wiring can be
+// inspected without requiring a real git invocation.
+var gitRunner = realRunGit
+
+func runGit(cwd string, env []string, args ...string) error {
+	return gitRunner(cwd, env, args)
+}
+
+func realRunGit(cwd string, env []string, args []string) error {
 	// #nosec G204 -- args are validated/static + user-supplied repo/ref; git is the binary we shell to.
 	cmd := exec.Command("git", args...)
 	if cwd != "" {
 		cmd.Dir = cwd
+	}
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
 	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -286,11 +303,14 @@ func runGit(cwd string, args ...string) error {
 	return nil
 }
 
-func captureGit(cwd string, args ...string) (string, error) {
+func captureGit(cwd string, env []string, args ...string) (string, error) {
 	// #nosec G204 -- internal git invocation; args are static commands.
 	cmd := exec.Command("git", args...)
 	if cwd != "" {
 		cmd.Dir = cwd
+	}
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
 	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

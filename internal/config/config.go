@@ -334,13 +334,27 @@ type Download struct {
 // GitClone represents a git clone-or-update operation in a configuration step.
 // Idempotent: if dest is already a git repo at the requested ref, no change.
 type GitClone struct {
-	Repo              string `yaml:"repo" json:"repo"`                                                     // Remote URL (required)
-	Dest              string `yaml:"dest" json:"dest" plan:"path"`                                         // Local destination path (required)
-	Ref               string `yaml:"ref" json:"ref,omitempty"`                                             // Branch, tag, or commit SHA (optional; default: remote HEAD)
-	Depth             int    `yaml:"depth" json:"depth,omitempty"`                                         // Shallow clone depth (0 = full)
-	RecurseSubmodules bool   `yaml:"recurse_submodules" json:"recurse_submodules,omitempty"`               // Init + update submodules
-	Update            bool   `yaml:"update" json:"update,omitempty"`                                       // If dest exists: fetch + checkout ref (default false → noop)
-	Force             bool   `yaml:"force" json:"force,omitempty"`                                         // Discard local changes when updating (git reset --hard)
+	Repo              string          `yaml:"repo" json:"repo"`                                       // Remote URL (required)
+	Dest              string          `yaml:"dest" json:"dest" plan:"path"`                           // Local destination path (required)
+	Ref               string          `yaml:"ref" json:"ref,omitempty"`                               // Branch, tag, or commit SHA (optional; default: remote HEAD)
+	Depth             int             `yaml:"depth" json:"depth,omitempty"`                           // Shallow clone depth (0 = full)
+	RecurseSubmodules bool            `yaml:"recurse_submodules" json:"recurse_submodules,omitempty"` // Init + update submodules
+	Update            bool            `yaml:"update" json:"update,omitempty"`                         // If dest exists: fetch + checkout ref (default false → noop)
+	Force             bool            `yaml:"force" json:"force,omitempty"`                           // Discard local changes when updating (git reset --hard)
+	Credentials       *GitCredentials `yaml:"credentials" json:"credentials,omitempty"`               // Auth for the remote; values are redacted in logs
+}
+
+// GitCredentials carries optional authentication for git network
+// operations. Username + password drive HTTPS auth via a temporary
+// GIT_ASKPASS helper; ssh_key drives SSH auth via GIT_SSH_COMMAND with
+// a tmpfile (mode 0600) for the key. Inline key content (starting with
+// `-----BEGIN`) is written to a tempfile; otherwise the value is
+// treated as a filesystem path to an existing key.
+type GitCredentials struct {
+	Username   string `yaml:"username" json:"username,omitempty"`     // HTTPS username
+	Password   string `yaml:"password" json:"password,omitempty"`     // HTTPS password / personal-access token; redacted
+	SSHKey     string `yaml:"ssh_key" json:"ssh_key,omitempty"`       // SSH private key — path or inline PEM; redacted when inline
+	SSHOptions string `yaml:"ssh_options" json:"ssh_options,omitempty"` // Extra ssh options appended to GIT_SSH_COMMAND (e.g. "-o StrictHostKeyChecking=no")
 }
 
 // GitCheckout represents a git checkout operation against an existing repo.

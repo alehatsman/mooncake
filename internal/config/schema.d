@@ -288,6 +288,12 @@ export interface GitCheckoutAction {
  * @category network
  */
 export interface GitCloneAction {
+  credentials?: {
+    password: string;
+    ssh_key: string;
+    ssh_options: string;
+    username: string;
+  };
   depth?: number;
   dest: string;
   force?: boolean;
