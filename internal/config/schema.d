@@ -697,6 +697,17 @@ export interface TextPatchAction {
 }
 
 /**
+ * Apply structural section/key edits to an INI-style configuration file
+ * @category file
+ */
+export interface TextPatchIniAction {
+  backup?: boolean;
+  delete?: string[];
+  path: string;
+  set?: Record<string, any>;
+}
+
+/**
  * Replace text in files using literal or regex patterns
  * @category file
  */
@@ -1009,6 +1020,10 @@ export interface Step {
    * Apply unified diff patches to files
    */
   "text.patch"?: TextPatchAction;
+  /**
+   * Apply structural section/key edits to an INI-style configuration file
+   */
+  "text.patch.ini"?: TextPatchIniAction;
   /**
    * Replace text in files using literal or regex patterns
    */

@@ -116,7 +116,7 @@ linters:
         linters: [revive]
         text: "var-naming: avoid meaningless package names"
 
-      - path: internal/actions/(file_replace|file_insert|file_delete_range|file_patch_apply|repo_search|repo_tree|repo_apply_patchset|artifact_capture|artifact_validate|include_vars|wait_port|wait_http|wait_file|wait_command|git_checkout|git_clone|git_config|text_line|os_user|os_ssh_key|os_cron|os_sysctl|pkg_repo)/
+      - path: internal/actions/(file_replace|file_insert|file_delete_range|file_patch_apply|repo_search|repo_tree|repo_apply_patchset|artifact_capture|artifact_validate|include_vars|wait_port|wait_http|wait_file|wait_command|git_checkout|git_clone|git_config|text_line|text_patch_ini|os_user|os_ssh_key|os_cron|os_sysctl|pkg_repo)/
         linters: [revive, staticcheck]
         text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names|ST1000:)"
 

@@ -473,6 +473,7 @@ var actionStructByName = map[string]any{
 	"text.insert":       &config.FileInsert{},
 	"text.delete_range": &config.FileDeleteRange{},
 	"text.patch":        &config.FilePatchApply{},
+	"text.patch.ini":    &config.TextPatchINI{},
 	"repo.search":       &config.RepoSearch{},
 	"repo.tree":         &config.RepoTree{},
 	"repo.patch":        &config.RepoApplyPatchset{},
