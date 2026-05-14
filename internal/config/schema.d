@@ -354,6 +354,16 @@ export interface OsCronAction {
 }
 
 /**
+ * Manage an /etc/fstab entry and the matching live mount
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsMountAction {
+}
+
+/**
  * Manage services across platforms (systemd, launchd, Windows)
  * 
  * @platforms linux, darwin, windows
@@ -1017,6 +1027,10 @@ export interface Step {
    * Manage a cron job via /etc/cron.d/<name>
    */
   "os.cron"?: OsCronAction;
+  /**
+   * Manage an /etc/fstab entry and the matching live mount
+   */
+  "os.mount"?: OsMountAction;
   /**
    * Manage services across platforms (systemd, launchd, Windows)
    */

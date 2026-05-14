@@ -28,6 +28,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/git_config"
 	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_cron"
+	_ "github.com/alehatsman/mooncake/internal/actions/os_mount"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_ssh_key"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_sysctl"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_systemd"
