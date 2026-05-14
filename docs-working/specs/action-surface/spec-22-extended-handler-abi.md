@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 5-8 (Reverse, Cost, MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slice A — `file.write` create-only reverse works end-to-end, enough to give spec-30's transaction layer a concrete consumer. Slices B–F (overwrite/delete, links, file.copy/template, text.*, categoricals) drafted with explicit errors so transaction implementers see what's coming. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -365,8 +365,42 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
    - ⏳ `--diff structural` CLI flag for text-mode stdout rendering.
      The JSON path already exposes Diff fully; this flag is the
      "human inspecting plan output" surface and is a small follow-up.
-5. **Phase 5** — implement `Reverse()` on the same handlers. Snapshot-
-   integration tests: apply then reverse should restore prior state.
+5. **Phase 5** 🟡 — implement `Reverse()` on the same handlers.
+   Sliced because reverse correctness is per-state-shape, not
+   per-handler. Slice A landed for `file.write` (create-only) so
+   the spec-30 transaction layer has something to integrate against
+   while later slices fill in the rest.
+   - ✅ Slice A — `file.write` create-only reverse. `Run` captures
+     pre-state via `FileReverseInfo{Existed, Kind, Mode}` into
+     `executor.Result.ReverseData` (apply-mode only; plan-mode
+     stays untouched). When `Existed=false` and state is `file` or
+     `directory`, `Reverse` returns a `state=absent` step against
+     the same path. Apply-reverse-verify cycles tested for both
+     shapes. All other state shapes return an explicit error
+     pointing at the slice that will cover them — no silent
+     "not reversible" surprises. Compile-time assert
+     `var _ actions.Reverser = (*Handler)(nil)` keeps the contract.
+   - ⏳ Slice B — content-snapshot integration for `file.write`
+     overwrite + delete + perms/touch. Adds a `Content []byte`
+     field to `FileReverseInfo` (gated by a size limit) so the
+     reverse step can rewrite the original bytes / re-create the
+     deleted file / restore the original mode.
+   - ⏳ Slice C — link/hardlink family for `file.write`.
+   - ⏳ Slice D — `file.template`, `file.copy`. Same content-snapshot
+     approach as Slice B but the source-vs-content asymmetry means
+     each handler owns its own capture path.
+   - ⏳ Slice E — `text.*` handlers. Capture the pre-replace lines /
+     pre-insert offset so reverse can splice the original window
+     back in. Coarser fallback (full file Before content) is
+     acceptable for the first cut.
+   - ⏳ Slice F — categorical handlers (`pkg`, `os.service`,
+     `file.download`, `file.unarchive`). Each needs a custom
+     ReverseData payload (pre-install package version, pre-state
+     `enabled`/`active`, the downloaded path to delete, the
+     extracted file list). `Reverse` for pkg specifically must
+     decide whether "was already installed pre-apply" means "leave
+     it alone on reverse" — that's the design question called out
+     in the streams.md note.
 6. **Phase 6** — implement `Cost()` on the same handlers. Surface in
    recap + JSON.
 7. **Phase 7** — MCP server exposes Diff/Cost/Permissions in plan tool

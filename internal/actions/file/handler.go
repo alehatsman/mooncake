@@ -871,6 +871,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		state = actionTypeFile
 	}
 
+	// Capture pre-state for Reverse() (spec-22 phase 5a). Apply mode
+	// only — plan mode doesn't mutate, so there is nothing to reverse.
+	// Must run BEFORE runState so the recorded snapshot reflects the
+	// world pre-mutation.
+	if ctx.Mode() == actions.ModeApply {
+		result.ReverseData = CaptureReverseInfo(renderedPath, state)
+	}
+
 	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
 	p := ctx.Effects()
 	opts := actions.PerformerOpts{Become: step.ShouldBecome()}

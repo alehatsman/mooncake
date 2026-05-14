@@ -83,6 +83,22 @@ type Result struct {
 	// Only populated in ModePlan. Not serialised into registered results.
 	Detail any `json:"-"`
 
+	// ReverseData holds action-specific apply-time state captured for
+	// later use by the handler's Reverse() method (spec-22 phase 5).
+	// Typically populated in ModeApply BEFORE the mutation runs so
+	// post-apply Reverse can construct an inverse step from the
+	// pre-state. Parallel to Detail rather than overloading it —
+	// Detail is plan-time output (ContentDiff for `--diff`),
+	// ReverseData is apply-time capture, distinct lifetimes and
+	// consumers.
+	//
+	// Not serialised into registered results because the captured
+	// payload may contain raw bytes (e.g. pre-write file content for
+	// the overwrite reverse case in phase 5b) that don't belong in
+	// JSON output. Lives only for the lifetime of the result object
+	// until a transaction layer or test calls Reverse.
+	ReverseData any `json:"-"`
+
 	// Timing information
 	StartTime time.Time     `json:"start_time,omitempty"`
 	EndTime   time.Time     `json:"end_time,omitempty"`
