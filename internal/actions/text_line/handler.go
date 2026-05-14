@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -146,6 +147,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Reason = plan.reason
 		return result, nil
 	}
+
+	// Capture pre-state for Reverse() (spec-22 phase 5 slice E).
+	// Past the ModePlan return so we only capture when we're truly
+	// about to mutate; ahead of any backup/write below.
+	result.ReverseData = filehandler.CaptureReverseInfo(path, "")
 
 	if tl.Backup && fileExists {
 		if err := os.WriteFile(path+".bak", []byte(original), 0o600); err != nil {
