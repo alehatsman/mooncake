@@ -29,6 +29,18 @@ func agentdCommand() *cli.Command {
 				Usage: "Override the state directory",
 			},
 			&cli.StringFlag{
+				Name:  "bind",
+				Usage: "TCP bind address for fleet access (e.g. 0.0.0.0:7878). Empty disables TCP.",
+			},
+			&cli.StringFlag{
+				Name:  "token-file",
+				Usage: "Bearer-token file path. Generated on first start if missing.",
+			},
+			&cli.Int64Flag{
+				Name:  "max-sync-bytes",
+				Usage: "Per-file size cap for PUT /v1/files (default 100 MiB).",
+			},
+			&cli.StringFlag{
 				Name:  "log-level",
 				Value: "info",
 				Usage: "Log level: debug, info, warn, error",
@@ -49,7 +61,26 @@ func agentdRun(c *cli.Context) error {
 	if v := c.String("state-dir"); v != "" {
 		cfg.StateDir = v
 	}
+	if v := c.String("bind"); v != "" {
+		cfg.BindAddr = v
+	}
+	if v := c.String("token-file"); v != "" {
+		cfg.TokenPath = v
+	}
+	if v := c.Int64("max-sync-bytes"); v > 0 {
+		cfg.MaxSyncBytes = v
+	}
 	cfg.LogLevel = c.String("log-level")
+
+	// Load (or create) the bearer token when TCP is enabled. The unix
+	// listener is gated by filesystem perms and doesn't need it.
+	if cfg.BindAddr != "" {
+		tok, err := agentd.LoadOrCreateToken(cfg.TokenPath)
+		if err != nil {
+			return fmt.Errorf("load bearer token: %w", err)
+		}
+		cfg.Token = tok
+	}
 
 	log, err := newDaemonLogger(cfg.LogLevel)
 	if err != nil {

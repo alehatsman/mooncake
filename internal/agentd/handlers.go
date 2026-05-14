@@ -26,6 +26,14 @@ type versionResponse struct {
 	SystemMode  bool   `json:"system_mode"`
 	QueueDepth  int    `json:"queue_depth"`
 	RunsRunning int    `json:"runs_running"`
+	// Hostname is the daemon's OS hostname, cached at startup. Used by the
+	// controller's discovery / status flows to identify which peer is which
+	// without an extra round-trip.
+	Hostname string `json:"hostname"`
+	// SyncedRoot is the absolute path under which PUT /v1/files writes scope
+	// subtrees (`<state_dir>/synced`). The controller needs this to build
+	// the `plan_path` it submits to POST /v1/runs.
+	SyncedRoot string `json:"synced_root"`
 }
 
 func (s *Server) versionHandler(w http.ResponseWriter, _ *http.Request) {
@@ -37,6 +45,8 @@ func (s *Server) versionHandler(w http.ResponseWriter, _ *http.Request) {
 		SystemMode:  s.cfg.SystemMode,
 		QueueDepth:  queued,
 		RunsRunning: running,
+		Hostname:    s.hostname,
+		SyncedRoot:  s.cfg.SyncedRoot(),
 	})
 }
 
