@@ -189,11 +189,12 @@ func formatEvent(ev transport.Event) string {
 		return "    ✗ " + extractField(ev.Data, "name", "") + ": " +
 			extractField(ev.Data, "error", "(no error message)")
 	case "step.stdout", "step.stderr":
-		txt := extractField(ev.Data, "line", "")
-		if txt == "" {
-			return ev.Type
-		}
-		return "      " + txt
+		// Empty stdout/stderr lines are legitimate output — render them as
+		// an indented blank line, not the literal event-type name. Without
+		// this guard, a `Write-Host ""` on Windows or any tool that emits
+		// blank separators shows up as "[host] step.stdout" instead of
+		// preserving the visual spacing.
+		return "      " + extractField(ev.Data, "line", "")
 	default:
 		if len(ev.Data) > 0 {
 			return ev.Type + " " + string(ev.Data)
