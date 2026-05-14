@@ -1208,6 +1208,10 @@
           "description": "Insert text before or after anchor patterns in files",
           "$ref": "#/definitions/text.insert"
         },
+        "text.line": {
+          "description": "Ensure a line is present or absent in a file (lineinfile-equivalent)",
+          "$ref": "#/definitions/text.line"
+        },
         "text.patch": {
           "description": "Apply unified diff patches to files",
           "$ref": "#/definitions/text.patch"
@@ -1394,6 +1398,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -1559,6 +1568,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -1732,6 +1746,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -1897,6 +1916,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -2070,6 +2094,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -2235,6 +2264,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -2408,6 +2442,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -2573,6 +2612,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -2746,6 +2790,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -2911,6 +2960,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -3084,6 +3138,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -3249,6 +3308,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -3422,6 +3486,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -3587,6 +3656,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -3760,6 +3834,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -3925,6 +4004,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -4098,6 +4182,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -4267,6 +4356,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -4432,6 +4526,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -4612,6 +4711,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -4781,6 +4885,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -4946,6 +5055,185 @@
               {
                 "required": [
                   "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "text.line"
+          ],
+          "properties": {
+            "text.line": {
+              "$ref": "#/definitions/text.line"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
                 ]
               },
               {
@@ -5124,6 +5412,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -5293,6 +5586,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -5458,6 +5756,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -5638,6 +5941,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -5803,6 +6111,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -5976,6 +6289,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -6141,6 +6459,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -6314,6 +6637,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -6479,6 +6807,11 @@
               {
                 "required": [
                   "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
                 ]
               },
               {
@@ -6652,6 +6985,11 @@
               },
               {
                 "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
                   "text.patch"
                 ]
               },
@@ -6783,6 +7121,45 @@
       "x-category": "file",
       "x-supports-dry-run": true,
       "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "text.line": {
+      "type": "object",
+      "description": "Ensure a line is present or absent in a file (lineinfile-equivalent)",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "insert_after": {
+          "type": "string"
+        },
+        "insert_before": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regexp": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
       "x-version": "1.0.0",
       "x-emits-events": [
         "file.updated"

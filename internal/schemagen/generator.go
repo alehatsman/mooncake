@@ -463,6 +463,7 @@ var actionStructByName = map[string]any{
 	"assert":            &config.Assert{},
 	"use":               &config.PresetInvocation{},
 	"log":               &config.PrintAction{},
+	"text.line":         &config.TextLine{},
 	"text.replace":      &config.FileReplace{},
 	"text.insert":       &config.FileInsert{},
 	"text.delete_range": &config.FileDeleteRange{},
