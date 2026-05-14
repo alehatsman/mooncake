@@ -22,22 +22,32 @@ the wow factor.
 
 ---
 
-## Progress snapshot (2026-05-14)
+## Progress snapshot (2026-05-15)
 
-**8 of 14 PRs shipped end-to-end.** Phase A is complete; Phase B is half-done.
+**12 of 14 PRs shipped end-to-end.** Phase A and Phase B are both complete; Phase C is 1/3.
 
 | Status | PRs |
 |---|---|
-| ✅ Shipped | 1, 2, 3, 4, 5, 6, 7, 11 (bootstrap-lite + pair only — see notes) |
-| 🟡 In progress | 14 (per-host overlays + tag selectors — separate worktree) |
-| ⏳ Not started | 8 (`fleet logs` + `fleet facts`), 9 (native SSH driver), 10 (systemd/launchd installer templates), 12 (mDNS), 13 (`fleet init`) |
+| ✅ Shipped | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 (full — auto-promoted when PR 10 landed), 14 |
+| ⏳ Not started | 12 (mDNS), 13 (`fleet init`) |
 
 Sidecar specs that shipped alongside:
 
-- **spec-49 (agentd on Windows)** → bdcc396. TCP-only mode + Windows config defaults + two SSE race fixes. Not part of the 14-PR plan but unblocked Windows peers.
-- **Fleet polish (bd4695a)** → empty-stdout rendering, peer-filter typo warning, Windows config path, SSE race regression tests.
+- **spec-49 (agentd on Windows)** → `bdcc396`. TCP-only mode + Windows config defaults + two SSE race fixes. Not part of the 14-PR plan but unblocked Windows peers.
+- **Fleet polish (`bd4695a`)** → empty-stdout rendering, peer-filter typo warning, Windows config path, SSE race regression tests.
+- **Tag-filter UX (`ed2cee9`)** → flags-after-positional reorder, opt-in tag-filter semantics.
+- **Fleet rendering + git.clone fix (`afa1d57`)** → render `step.failed` `error_message`; refuse divergent fast-forward.
 
-Notes on PR11: the merged version is the "lite" cut — system `ssh`/`scp` shell-out, `nohup` for the daemon, no systemd/launchd unit. The full PR9/PR10 surface (native SSH driver, embedded unit templates, idempotent reinstall, the 8-step rollback table from spec-44) is still open.
+PR11 history: shipped as a "lite" cut first (system `ssh`/`scp` shell-out, `nohup` for the daemon) and auto-promoted to the full surface (native SSH driver + embedded systemd/launchd templates + 8-step orchestration) once PR 9 + PR 10 landed.
+
+### Post-PR-14 follow-up specs (drafted from real-world use, not yet sequenced)
+
+| Spec | Topic | Effort | Notes |
+|---|---|---|---|
+| 50 | Extended filter keys (`os=`, `name=`, `role=`) for `--peer-filter` / `--step-filter` | S–M (~3–5 days) | Generalises spec-48's `tag=`-only DSL. Built on the existing `parseFilterFlags` predicate parser; no new flag. |
+| 51 | Local-apply overlay parity — `mooncake apply` auto-loads `vars/by-host/<hostname>.yml` | XS (~1 day) | Closes asymmetry where overlays only fired via `fleet apply`. Cheapest of all the open work. |
+
+These are loose drafts in `specs/personal-fleet/`. Sequence them after PR 12/13 or pull them forward if a real user trips on the bookkeeping.
 
 ---
 
@@ -54,16 +64,19 @@ Notes on PR11: the merged version is the "lite" cut — system `ssh`/`scp` shell
 | **Phase B — real fleet** |||||||
 | 6 | Multiplexer for N peers + `^C` banner | 43 | ✅ | `internal/fleet/multiplex.go`, parallel orchestration, padded prefix, color, NO_COLOR, ^C handling | PR5 | **🎯 Apply across multiple peers with interleaved `[host]` lines** | ~400 |
 | 7 | `fleet status` | 46 | ✅ | Per-peer parallel probe, table renderer, `--json` | PR4 | `mooncake fleet status` shows all peers' health | ~350 |
-| 8 | `fleet logs` + `fleet facts` | 46 | ⏳ | Latest-run resolution, reattach via SSE, `--all`, fact pretty-print, `--query` fan-out | PR4, PR6 | `mooncake fleet logs --all` reattaches to in-flight runs | ~300 |
-| 9 | SSH driver + platform detection | 44 | ⏳ | `internal/fleet/transport/ssh.go` (agent+key auth, known_hosts), `DetectPlatform()` | — (parallel to others) | Driver test against alpine+sshd container | ~400 |
-| 10 | Bootstrap orchestration + installer templates | 44 | ⏳ | Embedded systemd unit + launchd plist, 8-step install sequence | PR9 | `internal/fleet/bootstrap.go` callable from test | ~450 |
-| 11 | `fleet bootstrap` + `fleet pair` CLI | 47 | 🟡 | CLI wrappers, peers.toml upsert with diff, three token-source paths for pair | PR3, PR10 | **🎯 `mooncake fleet bootstrap aleh@new-box` adds a peer in one command** | ~300 |
+| 8 | `fleet logs` + `fleet facts` | 46 | ✅ | Latest-run resolution, reattach via SSE, `--all`, fact pretty-print, `--query` fan-out | PR4, PR6 | `mooncake fleet logs --all` reattaches to in-flight runs | ~300 |
+| 9 | SSH driver + platform detection | 44 | ✅ | `internal/fleet/transport/ssh.go` (agent+key auth, known_hosts), `DetectPlatform()` | — (parallel to others) | Driver test against alpine+sshd container | ~400 |
+| 10 | Bootstrap orchestration + installer templates | 44 | ✅ | Embedded systemd unit + launchd plist, 8-step install sequence | PR9 | `internal/fleet/bootstrap.go` callable from test | ~450 |
+| 11 | `fleet bootstrap` + `fleet pair` CLI | 47 | ✅ | CLI wrappers, peers.toml upsert with diff, three token-source paths for pair | PR3, PR10 | **🎯 `mooncake fleet bootstrap aleh@new-box` adds a peer in one command** | ~300 |
 | **Phase C — polish** |||||||
 | 12 | mDNS advertise (daemon) + query (controller) + SSH config parser | 45 | ⏳ | zeroconf wrapper, agentd advertise goroutine, ssh_config parser | PR1, PR4 | `mooncake fleet discover` (debug command) prints candidates | ~450 |
 | 13 | `fleet init` interactive flow | 45 | ⏳ | Aggregator, prompt loop, token paste / `--ssh-fetch` paths | PR11, PR12 | **🎯 `mooncake fleet init` walks through adding 4 boxes** | ~350 |
-| 14 | Per-host overlays + tag selectors | 48 | 🟡 | `internal/fleet/overlays.go`, `--tag` parsing, wire vars_files into submit | PR5 | `vars/by-host/macbook.yml` is applied when targeting macbook | ~250 |
+| 14 | Per-host overlays + tag selectors | 48 | ✅ | `internal/fleet/overlays.go`, `--peer-filter`/`--step-filter` parsing, wire vars_files into submit | PR5 | `vars/by-host/macbook.yml` is applied when targeting macbook | ~250 |
+| **Follow-up specs (not in original plan)** |||||||
+| 15 | Extended filter keys (`os=`, `name=`, `role=`) | 50 | ⏳ | Validator + evaluator extension to spec-48's predicate DSL — no new flags | PR14 | `mooncake fleet apply --peer-filter os=darwin` filters peers from `/v1/version` | ~250 |
+| 16 | Local-apply overlay parity | 51 | ⏳ | `mooncake apply` auto-loads `vars/by-host/<hostname>.yml` + `vars/common.yml` | PR14 | Edit `vars/by-host/laptop.yml`, run `mooncake apply` on laptop, overlay applies | ~120 |
 
-**Totals:** ~5,200 LOC across 14 PRs. ~14 distinct review sessions.
+**Totals:** ~5,200 LOC across 14 plan PRs + ~370 LOC across 2 follow-up PRs.
 
 ---
 
@@ -130,24 +143,16 @@ yet.
 
 **Full epic complete:** all 14 PRs.
 
-## What's still open (as of 2026-05-14)
+## What's still open (as of 2026-05-15)
 
-The shortest path to closing Phase B end-to-end:
+Phase A and Phase B are complete. The remaining open work is all Phase C polish or follow-ups:
 
-1. **PR 14** — per-host overlays + tag selectors (in flight). Resolve the
-   `--tag` flag name collision before merge: today `--tag` forwards to the
-   daemon as a step filter; spec-48 wants it to filter peers. Pick a
-   different flag for the peer filter (e.g. `--select tag=…`) or merge
-   semantics, but don't ship a silent breakage.
-2. **PR 8** — `fleet logs` + `fleet facts`. The `^C` banner from PR6
-   already references `mooncake fleet logs <host>`, currently a dishonest
-   forward-reference.
-3. **PR 9 + PR 10** — native SSH driver and embedded systemd/launchd
-   units, replacing the bootstrap-lite shipped under PR 11. Bumps PR 11
-   from 🟡 to ✅.
+1. **PR 12** — mDNS advertise + query + SSH config parser. Pure discovery polish.
+2. **PR 13** — `fleet init` interactive flow. Builds on PR 12 + PR 11.
+3. **PR 15 (spec-50)** — extended filter keys. Real-world ask from PR 14 use.
+4. **PR 16 (spec-51)** — local-apply overlay parity. XS, cheapest follow-up.
 
-PRs 12 and 13 (mDNS discovery + `fleet init`) are pure polish — defer
-until a real user complains about typing peer addresses by hand.
+`next-priorities-2026-05.md` deprioritises PRs 12/13 ("pure polish; defer until a real user complains about typing peer addresses by hand"). PRs 15 and 16 are smaller and operator-triggered — fold them in as cooldown work between Track A (spec-22 / spec-30) pushes.
 
 ---
 

@@ -1,18 +1,21 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `458e864`, 2026-05-15, revision 5).
+(master @ `235b8ff`, 2026-05-15, revision 6).
 
-> **What changed since revision 4**: **Spec-22 phase 3 is fully done.**
-> Rev4 captured phase 3c (text.\* family) at merge time but phase 3d
-> (`Permissions()` on `pkg` + `os.service`, `c555dd8`/`334a6a5`) had
-> landed in the same window — phase 3 now covers **all 5/5 priority
-> handler families** (file, text, pkg, os.service, executor preflight).
-> No new merges to master since rev4 was merged; the only forward-
-> looking signal is **spec-23 (framework primitives: `on_change`,
-> `try`/`catch`/`finally`, `!secret`) starting in
-> `worktree-spec-23-onchange-secret`** — first Stream 2 work outside
-> the spec-22 dependency chain.
+> **What changed since revision 5**: No new merges to master. The
+> deltas are signal cleanup: two PR 14 follow-up specs (**spec-50**
+> extended `--peer-filter`/`--step-filter` keys: `os=`, `name=`,
+> `role=`; and **spec-51** local-apply overlay parity so
+> `mooncake apply` picks up `vars/by-host/<hostname>.yml` like
+> `fleet apply` does) have been sitting unindexed in
+> `specs/personal-fleet/` since PR 14 landed in `9941ee3` — rev1–5
+> didn't surface them. Both are drafts. **Spec-23 in flight** remains
+> accurate but the worktree's work is still exploratory (one
+> uncommitted `internal/config/config.go` edit), not "about to
+> merge." Real-world use of PR 14 is producing follow-up specs, which
+> is a healthy signal — and a hint that `implementation-order.md`
+> would benefit from a refresh.
 
 ---
 
@@ -71,6 +74,13 @@ Personal Fleet (sub-stream): **12/14 PRs shipped end-to-end** as of
 | **A** (one peer end-to-end) | 1–5 | ✅ all shipped |
 | **B** (real fleet) | 6 multiplexer ✅, 7 status ✅, 8 logs/facts ✅, 9 native SSH driver ✅, 10 installer templates + 8-step bootstrap ✅, 11 bootstrap/pair ✅ (auto-flipped when PR 10 landed) | ✅ complete |
 | **C** (polish) | 12 mDNS ⏳, 13 `fleet init` ⏳, 14 overlays/tags ✅ | 1/3 |
+
+**Post-PR-14 follow-up specs** (not in original 14-PR plan, drafted from real-world use):
+
+| Spec | Topic | State |
+|---|---|---|
+| 50 | Extended filter keys (`os=`, `name=`, `role=`) for `--peer-filter`/`--step-filter` | Draft, S–M effort. Generalises spec-48's `tag=`-only DSL |
+| 51 | Local-apply overlay parity — `mooncake apply` auto-loads `vars/by-host/<hostname>.yml` | Draft, XS effort. Closes asymmetry where overlays only work via `fleet apply` |
 
 Sidecars merged this cycle: **spec-49 agentd-on-Windows** (TCP-only mode,
 SSE race fixes), a fleet polish PR (output + peer-filter UX + Windows
@@ -183,7 +193,9 @@ overlays + tag selectors** ✅, Windows agentd ✅.
 
 **Gap**: mDNS discovery ⏳. `fleet init` interactive flow ⏳. The
 ordered-phase `mooncake apply <machine>` UX (Windows+WSL) ⏳ — filed as
-a user request.
+a user request. Two PR 14 follow-ups drafted but not yet sequenced:
+**spec-50** (extended filter keys: `os=`, `name=`, `role=`) and
+**spec-51** (local-apply overlay parity).
 
 **Distance to ideal**: ~92% to the v1 "Friday-evening demo" success
 criteria from the epic. **Phase A and Phase B both complete**; Phase C
