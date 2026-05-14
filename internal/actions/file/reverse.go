@@ -10,16 +10,24 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
+// MaxReverseCaptureBytes caps how much pre-apply content slice B
+// snapshots into FileReverseInfo.Content. Set deliberately small:
+// reverse is for config files and small artefacts, not for binary
+// blobs or large logs. Above this threshold Content stays nil and
+// Reverse refuses with an explicit "too large to snapshot" error
+// so a transaction layer fails loudly rather than rolling back
+// partially.
+const MaxReverseCaptureBytes = 4 * 1024 * 1024
+
 // FileReverseInfo is the pre-apply snapshot the file.write handler
 // stashes on Result.ReverseData. Its contents are read by Reverse to
 // construct an inverse Step.
 //
-// Slice A scope: capture stat-level fields only. The pre-write file
-// CONTENT is not captured here — slice B (phase 5b) will add a
-// Content []byte field plus a size limit so overwrite reverses
-// become possible. Until then, this struct's job is to answer one
-// question: "did this path exist before we ran?" — enough to reverse
-// pure-create cases (the common transaction-rollback path).
+// Slice A captured stat-level fields; slice B adds Content so
+// overwrites and deletes of regular files become reversible. The
+// "did this path exist before we ran?" question is still the
+// primary axis — Existed is the gate that picks the create branch
+// vs the overwrite/delete branch in Reverse.
 type FileReverseInfo struct {
 	// State is the step's normalised State at apply time. Carried so
 	// Reverse knows what kind of mutation was performed and can pick
@@ -29,20 +37,35 @@ type FileReverseInfo struct {
 	// Existed reports whether the target path was present pre-apply.
 	// Drives the create-vs-overwrite split: when false, the step
 	// created the path (reverse = delete); when true, the step
-	// mutated existing content/state (reverse needs the pre-state
-	// payload that slice B will add).
+	// mutated existing content/state and Reverse needs Content +
+	// Mode to reconstruct the original.
 	Existed bool
 
 	// Kind, when Existed, classifies the pre-apply target: "file",
 	// "directory", "symlink", "other". Echoes the FileSnapshot.Kind
-	// vocabulary so phase 5b can construct precise restore steps.
+	// vocabulary so reverse can pick the right restore shape.
 	Kind string
 
 	// Mode is the pre-apply mode bits. Populated when Existed; zero
-	// otherwise. Slice A doesn't use this yet (no mode-restore in
-	// the create-only reverse cases), but capturing it now keeps the
-	// shape stable for slice B.
+	// otherwise. Slice B uses this for overwrite/delete restore
+	// (so the reverse step writes back the original permissions)
+	// and for state=perms reverse (where mode IS the change).
 	Mode os.FileMode
+
+	// Content holds the pre-apply bytes of the file when Kind=="file"
+	// and size <= MaxReverseCaptureBytes. nil otherwise. nil for a
+	// regular file means "exceeded the size cap" — Reverse uses that
+	// distinction to refuse explicitly rather than silently mangle
+	// the rollback.
+	//
+	// Templating note: the reverse step puts Content into
+	// config.File.Content as a string, which runs through Pongo2
+	// rendering on apply. Pre-rendered content that happens to
+	// contain `{{` or `{%` literals would be re-rendered on the way
+	// back — vanishingly rare for typical config-file payloads, but
+	// a known sharp edge until we add a "raw content" path in a
+	// future slice.
+	Content []byte
 }
 
 // CaptureReverseInfo reads the current state of path and returns a
@@ -75,6 +98,20 @@ func CaptureReverseInfo(path, state string) *FileReverseInfo {
 		info.Kind = "file"
 	default:
 		info.Kind = "other"
+	}
+
+	// Slice B: snapshot bytes for regular files under the size cap.
+	// Directories have no inherent content; symlinks have a target
+	// (slice C will use that); files over the cap stay nil and
+	// Reverse refuses with an explicit size error.
+	//
+	// Read errors degrade to nil — same rationale as the Lstat
+	// branch above: the runtime mutation will surface the real
+	// error, no point double-reporting here.
+	if info.Kind == "file" && st.Size() <= MaxReverseCaptureBytes {
+		if data, readErr := os.ReadFile(path); readErr == nil {
+			info.Content = data
+		}
 	}
 	return info
 }
@@ -109,58 +146,128 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 		return nil, fmt.Errorf("file.write Reverse: %w", err)
 	}
 
+	path := step.FileWrite.Path
+
 	// Path was absent pre-apply → step created it → reverse by
 	// deleting it. Works for both state=file (created file) and
 	// state=directory (created dir). state=touch is debatable —
 	// touch always changes mtime even on existing files, so we
 	// can't tell "we created it" vs "we just bumped mtime" from
-	// Existed alone. Handle touch in slice B; for now, conservative
-	// irreversibility.
+	// Existed alone — defer to a future slice.
 	if !info.Existed {
 		switch info.State {
 		case "", actionTypeFile, "directory":
 			return &config.Step{
-				Name: "reverse: delete " + step.FileWrite.Path,
+				Name: "reverse: delete " + path,
 				FileWrite: &config.File{
-					Path:  step.FileWrite.Path,
+					Path:  path,
 					State: "absent",
 				},
 			}, nil
 		}
 	}
 
-	// Path existed pre-apply OR state is one we don't yet reverse.
-	// Honest error pointing at slice B.
+	// Path existed pre-apply. Slice B restores from the captured
+	// content + mode for regular-file overwrites and deletes, and
+	// from mode alone for state=perms.
 	switch info.State {
 	case "", actionTypeFile:
-		return nil, errors.New(
-			"file.write Reverse: cannot reverse overwrite of an existing file " +
-				"in slice A; phase 5b will add content-snapshot integration")
+		// Overwrite reverse: rewrite the pre-apply bytes with the
+		// pre-apply mode. Only works when the original was a
+		// regular file we managed to snapshot.
+		if info.Kind != "file" {
+			return nil, fmt.Errorf(
+				"file.write Reverse: cannot reverse overwrite of a %s "+
+					"(only regular-file pre-state can be restored)", info.Kind)
+		}
+		if info.Content == nil {
+			return nil, fmt.Errorf(
+				"file.write Reverse: pre-apply file too large to snapshot "+
+					"(> %d bytes); transaction layer must refuse to rollback "+
+					"this step rather than partially restore", MaxReverseCaptureBytes)
+		}
+		return restoreFileStep(path, info), nil
+
 	case "absent":
-		return nil, errors.New(
-			"file.write Reverse: cannot reverse a delete in slice A; " +
-				"phase 5b will capture pre-delete content")
+		// Delete reverse: re-create with pre-apply bytes + mode.
+		// Directory deletions deferred — recreating a tree needs a
+		// listing of its prior contents, which slice E will add.
+		if info.Kind != "file" {
+			return nil, fmt.Errorf(
+				"file.write Reverse: cannot un-delete a %s in slice B; "+
+					"directory and link recreate paths land in later slices", info.Kind)
+		}
+		if info.Content == nil {
+			return nil, fmt.Errorf(
+				"file.write Reverse: pre-delete file too large to snapshot "+
+					"(> %d bytes); cannot reconstruct", MaxReverseCaptureBytes)
+		}
+		return restoreFileStep(path, info), nil
+
+	case "perms":
+		// Mode change on an existing path. Reverse step rewrites
+		// the original mode bits — no content touched. Works
+		// uniformly for files and directories.
+		return &config.Step{
+			Name: "reverse: restore perms on " + path,
+			FileWrite: &config.File{
+				Path:  path,
+				State: "perms",
+				Mode:  formatReverseMode(info.Mode),
+			},
+		}, nil
+
 	case "directory":
-		// Existing dir; if we only changed mode we'd want to
-		// restore mode. Deferred to slice B.
-		return nil, errors.New(
-			"file.write Reverse: cannot reverse mode change on existing " +
-				"directory in slice A; phase 5b will capture pre-state mode")
+		// Existing dir target with state=directory means a mode
+		// change at most (mkdir is a no-op on existing dirs). Use
+		// a state=perms reverse step to restore the original mode.
+		return &config.Step{
+			Name: "reverse: restore dir perms on " + path,
+			FileWrite: &config.File{
+				Path:  path,
+				State: "perms",
+				Mode:  formatReverseMode(info.Mode),
+			},
+		}, nil
+
 	case stateLink, stateHardlink:
 		return nil, errors.New(
 			"file.write Reverse: link/hardlink reversal not implemented; " +
-				"phase 5c will handle the link family")
+				"phase 5 slice C will handle the link family")
 	case "touch":
 		return nil, errors.New(
 			"file.write Reverse: touch reverse not implemented; " +
-				"phase 5b will capture pre-mtime for accurate restore")
-	case "perms":
-		return nil, errors.New(
-			"file.write Reverse: perms reverse not implemented; " +
-				"phase 5b will use captured pre-mode")
+				"future slice will capture pre-mtime for accurate restore")
 	default:
 		return nil, fmt.Errorf("file.write Reverse: unknown state %q", info.State)
 	}
+}
+
+// restoreFileStep builds the inverse Step for an overwrite or
+// delete reverse: write the captured bytes back at the captured
+// mode. Shared so the two callers stay textually identical.
+func restoreFileStep(path string, info *FileReverseInfo) *config.Step {
+	return &config.Step{
+		Name: "reverse: restore " + path,
+		FileWrite: &config.File{
+			Path:    path,
+			State:   actionTypeFile,
+			Content: string(info.Content),
+			Mode:    formatReverseMode(info.Mode),
+			Force:   true, // overwrite whatever the failing apply left behind
+		},
+	}
+}
+
+// formatReverseMode renders an os.FileMode in the octal form
+// config.File.Mode expects ("0644", "0755", …). Returns the
+// empty string for zero — callers can decide whether to omit the
+// field or pass it through.
+func formatReverseMode(m os.FileMode) string {
+	if m == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%#o", m)
 }
 
 // extractReverseInfo pulls the FileReverseInfo back out of the

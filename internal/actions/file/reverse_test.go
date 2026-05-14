@@ -117,14 +117,15 @@ func TestReverse_CreateDirectory(t *testing.T) {
 	}
 }
 
-// TestReverse_OverwriteRefusesInSliceA — when the target existed
-// pre-apply, slice A cannot reverse (would need pre-write content,
-// captured in slice B). Reverse must return an explicit error
-// pointing at slice B so transaction implementers know what's
-// coming.
-func TestReverse_OverwriteRefusesInSliceA(t *testing.T) {
+// TestReverse_OverwriteCycle exercises slice B's content-snapshot
+// path: we pre-seed a file with ORIGINAL, run an apply that writes
+// OVERWRITTEN, then verify Reverse returns a step that — when
+// applied — restores ORIGINAL with the original mode.
+func TestReverse_OverwriteCycle(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "existing.txt")
-	writeFile(t, path, []byte("ORIGINAL"), 0o644)
+	const original = "ORIGINAL content lines\nthat we want back\n"
+	writeFile(t, path, []byte(original), 0o640)
+
 	step := &config.Step{
 		FileWrite: &config.File{
 			Path:    path,
@@ -135,31 +136,53 @@ func TestReverse_OverwriteRefusesInSliceA(t *testing.T) {
 
 	result := applyStep(t, h, step)
 	info := result.ReverseData.(*FileReverseInfo)
-	if !info.Existed {
-		t.Fatalf("captured Existed=false; want true (we seeded the file)")
+	if !info.Existed || info.Kind != "file" {
+		t.Fatalf("captured info wrong: %+v", info)
 	}
-	if info.Kind != "file" {
-		t.Errorf("captured Kind=%q, want \"file\"", info.Kind)
+	if string(info.Content) != original {
+		t.Fatalf("captured content = %q, want %q", info.Content, original)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "OVERWRITTEN" {
+		t.Fatalf("apply: file content = %q, want %q", got, "OVERWRITTEN")
 	}
 
 	reverseStep, err := h.Reverse(nil, step, result)
-	if err == nil {
-		t.Fatal("Reverse returned nil error for existing-file overwrite; want slice-B refusal")
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
 	}
-	if reverseStep != nil {
-		t.Errorf("Reverse returned a step despite refusal: %+v", reverseStep)
+	if reverseStep == nil || reverseStep.FileWrite == nil {
+		t.Fatal("Reverse returned nil step")
 	}
-	if !strings.Contains(err.Error(), "phase 5b") {
-		t.Errorf("error %q should mention phase 5b so transaction implementers know what's coming", err.Error())
+	if reverseStep.FileWrite.Content != original {
+		t.Errorf("reverse step Content = %q, want %q", reverseStep.FileWrite.Content, original)
+	}
+	if reverseStep.FileWrite.Mode != "0640" {
+		t.Errorf("reverse step Mode = %q, want \"0640\" (preserved from pre-apply)", reverseStep.FileWrite.Mode)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != original {
+		t.Errorf("after reverse: content = %q, want %q", got, original)
+	}
+	if runtime.GOOS != "windows" {
+		st, _ := os.Stat(path)
+		if mode := st.Mode().Perm(); mode != 0o640 {
+			t.Errorf("after reverse: mode = %v, want 0640", mode)
+		}
 	}
 }
 
-// TestReverse_DeleteRefusesInSliceA — reversing a deletion needs
-// the captured pre-delete content (slice B). Without it Reverse
-// must refuse explicitly.
-func TestReverse_DeleteRefusesInSliceA(t *testing.T) {
+// TestReverse_DeleteCycle pre-seeds a file, applies state=absent
+// to delete it, and verifies Reverse re-creates the file with the
+// original bytes + mode.
+func TestReverse_DeleteCycle(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "to-delete.txt")
-	writeFile(t, path, []byte("doomed"), 0o644)
+	const original = "this should come back after rollback\n"
+	writeFile(t, path, []byte(original), 0o644)
+
 	step := &config.Step{
 		FileWrite: &config.File{
 			Path:  path,
@@ -174,16 +197,117 @@ func TestReverse_DeleteRefusesInSliceA(t *testing.T) {
 	}
 
 	reverseStep, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if reverseStep.FileWrite.State != actionTypeFile {
+		t.Errorf("reverse step State = %q, want \"file\"", reverseStep.FileWrite.State)
+	}
+	if reverseStep.FileWrite.Content != original {
+		t.Errorf("reverse step Content = %q, want %q", reverseStep.FileWrite.Content, original)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	got, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatalf("after reverse: file missing: %v", readErr)
+	}
+	if string(got) != original {
+		t.Errorf("after reverse: content = %q, want %q", got, original)
+	}
+}
+
+// TestReverse_PermsCycle pre-seeds a file with mode 0644, applies
+// state=perms changing it to 0600, then verifies Reverse restores
+// 0644. The content must remain untouched both ways.
+func TestReverse_PermsCycle(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on NTFS")
+	}
+	path := filepath.Join(t.TempDir(), "perms.txt")
+	const original = "do not touch my content\n"
+	writeFile(t, path, []byte(original), 0o644)
+
+	step := &config.Step{
+		FileWrite: &config.File{
+			Path:  path,
+			State: "perms",
+			Mode:  "0600",
+		},
+	}
+	h := &Handler{}
+
+	result := applyStep(t, h, step)
+	st, _ := os.Stat(path)
+	if mode := st.Mode().Perm(); mode != 0o600 {
+		t.Fatalf("apply: mode = %v, want 0600", mode)
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if reverseStep.FileWrite.State != "perms" {
+		t.Errorf("reverse step State = %q, want \"perms\"", reverseStep.FileWrite.State)
+	}
+	if reverseStep.FileWrite.Mode != "0644" {
+		t.Errorf("reverse step Mode = %q, want \"0644\"", reverseStep.FileWrite.Mode)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	st, _ = os.Stat(path)
+	if mode := st.Mode().Perm(); mode != 0o644 {
+		t.Errorf("after reverse: mode = %v, want 0644", mode)
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != original {
+		t.Errorf("after reverse: content changed unexpectedly: %q", got)
+	}
+}
+
+// TestReverse_OversizedFileRefused — a pre-existing file larger
+// than MaxReverseCaptureBytes cannot be snapshotted. CaptureReverseInfo
+// records the stat fields but leaves Content nil; Reverse must then
+// refuse with an explicit "too large to snapshot" error rather than
+// pretending to roll back.
+func TestReverse_OversizedFileRefused(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "huge.bin")
+	// One byte over the cap is enough — what matters is the branch.
+	big := make([]byte, MaxReverseCaptureBytes+1)
+	writeFile(t, path, big, 0o644)
+
+	step := &config.Step{
+		FileWrite: &config.File{
+			Path:    path,
+			Content: "small replacement",
+		},
+	}
+	h := &Handler{}
+
+	result := applyStep(t, h, step)
+	info := result.ReverseData.(*FileReverseInfo)
+	if info.Content != nil {
+		t.Fatalf("expected Content=nil for oversized capture; got %d bytes", len(info.Content))
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
 	if err == nil {
-		t.Fatal("Reverse returned nil error for delete; want slice-B refusal")
+		t.Fatal("Reverse returned nil error for oversized capture; want refusal")
 	}
 	if reverseStep != nil {
-		t.Errorf("Reverse returned a step: %+v", reverseStep)
+		t.Errorf("Reverse returned a step despite refusal: %+v", reverseStep)
+	}
+	if !strings.Contains(err.Error(), "too large") {
+		t.Errorf("error %q should mention size limit so callers know why", err.Error())
 	}
 }
 
 // TestReverse_LinkRefuses — the link/hardlink family is slice C
-// territory. Slice A must refuse explicitly.
+// territory. Slice B still refuses explicitly.
 func TestReverse_LinkRefuses(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlinks need admin or developer mode on Windows; not the point of this test")
@@ -207,8 +331,8 @@ func TestReverse_LinkRefuses(t *testing.T) {
 	if err == nil {
 		t.Fatal("Reverse returned nil error for state=link; want slice-C refusal")
 	}
-	if !strings.Contains(err.Error(), "phase 5c") {
-		t.Errorf("error %q should mention phase 5c so future work is discoverable", err.Error())
+	if !strings.Contains(err.Error(), "slice C") {
+		t.Errorf("error %q should mention slice C so future work is discoverable", err.Error())
 	}
 }
 
