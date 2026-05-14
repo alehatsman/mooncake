@@ -33,13 +33,14 @@ ABI lands.
 | 25 | `text.line` · `text.patch.{ini,json,yaml}` | P1–P4 shipped; P5 (ABI hooks) blocked on 22; P6 (docs) pending |
 | 26 | `git.clone` (incl. credentials + submodules) · `git.checkout` · `git.config` | P1–P4 shipped; P5 (ABI hooks) blocked on 22; P6 (docs) pending |
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped; P4 (ABI hooks) blocked on 22; P5 (docs) pending |
-| 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P3 + P5 shipped; **P4 `os.firewall` still TODO**; P6 (ABI hooks) blocked on 22 |
+| 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P5 shipped (ufw driver only; nftables / firewalld deferred); P6 (ABI hooks) blocked on 22 |
 | 37 | Step output capture — collision + plan-mode policy | drafted; prereq for 38 |
 | 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
 
-**Suggested order:** 22 (unblocks every "P_final") → 28 P4 `os.firewall` (last
-implementation gap) → 37 → 38 → 32 → 17. In parallel, individual action specs
-land their ABI hook phases as soon as 22 ships.
+**Suggested order:** 37 → 38 (read-side observation gap) → 22 (against a real
+consumer — likely spec-30 transactions as the first concrete user of
+`Reverse`) → 32 → 17. Individual action specs land their ABI hook phases as
+soon as 22 ships.
 
 ---
 
@@ -180,10 +181,8 @@ Stream 4 is the most independent — it is primarily UX work on the existing ker
 
 | Priority | Stream | First spec |
 |---|---|---|
-| 1 | Action Surface | **spec-22** (extended ABI) — unblocks the final phase of every action spec 24–28, and is the prerequisite for Stream 2 |
-| 2 | Action Surface | spec-28 P4 `os.firewall` — last remaining action implementation in 24–28 |
-| 3 | Safe Agent Runtime | spec-23 (framework primitives) once spec-22 lands |
-| 4 | Action Surface | specs 37 + 38 (read.json / read.yaml) — closes the observation gap |
-| 5 | Fleet & Cluster | C1 spec (node registry) — write spec first |
-| 6 | Ecosystem | spec-31 (plugin model) — independent, can run in parallel |
-| 7 | Developer Experience | `mooncake doctor` — define scope before speccing |
+| 1 | Action Surface | **specs 37 + 38** (read.json / read.yaml) — closes the observation gap; concrete user value, no ABI bets |
+| 2 | Safe Agent Runtime | spec-30 (transactions) — first real consumer of `Reverse`, drives the spec-22 design |
+| 3 | Action Surface | spec-22 (extended ABI) once spec-30 has the use case to design against |
+| 4 | Fleet & Cluster | C1 spec (node registry) — write spec first |
+| 5 | Ecosystem | spec-31 (plugin model) — independent, can run in parallel |
