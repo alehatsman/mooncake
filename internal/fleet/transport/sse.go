@@ -77,9 +77,12 @@ func (c *Client) Stream(ctx context.Context, runID string, sink chan<- Event) er
 // SSE spec, though agentd today emits single-line JSON.
 func parseSSE(ctx context.Context, r io.Reader, sink chan<- Event) error {
 	scanner := bufio.NewScanner(r)
-	// Per-event JSON can be sizeable (full apply step record).
-	// Match the daemon-side 1 MiB cap.
-	scanner.Buffer(make([]byte, 64<<10), 1<<20)
+	// Per-event JSON can be sizeable. Some tools (notably packer.nvim
+	// running parallel git clones) emit one logical "line" of stdout
+	// that's tens of MiB long because they use `\r` cursor-rewrites
+	// instead of `\n`. Until the daemon splits such output more
+	// aggressively, give the scanner enough headroom to swallow them.
+	scanner.Buffer(make([]byte, 64<<10), 16<<20)
 
 	var (
 		curID   int64

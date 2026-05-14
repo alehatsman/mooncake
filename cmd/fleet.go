@@ -271,23 +271,59 @@ func fleetApplyCommand() *cli.Command {
 // plan-dir, sync the plan-dir to each selected peer's <state_dir>/synced/,
 // submit a run, and stream [host]-prefixed events to stdout.
 //
+// Argument forms:
+//
+//	mooncake fleet apply path/to/config.yml          → plan file path
+//	mooncake fleet apply main_pc                     → "machine convention":
+//	    plan      = <plan-dir>/entries/main_pc.yml
+//	    plan-dir  = $PWD (unless --plan-dir given)
+//	    vars      = variables.yml + vars/main_pc.yml (if present)
+//	    --peers   = main_pc (unless --peers given)
+//
 // PR5 processes peers serially. PR6 will parallelize with multiplexed
 // output and ^C handling.
 func fleetApplyAction(c *cli.Context) error {
 	if c.NArg() != 1 {
-		return cli.Exit("fleet apply: exactly one plan file argument required", 2)
+		return cli.Exit("fleet apply: exactly one plan-file-or-machine argument required", 2)
 	}
 	planArg := c.Args().First()
+
+	// Resolve plan-dir first: explicit flag, else PWD if the arg matches
+	// the machine convention, else the directory of the plan file.
+	planDir := c.String("plan-dir")
+	if planDir != "" {
+		var err error
+		planDir, err = filepath.Abs(planDir)
+		if err != nil {
+			return fmt.Errorf("resolve plan-dir: %w", err)
+		}
+	}
+
+	// Machine convention: bare name (no slash, no .yml) and
+	// <plan-dir>/entries/<name>.yml exists.
+	machine := ""
+	if !strings.ContainsAny(planArg, "/\\") && !strings.HasSuffix(planArg, ".yml") {
+		root := planDir
+		if root == "" {
+			pwd, _ := os.Getwd()
+			root = pwd
+		}
+		entry := filepath.Join(root, "entries", planArg+".yml")
+		if st, err := os.Stat(entry); err == nil && !st.IsDir() {
+			machine = planArg
+			planArg = entry
+			if planDir == "" {
+				planDir = root
+			}
+		}
+	}
+
 	planAbs, err := filepath.Abs(planArg)
 	if err != nil {
 		return fmt.Errorf("resolve plan path: %w", err)
 	}
-	planDir := filepath.Dir(planAbs)
-	if pd := c.String("plan-dir"); pd != "" {
-		planDir, err = filepath.Abs(pd)
-		if err != nil {
-			return fmt.Errorf("resolve plan-dir: %w", err)
-		}
+	if planDir == "" {
+		planDir = filepath.Dir(planAbs)
 	}
 
 	controllerID, err := fleet.EnsureControllerID()
@@ -310,14 +346,36 @@ func fleetApplyAction(c *cli.Context) error {
 		return cli.Exit("fleet apply: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
-	selected := selectPeers(cfgPeers.Peers, c.String("peers"))
+	// Peer filter: explicit --peers wins; otherwise if the machine
+	// convention fired, default to that single peer.
+	peersFilter := c.String("peers")
+	if peersFilter == "" && machine != "" {
+		peersFilter = machine
+	}
+	selected := selectPeers(cfgPeers.Peers, peersFilter)
 	if len(selected) == 0 {
-		return cli.Exit("fleet apply: no peers matched --peers filter", 1)
+		return cli.Exit("fleet apply: no peers matched filter "+peersFilter, 1)
 	}
 
 	// Resolve vars files relative to plan-dir, absolute on the controller.
+	// When the machine convention is active, prepend conventional vars files
+	// (variables.yml + vars/<machine>.yml) when they exist on disk.
+	varsRel := c.StringSlice("vars-file")
+	if machine != "" {
+		conv := []string{"variables.yml", filepath.Join("vars", machine+".yml")}
+		// Prepend so explicit --vars-file overrides (later wins on key collision).
+		merged := make([]string, 0, len(conv)+len(varsRel))
+		for _, p := range conv {
+			abs := filepath.Join(planDir, p)
+			if _, err := os.Stat(abs); err == nil {
+				merged = append(merged, p)
+			}
+		}
+		merged = append(merged, varsRel...)
+		varsRel = merged
+	}
 	var varsAbs []string
-	for _, v := range c.StringSlice("vars-file") {
+	for _, v := range varsRel {
 		if !filepath.IsAbs(v) {
 			v = filepath.Join(planDir, v)
 		}

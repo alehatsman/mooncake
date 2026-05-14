@@ -240,7 +240,12 @@ func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flushe
 	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 1<<20), 1<<20)
+	// Match the client-side SSE parser cap. Some tools (packer.nvim, git
+	// --progress) emit single "lines" of stdout in the tens of MiB because
+	// they use `\r` cursor rewrites instead of newlines. The executor
+	// turns each into one step.stdout event whose `line` field is just as
+	// large; the on-disk JSONL line is at least that big.
+	scanner.Buffer(make([]byte, 1<<20), 16<<20)
 
 	for scanner.Scan() {
 		select {
