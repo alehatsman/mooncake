@@ -1,24 +1,18 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `b019805`, 2026-05-15, revision 8).
+(master @ `474b0bb`, 2026-05-15, revision 9).
 
-> **What changed since revision 7**: **DX bundle shipped** (`bd61319`)
-> — **spec-51 (local-apply overlay parity, `4d6b2a1`)** and a **simple
-> `mooncake fleet discover` (spec-45 simple, `f49930b`)** that probes
-> hosts from `peers.toml` + `~/.ssh/config` against `/v1/version`
-> without mDNS or any new daemon work. Spec-50 (extended filter keys)
-> wasn't in the bundle — left for another round. Plus a **`!secret`
-> plan-output redaction polish** (`b019805`) — `!secret` refs are now
-> redacted in plan output by default, closing a gap in the spec-23 §3
-> surface. **The single biggest in-flight move is
-> `worktree-spec-22-phase5`** — **`Reverse()`**, the primitive between
-> today and the spec-30 `transaction:` demo (still no commits in that
-> worktree; agent is in deep exploratory mode). Idle/cleanup-pending:
-> `dx-bundle` and `plan-redact-polish` (both already merged into
-> master). The earlier `spec-22-phase4f` and `tier2-secrets` worktrees
-> are gone — phase 4f folded into the JSON-Diff follow-up (`bb082a1`);
-> tier2-secrets stalled or was absorbed elsewhere.
+> **What changed since revision 8**: **`Reverse()` is now in master.**
+> Spec-22 phase 5 slice A (`e1e6361`/`d3db7c2`) shipped: `Reverse()`
+> on `file.write` for the **create-only** case (file didn't exist
+> before → reverse = delete). Slice B (modify-existing-file: capture
+> pre-state, restore bytes) is now in flight in
+> `worktree-spec-22-phase5b`. **The pivot rev8 predicted has happened:
+> `worktree-spec-30-parser` just opened** — the `transaction:` block
+> parser, previously blocked on `Reverse()`. Spec-30 work and slice B
+> are now parallel tracks. The "last load-bearing primitive" framing
+> from every prior rev collapses — it's in the tree.
 
 ---
 
@@ -41,7 +35,7 @@ The typed mutation vocabulary. Ships everywhere.
 | 37 | Step output capture (collision + plan-mode) | drafted |
 | 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
 | 32 | Collapse step action dispatch | not started |
-| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅, 3a–3d ✅ (`Permissions()`), 4a–4e ✅ (`Diff()` across all 5/5 priority handler families), plus phase 4 follow-up (`bb082a1`) wiring `Diff()` into JSON plan output. **Phases 3 + 4 fully complete.** **Phase 5 (`Reverse()`) in flight in `worktree-spec-22-phase5`** — the headline primitive that unblocks spec-30 `transaction:` blocks. Phases 6–8 (`Cost`, planner/MCP wiring, docs) still draft. |
+| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅, 3a–3d ✅ (`Permissions()`), 4a–4e ✅ (`Diff()` across all 5/5 priority handler families) + JSON-plan-output wiring (`bb082a1`), **phase 5 slice A ✅** (`Reverse()` on `file.write` create-only, `e1e6361`), **phase 5 slice B ✅** (content-snapshot reverse for overwrite/delete/perms, `4c24e5b`). **`Reverse()` on `file.write` is now fully complete** for create + modify cases. Remaining handlers (text family, pkg, os.service) ⏳. Phases 6–8 (`Cost`, planner/MCP wiring, docs) still draft. |
 
 **Verdict**: very wide, and the ABI is finally landing. Action breadth no
 longer the bottleneck — `Reverse()` is. Phase 3 needs to finish, then
@@ -51,22 +45,21 @@ phases 4–6 (Diff/Reverse/Cost) unblock spec-30.
 
 | Spec | Topic | State |
 |---|---|---|
-| 22 | Extended Handler ABI | 🟡 in progress (see Stream 1) — phases 3 + 4 complete; **phase 5 (`Reverse()`) in flight in `worktree-spec-22-phase5`**; phase 6 (`Cost()`) and 7–8 (wiring + docs) still draft |
-| 23 | Framework primitives (`on_change`, `try/catch/finally`, `!secret`) | **§1 (`on_change`) ✅**, **§3 (`!secret`) ✅**, **§2 (`try/catch/finally`) still drafted** — semantically overlaps with spec-30 transactions, design must align |
-| 30 | `transaction:` blocks with auto-reverse | drafted, blocked on 22 phase 5 (`Reverse()`) |
+| 22 | Extended Handler ABI | 🟡 in progress (see Stream 1) — phases 3 + 4 + **phase 5 slices A + B ✅ (Reverse on file.write complete)**; remaining handlers + phase 6 (`Cost()`) + 7–8 (wiring + docs) still draft |
+| 23 | Framework primitives (`on_change`, `try/catch/finally`, `!secret`) | **§1 (`on_change`) ✅**, **§3 (`!secret`) ✅** + plan-output redaction polish, **§2 (`try/catch/finally`) still drafted** — semantically overlaps with spec-30 transactions, design must align |
+| 30 | `transaction:` blocks with auto-reverse | **🟡 parser in flight in `worktree-spec-30-parser`** — unblocked the moment phase 5 slice A landed. Slice B + execution semantics still ahead. |
 
 Plus a list of unwritten future specs in `streams.md`: policy DSL, plan
 signing, per-action quotas, egress policy, sandbox mode, cost classifier,
 deterministic replay.
 
-**Verdict**: the ABI contract is in the tree; `Permissions()` and
-`Diff()` are both fully declared across the priority handler families;
-executor preflights sudo + required-binaries today; `Diff()` provides
-structural deltas a UI or LLM can branch on without parsing prose.
-Stream 2 now has two of three spec-23 sections shipped (`on_change` +
-`!secret`). **`Reverse()` (phase 5) is the last big gate** for the
-spec-30 `transaction:` demo — the headline agent-safety claim. After
-that: `Cost()`, planner/MCP wiring, and the demo assembly itself.
+**Verdict**: `Reverse()` is in the tree — slice A (`file.write`
+create-only) shipped. Slice B (modify-existing-file) is in flight, and
+**the spec-30 `transaction:` parser is also in flight** (it was the
+single thing blocked on Reverse). The previously-aspirational
+agent-safety claim now has a concrete shipping date: when slice B
+lands and spec-30's parser + executor wiring lands, the README's
+demo becomes falsifiable.
 
 ### Stream 3 — Fleet & Cluster Management  *(the monetizable wedge)*
 
@@ -83,7 +76,7 @@ Personal Fleet (sub-stream): **12/14 PRs shipped end-to-end** as of
 
 | Spec | Topic | State |
 |---|---|---|
-| 50 | Extended filter keys (`os=`, `name=`, `role=`) for `--peer-filter`/`--step-filter` | Draft. Generalises spec-48's `tag=`-only DSL |
+| 50 | Extended filter keys (`os=`, `name=`, `role=`) for `--peer-filter` / `name=` for `--step-filter` | ✅ shipped (`57686d1`/`e445a64`). Generalises spec-48's `tag=`-only DSL |
 | 51 | Local-apply overlay parity — `mooncake apply` auto-loads `vars/by-host/<hostname>.yml` | ✅ shipped (`4d6b2a1`) — DX bundle |
 | 45 simple | `mooncake fleet discover` — probe `peers.toml` + `~/.ssh/config` against `/v1/version` | ✅ shipped (`f49930b`) — DX bundle. Pragmatic subset of spec-45 (no mDNS, no `fleet init`, no daemon changes) |
 
@@ -262,12 +255,16 @@ all of this as agent tools.
   from env, masked in logs, and now also **redacted from plan output
   by default** (`b019805` polish), never written to disk.
 
+**What also just shipped (rev9)**:
+
+- **`Reverse()` on `file.write` create-only case** ✅ (spec-22 phase 5 slice A) — first concrete handler implementation of the headline primitive. Modify-existing-file case (slice B) is in flight.
+
 **Gap**:
 
-- **`Reverse()`**: **🟡 in flight in `worktree-spec-22-phase5`**. Spec-22 phase 5. **The headline primitive — the last gate between today and the agent-safety demo.**
+- **`Reverse()` across remaining handlers** (text family, pkg, os.service, etc.): not implemented yet. `file.write` is fully done (slices A + B).
 - **`Cost()`**: not implemented yet. Spec-22 phase 6.
 - **Planner / MCP wiring of `Diff` + `Cost`**: not implemented yet. Spec-22 phase 7.
-- **`transaction:` blocks**: not started. Spec-30, needs `Reverse()`. The killer demo.
+- **`transaction:` blocks**: **🟡 parser in flight** (`worktree-spec-30-parser`). Unblocked by phase 5 slice A. Execution semantics + reverse-on-failure orchestration still ahead.
 - **`try/catch/finally`**: still drafted (spec-23 §2). Overlaps semantically with spec-30 transactions; design must align.
 - **Policy DSL** (`deny:` patterns): not specced. Hooks now exist via `Permissions`.
 - **Plan signing** (Sigstore-style): not specced.
@@ -276,12 +273,12 @@ all of this as agent tools.
 - **Deterministic replay**: implicit via run audit but no `replay` command.
 - **Cost / risk classifier**: not specced.
 
-**Distance to ideal**: ~65%, up from ~60%. `Diff` is now wired into JSON
-plan output (so agents can branch on structural deltas without parsing
-prose). **`Reverse()` is in flight** in `worktree-spec-22-phase5` —
-which means the project is actively pulling the last load-bearing
-primitive into the tree. Once it ships and spec-30 `transaction:`
-follows, the README's agent-safety claim becomes a falsifiable demo.
+**Distance to ideal**: ~70%, up from ~65%. `Reverse()` is in the tree
+for `file.write` create-only — the first concrete handler implementing
+the headline primitive. The spec-30 `transaction:` parser is in flight
+in parallel with phase 5 slice B. The agent-safety demo is no longer
+"waiting on Reverse"; it's "waiting on slice B + spec-30 execution
+semantics."
 
 ---
 
@@ -289,25 +286,26 @@ follows, the README's agent-safety claim becomes a falsifiable demo.
 
 Mooncake has built the **kernel** (Stream 1: production-quality), the
 **fleet runtime** (Stream 3: 12/14, **Phase B complete**, plus the
-simple `fleet discover` bonus from this cycle, live-tested), and the
-**DX funnel** (Stream 4: shipped). The **agent safety layer** is the
-primary track: spec-22 phases 3 and 4 are both fully shipped
-(`Permissions()` and `Diff()` across all 5/5 priority handler
-families, with `Diff` now wired into JSON plan output), spec-23 §1
-(`on_change`) and §3 (`!secret`) are live in master, and **`Reverse()`
-(phase 5) is in flight right now** in `worktree-spec-22-phase5`. The
-strategic gap is no longer "does any agent-safety code exist" — it's
-**"how soon does spec-30 ship after `Reverse()` lands."**
+simple `fleet discover` bonus, live-tested), and the **DX funnel**
+(Stream 4: shipped). The **agent safety layer** is the primary track:
+spec-22 phases 3 and 4 are both fully shipped (`Permissions()` and
+`Diff()` across all 5/5 priority handler families, with `Diff` wired
+into JSON plan output), spec-23 §1 (`on_change`) and §3 (`!secret` +
+plan-output redaction) are live, and **phase 5 slice A (`Reverse()` on
+`file.write` create-only) just landed** (`e1e6361`). Two parallel
+worktrees are now driving the demo: **phase 5 slice B** (Reverse for
+modify-existing-file) and **spec-30 parser** (`transaction:` blocks,
+unblocked the moment slice A merged).
 
 `analysis/top-5-priorities-2026-05.md` (filed 2026-05-14) named the
-ordering. As of rev8 the picture is:
+ordering. As of rev9 the picture is:
 
 1. **Spec-22** — phases 1+2 ✅, phase 3 ✅ (Permissions across all 5/5
    families), phase 4 ✅ (Diff across all 5/5 families + JSON plan
-   output wiring), **phase 5 (Reverse) 🟡 in flight**, phases 6–8 still
-   draft.
-2. **Spec-30** — `transaction:` blocks. The killer demo. Starts the
-   moment `Reverse()` works on `file.write`.
+   output wiring), **phase 5 slice A ✅** (Reverse on file.write
+   create-only), **slice B 🟡 in flight**, phases 6–8 still draft.
+2. **Spec-30** — `transaction:` blocks. **🟡 parser in flight** —
+   moved from blocked to in-flight the moment phase 5 slice A merged.
 3. **Personal-fleet PR 8** — `fleet logs` + `fleet facts`. ✅ shipped.
 4. **Personal-fleet PR 9 + PR 10** — native SSH driver + systemd/launchd
    installer. **Both ✅ shipped.** PR 11 auto-promoted from 🟡 lite to ✅.
@@ -323,19 +321,20 @@ them.
 `next-priorities-2026-05.md` recommends **finish-then-pivot**. Track B
 (personal-fleet close-out) is effectively done — only Phase C polish
 (mDNS auto-advertise, interactive `fleet init`), spec-50 (extended
-filter keys), and the `mooncake apply <machine>` request remain. The
-pivot has fully happened and Track A is **mid-flight at speed**: phases
-3 and 4 of spec-22 are done, spec-23 §1+§3 are done, ten merges have
-landed across three sessions, and **`Reverse()` is in flight right
-now**. Once it lands and spec-30 `transaction:` blocks ship on top of
-it, the agent-safety pitch becomes a falsifiable demo: *"agent edits 4
-files, third fails, mooncake auto-reverts the first two."*
+filter keys), and the `mooncake apply <machine>` request remain. Track A
+is **demoable-soon**: phases 3 + 4 + slice 5A of spec-22 are done,
+spec-23 §1+§3 are done, eleven merges across four sessions, and **the
+spec-30 parser is already in flight in parallel with slice B**. Once
+slice B closes and spec-30's execution semantics + reverse-on-failure
+orchestration ship, the agent-safety pitch becomes a falsifiable demo:
+*"agent edits 4 files, third fails, mooncake auto-reverts the first
+two."*
 
-The unfair-advantage statement the VISION leaves open (§13.10) gets
-answered when `transaction:` ships: **"plan + snapshot + reverse +
-deterministic replay, all typed."** Once `Reverse()` lands, the answer
-to that question becomes load-bearing.
+The unfair-advantage statement the VISION leaves open (§13.10) is
+**now load-bearing**: *"plan + snapshot + reverse + deterministic
+replay, all typed."* Reverse is partially in the tree; the rest is
+incremental.
 
-The strategic question is no longer *"will the pivot happen"* or *"how
-soon does `Reverse()` start"* — it's *"how soon does spec-30 ship after
-`Reverse()` merges."*
+The strategic question collapses one more notch: from *"how soon does
+spec-30 ship after Reverse merges"* to **"how soon does the spec-30
+execution semantics close given the parser is already in flight."**
