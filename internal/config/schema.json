@@ -653,6 +653,44 @@
         "permissions.changed"
       ]
     },
+    "git.clone": {
+      "type": "object",
+      "description": "Idempotently clone or update a git repository at a specific ref",
+      "properties": {
+        "depth": {
+          "type": "integer"
+        },
+        "dest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "force": {
+          "type": "boolean"
+        },
+        "recurse_submodules": {
+          "type": "boolean"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "update": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "repo",
+        "dest"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "network",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
     "import": {
       "type": "string",
       "description": "Import steps from another file"
@@ -1102,6 +1140,10 @@
           "type": "string",
           "description": "Directory path for iterating over files (universal)"
         },
+        "git.clone": {
+          "description": "Idempotently clone or update a git repository at a specific ref",
+          "$ref": "#/definitions/git.clone"
+        },
         "import": {
           "type": "string",
           "description": "Path to YAML file with steps to import"
@@ -1297,6 +1339,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -1457,6 +1504,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -1625,6 +1677,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -1785,6 +1842,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -1953,6 +2015,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -2113,6 +2180,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -2281,6 +2353,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -2441,6 +2518,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -2609,6 +2691,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -2773,6 +2860,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -2933,6 +3025,180 @@
               {
                 "required": [
                   "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "git.clone"
+          ],
+          "properties": {
+            "git.clone": {
+              "$ref": "#/definitions/git.clone"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
                 ]
               },
               {
@@ -3106,6 +3372,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "log"
                 ]
               },
@@ -3266,6 +3537,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -3434,6 +3710,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -3594,6 +3875,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -3762,6 +4048,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -3926,6 +4217,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -4086,6 +4382,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -4261,6 +4562,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -4421,6 +4727,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -4589,6 +4900,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -4749,6 +5065,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -4917,6 +5238,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -5077,6 +5403,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -5252,6 +5583,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -5412,6 +5748,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -5580,6 +5921,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -5740,6 +6086,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {
@@ -5908,6 +6259,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -6072,6 +6428,11 @@
               },
               {
                 "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -6232,6 +6593,11 @@
               {
                 "required": [
                   "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
                 ]
               },
               {

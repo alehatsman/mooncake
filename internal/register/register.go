@@ -23,6 +23,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/file_insert"
 	_ "github.com/alehatsman/mooncake/internal/actions/file_patch_apply"
 	_ "github.com/alehatsman/mooncake/internal/actions/file_replace"
+	_ "github.com/alehatsman/mooncake/internal/actions/git_clone"
 	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
 	_ "github.com/alehatsman/mooncake/internal/actions/package"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"

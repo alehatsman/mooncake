@@ -470,6 +470,7 @@ var actionStructByName = map[string]any{
 	"repo.search":       &config.RepoSearch{},
 	"repo.tree":         &config.RepoTree{},
 	"repo.patch":        &config.RepoApplyPatchset{},
+	"git.clone":         &config.GitClone{},
 	"wait.port":         &config.WaitPort{},
 	"wait.http":         &config.WaitHTTP{},
 	"wait.file":         &config.WaitFile{},
