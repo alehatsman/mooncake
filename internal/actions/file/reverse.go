@@ -294,10 +294,54 @@ func FormatReverseMode(m os.FileMode) string {
 
 // ExtractReverseInfo pulls a *FileReverseInfo back out of an
 // actions.Result. Exported so other handlers that capture via
-// CaptureReverseInfo (file.copy, file.template) can share the
-// extraction path.
+// CaptureReverseInfo (file.copy, file.template, text.*) can share
+// the extraction path.
 func ExtractReverseInfo(result actions.Result) (*FileReverseInfo, error) {
 	return extractReverseInfo(result)
+}
+
+// ReverseInPlaceFileMutation is the canonical Reverse body for any
+// handler whose net effect on the filesystem is "mutate a single
+// regular file at `path`". The classic example is the text.*
+// family: read file → apply transformation → write file. The same
+// shape covers file.copy and file.template (dest is the mutated
+// file; source isn't touched).
+//
+// Behavior:
+//   - !Existed pre-apply (handler created the file) → DeleteFileStep
+//   - Existed && Kind=="file" && Content captured → RestoreFileStep
+//     (write pre-apply bytes back, with pre-apply mode, Force=true)
+//   - Existed but Kind != "file"  → refuse (replacing a dir/symlink
+//     would need a multi-step reverse the single-Step contract
+//     can't express)
+//   - Content nil due to size cap → refuse explicitly so the
+//     transaction layer surfaces "too large to roll back"
+//
+// handlerName prefixes error messages — "text.line", "file.copy",
+// etc — so a transaction failure log says which handler refused.
+func ReverseInPlaceFileMutation(path string, result actions.Result, handlerName string) (*config.Step, error) {
+	info, err := ExtractReverseInfo(result)
+	if err != nil {
+		return nil, fmt.Errorf("%s Reverse: %w", handlerName, err)
+	}
+	if !info.Existed {
+		return DeleteFileStep(path), nil
+	}
+	if info.Kind != "file" {
+		return nil, fmt.Errorf(
+			"%s Reverse: cannot reverse a mutation that replaced a %s "+
+				"at the target path (only regular-file pre-state is "+
+				"restorable from a single-step reverse)",
+			handlerName, info.Kind)
+	}
+	if info.Content == nil {
+		return nil, fmt.Errorf(
+			"%s Reverse: pre-apply file too large to snapshot "+
+				"(> %d bytes); transaction layer must refuse to rollback "+
+				"this step rather than partially restore",
+			handlerName, MaxReverseCaptureBytes)
+	}
+	return RestoreFileStep(path, info), nil
 }
 
 // extractReverseInfo pulls the FileReverseInfo back out of the

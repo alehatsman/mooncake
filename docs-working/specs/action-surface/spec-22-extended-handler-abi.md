@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slices A+B+C+D — `file.write` reverses for create / overwrite / delete / perms / link-create / hardlink-create; `file.copy` and `file.template` reverse for create + overwrite via shared content-snapshot helpers (`RestoreFileStep`, `DeleteFileStep`, `ExtractReverseInfo`). All cycles bounded by a 4 MiB content-snapshot cap; oversized payloads refuse explicitly. Slices E–F (text.*, categoricals) still drafted as refusals. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slices A+B+C+D+E — `file.write`, `file.copy`, `file.template`, and all eight `text.*` handlers (`text.line`, `text.replace`, `text.insert`, `text.delete_range`, `text.patch`, `text.patch.ini/json/yaml`) implement `Reverser`. The text.* family reuses a single `ReverseInPlaceFileMutation` helper — 12-line per-handler `Reverse` methods, no per-handler edge-case logic. All cycles bounded by a 4 MiB content-snapshot cap; oversized payloads refuse explicitly. Slice F (categoricals — pkg / os.service / file.download / file.unarchive) still drafted. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -412,10 +412,20 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      touched by these handlers. Same edge cases as slice B
      (oversized refusal, non-file replacement refusal,
      create-vs-overwrite split).
-   - ⏳ Slice E — `text.*` handlers. Capture the pre-replace lines /
-     pre-insert offset so reverse can splice the original window
-     back in. Coarser fallback (full file Before content) is
-     acceptable for the first cut.
+   - ✅ Slice E — `text.*` handlers (8 total): `text.line`,
+     `text.replace`, `text.insert`, `text.delete_range`, `text.patch`,
+     `text.patch.ini`, `text.patch.json`, `text.patch.yaml`. Used the
+     coarser-fallback approach (snapshot the full pre-apply file)
+     rather than per-handler line/offset capture — uniform shape
+     across all eight handlers, no per-handler edge-case logic.
+     Each handler's `Reverse` is 12 lines wrapping a new shared
+     helper `filehandler.ReverseInPlaceFileMutation(path, result,
+     handlerName)` that subsumes the existing `file.copy` /
+     `file.template` reverse bodies (refactored to use it too).
+     The capture call is one line in each `Run`, gated on apply
+     mode, placed after the plan-mode short-circuit so we don't
+     pay the syscall in plan mode. One cycle test per handler
+     locks the apply→reverse→verify contract.
    - ⏳ Slice F — categorical handlers (`pkg`, `os.service`,
      `file.download`, `file.unarchive`). Each needs a custom
      ReverseData payload (pre-install package version, pre-state

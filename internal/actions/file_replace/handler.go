@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -424,6 +425,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Reason = fmt.Sprintf("would replace %d occurrence(s)", replacementCount)
 		return result, nil
 	}
+
+	// Capture pre-state for Reverse() (spec-22 phase 5 slice E).
+	result.ReverseData = filehandler.CaptureReverseInfo(renderedPath, "")
 
 	if fr.Backup {
 		backupPath := renderedPath + ".bak"
