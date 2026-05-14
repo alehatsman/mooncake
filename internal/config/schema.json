@@ -812,6 +812,110 @@
         "package.managed"
       ]
     },
+    "pkg.repo": {
+      "type": "object",
+      "description": "Manage a third-party package repository (apt; dnf/brew deferred)",
+      "properties": {
+        "apt": {
+          "type": "object",
+          "properties": {
+            "architectures": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "components": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "gpg_check": {
+              "type": "boolean"
+            },
+            "gpg_key_fingerprint": {
+              "type": "string"
+            },
+            "gpg_key_url": {
+              "type": "string"
+            },
+            "suites": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "update_cache": {
+              "type": "boolean"
+            },
+            "uri": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "uri"
+          ],
+          "additionalProperties": false
+        },
+        "brew": {
+          "type": "object",
+          "properties": {
+            "tap": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "tap"
+          ],
+          "additionalProperties": false
+        },
+        "dnf": {
+          "type": "object",
+          "properties": {
+            "baseurl": {
+              "type": "string",
+              "minLength": 1
+            },
+            "gpg_check": {
+              "type": "boolean"
+            },
+            "gpg_key_url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "baseurl"
+          ],
+          "additionalProperties": false
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "repo.patch": {
       "type": "object",
       "description": "Apply multiple patches to multiple files atomically",
@@ -1118,6 +1222,10 @@
           "description": "Manage system packages (install/remove/update)",
           "$ref": "#/definitions/pkg"
         },
+        "pkg.repo": {
+          "description": "Manage a third-party package repository (apt; dnf/brew deferred)",
+          "$ref": "#/definitions/pkg.repo"
+        },
         "repo.patch": {
           "description": "Apply multiple patches to multiple files atomically",
           "$ref": "#/definitions/repo.patch"
@@ -1313,6 +1421,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -1473,6 +1586,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -1641,6 +1759,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -1801,6 +1924,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -1969,6 +2097,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -2129,6 +2262,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -2297,6 +2435,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -2457,6 +2600,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -2625,6 +2773,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -2785,6 +2938,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -2953,6 +3111,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -3113,6 +3276,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -3281,6 +3449,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -3445,6 +3618,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -3605,6 +3783,180 @@
               {
                 "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "pkg.repo"
+          ],
+          "properties": {
+            "pkg.repo": {
+              "$ref": "#/definitions/pkg.repo"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
                 ]
               },
               {
@@ -3778,6 +4130,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.search"
                 ]
               },
@@ -3942,6 +4299,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -4102,6 +4464,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -4277,6 +4644,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -4437,6 +4809,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -4605,6 +4982,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -4765,6 +5147,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -4933,6 +5320,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -5093,6 +5485,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -5268,6 +5665,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -5428,6 +5830,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -5596,6 +6003,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -5756,6 +6168,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {
@@ -5924,6 +6341,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -6088,6 +6510,11 @@
               },
               {
                 "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -6248,6 +6675,11 @@
               {
                 "required": [
                   "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
                 ]
               },
               {

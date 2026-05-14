@@ -25,6 +25,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/file_replace"
 	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
 	_ "github.com/alehatsman/mooncake/internal/actions/package"
+	_ "github.com/alehatsman/mooncake/internal/actions/pkg_repo"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"
 	_ "github.com/alehatsman/mooncake/internal/actions/print"
 	_ "github.com/alehatsman/mooncake/internal/actions/repo_apply_patchset"

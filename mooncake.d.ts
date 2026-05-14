@@ -364,6 +364,36 @@ export interface PkgAction {
 }
 
 /**
+ * Manage a third-party package repository (apt; dnf/brew deferred)
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface PkgRepoAction {
+  apt?: {
+    architectures: string[];
+    components: string[];
+    gpg_check: boolean;
+    gpg_key_fingerprint: string;
+    gpg_key_url: string;
+    suites: string[];
+    update_cache: boolean;
+    uri: string;
+  };
+  brew?: {
+    tap: string;
+  };
+  dnf?: {
+    baseurl: string;
+    gpg_check: boolean;
+    gpg_key_url: string;
+  };
+  name: string;
+  state?: string;
+}
+
+/**
  * Apply multiple patches to multiple files atomically
  * @category file
  */
@@ -765,6 +795,10 @@ export interface Step {
    * Manage system packages (install/remove/update)
    */
   pkg?: PkgAction;
+  /**
+   * Manage a third-party package repository (apt; dnf/brew deferred)
+   */
+  "pkg.repo"?: PkgRepoAction;
   /**
    * Apply multiple patches to multiple files atomically
    */

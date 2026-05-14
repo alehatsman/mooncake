@@ -331,6 +331,44 @@ type Package struct {
 	Extra        []string `yaml:"extra" json:"extra,omitempty"`                   // Extra arguments to pass to package manager
 }
 
+// PkgRepo declares a third-party package repository. The action picks
+// the matching nested block (apt/dnf/brew) for the active manager.
+// v1 implements apt only; dnf/brew blocks are accepted by the schema
+// but raise a clear "not yet implemented" error at run time.
+type PkgRepo struct {
+	Name  string       `yaml:"name" json:"name"`                       // Human-readable label, used as the source-list filename
+	State string       `yaml:"state" json:"state,omitempty"`           // present|absent (default: present)
+	Apt   *PkgRepoApt  `yaml:"apt" json:"apt,omitempty"`               // Apt-specific config
+	Dnf   *PkgRepoDnf  `yaml:"dnf" json:"dnf,omitempty"`               // DNF/YUM-specific config (deferred)
+	Brew  *PkgRepoBrew `yaml:"brew" json:"brew,omitempty"`             // Homebrew-specific config (deferred)
+}
+
+// PkgRepoApt is the apt driver block for pkg.repo. Written as DEB822
+// to /etc/apt/sources.list.d/<name>.sources with the keyring (if any)
+// at /etc/apt/keyrings/<name>.gpg.
+type PkgRepoApt struct {
+	URI               string   `yaml:"uri" json:"uri"`                                         // Required: repository URI
+	Suites            []string `yaml:"suites" json:"suites,omitempty"`                         // Required: suite names (e.g. [nodistro] or [jammy])
+	Components        []string `yaml:"components" json:"components,omitempty"`                 // Default: [main]
+	Architectures     []string `yaml:"architectures" json:"architectures,omitempty"`           // Default: host arch
+	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`               // URL to .gpg or .asc public key
+	GPGKeyFingerprint string   `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true
+	GPGCheck          *bool    `yaml:"gpg_check" json:"gpg_check,omitempty"`                   // Default: true
+	UpdateCache       *bool    `yaml:"update_cache" json:"update_cache,omitempty"`             // Run apt-get update after change (default: true)
+}
+
+// PkgRepoDnf is the dnf/yum driver block. Reserved for a future phase.
+type PkgRepoDnf struct {
+	BaseURL   string `yaml:"baseurl" json:"baseurl"`
+	GPGKeyURL string `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`
+	GPGCheck  *bool  `yaml:"gpg_check" json:"gpg_check,omitempty"`
+}
+
+// PkgRepoBrew is the homebrew driver block. Reserved for a future phase.
+type PkgRepoBrew struct {
+	Tap string `yaml:"tap" json:"tap"`
+}
+
 // UnmarshalYAML decodes Package and supports `names:` as either a list of
 // strings or a single scalar (template expression). The scalar form is
 // stashed in NamesExpr for late resolution at execute time.
@@ -750,6 +788,7 @@ type Step struct {
 	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty" action:"text.delete_range"`
 	TextPatch        *FilePatchApply         `yaml:"text.patch"        json:"text.patch,omitempty"        action:"text.patch"`
 	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
+	PkgRepo          *PkgRepo                `yaml:"pkg.repo"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
 	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
 	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
@@ -1019,6 +1058,7 @@ func (s *Step) Clone() *Step {
 		TextDeleteRange:  s.TextDeleteRange,
 		TextPatch:        s.TextPatch,
 		Pkg:              s.Pkg,
+		PkgRepo:          s.PkgRepo,
 		Tool:             s.Tool,
 		OsService:        s.OsService,
 		ContainerImage:   s.ContainerImage,
