@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"strings"
 
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
@@ -44,8 +43,17 @@ type ApplyOptions struct {
 	// daemon enforces a separate per-file cap.
 	MaxSyncBytes int64
 
-	// Writer receives one line per streamed event in `[peer] message`
-	// format. A nil writer discards everything.
+	// Events, when non-nil, receives one PeerEvent per streamed SSE event
+	// plus control events at sync/submit/disconnect/error boundaries. The
+	// caller (typically a Multiplexer) owns the channel and is responsible
+	// for closing it after every concurrent producer has returned. When
+	// Events is set, Writer is ignored.
+	Events chan<- PeerEvent
+
+	// Writer is the legacy single-peer rendering path: Apply writes
+	// `[peer] message` lines directly. Used by tests and callers that
+	// don't want the multiplexer indirection. Ignored when Events is set.
+	// A nil writer (with nil Events) discards rendered output.
 	Writer io.Writer
 }
 
@@ -67,9 +75,8 @@ type ApplyResult struct {
 //  4. Translate PlanPath / VarsFiles / PlanDir to peer-side absolute paths
 //     under the synced scope.
 //  5. Submit the run.
-//  6. Stream events, writing `[peer] message` lines to opts.Writer until
-//     the daemon closes the stream (run reached terminal state) or ctx is
-//     canceled.
+//  6. Stream events, emitting them via Events or Writer until the daemon
+//     closes the stream (run reached terminal state) or ctx is canceled.
 //
 // Returns the per-peer result; the run's terminal status is reported via
 // Result.Status when a run.completed event was seen. Returns the first
@@ -77,6 +84,7 @@ type ApplyResult struct {
 // useful (e.g. Sync stats even when Submit fails).
 func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 	result := ApplyResult{PeerName: opts.PeerName}
+	emit := makeEmitter(opts)
 
 	if err := validateApplyPaths(opts); err != nil {
 		return result, err
@@ -88,19 +96,27 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 
 	entries, _, err := Walk(opts.PlanDir, opts.MaxSyncBytes)
 	if err != nil {
-		return result, fmt.Errorf("walk plan-dir: %w", err)
+		err = fmt.Errorf("walk plan-dir: %w", err)
+		emit(PeerEvent{Kind: KindError, Message: err.Error()})
+		return result, err
 	}
 
 	ver, err := opts.Peer.GetVersion(ctx)
 	if err != nil {
+		emit(PeerEvent{Kind: KindError, Message: "version probe: " + oneLine(err.Error())})
 		return result, err
 	}
 
 	syncStats, err := SyncTo(ctx, opts.Peer, entries, scope)
 	result.Sync = syncStats
 	if err != nil {
-		return result, fmt.Errorf("sync: %w", err)
+		err = fmt.Errorf("sync: %w", err)
+		emit(PeerEvent{Kind: KindError, Message: oneLine(err.Error())})
+		return result, err
 	}
+	emit(PeerEvent{Kind: KindSync, Message: fmt.Sprintf(
+		"sync: %d uploaded, %d skipped (%d bytes total)",
+		syncStats.Put, syncStats.Skipped, syncStats.BytesTotal)})
 
 	// Translate controller-side absolute paths to peer-side absolute paths
 	// under the synced scope.
@@ -127,9 +143,11 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 		BaseDir:   peerBase,
 	})
 	if err != nil {
+		emit(PeerEvent{Kind: KindError, Message: "submit: " + oneLine(err.Error())})
 		return result, err
 	}
 	result.RunID = runID
+	emit(PeerEvent{Kind: KindSubmit, Message: "submitted run " + runID})
 
 	sink := make(chan transport.Event, 64)
 	streamErrCh := make(chan error, 1)
@@ -139,22 +157,20 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 		select {
 		case <-ctx.Done():
 			<-streamErrCh
-			drainEvents(sink, opts, &result)
+			drainEvents(sink, emit, &result)
 			return result, ctx.Err()
 		case ev := <-sink:
 			result.Events++
 			if status, ok := terminalStatus(ev); ok {
 				result.Status = status
 			}
-			if opts.Writer != nil {
-				fmt.Fprintln(opts.Writer, formatEvent(opts.PeerName, ev))
-			}
+			emit(PeerEvent{Kind: KindEvent, Event: ev})
 		case err := <-streamErrCh:
 			// Stream goroutine finished (clean close OR error). Drain any
 			// events still buffered in sink before returning — without
 			// this, the select can pick streamErrCh before the last events
 			// (commonly including run.completed) are read.
-			drainEvents(sink, opts, &result)
+			drainEvents(sink, emit, &result)
 
 			// If no run.completed event was seen (e.g. planner setup
 			// failed before any events fired), reach back for the run
@@ -164,39 +180,70 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 			if err == nil && result.Status == "" {
 				if rec, rerr := opts.Peer.GetRun(context.WithoutCancel(ctx), runID); rerr == nil {
 					result.Status = rec.Status
-					if rec.Error != "" && opts.Writer != nil {
-						fmt.Fprintf(opts.Writer, "[%s] ✗ run %s: %s\n",
-							opts.PeerName, rec.Status, oneLine(rec.Error))
+					if rec.Error != "" {
+						emit(PeerEvent{Kind: KindError, Message: fmt.Sprintf("run %s: %s", rec.Status, oneLine(rec.Error))})
 					}
 					if rec.Status == "failed" || rec.Status == "interrupted" {
 						return result, fmt.Errorf("run %s on %s: %s", rec.Status, opts.PeerName, oneLine(rec.Error))
 					}
 				}
 			}
+			// Stream ended without a terminal status and without an error:
+			// honest signal that the SSE connection dropped mid-run. The
+			// daemon-side run may still be alive; we just can't see it.
+			if err == nil && result.Status == "" {
+				emit(PeerEvent{Kind: KindDisconnect})
+			}
 			return result, err
 		}
 	}
 }
 
-// oneLine collapses a multi-line error into a single-line summary suitable
-// for the [peer] log prefix format. Newlines and indentation get squashed
-// to spaces; the result is trimmed.
-func oneLine(s string) string {
-	if s == "" {
-		return s
+// emitter is a thin abstraction over the two output paths: PeerEvent
+// channel (multi-peer multiplexer) and direct Writer (single-peer / tests).
+// The peer name is pre-filled so callers just pass {Kind, Event, Message}.
+type emitter func(PeerEvent)
+
+func makeEmitter(opts ApplyOptions) emitter {
+	if opts.Events != nil {
+		peer := opts.PeerName
+		ch := opts.Events
+		return func(ev PeerEvent) {
+			ev.Peer = peer
+			ch <- ev
+		}
 	}
-	out := strings.ReplaceAll(s, "\n", " ")
-	out = strings.ReplaceAll(out, "\t", " ")
-	for strings.Contains(out, "  ") {
-		out = strings.ReplaceAll(out, "  ", " ")
+	if opts.Writer == nil {
+		return func(PeerEvent) {}
 	}
-	return strings.TrimSpace(out)
+	// Single-peer Writer path: render inline with an unpadded prefix. The
+	// peer name appears in the same `[name]` format the multiplexer uses,
+	// so downstream consumers (tests, grep) see consistent output regardless
+	// of which code path produced it.
+	peer := opts.PeerName
+	w := opts.Writer
+	return func(ev PeerEvent) {
+		var line string
+		switch ev.Kind {
+		case KindEvent:
+			line = "[" + peer + "] " + formatEvent(ev.Event)
+		case KindSync, KindSubmit:
+			line = "[" + peer + "] " + ev.Message
+		case KindDisconnect:
+			line = "[" + peer + "] *** disconnected ***"
+		case KindError:
+			line = "[" + peer + "] ✗ " + ev.Message
+		default:
+			return
+		}
+		fmt.Fprintln(w, line)
+	}
 }
 
 // drainEvents non-blockingly reads everything currently in sink, updating
-// result and writing log lines. Used by Apply when the stream goroutine
-// returns to flush any buffered events that arrived just before close.
-func drainEvents(sink <-chan transport.Event, opts ApplyOptions, result *ApplyResult) {
+// result and emitting. Used when the stream goroutine returns, to flush any
+// buffered events that arrived just before close.
+func drainEvents(sink <-chan transport.Event, emit emitter, result *ApplyResult) {
 	for {
 		select {
 		case ev := <-sink:
@@ -204,9 +251,7 @@ func drainEvents(sink <-chan transport.Event, opts ApplyOptions, result *ApplyRe
 			if status, ok := terminalStatus(ev); ok {
 				result.Status = status
 			}
-			if opts.Writer != nil {
-				fmt.Fprintln(opts.Writer, formatEvent(opts.PeerName, ev))
-			}
+			emit(PeerEvent{Kind: KindEvent, Event: ev})
 		default:
 			return
 		}
@@ -277,84 +322,4 @@ func terminalStatus(ev transport.Event) (string, bool) {
 		return "success", true
 	}
 	return "failed", true
-}
-
-// formatEvent renders one event as a single `[peer] message` line. The
-// formatter is intentionally simple in PR5 — it covers run.* / step.*
-// events with a human-friendly summary and falls back to a compact-JSON
-// debug line for everything else. PR6 / spec-46 can iterate on visual
-// polish (colors, padding, etc.).
-func formatEvent(peer string, ev transport.Event) string {
-	prefix := "[" + peer + "] "
-	switch ev.Type {
-	case "run.started":
-		return prefix + "▶ run started"
-	case "run.completed":
-		return prefix + "✔ run complete " + summarizeRunCompleted(ev.Data)
-	case "plan.loaded":
-		return prefix + "plan loaded " + extractField(ev.Data, "step_count", "0") + " steps"
-	case "step.started":
-		return prefix + "  ▸ " + extractField(ev.Data, "name", "(unnamed step)")
-	case "step.completed":
-		return prefix + "    ✔ " + extractField(ev.Data, "name", "")
-	case "step.skipped":
-		return prefix + "    – " + extractField(ev.Data, "name", "") + " (skipped)"
-	case "step.failed":
-		return prefix + "    ✗ " + extractField(ev.Data, "name", "") + ": " +
-			extractField(ev.Data, "error", "(no error message)")
-	case "step.stdout", "step.stderr":
-		txt := extractField(ev.Data, "line", "")
-		if txt == "" {
-			return prefix + ev.Type
-		}
-		return prefix + "      " + txt
-	default:
-		if len(ev.Data) > 0 {
-			return prefix + string(ev.Type) + " " + string(ev.Data)
-		}
-		return prefix + string(ev.Type)
-	}
-}
-
-func extractField(data json.RawMessage, key, fallback string) string {
-	if len(data) == 0 {
-		return fallback
-	}
-	var m map[string]json.RawMessage
-	if err := json.Unmarshal(data, &m); err != nil {
-		return fallback
-	}
-	raw, ok := m[key]
-	if !ok {
-		return fallback
-	}
-	// Strings: unquote. Anything else: stringify.
-	var s string
-	if err := json.Unmarshal(raw, &s); err == nil {
-		return s
-	}
-	return string(raw)
-}
-
-func summarizeRunCompleted(data json.RawMessage) string {
-	if len(data) == 0 {
-		return ""
-	}
-	var m struct {
-		Success      bool `json:"success"`
-		TotalSteps   int  `json:"total_steps"`
-		ChangedSteps int  `json:"changed_steps"`
-		FailedSteps  int  `json:"failed_steps"`
-		SkippedSteps int  `json:"skipped_steps"`
-		DurationMs   int  `json:"duration_ms"`
-	}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return string(data)
-	}
-	verdict := "success"
-	if !m.Success {
-		verdict = "failed"
-	}
-	return fmt.Sprintf("%s: %d/%d changed, %d failed, %d skipped (%dms)",
-		verdict, m.ChangedSteps, m.TotalSteps, m.FailedSteps, m.SkippedSteps, m.DurationMs)
 }

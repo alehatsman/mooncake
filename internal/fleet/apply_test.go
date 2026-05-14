@@ -195,6 +195,119 @@ func TestApply_RejectsVarsOutsidePlanDir(t *testing.T) {
 	}
 }
 
+// TestApply_EventsChannel runs Apply with Events set instead of Writer and
+// verifies the PR6 fan-in path: every observable phase (sync, submit, real
+// SSE events) lands as a typed PeerEvent on the channel. Without this
+// coverage, regressions in the emitter switch (e.g. dropped KindSubmit)
+// would go unnoticed until the multiplexer renders nothing.
+func TestApply_EventsChannel(t *testing.T) {
+	addr, token, stop := startAgentdTCP(t)
+	defer stop()
+
+	dir, planPath := makePlanDir(t)
+	client := transport.New("evpeer", addr, token)
+
+	// Buffered enough to never block Apply: ~3 control + ~5 SSE events for
+	// an empty plan.
+	ch := make(chan fleet.PeerEvent, 64)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	res, err := fleet.Apply(ctx, fleet.ApplyOptions{
+		PeerName:     "evpeer",
+		Peer:         client,
+		PlanDir:      dir,
+		PlanPath:     planPath,
+		ControllerID: "00000000-0000-4000-8000-000000000000",
+		MaxSyncBytes: 100 << 20,
+		Events:       ch,
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if res.Status != "success" {
+		t.Errorf("Status = %q, want success", res.Status)
+	}
+	close(ch)
+
+	// Tally observed event kinds. Every successful Apply must emit at least
+	// one KindSync, one KindSubmit, and one KindEvent. KindDisconnect /
+	// KindError must NOT fire on the happy path.
+	var sync, submit, ev, disc, errk int
+	for pe := range ch {
+		if pe.Peer != "evpeer" {
+			t.Errorf("unexpected Peer field %q", pe.Peer)
+		}
+		switch pe.Kind {
+		case fleet.KindSync:
+			sync++
+		case fleet.KindSubmit:
+			submit++
+		case fleet.KindEvent:
+			ev++
+		case fleet.KindDisconnect:
+			disc++
+		case fleet.KindError:
+			errk++
+		}
+	}
+	if sync != 1 {
+		t.Errorf("KindSync count = %d, want 1", sync)
+	}
+	if submit != 1 {
+		t.Errorf("KindSubmit count = %d, want 1", submit)
+	}
+	if ev == 0 {
+		t.Errorf("KindEvent count = 0, want ≥1 (run.started + run.completed at minimum)")
+	}
+	if disc != 0 {
+		t.Errorf("KindDisconnect should not fire on happy path, got %d", disc)
+	}
+	if errk != 0 {
+		t.Errorf("KindError should not fire on happy path, got %d", errk)
+	}
+}
+
+// TestApply_EventsChannelTakesPriorityOverWriter — when both Events and
+// Writer are set, Events wins and Writer must stay untouched. Catches the
+// failure mode where double-emission leaks the same line to both stdout
+// (via Writer) and the multiplexer (via Events), producing duplicates.
+func TestApply_EventsChannelTakesPriorityOverWriter(t *testing.T) {
+	addr, token, stop := startAgentdTCP(t)
+	defer stop()
+	dir, planPath := makePlanDir(t)
+	client := transport.New("p", addr, token)
+
+	ch := make(chan fleet.PeerEvent, 64)
+	w := &bytes.Buffer{}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if _, err := fleet.Apply(ctx, fleet.ApplyOptions{
+		PeerName:     "p",
+		Peer:         client,
+		PlanDir:      dir,
+		PlanPath:     planPath,
+		ControllerID: "00000000-0000-4000-8000-000000000000",
+		MaxSyncBytes: 100 << 20,
+		Events:       ch,
+		Writer:       w,
+	}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	close(ch)
+	if w.Len() != 0 {
+		t.Errorf("Writer should be untouched when Events is set; got %q", w.String())
+	}
+	count := 0
+	for range ch {
+		count++
+	}
+	if count == 0 {
+		t.Error("Events channel got nothing — emitter likely no-op'd")
+	}
+}
+
 func TestApply_RejectsRelativePaths(t *testing.T) {
 	_, err := fleet.Apply(context.Background(), fleet.ApplyOptions{
 		PeerName:     "p",
