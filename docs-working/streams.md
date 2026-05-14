@@ -17,24 +17,29 @@ community can fill the long tail without forking.
 **Audience:** All three wedges — solo devs, AI agent developers, platform teams.
 
 **Key dependency:** spec-22 (extended handler ABI) unlocks everything that
-needs `Diff()`, `Reverse()`, and `Cost()` — which is most of specs 23–30.
-Ship it first.
+needs `Diff()`, `Reverse()`, and `Cost()` — which is most of specs 23–30
+and the final phase of every action spec in this stream. Ship it next; the
+remaining per-action phases collapse to "implement four methods" once the
+ABI lands.
 
 **Active specs:**
 
-| Spec | Topic | Blocks |
+| Spec | Topic | Status |
 |---|---|---|
-| 32 | Collapse step action dispatch | — |
-| 22 | Extended handler ABI (Diff / Reverse / Cost / Permissions) | 23, 30 |
-| 17 | Batched packages + templated `names` | — |
-| 24 | `pkg.install` / `pkg.remove` / `pkg.repo` | — |
-| 25 | `text.line`, structural patches (JSON/YAML/INI) | — |
-| 26 | `git.clone`, `git.checkout`, `git.config` | — |
-| 27 | `os.user`, `os.group`, `os.ssh_key` | — |
-| 28 | `os.cron`, `os.firewall`, `os.mount`, `os.sysctl` | — |
-| 29 | `wait.port`, `wait.http`, `wait.file` | — |
+| 32 | Collapse step action dispatch | not started |
+| 22 | Extended handler ABI (`Diff` / `Reverse` / `Cost` / `Permissions`) | not started — **blocks the final phase of every action spec below** |
+| 17 | Batched packages + templated `names` | not started |
+| 24 | `pkg.install` / `pkg.remove` / `pkg.repo` / `pkg.hold` / `pkg.upgrade` / `pkg.list` | P1–P5 shipped; P6 (ABI hooks) blocked on 22; P7 (docs) pending |
+| 25 | `text.line` · `text.patch.{ini,json,yaml}` | P1–P4 shipped; P5 (ABI hooks) blocked on 22; P6 (docs) pending |
+| 26 | `git.clone` (incl. credentials + submodules) · `git.checkout` · `git.config` | P1–P4 shipped; P5 (ABI hooks) blocked on 22; P6 (docs) pending |
+| 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped; P4 (ABI hooks) blocked on 22; P5 (docs) pending |
+| 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P3 + P5 shipped; **P4 `os.firewall` still TODO**; P6 (ABI hooks) blocked on 22 |
+| 37 | Step output capture — collision + plan-mode policy | drafted; prereq for 38 |
+| 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
 
-**Suggested order:** 32 → 22 → 17 → 24–29 in parallel
+**Suggested order:** 22 (unblocks every "P_final") → 28 P4 `os.firewall` (last
+implementation gap) → 37 → 38 → 32 → 17. In parallel, individual action specs
+land their ABI hook phases as soon as 22 ships.
 
 ---
 
@@ -175,8 +180,10 @@ Stream 4 is the most independent — it is primarily UX work on the existing ker
 
 | Priority | Stream | First spec |
 |---|---|---|
-| 1 | Action Surface | spec-32 (dispatch cleanup) → spec-22 (extended ABI) |
-| 2 | Safe Agent Runtime | spec-23 (framework primitives) after spec-22 |
-| 3 | Fleet & Cluster | C1 spec (node registry) — write spec first |
-| 4 | Ecosystem | spec-31 (plugin model) — independent, can run in parallel |
-| 5 | Developer Experience | `mooncake doctor` — define scope before speccing |
+| 1 | Action Surface | **spec-22** (extended ABI) — unblocks the final phase of every action spec 24–28, and is the prerequisite for Stream 2 |
+| 2 | Action Surface | spec-28 P4 `os.firewall` — last remaining action implementation in 24–28 |
+| 3 | Safe Agent Runtime | spec-23 (framework primitives) once spec-22 lands |
+| 4 | Action Surface | specs 37 + 38 (read.json / read.yaml) — closes the observation gap |
+| 5 | Fleet & Cluster | C1 spec (node registry) — write spec first |
+| 6 | Ecosystem | spec-31 (plugin model) — independent, can run in parallel |
+| 7 | Developer Experience | `mooncake doctor` — define scope before speccing |

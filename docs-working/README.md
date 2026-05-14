@@ -24,7 +24,12 @@ See **[action-design-principles.md](./action-design-principles.md)** for the 11 
 
 **Stream 1 — Action Surface**
 32 dispatch · 22 extended-handler-abi · 17 package-batch · 24 pkg-surface ·
-25 text-surface · 26 git-actions · 27 os-identity · 28 os-scheduling · 29 wait-primitives
+25 text-surface · 26 git-actions · 27 os-identity · 28 os-scheduling ·
+37 step-output-capture · 38 read-json-yaml
+
+Most action implementations under 24–28 are done; the remaining work is the
+shared spec-22 ABI hook phase plus a few stragglers (`os.firewall`). See
+[streams.md](./streams.md) for the per-spec phase status.
 
 **Stream 2 — Safe Agent Runtime** *(needs spec-22 first)*
 23 framework-primitives · 30 transactions
@@ -44,7 +49,8 @@ See **[action-design-principles.md](./action-design-principles.md)** for the 11 
 06 quiet-mode · 07 step-display · 08 run-history · 09 structured-errors ·
 10 mcp-server · 11 preset-registry · 12 package-summary · 13 single-step ·
 14 snapshot-diff · 15 check-mode · 16 unify-dryrun-execute ·
-18 mooncake-agent-daemon · 19 tool-action · 20 metrics · 21 modernization-cutover
+18 mooncake-agent-daemon · 19 tool-action · 20 metrics · 21 modernization-cutover ·
+29 wait-primitives · 33 execution-context-split · 34 typed-variable-context
 
 ## Epics (epics/)
 
