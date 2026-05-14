@@ -187,7 +187,7 @@ Summary: 3 ok, 0 warnings, 0 errors
 
 ---
 
-## Check catalogue (v1)
+## Check catalogue (shipped: 16 checks)
 
 Each row below is one `Check` implementation. Severity in brackets is
 the *worst case* — most checks fire `OK` in normal operation.
@@ -197,7 +197,6 @@ the *worst case* — most checks fire `OK` in normal operation.
 | install | `binary` — version + resolved path | error if can't resolve | – (debug shell PATH) |
 | install | `go-runtime` — Go runtime version | info | – |
 | system | `facts` — facts collection succeeds, prints summary | error if collection fails | report a bug |
-| system | `metrics` — metrics collection succeeds (non-fatal sanity check) | warning | report a bug |
 | state | `home-dir` — `~/.mooncake/` exists, is a dir, is writable | error | chmod / re-create |
 | state | `runs-log` — `~/.mooncake/runs.jsonl` is writable, last write age | warning if absent | – (created on first run) |
 | state | `disk-space` — at least 100 MiB free in `$HOME` | warning under threshold | free up space |
@@ -216,6 +215,13 @@ The two `services` checks are intentionally info-only — these are
 opt-in features and "not running" is the correct default state for
 most users.
 
+> **Deferred:** the original draft included a `system/metrics` check
+> (sanity-call `metrics.Collect`). It was dropped before shipping:
+> `metrics.Collect` samples CPU / GPU / network and costs ~1s on cold
+> start, blowing the wall-time budget for what would have been an
+> info-only result. The `mooncake metrics` command already exercises
+> that path. Revisit if `metrics` ever has a cheap probe.
+
 ---
 
 ## Design
@@ -231,7 +237,7 @@ internal/doctor/
 ├── render_json.go                  # JSON formatter
 └── checks/
     ├── install.go                  # binary, go-runtime
-    ├── system.go                   # facts, metrics
+    ├── system.go                   # facts (metrics deferred — see catalogue)
     ├── state.go                    # home-dir, runs-log, disk-space
     ├── presets.go                  # search-paths
     ├── tools.go                    # git, fzf, sudo
@@ -292,7 +298,7 @@ func Run(opts Options) (Report, error) {
     results := make([]Result, 0, len(checks))
 
     // Sequential. Total wall time budget < 1s on warm cache; no goroutines
-    // needed at v1 scale (~17 checks). Add parallelism only if profiling
+    // needed at v1 scale (~16 checks). Add parallelism only if profiling
     // shows it's worth the complexity.
     for _, c := range checks {
         results = append(results, c.Run(ctx))
