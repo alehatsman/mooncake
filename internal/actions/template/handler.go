@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -419,6 +420,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	rendered := []byte(output)
 	mode := h.parseFileMode(tmpl.Mode, defaultFileMode)
+
+	// Capture pre-state for Reverse() (spec-22 phase 5 slice D).
+	// Apply mode only — plan mode doesn't mutate, so there is
+	// nothing to reverse. Must precede the WriteFile below.
+	if ctx.Mode() == actions.ModeApply {
+		result.ReverseData = filehandler.CaptureReverseInfo(dest, "")
+	}
 
 	// Delegate to Performer.WriteFile — same site decides both
 	// "would change?" and "perform write" semantics for both modes.

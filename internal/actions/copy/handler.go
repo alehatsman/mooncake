@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -586,6 +587,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Default to the source file's mode if the user didn't specify one.
 	mode := h.parseFileMode(cp.Mode, srcInfo.Mode()&os.ModePerm)
+
+	// Capture pre-state for Reverse() (spec-22 phase 5 slice D).
+	// Apply mode only; plan mode doesn't mutate. Must precede the
+	// Force-driven os.Remove below — otherwise the snapshot would
+	// observe an empty path.
+	if ctx.Mode() == actions.ModeApply {
+		result.ReverseData = filehandler.CaptureReverseInfo(dest, "")
+	}
 
 	// Backup before overwrite — only in execute mode.
 	if ctx.Mode() == actions.ModeApply && cp.Backup {

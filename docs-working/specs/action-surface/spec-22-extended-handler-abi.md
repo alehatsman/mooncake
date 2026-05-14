@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slices A+B — `file.write` reverses cleanly for create, overwrite (content snapshot under 4 MiB cap), delete (re-creates with captured bytes), and perms (mode restore). Oversized payloads refuse explicitly. Slices C–F (links, file.copy/template, text.*, categoricals) drafted with explicit errors so transaction implementers see what's coming. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slices A+B+C+D — `file.write` reverses for create / overwrite / delete / perms / link-create / hardlink-create; `file.copy` and `file.template` reverse for create + overwrite via shared content-snapshot helpers (`RestoreFileStep`, `DeleteFileStep`, `ExtractReverseInfo`). All cycles bounded by a 4 MiB content-snapshot cap; oversized payloads refuse explicitly. Slices E–F (text.*, categoricals) still drafted as refusals. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -393,10 +393,25 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      dirs so only the mode matters). Touch is intentionally out
      of scope — needs pre-mtime capture, which a later slice can
      add.
-   - ⏳ Slice C — link/hardlink family for `file.write`.
-   - ⏳ Slice D — `file.template`, `file.copy`. Same content-snapshot
-     approach as Slice B but the source-vs-content asymmetry means
-     each handler owns its own capture path.
+   - ✅ Slice C — link/hardlink create-reverse for `file.write`.
+     `state=link` / `state=hardlink` create on a fresh path returns
+     a `state=absent` step (delete the link). Replacement of an
+     existing target by a link cannot be reversed in a single step
+     (would need "remove link, restore original" sequence) — the
+     apply path itself refuses that scenario today, so the
+     unreachable branch is left as defensive code.
+   - ✅ Slice D — `file.copy` and `file.template` Reverser
+     implementations. Both reuse `FileReverseInfo` / `CaptureReverseInfo`
+     / `MaxReverseCaptureBytes` from the file package, plus the
+     exported `RestoreFileStep` / `DeleteFileStep` / `FormatReverseMode`
+     / `ExtractReverseInfo` helpers, so the inverse-Step
+     construction stays textually identical across the three
+     handlers. The reverse Step always returns a `FileWrite`
+     payload because the only observable mutation lives at the
+     destination path — the source template / src file is never
+     touched by these handlers. Same edge cases as slice B
+     (oversized refusal, non-file replacement refusal,
+     create-vs-overwrite split).
    - ⏳ Slice E — `text.*` handlers. Capture the pre-replace lines /
      pre-insert offset so reverse can splice the original window
      back in. Coarser fallback (full file Before content) is

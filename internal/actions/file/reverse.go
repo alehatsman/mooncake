@@ -149,21 +149,17 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 	path := step.FileWrite.Path
 
 	// Path was absent pre-apply → step created it → reverse by
-	// deleting it. Works for both state=file (created file) and
-	// state=directory (created dir). state=touch is debatable —
-	// touch always changes mtime even on existing files, so we
-	// can't tell "we created it" vs "we just bumped mtime" from
-	// Existed alone — defer to a future slice.
+	// deleting it. Works uniformly for files, directories, and
+	// the link family — at the syscall level "delete this thing
+	// at this path" is the same operation regardless of what
+	// kind of thing we created. state=touch is debatable: touch
+	// always bumps mtime even on existing files, so we can't tell
+	// "we created it" vs "we just bumped mtime" from Existed
+	// alone — defer to a future slice.
 	if !info.Existed {
 		switch info.State {
-		case "", actionTypeFile, "directory":
-			return &config.Step{
-				Name: "reverse: delete " + path,
-				FileWrite: &config.File{
-					Path:  path,
-					State: "absent",
-				},
-			}, nil
+		case "", actionTypeFile, "directory", stateLink, stateHardlink:
+			return DeleteFileStep(path), nil
 		}
 	}
 
@@ -186,7 +182,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 					"(> %d bytes); transaction layer must refuse to rollback "+
 					"this step rather than partially restore", MaxReverseCaptureBytes)
 		}
-		return restoreFileStep(path, info), nil
+		return RestoreFileStep(path, info), nil
 
 	case "absent":
 		// Delete reverse: re-create with pre-apply bytes + mode.
@@ -202,7 +198,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 				"file.write Reverse: pre-delete file too large to snapshot "+
 					"(> %d bytes); cannot reconstruct", MaxReverseCaptureBytes)
 		}
-		return restoreFileStep(path, info), nil
+		return RestoreFileStep(path, info), nil
 
 	case "perms":
 		// Mode change on an existing path. Reverse step rewrites
@@ -213,7 +209,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 			FileWrite: &config.File{
 				Path:  path,
 				State: "perms",
-				Mode:  formatReverseMode(info.Mode),
+				Mode:  FormatReverseMode(info.Mode),
 			},
 		}, nil
 
@@ -226,14 +222,21 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 			FileWrite: &config.File{
 				Path:  path,
 				State: "perms",
-				Mode:  formatReverseMode(info.Mode),
+				Mode:  FormatReverseMode(info.Mode),
 			},
 		}, nil
 
 	case stateLink, stateHardlink:
+		// Reaching this branch means the link replaced an existing
+		// thing at the path (file/dir/symlink) — undoing it needs a
+		// multi-step reverse (remove the link, then restore the
+		// original) which the single-step Reverser contract can't
+		// express. Defer until a sub-slice or transaction-layer
+		// change adds multi-step reverse.
 		return nil, errors.New(
-			"file.write Reverse: link/hardlink reversal not implemented; " +
-				"phase 5 slice C will handle the link family")
+			"file.write Reverse: cannot reverse link/hardlink that replaced " +
+				"existing content — needs multi-step reverse (remove link, " +
+				"restore original); not supported by single-step Reverser yet")
 	case "touch":
 		return nil, errors.New(
 			"file.write Reverse: touch reverse not implemented; " +
@@ -243,31 +246,58 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 	}
 }
 
-// restoreFileStep builds the inverse Step for an overwrite or
-// delete reverse: write the captured bytes back at the captured
-// mode. Shared so the two callers stay textually identical.
-func restoreFileStep(path string, info *FileReverseInfo) *config.Step {
+// RestoreFileStep builds the canonical inverse Step for an overwrite
+// or delete reverse: a file.write that writes the captured bytes
+// back at the captured mode, with Force=true so it clobbers whatever
+// state the failing apply left behind. Shared so file.write's
+// internal callers and other handlers (file.copy, file.template,
+// …) build identical reverse shapes.
+//
+// Caller must have verified info.Content != nil and info.Kind ==
+// "file" — RestoreFileStep does not re-check.
+func RestoreFileStep(path string, info *FileReverseInfo) *config.Step {
 	return &config.Step{
 		Name: "reverse: restore " + path,
 		FileWrite: &config.File{
 			Path:    path,
 			State:   actionTypeFile,
 			Content: string(info.Content),
-			Mode:    formatReverseMode(info.Mode),
-			Force:   true, // overwrite whatever the failing apply left behind
+			Mode:    FormatReverseMode(info.Mode),
+			Force:   true,
 		},
 	}
 }
 
-// formatReverseMode renders an os.FileMode in the octal form
+// DeleteFileStep builds the canonical inverse Step for a pure-create
+// reverse: a file.write with state=absent against the path the
+// failing apply created.
+func DeleteFileStep(path string) *config.Step {
+	return &config.Step{
+		Name: "reverse: delete " + path,
+		FileWrite: &config.File{
+			Path:  path,
+			State: "absent",
+		},
+	}
+}
+
+// FormatReverseMode renders an os.FileMode in the octal form
 // config.File.Mode expects ("0644", "0755", …). Returns the
 // empty string for zero — callers can decide whether to omit the
 // field or pass it through.
-func formatReverseMode(m os.FileMode) string {
+func FormatReverseMode(m os.FileMode) string {
 	if m == 0 {
 		return ""
 	}
 	return fmt.Sprintf("%#o", m)
+}
+
+// ExtractReverseInfo pulls a *FileReverseInfo back out of an
+// actions.Result. Exported so other handlers that capture via
+// CaptureReverseInfo (file.copy, file.template) can share the
+// extraction path.
+func ExtractReverseInfo(result actions.Result) (*FileReverseInfo, error) {
+	return extractReverseInfo(result)
 }
 
 // extractReverseInfo pulls the FileReverseInfo back out of the
