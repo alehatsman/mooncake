@@ -235,9 +235,28 @@ func runUpdate(g *config.GitClone, ref, dest, beforeSHA string, env []string) (b
 			return false, err
 		}
 	} else {
-		// No ref pinned — fast-forward current branch from upstream.
-		if err := runGit(dest, env, "merge", "--ff-only", "@{u}"); err != nil {
-			return false, fmt.Errorf("git.clone: fast-forward: %w", err)
+		// No ref pinned — sync current branch to upstream. With force,
+		// hard-reset so any local commits get discarded (matches the
+		// "force: true to discard" promise made by the dirty-check above).
+		// Without force, refuse explicitly when local has commits not on
+		// origin — otherwise git merge --ff-only fails with an opaque
+		// "refusing to merge unrelated histories" that's surprising to
+		// anyone using mooncake on a host where they also hack on the repo.
+		if g.Force {
+			if err := runGit(dest, env, "reset", "--hard", "@{u}"); err != nil {
+				return false, fmt.Errorf("git.clone: reset to upstream: %w", err)
+			}
+		} else {
+			ahead, err := captureGit(dest, env, "rev-list", "--count", "@{u}..HEAD")
+			if err != nil {
+				return false, fmt.Errorf("git.clone: count local-only commits: %w", err)
+			}
+			if n := strings.TrimSpace(ahead); n != "" && n != "0" {
+				return false, fmt.Errorf("git.clone: local has %s commit(s) not on origin (set force: true to discard)", n)
+			}
+			if err := runGit(dest, env, "merge", "--ff-only", "@{u}"); err != nil {
+				return false, fmt.Errorf("git.clone: fast-forward: %w", err)
+			}
 		}
 	}
 

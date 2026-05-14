@@ -186,8 +186,17 @@ func formatEvent(ev transport.Event) string {
 	case "step.skipped":
 		return "    – " + extractField(ev.Data, "name", "") + " (skipped)"
 	case "step.failed":
-		return "    ✗ " + extractField(ev.Data, "name", "") + ": " +
-			extractField(ev.Data, "error", "(no error message)")
+		// agentd's RunEventSink serializes events.StepFailedData directly,
+		// whose JSON tag is "error_message". The stdout agent_subscriber.go
+		// path uses "error" (a separate event shape). Prefer error_message
+		// (the canonical field on StepFailedData) and fall back to error
+		// for the alternate shape — otherwise fleet apply always renders
+		// "(no error message)" on real failures.
+		errMsg := extractField(ev.Data, "error_message", "")
+		if errMsg == "" {
+			errMsg = extractField(ev.Data, "error", "(no error message)")
+		}
+		return "    ✗ " + extractField(ev.Data, "name", "") + ": " + errMsg
 	case "step.stdout", "step.stderr":
 		// Empty stdout/stderr lines are legitimate output — render them as
 		// an indented blank line, not the literal event-type name. Without
