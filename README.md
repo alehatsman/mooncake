@@ -37,37 +37,31 @@ Built for AI-driven infrastructure with idempotency guarantees, dry-run validati
 # Install
 go install github.com/alehatsman/mooncake@latest
 
-# Create config.yml
-cat > config.yml <<'EOF'
-- name: Hello Mooncake
-  shell: echo "Running on {{os}}/{{arch}}"
-
-- name: Create file
-  file:
-    path: /tmp/hello.txt
-    state: file
-    content: "Hello from Mooncake!"
-EOF
+# Scaffold a project — creates mooncake.yml, mooncake.vars.yml, .gitignore
+mooncake init --template dotfiles
 
 # Preview changes (safe!)
-mooncake run --config config.yml --dry-run
+mooncake apply --dry-run
 
 # Run it
-mooncake run --config config.yml
+mooncake apply
 ```
+
+`mooncake apply` (and `plan`, `validate`) auto-discover `./mooncake.yml`
+or `./mooncake/main.yml`, so you rarely need `-c`.
 
 ## What You Can Do
 
 | Action | Purpose | Example |
 |--------|---------|---------|
 | **shell** | Run commands | `shell: echo "hello"` |
-| **file** | Create files/directories | `file: {path: /tmp/test, state: directory}` |
-| **template** | Render configs | `template: {src: app.j2, dest: /etc/app.conf}` |
-| **copy** | Copy with checksums | `copy: {src: ./file, dest: /tmp/file}` |
-| **download** | Fetch from URLs | `download: {url: https://..., dest: /tmp/file}` |
-| **service** | Manage services | `service: {name: nginx, state: started}` |
+| **file.write** | Create files/directories | `file.write: {path: /tmp/test, state: directory}` |
+| **file.template** | Render configs | `file.template: {src: app.j2, dest: /etc/app.conf}` |
+| **file.copy** | Copy with checksums | `file.copy: {src: ./file, dest: /tmp/file}` |
+| **file.download** | Fetch from URLs | `file.download: {url: https://..., dest: /tmp/file}` |
+| **os.service** | Manage services | `os.service: {name: nginx, state: started}` |
 | **assert** | Verify state | `assert: {command: {cmd: docker --version}}` |
-| **preset** | Reusable workflows | `preset: ollama` |
+| **use** | Reusable presets | `use: ollama` |
 
 **Variables & Facts**: Auto-detected system info - `{{os}}`, `{{arch}}`, `{{cpu_cores}}`, `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`
 
@@ -95,7 +89,7 @@ mooncake facts  # See all available facts
 | **Setup** | Single binary | Python + modules | Text editor |
 | **Dependencies** | None | Python, modules | System tools |
 | **AI Agent Friendly** | Native support | Complex | Unsafe |
-| **Dry-run** | Native | Check mode | Manual |
+| **Dry-run** | `mooncake apply --dry-run` | Check mode | Manual |
 | **Idempotency** | Guaranteed | Yes | Manual |
 | **Cross-platform** | Built-in | Limited | OS-specific |
 | **Best For** | AI agents, dotfiles | Enterprise automation | Quick tasks |
@@ -121,7 +115,7 @@ git clone https://github.com/alehatsman/mooncake.git
 cd mooncake
 
 # Run Hello World
-mooncake run --config examples/01-hello-world/config.yml
+mooncake apply --config examples/hello-world/config.yml
 
 # Browse all examples
 ls examples/

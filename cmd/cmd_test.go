@@ -218,7 +218,7 @@ func TestCreateApp(t *testing.T) {
 	}
 
 	// Test commands exist
-	expectedCommands := []string{"presets", "docs", "schema", "snapshot", "last", "mcp", "step", "tool", "apply", "plan", "facts", "metrics", "actions", "validate", "agent", "agentd", "runs"}
+	expectedCommands := []string{"init", "presets", "docs", "schema", "snapshot", "last", "mcp", "step", "tool", "apply", "plan", "facts", "metrics", "actions", "validate", "agent", "agentd", "runs"}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}
@@ -1893,8 +1893,10 @@ func TestRunCommandPasswordFlags(t *testing.T) {
 	}
 }
 
-// TestPlanCommandRequiredFlags tests that plan command has config as required
-func TestPlanCommandRequiredFlags(t *testing.T) {
+// TestPlanCommandConfigFlag asserts the --config flag exists on plan and is
+// NOT required at the CLI level. Spec 40 makes it auto-discoverable from cwd
+// (./mooncake.yml or ./mooncake/main.yml).
+func TestPlanCommandConfigFlag(t *testing.T) {
 	app := createApp()
 
 	var planCmd *cli.Command
@@ -1904,28 +1906,28 @@ func TestPlanCommandRequiredFlags(t *testing.T) {
 			break
 		}
 	}
-
 	if planCmd == nil {
 		t.Fatal("plan command not found")
 	}
 
-	// Check that config flag is required
-	hasRequiredConfig := false
+	var configFlag *cli.StringFlag
 	for _, flag := range planCmd.Flags {
 		if f, ok := flag.(*cli.StringFlag); ok && f.Name == "config" {
-			if f.Required {
-				hasRequiredConfig = true
-			}
+			configFlag = f
+			break
 		}
 	}
-
-	if !hasRequiredConfig {
-		t.Error("plan command config flag should be required")
+	if configFlag == nil {
+		t.Fatal("plan command is missing --config flag")
+	}
+	if configFlag.Required {
+		t.Error("plan --config must NOT be Required (spec 40: auto-discoverable)")
 	}
 }
 
-// TestValidateCommandRequiredFlags tests that validate command has config as required
-func TestValidateCommandRequiredFlags(t *testing.T) {
+// TestValidateCommandConfigFlag mirrors TestPlanCommandConfigFlag for the
+// validate subcommand.
+func TestValidateCommandConfigFlag(t *testing.T) {
 	app := createApp()
 
 	var validateCmd *cli.Command
@@ -1935,23 +1937,59 @@ func TestValidateCommandRequiredFlags(t *testing.T) {
 			break
 		}
 	}
-
 	if validateCmd == nil {
 		t.Fatal("validate command not found")
 	}
 
-	// Check that config flag is required
-	hasRequiredConfig := false
+	var configFlag *cli.StringFlag
 	for _, flag := range validateCmd.Flags {
 		if f, ok := flag.(*cli.StringFlag); ok && f.Name == "config" {
-			if f.Required {
-				hasRequiredConfig = true
-			}
+			configFlag = f
+			break
 		}
 	}
+	if configFlag == nil {
+		t.Fatal("validate command is missing --config flag")
+	}
+	if configFlag.Required {
+		t.Error("validate --config must NOT be Required (spec 40: auto-discoverable)")
+	}
+}
 
-	if !hasRequiredConfig {
-		t.Error("validate command config flag should be required")
+// TestApplyCommandDryRunFlag asserts that `apply` exposes a --dry-run flag
+// (spec 40) with an `-n` short alias.
+func TestApplyCommandDryRunFlag(t *testing.T) {
+	app := createApp()
+
+	var applyCmd *cli.Command
+	for _, cmd := range app.Commands {
+		if cmd.Name == "apply" {
+			applyCmd = cmd
+			break
+		}
+	}
+	if applyCmd == nil {
+		t.Fatal("apply command not found")
+	}
+
+	var dryRun *cli.BoolFlag
+	for _, flag := range applyCmd.Flags {
+		if f, ok := flag.(*cli.BoolFlag); ok && f.Name == "dry-run" {
+			dryRun = f
+			break
+		}
+	}
+	if dryRun == nil {
+		t.Fatal("apply is missing --dry-run flag")
+	}
+	hasShort := false
+	for _, a := range dryRun.Aliases {
+		if a == "n" {
+			hasShort = true
+		}
+	}
+	if !hasShort {
+		t.Error("apply --dry-run should have -n short alias")
 	}
 }
 

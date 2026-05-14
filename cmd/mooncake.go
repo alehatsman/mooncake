@@ -70,7 +70,7 @@ func applyFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:    "config",
 			Aliases: []string{"c"},
-			Usage:   "Path to configuration file",
+			Usage:   "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)",
 		},
 		&cli.StringSliceFlag{
 			Name:    "vars",
@@ -101,6 +101,11 @@ func applyFlags() []cli.Flag {
 			Usage:   "Filter steps by tags (comma-separated)",
 		},
 		&cli.BoolFlag{
+			Name:    "dry-run",
+			Aliases: []string{"n"},
+			Usage:   "Preview changes without executing (sugar for `mooncake plan`)",
+		},
+		&cli.BoolFlag{
 			Name:  "tui",
 			Value: false,
 			Usage: "Use the animated TUI subscriber (default: raw console output)",
@@ -120,10 +125,27 @@ func applyFlags() []cli.Flag {
 }
 
 func run(c *cli.Context) error {
+	// --dry-run short-circuits to the plan path. Sugar over `mooncake plan`.
+	if c.Bool("dry-run") {
+		if c.String("from-plan") != "" {
+			return fmt.Errorf("--dry-run is incompatible with --from-plan: the plan was already produced; just run `mooncake apply --from-plan <file>` to apply it, or `mooncake plan -c <config>` to re-preview")
+		}
+		return planCommand(c)
+	}
+
 	// Check if running from plan
 	fromPlan := c.String("from-plan")
 	if fromPlan != "" {
 		return runFromPlan(c, fromPlan)
+	}
+
+	// Resolve config path: explicit --config wins, else auto-discover.
+	configPath, err := resolveConfigPath(c)
+	if err != nil {
+		if printNoConfigHintAndExit(err, "apply") {
+			return nil
+		}
+		return err
 	}
 
 	tui := c.Bool("tui")
@@ -192,7 +214,12 @@ func run(c *cli.Context) error {
 	publisher.Subscribe(logger.NewStderrErrorSubscriber())
 
 	// Always record run history (best-effort).
-	publisher.Subscribe(logger.NewRunLogSubscriber(c.String("config")))
+	publisher.Subscribe(logger.NewRunLogSubscriber(configPath))
+
+	// One-shot next-step hint after the first successful run on this host.
+	// The subscriber is self-suppressing for non-text formats and respects
+	// MOONCAKE_NO_HINTS=1.
+	publisher.Subscribe(logger.NewFirstRunHintSubscriber(os.Stdout, outputFormat))
 
 	// Create appropriate subscriber based on mode
 	if outputFormat == outputFormatAgent {
@@ -222,7 +249,7 @@ func run(c *cli.Context) error {
 
 	// Execute with event publisher
 	return executor.Start(executor.StartConfig{
-		ConfigFilePath:   c.String("config"),
+		ConfigFilePath:   configPath,
 		VarsFilePaths:    c.StringSlice("vars"),
 		SudoPass:         c.String("sudo-pass"),
 		SudoPassFile:     c.String("sudo-pass-file"),
@@ -394,10 +421,21 @@ func writeFactsJSON(f *facts.Facts, path string) error {
 }
 
 func planCommand(c *cli.Context) error {
-	configPath := c.String("config")
+	configPath, err := resolveConfigPath(c)
+	if err != nil {
+		if printNoConfigHintAndExit(err, "plan") {
+			return nil
+		}
+		return err
+	}
 	varsPaths := c.StringSlice("vars")
 	outputPath := c.String("output")
+	// When invoked via `apply --dry-run`, the plan-specific --format flag
+	// isn't registered on apply; fall back to the same default as `plan`.
 	format := c.String("format")
+	if format == "" {
+		format = outputFormatText
+	}
 	showOrigins := c.Bool("show-origins")
 	showDiff := c.Bool("diff")
 	noInspect := c.Bool("no-inspect")
@@ -692,7 +730,13 @@ func printAgentSummary(log *agent.IterationLog) {
 }
 
 func validateCommand(c *cli.Context) error {
-	configPath := c.String("config")
+	configPath, err := resolveConfigPath(c)
+	if err != nil {
+		if printNoConfigHintAndExit(err, "validate") {
+			return nil
+		}
+		return err
+	}
 	format := c.String("format")
 
 	// Read and validate configuration
@@ -753,6 +797,7 @@ func createApp() *cli.App {
 		EnableBashCompletion: true,
 
 		Commands: []*cli.Command{
+			initCommand(),
 			presetsCommand(),
 			docsCommand(),
 			schemaCommand(),
@@ -764,19 +809,18 @@ func createApp() *cli.App {
 			toolCommand(),
 			{
 				Name:   "apply",
-				Usage:  "Apply a playbook or saved plan to the system",
+				Usage:  "Apply a playbook or saved plan. Use --dry-run to preview without changes.",
 				Flags:  applyFlags(),
 				Action: run,
 			},
 			{
 				Name:  "plan",
-				Usage: "Generate and display execution plan",
+				Usage: "Generate and display execution plan (dry-run)",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "config",
-						Aliases:  []string{"c"},
-						Required: true,
-						Usage:    "Path to configuration file",
+						Name:    "config",
+						Aliases: []string{"c"},
+						Usage:   "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)",
 					},
 					&cli.StringSliceFlag{
 						Name:    "vars",
@@ -894,7 +938,7 @@ func createApp() *cli.App {
 						Name:  "apply",
 						Usage: "Submit a config to agentd and stream events back",
 						Flags: []cli.Flag{
-							&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Required: true, Usage: "Path to configuration file"},
+							&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)"},
 							&cli.StringSliceFlag{Name: "vars", Aliases: []string{"v"}, Usage: "Path to a variables file. Repeat to layer."},
 							&cli.StringFlag{Name: "tags", Aliases: []string{"t"}, Usage: "Filter steps by tags (comma-separated)"},
 							&cli.StringFlag{Name: "base-dir", Usage: "Base directory the daemon should chdir into (default: dirname of --config)"},
@@ -972,10 +1016,9 @@ func createApp() *cli.App {
 				Usage: "Validate configuration file without executing",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "config",
-						Aliases:  []string{"c"},
-						Required: true,
-						Usage:    "Path to configuration file",
+						Name:    "config",
+						Aliases: []string{"c"},
+						Usage:   "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)",
 					},
 					&cli.StringSliceFlag{
 						Name:    "vars",

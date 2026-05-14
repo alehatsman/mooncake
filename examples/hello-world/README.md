@@ -11,8 +11,12 @@
 ## Quick Start
 
 ```bash
-mooncake run --config config.yml
+mooncake apply --config config.yml           # run it
+mooncake apply --config config.yml --dry-run # preview first
 ```
+
+> In your own projects, name the file `mooncake.yml` and you can drop `-c`
+> entirely — `mooncake apply` auto-discovers it.
 
 ## What It Does
 
@@ -65,4 +69,6 @@ Running on darwin/arm64
 
 ## Next Steps
 
-→ Continue to [02-variables-and-facts](../02-variables-and-facts/) to learn about custom variables and all available system facts.
+→ Browse [`../variables-and-facts/`](../variables-and-facts/) for custom
+  variables and the full system-facts reference.
+→ Run `mooncake init` in a new directory to scaffold your own project.
