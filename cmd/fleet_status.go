@@ -1,0 +1,266 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"strings"
+	"text/tabwriter"
+	"time"
+
+	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/internal/fleet"
+)
+
+func fleetStatusCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "status",
+		Usage: "Show one-line-per-peer health for the configured fleet",
+		Description: "Probes each peer's /v1/version, /v1/runs, and /v1/facts " +
+			"in parallel and renders a STATE column (ok / running / failed / " +
+			"unreachable) alongside OS, mooncake version, queue depth, and " +
+			"the last run's outcome. --json switches to JSONL for scripts.",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "peers",
+				Usage: "Comma-separated list of peer names to probe (default: all in peers.toml)",
+			},
+			&cli.StringFlag{
+				Name:  "peers-file",
+				Usage: "Override the peers.toml path",
+			},
+			&cli.IntFlag{
+				Name:  "parallel",
+				Usage: "Maximum peers in flight at once (0 = unbounded, default)",
+				Value: 0,
+			},
+			&cli.DurationFlag{
+				Name:  "timeout",
+				Usage: "Per-peer probe timeout (covers the three GETs)",
+				Value: 3 * time.Second,
+			},
+			&cli.BoolFlag{
+				Name:  "json",
+				Usage: "Emit one JSON record per peer (JSONL), skip the table renderer",
+			},
+			&cli.BoolFlag{
+				Name:  "no-color",
+				Usage: "Disable ANSI colors on the STATE column (also honors NO_COLOR env)",
+			},
+		},
+		Action: fleetStatusAction,
+	}
+}
+
+// fleetStatusAction loads peers.toml, probes each selected peer in
+// parallel, and renders either a table or JSONL. Exit code aggregates
+// across peers: 0 if all ok-or-running, 1 if any failed, 2 if any
+// unreachable. Matches `fleet apply`'s exit-code shape.
+func fleetStatusAction(c *cli.Context) error {
+	peersPath := c.String("peers-file")
+	if peersPath == "" {
+		var err error
+		peersPath, err = fleet.DefaultPeersPath()
+		if err != nil {
+			return err
+		}
+	}
+	cfgPeers, err := fleet.LoadPeers(peersPath)
+	if err != nil {
+		return err
+	}
+	if len(cfgPeers.Peers) == 0 {
+		return cli.Exit("fleet status: no peers configured. Edit "+peersPath+
+			" or run `mooncake fleet bootstrap` / `mooncake fleet pair`.", 1)
+	}
+
+	selected, unknown := selectPeers(cfgPeers.Peers, c.String("peers"))
+	if len(selected) == 0 {
+		msg := "fleet status: no peers matched filter " + c.String("peers")
+		if len(unknown) > 0 {
+			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
+		}
+		return cli.Exit(msg, 1)
+	}
+
+	rows := fleet.ProbeAll(c.Context, selected, c.Duration("timeout"), c.Int("parallel"))
+
+	w := c.App.Writer
+	if c.Bool("json") {
+		if err := emitJSON(w, rows); err != nil {
+			return err
+		}
+	} else {
+		useColor := fleet.ShouldColor(w, c.Bool("no-color"))
+		renderStatusTable(w, rows, useColor)
+		// Print the unknown-peer warning AFTER the table so the table
+		// stays parseable for tools that aren't using --json.
+		if len(unknown) > 0 {
+			fmt.Fprintf(w, "\nwarning: unknown peer name(s) in --peers: %s\n",
+				strings.Join(unknown, ", "))
+		}
+	}
+
+	return statusExitCode(rows)
+}
+
+// statusExitCode maps the per-peer state mix to the same 0/1/2 code shape
+// that `fleet apply` uses: unreachable dominates, then failed, then ok.
+// Running peers count as healthy for exit-code purposes — they just
+// haven't finished yet.
+func statusExitCode(rows []fleet.Status) error {
+	var unreachable, failed []string
+	for _, r := range rows {
+		switch r.State {
+		case fleet.StateUnreachable:
+			unreachable = append(unreachable, r.Name)
+		case fleet.StateFailed:
+			failed = append(failed, r.Name)
+		}
+	}
+	switch {
+	case len(unreachable) > 0:
+		return cli.Exit("fleet status: unreachable peer(s): "+strings.Join(unreachable, ", "), 2)
+	case len(failed) > 0:
+		return cli.Exit("fleet status: failed peer(s): "+strings.Join(failed, ", "), 1)
+	}
+	return nil
+}
+
+// renderStatusTable lays out [host addr state os mooncake queue last_run]
+// via tabwriter and tail-summarises the state counts. ANSI color on the
+// STATE column only when stdout is a TTY (or testing forces it).
+func renderStatusTable(w io.Writer, rows []fleet.Status, useColor bool) {
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "HOST\tADDR\tSTATE\tOS\tMOONCAKE\tQUEUE\tLAST RUN")
+	for _, r := range rows {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			r.Name,
+			r.Addr,
+			colorState(r.State, useColor),
+			dash(osColumn(r)),
+			dash(r.Mooncake),
+			queueColumn(r),
+			lastRunColumn(r),
+		)
+	}
+	_ = tw.Flush()
+
+	// Tail summary.
+	counts := map[fleet.State]int{}
+	for _, r := range rows {
+		counts[r.State]++
+	}
+	parts := make([]string, 0, 4)
+	if counts[fleet.StateOK] > 0 {
+		parts = append(parts, fmt.Sprintf("%d ok", counts[fleet.StateOK]))
+	}
+	if counts[fleet.StateRunning] > 0 {
+		parts = append(parts, fmt.Sprintf("%d running", counts[fleet.StateRunning]))
+	}
+	if counts[fleet.StateFailed] > 0 {
+		parts = append(parts, fmt.Sprintf("%d failed", counts[fleet.StateFailed]))
+	}
+	if counts[fleet.StateUnreachable] > 0 {
+		parts = append(parts, fmt.Sprintf("%d unreachable", counts[fleet.StateUnreachable]))
+	}
+	tickOrCross := "✔"
+	if counts[fleet.StateUnreachable] > 0 || counts[fleet.StateFailed] > 0 {
+		tickOrCross = "✗"
+	}
+	fmt.Fprintln(w, tickOrCross+" "+strings.Join(parts, ", "))
+
+	// Print probe errors as a footnote so the table itself stays narrow.
+	for _, r := range rows {
+		if r.State == fleet.StateUnreachable && r.Error != "" {
+			fmt.Fprintf(w, "  %s: %s\n", r.Name, oneLineErr(r.Error))
+		}
+	}
+}
+
+// colorState wraps the STATE word in an ANSI color when useColor is true.
+// ok=green, running=yellow, failed=red, unreachable=red.
+func colorState(s fleet.State, useColor bool) string {
+	if !useColor {
+		return string(s)
+	}
+	const reset = "\x1b[0m"
+	switch s {
+	case fleet.StateOK:
+		return "\x1b[32m" + string(s) + reset
+	case fleet.StateRunning:
+		return "\x1b[33m" + string(s) + reset
+	case fleet.StateFailed, fleet.StateUnreachable:
+		return "\x1b[31m" + string(s) + reset
+	default:
+		return string(s)
+	}
+}
+
+// osColumn collapses OS + arch into one cell. Arch is the parenthetical
+// hint that's mostly useful for distinguishing aarch64 vs amd64 on macOS.
+func osColumn(r fleet.Status) string {
+	if r.OS == "" {
+		return ""
+	}
+	if r.Arch == "" {
+		return r.OS
+	}
+	return r.OS + " (" + r.Arch + ")"
+}
+
+func queueColumn(r fleet.Status) string {
+	if r.QueueDepth < 0 {
+		return "—"
+	}
+	if r.RunsRunning > 0 {
+		// Show "running+queued" so the user sees there's both an
+		// in-flight run AND a backlog.
+		return fmt.Sprintf("%d (+%d running)", r.QueueDepth, r.RunsRunning)
+	}
+	return fmt.Sprintf("%d", r.QueueDepth)
+}
+
+func lastRunColumn(r fleet.Status) string {
+	switch {
+	case r.State == fleet.StateUnreachable:
+		return "—"
+	case r.LastRunStatus == "" && r.LastRunAge == "":
+		return "—"
+	case r.LastRunAge == "in flight":
+		return "in flight"
+	default:
+		return r.LastRunStatus + " " + r.LastRunAge
+	}
+}
+
+// dash returns "—" when s is empty, so the table doesn't have visually
+// blank cells for fields the probe couldn't fill.
+func dash(s string) string {
+	if s == "" {
+		return "—"
+	}
+	return s
+}
+
+func oneLineErr(s string) string {
+	out := strings.ReplaceAll(s, "\n", " ")
+	out = strings.ReplaceAll(out, "\t", " ")
+	for strings.Contains(out, "  ") {
+		out = strings.ReplaceAll(out, "  ", " ")
+	}
+	return strings.TrimSpace(out)
+}
+
+// emitJSON writes one JSON object per row to w (JSONL). Designed for
+// `mooncake fleet status --json | jq` and similar pipelines.
+func emitJSON(w io.Writer, rows []fleet.Status) error {
+	enc := json.NewEncoder(w)
+	for _, r := range rows {
+		if err := enc.Encode(r); err != nil {
+			return fmt.Errorf("emit json: %w", err)
+		}
+	}
+	return nil
+}
