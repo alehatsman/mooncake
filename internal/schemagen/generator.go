@@ -172,6 +172,17 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "boolean",
 			Description: "Continue execution even if this step fails (universal)",
 		},
+		"on_change": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Reactive triggers: child steps that run only if this step reports changed=true (spec-23)",
+		},
+		"triggered_by": {
+			Type:        "string",
+			Description: "(plan metadata) Parent step ID when expanded from an on_change child",
+		},
 	}
 
 	for name, prop := range universalFields {

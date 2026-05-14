@@ -1,0 +1,42 @@
+# Reactive triggers via `on_change` (spec-23 §1).
+#
+# A step's `on_change:` lists child steps that run iff the parent step's
+# outcome was `changed=true`. If the parent ran but didn't change anything
+# (e.g. file content already matched, package already installed), the
+# children skip with "on_change: parent <id> did not change".
+#
+# Try this example twice:
+#
+#   $ mooncake apply --config examples/triggers/on-change-config-reload.yml
+#   ✓ write demo config           changed=true
+#   ~ on_change: log reload       (ran because parent changed)
+#   ~ on_change: print version    (ran because parent changed)
+#
+#   $ mooncake apply --config examples/triggers/on-change-config-reload.yml
+#   ✓ write demo config           changed=false   (file already up to date)
+#   - on_change: log reload       skipped (parent did not change)
+#   - on_change: print version    skipped (parent did not change)
+#
+# This is the same pattern Ansible's `notify:` solves with a magic handler
+# registry, expressed inline. Children inherit the parent's `as_user`,
+# `env`, and `cwd` unless they override.
+
+version: "1.0"
+
+vars:
+  config_path: /tmp/mooncake-on-change-demo.conf
+  config_body: |
+    # mooncake on_change demo
+    log_level=info
+
+steps:
+  - name: write demo config
+    file.write:
+      path: "{{ config_path }}"
+      content: "{{ config_body }}"
+    on_change:
+      - name: log that the config changed
+        log: "config at {{ config_path }} was rewritten — would reload service here"
+
+      - name: print mooncake version
+        shell: mooncake --version

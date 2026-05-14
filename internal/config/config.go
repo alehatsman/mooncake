@@ -1132,6 +1132,13 @@ type Step struct {
 	Tags []string `yaml:"tags" json:"tags,omitempty"`
 	As   string   `yaml:"as" json:"as,omitempty"`
 
+	// Reactive triggers (spec-23 §1). Children run iff the parent step's
+	// outputs reported `changed: true`. Otherwise skipped with reason
+	// "parent didn't change". Children execute in declaration order; a
+	// child's failure surfaces normally and may itself have on_change.
+	// Children DO NOT inherit the parent's outputs scope.
+	OnChange []Step `yaml:"on_change,omitempty" json:"on_change,omitempty"`
+
 	// Plan metadata (populated during plan expansion, omitted in config files)
 	ID             string        `yaml:"id,omitempty" json:"id,omitempty"`
 	ActionType     string        `yaml:"action_type,omitempty" json:"action_type,omitempty"`
@@ -1139,6 +1146,13 @@ type Step struct {
 	Skipped        bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
 	LoopContext    *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
 	SourceLocation *Position     `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
+
+	// TriggeredBy carries the ID of the parent step when this Step was
+	// expanded from an on_change child. Populated during plan expansion;
+	// empty for top-level steps. Used by the executor to gate execution
+	// on the parent's `changed` outcome, and by events/runlog to surface
+	// the parent→child relationship to consumers.
+	TriggeredBy string `yaml:"triggered_by,omitempty" json:"triggered_by,omitempty"`
 }
 
 // ForEachField holds the value of a Step's `for_each` keyword. It supports
@@ -1406,10 +1420,12 @@ func (s *Step) Clone() *Step {
 		ForEachFile:      s.ForEachFile,
 		Tags:             append([]string(nil), s.Tags...),
 		As:               s.As,
+		OnChange:         append([]Step(nil), s.OnChange...),
 		ID:               s.ID,
 		ActionType:       s.ActionType,
 		Origin:           s.Origin,
 		Skipped:          s.Skipped,
 		LoopContext:      s.LoopContext,
+		TriggeredBy:      s.TriggeredBy,
 	}
 }

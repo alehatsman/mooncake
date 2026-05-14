@@ -146,6 +146,10 @@ type StepStartedData struct {
 	Vars       map[string]string `json:"vars,omitempty"`
 	Depth      int               `json:"depth,omitempty"` // Directory depth for filetree items
 	DryRun     bool              `json:"dry_run"`
+	// TriggeredBy is set on steps expanded from an on_change child
+	// (spec-23 §1). Carries the parent step's ID so consumers can render
+	// parent→child relationships in logs / UIs / replays.
+	TriggeredBy string `json:"triggered_by,omitempty"`
 }
 
 // StepCompletedData contains data for step.completed events
@@ -158,6 +162,10 @@ type StepCompletedData struct {
 	Result     map[string]interface{} `json:"result,omitempty"`
 	Depth      int                    `json:"depth,omitempty"` // Directory depth for filetree items
 	DryRun     bool                   `json:"dry_run"`
+	// TriggeredBy mirrors StepStartedData.TriggeredBy. Repeating it on
+	// completed events lets log-only consumers attribute changes back to
+	// the triggering parent without holding state across event types.
+	TriggeredBy string `json:"triggered_by,omitempty"`
 }
 
 // StepSkippedData contains data for step.skipped events
@@ -167,6 +175,10 @@ type StepSkippedData struct {
 	Level  int    `json:"level"`
 	Reason string `json:"reason"`
 	Depth  int    `json:"depth,omitempty"` // Directory depth for filetree items
+	// TriggeredBy mirrors the started/completed fields. Most useful here
+	// for the "parent didn't change → skipped" path: the consumer sees
+	// both the reason string and the structured parent reference.
+	TriggeredBy string `json:"triggered_by,omitempty"`
 }
 
 // StepFailedData contains data for step.failed events

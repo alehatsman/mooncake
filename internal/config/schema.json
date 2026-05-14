@@ -1711,6 +1711,13 @@
           "type": "string",
           "description": "Name of the step (universal)"
         },
+        "on_change": {
+          "type": "array",
+          "description": "Reactive triggers: child steps that run only if this step reports changed=true (spec-23)",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
         "os.cron": {
           "description": "Manage a cron job via /etc/cron.d/\u003cname\u003e",
           "$ref": "#/definitions/os.cron"
@@ -1843,6 +1850,10 @@
         "tool": {
           "description": "Install a developer tool at a pinned version with lockfile-backed reproducibility",
           "$ref": "#/definitions/tool"
+        },
+        "triggered_by": {
+          "type": "string",
+          "description": "(plan metadata) Parent step ID when expanded from an on_change child"
         },
         "unless_command": {
           "type": "string",
