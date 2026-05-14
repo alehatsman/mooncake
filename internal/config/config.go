@@ -573,6 +573,20 @@ type OsSysctl struct {
 	Reload  *bool       `yaml:"reload" json:"reload,omitempty"`         // Apply via `sysctl key=value` when changed (default: true)
 }
 
+// OsMount declares a filesystem mount: an `/etc/fstab` entry plus the
+// matching live mount state. Identity is the destination mount point
+// (one fstab entry per dest). Linux-only for v1.
+type OsMount struct {
+	Src     string   `yaml:"src" json:"src,omitempty"`                       // Device, UUID=..., LABEL=..., tmpfs, overlay, etc. Required when state != absent
+	Dest    string   `yaml:"dest" json:"dest" plan:"path"`                   // Mount point (identity, required)
+	FSType  string   `yaml:"fstype" json:"fstype,omitempty"`                 // Filesystem type; required when adding/updating fstab entry
+	Options []string `yaml:"options" json:"options,omitempty"`               // Mount options; default: [defaults]
+	State   string   `yaml:"state" json:"state,omitempty"`                   // mounted|unmounted|fstab_only|absent (default: mounted)
+	Dump    *int     `yaml:"dump" json:"dump,omitempty"`                     // fstab dump field; default 0
+	Pass    *int     `yaml:"pass" json:"pass,omitempty"`                     // fstab pass field; default 0
+	Backup  *bool    `yaml:"backup" json:"backup,omitempty"`                 // Snapshot /etc/fstab to /etc/fstab.bak.<ts> before write; default true
+}
+
 // ContainerImage represents a container image management operation.
 // Ensures an image reference is present (or absent) in local storage of
 // the selected container runtime (podman/docker).
@@ -960,6 +974,7 @@ type Step struct {
 	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
 	OsCron           *OsCron                 `yaml:"os.cron"           json:"os.cron,omitempty"           action:"os.cron"`
 	OsSysctl         *OsSysctl               `yaml:"os.sysctl"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
+	OsMount          *OsMount                `yaml:"os.mount"          json:"os.mount,omitempty"          action:"os.mount"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
 	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
@@ -1242,6 +1257,7 @@ func (s *Step) Clone() *Step {
 		OsSSHKey:         s.OsSSHKey,
 		OsCron:           s.OsCron,
 		OsSysctl:         s.OsSysctl,
+		OsMount:          s.OsMount,
 		ContainerImage:   s.ContainerImage,
 		Container:        s.Container,
 		Cmd:              s.Cmd,
