@@ -37,8 +37,18 @@ type Status struct {
 	Name string `json:"name"`
 	// Addr is the peer's `host:port`.
 	Addr string `json:"addr"`
-	// State is one of the State constants above.
+	// State is one of the State constants above. Drives exit-code logic
+	// and color, but no longer rendered as a single column — see
+	// Accessible / Running for the table-facing booleans.
 	State State `json:"state"`
+
+	// Accessible reports whether agentd responded to the gating
+	// /v1/version probe. False ↔ State == StateUnreachable.
+	Accessible bool `json:"accessible"`
+	// Running reports whether the peer has a run in flight at the time
+	// of the probe (RunsRunning > 0 or the latest record is
+	// non-terminal). Always false when Accessible is false.
+	Running bool `json:"running"`
 
 	// OS is the peer's reported os + version (e.g. "ubuntu 24.04",
 	// "darwin 14.4"). Empty if the facts probe failed.
@@ -151,6 +161,8 @@ func Probe(ctx context.Context, name, addr, token string, timeout time.Duration)
 	default:
 		out.State = StateOK
 	}
+	out.Accessible = true
+	out.Running = out.State == StateRunning
 	return out
 }
 

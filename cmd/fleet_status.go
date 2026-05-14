@@ -128,17 +128,19 @@ func statusExitCode(rows []fleet.Status) error {
 	return nil
 }
 
-// renderStatusTable lays out [host addr state os mooncake queue last_run]
-// via tabwriter and tail-summarises the state counts. ANSI color on the
-// STATE column only when stdout is a TTY (or testing forces it).
+// renderStatusTable lays out [host addr accessible running os mooncake
+// queue last_run] via tabwriter and tail-summarises the counts. ANSI
+// color on the ACCESSIBLE (green/red) and RUNNING (yellow/dim) cells
+// when useColor is true.
 func renderStatusTable(w io.Writer, rows []fleet.Status, useColor bool) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "HOST\tADDR\tSTATE\tOS\tMOONCAKE\tQUEUE\tLAST RUN")
+	fmt.Fprintln(tw, "HOST\tADDR\tACCESSIBLE\tRUNNING\tOS\tMOONCAKE\tQUEUE\tLAST RUN")
 	for _, r := range rows {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			r.Name,
 			r.Addr,
-			colorState(r.State, useColor),
+			colorAccessible(r.Accessible, useColor),
+			colorRunning(r.Running, useColor),
 			dash(osColumn(r)),
 			dash(r.Mooncake),
 			queueColumn(r),
@@ -147,55 +149,78 @@ func renderStatusTable(w io.Writer, rows []fleet.Status, useColor bool) {
 	}
 	_ = tw.Flush()
 
-	// Tail summary.
-	counts := map[fleet.State]int{}
+	// Tail summary: lead with accessibility, then call out subsets
+	// (running + last-failed) and the unreachable count.
+	var accessible, running, lastFailed, unreachable int
 	for _, r := range rows {
-		counts[r.State]++
+		if !r.Accessible {
+			unreachable++
+			continue
+		}
+		accessible++
+		if r.Running {
+			running++
+		}
+		if r.State == fleet.StateFailed {
+			lastFailed++
+		}
 	}
 	parts := make([]string, 0, 4)
-	if counts[fleet.StateOK] > 0 {
-		parts = append(parts, fmt.Sprintf("%d ok", counts[fleet.StateOK]))
+	parts = append(parts, fmt.Sprintf("%d/%d accessible", accessible, len(rows)))
+	if running > 0 {
+		parts = append(parts, fmt.Sprintf("%d running", running))
 	}
-	if counts[fleet.StateRunning] > 0 {
-		parts = append(parts, fmt.Sprintf("%d running", counts[fleet.StateRunning]))
+	if lastFailed > 0 {
+		parts = append(parts, fmt.Sprintf("%d last-failed", lastFailed))
 	}
-	if counts[fleet.StateFailed] > 0 {
-		parts = append(parts, fmt.Sprintf("%d failed", counts[fleet.StateFailed]))
-	}
-	if counts[fleet.StateUnreachable] > 0 {
-		parts = append(parts, fmt.Sprintf("%d unreachable", counts[fleet.StateUnreachable]))
+	if unreachable > 0 {
+		parts = append(parts, fmt.Sprintf("%d unreachable", unreachable))
 	}
 	tickOrCross := "✔"
-	if counts[fleet.StateUnreachable] > 0 || counts[fleet.StateFailed] > 0 {
+	if unreachable > 0 || lastFailed > 0 {
 		tickOrCross = "✗"
 	}
 	fmt.Fprintln(w, tickOrCross+" "+strings.Join(parts, ", "))
 
 	// Print probe errors as a footnote so the table itself stays narrow.
 	for _, r := range rows {
-		if r.State == fleet.StateUnreachable && r.Error != "" {
+		if !r.Accessible && r.Error != "" {
 			fmt.Fprintf(w, "  %s: %s\n", r.Name, oneLineErr(r.Error))
 		}
 	}
 }
 
-// colorState wraps the STATE word in an ANSI color when useColor is true.
-// ok=green, running=yellow, failed=red, unreachable=red.
-func colorState(s fleet.State, useColor bool) string {
+// colorAccessible renders the ACCESSIBLE cell as green "yes" / red "no".
+func colorAccessible(ok bool, useColor bool) string {
+	word := "no"
+	if ok {
+		word = "yes"
+	}
 	if !useColor {
-		return string(s)
+		return word
 	}
 	const reset = "\x1b[0m"
-	switch s {
-	case fleet.StateOK:
-		return "\x1b[32m" + string(s) + reset
-	case fleet.StateRunning:
-		return "\x1b[33m" + string(s) + reset
-	case fleet.StateFailed, fleet.StateUnreachable:
-		return "\x1b[31m" + string(s) + reset
-	default:
-		return string(s)
+	if ok {
+		return "\x1b[32m" + word + reset
 	}
+	return "\x1b[31m" + word + reset
+}
+
+// colorRunning renders the RUNNING cell as yellow "yes" (run in flight)
+// or dim "no" (idle, or peer unreachable so we can't tell).
+func colorRunning(running bool, useColor bool) string {
+	word := "no"
+	if running {
+		word = "yes"
+	}
+	if !useColor {
+		return word
+	}
+	const reset = "\x1b[0m"
+	if running {
+		return "\x1b[33m" + word + reset
+	}
+	return "\x1b[2m" + word + reset
 }
 
 // osColumn collapses OS + arch into one cell. Arch is the parenthetical
