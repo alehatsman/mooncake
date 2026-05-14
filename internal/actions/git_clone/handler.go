@@ -235,14 +235,25 @@ func runUpdate(g *config.GitClone, ref, dest, beforeSHA string, env []string) (b
 			return false, err
 		}
 	} else {
-		// No ref pinned — sync current branch to upstream. With force,
-		// hard-reset so any local commits get discarded (matches the
-		// "force: true to discard" promise made by the dirty-check above).
-		// Without force, refuse explicitly when local has commits not on
-		// origin — otherwise git merge --ff-only fails with an opaque
-		// "refusing to merge unrelated histories" that's surprising to
-		// anyone using mooncake on a host where they also hack on the repo.
-		if g.Force {
+		// No ref pinned — sync current branch to upstream. Three paths:
+		//
+		// 1. Force: hard-reset, throwing away anything local.
+		// 2. Shallow clone: implicit hard-reset. Repeated --depth N
+		//    fetches against a moving remote leave grafted history
+		//    where `@{u}..HEAD` counts the entire disconnected pre-fetch
+		//    history as "ahead" (each prior shallow tip becomes a stray
+		//    line of commits). A shallow clone wasn't meant to preserve
+		//    local-only work anyway, so reset is the honest default.
+		// 3. Full clone, no force: refuse if local has commits not on
+		//    origin — otherwise `git merge --ff-only` fails with the
+		//    opaque "refusing to merge unrelated histories", surprising
+		//    to anyone using mooncake on a host where they also hack on
+		//    the repo.
+		shallow, err := isShallow(dest)
+		if err != nil {
+			return false, err
+		}
+		if g.Force || shallow {
 			if err := runGit(dest, env, "reset", "--hard", "@{u}"); err != nil {
 				return false, fmt.Errorf("git.clone: reset to upstream: %w", err)
 			}
@@ -291,6 +302,20 @@ func isDirty(dest string) (bool, error) {
 		return false, fmt.Errorf("git.clone: status: %w", err)
 	}
 	return strings.TrimSpace(out) != "", nil
+}
+
+// isShallow reports whether dest is a shallow clone. Cheaper than
+// `git rev-parse --is-shallow-repository` and avoids a subprocess in
+// the common (deep-clone) case.
+func isShallow(dest string) (bool, error) {
+	_, err := os.Stat(filepath.Join(dest, ".git", "shallow"))
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, fmt.Errorf("git.clone: stat .git/shallow: %w", err)
 }
 
 // gitRunner is overridable by tests so credential-env wiring can be

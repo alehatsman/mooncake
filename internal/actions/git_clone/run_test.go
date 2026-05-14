@@ -208,6 +208,63 @@ func TestRun_Apply_DestExistsButNotGit(t *testing.T) {
 	}
 }
 
+// TestRun_Apply_Shallow_ImplicitForceOnUpdate ensures shallow clones
+// don't trip the "local has N commit(s) not on origin" guard when the
+// local HEAD diverges from upstream. Repeated --depth N fetches against
+// a moving remote leave grafted history where `@{u}..HEAD` counts the
+// disconnected pre-fetch tips as "ahead" even though the user never
+// wrote anything. Shallow clones can't preserve local-only history
+// anyway, so the handler treats shallow as implicit-force.
+//
+// We force a real shallow clone via the `file://` URL form — git
+// silently ignores --depth on bare filesystem paths (it hardlink-clones
+// instead), so we must opt into the remote-like code path explicitly.
+func TestRun_Apply_Shallow_ImplicitForceOnUpdate(t *testing.T) {
+	upstream, _, _ := makeUpstream(t)
+	dest := filepath.Join(t.TempDir(), "clone")
+
+	step := &config.Step{GitClone: &config.GitClone{
+		Repo: "file://" + upstream, Dest: dest, Depth: 1, Update: true,
+	}}
+	if _, err := (&Handler{}).Run(newCtx(t, false), step); err != nil {
+		t.Fatalf("first clone: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, ".git", "shallow")); err != nil {
+		t.Fatalf("expected .git/shallow after depth-1 clone over file://: %v", err)
+	}
+
+	// Stage a local commit so HEAD diverges from origin — mirrors what
+	// shallow-graft artifacts look like to `git rev-list @{u}..HEAD`.
+	mustGit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dest
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=test", "GIT_AUTHOR_EMAIL=test@test",
+			"GIT_COMMITTER_NAME=test", "GIT_COMMITTER_EMAIL=test@test",
+		)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+		}
+	}
+	mustGit("config", "user.email", "test@test")
+	mustGit("config", "user.name", "test")
+	if err := os.WriteFile(filepath.Join(dest, "local.txt"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mustGit("add", ".")
+	mustGit("commit", "-q", "-m", "local-only")
+
+	// Pre-fix this errored "local has 1 commit(s) not on origin". Post-fix
+	// the shallow check fires → hard-reset → success.
+	if _, err := (&Handler{}).Run(newCtx(t, false), step); err != nil {
+		t.Errorf("shallow update should succeed (implicit force on shallow), got: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "local.txt")); err == nil {
+		t.Error("expected local.txt to be discarded by implicit shallow reset")
+	}
+}
+
 func TestRun_Plan_RepoUpdate_NoUpdate(t *testing.T) {
 	upstream, _, _ := makeUpstream(t)
 	dest := filepath.Join(t.TempDir(), "clone")
