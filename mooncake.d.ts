@@ -354,6 +354,16 @@ export interface OsCronAction {
 }
 
 /**
+ * Manage host firewall rules (ufw backend)
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsFirewallAction {
+}
+
+/**
  * Declaratively manage a Unix group
  * 
  * @platforms linux
@@ -1051,6 +1061,10 @@ export interface Step {
    * Manage a cron job via /etc/cron.d/<name>
    */
   "os.cron"?: OsCronAction;
+  /**
+   * Manage host firewall rules (ufw backend)
+   */
+  "os.firewall"?: OsFirewallAction;
   /**
    * Declaratively manage a Unix group
    */
