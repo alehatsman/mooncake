@@ -177,6 +177,7 @@ func TestRenderStatusTable_Snapshot(t *testing.T) {
 		{
 			Name: "alpha", Addr: "alpha.lan:7878",
 			State:         fleet.StateOK,
+			Accessible:    true,
 			OS:            "ubuntu 24.04",
 			Arch:          "amd64",
 			Mooncake:      "0.9.0",
@@ -187,6 +188,8 @@ func TestRenderStatusTable_Snapshot(t *testing.T) {
 		{
 			Name: "beta", Addr: "beta.lan:7878",
 			State:         fleet.StateRunning,
+			Accessible:    true,
+			Running:       true,
 			OS:            "darwin 14.4",
 			Arch:          "arm64",
 			Mooncake:      "0.9.0",
@@ -198,6 +201,7 @@ func TestRenderStatusTable_Snapshot(t *testing.T) {
 		{
 			Name: "gamma", Addr: "gamma.lan:7878",
 			State:         fleet.StateFailed,
+			Accessible:    true,
 			OS:            "ubuntu 24.04",
 			Arch:          "amd64",
 			Mooncake:      "0.9.0",
@@ -219,12 +223,12 @@ func TestRenderStatusTable_Snapshot(t *testing.T) {
 	// Be explicit about the layout invariants rather than diffing whole
 	// strings — tabwriter spacing is sensitive to terminal width.
 	wantSubstrings := []string{
-		"HOST", "ADDR", "STATE", "OS", "MOONCAKE", "QUEUE", "LAST RUN",
-		"alpha", "ok", "ubuntu 24.04 (amd64)", "success 2m ago",
-		"beta", "running", "darwin 14.4 (arm64)", "in flight",
-		"gamma", "failed", "failed 18h ago",
-		"delta", "unreachable", "—",
-		"✗ 1 ok, 1 running, 1 failed, 1 unreachable",
+		"HOST", "ADDR", "ACCESSIBLE", "RUNNING", "OS", "MOONCAKE", "QUEUE", "LAST RUN",
+		"alpha", "yes", "ubuntu 24.04 (amd64)", "success 2m ago",
+		"beta", "darwin 14.4 (arm64)", "in flight",
+		"gamma", "failed 18h ago",
+		"delta", "—",
+		"✗ 3/4 accessible, 1 running, 1 last-failed, 1 unreachable",
 		"delta: dial tcp: connection refused",
 	}
 	for _, s := range wantSubstrings {
@@ -238,13 +242,13 @@ func TestRenderStatusTable_Snapshot(t *testing.T) {
 // unreachable peers, the summary line leads with a check, not an X.
 func TestRenderStatusTable_AllHealthyShowsTick(t *testing.T) {
 	rows := []fleet.Status{
-		{Name: "alpha", Addr: "a:7878", State: fleet.StateOK, Mooncake: "0.9.0"},
-		{Name: "beta", Addr: "b:7878", State: fleet.StateRunning, Mooncake: "0.9.0", RunsRunning: 1},
+		{Name: "alpha", Addr: "a:7878", State: fleet.StateOK, Accessible: true, Mooncake: "0.9.0"},
+		{Name: "beta", Addr: "b:7878", State: fleet.StateRunning, Accessible: true, Running: true, Mooncake: "0.9.0", RunsRunning: 1},
 	}
 	var buf bytes.Buffer
 	renderStatusTable(&buf, rows, false)
 	got := buf.String()
-	if !strings.Contains(got, "✔ 1 ok, 1 running") {
+	if !strings.Contains(got, "✔ 2/2 accessible, 1 running") {
 		t.Errorf("want ✔ summary, got:\n%s", got)
 	}
 	if strings.Contains(got, "✗") {
