@@ -1629,6 +1629,10 @@
           "description": "Apply unified diff patches to files",
           "$ref": "#/definitions/text.patch"
         },
+        "text.patch.ini": {
+          "description": "Apply structural section/key edits to an INI-style configuration file",
+          "$ref": "#/definitions/text.patch.ini"
+        },
         "text.replace": {
           "description": "Replace text in files using literal or regex patterns",
           "$ref": "#/definitions/text.replace"
@@ -1856,6 +1860,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -2061,6 +2070,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -2274,6 +2288,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -2479,6 +2498,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -2692,6 +2716,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -2897,6 +2926,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -3110,6 +3144,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -3315,6 +3354,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -3528,6 +3572,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -3733,6 +3782,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -3946,6 +4000,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -4151,6 +4210,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -4364,6 +4428,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -4569,6 +4638,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -4782,6 +4856,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -4987,6 +5066,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -5200,6 +5284,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -5405,6 +5494,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -5618,6 +5712,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -5823,6 +5922,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -6036,6 +6140,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -6241,6 +6350,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -6454,6 +6568,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -6659,6 +6778,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -6872,6 +6996,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -7077,6 +7206,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -7297,6 +7431,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -7502,6 +7641,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -7715,6 +7859,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -7924,6 +8073,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -8129,6 +8283,225 @@
               {
                 "required": [
                   "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "text.patch.ini"
+          ],
+          "properties": {
+            "text.patch.ini": {
+              "$ref": "#/definitions/text.patch.ini"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
                 ]
               },
               {
@@ -8347,6 +8720,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "tool"
                 ]
               },
@@ -8552,6 +8930,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -8772,6 +9155,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -8977,6 +9365,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -9190,6 +9583,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -9395,6 +9793,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -9608,6 +10011,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -9813,6 +10221,11 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -10026,6 +10439,11 @@
               },
               {
                 "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -10231,6 +10649,40 @@
       "x-category": "file",
       "x-supports-dry-run": true,
       "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "text.patch.ini": {
+      "type": "object",
+      "description": "Apply structural section/key edits to an INI-style configuration file",
+      "properties": {
+        "backup": {
+          "type": "boolean"
+        },
+        "delete": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "set": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
       "x-version": "1.0.0",
       "x-emits-events": [
         "file.updated"

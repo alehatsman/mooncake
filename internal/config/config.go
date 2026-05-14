@@ -741,6 +741,21 @@ type TextLine struct {
 	Backup       bool   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
 }
 
+// TextPatchINI represents structural section/key edits to an INI-style
+// configuration file (php.ini, systemd unit files, ssh_config, ...).
+// Keys take the form "Section.key" for `[Section]` files; a bare key
+// (no dot) targets the top level for sectionless variants. Set values
+// are written as-is; delete removes matching key lines. Comments,
+// blank lines, section ordering, indentation of untouched keys, and
+// line endings (LF vs CRLF) are preserved across edits, so a second
+// run with the same desired state is byte-identical.
+type TextPatchINI struct {
+	Path   string            `yaml:"path" json:"path" plan:"path"`     // Target file path (required)
+	Set    map[string]string `yaml:"set" json:"set,omitempty"`         // Map of "Section.key" → value (literal; not quoted)
+	Delete []string          `yaml:"delete" json:"delete,omitempty"`   // List of "Section.key" entries to remove
+	Backup bool              `yaml:"backup" json:"backup,omitempty"`   // Create .bak before modify
+}
+
 // FilePatchApply represents a unified diff patch application operation.
 // Applies a unified diff patch to a file with validation and safety checks.
 type FilePatchApply struct {
@@ -904,6 +919,7 @@ type Step struct {
 	TextInsert       *FileInsert             `yaml:"text.insert"       json:"text.insert,omitempty"       action:"text.insert"`
 	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty" action:"text.delete_range"`
 	TextPatch        *FilePatchApply         `yaml:"text.patch"        json:"text.patch,omitempty"        action:"text.patch"`
+	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini"    json:"text.patch.ini,omitempty"   action:"text.patch.ini"`
 	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
 	PkgRepo          *PkgRepo                `yaml:"pkg.repo"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
 	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
@@ -1182,6 +1198,7 @@ func (s *Step) Clone() *Step {
 		TextInsert:       s.TextInsert,
 		TextDeleteRange:  s.TextDeleteRange,
 		TextPatch:        s.TextPatch,
+		TextPatchINI:     s.TextPatchINI,
 		Pkg:              s.Pkg,
 		PkgRepo:          s.PkgRepo,
 		Tool:             s.Tool,
