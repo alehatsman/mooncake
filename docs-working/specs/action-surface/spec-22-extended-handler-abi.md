@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-3 shipped. All 11 priority handlers declare `Permissions()` and the executor preflights Sudo + RequiredBinaries. Phase 4 underway — `file.write`, `file.template`, `file.copy`, the four text.* handlers, plus `pkg` and `os.service` all implement `Differ`. **9/11 priority handlers done; 2 remaining (`file.download`, `file.unarchive`).** Shared file-family helpers in `internal/actions/file/diff.go`; `PkgSnapshot` + `ServiceSnapshot` typed payloads in their respective packages. `--diff structural` CLI wiring + per-step `diff:` in JSON plan output deferred to phase 4e. Phases 5-8 still draft.
+**Status:** 🟡 In progress. Phases 1-4 shipped. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. The `mooncake plan --format json` per-step `diff:` field + `--diff structural` CLI flag remain to ship in phase 4-followup. Phases 5-8 (Reverse, Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -280,7 +280,9 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      system-managed paths). `os.service` always declares Sudo
      (every backend — systemd, launchd, Windows SCM — needs root).
    - ✅ 11/11 priority handlers done. Phase complete.
-4. **Phase 4** 🟡 — `Diff()` per-handler + plan-output wiring.
+4. **Phase 4** ✅ — `Diff()` per-handler (all 11 priority handlers).
+   `mooncake plan --format json` per-step wiring and the `--diff
+   structural` CLI flag remain as a phase-4-followup PR.
    - ✅ Shared `FileSnapshot` payload + `SnapshotPath` / `FileResource`
      / `HashFile` helpers exported from `internal/actions/file/diff.go`.
      Sibling file-family handlers reuse them; no per-package
@@ -328,12 +330,27 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      Resource.Kind = ResourceService. 7 unit tests including a
      dedicated lock-in that Before stays nil under all state
      variants.
-   - ⏳ 2 priority handlers remaining: `file.download` (needs
-     Network-fetch design — use declared checksum, no actual fetch
-     in Diff) and `file.unarchive` (needs a directory-tree snapshot
-     shape).
+   - ✅ `file.download` implements `Differ` —
+     `internal/actions/download/diff.go`. Spec-22 says don't fetch
+     the URL at plan time; instead the declared `Checksum` field
+     (when SHA256 — 64 hex chars) becomes the predicted After.Sha256
+     and enables OpNoop detection when Dest already matches. MD5
+     checksums are not passed through as Sha256 (different hash
+     space). No checksum → conservative OpUpdate. 7 unit tests
+     including case-folding and the MD5-not-misused-as-Sha256
+     lock-in.
+   - ✅ `file.unarchive` implements `Differ` —
+     `internal/actions/unarchive/diff.go`. Coarse "Dest is a
+     directory" shape (no tree enumeration in Diff). Idempotency-
+     marker semantics: when `step.Creates` is set AND that path
+     exists, Operation=OpNoop, mirroring the handler's runtime
+     skip-extraction check. Otherwise Create/Update based on Dest
+     existence. Src is correctly excluded from the Resource ref
+     (read-only input). 6 unit tests.
+   - ✅ **11/11 priority handlers shipping Diff.**
    - ⏳ Lines (unified-diff-style breakdown) still empty across all
-     handlers; will wire `effects.ContentDiff` in phase 4e.
+     handlers; will wire `effects.ContentDiff` in a phase-4
+     followup.
    - ⏳ `mooncake plan --format json` per-step `diff:` field and
      `--diff structural` CLI flag — phase 4e.
 5. **Phase 5** — implement `Reverse()` on the same handlers. Snapshot-
