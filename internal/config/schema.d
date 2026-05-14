@@ -482,6 +482,30 @@ export interface PkgAction {
 }
 
 /**
+ * Mark or unmark packages as held to prevent upgrade/removal (apt only in v1)
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface PkgHoldAction {
+  manager?: string;
+  name?: string;
+  names?: string[];
+  state?: string;
+}
+
+/**
+ * Return the installed packages and versions (read-only; apt only in v1)
+ * 
+ * @platforms linux
+ * @category system
+ */
+export interface PkgListAction {
+  manager?: string;
+}
+
+/**
  * Manage a third-party package repository (apt; dnf/brew deferred)
  * 
  * @platforms linux
@@ -509,6 +533,19 @@ export interface PkgRepoAction {
   };
   name: string;
   state?: string;
+}
+
+/**
+ * Upgrade named packages or all installed packages (apt only in v1)
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface PkgUpgradeAction {
+  autoremove?: boolean;
+  manager?: string;
+  names?: string[];
 }
 
 /**
@@ -985,9 +1022,22 @@ export interface Step {
    */
   pkg?: PkgAction;
   /**
+   * Mark or unmark packages as held to prevent upgrade/removal (apt only
+   * in v1)
+   */
+  "pkg.hold"?: PkgHoldAction;
+  /**
+   * Return the installed packages and versions (read-only; apt only in v1)
+   */
+  "pkg.list"?: PkgListAction;
+  /**
    * Manage a third-party package repository (apt; dnf/brew deferred)
    */
   "pkg.repo"?: PkgRepoAction;
+  /**
+   * Upgrade named packages or all installed packages (apt only in v1)
+   */
+  "pkg.upgrade"?: PkgUpgradeAction;
   /**
    * Apply multiple patches to multiple files atomically
    */

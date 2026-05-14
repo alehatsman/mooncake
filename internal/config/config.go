@@ -411,6 +411,35 @@ type PkgRepoBrew struct {
 	Tap string `yaml:"tap" json:"tap"`
 }
 
+// PkgHold declares one or more packages as held/unheld so the package
+// manager will refuse to upgrade or remove them automatically. v1
+// implements apt only (apt-mark hold/unhold); other managers raise a
+// clear "only apt is supported in v1" error.
+type PkgHold struct {
+	Name    string   `yaml:"name" json:"name,omitempty"`         // Single package (mutually exclusive with names)
+	Names   []string `yaml:"names" json:"names,omitempty"`       // Multiple packages (mutually exclusive with name)
+	State   string   `yaml:"state" json:"state,omitempty"`       // held|unheld (default: held)
+	Manager string   `yaml:"manager" json:"manager,omitempty"`   // Package manager (auto-detected if empty; only apt in v1)
+}
+
+// PkgUpgrade requests an upgrade of named packages, or all packages
+// when names is empty. v1 implements apt only. Upgrade is declared
+// "partially idempotent" by the spec: there's no clean way to predict
+// whether a real upgrade would happen without simulating it, so this
+// action always invokes apt and reports Changed=true on success.
+type PkgUpgrade struct {
+	Names      []string `yaml:"names" json:"names,omitempty"`           // Optional: subset of packages to upgrade
+	Autoremove bool     `yaml:"autoremove" json:"autoremove,omitempty"` // Run apt-get autoremove -y after upgrade
+	Manager    string   `yaml:"manager" json:"manager,omitempty"`       // Package manager (auto-detected if empty; only apt in v1)
+}
+
+// PkgList is the read-only query action that returns the currently
+// installed packages and versions. No side effects in any mode; Changed
+// is always false. v1 implements apt (via dpkg-query) only.
+type PkgList struct {
+	Manager string `yaml:"manager" json:"manager,omitempty"` // Package manager (auto-detected if empty; only apt in v1)
+}
+
 // UnmarshalYAML decodes Package and supports `names:` as either a list of
 // strings or a single scalar (template expression). The scalar form is
 // stashed in NamesExpr for late resolution at execute time.
@@ -922,6 +951,9 @@ type Step struct {
 	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini"    json:"text.patch.ini,omitempty"   action:"text.patch.ini"`
 	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
 	PkgRepo          *PkgRepo                `yaml:"pkg.repo"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
+	PkgHold          *PkgHold                `yaml:"pkg.hold"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
+	PkgUpgrade       *PkgUpgrade             `yaml:"pkg.upgrade"       json:"pkg.upgrade,omitempty"       action:"pkg.upgrade"`
+	PkgList          *PkgList                `yaml:"pkg.list"          json:"pkg.list,omitempty"          action:"pkg.list"`
 	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
 	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
 	OsUser           *OsUser                 `yaml:"os.user"           json:"os.user,omitempty"           action:"os.user"`
@@ -1201,6 +1233,9 @@ func (s *Step) Clone() *Step {
 		TextPatchINI:     s.TextPatchINI,
 		Pkg:              s.Pkg,
 		PkgRepo:          s.PkgRepo,
+		PkgHold:          s.PkgHold,
+		PkgUpgrade:       s.PkgUpgrade,
+		PkgList:          s.PkgList,
 		Tool:             s.Tool,
 		OsService:        s.OsService,
 		OsUser:           s.OsUser,
