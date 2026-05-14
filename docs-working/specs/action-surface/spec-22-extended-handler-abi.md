@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slice A — `file.write` create-only reverse works end-to-end, enough to give spec-30's transaction layer a concrete consumer. Slices B–F (overwrite/delete, links, file.copy/template, text.*, categoricals) drafted with explicit errors so transaction implementers see what's coming. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slices A+B — `file.write` reverses cleanly for create, overwrite (content snapshot under 4 MiB cap), delete (re-creates with captured bytes), and perms (mode restore). Oversized payloads refuse explicitly. Slices C–F (links, file.copy/template, text.*, categoricals) drafted with explicit errors so transaction implementers see what's coming. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -380,11 +380,19 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      pointing at the slice that will cover them — no silent
      "not reversible" surprises. Compile-time assert
      `var _ actions.Reverser = (*Handler)(nil)` keeps the contract.
-   - ⏳ Slice B — content-snapshot integration for `file.write`
-     overwrite + delete + perms/touch. Adds a `Content []byte`
-     field to `FileReverseInfo` (gated by a size limit) so the
-     reverse step can rewrite the original bytes / re-create the
-     deleted file / restore the original mode.
+   - ✅ Slice B — content-snapshot integration for `file.write`
+     overwrite, delete, and perms. Adds `Content []byte` to
+     `FileReverseInfo` gated by `MaxReverseCaptureBytes` (4 MiB).
+     Overwrite reverse rewrites pre-apply bytes + mode; delete
+     reverse re-creates the file from captured bytes + mode;
+     perms reverse rebuilds a `state=perms` step at the original
+     mode. Oversized files refuse with an explicit "too large to
+     snapshot" error so a transaction layer never partially
+     restores. `state=directory` on an existing dir routes to a
+     `state=perms` reverse step (mkdir is a no-op on existing
+     dirs so only the mode matters). Touch is intentionally out
+     of scope — needs pre-mtime capture, which a later slice can
+     add.
    - ⏳ Slice C — link/hardlink family for `file.write`.
    - ⏳ Slice D — `file.template`, `file.copy`. Same content-snapshot
      approach as Slice B but the source-vs-content asymmetry means
