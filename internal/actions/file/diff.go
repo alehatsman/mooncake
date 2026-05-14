@@ -356,6 +356,64 @@ func diffPerms(path string, mode os.FileMode, before *FileSnapshot) actions.Diff
 	}
 }
 
+// DiffSinglePathMutation is a Diff helper for actions whose mutation is
+// "transform the existing file in place" — text.replace, text.insert,
+// text.delete_range, text.patch. These actions all need a target Path,
+// but the resulting content depends on the action-specific transformation
+// (regex sub / anchor insert / range delete / unified-diff apply) which
+// is too complex to simulate cheaply at plan time.
+//
+// Semantics:
+//   - Operation is ALWAYS OpUpdate — the intent is mutation regardless
+//     of whether Path currently exists. Runtime surfaces "file missing"
+//     as a typed error; Diff doesn't try to predict it.
+//   - Before is a real snapshot of Path (Exists=false when missing).
+//   - After signals "the file will exist after apply, kind=file" but
+//     leaves Size and Sha256 empty — we don't know the post-mutation
+//     content without running the transformation.
+//
+// Callers (text.* handler Diff impls) pass the rendered absolute Path
+// after their own template expansion; this helper trusts that and only
+// stats / snapshots.
+//
+// Phase 4d may upgrade specific text actions (e.g. text.replace with a
+// non-matching pattern → noop) by simulating the transformation, but
+// the conservative shape here is the right base.
+func DiffSinglePathMutation(path string) actions.Diff {
+	before := SnapshotPath(path)
+	after := &FileSnapshot{
+		Path:   path,
+		Exists: true,
+		Kind:   "file",
+		// Mode inherits before's mode when present so consumers don't
+		// see a "mode changed to empty" hallucination.
+		Mode: before.Mode,
+	}
+	return actions.Diff{
+		Resource:  FileResource(path),
+		Operation: actions.OpUpdate,
+		Before:    before,
+		After:     after,
+	}
+}
+
+// ExpandPath wraps the ExecutionContext's PathUtil expansion in the
+// same way resolveDiffPath does for file.write. Falls back to raw when
+// the context isn't an *executor.ExecutionContext (e.g. a test stub) or
+// the expander errors. Sibling handlers (text.replace etc.) use this so
+// every Diff sees the same Path text.write would see at Apply time.
+func ExpandPath(ctx actions.Context, raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if ec, ok := ctx.(*executor.ExecutionContext); ok && ec.Svc != nil && ec.Svc.PathUtil != nil {
+		if expanded, err := ec.Svc.PathUtil.ExpandPath(raw, ec.CurrentDir, ctx.GetVariables()); err == nil {
+			return expanded
+		}
+	}
+	return raw
+}
+
 // Compile-time interface check: confirm Handler satisfies actions.Differ
 // so a future receiver narrowing or method-signature drift breaks the
 // build, not the runtime.
