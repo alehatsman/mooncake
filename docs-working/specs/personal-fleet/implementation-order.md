@@ -22,27 +22,46 @@ the wow factor.
 
 ---
 
+## Progress snapshot (2026-05-14)
+
+**8 of 14 PRs shipped end-to-end.** Phase A is complete; Phase B is half-done.
+
+| Status | PRs |
+|---|---|
+| ✅ Shipped | 1, 2, 3, 4, 5, 6, 7, 11 (bootstrap-lite + pair only — see notes) |
+| 🟡 In progress | 14 (per-host overlays + tag selectors — separate worktree) |
+| ⏳ Not started | 8 (`fleet logs` + `fleet facts`), 9 (native SSH driver), 10 (systemd/launchd installer templates), 12 (mDNS), 13 (`fleet init`) |
+
+Sidecar specs that shipped alongside:
+
+- **spec-49 (agentd on Windows)** → bdcc396. TCP-only mode + Windows config defaults + two SSE race fixes. Not part of the 14-PR plan but unblocked Windows peers.
+- **Fleet polish (bd4695a)** → empty-stdout rendering, peer-filter typo warning, Windows config path, SSE race regression tests.
+
+Notes on PR11: the merged version is the "lite" cut — system `ssh`/`scp` shell-out, `nohup` for the daemon, no systemd/launchd unit. The full PR9/PR10 surface (native SSH driver, embedded unit templates, idempotent reinstall, the 8-step rollback table from spec-44) is still open.
+
+---
+
 ## PR table
 
-| # | Title | Spec | Scope (one line) | Depends on | Demoable? | Est. LOC |
-|---|---|---|---|---|---|---|
-| **Phase A — one peer end-to-end** ||||||
-| 1 | agentd TCP + bearer auth + token + /v1/version extension | 39 | `Config` fields, second listener, bearer middleware, token gen, add `hostname` + `synced_root` to `/v1/version` | — | `curl :7878/v1/version` with bearer | ~250 |
-| 2 | `PUT /v1/files` + `HEAD /v1/files` with sandbox | 39 | Path sandbox helper, streaming write, sha256 check, 100 MiB cap | PR1 | `curl -X PUT … --data-binary @foo.yml` lands in `<state_dir>/synced/<scope>/foo.yml` | ~350 |
-| 3 | Fleet CLI scaffold + peers.toml + controller_id | 39 | `cmd/fleet.go`, `peers.toml` loader+writer, `EnsureControllerID()`, `fleet apply` skeleton (no-op) | PR1 (for /v1/version probe) | `mooncake fleet apply --help` works; peers.toml round-trip | ~300 |
-| 4 | Peer transport client (HTTP + SSE) | 39 | `Head`/`Put`/`Submit`/`Stream` methods, bearer header, SSE parser | PR2, PR3 | Run an integration test against a single agentd | ~400 |
-| 5 | Sync loop + apply orchestration (single peer) | 39 | Plan-dir walker, HEAD-skip+PUT loop, submit, stream events, interleaved output (degenerate with one peer) | PR4 | **🎯 `mooncake fleet apply config.yml` works end-to-end against one configured peer** | ~500 |
-| **Phase B — real fleet** ||||||
-| 6 | Multiplexer for N peers + `^C` banner | 39 | `internal/fleet/multiplex.go`, parallel orchestration, padded prefix, color, NO_COLOR, ^C handling | PR5 | **🎯 Apply across multiple peers with interleaved `[host]` lines** | ~400 |
-| 7 | `fleet status` | 42 | Per-peer parallel probe, table renderer, `--json`, `--remote-only` | PR4 | `mooncake fleet status` shows all peers' health | ~350 |
-| 8 | `fleet logs` + `fleet facts` | 42 | Latest-run resolution, reattach via SSE, `--all`, fact pretty-print, `--query` fan-out | PR4, PR6 | `mooncake fleet logs --all` reattaches to in-flight runs | ~300 |
-| 9 | SSH driver + platform detection | 40 | `internal/fleet/transport/ssh.go` (agent+key auth, known_hosts), `DetectPlatform()` | — (parallel to others) | Driver test against alpine+sshd container | ~400 |
-| 10 | Bootstrap orchestration + installer templates | 40 | Embedded systemd unit + launchd plist, 8-step install sequence | PR9 | `internal/fleet/bootstrap.go` callable from test | ~450 |
-| 11 | `fleet bootstrap` + `fleet pair` CLI | 43 | CLI wrappers, peers.toml upsert with diff, three token-source paths for pair | PR3, PR10 | **🎯 `mooncake fleet bootstrap aleh@new-box` adds a peer in one command** | ~300 |
-| **Phase C — polish** ||||||
-| 12 | mDNS advertise (daemon) + query (controller) + SSH config parser | 41 | zeroconf wrapper, agentd advertise goroutine, ssh_config parser | PR1, PR4 | `mooncake fleet discover` (debug command) prints candidates | ~450 |
-| 13 | `fleet init` interactive flow | 41 | Aggregator, prompt loop, token paste / `--ssh-fetch` paths | PR11, PR12 | **🎯 `mooncake fleet init` walks through adding 4 boxes** | ~350 |
-| 14 | Per-host overlays + tag selectors | 44 | `internal/fleet/overlays.go`, `--tag` parsing, wire vars_files into submit | PR5 | `vars/by-host/macbook.yml` is applied when targeting macbook | ~250 |
+| # | Title | Spec | Status | Scope (one line) | Depends on | Demoable? | Est. LOC |
+|---|---|---|---|---|---|---|---|
+| **Phase A — one peer end-to-end** |||||||
+| 1 | agentd TCP + bearer auth + token + /v1/version extension | 43 | ✅ | `Config` fields, second listener, bearer middleware, token gen, add `hostname` + `synced_root` to `/v1/version` | — | `curl :7878/v1/version` with bearer | ~250 |
+| 2 | `PUT /v1/files` + `HEAD /v1/files` with sandbox | 43 | ✅ | Path sandbox helper, streaming write, sha256 check, 100 MiB cap | PR1 | `curl -X PUT … --data-binary @foo.yml` lands in `<state_dir>/synced/<scope>/foo.yml` | ~350 |
+| 3 | Fleet CLI scaffold + peers.toml + controller_id | 43 | ✅ | `cmd/fleet.go`, `peers.toml` loader+writer, `EnsureControllerID()`, `fleet apply` skeleton (no-op) | PR1 (for /v1/version probe) | `mooncake fleet apply --help` works; peers.toml round-trip | ~300 |
+| 4 | Peer transport client (HTTP + SSE) | 43 | ✅ | `Head`/`Put`/`Submit`/`Stream` methods, bearer header, SSE parser | PR2, PR3 | Run an integration test against a single agentd | ~400 |
+| 5 | Sync loop + apply orchestration (single peer) | 43 | ✅ | Plan-dir walker, HEAD-skip+PUT loop, submit, stream events, interleaved output (degenerate with one peer) | PR4 | **🎯 `mooncake fleet apply config.yml` works end-to-end against one configured peer** | ~500 |
+| **Phase B — real fleet** |||||||
+| 6 | Multiplexer for N peers + `^C` banner | 43 | ✅ | `internal/fleet/multiplex.go`, parallel orchestration, padded prefix, color, NO_COLOR, ^C handling | PR5 | **🎯 Apply across multiple peers with interleaved `[host]` lines** | ~400 |
+| 7 | `fleet status` | 46 | ✅ | Per-peer parallel probe, table renderer, `--json` | PR4 | `mooncake fleet status` shows all peers' health | ~350 |
+| 8 | `fleet logs` + `fleet facts` | 46 | ⏳ | Latest-run resolution, reattach via SSE, `--all`, fact pretty-print, `--query` fan-out | PR4, PR6 | `mooncake fleet logs --all` reattaches to in-flight runs | ~300 |
+| 9 | SSH driver + platform detection | 44 | ⏳ | `internal/fleet/transport/ssh.go` (agent+key auth, known_hosts), `DetectPlatform()` | — (parallel to others) | Driver test against alpine+sshd container | ~400 |
+| 10 | Bootstrap orchestration + installer templates | 44 | ⏳ | Embedded systemd unit + launchd plist, 8-step install sequence | PR9 | `internal/fleet/bootstrap.go` callable from test | ~450 |
+| 11 | `fleet bootstrap` + `fleet pair` CLI | 47 | 🟡 | CLI wrappers, peers.toml upsert with diff, three token-source paths for pair | PR3, PR10 | **🎯 `mooncake fleet bootstrap aleh@new-box` adds a peer in one command** | ~300 |
+| **Phase C — polish** |||||||
+| 12 | mDNS advertise (daemon) + query (controller) + SSH config parser | 45 | ⏳ | zeroconf wrapper, agentd advertise goroutine, ssh_config parser | PR1, PR4 | `mooncake fleet discover` (debug command) prints candidates | ~450 |
+| 13 | `fleet init` interactive flow | 45 | ⏳ | Aggregator, prompt loop, token paste / `--ssh-fetch` paths | PR11, PR12 | **🎯 `mooncake fleet init` walks through adding 4 boxes** | ~350 |
+| 14 | Per-host overlays + tag selectors | 48 | 🟡 | `internal/fleet/overlays.go`, `--tag` parsing, wire vars_files into submit | PR5 | `vars/by-host/macbook.yml` is applied when targeting macbook | ~250 |
 
 **Totals:** ~5,200 LOC across 14 PRs. ~14 distinct review sessions.
 
@@ -110,6 +129,25 @@ add boxes to, apply against, and inspect — without discovery or overlays
 yet.
 
 **Full epic complete:** all 14 PRs.
+
+## What's still open (as of 2026-05-14)
+
+The shortest path to closing Phase B end-to-end:
+
+1. **PR 14** — per-host overlays + tag selectors (in flight). Resolve the
+   `--tag` flag name collision before merge: today `--tag` forwards to the
+   daemon as a step filter; spec-48 wants it to filter peers. Pick a
+   different flag for the peer filter (e.g. `--select tag=…`) or merge
+   semantics, but don't ship a silent breakage.
+2. **PR 8** — `fleet logs` + `fleet facts`. The `^C` banner from PR6
+   already references `mooncake fleet logs <host>`, currently a dishonest
+   forward-reference.
+3. **PR 9 + PR 10** — native SSH driver and embedded systemd/launchd
+   units, replacing the bootstrap-lite shipped under PR 11. Bumps PR 11
+   from 🟡 to ✅.
+
+PRs 12 and 13 (mDNS discovery + `fleet init`) are pure polish — defer
+until a real user complains about typing peer addresses by hand.
 
 ---
 

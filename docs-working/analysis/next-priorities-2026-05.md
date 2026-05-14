@@ -4,6 +4,11 @@
 > [DX audit](./dx-audit-2026-05.md). **Not a roadmap.** Use this to
 > pressure-test the next 1–2 quarters before committing to specs. Edit freely;
 > cross out what's wrong.
+>
+> **Last updated 2026-05-14**: PR7 (`fleet status`) shipped, spec-49
+> (agentd on Windows) shipped, fleet polish PR shipped. Personal-fleet is
+> now 8/14 PRs in (Phase A done, Phase B half done). Path-A pivot (spec-22
+> ABI) still not started.
 
 ---
 
@@ -30,8 +35,12 @@ the strategic question for the next two quarters.
 - **DX wave 1+2** (R1–R10 from the DX audit): `init`, auto-discovery,
   `--dry-run`, `doctor`, examples index, history, `presets recommend`. Most
   shipped in last two weeks.
-- **Personal-fleet runtime**: ~5k LOC, 6/14 planned PRs merged, agentd has a
-  real SSE hub and a sandboxed file-sync endpoint. The hardest plumbing is
+- **Personal-fleet runtime**: ~6k LOC, 8/14 planned PRs merged (Phase A
+  complete; Phase B half done — PR6 multiplexer + PR7 `fleet status` +
+  bootstrap-lite are in), agentd has a real SSE hub and a sandboxed
+  file-sync endpoint. Live verified against a WSL + Windows two-peer
+  testbed including `running`/`failed`/`unreachable` states. Sidecar
+  spec-49 (agentd on Windows) also landed. The hardest plumbing is
   already in tree.
 - **Test discipline**: 194 test files, hooks for `goleak`-style guarantees in
   the multiplexer spec. The "no untested PRs" rule is holding.
@@ -106,11 +115,13 @@ isn't earned.
 
 **Sequence: finish-then-pivot.**
 
-1. **Finish what's in flight (4–6 weeks).** Personal-fleet PR 7–11
-   (`status`, `logs`, `bootstrap`, `pair`, `facts`) + DX-audit R7–R10. These
-   are mostly known scope, already specced, and stopping mid-PR-chain wastes
-   the multiplexer/SSE infra that just landed. Resist any *new* fleet sub-epic
-   (C-series, overlays, mDNS polish) until after the pivot.
+1. **Finish what's in flight (2–3 weeks left).** Personal-fleet PR 8
+   (`logs` + `facts`), PR 14 (overlays + tag selectors, in another
+   worktree right now), and the PR 9/10 "real bootstrap" work that
+   would bump the lite shim to ✅. DX-audit R7–R10. These are mostly
+   known scope, already specced, and stopping mid-PR-chain wastes the
+   multiplexer/SSE infra that just landed. Resist any *new* fleet
+   sub-epic (C-series, mDNS polish) until after the pivot.
 2. **Then pivot to Path A.** Land spec-22 against spec-30 as a concrete user
    (per `streams.md`'s own work-order). Ship `transaction:` blocks. Add a
    minimum policy DSL (`deny:` over `Permissions`). Wire `Reverse()` into at
@@ -120,11 +131,23 @@ isn't earned.
    work in step 2 is exploratory enough that a real user's edge cases
    should drive design.
 
-The reason for "finish-then-pivot" rather than "pivot now": personal-fleet
-PR 6 just merged, the multiplexer is fresh in-cache, and stopping with
-`fleet apply` working but `fleet status` missing makes the whole stream feel
-unfinished. Better to bank the demo, then commit to the harder pivot from
-a clean position.
+The reason for "finish-then-pivot" rather than "pivot now": PR 7 (`fleet
+status`) just merged, closing the "see what's healthy" gap, but `fleet
+logs` and the real bootstrap installer (systemd/launchd units) still
+leave the epic feeling unfinished. Better to bank the full demo, then
+commit to the harder pivot from a clean position.
+
+**Step-1 progress check** (against the original list):
+
+| Item | Status |
+|---|---|
+| PR 6 — multiplexer + ^C | ✅ shipped (d17953f) |
+| PR 7 — `fleet status` | ✅ shipped (c689ad6) |
+| PR 8 — `fleet logs` + `facts` | ⏳ next |
+| PR 11 — `bootstrap` + `pair` (lite) | 🟡 shipped lite; needs PR 9/10 to flip to ✅ |
+| PR 14 — overlays + tag selectors | 🟡 in flight (separate worktree) |
+| Spec-49 — agentd on Windows | ✅ shipped (bdcc396) — sidecar |
+| DX-audit R7–R10 | ⏳ untouched |
 
 ---
 
@@ -156,7 +179,7 @@ Land all 7 before any new action family.
 | New action families (e.g. `cloud.*`, `k8s.*`) | Stream 1 is overheated; ABI is the bottleneck, not breadth | After spec-22 lands |
 | Cross-host DAG in fleet plans | YAGNI for 4-box personal fleet | If real users hit it |
 | TUI for `fleet apply` | Interleaved stdout covers 99% per the epic | Real user feedback says they need it |
-| Windows support (spec-49 in worktree) | Adjacent to the wedge question, but not on the critical path | After Path A demo lands |
+| ~~Windows support (spec-49 in worktree)~~ | ✅ shipped 2026-05-14 (bdcc396) | — |
 
 ---
 

@@ -1,6 +1,6 @@
 # Spec 49 — `agentd` on Windows
 
-**Status:** Draft
+**Status:** ✅ Shipped 2026-05-14. Merge → bdcc396. Includes two pre-existing SSE race fixes (hub-not-yet-created + jsonl-not-yet-created) that were caught live during Windows testing; regression tests landed in bd4695a.
 **Effort:** S (~1–2 days)
 **Value:** High — unlocks `mooncake fleet apply` against a Windows host, which
 turns "Windows + WSL" boxes from one-managed-half into two fleet peers on
