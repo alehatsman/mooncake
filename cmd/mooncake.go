@@ -1045,7 +1045,92 @@ func createApp() *cli.App {
 func main() {
 	app := createApp()
 
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(reorderArgs(os.Args, app)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// reorderArgs makes urfave/cli v2 accept flags after positional args. The
+// library uses Go's stdlib flag.Parse, which stops at the first non-flag
+// token, so `mooncake fleet apply <plan> --step-filter X` would otherwise
+// reject the flag. We walk the subcommand chain in os.Args, then shuffle
+// the tail so any --flag (and its value) precedes the bare positionals.
+//
+// The flag-vs-positional split needs to know which flags take a value
+// (every non-bool urfave flag does) — we look up the matched subcommand's
+// Flags slice. Tokens after `--` are passed through unchanged.
+func reorderArgs(args []string, app *cli.App) []string {
+	if len(args) < 2 {
+		return args
+	}
+
+	// Walk subcommands. `head` accumulates the program name + subcommand
+	// names; `cmd` ends pointing at the deepest matched command (or nil).
+	head := []string{args[0]}
+	i := 1
+	var cmd *cli.Command
+	cmds := app.Commands
+	for i < len(args) {
+		name := args[i]
+		var match *cli.Command
+		for _, c := range cmds {
+			if c.HasName(name) {
+				match = c
+				break
+			}
+		}
+		if match == nil {
+			break
+		}
+		head = append(head, name)
+		cmd = match
+		cmds = match.Subcommands
+		i++
+	}
+	if cmd == nil {
+		return args
+	}
+
+	// Map each flag name (long + aliases) to "takes a value" — true for
+	// every urfave/cli v2 flag type except *cli.BoolFlag.
+	takesValue := make(map[string]bool)
+	for _, f := range cmd.Flags {
+		_, isBool := f.(*cli.BoolFlag)
+		for _, n := range f.Names() {
+			takesValue[n] = !isBool
+		}
+	}
+
+	// Split the tail into flags-and-their-values vs. bare positionals.
+	var flags, positionals []string
+	for i < len(args) {
+		tok := args[i]
+		if tok == "--" {
+			// `--` ends flag parsing; everything after is positional.
+			positionals = append(positionals, args[i:]...)
+			break
+		}
+		if strings.HasPrefix(tok, "-") && len(tok) > 1 {
+			flags = append(flags, tok)
+			// `--name=value` already carries its value; `--name value`
+			// needs the next token IF the flag is known to take one.
+			if !strings.Contains(tok, "=") {
+				name := strings.TrimLeft(tok, "-")
+				if takesValue[name] && i+1 < len(args) {
+					flags = append(flags, args[i+1])
+					i++
+				}
+			}
+			i++
+			continue
+		}
+		positionals = append(positionals, tok)
+		i++
+	}
+
+	out := make([]string, 0, len(args))
+	out = append(out, head...)
+	out = append(out, flags...)
+	out = append(out, positionals...)
+	return out
 }
