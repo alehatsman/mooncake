@@ -862,6 +862,25 @@ type TextPatchJSON struct {
 	Backup        bool                   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
 }
 
+// TextPatchYAML represents structural edits to a YAML file via a small
+// dotted + indexed path subset (`a.b.c`, `a[0]`, `a.b[3].c`). Three
+// operations are supported and applied in order: `set` upserts a value
+// at a path; `delete` removes keys/elements at the listed paths;
+// `merge` deep-merges objects (non-destructive on existing keys) or
+// arrays (per `merge_strategy`). Edits go through gopkg.in/yaml.v3's
+// node API to preserve key order and comments adjacent to unchanged
+// nodes. Idempotent: a second run with byte-identical desired state
+// writes nothing.
+type TextPatchYAML struct {
+	Path          string                 `yaml:"path" json:"path" plan:"path"`                   // Target file path (required)
+	Set           map[string]interface{} `yaml:"set" json:"set,omitempty"`                       // Path → value upserts
+	Delete        []string               `yaml:"delete" json:"delete,omitempty"`                 // Paths to remove
+	Merge         map[string]interface{} `yaml:"merge" json:"merge,omitempty"`                   // Path → value merges
+	MergeStrategy string                 `yaml:"merge_strategy" json:"merge_strategy,omitempty"` // append_unique|replace|append (default: append_unique)
+	Backup        bool                   `yaml:"backup" json:"backup,omitempty"`                 // Create .bak before modify
+}
+
+
 // FilePatchApply represents a unified diff patch application operation.
 // Applies a unified diff patch to a file with validation and safety checks.
 type FilePatchApply struct {
@@ -1027,6 +1046,7 @@ type Step struct {
 	TextPatch        *FilePatchApply         `yaml:"text.patch"        json:"text.patch,omitempty"        action:"text.patch"`
 	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini"    json:"text.patch.ini,omitempty"   action:"text.patch.ini"`
 	TextPatchJSON    *TextPatchJSON          `yaml:"text.patch.json"   json:"text.patch.json,omitempty"  action:"text.patch.json"`
+	TextPatchYAML    *TextPatchYAML          `yaml:"text.patch.yaml"   json:"text.patch.yaml,omitempty"  action:"text.patch.yaml"`
 	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
 	PkgRepo          *PkgRepo                `yaml:"pkg.repo"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
 	PkgHold          *PkgHold                `yaml:"pkg.hold"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
@@ -1313,6 +1333,7 @@ func (s *Step) Clone() *Step {
 		TextPatch:        s.TextPatch,
 		TextPatchINI:     s.TextPatchINI,
 		TextPatchJSON:    s.TextPatchJSON,
+		TextPatchYAML:    s.TextPatchYAML,
 		Pkg:              s.Pkg,
 		PkgRepo:          s.PkgRepo,
 		PkgHold:          s.PkgHold,
