@@ -803,7 +803,7 @@ func createApp() *cli.App {
 			docsCommand(),
 			schemaCommand(),
 			snapshotCommand(),
-			lastCommand(),
+			historyCommand(),
 			mcpCommand(),
 			agentdCommand(),
 			stepCommand(),
