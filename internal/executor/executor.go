@@ -933,7 +933,20 @@ func truncate(s string, maxLen int) string {
 // In ModePlan it emits EventStepChecked (matching the legacy Check
 // flow) so existing subscribers continue to work; in ModeApply it
 // relies on the surrounding ExecuteStep to emit started/completed.
+//
+// Spec-22 phase 3 preflight: when the underlying handler implements
+// actions.Permitter, check declared permissions BEFORE calling Run.
+// Handlers without Permitter skip the check (legacy behavior). The
+// type-assertion on actions.Permitter is intentional rather than
+// going through Handler — runner is typed as actions.Runner here and
+// the Permitter interface stands alone, so we can introspect without
+// up-casting.
 func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runner) error {
+	if p, ok := runner.(actions.Permitter); ok {
+		if err := preflightPermissions(p.Permissions(&step), &step); err != nil {
+			return err
+		}
+	}
 	result, err := runner.Run(ec, &step)
 
 	// Capture the result on the context whether or not Run errored,
