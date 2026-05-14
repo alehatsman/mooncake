@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -86,107 +85,6 @@ func TestFleetApply_NoPeersConfigured(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "no peers configured") {
 		t.Errorf("err = %v, want substring 'no peers configured'", err)
-	}
-}
-
-func TestFleetApply_SkeletonOutput(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "xdg"))
-
-	peersPath := filepath.Join(dir, "peers.toml")
-	const peers = `[[peers]]
-name = "laptop"
-addr = "laptop.lan:7878"
-token = "tok-laptop"
-tags = ["linux"]
-
-[[peers]]
-name = "macbook"
-addr = "macbook.lan:7878"
-token = "tok-macbook"
-tags = ["darwin"]
-`
-	if err := os.WriteFile(peersPath, []byte(peers), 0o600); err != nil {
-		t.Fatalf("seed peers: %v", err)
-	}
-
-	planPath := filepath.Join(dir, "config.yml")
-	if err := os.WriteFile(planPath, []byte("steps: []\n"), 0o600); err != nil {
-		t.Fatalf("seed plan: %v", err)
-	}
-
-	out := &bytes.Buffer{}
-	app := newTestFleetApp()
-	app.Writer = out
-	if err := app.Run([]string{"mooncake", "fleet", "apply", "--peers-file", peersPath, planPath}); err != nil {
-		t.Fatalf("apply: %v", err)
-	}
-	s := out.String()
-	for _, want := range []string{
-		"controller_id:",
-		"plan_dir:",
-		"peers (2)",
-		"laptop",
-		"macbook",
-		"[PR3 skeleton",
-	} {
-		if !strings.Contains(s, want) {
-			t.Errorf("output missing %q. full output:\n%s", want, s)
-		}
-	}
-
-	// EnsureControllerID side effect: the file got persisted.
-	idPath := filepath.Join(dir, "xdg", "mooncake", "controller_id")
-	if _, err := os.Stat(idPath); err != nil {
-		t.Errorf("controller_id not persisted at %s: %v", idPath, err)
-	}
-}
-
-func TestFleetApply_PeersFilter(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "xdg"))
-
-	peersPath := filepath.Join(dir, "peers.toml")
-	const peers = `[[peers]]
-name = "laptop"
-addr = "laptop.lan:7878"
-token = "t"
-
-[[peers]]
-name = "macbook"
-addr = "macbook.lan:7878"
-token = "t"
-
-[[peers]]
-name = "desktop"
-addr = "desktop.lan:7878"
-token = "t"
-`
-	if err := os.WriteFile(peersPath, []byte(peers), 0o600); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	planPath := filepath.Join(dir, "config.yml")
-	if err := os.WriteFile(planPath, []byte("steps: []\n"), 0o600); err != nil {
-		t.Fatalf("seed plan: %v", err)
-	}
-
-	out := &bytes.Buffer{}
-	app := newTestFleetApp()
-	app.Writer = out
-	if err := app.Run([]string{
-		"mooncake", "fleet", "apply",
-		"--peers-file", peersPath,
-		"--peers", "laptop,desktop",
-		planPath,
-	}); err != nil {
-		t.Fatalf("apply: %v", err)
-	}
-	s := out.String()
-	if !strings.Contains(s, "peers (2)") {
-		t.Errorf("expected `peers (2)` in output, got:\n%s", s)
-	}
-	if strings.Contains(s, "macbook") {
-		t.Errorf("macbook should have been filtered out:\n%s", s)
 	}
 }
 

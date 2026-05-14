@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/alehatsman/mooncake/internal/fleet"
+	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
 
 func fleetCommand() *cli.Command {
@@ -29,9 +31,8 @@ func fleetApplyCommand() *cli.Command {
 		Usage:     "Apply a plan to one or more fleet peers",
 		ArgsUsage: "<plan.yml>",
 		Description: "Sync the plan's directory to each selected peer, submit a " +
-			"run via agentd, and stream multiplexed [host] log lines back. " +
-			"In PR3 this command resolves peers + plan-dir and prints a plan; " +
-			"real sync + run land in PR4 and PR5.",
+			"run via agentd, and stream [host]-prefixed log lines back. PR5 " +
+			"processes peers serially; PR6 adds parallel multiplexing.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "peers",
@@ -41,14 +42,30 @@ func fleetApplyCommand() *cli.Command {
 				Name:  "peers-file",
 				Usage: "Override the peers.toml path",
 			},
+			&cli.Int64Flag{
+				Name:  "max-sync-size",
+				Usage: "Plan-dir cumulative size cap in bytes (default 100 MiB)",
+				Value: 100 << 20,
+			},
+			&cli.StringSliceFlag{
+				Name:  "vars-file",
+				Usage: "Vars file to load (relative to plan-dir); may be repeated",
+			},
+			&cli.StringSliceFlag{
+				Name:  "tag",
+				Usage: "Forward this tag to the daemon's run-submit (filters steps); may be repeated",
+			},
 		},
 		Action: fleetApplyAction,
 	}
 }
 
-// fleetApplyAction in PR3 is a skeleton: it resolves the controller ID,
-// loads peers.toml, filters by --peers, resolves the plan-dir, and prints
-// what it WOULD do. Real sync + submit + stream lands in PR4/PR5.
+// fleetApplyAction runs the full apply cycle: resolve controller id +
+// plan-dir, sync the plan-dir to each selected peer's <state_dir>/synced/,
+// submit a run, and stream [host]-prefixed events to stdout.
+//
+// PR5 processes peers serially. PR6 will parallelize with multiplexed
+// output and ^C handling.
 func fleetApplyAction(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return cli.Exit("fleet apply: exactly one plan file argument required", 2)
@@ -72,29 +89,87 @@ func fleetApplyAction(c *cli.Context) error {
 			return err
 		}
 	}
-	cfg, err := fleet.LoadPeers(peersPath)
+	cfgPeers, err := fleet.LoadPeers(peersPath)
 	if err != nil {
 		return err
 	}
-	if len(cfg.Peers) == 0 {
+	if len(cfgPeers.Peers) == 0 {
 		return cli.Exit("fleet apply: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
-	selected := selectPeers(cfg.Peers, c.String("peers"))
+	selected := selectPeers(cfgPeers.Peers, c.String("peers"))
 	if len(selected) == 0 {
 		return cli.Exit("fleet apply: no peers matched --peers filter", 1)
 	}
 
-	// PR3 stops here. PR4 wires the transport; PR5 wires sync+submit+stream.
-	w := c.App.Writer
-	fmt.Fprintf(w, "controller_id: %s\n", controllerID)
-	fmt.Fprintf(w, "plan_dir:      %s\n", planDir)
-	fmt.Fprintf(w, "plan_file:     %s\n", planAbs)
-	fmt.Fprintf(w, "peers (%d):\n", len(selected))
-	for _, p := range selected {
-		fmt.Fprintf(w, "  - %s (%s, %s)\n", p.Name, p.Transport, p.Addr)
+	// Resolve vars files relative to plan-dir, absolute on the controller.
+	var varsAbs []string
+	for _, v := range c.StringSlice("vars-file") {
+		if !filepath.IsAbs(v) {
+			v = filepath.Join(planDir, v)
+		}
+		varsAbs = append(varsAbs, filepath.Clean(v))
 	}
-	fmt.Fprintln(w, "\n[PR3 skeleton — sync + apply land in PR4/PR5]")
+
+	maxSync := c.Int64("max-sync-size")
+	tags := c.StringSlice("tag")
+
+	w := c.App.Writer
+	fmt.Fprintf(w, "fleet apply: %s → %d peer(s)\n", planAbs, len(selected))
+
+	var firstErr error
+	var failedPeers []string
+	results := make([]fleet.ApplyResult, 0, len(selected))
+	for _, p := range selected {
+		if p.Transport != fleet.TransportAgentd {
+			fmt.Fprintf(w, "[%s] skipped: transport %q not supported in PR5 (agentd only)\n", p.Name, p.Transport)
+			continue
+		}
+		client := transport.New(p.Name, p.Addr, p.Token)
+		res, err := fleet.Apply(c.Context, fleet.ApplyOptions{
+			PeerName:     p.Name,
+			Peer:         client,
+			PlanDir:      planDir,
+			PlanPath:     planAbs,
+			VarsFiles:    varsAbs,
+			Tags:         tags,
+			ControllerID: controllerID,
+			MaxSyncBytes: maxSync,
+			Writer:       w,
+		})
+		results = append(results, res)
+		if err != nil {
+			fmt.Fprintf(w, "[%s] apply error: %v\n", p.Name, err)
+			failedPeers = append(failedPeers, p.Name)
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		fmt.Fprintf(w, "[%s] sync: %d uploaded, %d skipped (%d bytes total)\n",
+			p.Name, res.Sync.Put, res.Sync.Skipped, res.Sync.BytesTotal)
+		if res.Status != "" && res.Status != "success" {
+			failedPeers = append(failedPeers, p.Name)
+		}
+	}
+
+	// Summary line.
+	ok := 0
+	for _, r := range results {
+		if r.Status == "success" {
+			ok++
+		}
+	}
+	fmt.Fprintf(w, "fleet apply: %d/%d ok\n", ok, len(selected))
+
+	if len(failedPeers) > 0 {
+		return cli.Exit(
+			"fleet apply: failed on peer(s): "+strings.Join(failedPeers, ", "), 1)
+	}
+	if firstErr != nil {
+		// Belt + braces: shouldn't normally happen because err → failedPeers.
+		return errors.Join(firstErr)
+	}
 	return nil
 }
 
