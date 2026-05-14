@@ -771,6 +771,13 @@ export interface TextPatchIniAction {
 }
 
 /**
+ * Apply structural set/delete/merge edits to a JSON file with order + indent preservation
+ * @category file
+ */
+export interface TextPatchJsonAction {
+}
+
+/**
  * Replace text in files using literal or regex patterns
  * @category file
  */
@@ -1108,6 +1115,11 @@ export interface Step {
    * Apply structural section/key edits to an INI-style configuration file
    */
   "text.patch.ini"?: TextPatchIniAction;
+  /**
+   * Apply structural set/delete/merge edits to a JSON file with order +
+   * indent preservation
+   */
+  "text.patch.json"?: TextPatchJsonAction;
   /**
    * Replace text in files using literal or regex patterns
    */

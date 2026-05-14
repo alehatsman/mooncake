@@ -845,6 +845,23 @@ type TextPatchINI struct {
 	Backup bool              `yaml:"backup" json:"backup,omitempty"`   // Create .bak before modify
 }
 
+// TextPatchJSON represents structural edits to a JSON file via a
+// JSONPath-lite subset (`a.b.c`, `a[0]`, `a.b[3].c`). Three operations
+// are supported and applied in order: `set` upserts a value at a path;
+// `delete` removes keys/elements at the listed paths; `merge` applies
+// object/array merges (arrays follow the chosen `merge_strategy`).
+// Key order, indentation, and the trailing newline of the source file
+// are preserved so a second run with byte-identical desired state is a
+// true no-op (Changed=false, no write).
+type TextPatchJSON struct {
+	Path          string                 `yaml:"path" json:"path" plan:"path"`                       // Target file path (required)
+	Set           map[string]interface{} `yaml:"set" json:"set,omitempty"`                           // Path → value upserts
+	Delete        []string               `yaml:"delete" json:"delete,omitempty"`                     // Paths to remove
+	Merge         map[string]interface{} `yaml:"merge" json:"merge,omitempty"`                       // Path → value merges (object deep-set; array per strategy)
+	MergeStrategy string                 `yaml:"merge_strategy" json:"merge_strategy,omitempty"`     // append_unique|replace|append (default: append_unique)
+	Backup        bool                   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
+}
+
 // FilePatchApply represents a unified diff patch application operation.
 // Applies a unified diff patch to a file with validation and safety checks.
 type FilePatchApply struct {
@@ -1009,6 +1026,7 @@ type Step struct {
 	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty" action:"text.delete_range"`
 	TextPatch        *FilePatchApply         `yaml:"text.patch"        json:"text.patch,omitempty"        action:"text.patch"`
 	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini"    json:"text.patch.ini,omitempty"   action:"text.patch.ini"`
+	TextPatchJSON    *TextPatchJSON          `yaml:"text.patch.json"   json:"text.patch.json,omitempty"  action:"text.patch.json"`
 	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
 	PkgRepo          *PkgRepo                `yaml:"pkg.repo"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
 	PkgHold          *PkgHold                `yaml:"pkg.hold"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
@@ -1294,6 +1312,7 @@ func (s *Step) Clone() *Step {
 		TextDeleteRange:  s.TextDeleteRange,
 		TextPatch:        s.TextPatch,
 		TextPatchINI:     s.TextPatchINI,
+		TextPatchJSON:    s.TextPatchJSON,
 		Pkg:              s.Pkg,
 		PkgRepo:          s.PkgRepo,
 		PkgHold:          s.PkgHold,
