@@ -315,10 +315,10 @@ func TestShouldSkipByTags(t *testing.T) {
 			wantSkip:   false,
 		},
 		{
-			name:       "no step tags with filter - skip",
+			name:       "no step tags with filter - run (untagged steps always run)",
 			stepTags:   []string{},
 			filterTags: []string{"dev"},
-			wantSkip:   true,
+			wantSkip:   false,
 		},
 		{
 			name:       "matching single tag",
