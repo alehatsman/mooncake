@@ -1,22 +1,18 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `9666e40`, 2026-05-15, revision 4).
+(master @ `458e864`, 2026-05-15, revision 5).
 
-> **What changed since revision 2**: **Phase B of personal-fleet is fully
-> complete.** PR 9 (native SSH driver via `crypto/ssh` + `pkg/sftp` with
-> ssh-agent → IdentityFiles auth chain + `known_hosts` verification) and
-> PR 10 (full spec-44 §88 8-step bootstrap orchestration with embedded
-> systemd unit + launchd plist, two-stage SFTP install, daemon-reload +
-> startup probe, idempotent re-bootstrap via version-match short-circuit)
-> both shipped. PR 11 flipped from 🟡 lite → ✅ full automatically. Two
-> bug fixes also landed: tag-filter UX (flags after positional, opt-in
-> tag semantics) and `step.failed` error rendering + `git.clone`
-> divergent-state guard. Personal-fleet now **12/14** (only PR 12 mDNS
-> and PR 13 `fleet init` remain — both Phase C polish). Spec-22 phase 3c
-> (`Permissions()` across the text.\* family) also shipped (`6779638`)
-> — **phase 3 is now complete**; phase 4 (`Diff()`) is the next gate
-> for the agent-safety wedge.
+> **What changed since revision 4**: **Spec-22 phase 3 is fully done.**
+> Rev4 captured phase 3c (text.\* family) at merge time but phase 3d
+> (`Permissions()` on `pkg` + `os.service`, `c555dd8`/`334a6a5`) had
+> landed in the same window — phase 3 now covers **all 5/5 priority
+> handler families** (file, text, pkg, os.service, executor preflight).
+> No new merges to master since rev4 was merged; the only forward-
+> looking signal is **spec-23 (framework primitives: `on_change`,
+> `try`/`catch`/`finally`, `!secret`) starting in
+> `worktree-spec-23-onchange-secret`** — first Stream 2 work outside
+> the spec-22 dependency chain.
 
 ---
 
@@ -39,7 +35,7 @@ The typed mutation vocabulary. Ships everywhere.
 | 37 | Step output capture (collision + plan-mode) | drafted |
 | 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
 | 32 | Collapse step action dispatch | not started |
-| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅ (types + sub-interfaces + safe defaults), 3a ✅ (`file.write` + executor preflight), 3b ✅ (full file family), 3c ✅ (text.* family). **Phase 3 (`Permissions()`) complete**. Phases 4–8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft. |
+| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅ (types + sub-interfaces + safe defaults), 3a ✅ (`file.write` + executor preflight), 3b ✅ (full file family), 3c ✅ (text.* family), 3d ✅ (`pkg` + `os.service`). **Phase 3 (`Permissions()`) fully complete — 5/5 priority handler families.** Phases 4–8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft. |
 
 **Verdict**: very wide, and the ABI is finally landing. Action breadth no
 longer the bottleneck — `Reverse()` is. Phase 3 needs to finish, then
@@ -49,18 +45,21 @@ phases 4–6 (Diff/Reverse/Cost) unblock spec-30.
 
 | Spec | Topic | State |
 |---|---|---|
-| 22 | Extended Handler ABI | 🟡 in progress (see Stream 1) — the dependency that gates everything below |
-| 23 | Framework primitives (`on_change`, `try/catch/finally`, `!secret`) | drafted, blocked on 22 |
-| 30 | `transaction:` blocks with auto-reverse | drafted, blocked on 22 |
+| 22 | Extended Handler ABI | 🟡 in progress (see Stream 1) — phase 3 complete; phase 4 (`Diff()`) is the next gate |
+| 23 | Framework primitives (`on_change`, `try/catch/finally`, `!secret`) | 🟡 in flight in `worktree-spec-23-onchange-secret`. `on_change` + `!secret` are independent of spec-22; `try/catch/finally` overlaps with spec-30 |
+| 30 | `transaction:` blocks with auto-reverse | drafted, blocked on 22 phase 5–6 (`Reverse()`) |
 
 Plus a list of unwritten future specs in `streams.md`: policy DSL, plan
 signing, per-action quotas, egress policy, sandbox mode, cost classifier,
 deterministic replay.
 
-**Verdict**: the ABI contract is in the tree and `Permissions()` preflight
-runs in the executor today. Half of phase 3 is done. `Diff` / `Reverse` /
-`Cost` are still spec, not code — they are the gating work for the
-`transaction:` demo. Stream 2 has moved from "zero code" to "scaffolded."
+**Verdict**: the ABI contract is in the tree, `Permissions()` is fully
+declared across the priority handler families, and the executor
+preflights sudo + required-binaries today. Phase 3 is done; `Diff` /
+`Reverse` / `Cost` are still spec, not code — they are the gating work
+for the `transaction:` demo. Spec-23 framework primitives just opened in
+a parallel worktree, so Stream 2 now has work in flight on both sides
+of the spec-22 dependency line.
 
 ### Stream 3 — Fleet & Cluster Management  *(the monetizable wedge)*
 
@@ -221,11 +220,12 @@ all of this as agent tools.
 - **agentd async submit + SSE event stream** ✅
 - **Secret redaction** ✅
 - **Extended Handler ABI contract** ✅ (spec-22 phases 1+2)
-- **`Permissions()` declaration + executor preflight** ✅ on the full file
-  family (`file.write`, `file.template`, `file.copy`, `file.download`,
-  `file.unarchive`) — sudo and required-binary checks fail fast with
-  typed errors agents can catch
-- **`Permissions()` on text.\* family** ✅ (spec-22 phase 3c) — phase 3 complete
+- **`Permissions()` declaration + executor preflight** ✅ across **5/5
+  priority handler families**: file (`file.write`, `file.template`,
+  `file.copy`, `file.download`, `file.unarchive`), text (`text.line`,
+  `text.patch.{ini,json,yaml}`), `pkg`, `os.service`, plus executor
+  preflight — sudo and required-binary checks fail fast with typed
+  errors agents can catch. **Spec-22 phase 3 fully complete.**
 
 **Gap — the strategic gap of the whole project**:
 
@@ -233,7 +233,7 @@ all of this as agent tools.
 - **`Reverse()`**: not implemented yet. Spec-22 phases 5–6. The headline primitive.
 - **`Cost()`**: not implemented yet. Spec-22 phase 6.
 - **`transaction:` blocks**: not started. Spec-30, needs `Reverse()`. The killer demo.
-- **`try/catch/finally`, `on_change:`, `!secret`**: not started. Spec-23. `on_change` + `!secret` are independent of spec-22 and can ship in parallel.
+- **`on_change:` + `!secret`**: 🟡 in flight in `worktree-spec-23-onchange-secret` — independent of spec-22. **`try/catch/finally`**: still drafted; overlaps semantically with spec-30 transactions and design must align.
 - **Policy DSL** (`deny:` patterns): not specced. Hooks now exist via `Permissions`.
 - **Plan signing** (Sigstore-style): not specced.
 - **Per-action quotas + egress policy**: not specced.
@@ -241,11 +241,12 @@ all of this as agent tools.
 - **Deterministic replay**: implicit via run audit but no `replay` command.
 - **Cost / risk classifier**: not specced.
 
-**Distance to ideal**: ~40%, up from ~30%. The agent *interface* is real,
-the ABI contract is in the tree, and `Permissions` preflight is live for
-the biggest handler family. The agent *safety* primitives that turn the
-README's marketing into a demoable claim — `Diff` / `Reverse` /
-`transaction:` — are still pending. **The next single biggest leverage
+**Distance to ideal**: ~45%, up from ~40%. The agent *interface* is real,
+the ABI contract is in the tree, `Permissions` preflight is live across
+all 5/5 priority handler families, and `on_change`/`!secret` are now in
+flight. The agent *safety* primitives that turn the README's marketing
+into a demoable claim — `Diff` / `Reverse` / `transaction:` — are still
+pending. **The next single biggest leverage
 move in the whole codebase is shipping `Reverse()` on `file.write`.**
 
 ---
@@ -255,8 +256,10 @@ move in the whole codebase is shipping `Reverse()` on `file.write`.**
 Mooncake has built the **kernel** (Stream 1: production-quality), the
 **fleet runtime** (Stream 3: 12/14, **Phase B complete**, live-tested),
 and the **DX funnel** (Stream 4: shipped). It has *started* the **agent
-safety layer** — phase 3 of spec-22 is fully in master (`Permissions()`
-across the file and text families). The strategic gap is no longer "does any agent-safety
+safety layer** in earnest — spec-22 phase 3 fully shipped (`Permissions()`
+across the file, text, pkg, and os.service families plus executor
+preflight), and spec-23 (`on_change` + `!secret` framework primitives)
+just opened in a parallel worktree. The strategic gap is no longer "does any agent-safety
 code exist" but "how fast does `Reverse()` + `transaction:` ship after
 `Permissions` finishes."
 
@@ -278,9 +281,12 @@ ordering explicitly:
 8, 9, 10, 11, and 14 all in master, **Track B (personal-fleet close-out)
 is effectively done** — only Phase C polish (mDNS, `fleet init`) and
 the new `mooncake apply <machine>` user request remain, all of which the
-analysis docs explicitly de-prioritise. The recommendation collapses to
-**"pivot now."** Track A (agent-safety) is the only meaningful work
-ahead; phase 3 just closed, so phase 4 (`Diff()`) is the next move.
+analysis docs explicitly de-prioritise. **The pivot has happened** —
+spec-22 phase 3 is fully complete and spec-23 framework primitives are
+in flight. The next move is phase 4 (`Diff()`) plus continued spec-23
+shipping. Once `Diff()` lands and `Reverse()` (phases 5–6) follows,
+spec-30 `transaction:` blocks become reachable — and the README's
+agent-safety pitch becomes a demoable claim.
 
 The unfair-advantage statement the VISION leaves open (§13.10) gets
 answered when `transaction:` ships: **"plan + snapshot + reverse +
