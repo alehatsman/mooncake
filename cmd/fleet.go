@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -233,8 +236,8 @@ func fleetApplyCommand() *cli.Command {
 		Usage:     "Apply a plan to one or more fleet peers",
 		ArgsUsage: "<plan.yml>",
 		Description: "Sync the plan's directory to each selected peer, submit a " +
-			"run via agentd, and stream [host]-prefixed log lines back. PR5 " +
-			"processes peers serially; PR6 adds parallel multiplexing.",
+			"run via agentd, and stream [host]-prefixed log lines back. Peers " +
+			"are processed in parallel; output is line-atomic per peer.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "peers",
@@ -262,6 +265,15 @@ func fleetApplyCommand() *cli.Command {
 				Name:  "tag",
 				Usage: "Forward this tag to the daemon's run-submit (filters steps); may be repeated",
 			},
+			&cli.IntFlag{
+				Name:  "parallel",
+				Usage: "Maximum peers in flight at once (0 = unbounded, default)",
+				Value: 0,
+			},
+			&cli.BoolFlag{
+				Name:  "no-color",
+				Usage: "Disable ANSI colors in the [host] prefix (also honors NO_COLOR env)",
+			},
 		},
 		Action: fleetApplyAction,
 	}
@@ -280,8 +292,13 @@ func fleetApplyCommand() *cli.Command {
 //	    vars      = variables.yml + vars/main_pc.yml (if present)
 //	    --peers   = main_pc (unless --peers given)
 //
-// PR5 processes peers serially. PR6 will parallelize with multiplexed
-// output and ^C handling.
+// Peers are applied in parallel (capped by --parallel). One PeerEvent
+// channel feeds a single Multiplexer that owns stdout; per-peer goroutines
+// never write to the terminal directly, so output is line-atomic.
+//
+// SIGINT: first signal cancels the local apply context (closes SSE streams)
+// and prints a banner explaining that remote runs continue. Second signal
+// hard-exits with code 130.
 func fleetApplyAction(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return cli.Exit("fleet apply: exactly one plan-file-or-machine argument required", 2)
@@ -386,65 +403,137 @@ func fleetApplyAction(c *cli.Context) error {
 	tags := c.StringSlice("tag")
 
 	w := c.App.Writer
-	fmt.Fprintf(w, "fleet apply: %s → %d peer(s)\n", planAbs, len(selected))
 
-	var firstErr error
-	var failedPeers []string
-	results := make([]fleet.ApplyResult, 0, len(selected))
+	// Filter out non-agentd transports up-front; the orchestrator only
+	// targets peers it can actually drive. Skipped peers get a banner line.
+	agentdPeers := make([]fleet.Peer, 0, len(selected))
 	for _, p := range selected {
 		if p.Transport != fleet.TransportAgentd {
-			fmt.Fprintf(w, "[%s] skipped: transport %q not supported in PR5 (agentd only)\n", p.Name, p.Transport)
+			fmt.Fprintf(w, "[%s] skipped: transport %q not supported (agentd only)\n", p.Name, p.Transport)
 			continue
 		}
-		client := transport.New(p.Name, p.Addr, p.Token)
-		res, err := fleet.Apply(c.Context, fleet.ApplyOptions{
-			PeerName:     p.Name,
-			Peer:         client,
-			PlanDir:      planDir,
-			PlanPath:     planAbs,
-			VarsFiles:    varsAbs,
-			Tags:         tags,
-			ControllerID: controllerID,
-			MaxSyncBytes: maxSync,
-			Writer:       w,
-		})
-		results = append(results, res)
-		if err != nil {
-			// Apply already prints `[peer] ✗ run failed: …` when the
-			// daemon-side record carries an error; don't double-log here.
-			// Only echo the error if it doesn't already say "run failed".
-			if !strings.Contains(err.Error(), "run failed") &&
-				!strings.Contains(err.Error(), "run interrupted") {
-				fmt.Fprintf(w, "[%s] apply error: %v\n", p.Name, err)
-			}
-			failedPeers = append(failedPeers, p.Name)
-			if firstErr == nil {
-				firstErr = err
-			}
-			continue
-		}
-		fmt.Fprintf(w, "[%s] sync: %d uploaded, %d skipped (%d bytes total)\n",
-			p.Name, res.Sync.Put, res.Sync.Skipped, res.Sync.BytesTotal)
-		if res.Status != "" && res.Status != "success" {
-			failedPeers = append(failedPeers, p.Name)
-		}
+		agentdPeers = append(agentdPeers, p)
+	}
+	if len(agentdPeers) == 0 {
+		return cli.Exit("fleet apply: no agentd-transport peers selected", 1)
 	}
 
-	// Summary line.
-	ok := 0
-	for _, r := range results {
-		if r.Status == "success" {
+	peerNames := make([]string, 0, len(agentdPeers))
+	for _, p := range agentdPeers {
+		peerNames = append(peerNames, p.Name)
+	}
+	useColor := fleet.ShouldColor(w, c.Bool("no-color"))
+	mux := fleet.NewMultiplexer(w, peerNames, useColor)
+	mux.Banner(fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)))
+
+	// One event channel feeds the single Multiplexer. Buffer ~64 events per
+	// peer to keep producers off the critical path during bursty step.stdout
+	// runs (e.g. packer.nvim parallel git clones).
+	events := make(chan fleet.PeerEvent, 64*len(agentdPeers))
+	drained := make(chan struct{})
+	go func() {
+		mux.Drain(events)
+		close(drained)
+	}()
+
+	// SIGINT: first → cancel & banner; second → hard exit.
+	applyCtx, cancel := context.WithCancel(c.Context)
+	defer cancel()
+	sigCh := make(chan os.Signal, 2)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+	go func() {
+		select {
+		case <-sigCh:
+			mux.Banner("⚠ ^C closes the log stream only — remote runs continue.")
+			mux.Banner("  See `mooncake fleet logs <host>` to reattach.")
+			cancel()
+			select {
+			case <-sigCh:
+				// Second signal: bypass the orderly shutdown.
+				os.Exit(130)
+			case <-applyCtx.Done():
+				// Apply finished on its own after first ^C.
+			}
+		case <-applyCtx.Done():
+		}
+	}()
+
+	// Optional semaphore. parallel <= 0 → unbounded.
+	parallel := c.Int("parallel")
+	var sem chan struct{}
+	if parallel > 0 {
+		sem = make(chan struct{}, parallel)
+	}
+
+	results := make([]fleet.ApplyResult, len(agentdPeers))
+	errs := make([]error, len(agentdPeers))
+	var wg sync.WaitGroup
+	for i, p := range agentdPeers {
+		wg.Add(1)
+		go func(i int, p fleet.Peer) {
+			defer wg.Done()
+			if sem != nil {
+				sem <- struct{}{}
+				defer func() { <-sem }()
+			}
+			client := transport.New(p.Name, p.Addr, p.Token)
+			results[i], errs[i] = fleet.Apply(applyCtx, fleet.ApplyOptions{
+				PeerName:     p.Name,
+				Peer:         client,
+				PlanDir:      planDir,
+				PlanPath:     planAbs,
+				VarsFiles:    varsAbs,
+				Tags:         tags,
+				ControllerID: controllerID,
+				MaxSyncBytes: maxSync,
+				Events:       events,
+			})
+		}(i, p)
+	}
+	wg.Wait()
+	close(events)
+	<-drained
+
+	// Aggregate exit code:
+	//   0 → every peer's run reached "success"
+	//   1 → at least one peer ran but ended failed/interrupted
+	//   2 → at least one peer was unreachable (sync/version/submit failed)
+	ok, runFailed, unreachable := 0, 0, 0
+	var failedPeers []string
+	for i, r := range results {
+		switch {
+		case r.Status == "success":
 			ok++
+		case r.Status == "failed" || r.Status == "interrupted":
+			runFailed++
+			failedPeers = append(failedPeers, agentdPeers[i].Name)
+		default:
+			// Status == "" → never made it to a terminal SSE event.
+			// errs[i] should be set in that case (transport/sync/submit).
+			if errs[i] != nil {
+				unreachable++
+				failedPeers = append(failedPeers, agentdPeers[i].Name)
+			}
 		}
 	}
-	fmt.Fprintf(w, "fleet apply: %d/%d ok\n", ok, len(selected))
+	mux.Banner(fmt.Sprintf("fleet apply: %d/%d ok", ok, len(agentdPeers)))
 
-	if len(failedPeers) > 0 {
-		return cli.Exit(
-			"fleet apply: failed on peer(s): "+strings.Join(failedPeers, ", "), 1)
+	switch {
+	case unreachable > 0:
+		return cli.Exit("fleet apply: unreachable peer(s): "+strings.Join(failedPeers, ", "), 2)
+	case runFailed > 0:
+		return cli.Exit("fleet apply: failed on peer(s): "+strings.Join(failedPeers, ", "), 1)
+	}
+	// Belt + braces: surface a stray error that didn't map to either bucket.
+	var firstErr error
+	for _, e := range errs {
+		if e != nil && !errors.Is(e, context.Canceled) {
+			firstErr = e
+			break
+		}
 	}
 	if firstErr != nil {
-		// Belt + braces: shouldn't normally happen because err → failedPeers.
 		return errors.Join(firstErr)
 	}
 	return nil
