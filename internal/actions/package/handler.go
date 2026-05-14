@@ -69,6 +69,30 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). pkg always
+// declares Sudo and Network: every supported manager (apt/dnf/brew/
+// pacman/winget/...) needs elevated privileges to mutate the system
+// package database AND reaches out to remote repositories. The
+// declaration is unconditional — it does NOT depend on step.Pkg
+// fields, since the action TYPE is the indicator.
+//
+// FilesystemWrite is intentionally empty: pkg writes to
+// system-managed paths (/usr/bin, /var/lib/dpkg/, Cellar/, etc.)
+// that the user doesn't address directly. A future policy layer
+// that wants to gate "which packages can be installed" should look
+// at step.Pkg.Name(s), not FilesystemWrite.
+//
+// RequiredBinaries is also empty by design: the package handler
+// auto-detects the manager and ships fallbacks. Demanding a specific
+// binary on PATH would break detection. Per-manager preflight (e.g.
+// "apt-get exists") happens inside Run.
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:    true,
+		Network: true,
+	}
+}
+
 // Validate checks if the package configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.Pkg == nil {

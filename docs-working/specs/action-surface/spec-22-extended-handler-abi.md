@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phase 3 nearly complete — every file-family and text-family handler (`file.write`, `file.template`, `file.copy`, `file.download`, `file.unarchive`, `text.replace`, `text.insert`, `text.delete_range`, `text.patch`) declares `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries. 9/11 priority handlers done; 2 remaining: `pkg` and `os.service`. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-3 shipped. All 11 priority handlers (file family, text family, pkg, os.service) declare `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -258,7 +258,7 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
    `Is*` capability checks). Landed in `internal/actions/registry_abi.go`
    + 8 unit tests in `handler_abi_test.go` proving every default and the
    "native implementation wins" contract.
-3. **Phase 3** 🟡 — `Permissions()` per-handler + executor preflight.
+3. **Phase 3** ✅ — `Permissions()` per-handler + executor preflight.
    - ✅ Executor preflight wired into `dispatchRunner` →
      `internal/executor/preflight.go`. Fails fast on Sudo+non-root
      +no-AsUser; checks RequiredBinaries via `exec.LookPath`;
@@ -274,9 +274,12 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      system paths + FilesystemWrite=[Path]. text.patch's PatchFile
      is correctly excluded from the write set (it's a read-only
      input on the controller's FS).
-   - ✅ 9/11 priority handlers done.
-   - ⏳ 2 remaining: `pkg` (Sudo+Network always), `os.service` (Sudo
-     always). Each ~25 LOC + tests against the same pattern.
+   - ✅ Categorical handlers: `pkg` always declares Sudo+Network
+     (every supported manager mutates system state and reaches
+     remote repos; FilesystemWrite empty because installs go to
+     system-managed paths). `os.service` always declares Sudo
+     (every backend — systemd, launchd, Windows SCM — needs root).
+   - ✅ 11/11 priority handlers done. Phase complete.
 4. **Phase 4** — implement `Diff()` on the file/text/pkg/service
    handlers. Wire into `mooncake plan --format json` and `--diff
    structural`. Snapshot tests for diff output stability.
