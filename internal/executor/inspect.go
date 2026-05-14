@@ -55,6 +55,11 @@ func (c *inspectionCollector) OnEvent(e events.Event) {
 		if !ok {
 			return
 		}
+		// Diff is carried as `any` through the event (events package
+		// can't import actions without a cycle); cast back to the
+		// typed *actions.Diff here. The cast fails silently for
+		// non-Differ handlers — d.Diff is nil and so is diff.
+		diff, _ := d.Diff.(*actions.Diff)
 		c.byStepID[d.StepID] = plan.StepInspection{
 			StepID:      d.StepID,
 			ActionType:  d.Action,
@@ -62,6 +67,7 @@ func (c *inspectionCollector) OnEvent(e events.Event) {
 			Checkable:   d.Checkable,
 			Reason:      d.Reason,
 			Detail:      d.Detail,
+			Diff:        diff,
 		}
 	case events.EventStepSkipped:
 		d, ok := e.Data.(events.StepSkippedData)

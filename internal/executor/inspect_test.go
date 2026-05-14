@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/plan"
@@ -143,5 +144,108 @@ func TestInspectPlan_TolerantWhenInPlanMode(t *testing.T) {
 	}
 	if got[1].Reason == "" {
 		t.Errorf("step-0002 reason should explain unevaluable when; got %+v", got[1])
+	}
+}
+
+// TestInspectPlan_PopulatesDiffForDifferHandlers is the spec-22
+// phase-4 followup contract: when a step's handler natively
+// implements actions.Differ, the resulting StepInspection.Diff is
+// populated with the structural delta. This is what `mooncake plan
+// --format json` exposes as the per-step `diff:` field.
+//
+// Inspects a file.write step targeting a missing path, then asserts:
+//   - inspection.Diff is non-nil
+//   - Operation reflects the expected create vs update vs noop
+//   - Resource.Kind is ResourceFile
+//   - The typed Before/After payload is the FileSnapshot kind
+//
+// Failure modes this catches:
+//   - dispatchRunner forgetting to populate the event's Diff field
+//   - inspectionCollector failing to type-assert events.StepCheckedData.Diff
+//     back to *actions.Diff
+//   - the plan.StepInspection.Diff field getting renamed without
+//     updating the wiring
+func TestInspectPlan_PopulatesDiffForDifferHandlers(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "new.txt")
+	p := &plan.Plan{
+		Version:     "1.0",
+		GeneratedAt: time.Now(),
+		RootFile:    "<test>",
+		Steps: []config.Step{{
+			ID:   "step-0001",
+			Name: "write a new file",
+			FileWrite: &config.File{
+				Path:    missing,
+				State:   "file",
+				Content: "hello\n",
+				Mode:    "0644",
+			},
+		}},
+		InitialVars: map[string]interface{}{},
+	}
+
+	got, err := InspectPlan(p, "", silentLogger{})
+	if err != nil {
+		t.Fatalf("InspectPlan: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 inspection, got %d", len(got))
+	}
+
+	ins := got[0]
+	if ins.Diff == nil {
+		t.Fatalf("Diff is nil; file.write must produce a structural Diff (spec-22 phase 4)")
+	}
+	if ins.Diff.Operation != actions.OpCreate {
+		t.Errorf("Diff.Operation = %q, want %q (path is missing → create)", ins.Diff.Operation, actions.OpCreate)
+	}
+	if ins.Diff.Resource.Kind != actions.ResourceFile {
+		t.Errorf("Diff.Resource.Kind = %q, want %q", ins.Diff.Resource.Kind, actions.ResourceFile)
+	}
+	if ins.Diff.Resource.Identifier != missing {
+		t.Errorf("Diff.Resource.Identifier = %q, want %q", ins.Diff.Resource.Identifier, missing)
+	}
+	if ins.Diff.After == nil {
+		t.Error("Diff.After is nil; file.write should populate a typed FileSnapshot")
+	}
+	// Don't type-assert on *filehandler.FileSnapshot here — the file
+	// handler imports executor, so importing it back from an executor
+	// test creates a cycle. The Diff.After payload's shape is locked
+	// in by tests inside the file package itself; here we only verify
+	// the wiring (non-nil + the executor-visible fields).
+}
+
+// TestInspectPlan_NilDiffForNonDifferHandlers — the complement: when
+// the handler doesn't implement Differ, inspection.Diff must stay
+// nil. Locks in the "skip ResolveDiffer's default fallback" decision
+// from dispatchRunner — without that, every step would get a
+// meaningless Operation=update default Diff in JSON output.
+//
+// Uses `assert` since it doesn't (yet) implement Differ. If `assert`
+// ever opts in to Differ, swap this for a different non-Differ
+// action like `log` or `shell` (or, ideally, replace it with a
+// guaranteed-non-Differ test handler).
+func TestInspectPlan_NilDiffForNonDifferHandlers(t *testing.T) {
+	p := &plan.Plan{
+		Version:     "1.0",
+		GeneratedAt: time.Now(),
+		RootFile:    "<test>",
+		Steps: []config.Step{{
+			ID:   "step-0001",
+			Name: "log a message",
+			Log:  &config.PrintAction{Msg: "hello"},
+		}},
+		InitialVars: map[string]interface{}{},
+	}
+	got, err := InspectPlan(p, "", silentLogger{})
+	if err != nil {
+		t.Fatalf("InspectPlan: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 inspection, got %d", len(got))
+	}
+	if got[0].Diff != nil {
+		t.Errorf("Diff = %+v, want nil for non-Differ handler", got[0].Diff)
 	}
 }

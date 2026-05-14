@@ -3,6 +3,7 @@ package plan
 import (
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
@@ -40,6 +41,17 @@ type StepInspection struct {
 	Skipped bool `json:"skipped,omitempty" yaml:"skipped,omitempty"`
 	// Detail carries action-specific plan data (e.g. effects.ContentDiff for file writes).
 	Detail any `json:"detail,omitempty" yaml:"detail,omitempty"`
+
+	// Diff is the spec-22 structural per-step delta when the handler
+	// implements actions.Differ. nil for handlers that haven't opted
+	// in (assert, shell, cmd, etc.) — we deliberately don't synthesize
+	// a default-Differ Diff here because the coarse "Operation=update,
+	// Resource.Kind=other" fallback would appear on every non-Differ
+	// step and add noise to JSON output without information.
+	//
+	// Consumers wanting structured information about steps that don't
+	// implement Differ should look at Reason + Detail instead.
+	Diff *actions.Diff `json:"diff,omitempty" yaml:"diff,omitempty"`
 }
 
 // HostFacts captures the minimum set of facts needed to detect a

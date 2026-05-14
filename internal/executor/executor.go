@@ -1010,6 +1010,25 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			reason = r.Reason
 			detail = r.Detail
 		}
+		// Spec-22 phase 4-followup: when the handler natively implements
+		// Differ, compute a structural Diff and carry it through the
+		// StepChecked event so `mooncake plan --format json` exposes it
+		// as the per-step `diff:` field. Direct type-assert (not
+		// ResolveDiffer) so we don't fill JSON output with default-
+		// Differ stubs for handlers that haven't opted in.
+		//
+		// Errors from Diff are intentionally swallowed: Diff is best-
+		// effort planning information, the Reason / Result.Detail
+		// already carries the actionable error message for the
+		// underlying problem (template render fail etc.), and
+		// surfacing a nil Diff is the right signal for "couldn't
+		// predict structurally."
+		var diffPayload any
+		if differ, ok := runner.(actions.Differ); ok {
+			if d, err := differ.Diff(ec, &step); err == nil {
+				diffPayload = &d
+			}
+		}
 		ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
 			StepID:      ec.CurrentStepID,
 			Name:        name,
@@ -1018,6 +1037,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			Checkable:   checkable,
 			Reason:      reason,
 			Detail:      detail,
+			Diff:        diffPayload,
 			Level:       ec.Level,
 		})
 		if wouldChange {
