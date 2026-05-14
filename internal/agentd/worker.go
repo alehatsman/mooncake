@@ -168,6 +168,7 @@ func (w *Worker) executeRun(runID string) {
 		ConfigFilePath: run.PlanPath,
 		VarsFilePaths:  run.VarsFiles,
 		Tags:           run.Tags,
+		Names:          run.Names,
 	}, internalLog, publisher)
 
 	// CRITICAL ORDER: drain publisher → close publisher → close sink → write

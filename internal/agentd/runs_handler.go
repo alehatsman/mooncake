@@ -20,7 +20,10 @@ type submitRequest struct {
 	VarsFiles []string `json:"vars_files,omitempty"`
 	// Tags filters steps to only those matching at least one tag (and any
 	// inherited tags propagated from imports). Empty = no filter.
-	Tags    []string `json:"tags,omitempty"`
+	Tags []string `json:"tags,omitempty"`
+	// Names is the spec-50 step-name filter from `--step-filter name=<x>`.
+	// AND'd with Tags by the planner; empty = no filter.
+	Names   []string `json:"names,omitempty"`
 	Goal    string   `json:"goal,omitempty"`
 	BaseDir string   `json:"base_dir,omitempty"`
 }
@@ -106,6 +109,7 @@ func (s *Server) submitRunHandler(w http.ResponseWriter, r *http.Request) {
 		PlanPath:  planPath,
 		VarsFiles: req.VarsFiles,
 		Tags:      req.Tags,
+		Names:     req.Names,
 		Goal:      req.Goal,
 		BaseDir:   baseDir,
 	})

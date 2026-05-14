@@ -31,12 +31,19 @@ const (
 //   - Addr: `host:port` parseable by net.SplitHostPort.
 //   - Transport: "agentd" or "ssh"; defaults to "agentd" when empty.
 //   - Token: required when Transport == "agentd".
+//
+// Roles is the spec-50 addition: a list of semantic labels for what this
+// peer is for ("db", "primary", "edge"). Distinct from Tags by convention
+// — Tags is free-form, Roles answers "what's this machine's job?". Both
+// are matched by `--peer-filter` (`tag=` and `role=` respectively).
+// Optional; existing peers.toml entries with no roles field load fine.
 type Peer struct {
 	Name      string    `toml:"name"`
 	Addr      string    `toml:"addr"`
 	Transport Transport `toml:"transport"`
 	Token     string    `toml:"token,omitempty"`
 	Tags      []string  `toml:"tags,omitempty"`
+	Roles     []string  `toml:"roles,omitempty"`
 }
 
 // Config is the top-level shape of peers.toml.

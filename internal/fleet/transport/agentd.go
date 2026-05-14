@@ -102,6 +102,11 @@ type Version struct {
 	UptimeSec   int64  `json:"uptime_sec"`
 	QueueDepth  int    `json:"queue_depth"`
 	RunsRunning int    `json:"runs_running"`
+	// OS is runtime.GOOS on the peer ("darwin", "linux", "windows",
+	// "freebsd", ...). Used by spec-50's `--peer-filter os=<x>` evaluator
+	// in cmd/fleet.go. Empty on daemons predating the spec-50 change; the
+	// evaluator treats that as ok=false (predicate fails + warning).
+	OS string `json:"os"`
 }
 
 // GetVersion fetches /v1/version. Used by the controller to learn the
@@ -346,8 +351,11 @@ type SubmitRequest struct {
 	PlanPath  string   `json:"plan_path"`
 	VarsFiles []string `json:"vars_files,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
-	Goal      string   `json:"goal,omitempty"`
-	BaseDir   string   `json:"base_dir,omitempty"`
+	// Names is the spec-50 step-name filter; AND'd with Tags by the
+	// daemon-side planner.
+	Names   []string `json:"names,omitempty"`
+	Goal    string   `json:"goal,omitempty"`
+	BaseDir string   `json:"base_dir,omitempty"`
 }
 
 // Submit POSTs a run request and returns the run ID assigned by the daemon.

@@ -27,10 +27,13 @@ const (
 
 // Run is the persisted record for a single submitted plan.
 type Run struct {
-	ID         string     `json:"id"`
-	PlanPath   string     `json:"plan_path"`
-	VarsFiles  []string   `json:"vars_files,omitempty"`
-	Tags       []string   `json:"tags,omitempty"`
+	ID        string   `json:"id"`
+	PlanPath  string   `json:"plan_path"`
+	VarsFiles []string `json:"vars_files,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	// Names is the spec-50 step-name filter; AND'd with Tags by the
+	// planner. Empty = no filter active.
+	Names      []string   `json:"names,omitempty"`
 	Goal       string     `json:"goal,omitempty"`
 	BaseDir    string     `json:"base_dir"`
 	Status     RunStatus  `json:"status"`
@@ -55,6 +58,7 @@ type SubmitReq struct {
 	PlanPath  string
 	VarsFiles []string
 	Tags      []string
+	Names     []string
 	Goal      string
 	BaseDir   string
 }
@@ -142,6 +146,7 @@ func (s *Store) Create(req SubmitReq) (*Run, error) {
 		PlanPath:  req.PlanPath,
 		VarsFiles: req.VarsFiles,
 		Tags:      req.Tags,
+		Names:     req.Names,
 		Goal:      req.Goal,
 		BaseDir:   req.BaseDir,
 		Status:    StatusQueued,

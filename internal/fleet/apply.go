@@ -35,6 +35,10 @@ type ApplyOptions struct {
 	// Tags are forwarded to the daemon's run-submit request.
 	Tags []string
 
+	// Names is the spec-50 step-name filter, forwarded to the daemon's
+	// run-submit request and AND'd with Tags during plan building.
+	Names []string
+
 	// ControllerID is the UUID minted by EnsureControllerID — drives the
 	// scope key. Caller is responsible for providing it.
 	ControllerID string
@@ -140,6 +144,7 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 		PlanPath:  peerPlanPath,
 		VarsFiles: peerVars,
 		Tags:      opts.Tags,
+		Names:     opts.Names,
 		BaseDir:   peerBase,
 	})
 	if err != nil {

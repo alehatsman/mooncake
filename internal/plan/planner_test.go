@@ -236,6 +236,96 @@ steps:
 	}
 }
 
+// TestPlanner_NameFiltering covers spec-50 Phase C: the planner sets
+// step.Skipped when a step's Name isn't in PlannerConfig.Names. AND'd with
+// tag filtering, so a step has to pass both.
+func TestPlanner_NameFiltering(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test.yml")
+
+	configContent := `version: "1.0"
+steps:
+  - name: install nvim
+    shell: echo "nvim"
+
+  - name: install zsh
+    shell: echo "zsh"
+
+  - name: ""
+    shell: echo "unnamed"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("new planner: %v", err)
+	}
+	plan, err := planner.BuildPlan(PlannerConfig{
+		ConfigPath: configPath,
+		Names:      []string{"install nvim"},
+	})
+	if err != nil {
+		t.Fatalf("BuildPlan: %v", err)
+	}
+
+	if len(plan.Steps) != 3 {
+		t.Fatalf("expected 3 steps in plan, got %d", len(plan.Steps))
+	}
+	if plan.Steps[0].Skipped {
+		t.Error("step 0 (install nvim) should run — its name matches the filter")
+	}
+	if !plan.Steps[1].Skipped {
+		t.Error("step 1 (install zsh) should be skipped — name doesn't match")
+	}
+	if !plan.Steps[2].Skipped {
+		t.Error("step 2 (unnamed) should be skipped — name filter is exact match")
+	}
+}
+
+// TestPlanner_NameAndTagFilteringAreANDed: a step has to pass BOTH the
+// name filter AND the tag filter when both are active. Verifies the
+// AND semantics described in spec-50 §G2 / utils.MatchesNames doc.
+func TestPlanner_NameAndTagFilteringAreANDed(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test.yml")
+
+	configContent := `version: "1.0"
+steps:
+  - name: install nvim
+    shell: echo "nvim-install"
+    tags: [install]
+
+  - name: install nvim
+    shell: echo "nvim-uninstall"
+    tags: [uninstall]
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("new planner: %v", err)
+	}
+	plan, err := planner.BuildPlan(PlannerConfig{
+		ConfigPath: configPath,
+		Tags:       []string{"install"},
+		Names:      []string{"install nvim"},
+	})
+	if err != nil {
+		t.Fatalf("BuildPlan: %v", err)
+	}
+
+	if plan.Steps[0].Skipped {
+		t.Error("step 0 matches both name and tag; should run")
+	}
+	if !plan.Steps[1].Skipped {
+		t.Error("step 1 matches name but NOT tag; should be skipped (AND, not OR)")
+	}
+}
+
 func TestDeterminism(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()

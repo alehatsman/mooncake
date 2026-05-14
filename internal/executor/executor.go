@@ -686,6 +686,9 @@ type StartConfig struct {
 	AskBecomePass    bool
 	InsecureSudoPass bool
 	Tags             []string
+	// Names is the spec-50 step-name filter (`--step-filter name=<x>`).
+	// AND'd with Tags at plan-build time: a step must pass both.
+	Names []string
 
 	// Artifact configuration
 	ArtifactsDir      string
@@ -769,6 +772,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		ConfigPath: configFilePath,
 		Variables:  variables,
 		Tags:       startConfig.Tags,
+		Names:      startConfig.Names,
 	})
 	if err != nil {
 		return &SetupError{Component: "planner", Issue: "failed to build plan", Cause: err}
