@@ -117,6 +117,50 @@ func TestResolveVarsFiles_PeerWithoutTags(t *testing.T) {
 	}
 }
 
+func TestResolveLocalOverlays_CommonAndByHost(t *testing.T) {
+	planDir := makeOverlayDir(t, "common.yml", "by-host/laptop.yml")
+
+	got := rel(t, planDir, ResolveLocalOverlays(planDir, "laptop"))
+	want := []string{"vars/common.yml", "vars/by-host/laptop.yml"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestResolveLocalOverlays_IgnoresByTagFiles(t *testing.T) {
+	// Local apply has no peers.toml entry, so by-tag overlays are out of
+	// scope (spec-51 §Design "Tag resolution (G2 deferred)"). Even if a
+	// by-tag file exists on disk, the local path must not load it.
+	planDir := makeOverlayDir(t, "by-tag/darwin.yml", "by-host/laptop.yml")
+
+	got := rel(t, planDir, ResolveLocalOverlays(planDir, "laptop"))
+	want := []string{"vars/by-host/laptop.yml"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("local path leaked a by-tag overlay:\n got: %v\nwant: %v", got, want)
+	}
+}
+
+func TestResolveLocalOverlays_CleanMissIsSilent(t *testing.T) {
+	planDir := t.TempDir()
+
+	got := ResolveLocalOverlays(planDir, "laptop")
+	if len(got) != 0 {
+		t.Fatalf("expected empty slice for clean miss, got %v", got)
+	}
+}
+
+func TestResolveLocalOverlays_EmptyHostnameDropsByHostCandidate(t *testing.T) {
+	// Defensive: if hostname resolution somehow yields "" upstream, we must
+	// not stat vars/by-host/.yml (which could match a stray file).
+	planDir := makeOverlayDir(t, "common.yml", "by-host/.yml")
+
+	got := rel(t, planDir, ResolveLocalOverlays(planDir, ""))
+	want := []string{"vars/common.yml"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestResolveVarsFiles_DirectoryAtCandidatePathIsSkipped(t *testing.T) {
 	// Defensive: if someone creates `vars/common.yml/` as a directory by
 	// accident, we should not return it as a vars file. Stat would succeed

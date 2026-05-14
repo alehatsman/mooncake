@@ -18,6 +18,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
+	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/plan"
 	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
@@ -62,6 +63,89 @@ func parseTags(tagsStr string) []string {
 	return tags
 }
 
+
+// hostnameForLocalOverlays returns os.Hostname() with the first DNS label
+// only. macOS reports "MacBook-Air.local"; this trims to "MacBook-Air" so
+// the corresponding overlay file an operator would commit is
+// vars/by-host/MacBook-Air.yml. No-op on systems that already return a bare
+// label.
+func hostnameForLocalOverlays() (string, error) {
+	h, err := os.Hostname()
+	if err != nil {
+		return "", err
+	}
+	if i := strings.Index(h, "."); i >= 0 {
+		h = h[:i]
+	}
+	return h, nil
+}
+
+// resolveLocalOverlays returns the auto-loaded overlay vars-files for a
+// local `mooncake apply` (or `plan`) run, honoring spec-51's --host,
+// $MOONCAKE_HOST, and --overlays=off. The result is meant to be prepended
+// to any explicit --vars-file args so user flags still win on collision.
+//
+// Hostname source order:
+//
+//  1. --host <name> flag       (explicit; missing by-host file → error)
+//  2. $MOONCAKE_HOST env var   (explicit; missing by-host file → error)
+//  3. os.Hostname() first-label (implicit; missing by-host file → silent)
+//
+// configPath is the resolved config file; the plan-dir for overlay lookup
+// is its directory.
+func resolveLocalOverlays(c *cli.Context, configPath string) ([]string, error) {
+	switch c.String("overlays") {
+	case "", "on":
+		// proceed
+	case "off":
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("--overlays must be 'on' or 'off', got %q", c.String("overlays"))
+	}
+
+	hostname := c.String("host")
+	hostExplicit := hostname != ""
+	if hostname == "" {
+		if env := os.Getenv("MOONCAKE_HOST"); env != "" {
+			hostname = env
+			hostExplicit = true
+		}
+	}
+	if hostname == "" {
+		derived, err := hostnameForLocalOverlays()
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive hostname for overlay auto-load: %w", err)
+		}
+		hostname = derived
+	}
+
+	absConfig, err := filepath.Abs(configPath)
+	if err != nil {
+		return nil, err
+	}
+	planDir := filepath.Dir(absConfig)
+
+	overlays := fleet.ResolveLocalOverlays(planDir, hostname)
+
+	if hostExplicit {
+		// Operator named a host specifically. A missing by-host file likely
+		// means a typo or a not-yet-created overlay — surface it rather than
+		// silently producing an un-overlaid plan.
+		wantHost := filepath.Clean(filepath.Join(planDir, "vars", "by-host", hostname+".yml"))
+		found := false
+		for _, p := range overlays {
+			if p == wantHost {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("overlay file not found for host %q: %s does not exist", hostname, wantHost)
+		}
+	}
+
+	return overlays, nil
+}
 
 // applyFlags returns the canonical flag set shared by `apply` and the
 // deprecated `run` alias. Centralized so both commands stay in sync.
@@ -118,6 +202,20 @@ func applyFlags() []cli.Flag {
 		&cli.StringFlag{Name: "from-plan", Usage: "Apply from saved plan file (JSON or YAML)"},
 		&cli.StringFlag{Name: "facts-json", Usage: "Path to write collected facts as JSON"},
 
+		// Spec 51: local overlay auto-load. Pulls vars/common.yml and
+		// vars/by-host/<host>.yml (relative to the config's directory) into
+		// the vars list, so the spec-48 overlay convention works the same
+		// on `mooncake apply` as it does on `mooncake fleet apply`.
+		&cli.StringFlag{
+			Name:  "host",
+			Usage: "Override the auto-detected hostname for overlay lookup (vars/by-host/<host>.yml). Also honors $MOONCAKE_HOST. An explicit name whose by-host file is missing is an error.",
+		},
+		&cli.StringFlag{
+			Name:  "overlays",
+			Value: "on",
+			Usage: "Local overlay auto-load: 'on' (default) loads vars/common.yml and vars/by-host/<host>.yml; 'off' disables.",
+		},
+
 		// Spec 16 stale-plan policy (only meaningful with --from-plan).
 		&cli.BoolFlag{Name: "allow-stale", Value: false, Usage: "Apply a saved plan even if host facts mismatch or input files have changed since plan time"},
 		&cli.DurationFlag{Name: "max-plan-age", Value: 0, Usage: "Refuse to apply a saved plan older than this duration (e.g. 1h). Default: no limit."},
@@ -147,6 +245,18 @@ func run(c *cli.Context) error {
 		}
 		return err
 	}
+
+	// Spec 51: auto-load local overlays (vars/common.yml + vars/by-host/
+	// <host>.yml under the config's directory) and prepend to --vars so
+	// explicit -v args still win on key collision.
+	overlayVars, err := resolveLocalOverlays(c, configPath)
+	if err != nil {
+		return err
+	}
+	explicitVars := c.StringSlice("vars")
+	resolvedVars := make([]string, 0, len(overlayVars)+len(explicitVars))
+	resolvedVars = append(resolvedVars, overlayVars...)
+	resolvedVars = append(resolvedVars, explicitVars...)
 
 	tui := c.Bool("tui")
 	logLevel := c.String("log-level")
@@ -250,7 +360,7 @@ func run(c *cli.Context) error {
 	// Execute with event publisher
 	return executor.Start(executor.StartConfig{
 		ConfigFilePath:   configPath,
-		VarsFilePaths:    c.StringSlice("vars"),
+		VarsFilePaths:    resolvedVars,
 		SudoPass:         c.String("sudo-pass"),
 		SudoPassFile:     c.String("sudo-pass-file"),
 		AskBecomePass:    c.Bool("ask-become-pass"),
@@ -428,7 +538,18 @@ func planCommand(c *cli.Context) error {
 		}
 		return err
 	}
-	varsPaths := c.StringSlice("vars")
+	// Spec 51: prepend local overlay vars. For standalone `plan`, --host
+	// and --overlays aren't registered as flags; the helper falls through
+	// to the derived hostname and the default on-state, so behavior matches
+	// `apply --dry-run` reached via the apply flag set.
+	overlayVars, err := resolveLocalOverlays(c, configPath)
+	if err != nil {
+		return err
+	}
+	explicitVars := c.StringSlice("vars")
+	varsPaths := make([]string, 0, len(overlayVars)+len(explicitVars))
+	varsPaths = append(varsPaths, overlayVars...)
+	varsPaths = append(varsPaths, explicitVars...)
 	outputPath := c.String("output")
 	// When invoked via `apply --dry-run`, the plan-specific --format flag
 	// isn't registered on apply; fall back to the same default as `plan`.
