@@ -847,6 +847,20 @@
         "file.updated"
       ]
     },
+    "os.group": {
+      "type": "object",
+      "description": "Declaratively manage a Unix group",
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0"
+    },
     "os.mount": {
       "type": "object",
       "description": "Manage an /etc/fstab entry and the matching live mount",
@@ -1687,6 +1701,10 @@
           "description": "Manage a cron job via /etc/cron.d/\u003cname\u003e",
           "$ref": "#/definitions/os.cron"
         },
+        "os.group": {
+          "description": "Declaratively manage a Unix group",
+          "$ref": "#/definitions/os.group"
+        },
         "os.mount": {
           "description": "Manage an /etc/fstab entry and the matching live mount",
           "$ref": "#/definitions/os.mount"
@@ -1790,6 +1808,10 @@
         "text.patch.json": {
           "description": "Apply structural set/delete/merge edits to a JSON file with order + indent preservation",
           "$ref": "#/definitions/text.patch.json"
+        },
+        "text.patch.yaml": {
+          "description": "Apply structural set/delete/merge edits to a YAML file, preserving order and adjacent comments",
+          "$ref": "#/definitions/text.patch.yaml"
         },
         "text.replace": {
           "description": "Replace text in files using literal or regex patterns",
@@ -1948,6 +1970,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -2049,6 +2076,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -2192,6 +2224,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -2293,6 +2330,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -2436,6 +2478,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -2537,6 +2584,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -2680,6 +2732,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -2781,6 +2838,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -2924,6 +2986,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -3025,6 +3092,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -3168,6 +3240,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -3269,6 +3346,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -3412,6 +3494,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -3513,6 +3600,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -3656,6 +3748,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -3757,6 +3854,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -3900,6 +4002,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -4001,6 +4108,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -4144,6 +4256,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -4245,6 +4362,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -4388,6 +4510,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -4489,6 +4616,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -4632,6 +4764,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -4733,6 +4870,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -4876,6 +5018,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -4977,6 +5124,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -5120,6 +5272,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -5221,6 +5378,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -5364,6 +5526,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -5465,6 +5632,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -5608,6 +5780,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -5709,6 +5886,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -5852,6 +6034,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -5868,6 +6055,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -5948,6 +6140,265 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.group"
+          ],
+          "properties": {
+            "os.group": {
+              "$ref": "#/definitions/os.group"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -6096,6 +6547,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -6187,6 +6643,16 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -6335,6 +6801,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -6431,6 +6902,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -6579,6 +7055,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -6675,6 +7156,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -6823,6 +7309,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -6914,6 +7405,16 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7062,6 +7563,16 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -7153,6 +7664,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7301,6 +7817,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -7397,6 +7918,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7545,6 +8071,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -7641,6 +8172,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7789,6 +8325,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -7885,6 +8426,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -8033,6 +8579,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -8129,6 +8680,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -8277,6 +8833,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -8373,6 +8934,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -8521,6 +9087,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -8617,6 +9188,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -8765,6 +9341,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -8861,6 +9442,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9009,6 +9595,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -9105,6 +9696,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9253,6 +9849,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -9349,6 +9950,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9504,6 +10110,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -9600,6 +10211,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9748,6 +10364,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -9844,6 +10465,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9992,6 +10618,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -10088,6 +10719,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -10236,6 +10872,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -10332,6 +10973,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -10480,6 +11126,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -10576,6 +11227,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -10724,6 +11380,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -10820,6 +11481,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -10968,6 +11634,16 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -10979,6 +11655,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -11054,6 +11735,265 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "text.patch.yaml"
+          ],
+          "properties": {
+            "text.patch.yaml": {
+              "$ref": "#/definitions/text.patch.yaml"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
                 ]
               },
               {
@@ -11202,6 +12142,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -11303,6 +12248,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -11446,6 +12396,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -11547,6 +12502,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -11697,6 +12657,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -11798,6 +12763,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -11941,6 +12911,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -12042,6 +13017,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -12185,6 +13165,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -12286,6 +13271,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -12429,6 +13419,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -12530,6 +13525,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -12673,6 +13673,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -12774,6 +13779,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -12917,6 +13927,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -13018,6 +14033,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -13161,6 +14181,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.mount"
                 ]
               },
@@ -13262,6 +14287,11 @@
               {
                 "required": [
                   "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -13513,6 +14543,18 @@
     "text.patch.json": {
       "type": "object",
       "description": "Apply structural set/delete/merge edits to a JSON file with order + indent preservation",
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "text.patch.yaml": {
+      "type": "object",
+      "description": "Apply structural set/delete/merge edits to a YAML file, preserving order and adjacent comments",
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",

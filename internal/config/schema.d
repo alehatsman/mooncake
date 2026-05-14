@@ -354,6 +354,16 @@ export interface OsCronAction {
 }
 
 /**
+ * Declaratively manage a Unix group
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsGroupAction {
+}
+
+/**
  * Manage an /etc/fstab entry and the matching live mount
  * 
  * @platforms linux
@@ -778,6 +788,13 @@ export interface TextPatchJsonAction {
 }
 
 /**
+ * Apply structural set/delete/merge edits to a YAML file, preserving order and adjacent comments
+ * @category file
+ */
+export interface TextPatchYamlAction {
+}
+
+/**
  * Replace text in files using literal or regex patterns
  * @category file
  */
@@ -1035,6 +1052,10 @@ export interface Step {
    */
   "os.cron"?: OsCronAction;
   /**
+   * Declaratively manage a Unix group
+   */
+  "os.group"?: OsGroupAction;
+  /**
    * Manage an /etc/fstab entry and the matching live mount
    */
   "os.mount"?: OsMountAction;
@@ -1120,6 +1141,11 @@ export interface Step {
    * indent preservation
    */
   "text.patch.json"?: TextPatchJsonAction;
+  /**
+   * Apply structural set/delete/merge edits to a YAML file, preserving
+   * order and adjacent comments
+   */
+  "text.patch.yaml"?: TextPatchYamlAction;
   /**
    * Replace text in files using literal or regex patterns
    */
