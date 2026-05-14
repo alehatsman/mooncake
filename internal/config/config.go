@@ -618,6 +618,28 @@ type OsSystemd struct {
 	Path           string                 `yaml:"path" json:"path,omitempty"`                             // override unit dir (default: /etc/systemd/system)
 }
 
+// OsFirewall manages host firewall rules. v1 ships a ufw driver only;
+// `backend: auto` resolves to ufw when present and errors otherwise so
+// nftables / firewalld can be added later without changing the user
+// surface. Idempotency is computed by parsing the live rule set
+// (`ufw status numbered`) and applying only the deltas.
+type OsFirewall struct {
+	Backend string         `yaml:"backend" json:"backend,omitempty"` // ufw|auto (default: auto; v1 supports ufw only)
+	State   string         `yaml:"state" json:"state,omitempty"`     // present|absent (default: present)
+	Rule    *FirewallRule  `yaml:"rule" json:"rule,omitempty"`       // Single-rule shape (mutually exclusive with rules)
+	Rules   []FirewallRule `yaml:"rules" json:"rules,omitempty"`     // Multi-rule shape
+}
+
+// FirewallRule describes one inbound rule. Port-based rules are the
+// common case; `from` defaults to "any" to mean any source address.
+type FirewallRule struct {
+	Port     int    `yaml:"port" json:"port"`                           // Destination port (required for port-based rules)
+	Protocol string `yaml:"protocol" json:"protocol,omitempty"`         // tcp|udp (default: tcp)
+	Action   string `yaml:"action" json:"action,omitempty"`             // allow|deny|reject (default: allow)
+	From     string `yaml:"from" json:"from,omitempty"`                 // Source CIDR or "any" (default: any)
+	Comment  string `yaml:"comment" json:"comment,omitempty"`           // Human-readable note appended to the rule
+}
+
 // OsMount declares a filesystem mount: an `/etc/fstab` entry plus the
 // matching live mount state. Identity is the destination mount point
 // (one fstab entry per dest). Linux-only for v1.
@@ -1061,6 +1083,7 @@ type Step struct {
 	OsSysctl         *OsSysctl               `yaml:"os.sysctl"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
 	OsSystemd        *OsSystemd              `yaml:"os.systemd"        json:"os.systemd,omitempty"        action:"os.systemd"`
 	OsMount          *OsMount                `yaml:"os.mount"          json:"os.mount,omitempty"          action:"os.mount"`
+	OsFirewall       *OsFirewall             `yaml:"os.firewall"       json:"os.firewall,omitempty"       action:"os.firewall"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
 	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
@@ -1348,6 +1371,7 @@ func (s *Step) Clone() *Step {
 		OsSysctl:         s.OsSysctl,
 		OsSystemd:        s.OsSystemd,
 		OsMount:          s.OsMount,
+		OsFirewall:       s.OsFirewall,
 		ContainerImage:   s.ContainerImage,
 		Container:        s.Container,
 		Cmd:              s.Cmd,
