@@ -30,6 +30,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/os_cron"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_ssh_key"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_sysctl"
+	_ "github.com/alehatsman/mooncake/internal/actions/os_systemd"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_user"
 	_ "github.com/alehatsman/mooncake/internal/actions/package"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_hold"
