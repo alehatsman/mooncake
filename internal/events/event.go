@@ -359,4 +359,10 @@ type StepCheckedData struct {
 	Depth       int    `json:"depth,omitempty"`
 	// Detail carries action-specific plan data (e.g. effects.ContentDiff).
 	Detail any `json:"detail,omitempty"`
+	// Diff is the spec-22 structural delta when the dispatching handler
+	// implements actions.Differ. Carried as `any` so this package
+	// doesn't import internal/actions; the executor populates it with
+	// a `*actions.Diff`, the inspectionCollector type-asserts back.
+	// Empty (nil) for handlers that haven't opted into Differ.
+	Diff any `json:"diff,omitempty"`
 }

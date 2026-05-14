@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-4 shipped. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. The `mooncake plan --format json` per-step `diff:` field + `--diff structural` CLI flag remain to ship in phase 4-followup. Phases 5-8 (Reverse, Cost, MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 5-8 (Reverse, Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -348,11 +348,23 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      existence. Src is correctly excluded from the Resource ref
      (read-only input). 6 unit tests.
    - ✅ **11/11 priority handlers shipping Diff.**
+   - ✅ `mooncake plan --format json` exposes per-step `diff:` field.
+     Wired in `internal/executor/inspect.go` via the existing
+     EventStepChecked event: `dispatchRunner` calls the handler's
+     `Diff()` (only when natively `actions.Differ`-implementing —
+     not via `ResolveDiffer`'s default fallback, so non-Differ
+     handlers don't pollute output with stub diffs). The `Diff`
+     field rides through as `any` on `events.StepCheckedData`
+     (events can't import actions; type-asserted back in the
+     collector). `plan.StepInspection.Diff *actions.Diff` is the
+     plan-time consumer surface — JSON output picks it up via the
+     existing field-tag-driven serialisation.
    - ⏳ Lines (unified-diff-style breakdown) still empty across all
      handlers; will wire `effects.ContentDiff` in a phase-4
      followup.
-   - ⏳ `mooncake plan --format json` per-step `diff:` field and
-     `--diff structural` CLI flag — phase 4e.
+   - ⏳ `--diff structural` CLI flag for text-mode stdout rendering.
+     The JSON path already exposes Diff fully; this flag is the
+     "human inspecting plan output" surface and is a small follow-up.
 5. **Phase 5** — implement `Reverse()` on the same handlers. Snapshot-
    integration tests: apply then reverse should restore prior state.
 6. **Phase 6** — implement `Cost()` on the same handlers. Surface in
