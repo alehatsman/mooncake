@@ -310,9 +310,9 @@ func fleetApplyCommand() *cli.Command {
 //
 //	mooncake fleet apply path/to/config.yml          → plan file path
 //	mooncake fleet apply main_pc                     → "machine convention":
-//	    plan      = <plan-dir>/entries/main_pc.yml
+//	    plan      = <plan-dir>/machines/main_pc/index.yml
 //	    plan-dir  = $PWD (unless --plan-dir given)
-//	    vars      = variables.yml + vars/main_pc.yml (if present)
+//	    vars      = shared/variables.yml + machines/main_pc/vars.yml (if present)
 //	    --peers   = main_pc (unless --peers given)
 //
 // Peers are applied in parallel (capped by --parallel). One PeerEvent
@@ -340,7 +340,9 @@ func fleetApplyAction(c *cli.Context) error {
 	}
 
 	// Machine convention: bare name (no slash, no .yml) and
-	// <plan-dir>/entries/<name>.yml exists.
+	// <plan-dir>/machines/<name>/index.yml exists. Each machine owns a
+	// directory so it can carry its own vars.yml / fixtures alongside
+	// the entry plan.
 	machine := ""
 	if !strings.ContainsAny(planArg, "/\\") && !strings.HasSuffix(planArg, ".yml") {
 		root := planDir
@@ -348,7 +350,7 @@ func fleetApplyAction(c *cli.Context) error {
 			pwd, _ := os.Getwd()
 			root = pwd
 		}
-		entry := filepath.Join(root, "entries", planArg+".yml")
+		entry := filepath.Join(root, "machines", planArg, "index.yml")
 		if st, err := os.Stat(entry); err == nil && !st.IsDir() {
 			machine = planArg
 			planArg = entry
@@ -423,11 +425,16 @@ func fleetApplyAction(c *cli.Context) error {
 	}
 
 	// Resolve vars files relative to plan-dir, absolute on the controller.
-	// When the machine convention is active, prepend conventional vars files
-	// (variables.yml + vars/<machine>.yml) when they exist on disk.
+	// When the machine convention is active, prepend conventional vars
+	// files (shared/variables.yml + machines/<machine>/vars.yml) when
+	// they exist on disk. The shared file goes first so per-machine
+	// overrides win on key collision (later-wins).
 	varsRel := c.StringSlice("vars-file")
 	if machine != "" {
-		conv := []string{"variables.yml", filepath.Join("vars", machine+".yml")}
+		conv := []string{
+			filepath.Join("shared", "variables.yml"),
+			filepath.Join("machines", machine, "vars.yml"),
+		}
 		// Prepend so explicit --vars-file overrides (later wins on key collision).
 		merged := make([]string, 0, len(conv)+len(varsRel))
 		for _, p := range conv {
