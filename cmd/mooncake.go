@@ -887,6 +887,45 @@ func createApp() *cli.App {
 				},
 			},
 			{
+				Name:  "runs",
+				Usage: "Submit and follow runs on the local agentd daemon",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "apply",
+						Usage: "Submit a config to agentd and stream events back",
+						Flags: []cli.Flag{
+							&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Required: true, Usage: "Path to configuration file"},
+							&cli.StringSliceFlag{Name: "vars", Aliases: []string{"v"}, Usage: "Path to a variables file. Repeat to layer."},
+							&cli.StringFlag{Name: "tags", Aliases: []string{"t"}, Usage: "Filter steps by tags (comma-separated)"},
+							&cli.StringFlag{Name: "base-dir", Usage: "Base directory the daemon should chdir into (default: dirname of --config)"},
+							&cli.StringFlag{Name: "goal", Aliases: []string{"g"}, Usage: "Free-text goal recorded with the run"},
+							&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket (/run/mooncake/agentd.sock)"},
+						},
+						Action: runsApplyCommand,
+					},
+					{
+						Name:  "follow",
+						Usage: "Stream events for an existing run, rendered like `apply`",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket"},
+						},
+						Action: runsFollowCommand,
+					},
+					{
+						Name:   "get",
+						Usage:  "Print the JSON record for one run",
+						Flags:  []cli.Flag{&cli.BoolFlag{Name: "system"}},
+						Action: runsGetCommand,
+					},
+					{
+						Name:   "list",
+						Usage:  "List runs known to the daemon",
+						Flags:  []cli.Flag{&cli.BoolFlag{Name: "system"}},
+						Action: runsListCommand,
+					},
+				},
+			},
+			{
 				Name:  "agent",
 				Usage: "Agent operations",
 				Subcommands: []*cli.Command{

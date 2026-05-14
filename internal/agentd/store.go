@@ -30,6 +30,7 @@ type Run struct {
 	ID         string     `json:"id"`
 	PlanPath   string     `json:"plan_path"`
 	VarsFiles  []string   `json:"vars_files,omitempty"`
+	Tags       []string   `json:"tags,omitempty"`
 	Goal       string     `json:"goal,omitempty"`
 	BaseDir    string     `json:"base_dir"`
 	Status     RunStatus  `json:"status"`
@@ -53,6 +54,7 @@ func (r *Run) IsTerminal() bool {
 type SubmitReq struct {
 	PlanPath  string
 	VarsFiles []string
+	Tags      []string
 	Goal      string
 	BaseDir   string
 }
@@ -139,6 +141,7 @@ func (s *Store) Create(req SubmitReq) (*Run, error) {
 		ID:        id,
 		PlanPath:  req.PlanPath,
 		VarsFiles: req.VarsFiles,
+		Tags:      req.Tags,
 		Goal:      req.Goal,
 		BaseDir:   req.BaseDir,
 		Status:    StatusQueued,

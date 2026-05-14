@@ -18,8 +18,11 @@ type submitRequest struct {
 	// VarsFiles are loaded in order; later files override earlier on key
 	// collision. Mirrors `mooncake apply -v a.yml -v b.yml`.
 	VarsFiles []string `json:"vars_files,omitempty"`
-	Goal      string   `json:"goal,omitempty"`
-	BaseDir   string   `json:"base_dir,omitempty"`
+	// Tags filters steps to only those matching at least one tag (and any
+	// inherited tags propagated from imports). Empty = no filter.
+	Tags    []string `json:"tags,omitempty"`
+	Goal    string   `json:"goal,omitempty"`
+	BaseDir string   `json:"base_dir,omitempty"`
 }
 
 type submitResponse struct {
@@ -102,6 +105,7 @@ func (s *Server) submitRunHandler(w http.ResponseWriter, r *http.Request) {
 	run, err := s.store.Create(SubmitReq{
 		PlanPath:  planPath,
 		VarsFiles: req.VarsFiles,
+		Tags:      req.Tags,
 		Goal:      req.Goal,
 		BaseDir:   baseDir,
 	})
