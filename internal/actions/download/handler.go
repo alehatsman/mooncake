@@ -55,6 +55,24 @@ func (Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). file.download
+// always declares Network=true — it fetches a URL — and Sudo when Dest
+// lands under a known system root. FilesystemWrite=[Dest]. No required
+// binaries (the HTTP client is built-in, not an external curl/wget).
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{Network: true}
+	if step == nil || step.FileDownload == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.FileDownload.Dest) {
+		ps.Sudo = true
+	}
+	if step.FileDownload.Dest != "" {
+		ps.FilesystemWrite = []string{step.FileDownload.Dest}
+	}
+	return ps
+}
+
 // Validate checks if the download configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.FileDownload == nil {
