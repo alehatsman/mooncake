@@ -475,6 +475,8 @@ var actionStructByName = map[string]any{
 	"repo.tree":         &config.RepoTree{},
 	"repo.patch":        &config.RepoApplyPatchset{},
 	"git.clone":         &config.GitClone{},
+	"git.checkout":      &config.GitCheckout{},
+	"git.config":        &config.GitConfig{},
 	"wait.port":         &config.WaitPort{},
 	"wait.http":         &config.WaitHTTP{},
 	"wait.file":         &config.WaitFile{},

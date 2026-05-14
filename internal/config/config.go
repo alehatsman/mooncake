@@ -343,6 +343,23 @@ type GitClone struct {
 	Force             bool   `yaml:"force" json:"force,omitempty"`                                         // Discard local changes when updating (git reset --hard)
 }
 
+// GitCheckout represents a git checkout operation against an existing repo.
+// Idempotent: if HEAD already resolves to the requested ref's sha, no change.
+type GitCheckout struct {
+	Dest  string `yaml:"dest" json:"dest" plan:"path"` // Local git working tree (required, must already be a git repo)
+	Ref   string `yaml:"ref" json:"ref"`               // Branch, tag, or commit SHA to check out (required)
+	Force bool   `yaml:"force" json:"force,omitempty"` // Discard local changes if working tree is dirty
+}
+
+// GitConfig manages git config keys at local/global/system scope.
+// Idempotent: only set/unset keys whose current value differs from the desired state.
+type GitConfig struct {
+	Scope string            `yaml:"scope" json:"scope"`                  // local | global | system (required)
+	Repo  string            `yaml:"repo" json:"repo,omitempty" plan:"path"` // Working tree path (required iff scope=local)
+	Set   map[string]string `yaml:"set" json:"set,omitempty"`            // Key → desired value
+	Unset []string          `yaml:"unset" json:"unset,omitempty"`        // Keys to remove
+}
+
 // Package represents a package management operation (install/remove/update packages).
 // Supports apt, dnf, yum, pacman, zypper, apk (Linux), brew, port (macOS), choco, scoop (Windows).
 type Package struct {
@@ -872,6 +889,8 @@ type Step struct {
 	RepoTree         *RepoTree               `yaml:"repo.tree"         json:"repo.tree,omitempty"         action:"repo.tree"`
 	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch"        json:"repo.patch,omitempty"        action:"repo.patch"`
 	GitClone         *GitClone               `yaml:"git.clone"         json:"git.clone,omitempty"         action:"git.clone"`
+	GitCheckout      *GitCheckout            `yaml:"git.checkout"      json:"git.checkout,omitempty"      action:"git.checkout"`
+	GitConfig        *GitConfig              `yaml:"git.config"        json:"git.config,omitempty"        action:"git.config"`
 	ArtifactCapture  *ArtifactCapture        `yaml:"artifact.capture"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
 	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate" json:"artifact.validate,omitempty" action:"artifact.validate"`
 	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
@@ -1146,6 +1165,8 @@ func (s *Step) Clone() *Step {
 		RepoTree:         s.RepoTree,
 		RepoPatch:        s.RepoPatch,
 		GitClone:         s.GitClone,
+		GitCheckout:      s.GitCheckout,
+		GitConfig:        s.GitConfig,
 		ArtifactCapture:  s.ArtifactCapture,
 		ArtifactValidate: s.ArtifactValidate,
 		Shell:            s.Shell,

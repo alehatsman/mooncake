@@ -274,6 +274,16 @@ export interface FileWriteAction {
 }
 
 /**
+ * Switch an existing git working tree to a specified ref
+ * @category system
+ */
+export interface GitCheckoutAction {
+  dest: string;
+  force?: boolean;
+  ref: string;
+}
+
+/**
  * Idempotently clone or update a git repository at a specific ref
  * @category network
  */
@@ -285,6 +295,17 @@ export interface GitCloneAction {
   ref?: string;
   repo: string;
   update?: boolean;
+}
+
+/**
+ * Idempotently manage git config keys at local, global, or system scope
+ * @category system
+ */
+export interface GitConfigAction {
+  repo?: string;
+  scope: string;
+  set?: Record<string, any>;
+  unset?: string[];
 }
 
 /**
@@ -869,9 +890,17 @@ export interface Step {
    */
   "file.write"?: FileWriteAction;
   /**
+   * Switch an existing git working tree to a specified ref
+   */
+  "git.checkout"?: GitCheckoutAction;
+  /**
    * Idempotently clone or update a git repository at a specific ref
    */
   "git.clone"?: GitCloneAction;
+  /**
+   * Idempotently manage git config keys at local, global, or system scope
+   */
+  "git.config"?: GitConfigAction;
   /**
    * Display messages to the user
    */
