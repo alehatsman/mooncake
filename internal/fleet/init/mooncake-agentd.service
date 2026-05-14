@@ -1,0 +1,23 @@
+[Unit]
+Description=Mooncake host daemon (agentd)
+Documentation=https://github.com/alehatsman/mooncake
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mooncake agentd --system --bind 0.0.0.0:{{PORT}}
+Restart=on-failure
+RestartSec=5
+# Run as root for v1. spec-44 §324 leaves the dedicated-user question
+# open; revisit when a real "least-privilege agentd user" story exists.
+User=root
+Group=root
+# Hardening: minimal defaults appropriate for a daemon that needs broad
+# filesystem access (it runs typed mutations on behalf of fleet plans).
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target
