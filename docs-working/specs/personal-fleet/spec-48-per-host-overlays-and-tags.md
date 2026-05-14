@@ -1,7 +1,7 @@
-# Spec 44: Per-Host Overlays + Tag Selectors
+# Spec 48: Per-Host Overlays + Filter Selectors
 
 **Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P6.
-**Status:** Draft
+**Status:** Draft (PR 14 in progress)
 **Effort:** S (~2–3 days)
 **Value:** Medium — the minimum-viable "same plan, different boxes" story.
 Without this, a personal fleet of mixed Linux + macOS boxes either needs
@@ -9,6 +9,21 @@ hand-conditional plans or one plan per box. With this, one plan with a
 small overlay per peer covers the realistic differences.
 **Depends on:** spec-43 (controller-side plan walking, peers.toml with
 `tags`). Nothing in agentd changes.
+
+> **2026-05-14 drift note.** The original draft proposed `--tag` for the
+> peer-filter flag. By the time PR 14 landed, `--tag` was already taken on
+> `fleet apply` by the existing step-tag-forwarder (added during fleet
+> polish). To avoid overloading one flag with two different semantics
+> (peer selection vs. step-tag forwarding), this spec was revised to use
+> two parallel flags:
+>
+> - `--peer-filter <key=value>[,…]` — peer selection (this spec).
+> - `--step-filter <key=value>[,…]` — step-tag forwarding (renames the
+>   pre-existing `--tag`; v1 accepts only `tag=<x>`).
+>
+> v1 of both flags supports only `tag=` as the key. Extension to `name=`,
+> `os=`, `role=`, etc. is the subject of a follow-up spec under
+> [`spec-50-extended-filter-keys.md`](spec-50-extended-filter-keys.md).
 
 ---
 
@@ -39,8 +54,11 @@ This spec adds both — strictly controller-side. No daemon changes.
 - **G2** Define `vars/by-tag/<tag>.yml` as the conventional location for
   per-tag overlays. Loaded for every peer that carries that tag in
   `peers.toml`.
-- **G3** Add `--tag <key=value>` and `--tag <name>` flags to
-  `mooncake fleet apply` that filter peers before any sync happens.
+- **G3** Add `--peer-filter <key=value>` (repeatable) to `mooncake fleet
+  apply` that filters peers before any sync happens. v1 accepts only the
+  `tag=<x>` form. Multiple values within one flag = AND; repeating the
+  flag = OR. Rename the existing fleet `--tag` flag to `--step-filter`
+  for symmetry; v1 accepts only `tag=<x>` for it as well.
 - **G4** Resolve the peer's hostname *before* sync so the right overlay is
   bundled in the sync set.
 
@@ -147,29 +165,33 @@ naturally skip uploading overlay files unchanged across reruns.
 ## Tag selectors
 
 ```
-mooncake fleet apply config.yml --tag os=darwin
-mooncake fleet apply config.yml --tag gpu --tag env=home
-mooncake fleet apply config.yml --tag os=darwin,workstation  # AND within one flag
-mooncake fleet apply config.yml --tag os=darwin --tag os=linux  # OR across flags
+mooncake fleet apply config.yml --peer-filter tag=os=darwin
+mooncake fleet apply config.yml --peer-filter tag=gpu --peer-filter tag=env=home
+mooncake fleet apply config.yml --peer-filter tag=os=darwin,tag=workstation  # AND
+mooncake fleet apply config.yml --peer-filter tag=os=darwin --peer-filter tag=os=linux  # OR
 ```
 
 Semantics:
 
-- A bare tag name (`gpu`) matches any peer whose `tags` list contains
-  exactly `gpu`.
-- A `key=value` tag matches any peer with a tag of that form.
-  (For v1, `key=value` is just a string convention; the parser splits on
-  `=` for display, but matching is exact-string.)
-- Multiple values separated by `,` within one `--tag` flag → AND.
-- Multiple `--tag` flags → OR.
-- No `--tag` → all peers (current spec-43 behavior).
+- v1 only accepts `tag=<value>` as the key. Any other key (`name=`,
+  `os=`, `role=`) errors with a message pointing at the follow-up spec.
+  The flag is a predicate DSL on purpose so the extension lands as a
+  validator change, not a flag rename.
+- `tag=<value>` matches any peer whose `tags` list in `peers.toml`
+  contains the exact string `<value>`. The value can itself contain `=`
+  — e.g. `tag=os=darwin` matches the literal tag string `os=darwin`.
+- Multiple `tag=…` terms separated by `,` within one `--peer-filter`
+  flag → AND.
+- Multiple `--peer-filter` flags → OR across them.
+- No `--peer-filter` → all peers (existing behavior).
 - `--peers <name,...>` already exists from spec-43; it's compatible:
-  intersect with the tag-selected set.
+  the tag predicate intersects with the name-selected set.
 
-Print the resolved set before applying:
+Print the resolved set before applying (planned; PR 14 prints only an
+error when 0 peers match):
 
 ```
-$ mooncake fleet apply config.yml --tag os=darwin
+$ mooncake fleet apply config.yml --peer-filter tag=os=darwin
 selected 1 of 4 peers: macbook
 sync: 12 files (0.4 MiB)…
 …
@@ -188,15 +210,21 @@ sync: 12 files (0.4 MiB)…
    Returns the ordered list of vars-files to send for this peer.
    Stats each candidate; only present files are included.
 
-### Task 2 — Tag selector
+### Task 2 — Filter selectors
 
 1. Extend `cmd/fleet.go` apply subcommand:
    ```
-   --tag <expr>   # repeatable; OR across flags, AND within a single flag
+   --peer-filter <expr>   # repeatable; AND within one flag, OR across flags
+   --step-filter <expr>   # renames existing --tag; same expression syntax
    ```
-2. Parser: `parseTags(args []string) [][]string` returning a list of
-   AND-groups.
-3. Apply selector after loading peers.toml; print the resolved set.
+2. Parser: `parseFilterFlags(args []string) ([][]filterTerm, error)` —
+   returns a list of AND-groups, generic over keys so the follow-up spec
+   can extend without re-parsing.
+3. `validatePeerFilterKeys` / `extractStepFilterTags` reject anything
+   other than `tag=` in v1.
+4. Apply selector after loading peers.toml and after the `--peers` name
+   filter (intersect, not replace). Exit 1 with a clear message when zero
+   peers match.
 
 ### Task 3 — Wire overlays into submit
 
