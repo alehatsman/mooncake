@@ -249,9 +249,14 @@ func fleetApplyCommand() *cli.Command {
 				Usage: "Plan-dir cumulative size cap in bytes (default 100 MiB)",
 				Value: 100 << 20,
 			},
+			&cli.StringFlag{
+				Name:  "plan-dir",
+				Usage: "Root directory to sync to each peer (default: directory of the plan file). " +
+					"Use this when the plan imports siblings via `../` — point at the repo root.",
+			},
 			&cli.StringSliceFlag{
 				Name:  "vars-file",
-				Usage: "Vars file to load (relative to plan-dir); may be repeated",
+				Usage: "Vars file to load (relative to plan-dir or absolute); may be repeated",
 			},
 			&cli.StringSliceFlag{
 				Name:  "tag",
@@ -278,6 +283,12 @@ func fleetApplyAction(c *cli.Context) error {
 		return fmt.Errorf("resolve plan path: %w", err)
 	}
 	planDir := filepath.Dir(planAbs)
+	if pd := c.String("plan-dir"); pd != "" {
+		planDir, err = filepath.Abs(pd)
+		if err != nil {
+			return fmt.Errorf("resolve plan-dir: %w", err)
+		}
+	}
 
 	controllerID, err := fleet.EnsureControllerID()
 	if err != nil {
