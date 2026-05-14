@@ -683,6 +683,24 @@
       "type": "object",
       "description": "Idempotently clone or update a git repository at a specific ref",
       "properties": {
+        "credentials": {
+          "type": "object",
+          "properties": {
+            "password": {
+              "type": "string"
+            },
+            "ssh_key": {
+              "type": "string"
+            },
+            "ssh_options": {
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
         "depth": {
           "type": "integer"
         },
