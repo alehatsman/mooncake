@@ -119,6 +119,14 @@ type ExecutionContext struct {
 	// CurrentResult holds the result of the currently executing step.
 	// Not copied on Clone — resets per step.
 	CurrentResult *Result
+
+	// ChangedByStepID records the .Changed outcome of each step that has
+	// completed in this execution context, keyed by step.ID. Read by
+	// on_change child execution (spec-23 §1): a child runs iff
+	// ChangedByStepID[step.TriggeredBy] is true. Survives across steps so
+	// triggered children can look back at their parents; never copied to
+	// nested Clone() scopes (each scope tracks its own changes).
+	ChangedByStepID map[string]bool
 }
 
 // Clone creates a new ExecutionContext for a nested execution scope (include or loop).

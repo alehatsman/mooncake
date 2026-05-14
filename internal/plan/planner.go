@@ -306,7 +306,29 @@ func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan
 	if err != nil {
 		return fmt.Errorf("failed to compile step %q: %w", step.Name, err)
 	}
+
+	// Capture on_change children BEFORE clearing the field on the plan-step
+	// copy. Spec-23 §1: the planner expands them into sibling plan steps
+	// tagged with TriggeredBy=parent.ID. The executor uses TriggeredBy to
+	// gate execution on the parent's outputs.changed.
+	//
+	// On the parent's plan entry we clear OnChange so the field doesn't
+	// serialize twice (once on the parent + once as expanded sibling
+	// entries). The linkage survives via the children's TriggeredBy.
+	onChange := planStep.OnChange
+	planStep.OnChange = nil
 	plan.Steps = append(plan.Steps, planStep)
+
+	if len(onChange) > 0 {
+		parentID := planStep.ID
+		for ci := range onChange {
+			child := onChange[ci]
+			child.TriggeredBy = parentID
+			if err := p.expandStep(child, ctx, plan, 0); err != nil {
+				return fmt.Errorf("expand on_change child %d of %q: %w", ci, step.Name, err)
+			}
+		}
+	}
 	return nil
 }
 

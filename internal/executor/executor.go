@@ -274,6 +274,19 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 		return true, "tags", nil
 	}
 
+	// spec-23 on_change: a triggered child runs iff its parent's step
+	// reported changed=true. Lookup is by ID against the per-context
+	// ChangedByStepID map populated as each prior step completes. A miss
+	// (parent not yet recorded, or no map at all) treats as "didn't change"
+	// — defensive and matches the user's intent that on_change children
+	// only run on positive change signals.
+	if step.TriggeredBy != "" {
+		parentChanged := ec.ChangedByStepID[step.TriggeredBy]
+		if !parentChanged {
+			return true, "on_change: parent " + step.TriggeredBy + " did not change", nil
+		}
+	}
+
 	// Check when condition
 	if step.When != "" {
 		shouldSkip, err := handleWhenExpression(step, ec)
@@ -392,11 +405,12 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 		depth = step.LoopContext.Depth
 	}
 	ec.EmitEvent(events.EventStepSkipped, events.StepSkippedData{
-		StepID: stepID,
-		Name:   stepName,
-		Level:  ec.Level,
-		Reason: skipReason,
-		Depth:  depth,
+		StepID:      stepID,
+		Name:        stepName,
+		Level:       ec.Level,
+		Reason:      skipReason,
+		Depth:       depth,
+		TriggeredBy: step.TriggeredBy,
 	})
 }
 
@@ -550,15 +564,16 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Emit step.started event
 	ec.EmitEvent(events.EventStepStarted, events.StepStartedData{
-		StepID:     stepID,
-		Name:       stepName,
-		Level:      ec.Level,
-		GlobalStep: *ec.Svc.Stats.Global,
-		Action:     step.ActionType,
-		Tags:       step.Tags,
-		When:       step.When,
-		Depth:      depth,
-		DryRun:     ec.Mode() == actions.ModePlan,
+		StepID:      stepID,
+		Name:        stepName,
+		Level:       ec.Level,
+		GlobalStep:  *ec.Svc.Stats.Global,
+		Action:      step.ActionType,
+		Tags:        step.Tags,
+		When:        step.When,
+		Depth:       depth,
+		DryRun:      ec.Mode() == actions.ModePlan,
+		TriggeredBy: step.TriggeredBy,
 	})
 
 	// Track start time for duration
@@ -595,15 +610,25 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Emit step.completed event
 	ec.EmitEvent(events.EventStepCompleted, events.StepCompletedData{
-		StepID:     stepID,
-		Name:       stepName,
-		Level:      ec.Level,
-		DurationMs: stepDuration.Milliseconds(),
-		Changed:    changed,
-		Result:     resultData,
-		Depth:      depth,
-		DryRun:     ec.Mode() == actions.ModePlan,
+		StepID:      stepID,
+		Name:        stepName,
+		Level:       ec.Level,
+		DurationMs:  stepDuration.Milliseconds(),
+		Changed:     changed,
+		Result:      resultData,
+		Depth:       depth,
+		DryRun:      ec.Mode() == actions.ModePlan,
+		TriggeredBy: step.TriggeredBy,
 	})
+
+	// Record the changed bit by step ID so any sibling that carries this
+	// step's ID in TriggeredBy can look up the outcome (spec-23 on_change).
+	if step.ID != "" {
+		if ec.ChangedByStepID == nil {
+			ec.ChangedByStepID = make(map[string]bool)
+		}
+		ec.ChangedByStepID[step.ID] = changed
+	}
 
 	// Clear current result for next step
 	ec.CurrentResult = nil
