@@ -829,6 +829,20 @@
         "file.updated"
       ]
     },
+    "os.group": {
+      "type": "object",
+      "description": "Declaratively manage a Unix group",
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0"
+    },
     "os.service": {
       "type": "object",
       "description": "Manage services across platforms (systemd, launchd, Windows)",
@@ -1635,6 +1649,10 @@
           "description": "Manage a cron job via /etc/cron.d/\u003cname\u003e",
           "$ref": "#/definitions/os.cron"
         },
+        "os.group": {
+          "description": "Declaratively manage a Unix group",
+          "$ref": "#/definitions/os.group"
+        },
         "os.service": {
           "description": "Manage services across platforms (systemd, launchd, Windows)",
           "$ref": "#/definitions/os.service"
@@ -1884,6 +1902,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -2109,6 +2132,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -2342,6 +2370,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -2567,6 +2600,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -2800,6 +2838,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -3025,6 +3068,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -3258,6 +3306,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -3483,6 +3536,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -3716,6 +3774,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -3941,6 +4004,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -4174,6 +4242,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -4399,6 +4472,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -4632,6 +4710,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -4857,6 +4940,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -5090,6 +5178,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -5319,6 +5412,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -5544,6 +5642,245 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.group"
+          ],
+          "properties": {
+            "os.group": {
+              "$ref": "#/definitions/os.group"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
                 ]
               },
               {
@@ -5782,6 +6119,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.ssh_key"
                 ]
               },
@@ -6007,6 +6349,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -6240,6 +6587,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -6465,6 +6817,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -6698,6 +7055,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -6923,6 +7285,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -7156,6 +7523,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -7381,6 +7753,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -7614,6 +7991,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -7839,6 +8221,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -8072,6 +8459,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -8297,6 +8689,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -8537,6 +8934,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -8762,6 +9164,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -8995,6 +9402,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -9220,6 +9632,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -9453,6 +9870,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -9678,6 +10100,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -9911,6 +10338,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -10136,6 +10568,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -10376,6 +10813,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -10601,6 +11043,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -10834,6 +11281,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -11059,6 +11511,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {
@@ -11292,6 +11749,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -11521,6 +11983,11 @@
               },
               {
                 "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
@@ -11746,6 +12213,11 @@
               {
                 "required": [
                   "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
                 ]
               },
               {

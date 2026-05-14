@@ -532,6 +532,17 @@ type OsUser struct {
 	RemoveHome   bool     `yaml:"remove_home" json:"remove_home,omitempty"`               // When state=absent, also remove home directory
 }
 
+// OsGroup represents a declarative Unix group. Idempotency is keyed by
+// `name`; the action refuses to renumber an existing group's GID (that
+// would silently change file ownership on disk) and refuses to remove a
+// group that still has members.
+type OsGroup struct {
+	Name   string `yaml:"name" json:"name"`                     // Group name (required)
+	State  string `yaml:"state" json:"state,omitempty"`         // present|absent (default: present)
+	GID    *int   `yaml:"gid" json:"gid,omitempty"`             // Numeric GID; required for new groups when set, errors on drift
+	System bool   `yaml:"system" json:"system,omitempty"`       // Create as system group (uid < SYS_GID_MAX, typically <1000)
+}
+
 // OsSSHKey represents authorized_keys management for a user.
 // Idempotency is per-key by algorithm + base64-encoded public material;
 // the comment is descriptive and doesn't participate in identity.
@@ -957,6 +968,7 @@ type Step struct {
 	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
 	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
 	OsUser           *OsUser                 `yaml:"os.user"           json:"os.user,omitempty"           action:"os.user"`
+	OsGroup          *OsGroup                `yaml:"os.group"          json:"os.group,omitempty"          action:"os.group"`
 	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
 	OsCron           *OsCron                 `yaml:"os.cron"           json:"os.cron,omitempty"           action:"os.cron"`
 	OsSysctl         *OsSysctl               `yaml:"os.sysctl"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
@@ -1239,6 +1251,7 @@ func (s *Step) Clone() *Step {
 		Tool:             s.Tool,
 		OsService:        s.OsService,
 		OsUser:           s.OsUser,
+		OsGroup:          s.OsGroup,
 		OsSSHKey:         s.OsSSHKey,
 		OsCron:           s.OsCron,
 		OsSysctl:         s.OsSysctl,
