@@ -219,6 +219,51 @@ func (c *Client) Put(ctx context.Context, scope, relPath, srcPath, sha256 string
 	return c.httpErr(fmt.Sprintf("PUT /v1/files scope=%s path=%s", scope, relPath), resp.StatusCode, body)
 }
 
+// RunRecord mirrors the daemon's persisted Run record (a subset of fields
+// the controller actually consumes). Used by GetRun to read the final state
+// of a run that may have failed before emitting events.
+type RunRecord struct {
+	ID         string `json:"id"`
+	Status     string `json:"status"`
+	Error      string `json:"error,omitempty"`
+	PlanPath   string `json:"plan_path"`
+	QueuedAt   string `json:"queued_at"`
+	StartedAt  string `json:"started_at,omitempty"`
+	FinishedAt string `json:"finished_at,omitempty"`
+}
+
+// GetRun fetches the run record from /v1/runs/{id}. Used by Apply after
+// Stream returns to recover the run's final status when no run.completed
+// event was emitted (e.g. planner setup failure before any events fire).
+func (c *Client) GetRun(ctx context.Context, runID string) (*RunRecord, error) {
+	if runID == "" {
+		return nil, errors.New("GetRun: runID is empty")
+	}
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/runs/"+runID, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("GET /v1/runs/"+runID, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("GET /v1/runs/"+runID+": read body", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.httpErr("GET /v1/runs/"+runID, resp.StatusCode, body)
+	}
+	var rec RunRecord
+	if err := json.Unmarshal(body, &rec); err != nil {
+		return nil, c.wrap("GET /v1/runs/"+runID+": decode", err)
+	}
+	return &rec, nil
+}
+
 // SubmitRequest mirrors the daemon's submitRequest JSON shape. PlanPath
 // must be an absolute path on the daemon's filesystem (typically under
 // `<synced_root>/<scope>/...`); same for VarsFiles and BaseDir.

@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -21,7 +25,205 @@ func fleetCommand() *cli.Command {
 			"~/.config/mooncake/peers.toml.",
 		Subcommands: []*cli.Command{
 			fleetApplyCommand(),
+			fleetBootstrapCommand(),
+			fleetPairCommand(),
 		},
+	}
+}
+
+func fleetBootstrapCommand() *cli.Command {
+	return &cli.Command{
+		Name:      "bootstrap",
+		Usage:     "Install mooncake on a remote box via SSH and register it as a peer",
+		ArgsUsage: "<user@host>",
+		Description: "Minimal bootstrap (spec-40/43 PR9-11 cut down to the essentials):\n" +
+			" - SCPs the local mooncake binary to the target via system ssh/scp.\n" +
+			" - Starts agentd in the foreground via nohup (no systemd/launchd yet).\n" +
+			" - Reads the freshly minted token and upserts a [[peers]] entry.\n" +
+			" - Verifies the bind addr is reachable from this machine.",
+		Flags: []cli.Flag{
+			&cli.IntFlag{Name: "port", Aliases: []string{"p"}, Usage: "SSH port", Value: 22},
+			&cli.IntFlag{Name: "agentd-port", Usage: "agentd TCP port on remote", Value: 7878},
+			&cli.StringFlag{Name: "name", Usage: "Peer name in peers.toml (default: hostname with dots → dashes)"},
+			&cli.StringSliceFlag{Name: "tag", Usage: "Tag to attach to the peer (repeatable)"},
+			&cli.StringFlag{Name: "binary", Usage: "Path to mooncake binary to upload (default: this process)"},
+			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
+		},
+		Action: fleetBootstrapAction,
+	}
+}
+
+func fleetBootstrapAction(c *cli.Context) error {
+	if c.NArg() != 1 {
+		return cli.Exit("fleet bootstrap: exactly one <user@host> argument required", 2)
+	}
+	target, err := transport.ParseSSHTarget(c.Args().First())
+	if err != nil {
+		return cli.Exit(err.Error(), 2)
+	}
+	// Allow --port to override unless the target string already specified one.
+	if target.Port == 0 {
+		target.Port = c.Int("port")
+	}
+
+	binPath := c.String("binary")
+	if binPath == "" {
+		binPath, err = fleet.EnsureLocalBinaryPath()
+		if err != nil {
+			return err
+		}
+	}
+
+	peersPath := c.String("peers-file")
+	if peersPath == "" {
+		peersPath, err = fleet.DefaultPeersPath()
+		if err != nil {
+			return err
+		}
+	}
+
+	w := c.App.Writer
+	res, err := fleet.Bootstrap(c.Context, fleet.BootstrapOptions{
+		Target:      target,
+		Name:        c.String("name"),
+		Tags:        c.StringSlice("tag"),
+		Port:        c.Int("agentd-port"),
+		LocalBinary: binPath,
+		Writer:      w,
+	})
+	if err != nil {
+		return err
+	}
+	added, diff, err := fleet.Upsert(peersPath, res.Peer)
+	if err != nil {
+		return fmt.Errorf("update peers.toml: %w", err)
+	}
+	if added {
+		fmt.Fprintf(w, "wrote new peer %q to %s\n", res.Peer.Name, peersPath)
+	} else {
+		fmt.Fprintf(w, "updated peer %q in %s\n", res.Peer.Name, peersPath)
+		for _, line := range diff {
+			fmt.Fprintf(w, "  %s\n", line)
+		}
+	}
+	fmt.Fprintf(w, "✓ %s is in your fleet. Try: mooncake fleet apply <plan.yml>\n", res.Peer.Name)
+	return nil
+}
+
+func fleetPairCommand() *cli.Command {
+	return &cli.Command{
+		Name:      "pair",
+		Usage:     "Register an already-running agentd as a fleet peer",
+		ArgsUsage: "<host:port>",
+		Description: "Use this when agentd is already installed and running on the target. " +
+			"The token is read from --token-via (stdin|file:<path>|literal:<tok>). " +
+			"For a fresh box without mooncake installed, use `fleet bootstrap` instead.",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "name", Usage: "Peer name in peers.toml (default: host portion of addr)"},
+			&cli.StringSliceFlag{Name: "tag", Usage: "Tag to attach to the peer (repeatable)"},
+			&cli.StringFlag{
+				Name:  "token-via",
+				Usage: "Where to read the bearer token from: stdin | file:<path> | literal:<token>",
+				Value: "stdin",
+			},
+			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
+		},
+		Action: fleetPairAction,
+	}
+}
+
+func fleetPairAction(c *cli.Context) error {
+	if c.NArg() != 1 {
+		return cli.Exit("fleet pair: exactly one <host:port> argument required", 2)
+	}
+	addr := c.Args().First()
+	if _, _, err := net.SplitHostPort(addr); err != nil {
+		return cli.Exit(fmt.Sprintf("invalid addr %q: %v", addr, err), 2)
+	}
+
+	token, err := readToken(c, c.String("token-via"))
+	if err != nil {
+		return err
+	}
+
+	name := c.String("name")
+	if name == "" {
+		host, _, _ := net.SplitHostPort(addr)
+		name = strings.ReplaceAll(host, ".", "-")
+	}
+
+	peersPath := c.String("peers-file")
+	if peersPath == "" {
+		peersPath, err = fleet.DefaultPeersPath()
+		if err != nil {
+			return err
+		}
+	}
+
+	peer := fleet.Peer{
+		Name:      name,
+		Addr:      addr,
+		Transport: fleet.TransportAgentd,
+		Token:     token,
+		Tags:      c.StringSlice("tag"),
+	}
+
+	// Verify the token before persisting — refuse to write a bogus entry.
+	client := transport.New(name, addr, token)
+	ctx, cancel := context.WithTimeout(c.Context, 5*time.Second)
+	defer cancel()
+	if _, err := client.GetVersion(ctx); err != nil {
+		return fmt.Errorf("verify peer at %s: %w", addr, err)
+	}
+
+	w := c.App.Writer
+	added, diff, err := fleet.Upsert(peersPath, peer)
+	if err != nil {
+		return fmt.Errorf("update peers.toml: %w", err)
+	}
+	if added {
+		fmt.Fprintf(w, "✓ wrote new peer %q to %s\n", name, peersPath)
+	} else {
+		fmt.Fprintf(w, "✓ updated peer %q in %s\n", name, peersPath)
+		for _, line := range diff {
+			fmt.Fprintf(w, "  %s\n", line)
+		}
+	}
+	return nil
+}
+
+func readToken(c *cli.Context, src string) (string, error) {
+	switch {
+	case src == "stdin":
+		fmt.Fprint(c.App.ErrWriter, "Paste bearer token: ")
+		var tok string
+		if _, err := fmt.Fscanln(c.App.Reader, &tok); err != nil {
+			return "", fmt.Errorf("read stdin: %w", err)
+		}
+		tok = strings.TrimSpace(tok)
+		if tok == "" {
+			return "", errors.New("empty token from stdin")
+		}
+		return tok, nil
+	case strings.HasPrefix(src, "file:"):
+		path := strings.TrimPrefix(src, "file:")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", fmt.Errorf("read token file %s: %w", path, err)
+		}
+		tok := strings.TrimSpace(string(data))
+		if tok == "" {
+			return "", fmt.Errorf("token file %s is empty", path)
+		}
+		return tok, nil
+	case strings.HasPrefix(src, "literal:"):
+		tok := strings.TrimSpace(strings.TrimPrefix(src, "literal:"))
+		if tok == "" {
+			return "", errors.New("literal: token is empty")
+		}
+		return tok, nil
+	default:
+		return "", fmt.Errorf("unknown --token-via source %q (use stdin | file:<path> | literal:<token>)", src)
 	}
 }
 
@@ -139,7 +341,13 @@ func fleetApplyAction(c *cli.Context) error {
 		})
 		results = append(results, res)
 		if err != nil {
-			fmt.Fprintf(w, "[%s] apply error: %v\n", p.Name, err)
+			// Apply already prints `[peer] ✗ run failed: …` when the
+			// daemon-side record carries an error; don't double-log here.
+			// Only echo the error if it doesn't already say "run failed".
+			if !strings.Contains(err.Error(), "run failed") &&
+				!strings.Contains(err.Error(), "run interrupted") {
+				fmt.Fprintf(w, "[%s] apply error: %v\n", p.Name, err)
+			}
 			failedPeers = append(failedPeers, p.Name)
 			if firstErr == nil {
 				firstErr = err

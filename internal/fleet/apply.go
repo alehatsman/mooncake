@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
@@ -154,9 +155,42 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 			// this, the select can pick streamErrCh before the last events
 			// (commonly including run.completed) are read.
 			drainEvents(sink, opts, &result)
+
+			// If no run.completed event was seen (e.g. planner setup
+			// failed before any events fired), reach back for the run
+			// record so we can surface the real status + error. Without
+			// this, Apply silently returns Status="" and the user has no
+			// idea why their plan didn't run.
+			if err == nil && result.Status == "" {
+				if rec, rerr := opts.Peer.GetRun(context.WithoutCancel(ctx), runID); rerr == nil {
+					result.Status = rec.Status
+					if rec.Error != "" && opts.Writer != nil {
+						fmt.Fprintf(opts.Writer, "[%s] ✗ run %s: %s\n",
+							opts.PeerName, rec.Status, oneLine(rec.Error))
+					}
+					if rec.Status == "failed" || rec.Status == "interrupted" {
+						return result, fmt.Errorf("run %s on %s: %s", rec.Status, opts.PeerName, oneLine(rec.Error))
+					}
+				}
+			}
 			return result, err
 		}
 	}
+}
+
+// oneLine collapses a multi-line error into a single-line summary suitable
+// for the [peer] log prefix format. Newlines and indentation get squashed
+// to spaces; the result is trimmed.
+func oneLine(s string) string {
+	if s == "" {
+		return s
+	}
+	out := strings.ReplaceAll(s, "\n", " ")
+	out = strings.ReplaceAll(out, "\t", " ")
+	for strings.Contains(out, "  ") {
+		out = strings.ReplaceAll(out, "  ", " ")
+	}
+	return strings.TrimSpace(out)
 }
 
 // drainEvents non-blockingly reads everything currently in sink, updating

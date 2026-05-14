@@ -142,6 +142,76 @@ func LoadPeers(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// Upsert inserts or replaces a peer by Name in peers.toml at path. The file
+// is created if missing. Returns:
+//
+//   - added=true when no entry with that Name existed before;
+//   - diff=non-empty when an existing entry was replaced (one human-readable
+//     line per changed field, suitable for printing as a confirmation).
+//
+// Atomic on success: the file is written via temp+rename. Validates the
+// whole config before persisting — if the new peer conflicts with an
+// existing one in a way that breaks Validate, nothing is written.
+func Upsert(path string, p Peer) (added bool, diff []string, err error) {
+	cfg, err := LoadPeers(path)
+	if err != nil {
+		// LoadPeers returns nil error for "file missing" so this is a real
+		// load failure.
+		return false, nil, err
+	}
+	if err := p.Validate(); err != nil {
+		return false, nil, err
+	}
+
+	idx := -1
+	for i, existing := range cfg.Peers {
+		if existing.Name == p.Name {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		cfg.Peers = append(cfg.Peers, p)
+		added = true
+	} else {
+		diff = peerDiff(cfg.Peers[idx], p)
+		cfg.Peers[idx] = p
+	}
+	if err := SavePeers(path, cfg); err != nil {
+		return added, diff, err
+	}
+	return added, diff, nil
+}
+
+func peerDiff(old, new Peer) []string {
+	var out []string
+	if old.Addr != new.Addr {
+		out = append(out, fmt.Sprintf("addr: %s → %s", old.Addr, new.Addr))
+	}
+	if old.Transport != new.Transport {
+		out = append(out, fmt.Sprintf("transport: %s → %s", old.Transport, new.Transport))
+	}
+	if old.Token != new.Token {
+		out = append(out, "token: (rotated)")
+	}
+	if !stringSlicesEqual(old.Tags, new.Tags) {
+		out = append(out, fmt.Sprintf("tags: %v → %v", old.Tags, new.Tags))
+	}
+	return out
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // SavePeers atomically writes cfg to path. The parent dir is created with
 // mode 0700; the file is written 0600. Validates before writing — there is
 // no way to persist an invalid Config.
