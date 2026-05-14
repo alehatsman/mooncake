@@ -43,11 +43,15 @@ func fleetBootstrapCommand() *cli.Command {
 		Name:      "bootstrap",
 		Usage:     "Install mooncake on a remote box via SSH and register it as a peer",
 		ArgsUsage: "<user@host>",
-		Description: "Minimal bootstrap (spec-44/43 PR9-11 cut down to the essentials):\n" +
-			" - SCPs the local mooncake binary to the target via system ssh/scp.\n" +
-			" - Starts agentd in the foreground via nohup (no systemd/launchd yet).\n" +
-			" - Reads the freshly minted token and upserts a [[peers]] entry.\n" +
-			" - Verifies the bind addr is reachable from this machine.",
+		Description: "Production bootstrap (spec-44 §88, 8-step sequence):\n" +
+			" 1. SSH to <user@host> using ssh-agent or ~/.ssh/id_ed25519.\n" +
+			" 2. Detect platform (linux+darwin × amd64+arm64).\n" +
+			" 3. Skip steps 4-6 if the same version is already installed and active.\n" +
+			" 4. SFTP the mooncake binary, sudo-install to /usr/local/bin.\n" +
+			" 5. Render + install a systemd unit (Linux) or launchd plist (macOS).\n" +
+			" 6. Enable + start the service; wait for /v1/version reachable.\n" +
+			" 7. Read /etc/mooncake/agentd.token over sudo cat.\n" +
+			" 8. Upsert a [[peers]] entry in peers.toml.",
 		Flags: []cli.Flag{
 			&cli.IntFlag{Name: "port", Aliases: []string{"p"}, Usage: "SSH port", Value: 22},
 			&cli.IntFlag{Name: "agentd-port", Usage: "agentd TCP port on remote", Value: 7878},
@@ -55,6 +59,11 @@ func fleetBootstrapCommand() *cli.Command {
 			&cli.StringSliceFlag{Name: "tag", Usage: "Tag to attach to the peer (repeatable)"},
 			&cli.StringFlag{Name: "binary", Usage: "Path to mooncake binary to upload (default: this process)"},
 			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
+			&cli.BoolFlag{
+				Name:  "upgrade",
+				Usage: "Replace an already-installed mooncake of a different version. " +
+					"Without this, version mismatch on the target errors out.",
+			},
 		},
 		Action: fleetBootstrapAction,
 	}
@@ -91,12 +100,14 @@ func fleetBootstrapAction(c *cli.Context) error {
 
 	w := c.App.Writer
 	res, err := fleet.Bootstrap(c.Context, fleet.BootstrapOptions{
-		Target:      target,
-		Name:        c.String("name"),
-		Tags:        c.StringSlice("tag"),
-		Port:        c.Int("agentd-port"),
-		LocalBinary: binPath,
-		Writer:      w,
+		Target:            target,
+		Name:              c.String("name"),
+		Tags:              c.StringSlice("tag"),
+		Port:              c.Int("agentd-port"),
+		LocalBinary:       binPath,
+		ControllerVersion: version,
+		Upgrade:           c.Bool("upgrade"),
+		Writer:            w,
 	})
 	if err != nil {
 		return err
