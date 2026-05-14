@@ -306,16 +306,17 @@ func TestReverse_OversizedFileRefused(t *testing.T) {
 	}
 }
 
-// TestReverse_LinkRefuses — the link/hardlink family is slice C
-// territory. Slice B still refuses explicitly.
-func TestReverse_LinkRefuses(t *testing.T) {
+// TestReverse_CreateLinkCycle — slice C's primary case: an apply
+// that creates a fresh symlink should reverse cleanly by deleting
+// the link path. The target file is unaffected.
+func TestReverse_CreateLinkCycle(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symlinks need admin or developer mode on Windows; not the point of this test")
 	}
 	dir := t.TempDir()
 	target := filepath.Join(dir, "target.txt")
-	link := filepath.Join(dir, "link")
-	writeFile(t, target, []byte("x"), 0o644)
+	link := filepath.Join(dir, "fresh-link")
+	writeFile(t, target, []byte("target content"), 0o644)
 
 	step := &config.Step{
 		FileWrite: &config.File{
@@ -327,12 +328,75 @@ func TestReverse_LinkRefuses(t *testing.T) {
 	h := &Handler{}
 
 	result := applyStep(t, h, step)
-	_, err := h.Reverse(nil, step, result)
-	if err == nil {
-		t.Fatal("Reverse returned nil error for state=link; want slice-C refusal")
+	if !exists(t, link) {
+		t.Fatal("apply: link was not created")
 	}
-	if !strings.Contains(err.Error(), "slice C") {
-		t.Errorf("error %q should mention slice C so future work is discoverable", err.Error())
+	info := result.ReverseData.(*FileReverseInfo)
+	if info.Existed {
+		t.Fatalf("captured Existed=true; want false for fresh link")
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if reverseStep.FileWrite.State != "absent" {
+		t.Errorf("reverse state = %q, want \"absent\"", reverseStep.FileWrite.State)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	if exists(t, link) {
+		t.Error("link still exists after applying reverse step")
+	}
+	if !exists(t, target) {
+		t.Error("reverse must not touch the link target — but target is gone")
+	}
+}
+
+// TestReverse_CreateHardlinkCycle mirrors CreateLinkCycle for
+// state=hardlink. Hardlinks share inodes so the "delete the link"
+// reverse is the same shape.
+func TestReverse_CreateHardlinkCycle(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("hardlink semantics on NTFS differ enough that the kernel-level test would diverge")
+	}
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target.txt")
+	link := filepath.Join(dir, "fresh-hardlink")
+	writeFile(t, target, []byte("shared inode payload"), 0o644)
+
+	step := &config.Step{
+		FileWrite: &config.File{
+			Path:  link,
+			State: "hardlink",
+			Src:   target,
+		},
+	}
+	h := &Handler{}
+
+	result := applyStep(t, h, step)
+	if !exists(t, link) {
+		t.Fatal("apply: hardlink was not created")
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if reverseStep.FileWrite.State != "absent" {
+		t.Errorf("reverse state = %q, want \"absent\"", reverseStep.FileWrite.State)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	if exists(t, link) {
+		t.Error("hardlink path still exists after reverse")
+	}
+	if !exists(t, target) {
+		t.Error("reverse deleted the target file — hardlink reverse must not break the source")
 	}
 }
 
