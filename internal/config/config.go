@@ -516,6 +516,34 @@ type OsSSHKey struct {
 	Exclusive bool     `yaml:"exclusive" json:"exclusive,omitempty"`                      // When state=present and keys is set: remove any keys not in the supplied list
 }
 
+// OsCron declares a cron entry written to /etc/cron.d/<name>. The
+// `name` is the identity for idempotency; one file per action. v1
+// supports the cron.d form only (no per-user crontab via crontab -u).
+type OsCron struct {
+	Name     string            `yaml:"name" json:"name"`                           // Identity; used as filename in /etc/cron.d
+	State    string            `yaml:"state" json:"state,omitempty"`               // present|absent (default: present)
+	User     string            `yaml:"user" json:"user,omitempty"`                 // Account that runs the command (default: root)
+	Minute   string            `yaml:"minute" json:"minute,omitempty"`             // Cron field; default: *
+	Hour     string            `yaml:"hour" json:"hour,omitempty"`                 // Cron field; default: *
+	Day      string            `yaml:"day" json:"day,omitempty"`                   // Cron field; default: *
+	Month    string            `yaml:"month" json:"month,omitempty"`               // Cron field; default: *
+	Weekday  string            `yaml:"weekday" json:"weekday,omitempty"`           // Cron field; default: *
+	Schedule string            `yaml:"schedule" json:"schedule,omitempty"`         // Whole schedule string; mutually exclusive with the individual fields
+	Command  string            `yaml:"command" json:"command,omitempty"`           // Command line to run; required when state=present
+	Env      map[string]string `yaml:"env" json:"env,omitempty"`                   // Environment variables (e.g. MAILTO, PATH)
+}
+
+// OsSysctl manages a single Linux kernel parameter. The persist file
+// is a shared `/etc/sysctl.d/99-mooncake.conf`; each call owns one
+// line keyed by `name`.
+type OsSysctl struct {
+	Name    string      `yaml:"name" json:"name"`                       // Sysctl key, e.g. net.ipv4.ip_forward (required)
+	Value   interface{} `yaml:"value" json:"value,omitempty"`           // Desired value (string or int); required when state=present
+	State   string      `yaml:"state" json:"state,omitempty"`           // present|absent (default: present)
+	Persist *bool       `yaml:"persist" json:"persist,omitempty"`       // Write to /etc/sysctl.d/99-mooncake.conf (default: true)
+	Reload  *bool       `yaml:"reload" json:"reload,omitempty"`         // Apply via `sysctl key=value` when changed (default: true)
+}
+
 // ContainerImage represents a container image management operation.
 // Ensures an image reference is present (or absent) in local storage of
 // the selected container runtime (podman/docker).
@@ -882,6 +910,8 @@ type Step struct {
 	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
 	OsUser           *OsUser                 `yaml:"os.user"           json:"os.user,omitempty"           action:"os.user"`
 	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
+	OsCron           *OsCron                 `yaml:"os.cron"           json:"os.cron,omitempty"           action:"os.cron"`
+	OsSysctl         *OsSysctl               `yaml:"os.sysctl"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
 	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
@@ -1158,6 +1188,8 @@ func (s *Step) Clone() *Step {
 		OsService:        s.OsService,
 		OsUser:           s.OsUser,
 		OsSSHKey:         s.OsSSHKey,
+		OsCron:           s.OsCron,
+		OsSysctl:         s.OsSysctl,
 		ContainerImage:   s.ContainerImage,
 		Container:        s.Container,
 		Cmd:              s.Cmd,

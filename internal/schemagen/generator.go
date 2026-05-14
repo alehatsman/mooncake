@@ -461,6 +461,8 @@ var actionStructByName = map[string]any{
 	"os.service":        &config.ServiceAction{},
 	"os.user":           &config.OsUser{},
 	"os.ssh_key":        &config.OsSSHKey{},
+	"os.cron":           &config.OsCron{},
+	"os.sysctl":         &config.OsSysctl{},
 	"container.image":   &config.ContainerImage{},
 	"container":         &config.Container{},
 	"assert":            &config.Assert{},
