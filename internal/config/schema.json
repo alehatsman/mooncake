@@ -1028,6 +1028,23 @@
         "file.updated"
       ]
     },
+    "os.systemd": {
+      "type": "object",
+      "description": "Manage a systemd unit file with daemon-reload, enable, start",
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "os.user": {
       "type": "object",
       "description": "Declaratively manage a system user account",
@@ -1665,6 +1682,10 @@
           "description": "Manage a Linux kernel parameter (sysctl)",
           "$ref": "#/definitions/os.sysctl"
         },
+        "os.systemd": {
+          "description": "Manage a systemd unit file with daemon-reload, enable, start",
+          "$ref": "#/definitions/os.systemd"
+        },
         "os.user": {
           "description": "Declaratively manage a system user account",
           "$ref": "#/definitions/os.user"
@@ -1917,6 +1938,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -2142,6 +2168,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -2375,6 +2406,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -2600,6 +2636,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -2833,6 +2874,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -3058,6 +3104,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -3291,6 +3342,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -3516,6 +3572,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -3749,6 +3810,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -3974,6 +4040,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -4207,6 +4278,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -4432,6 +4508,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -4665,6 +4746,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -4890,6 +4976,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -5123,6 +5214,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -5348,6 +5444,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -5581,6 +5682,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -5806,6 +5912,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -6039,6 +6150,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -6264,6 +6380,245 @@
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.systemd"
+          ],
+          "properties": {
+            "os.systemd": {
+              "$ref": "#/definitions/os.systemd"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -6502,6 +6857,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "pkg"
                 ]
               },
@@ -6727,6 +7087,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -6960,6 +7325,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -7185,6 +7555,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -7418,6 +7793,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -7643,6 +8023,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -7876,6 +8261,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -8105,6 +8495,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -8330,6 +8725,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -8570,6 +8970,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -8795,6 +9200,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -9028,6 +9438,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -9253,6 +9668,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -9486,6 +9906,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -9711,6 +10136,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -9944,6 +10374,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -10169,6 +10604,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -10409,6 +10849,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -10634,6 +11079,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -10867,6 +11317,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -11092,6 +11547,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {
@@ -11325,6 +11785,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -11554,6 +12019,11 @@
               },
               {
                 "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
                   "os.user"
                 ]
               },
@@ -11779,6 +12249,11 @@
               {
                 "required": [
                   "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
                 ]
               },
               {

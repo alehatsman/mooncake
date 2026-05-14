@@ -587,6 +587,26 @@ type OsSysctl struct {
 	Reload  *bool       `yaml:"reload" json:"reload,omitempty"`         // Apply via `sysctl key=value` when changed (default: true)
 }
 
+// OsSystemd manages a systemd unit file plus its lifecycle (daemon-reload
+// after content change, enable/disable, start/stop). The unit `name`
+// includes the suffix (e.g. "myapp.service", "backup.timer"). Section
+// values may be scalars or lists; list values emit one `Key=value` line
+// per element, matching systemd's handling of repeated directives like
+// ExecStartPre.
+type OsSystemd struct {
+	Name           string                 `yaml:"name" json:"name"`                                       // Unit filename with suffix, e.g. myapp.service
+	State          string                 `yaml:"state" json:"state,omitempty"`                           // present|absent (default: present)
+	Unit           map[string]interface{} `yaml:"unit" json:"unit,omitempty"`                             // [Unit] section
+	Service        map[string]interface{} `yaml:"service" json:"service,omitempty"`                       // [Service] section (for .service)
+	Timer          map[string]interface{} `yaml:"timer" json:"timer,omitempty"`                           // [Timer] section (for .timer)
+	Socket         map[string]interface{} `yaml:"socket" json:"socket,omitempty"`                         // [Socket] section (for .socket)
+	Install        map[string]interface{} `yaml:"install" json:"install,omitempty"`                       // [Install] section
+	Enabled        *bool                  `yaml:"enabled" json:"enabled,omitempty"`                       // ensure enabled state (default: unmanaged)
+	Started        *bool                  `yaml:"started" json:"started,omitempty"`                       // ensure started state (default: unmanaged)
+	ReloadOnChange *bool                  `yaml:"reload_on_change" json:"reload_on_change,omitempty"`     // daemon-reload on unit content drift (default: true)
+	Path           string                 `yaml:"path" json:"path,omitempty"`                             // override unit dir (default: /etc/systemd/system)
+}
+
 // ContainerImage represents a container image management operation.
 // Ensures an image reference is present (or absent) in local storage of
 // the selected container runtime (podman/docker).
@@ -974,6 +994,7 @@ type Step struct {
 	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
 	OsCron           *OsCron                 `yaml:"os.cron"           json:"os.cron,omitempty"           action:"os.cron"`
 	OsSysctl         *OsSysctl               `yaml:"os.sysctl"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
+	OsSystemd        *OsSystemd              `yaml:"os.systemd"        json:"os.systemd,omitempty"        action:"os.systemd"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
 	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
@@ -1256,6 +1277,7 @@ func (s *Step) Clone() *Step {
 		OsSSHKey:         s.OsSSHKey,
 		OsCron:           s.OsCron,
 		OsSysctl:         s.OsSysctl,
+		OsSystemd:        s.OsSystemd,
 		ContainerImage:   s.ContainerImage,
 		Container:        s.Container,
 		Cmd:              s.Cmd,

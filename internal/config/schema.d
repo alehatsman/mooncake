@@ -429,6 +429,16 @@ export interface OsSysctlAction {
 }
 
 /**
+ * Manage a systemd unit file with daemon-reload, enable, start
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsSystemdAction {
+}
+
+/**
  * Declaratively manage a system user account
  * 
  * @platforms linux
@@ -1019,6 +1029,10 @@ export interface Step {
    * Manage a Linux kernel parameter (sysctl)
    */
   "os.sysctl"?: OsSysctlAction;
+  /**
+   * Manage a systemd unit file with daemon-reload, enable, start
+   */
+  "os.systemd"?: OsSystemdAction;
   /**
    * Declaratively manage a system user account
    */
