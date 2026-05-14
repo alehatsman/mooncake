@@ -1131,6 +1131,57 @@
         "package.managed"
       ]
     },
+    "pkg.hold": {
+      "type": "object",
+      "description": "Mark or unmark packages as held to prevent upgrade/removal (apt only in v1)",
+      "properties": {
+        "manager": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "package.managed"
+      ]
+    },
+    "pkg.list": {
+      "type": "object",
+      "description": "Return the installed packages and versions (read-only; apt only in v1)",
+      "properties": {
+        "manager": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
     "pkg.repo": {
       "type": "object",
       "description": "Manage a third-party package repository (apt; dnf/brew deferred)",
@@ -1233,6 +1284,37 @@
       "x-version": "1.0.0",
       "x-emits-events": [
         "file.updated"
+      ]
+    },
+    "pkg.upgrade": {
+      "type": "object",
+      "description": "Upgrade named packages or all installed packages (apt only in v1)",
+      "properties": {
+        "autoremove": {
+          "type": "boolean"
+        },
+        "manager": {
+          "type": "string"
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "package.managed"
       ]
     },
     "repo.patch": {
@@ -1573,9 +1655,21 @@
           "description": "Manage system packages (install/remove/update)",
           "$ref": "#/definitions/pkg"
         },
+        "pkg.hold": {
+          "description": "Mark or unmark packages as held to prevent upgrade/removal (apt only in v1)",
+          "$ref": "#/definitions/pkg.hold"
+        },
+        "pkg.list": {
+          "description": "Return the installed packages and versions (read-only; apt only in v1)",
+          "$ref": "#/definitions/pkg.list"
+        },
         "pkg.repo": {
           "description": "Manage a third-party package repository (apt; dnf/brew deferred)",
           "$ref": "#/definitions/pkg.repo"
+        },
+        "pkg.upgrade": {
+          "description": "Upgrade named packages or all installed packages (apt only in v1)",
+          "$ref": "#/definitions/pkg.upgrade"
         },
         "repo.patch": {
           "description": "Apply multiple patches to multiple files atomically",
@@ -1811,7 +1905,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -2020,7 +2129,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -2229,7 +2353,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -2438,7 +2577,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -2647,7 +2801,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -2856,7 +3025,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -3065,7 +3249,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -3274,7 +3473,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -3483,7 +3697,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -3692,7 +3921,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -3901,7 +4145,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -4110,7 +4369,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -4319,7 +4593,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -4528,7 +4817,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -4737,7 +5041,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -4946,7 +5265,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -5155,7 +5489,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -5364,7 +5713,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -5573,7 +5937,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -5782,7 +6161,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -5991,7 +6385,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -6200,7 +6609,470 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "pkg.hold"
+          ],
+          "properties": {
+            "pkg.hold": {
+              "$ref": "#/definitions/pkg.hold"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "pkg.list"
+          ],
+          "properties": {
+            "pkg.list": {
+              "$ref": "#/definitions/pkg.list"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -6414,6 +7286,245 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "pkg.upgrade"
+          ],
+          "properties": {
+            "pkg.upgrade": {
+              "$ref": "#/definitions/pkg.upgrade"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -6623,7 +7734,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -6832,7 +7958,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -7041,7 +8182,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -7257,7 +8413,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -7466,7 +8637,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -7675,7 +8861,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -7884,7 +9085,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -8093,7 +9309,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -8302,7 +9533,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -8511,7 +9757,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -8727,7 +9988,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -8936,7 +10212,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -9145,7 +10436,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -9354,7 +10660,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -9563,7 +10884,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -9772,7 +11108,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -9981,7 +11332,22 @@
               },
               {
                 "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
