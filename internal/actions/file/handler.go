@@ -55,56 +55,15 @@ func init() {
 	actions.Register(&Handler{})
 }
 
-// systemPathPrefixes are POSIX directories that conventionally require
-// root privileges to write to. Used by Permissions() to predict whether
-// a file.write step needs Sudo BEFORE running the action — so a user
-// trying to write /etc/hosts from a non-root shell sees a friendly
-// preflight error instead of a runtime EACCES.
-//
-// Conservative on purpose: we only catch literal-prefix matches. Paths
-// constructed via templates (e.g. "{{ etc_dir }}/foo") aren't expanded
-// here, so a templated /etc/* path would *not* be flagged Sudo. That's
-// a known false negative — the runtime error path still exists as a
-// backstop. We'd rather under-warn than refuse to plan steps that
-// actually work for the running user.
-var systemPathPrefixes = []string{
-	"/etc/",
-	"/usr/",
-	"/var/",
-	"/opt/",
-	"/boot/",
-	"/root/",
-	"/lib/",
-	"/lib64/",
-	"/sbin/",
-	"/bin/",
-	"/srv/",
-}
-
-// pathNeedsSudo reports whether p falls under any system directory that
-// normally requires root to write. Returns false for relative paths,
-// templated paths (containing "{{"), and any path outside the known
-// system roots.
-func pathNeedsSudo(p string) bool {
-	if p == "" {
-		return false
-	}
-	for _, prefix := range systemPathPrefixes {
-		if len(p) >= len(prefix) && p[:len(prefix)] == prefix {
-			return true
-		}
-	}
-	return false
-}
-
 // Permissions implements actions.Permitter (spec-22). Declares the
 // privileges and FS write target a file.write step needs, so the
 // executor can preflight-check before running.
 //
 // Sudo: true when the destination path is under a system directory
-// (/etc, /usr, /var, /opt, ...). FilesystemWrite always carries the
-// declared path (or empty if not specified) so a future policy layer
-// can allowlist / denylist write targets.
+// (/etc, /usr, /var, /opt, ...) per actions.SystemPathPrefixes.
+// FilesystemWrite always carries the declared path (or empty if not
+// specified) so a future policy layer can allowlist / denylist write
+// targets.
 //
 // Network and RequiredBinaries: unset — file.write is a pure local-FS
 // operation with no binary deps.
@@ -113,7 +72,7 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	if step == nil || step.FileWrite == nil {
 		return ps
 	}
-	if pathNeedsSudo(step.FileWrite.Path) {
+	if actions.PathNeedsSudo(step.FileWrite.Path) {
 		ps.Sudo = true
 	}
 	if step.FileWrite.Path != "" {

@@ -221,3 +221,53 @@ type Coster interface {
 type Permitter interface {
 	Permissions(step *config.Step) PermissionSet
 }
+
+// SystemPathPrefixes are POSIX directories that conventionally require
+// root privileges to write to. Used by handlers' Permissions() to
+// declare Sudo=true for steps targeting system locations, so the
+// executor preflight can surface a friendly error BEFORE the run
+// rather than EACCES mid-run.
+//
+// Exported so every file-family handler (file.write, file.template,
+// file.copy, file.download, file.unarchive) can share one canonical
+// list rather than redeclaring it per-package. Extend here when a new
+// system root needs guarding; tests in each handler's
+// permissions_test.go pick up the new prefix automatically.
+var SystemPathPrefixes = []string{
+	"/etc/",
+	"/usr/",
+	"/var/",
+	"/opt/",
+	"/boot/",
+	"/root/",
+	"/lib/",
+	"/lib64/",
+	"/sbin/",
+	"/bin/",
+	"/srv/",
+}
+
+// PathNeedsSudo reports whether p falls under any directory in
+// SystemPathPrefixes. Conservative: returns false for empty paths,
+// relative paths, templated paths (containing "{{"), and anything
+// outside the known roots — the runtime EACCES path remains the
+// backstop for false negatives we can't predict at plan time.
+//
+// Callers should use this from Permissions() implementations:
+//
+//	func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+//	    var ps actions.PermissionSet
+//	    if actions.PathNeedsSudo(dest) { ps.Sudo = true }
+//	    ...
+//	}
+func PathNeedsSudo(p string) bool {
+	if p == "" {
+		return false
+	}
+	for _, prefix := range SystemPathPrefixes {
+		if len(p) >= len(prefix) && p[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
+}

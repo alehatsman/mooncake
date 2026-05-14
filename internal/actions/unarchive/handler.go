@@ -87,6 +87,25 @@ func (Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). Sudo when Dest
+// lands under a known system root; FilesystemWrite=[Dest]. Unarchive is
+// local-only (Src is on the controller's FS already) so Network stays
+// false even though it touches an archive. RequiredBinaries unset —
+// archive decoding happens in-process (archive/tar, archive/zip).
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.FileUnarchive == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.FileUnarchive.Dest) {
+		ps.Sudo = true
+	}
+	if step.FileUnarchive.Dest != "" {
+		ps.FilesystemWrite = []string{step.FileUnarchive.Dest}
+	}
+	return ps
+}
+
 // Validate checks if the unarchive configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.FileUnarchive == nil {

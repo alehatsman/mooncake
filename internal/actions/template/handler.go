@@ -48,6 +48,24 @@ func (Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). Declares Sudo
+// when Dest falls under a known system root (/etc/, /usr/, /var/, ...)
+// and always populates FilesystemWrite=[Dest]. Network / RequiredBinaries
+// stay unset — template rendering is pure local-FS, like file.write.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.FileTemplate == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.FileTemplate.Dest) {
+		ps.Sudo = true
+	}
+	if step.FileTemplate.Dest != "" {
+		ps.FilesystemWrite = []string{step.FileTemplate.Dest}
+	}
+	return ps
+}
+
 // Validate checks if the template configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.FileTemplate == nil {

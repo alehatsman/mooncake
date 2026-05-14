@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phase 3 partially shipped — `file.write` declares `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries; 9 priority handlers remaining. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phase 3 half-shipped — the entire file family (`file.write`, `file.template`, `file.copy`, `file.download`, `file.unarchive`) declares `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries. 5/10 priority handlers done; 5 remaining: text.* family (4) and pkg + os.service. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -259,16 +259,20 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
    + 8 unit tests in `handler_abi_test.go` proving every default and the
    "native implementation wins" contract.
 3. **Phase 3** 🟡 — `Permissions()` per-handler + executor preflight.
-   - ✅ `file.write` declares Sudo for system paths +
-     FilesystemWrite=[path]. `internal/actions/file/handler.go:Permissions`.
    - ✅ Executor preflight wired into `dispatchRunner` →
      `internal/executor/preflight.go`. Fails fast on Sudo+non-root
      +no-AsUser; checks RequiredBinaries via `exec.LookPath`;
      Network is informational only.
-   - ⏳ 9 handlers remaining: `file.template`, `file.copy`,
-     `file.download`, `file.unarchive`, `text.replace/insert/
-     delete_range/patch`, `pkg`, `os.service`. Each is roughly 20-30
-     LOC + tests, following the file.write pattern.
+   - ✅ Shared `actions.PathNeedsSudo` + `actions.SystemPathPrefixes`
+     in `internal/actions/handler_abi.go` so every file-family
+     handler shares one canonical list of system roots.
+   - ✅ `file.write`, `file.template`, `file.copy`, `file.download`
+     (with Network=true), and `file.unarchive` all declare
+     `Permissions()`. 5/10 handlers done.
+   - ⏳ 5 remaining: `text.replace`, `text.insert`,
+     `text.delete_range`, `text.patch`, `pkg`, `os.service`. Each is
+     roughly 20-30 LOC + tests against the same pattern. pkg adds
+     Sudo+Network unconditionally; os.service adds Sudo.
 4. **Phase 4** — implement `Diff()` on the file/text/pkg/service
    handlers. Wire into `mooncake plan --format json` and `--diff
    structural`. Snapshot tests for diff output stability.

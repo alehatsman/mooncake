@@ -51,6 +51,23 @@ func (Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). Declares Sudo
+// when Dest is under a known system root; populates FilesystemWrite=[Dest].
+// No Network: file.copy reads a local source. RequiredBinaries unset.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.FileCopy == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.FileCopy.Dest) {
+		ps.Sudo = true
+	}
+	if step.FileCopy.Dest != "" {
+		ps.FilesystemWrite = []string{step.FileCopy.Dest}
+	}
+	return ps
+}
+
 // Validate checks if the copy configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.FileCopy == nil {
