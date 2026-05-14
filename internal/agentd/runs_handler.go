@@ -232,9 +232,20 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 // streamJSONL reads the events.jsonl line by line and emits each as an SSE
 // event. The file may grow during reading (worker still appending) — we
 // stop at EOF; the caller continues tailing from the hub.
+//
+// Missing file is NOT an error: the worker creates events.jsonl lazily on
+// the first event, and a controller that subscribes between submit and
+// the first event would otherwise see this as "stream failed" and drop
+// the connection — taking the live hub tail down with it. Surface "no
+// replay" as a nil return so runEventsHandler can proceed to hub-only
+// tailing. Spec-49 caught this on Windows where the worker latency is
+// large enough to expose the race.
 func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, path string) error {
 	f, err := os.Open(path)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
 		return err
 	}
 	defer func() { _ = f.Close() }()
