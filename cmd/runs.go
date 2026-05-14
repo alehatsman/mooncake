@@ -41,7 +41,14 @@ func agentdHTTPClient(systemMode bool) (*http.Client, string, error) {
 // This is the agentd analog of `apply`: same UX, daemon-backed execution.
 // Vars files are passed via --vars (multi-valued).
 func runsApplyCommand(c *cli.Context) error {
-	configPath, err := absPath(c.String("config"))
+	resolvedPath, err := resolveConfigPath(c)
+	if err != nil {
+		if printNoConfigHintAndExit(err, "runs apply") {
+			return nil
+		}
+		return err
+	}
+	configPath, err := absPath(resolvedPath)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,5 @@
+# Variables available to mooncake.yml as {{ name }}.
+# Example:
+#   editor: nvim
+#   shell:  zsh
+{}

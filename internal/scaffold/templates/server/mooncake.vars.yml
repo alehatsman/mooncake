@@ -1,0 +1,5 @@
+# Variables available to mooncake.yml as {{ name }}.
+# Example:
+#   admin_user: ops
+#   ssh_port:   22022
+{}
