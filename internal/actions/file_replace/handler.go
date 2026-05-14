@@ -55,6 +55,24 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). text.replace
+// edits a file in place; Sudo when Path falls under a known system
+// root. FilesystemWrite=[Path]. No Network; no RequiredBinaries
+// (regex replacement is in-process).
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.TextReplace == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.TextReplace.Path) {
+		ps.Sudo = true
+	}
+	if step.TextReplace.Path != "" {
+		ps.FilesystemWrite = []string{step.TextReplace.Path}
+	}
+	return ps
+}
+
 // Validate checks if the file_replace configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.TextReplace == nil {

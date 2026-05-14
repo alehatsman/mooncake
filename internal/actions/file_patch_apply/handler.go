@@ -56,6 +56,26 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). text.patch
+// applies a unified-diff-style patch to a file; Sudo when Path is
+// under a known system root. FilesystemWrite=[Path]. PatchFile (when
+// used) is a read-only input on the controller's FS, so it isn't
+// echoed into FilesystemWrite. No Network; no RequiredBinaries
+// (patch logic is in-process, no external `patch` invocation).
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.TextPatch == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.TextPatch.Path) {
+		ps.Sudo = true
+	}
+	if step.TextPatch.Path != "" {
+		ps.FilesystemWrite = []string{step.TextPatch.Path}
+	}
+	return ps
+}
+
 // Validate checks if the file_patch_apply configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.TextPatch == nil {

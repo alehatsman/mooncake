@@ -57,6 +57,24 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). text.insert
+// modifies a file via anchor-based insertion; Sudo when Path lives
+// under a known system root. FilesystemWrite=[Path]. No Network; no
+// RequiredBinaries.
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.TextInsert == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.TextInsert.Path) {
+		ps.Sudo = true
+	}
+	if step.TextInsert.Path != "" {
+		ps.FilesystemWrite = []string{step.TextInsert.Path}
+	}
+	return ps
+}
+
 // Validate checks if the file_insert configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.TextInsert == nil {
