@@ -1,15 +1,22 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `31acb20`, 2026-05-14, revision 2).
+(master @ `9666e40`, 2026-05-15, revision 4).
 
-> **What changed since revision 1**: `transaction:`-track is no longer
-> aspirational — spec-22 is 🟡 *in progress* with the ABI contract and
-> `Permissions()` shipped on the full file family. Personal-fleet is now
-> 10/14 (PR 8 logs/facts and PR 14 overlays/tags both merged); PR 9 (SSH
-> driver) is in flight in a worktree. Two new docs filed:
-> `analysis/top-5-priorities-2026-05.md` and a user request for
-> `mooncake apply <machine>` (ordered Windows+WSL multi-peer apply).
+> **What changed since revision 2**: **Phase B of personal-fleet is fully
+> complete.** PR 9 (native SSH driver via `crypto/ssh` + `pkg/sftp` with
+> ssh-agent → IdentityFiles auth chain + `known_hosts` verification) and
+> PR 10 (full spec-44 §88 8-step bootstrap orchestration with embedded
+> systemd unit + launchd plist, two-stage SFTP install, daemon-reload +
+> startup probe, idempotent re-bootstrap via version-match short-circuit)
+> both shipped. PR 11 flipped from 🟡 lite → ✅ full automatically. Two
+> bug fixes also landed: tag-filter UX (flags after positional, opt-in
+> tag semantics) and `step.failed` error rendering + `git.clone`
+> divergent-state guard. Personal-fleet now **12/14** (only PR 12 mDNS
+> and PR 13 `fleet init` remain — both Phase C polish). Spec-22 phase 3c
+> (`Permissions()` across the text.\* family) also shipped (`6779638`)
+> — **phase 3 is now complete**; phase 4 (`Diff()`) is the next gate
+> for the agent-safety wedge.
 
 ---
 
@@ -32,7 +39,7 @@ The typed mutation vocabulary. Ships everywhere.
 | 37 | Step output capture (collision + plan-mode) | drafted |
 | 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
 | 32 | Collapse step action dispatch | not started |
-| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅ (types + sub-interfaces + safe defaults), 3a ✅ (`file.write` + executor preflight), 3b ✅ (full file family). 3c in flight in `worktree-spec-22-perms-c` (text.* family). Phases 4–8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft. **5/10 priority handlers** complete. |
+| **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅ (types + sub-interfaces + safe defaults), 3a ✅ (`file.write` + executor preflight), 3b ✅ (full file family), 3c ✅ (text.* family). **Phase 3 (`Permissions()`) complete**. Phases 4–8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft. |
 
 **Verdict**: very wide, and the ABI is finally landing. Action breadth no
 longer the bottleneck — `Reverse()` is. Phase 3 needs to finish, then
@@ -57,13 +64,13 @@ runs in the executor today. Half of phase 3 is done. `Diff` / `Reverse` /
 
 ### Stream 3 — Fleet & Cluster Management  *(the monetizable wedge)*
 
-Personal Fleet (sub-stream): **10/14 PRs shipped end-to-end** as of
-2026-05-14.
+Personal Fleet (sub-stream): **12/14 PRs shipped end-to-end** as of
+2026-05-15.
 
 | Phase | PRs | State |
 |---|---|---|
 | **A** (one peer end-to-end) | 1–5 | ✅ all shipped |
-| **B** (real fleet) | 6 multiplexer ✅, 7 status ✅, 8 logs/facts ✅, 9 SSH driver 🟡 in flight, 10 systemd/launchd templates ⏳, 11 bootstrap/pair 🟡 lite | mostly done |
+| **B** (real fleet) | 6 multiplexer ✅, 7 status ✅, 8 logs/facts ✅, 9 native SSH driver ✅, 10 installer templates + 8-step bootstrap ✅, 11 bootstrap/pair ✅ (auto-flipped when PR 10 landed) | ✅ complete |
 | **C** (polish) | 12 mDNS ⏳, 13 `fleet init` ⏳, 14 overlays/tags ✅ | 1/3 |
 
 Sidecars merged this cycle: **spec-49 agentd-on-Windows** (TCP-only mode,
@@ -167,23 +174,29 @@ overlays land naturally. No hub, no SaaS, peer-to-peer over LAN.
 sandboxed file sync + `/v1/files` PUT/HEAD endpoints ✅, controller-side
 multiplexed `fleet apply` ✅, **`fleet status`** with `--json` ✅, **`fleet
 logs` + `fleet facts`** ✅, parallel multi-peer multiplexer with `^C`
-banner ✅, `peers.toml` + `controller_id` ✅, `fleet bootstrap` / `fleet
-pair` **lite** (shell-out to `ssh`/`scp`) 🟡, **per-host overlays + tag
-selectors** ✅, Windows agentd ✅.
+banner ✅, `peers.toml` + `controller_id` ✅, **native SSH driver** (crypto/ssh
++ pkg/sftp, ssh-agent → IdentityFiles → clear-error auth chain,
+known_hosts verification) ✅, **full `mooncake fleet bootstrap`** with
+spec-44 8-step orchestration, embedded systemd unit + launchd plist,
+two-stage SFTP install, daemon-reload + 10s `/v1/version` startup probe,
+idempotent re-bootstrap via version-match short-circuit ✅, **per-host
+overlays + tag selectors** ✅, Windows agentd ✅.
 
-**Gap**: Native SSH driver 🟡 (in flight in `worktree-pr9-ssh-driver`).
-systemd/launchd installer templates ⏳ (would promote bootstrap from 🟡 to
-✅). mDNS discovery ⏳. `fleet init` interactive flow ⏳. The ordered-phase
-`mooncake apply <machine>` UX (Windows+WSL) ⏳ — filed as a user request.
+**Gap**: mDNS discovery ⏳. `fleet init` interactive flow ⏳. The
+ordered-phase `mooncake apply <machine>` UX (Windows+WSL) ⏳ — filed as
+a user request.
 
-**Distance to ideal**: ~80% to the v1 "Friday-evening demo" success
-criteria from the epic. Phase A done; Phase B mostly done (only real
-bootstrap left); Phase C 1/3. `fleet apply` + `fleet status` + `fleet
-logs` + per-host overlays now all work end-to-end against a real two-peer
-testbed.
+**Distance to ideal**: ~92% to the v1 "Friday-evening demo" success
+criteria from the epic. **Phase A and Phase B both complete**; Phase C
+1/3. `fleet apply` + `fleet status` + `fleet logs` + per-host overlays +
+native SSH + full bootstrap (`mooncake fleet bootstrap user@new-box` now
+actually does the 60-second story the epic promises) all work end-to-end
+against the real WSL + Windows testbed.
 
-**Notable**: this is the stream with the most velocity right now — three
-PRs landed since the previous report.
+**Notable**: this is the stream with the most velocity right now — six
+PRs and two bug fixes landed since the previous report. The "Friday-
+evening demo" success criteria are essentially met sans mDNS auto-discovery
+and the interactive `fleet init`.
 
 ### D. Secure AI execution layer (base for agent harnesses)
 
@@ -212,7 +225,7 @@ all of this as agent tools.
   family (`file.write`, `file.template`, `file.copy`, `file.download`,
   `file.unarchive`) — sudo and required-binary checks fail fast with
   typed errors agents can catch
-- **`Permissions()` on text.\* family** 🟡 in flight (phase 3c)
+- **`Permissions()` on text.\* family** ✅ (spec-22 phase 3c) — phase 3 complete
 
 **Gap — the strategic gap of the whole project**:
 
@@ -240,12 +253,12 @@ move in the whole codebase is shipping `Reverse()` on `file.write`.**
 ## 3. The honest strategic picture
 
 Mooncake has built the **kernel** (Stream 1: production-quality), the
-**fleet runtime** (Stream 3: 10/14, live-tested), and the **DX funnel**
-(Stream 4: shipped). It has *started* the **agent safety layer** —
-phases 1+2+3a+3b of spec-22 are in master, phase 3c is in a worktree.
-The strategic gap is no longer "does any agent-safety code exist" but
-"how fast does `Reverse()` + `transaction:` ship after `Permissions`
-finishes."
+**fleet runtime** (Stream 3: 12/14, **Phase B complete**, live-tested),
+and the **DX funnel** (Stream 4: shipped). It has *started* the **agent
+safety layer** — phase 3 of spec-22 is fully in master (`Permissions()`
+across the file and text families). The strategic gap is no longer "does any agent-safety
+code exist" but "how fast does `Reverse()` + `transaction:` ship after
+`Permissions` finishes."
 
 `analysis/top-5-priorities-2026-05.md` (filed 2026-05-14) names the
 ordering explicitly:
@@ -254,19 +267,20 @@ ordering explicitly:
    flight; 4–8 still draft.
 2. **Spec-30** — `transaction:` blocks. The killer demo. Starts the
    moment `Reverse()` works on `file.write`.
-3. **Personal-fleet PR 8** — `fleet logs` + `fleet facts`. **Shipped
-   2026-05-14** — top-5 doc was written before this merged, but the
-   item is now ✅.
+3. **Personal-fleet PR 8** — `fleet logs` + `fleet facts`. ✅ shipped.
 4. **Personal-fleet PR 9 + PR 10** — native SSH driver + systemd/launchd
-   installer. PR 9 in flight (`worktree-pr9-ssh-driver`).
+   installer. **Both ✅ shipped 2026-05-15.** PR 11 (`fleet bootstrap`
+   CLI) auto-promoted from 🟡 lite to ✅ full.
 5. **Spec-23** — framework primitives. `on_change` + `!secret` are
    parallelisable with spec-22 work.
 
-`next-priorities-2026-05.md` recommends **finish-then-pivot**. With PR 8
-and PR 14 in, that recommendation is more like **finish the bootstrap, then
-ride the spec-22 momentum** — Track B (personal-fleet close-out) is one
-PR-pair from done; Track A (agent-safety) is already mid-flight on a
-parallel worktree.
+`next-priorities-2026-05.md` recommends **finish-then-pivot**. With PRs
+8, 9, 10, 11, and 14 all in master, **Track B (personal-fleet close-out)
+is effectively done** — only Phase C polish (mDNS, `fleet init`) and
+the new `mooncake apply <machine>` user request remain, all of which the
+analysis docs explicitly de-prioritise. The recommendation collapses to
+**"pivot now."** Track A (agent-safety) is the only meaningful work
+ahead; phase 3 just closed, so phase 4 (`Diff()`) is the next move.
 
 The unfair-advantage statement the VISION leaves open (§13.10) gets
 answered when `transaction:` ships: **"plan + snapshot + reverse +
