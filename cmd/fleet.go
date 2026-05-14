@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -413,9 +414,17 @@ func fleetApplyAction(c *cli.Context) error {
 		return cli.Exit("fleet apply: "+err.Error(), 2)
 	}
 	if len(peerFilterGroups) > 0 {
+		// Spec-50 §Phase B: `os=` requires a /v1/version probe. Run that
+		// pass only when at least one term needs it; cache results so a
+		// single `fleet apply` doesn't re-probe the same peer for each
+		// AND-group it appears in.
+		var osFor peerOSResolver
+		if peerFilterGroupsUseKey(peerFilterGroups, "os") {
+			osFor = newPeerOSCache(c.Context, selected, c.App.Writer)
+		}
 		filtered := make([]fleet.Peer, 0, len(selected))
 		for _, p := range selected {
-			if peerMatchesFilters(p, peerFilterGroups) {
+			if peerMatchesFilters(p, peerFilterGroups, osFor) {
 				filtered = append(filtered, p)
 			}
 		}
@@ -456,7 +465,7 @@ func fleetApplyAction(c *cli.Context) error {
 	}
 
 	maxSync := c.Int64("max-sync-size")
-	tags, err := extractStepFilterTags(c.StringSlice("step-filter"))
+	tags, stepNames, err := extractStepFilter(c.StringSlice("step-filter"))
 	if err != nil {
 		return cli.Exit("fleet apply: "+err.Error(), 2)
 	}
@@ -559,6 +568,7 @@ func fleetApplyAction(c *cli.Context) error {
 				PlanPath:     planAbs,
 				VarsFiles:    peerVars,
 				Tags:         tags,
+				Names:        stepNames,
 				ControllerID: controllerID,
 				MaxSyncBytes: maxSync,
 				Events:       events,
@@ -693,25 +703,53 @@ func parseFilterFlags(args []string) ([][]filterTerm, error) {
 	return groups, nil
 }
 
-// validatePeerFilterKeys rejects any --peer-filter key not supported in v1.
-// v1 supports only "tag". Extending keys (name=, os=, role=) is the subject
-// of the planned follow-up spec.
+// peerFilterKeys is the allowlist enforced by validatePeerFilterKeys. Kept
+// as a slice so the error message can render the keys in a stable order
+// (spec-50 §G3: the unknown-key error lists the valid keys explicitly).
+var peerFilterKeys = []string{"tag", "name", "os", "role"}
+
+// validatePeerFilterKeys rejects any --peer-filter key not in peerFilterKeys.
+// Spec-50 extends the v1 allowlist (`tag`) with `name`, `os`, and `role`;
+// the parser is already generic over keys, so this is a validator change
+// only.
 func validatePeerFilterKeys(groups [][]filterTerm) error {
 	for _, g := range groups {
 		for _, t := range g {
-			if t.key != "tag" {
+			if !isPeerFilterKey(t.key) {
 				return fmt.Errorf(
-					"unsupported --peer-filter key %q (v1 supports only tag=<x>; "+
-						"name/os/role keys land in spec-50)", t.key)
+					"unsupported --peer-filter key %q (valid: %s)",
+					t.key, strings.Join(peerFilterKeys, ", "))
 			}
 		}
 	}
 	return nil
 }
 
+func isPeerFilterKey(k string) bool {
+	for _, v := range peerFilterKeys {
+		if k == v {
+			return true
+		}
+	}
+	return false
+}
+
+// peerOSResolver is the function peerMatchesFilters consults for `os=`
+// predicates. Returns the GOOS string for p (e.g. "darwin", "linux") and
+// ok=false when the daemon couldn't be probed. Spec-50 §G1: `os=` matches
+// `runtime.GOOS` from the peer's `/v1/version` response, cached per
+// `fleet apply` invocation by the caller.
+type peerOSResolver func(p fleet.Peer) (string, bool)
+
 // peerMatchesFilters reports whether p satisfies any of the AND-groups in
 // groups. An empty groups slice matches everything.
-func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm) bool {
+//
+// osFor is the resolver for `os=` predicates; pass nil when no `os=`
+// term is present in any group (or to force every `os=` predicate to
+// fail). When osFor returns ok=false, the `os=` predicate fails and the
+// caller is responsible for surfacing a warning so the operator notices
+// an unreachable peer dropped out of the selection.
+func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm, osFor peerOSResolver) bool {
 	if len(groups) == 0 {
 		return true
 	}
@@ -719,12 +757,36 @@ func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm) bool {
 	for _, t := range p.Tags {
 		tagSet[t] = struct{}{}
 	}
+	roleSet := make(map[string]struct{}, len(p.Roles))
+	for _, r := range p.Roles {
+		roleSet[r] = struct{}{}
+	}
 	for _, g := range groups {
 		all := true
 		for _, t := range g {
 			switch t.key {
 			case "tag":
 				if _, ok := tagSet[t.value]; !ok {
+					all = false
+				}
+			case "name":
+				if p.Name != t.value {
+					all = false
+				}
+			case "role":
+				if _, ok := roleSet[t.value]; !ok {
+					all = false
+				}
+			case "os":
+				// No resolver, or probe failed → predicate fails. The
+				// caller logs the unreachable case so the operator
+				// notices the peer dropped out.
+				if osFor == nil {
+					all = false
+					break
+				}
+				peerOS, ok := osFor(p)
+				if !ok || peerOS != t.value {
 					all = false
 				}
 			default:
@@ -743,13 +805,31 @@ func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm) bool {
 	return false
 }
 
-// extractStepFilterTags flattens --step-filter values into the tag list the
-// daemon's executor consumes. Only tag=<x> is accepted in v1; AND/OR within
-// step-filter has no daemon-side analogue (the executor unions tags), so all
-// values dedupe into a flat list.
-func extractStepFilterTags(args []string) ([]string, error) {
-	var out []string
-	seen := make(map[string]struct{})
+// peerFilterGroupsUseKey reports whether any term in groups uses key. Lets
+// the caller skip the os-probe pass entirely when no `os=` predicate is
+// present.
+func peerFilterGroupsUseKey(groups [][]filterTerm, key string) bool {
+	for _, g := range groups {
+		for _, t := range g {
+			if t.key == key {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// stepFilterKeys is the allowlist for --step-filter. Spec-50 adds `name=`
+// so operators can target a single step by name without editing the plan.
+var stepFilterKeys = []string{"tag", "name"}
+
+// extractStepFilter flattens --step-filter values into the (tags, names)
+// pair the daemon's executor consumes. AND/OR within step-filter has no
+// daemon-side analogue (the executor unions tags and unions names), so
+// all values dedupe into flat per-key lists.
+func extractStepFilter(args []string) (tags, names []string, err error) {
+	tagSeen := make(map[string]struct{})
+	nameSeen := make(map[string]struct{})
 	for _, arg := range args {
 		for _, raw := range strings.Split(arg, ",") {
 			tok := strings.TrimSpace(raw)
@@ -758,23 +838,87 @@ func extractStepFilterTags(args []string) ([]string, error) {
 			}
 			eq := strings.IndexByte(tok, '=')
 			if eq < 0 {
-				return nil, fmt.Errorf("invalid --step-filter %q: expected key=value", tok)
+				return nil, nil, fmt.Errorf("invalid --step-filter %q: expected key=value", tok)
 			}
 			key := strings.TrimSpace(tok[:eq])
 			val := strings.TrimSpace(tok[eq+1:])
 			if val == "" {
-				return nil, fmt.Errorf("invalid --step-filter %q: empty value", tok)
+				return nil, nil, fmt.Errorf("invalid --step-filter %q: empty value", tok)
 			}
-			if key != "tag" {
-				return nil, fmt.Errorf(
-					"unsupported --step-filter key %q (v1 supports only tag=<x>)", key)
+			switch key {
+			case "tag":
+				if _, dup := tagSeen[val]; dup {
+					continue
+				}
+				tagSeen[val] = struct{}{}
+				tags = append(tags, val)
+			case "name":
+				if _, dup := nameSeen[val]; dup {
+					continue
+				}
+				nameSeen[val] = struct{}{}
+				names = append(names, val)
+			default:
+				return nil, nil, fmt.Errorf(
+					"unsupported --step-filter key %q (valid: %s)",
+					key, strings.Join(stepFilterKeys, ", "))
 			}
-			if _, dup := seen[val]; dup {
-				continue
-			}
-			seen[val] = struct{}{}
-			out = append(out, val)
 		}
 	}
-	return out, nil
+	return tags, names, nil
+}
+
+// newPeerOSCache returns a peerOSResolver that probes each peer's
+// /v1/version exactly once per `fleet apply` invocation and caches the
+// reported OS. Probes run lazily — the first match attempt against a
+// peer triggers its probe — so peers excluded by another AND-term in
+// the same group never get probed at all.
+//
+// Unreachable peers (probe error, missing token, etc.) get a warning
+// printed once to w and ok=false on every subsequent resolve. This
+// surfaces dropped peers to the operator without spamming the log when
+// multiple groups consult the same peer.
+func newPeerOSCache(ctx context.Context, peers []fleet.Peer, w io.Writer) peerOSResolver {
+	type cacheEntry struct {
+		os string
+		ok bool
+	}
+	cache := make(map[string]cacheEntry, len(peers))
+	tokens := make(map[string]string, len(peers))
+	addrs := make(map[string]string, len(peers))
+	warned := make(map[string]struct{})
+	for _, p := range peers {
+		tokens[p.Name] = p.Token
+		addrs[p.Name] = p.Addr
+	}
+
+	const probeTimeout = 2 * time.Second
+	return func(p fleet.Peer) (string, bool) {
+		if e, ok := cache[p.Name]; ok {
+			return e.os, e.ok
+		}
+		var entry cacheEntry
+		token := tokens[p.Name]
+		addr := addrs[p.Name]
+		if token == "" || addr == "" || p.Transport != fleet.TransportAgentd {
+			entry.ok = false
+		} else {
+			probeCtx, cancel := context.WithTimeout(ctx, probeTimeout)
+			defer cancel()
+			cli := transport.New(p.Name, addr, token)
+			v, err := cli.GetVersion(probeCtx)
+			if err == nil && v.OS != "" {
+				entry.os = v.OS
+				entry.ok = true
+			}
+		}
+		cache[p.Name] = entry
+		if !entry.ok {
+			if _, already := warned[p.Name]; !already {
+				warned[p.Name] = struct{}{}
+				fmt.Fprintf(w, "warning: peer %q: os= predicate could not be evaluated (peer unreachable or daemon predates spec-50)\n", p.Name)
+			}
+		}
+		return entry.os, entry.ok
+	}
 }

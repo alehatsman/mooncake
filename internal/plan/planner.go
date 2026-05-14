@@ -90,6 +90,11 @@ type ExpansionContext struct {
 	Variables  map[string]interface{}
 	CurrentDir string
 	Tags       []string
+	// Names is the spec-50 step-name filter. When non-empty, a step is
+	// only kept (step.Skipped=false) when its name matches one of the
+	// entries. Untagged steps still run on a tag filter; unnamed steps
+	// are dropped on a name filter (see utils.MatchesNames).
+	Names []string
 }
 
 // PlannerConfig holds configuration for building a plan
@@ -97,6 +102,9 @@ type PlannerConfig struct {
 	ConfigPath string
 	Variables  map[string]interface{}
 	Tags       []string
+	// Names is the spec-50 step-name filter; propagated into
+	// ExpansionContext so per-step skip evaluation can consult it.
+	Names []string
 }
 
 // NewPlanner creates a new Planner instance.
@@ -198,6 +206,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		Variables:  variables,
 		CurrentDir: currentDir,
 		Tags:       cfg.Tags,
+		Names:      cfg.Names,
 	}
 
 	// Mark root file as seen
@@ -391,6 +400,7 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 		Variables:  ctx.Variables, // Share variables
 		CurrentDir: filepath.Dir(absIncludePath),
 		Tags:       ctx.Tags,
+		Names:      ctx.Names,
 	}
 
 	// Tags propagate BEFORE expansion. The per-step `Skipped` flag (set by
@@ -671,8 +681,10 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 		step.Name = rendered
 	}
 
-	// Check if step should be skipped by tags
-	skipped := !utils.MatchesTags(step.Tags, ctx.Tags)
+	// Check if step should be skipped by tags. Spec-50: an additional
+	// `--step-filter name=<x>` filter ANDs with the tag check — both must
+	// pass for the step to run.
+	skipped := !utils.MatchesTags(step.Tags, ctx.Tags) || !utils.MatchesNames(step.Name, ctx.Names)
 
 	// Render action templates
 	err := p.renderActionTemplates(&step, ctx)
@@ -895,6 +907,7 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 		Variables:  newVars,
 		CurrentDir: ctx.CurrentDir,
 		Tags:       ctx.Tags,
+		Names:      ctx.Names,
 	}
 }
 

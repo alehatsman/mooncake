@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -34,6 +35,12 @@ type versionResponse struct {
 	// subtrees (`<state_dir>/synced`). The controller needs this to build
 	// the `plan_path` it submits to POST /v1/runs.
 	SyncedRoot string `json:"synced_root"`
+	// OS is runtime.GOOS on the daemon host ("darwin", "linux", "windows",
+	// "freebsd", ...). Used by the controller's `--peer-filter os=<x>`
+	// predicate (spec-50) so operators can target a subset of the fleet
+	// without maintaining redundant `tags = ["os=..."]` entries in
+	// peers.toml.
+	OS string `json:"os"`
 }
 
 func (s *Server) versionHandler(w http.ResponseWriter, _ *http.Request) {
@@ -47,6 +54,7 @@ func (s *Server) versionHandler(w http.ResponseWriter, _ *http.Request) {
 		RunsRunning: running,
 		Hostname:    s.hostname,
 		SyncedRoot:  s.cfg.SyncedRoot(),
+		OS:          runtime.GOOS,
 	})
 }
 
