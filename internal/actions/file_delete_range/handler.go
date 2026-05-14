@@ -54,6 +54,24 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22). text.delete_range
+// deletes content between two anchors in a file; Sudo when Path is
+// under a known system root. FilesystemWrite=[Path]. No Network; no
+// RequiredBinaries.
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.TextDeleteRange == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.TextDeleteRange.Path) {
+		ps.Sudo = true
+	}
+	if step.TextDeleteRange.Path != "" {
+		ps.FilesystemWrite = []string{step.TextDeleteRange.Path}
+	}
+	return ps
+}
+
 // Validate checks if the file_delete_range configuration is valid.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.TextDeleteRange == nil {

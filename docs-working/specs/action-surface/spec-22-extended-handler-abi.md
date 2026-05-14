@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phase 3 half-shipped — the entire file family (`file.write`, `file.template`, `file.copy`, `file.download`, `file.unarchive`) declares `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries. 5/10 priority handlers done; 5 remaining: text.* family (4) and pkg + os.service. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
+**Status:** 🟡 In progress. Phases 1+2 shipped (types + sub-interfaces + registry helpers with safe defaults). Phase 3 nearly complete — every file-family and text-family handler (`file.write`, `file.template`, `file.copy`, `file.download`, `file.unarchive`, `text.replace`, `text.insert`, `text.delete_range`, `text.patch`) declares `Permissions()` and the executor `dispatchRunner` preflights Sudo + RequiredBinaries. 9/11 priority handlers done; 2 remaining: `pkg` and `os.service`. Phases 4-8 (Diff, Reverse, Cost, planner/MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -266,13 +266,17 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
    - ✅ Shared `actions.PathNeedsSudo` + `actions.SystemPathPrefixes`
      in `internal/actions/handler_abi.go` so every file-family
      handler shares one canonical list of system roots.
-   - ✅ `file.write`, `file.template`, `file.copy`, `file.download`
-     (with Network=true), and `file.unarchive` all declare
-     `Permissions()`. 5/10 handlers done.
-   - ⏳ 5 remaining: `text.replace`, `text.insert`,
-     `text.delete_range`, `text.patch`, `pkg`, `os.service`. Each is
-     roughly 20-30 LOC + tests against the same pattern. pkg adds
-     Sudo+Network unconditionally; os.service adds Sudo.
+   - ✅ File family: `file.write`, `file.template`, `file.copy`,
+     `file.download` (with Network=true), `file.unarchive`. Each
+     declares Sudo for system paths + FilesystemWrite=[Dest].
+   - ✅ Text family: `text.replace`, `text.insert`,
+     `text.delete_range`, `text.patch`. Each declares Sudo for
+     system paths + FilesystemWrite=[Path]. text.patch's PatchFile
+     is correctly excluded from the write set (it's a read-only
+     input on the controller's FS).
+   - ✅ 9/11 priority handlers done.
+   - ⏳ 2 remaining: `pkg` (Sudo+Network always), `os.service` (Sudo
+     always). Each ~25 LOC + tests against the same pattern.
 4. **Phase 4** — implement `Diff()` on the file/text/pkg/service
    handlers. Wire into `mooncake plan --format json` and `--diff
    structural`. Snapshot tests for diff output stability.
