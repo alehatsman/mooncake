@@ -46,6 +46,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/template"
 	_ "github.com/alehatsman/mooncake/internal/actions/text_line"
 	_ "github.com/alehatsman/mooncake/internal/actions/text_patch_ini"
+	_ "github.com/alehatsman/mooncake/internal/actions/text_patch_yaml"
 	_ "github.com/alehatsman/mooncake/internal/actions/tool"
 	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"

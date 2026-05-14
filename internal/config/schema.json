@@ -1727,6 +1727,10 @@
           "description": "Apply structural section/key edits to an INI-style configuration file",
           "$ref": "#/definitions/text.patch.ini"
         },
+        "text.patch.yaml": {
+          "description": "Apply structural set/delete/merge edits to a YAML file, preserving order and adjacent comments",
+          "$ref": "#/definitions/text.patch.yaml"
+        },
         "text.replace": {
           "description": "Replace text in files using literal or regex patterns",
           "$ref": "#/definitions/text.replace"
@@ -1974,6 +1978,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -2199,6 +2208,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -2432,6 +2446,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -2657,6 +2676,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -2890,6 +2914,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -3115,6 +3144,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -3348,6 +3382,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -3573,6 +3612,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -3806,6 +3850,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -4031,6 +4080,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -4264,6 +4318,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -4489,6 +4548,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -4722,6 +4786,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -4947,6 +5016,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -5180,6 +5254,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -5405,6 +5484,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -5638,6 +5722,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -5863,6 +5952,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -6096,6 +6190,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -6321,6 +6420,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -6554,6 +6658,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -6779,6 +6888,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7012,6 +7126,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -7237,6 +7356,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7470,6 +7594,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -7695,6 +7824,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -7928,6 +8062,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -8157,6 +8296,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -8382,6 +8526,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -8622,6 +8771,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -8847,6 +9001,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9080,6 +9239,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -9305,6 +9469,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -9538,6 +9707,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -9763,6 +9937,245 @@
               {
                 "required": [
                   "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "text.patch.yaml"
+          ],
+          "properties": {
+            "text.patch.yaml": {
+              "$ref": "#/definitions/text.patch.yaml"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
                 ]
               },
               {
@@ -10001,6 +10414,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "tool"
                 ]
               },
@@ -10226,6 +10644,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -10466,6 +10889,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -10691,6 +11119,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -10924,6 +11357,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -11149,6 +11587,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -11382,6 +11825,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -11611,6 +12059,11 @@
               },
               {
                 "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
                   "text.replace"
                 ]
               },
@@ -11836,6 +12289,11 @@
               {
                 "required": [
                   "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
                 ]
               },
               {
@@ -12075,6 +12533,18 @@
       "required": [
         "path"
       ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "file",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "text.patch.yaml": {
+      "type": "object",
+      "description": "Apply structural set/delete/merge edits to a YAML file, preserving order and adjacent comments",
       "additionalProperties": false,
       "x-implements-check": true,
       "x-category": "file",
