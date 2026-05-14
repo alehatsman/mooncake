@@ -20,6 +20,11 @@ type BootstrapOptions struct {
 	Tags   []string            // peer tags written to peers.toml
 	Port   int                 // agentd TCP bind port on remote (default 7878)
 
+	// SSHOpts is forwarded to transport.Connect. Most callers leave this
+	// zero — defaults (ssh-agent + ~/.ssh/known_hosts) match the system
+	// ssh client's behavior.
+	SSHOpts transport.ConnectOptions
+
 	// LocalBinary is the path to the mooncake binary to SCP to the
 	// remote. Caller passes os.Executable() when empty isn't desired.
 	LocalBinary string
@@ -44,7 +49,7 @@ type BootstrapResult struct {
 // registers it as an agentd peer. This is the minimal version of
 // spec-44/43:
 //
-//   - SSH over the system `ssh`/`scp` binaries (TODO: native).
+//   - SSH via golang.org/x/crypto/ssh + SFTP (no shell-out to system ssh/scp).
 //   - No systemd unit / launchd plist (TODO: spec-44 PR10).
 //   - Foreground daemon launched via nohup. Dies on reboot.
 //   - Linux x86_64 only validated; macOS arm64/x86_64 should also work
@@ -88,12 +93,19 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	}
 	report := func(s string) { fmt.Fprintln(w, s) }
 
-	r := transport.NewSSHRunner(opts.Target)
-
 	report(fmt.Sprintf("[%s] connecting via ssh", opts.Name))
-	unameOut, _, err := r.Run(ctx, `uname -s && uname -m && echo "$HOME"`)
+	sess, err := transport.Connect(ctx, opts.Target, opts.SSHOpts)
+	if err != nil {
+		return BootstrapResult{}, fmt.Errorf("ssh connect: %w", err)
+	}
+	defer func() { _ = sess.Close() }()
+
+	unameOut, _, code, err := sess.Run(ctx, `uname -s && uname -m && echo "$HOME"`)
 	if err != nil {
 		return BootstrapResult{}, fmt.Errorf("ssh probe failed: %w", err)
+	}
+	if code != 0 {
+		return BootstrapResult{}, fmt.Errorf("ssh probe: uname/echo exited %d", code)
 	}
 	lines := strings.Split(strings.TrimSpace(unameOut), "\n")
 	if len(lines) < 3 {
@@ -106,37 +118,36 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	}
 
 	// Resolve any leading ~ in RemoteBinary against the remote $HOME so
-	// scp's destination is unambiguous (scp on some systems doesn't
-	// expand ~ the way the user might expect).
+	// the SFTP destination is unambiguous (SFTP doesn't expand ~).
 	remoteBin := strings.Replace(opts.RemoteBinary, "~", remoteHome, 1)
 
 	report(fmt.Sprintf("[%s] uploading binary → %s", opts.Name, remoteBin))
-	if _, _, err := r.Run(ctx, fmt.Sprintf("mkdir -p %q", remoteDir(remoteBin))); err != nil {
-		return BootstrapResult{}, fmt.Errorf("mkdir bin dir: %w", err)
+	if _, _, code, err := sess.Run(ctx, fmt.Sprintf("mkdir -p %q", remoteDir(remoteBin))); err != nil || code != 0 {
+		return BootstrapResult{}, fmt.Errorf("mkdir bin dir (code=%d): %w", code, err)
 	}
+	// Upload to a temp path first, then rename — avoids the controller's
+	// crash mid-upload leaving an unusable binary at the canonical path.
+	// Upload sets mode 0755 directly so a follow-up chmod isn't needed.
 	tmpRemote := remoteBin + ".tmp"
-	if err := r.Upload(ctx, opts.LocalBinary, tmpRemote); err != nil {
+	if err := sess.Upload(ctx, opts.LocalBinary, tmpRemote, 0o755); err != nil {
 		return BootstrapResult{}, err
 	}
-	if _, _, err := r.Run(ctx, fmt.Sprintf("chmod +x %q && mv %q %q",
-		tmpRemote, tmpRemote, remoteBin)); err != nil {
-		return BootstrapResult{}, fmt.Errorf("install binary: %w", err)
+	if _, _, code, err := sess.Run(ctx, fmt.Sprintf("mv %q %q", tmpRemote, remoteBin)); err != nil || code != 0 {
+		return BootstrapResult{}, fmt.Errorf("install binary (code=%d): %w", code, err)
 	}
 
 	report(fmt.Sprintf("[%s] stopping any existing agentd", opts.Name))
 	// Best-effort kill of a previous foreground agentd. The pkill exit
 	// code is non-zero when no match — ignore.
-	_, _, _ = r.Run(ctx, "pkill -f 'mooncake agentd' || true")
+	_, _, _, _ = sess.Run(ctx, "pkill -f 'mooncake agentd' || true")
 
 	report(fmt.Sprintf("[%s] starting agentd on :%d", opts.Name, opts.Port))
 	startCmd := fmt.Sprintf(
 		`nohup %q agentd --bind 0.0.0.0:%d >/tmp/mooncake-agentd.log 2>&1 </dev/null &`,
 		remoteBin, opts.Port,
 	)
-	// Important: trailing `echo $!` is not portable inside nohup &;
-	// run a follow-up command to read pgrep instead.
-	if _, _, err := r.Run(ctx, startCmd); err != nil {
-		return BootstrapResult{}, fmt.Errorf("start agentd: %w", err)
+	if _, _, code, err := sess.Run(ctx, startCmd); err != nil || code != 0 {
+		return BootstrapResult{}, fmt.Errorf("start agentd (code=%d): %w", code, err)
 	}
 
 	// Wait briefly for the daemon to write its token file. The
@@ -146,8 +157,8 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	var token string
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		out, _, err := r.Run(ctx, fmt.Sprintf("cat %q 2>/dev/null", tokenPath))
-		if err == nil {
+		out, _, _, runErr := sess.Run(ctx, fmt.Sprintf("cat %q 2>/dev/null", tokenPath))
+		if runErr == nil {
 			token = strings.TrimSpace(out)
 			if token != "" {
 				break
@@ -157,14 +168,14 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	}
 	if token == "" {
 		// Pull the agentd log for context before giving up.
-		log, _, _ := r.Run(ctx, "tail -n 20 /tmp/mooncake-agentd.log 2>/dev/null")
+		log, _, _, _ := sess.Run(ctx, "tail -n 20 /tmp/mooncake-agentd.log 2>/dev/null")
 		return BootstrapResult{}, fmt.Errorf(
 			"agentd token never appeared at %s; last log:\n%s",
 			tokenPath, log)
 	}
 	report(fmt.Sprintf("[%s] read bearer token (%d chars)", opts.Name, len(token)))
 
-	pidOut, _, _ := r.Run(ctx, "pgrep -fn 'mooncake agentd' || true")
+	pidOut, _, _, _ := sess.Run(ctx, "pgrep -fn 'mooncake agentd' || true")
 	pid := 0
 	_, _ = fmt.Sscanf(strings.TrimSpace(pidOut), "%d", &pid)
 

@@ -58,26 +58,41 @@ func TestSSHTarget_String(t *testing.T) {
 	}
 }
 
-func TestSSHRunner_BuildsCorrectArgs(t *testing.T) {
-	r := NewSSHRunner(SSHTarget{User: "aleh", Host: "h", Port: 2222})
-	args := r.sshArgs(false)
-	if !contains(args, "-p") || !contains(args, "2222") {
-		t.Errorf("ssh args missing port flag: %v", args)
+// TestParseUnameOutput drives DetectPlatform's pure-function half against
+// the real combinations that surface from `uname -s` and `uname -m` on
+// Linux + macOS. Cheap to test and the place a regression is most likely.
+func TestParseUnameOutput(t *testing.T) {
+	cases := []struct {
+		in           string
+		wantOS       string
+		wantArch     string
+		wantErrSubst string
+	}{
+		{"Linux\nx86_64", "linux", "amd64", ""},
+		{"Linux\naarch64", "linux", "arm64", ""},
+		{"linux\narm64", "linux", "arm64", ""},
+		{"Darwin\narm64", "darwin", "arm64", ""},
+		{"Darwin\nx86_64", "darwin", "amd64", ""},
+		{"FreeBSD\namd64", "", "", "unsupported OS"},
+		{"Linux\nmips", "", "", "unsupported arch"},
+		{"Linux", "", "", "expected 2 lines"},
 	}
-	scpArgs := r.sshArgs(true)
-	if !contains(scpArgs, "-P") || !contains(scpArgs, "2222") {
-		t.Errorf("scp args missing port flag: %v", scpArgs)
+	for _, tc := range cases {
+		t.Run(strings.ReplaceAll(tc.in, "\n", "+"), func(t *testing.T) {
+			osN, arch, err := parseUnameOutput(tc.in)
+			if tc.wantErrSubst != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErrSubst) {
+					t.Fatalf("want err containing %q, got %v", tc.wantErrSubst, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if osN != tc.wantOS || arch != tc.wantArch {
+				t.Errorf("got os=%q arch=%q, want os=%q arch=%q",
+					osN, arch, tc.wantOS, tc.wantArch)
+			}
+		})
 	}
-	if !contains(args, "BatchMode=yes") {
-		t.Errorf("expected BatchMode=yes in args: %v", args)
-	}
-}
-
-func contains(ss []string, target string) bool {
-	for _, s := range ss {
-		if s == target {
-			return true
-		}
-	}
-	return false
 }
