@@ -12,6 +12,10 @@ var KnownEnums = map[string][]string{
 	// pkg action enums
 	"pkg.state": {"present", "absent", "latest"},
 
+	// os.cron / os.sysctl state enums
+	"os.cron.state":   {"present", "absent"},
+	"os.sysctl.state": {"present", "absent"},
+
 	// shell.interpreter is intentionally unconstrained: any executable on
 	// PATH is valid (bash, sh, zsh, pwsh, powershell, cmd, nu, ...).
 }
@@ -109,6 +113,16 @@ var FieldOverrides = map[string]func(prop *Property){
 		prop.OneOf = []*Property{
 			{Type: "array", Items: &Property{Type: "string"}},
 			{Type: "string"},
+		}
+	},
+	"os.sysctl.value": func(prop *Property) {
+		// Sysctl values are stringly typed in /proc but YAML users
+		// naturally write `value: 1` or `value: "1"`. Accept either.
+		prop.Type = ""
+		prop.OneOf = []*Property{
+			{Type: "string"},
+			{Type: "integer"},
+			{Type: "boolean"},
 		}
 	},
 }

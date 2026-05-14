@@ -302,6 +302,31 @@ export interface LogAction {
 }
 
 /**
+ * Manage a cron job via /etc/cron.d/<name>
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsCronAction {
+  command?: string;
+  day?: string;
+  env?: Record<string, any>;
+  hour?: string;
+  minute?: string;
+  month?: string;
+  name: string;
+  schedule?: string;
+  /**
+   * 
+   * @values present | absent
+   */
+  state?: "present" | "absent";
+  user?: string;
+  weekday?: string;
+}
+
+/**
  * Manage services across platforms (systemd, launchd, Windows)
  * 
  * @platforms linux, darwin, windows
@@ -355,6 +380,25 @@ export interface OsSshKeyAction {
   path?: string;
   state?: string;
   user: string;
+}
+
+/**
+ * Manage a Linux kernel parameter (sysctl)
+ * 
+ * @platforms linux
+ * @requiresSudo true
+ * @category system
+ */
+export interface OsSysctlAction {
+  name: string;
+  persist?: boolean;
+  reload?: boolean;
+  /**
+   * 
+   * @values present | absent
+   */
+  state?: "present" | "absent";
+  value?: string | number | boolean;
 }
 
 /**
@@ -877,6 +921,10 @@ export interface Step {
    */
   log?: LogAction;
   /**
+   * Manage a cron job via /etc/cron.d/<name>
+   */
+  "os.cron"?: OsCronAction;
+  /**
    * Manage services across platforms (systemd, launchd, Windows)
    */
   "os.service"?: OsServiceAction;
@@ -884,6 +932,10 @@ export interface Step {
    * Manage authorized_keys entries for a user (idempotent per-key)
    */
   "os.ssh_key"?: OsSshKeyAction;
+  /**
+   * Manage a Linux kernel parameter (sysctl)
+   */
+  "os.sysctl"?: OsSysctlAction;
   /**
    * Declaratively manage a system user account
    */

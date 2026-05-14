@@ -711,6 +711,67 @@
         "print.message"
       ]
     },
+    "os.cron": {
+      "type": "object",
+      "description": "Manage a cron job via /etc/cron.d/\u003cname\u003e",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "day": {
+          "type": "string"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "hour": {
+          "type": "string"
+        },
+        "minute": {
+          "type": "string"
+        },
+        "month": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schedule": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "present",
+            "absent"
+          ]
+        },
+        "user": {
+          "type": "string"
+        },
+        "weekday": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
     "os.service": {
       "type": "object",
       "description": "Manage services across platforms (systemd, launchd, Windows)",
@@ -835,6 +896,58 @@
       "x-implements-check": true,
       "x-category": "system",
       "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "file.updated"
+      ]
+    },
+    "os.sysctl": {
+      "type": "object",
+      "description": "Manage a Linux kernel parameter (sysctl)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "persist": {
+          "type": "boolean"
+        },
+        "reload": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "present",
+            "absent"
+          ]
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "linux"
+      ],
+      "x-requires-sudo": true,
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-supports-become": true,
       "x-version": "1.0.0",
       "x-emits-events": [
         "file.updated"
@@ -1371,6 +1484,10 @@
           "type": "string",
           "description": "Name of the step (universal)"
         },
+        "os.cron": {
+          "description": "Manage a cron job via /etc/cron.d/\u003cname\u003e",
+          "$ref": "#/definitions/os.cron"
+        },
         "os.service": {
           "description": "Manage services across platforms (systemd, launchd, Windows)",
           "$ref": "#/definitions/os.service"
@@ -1378,6 +1495,10 @@
         "os.ssh_key": {
           "description": "Manage authorized_keys entries for a user (idempotent per-key)",
           "$ref": "#/definitions/os.ssh_key"
+        },
+        "os.sysctl": {
+          "description": "Manage a Linux kernel parameter (sysctl)",
+          "$ref": "#/definitions/os.sysctl"
         },
         "os.user": {
           "description": "Declaratively manage a system user account",
@@ -1585,12 +1706,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -1774,12 +1905,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -1963,12 +2104,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -2152,12 +2303,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -2341,12 +2502,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -2530,12 +2701,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -2719,12 +2900,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -2908,12 +3099,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -3097,12 +3298,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -3286,12 +3497,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -3475,12 +3696,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -3664,12 +3895,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -3853,12 +4094,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -4042,12 +4293,221 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.cron"
+          ],
+          "properties": {
+            "os.cron": {
+              "$ref": "#/definitions/os.cron"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -4236,7 +4696,17 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -4425,7 +4895,216 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "os.sysctl"
+          ],
+          "properties": {
+            "os.sysctl": {
+              "$ref": "#/definitions/os.sysctl"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
                 ]
               },
               {
@@ -4614,12 +5293,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -4803,12 +5492,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -4992,12 +5691,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -5181,12 +5890,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -5370,12 +6089,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -5559,12 +6288,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -5755,12 +6494,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -5944,12 +6693,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -6133,12 +6892,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -6322,12 +7091,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -6511,12 +7290,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -6700,12 +7489,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -6889,12 +7688,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -7085,12 +7894,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -7274,12 +8093,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -7463,12 +8292,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -7652,12 +8491,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -7841,12 +8690,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -8030,12 +8889,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
@@ -8219,12 +9088,22 @@
               },
               {
                 "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
                   "os.service"
                 ]
               },
               {
                 "required": [
                   "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
                 ]
               },
               {
