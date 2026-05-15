@@ -348,6 +348,30 @@ config file is empty: /work/empty.yml — expected a list of steps
 
 ---
 
+## #85 — `--ask-become-pass` without TTY emits `inappropriate ioctl for device` — LOW
+
+**Repro**:
+```
+$ mooncake apply --ask-become-pass -c cfg.yml <&-     # no TTY
+BECOME password:
+sudo password setup failed: failed to resolve password: failed to read password: inappropriate ioctl for device
+```
+
+The Go `term.ReadPassword(0)` call returns this generic OS-level
+error when stdin isn't a TTY. The wrapper prints a prompt
+("BECOME password: ") even though the read will immediately fail.
+
+**Fix**: detect at startup whether stdin is a TTY before prompting.
+If not:
+```
+--ask-become-pass requires an interactive terminal.
+  Use --sudo-pass-file <path> (0600 permissions) instead.
+```
+
+(Same template as the `mooncake init` non-TTY hint from finding round 11.)
+
+---
+
 ## #81 — `as_user: <name>` errors are generic when sudo is missing or user doesn't exist — LOW
 
 **Repro** (running as root, sudo not installed):

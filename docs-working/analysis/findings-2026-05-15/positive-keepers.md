@@ -565,6 +565,29 @@ fleet-as-pipeline story working as advertised.
 
 ---
 
+## ★ `--sudo-pass-file` requires 0600 — security check
+
+```
+$ chmod 600 /work/sudo.txt
+$ mooncake apply --sudo-pass-file /work/sudo.txt -c cfg.yml
+RECAP  ok=1  changed=0  failed=0
+
+$ chmod 644 /work/sudo.txt
+$ mooncake apply --sudo-pass-file /work/sudo.txt -c cfg.yml
+sudo password setup failed: failed to resolve password:
+  password file must have 0600 permissions, found 0644
+
+$ mooncake apply --sudo-pass-file /work/nonexistent.txt -c cfg.yml
+sudo password setup failed: failed to resolve password:
+  cannot access password file: stat /work/nonexistent.txt: no such file or directory
+```
+
+The 0600 enforcement and clear error message ("found 0644")
+matches `ssh -i` permission checks. The right kind of paranoia for
+credential files.
+
+---
+
 ## ★ `mooncake fleet pair --token-via {stdin|file:|literal:}` — secure-by-default token input
 
 ```
