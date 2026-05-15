@@ -201,6 +201,72 @@ patterns this is probably wrong; users may want
 
 ---
 
+## #60 — `tool which <name>` returns the version dir when `bin:` is unset — LOW
+
+**Repro 1** (`bin:` unset — pre-MT-40 hint when bare-binary support
+landed):
+```yaml
+- tool:
+    name: jq
+    backend: github-release
+    version: "1.7.1"
+    tag: jq-1.7.1
+    asset: jq-linux-amd64
+    # no bin:
+```
+```
+$ mooncake tool which jq
+/root/.local/share/mooncake/tools/jq/1.7.1
+$ /root/.local/share/mooncake/tools/jq/1.7.1 --version
+bash: ...: Is a directory
+```
+
+**Repro 2** (`bin:` set):
+```yaml
+- tool:
+    name: yq
+    backend: archive-url
+    ...
+    bin: yq_linux_amd64
+```
+```
+$ mooncake tool which yq
+/root/.local/share/mooncake/tools/yq/4.44.3/yq_linux_amd64    ← correct
+```
+
+**Why LOW**: with `bin:` set, the resolution works perfectly. But the
+common case for github-release bare-binary is that `asset:` and `bin:`
+have the same value — and forgetting `bin:` is a quiet pit. The
+action should default `bin: asset` when asset is unambiguous (single
+file, not an archive).
+
+**Fix**: when `bin:` is unset and the install dir contains exactly
+one executable file, auto-resolve to that.
+
+---
+
+## ★ `tool: backend: archive-url` works end-to-end — positive
+
+Don't forget to record this works:
+```yaml
+- tool:
+    name: yq
+    backend: archive-url
+    version: "4.44.3"
+    url: https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz
+    checksum: "sha256:a347…"
+    bin: yq_linux_amd64
+```
+- Verifies checksum (rejects mismatches, file does NOT land)
+- Extracts to versioned dir
+- Run 2: `already installed at ...`, idempotent
+- `tool which yq` → binary path; `yq --version` → `4.44.3`
+
+This is the right pattern for installing tools that don't have
+github-release pages. Keep.
+
+---
+
 ## #52 — `git.*` family has inconsistent path parameter names — LOW (DX surprise)
 
 Each action uses a different param name for "the local repo":
