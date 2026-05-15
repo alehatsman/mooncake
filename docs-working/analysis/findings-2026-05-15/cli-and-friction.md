@@ -279,6 +279,44 @@ should accept `--format json` to forward that response verbatim.
 
 ---
 
+## #58 — No `--skip-tags` exclusion flag — LOW (DX gap)
+
+**Repro**:
+```
+$ mooncake apply --skip-tags a
+flag provided but not defined: -skip-tags
+```
+
+`--tags X` includes, `--skip-tags X` excludes — Ansible's standard
+pattern. Mooncake supports only inclusion. The "run everything except
+slow tests" workflow needs a workaround (tag every step `default` and
+exclude the slow tag, etc.).
+
+**Fix**: add `--skip-tags <list>` paralleling `--tags`. Both can
+coexist (`--tags deploy --skip-tags slow` = include deploy, exclude slow).
+
+---
+
+## #59 — MT-19 error lists tags but doesn't suggest the closest match — LOW (DX polish)
+
+**Repro** (post-MT-19):
+```
+$ mooncake apply --tags depply
+tags setup failed: no steps matched tags: depply (available: a, b)
+```
+
+The "available: a, b" list is helpful but doesn't suggest the closest
+typo correction. The mooncake-doctor and validator both use fuzzy
+suggestions; this should too:
+```
+tags setup failed: no steps matched tags: depply (did you mean: deploy?). available: a, b, deploy
+```
+
+(Tiny issue; MT-19 itself is a clear win — the error tells you
+exactly what's wrong now.)
+
+---
+
 ## #57 — `runs` subcommand error format inconsistent — LOW
 
 ```
