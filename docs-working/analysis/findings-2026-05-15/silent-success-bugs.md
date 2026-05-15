@@ -743,6 +743,52 @@ dispatching to the handler.
 
 ---
 
+## #84 — `text.insert` is not idempotent — duplicates content on re-run — MEDIUM
+
+**Repro**:
+```yaml
+- text.insert:
+    path: /work/conf.txt
+    anchor: "[server]"
+    position: after
+    content: "host=localhost"
+```
+
+```
+$ mooncake step <above>
+{"changed": true, "insertions": 1}
+
+$ mooncake step <above>      # exact same step, run 2
+{"changed": true, "insertions": 1}     # ← duplicated insert!
+```
+
+File after run 2:
+```
+[server]
+host=localhost
+host=localhost      ← duplicate
+port=8080
+```
+
+`text.line` correctly handles "line already exists" — see
+[`positive-keepers.md`](./positive-keepers.md). `text.insert` doesn't:
+it just inserts the content at every matching anchor, blindly.
+
+**Why MEDIUM**: idempotency is a core mooncake promise. Users have
+to wrap `text.insert` in `unless: grep -q 'host=localhost' /work/conf.txt`
+to make it safe. That's brittle and easy to forget.
+
+**Fix**: before inserting, check if the exact content already appears
+in the expected position (immediately after/before the anchor).
+If yes, return `changed: false, operation: noop`. Same convention
+as text.line.
+
+(Wider observation: every text.* action should either honor `unless:`
+universally OR implement content-aware idempotency. Pick one model
+and apply consistently.)
+
+---
+
 ## #80 — `text.patch` silently no-ops on broken hunks (no error, no signal) — MEDIUM
 
 **Repro**:
