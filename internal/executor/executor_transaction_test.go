@@ -113,6 +113,73 @@ steps:
 	_ = c
 }
 
+// MT-45: when a transaction rolls back, the recap (driven by
+// run.completed) should subtract reverted body steps from
+// changed_steps and surface them as reverted_steps. Before the fix,
+// the original body writes stayed in the changed count even though
+// their effects were undone.
+func TestTransaction_RollbackRecapMath(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "rb-a")
+	b := filepath.Join(dir, "rb-b")
+	c := "/dev/null/cannot-write-here"
+
+	yaml := `version: "1.0"
+steps:
+  - name: deploy
+    transaction:
+      - file.write: { path: ` + a + `, content: A }
+      - file.write: { path: ` + b + `, content: B }
+      - file.write: { path: ` + c + `, content: C }
+`
+	configPath := filepath.Join(t.TempDir(), "config.yml")
+	if err := os.WriteFile(configPath, []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	publisher := events.NewSyncPublisher()
+	var runCompleted *events.RunCompletedData
+	publisher.Subscribe(&capturingSubscriber{
+		onEvent: func(e events.Event) {
+			if e.Type == events.EventRunCompleted {
+				if d, ok := e.Data.(events.RunCompletedData); ok {
+					runCompleted = &d
+				}
+			}
+		},
+	})
+
+	_ = executor.Start(executor.StartConfig{
+		ConfigFilePath: configPath,
+	}, logger.NewTestLogger(), publisher)
+
+	if runCompleted == nil {
+		t.Fatal("run.completed event was never emitted")
+	}
+
+	// Both rolled-back body steps must show up in RevertedSteps;
+	// they must NOT inflate ChangedSteps (which would report 2
+	// persistent writes that did not happen).
+	if runCompleted.RevertedSteps != 2 {
+		t.Errorf("RevertedSteps = %d, want 2 (both body writes rolled back)",
+			runCompleted.RevertedSteps)
+	}
+	if runCompleted.ChangedSteps >= 2 {
+		t.Errorf("ChangedSteps = %d, want < 2 after rollback (post-revert net effect)",
+			runCompleted.ChangedSteps)
+	}
+}
+
+// capturingSubscriber is a tiny test helper that forwards every event
+// to a closure. Used to inspect run.completed without spinning a real
+// console subscriber.
+type capturingSubscriber struct {
+	onEvent func(events.Event)
+}
+
+func (c *capturingSubscriber) OnEvent(e events.Event) { c.onEvent(e) }
+func (c *capturingSubscriber) Close()                 {}
+
 // TestTransaction_OnRollbackFiresOnFailureOnly: on_rollback children
 // run when the transaction rolled back; they skip when it committed.
 // Encoded by checking the existence of a marker file the on_rollback

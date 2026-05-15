@@ -1033,6 +1033,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 	statsSkipped := 0
 	statsFailed := 0
 	statsChanged := 0
+	statsReverted := 0
 
 	svc := &RunServices{
 		Logger:   log.WithPadLevel(0),
@@ -1045,6 +1046,7 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 			Skipped:  &statsSkipped,
 			Failed:   &statsFailed,
 			Changed:  &statsChanged,
+			Reverted: &statsReverted,
 		},
 		Template:       renderer,
 		Evaluator:      evaluator,
@@ -1078,14 +1080,15 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 		Type:      events.EventRunCompleted,
 		Timestamp: time.Now(),
 		Data: events.RunCompletedData{
-			TotalSteps:   len(steps),
-			SuccessSteps: statsExecuted,
-			FailedSteps:  statsFailed,
-			SkippedSteps: statsSkipped,
-			ChangedSteps: statsChanged,
-			DurationMs:   duration.Milliseconds(),
-			Success:      execErr == nil,
-			CheckMode:    mode == actions.ModePlan,
+			TotalSteps:    len(steps),
+			SuccessSteps:  statsExecuted,
+			FailedSteps:   statsFailed,
+			SkippedSteps:  statsSkipped,
+			ChangedSteps:  statsChanged,
+			RevertedSteps: statsReverted,
+			DurationMs:    duration.Milliseconds(),
+			Success:       execErr == nil,
+			CheckMode:     mode == actions.ModePlan,
 			ErrorMessage: func() string {
 				if execErr != nil {
 					return execErr.Error()

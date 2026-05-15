@@ -29,6 +29,11 @@ type ExecutionStats struct {
 	Failed *int
 	// Changed counts steps that resulted in a system change
 	Changed *int
+	// Reverted counts steps whose changes were undone by a transaction's
+	// LIFO Reverse() pass (MT-45). Reverted steps are subtracted from
+	// Changed at rollback time so the recap reflects net effect, not
+	// gross writes-then-undos.
+	Reverted *int
 }
 
 // NewExecutionStats creates a new ExecutionStats with all counters initialized to zero
@@ -39,6 +44,7 @@ func NewExecutionStats() *ExecutionStats {
 		Skipped:  new(int),
 		Failed:   new(int),
 		Changed:  new(int),
+		Reverted: new(int),
 	}
 }
 
