@@ -355,9 +355,15 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 		}
 	}
 
-	// For with_items, show the item value
+	// For with_items, append the item value to the step name so iterations
+	// are distinguishable without losing the configured name. Falls back to
+	// just the item value when the step has no name.
 	if item, ok := vars["item"]; ok {
-		return fmt.Sprintf("%v", item), true
+		itemStr := fmt.Sprintf("%v", item)
+		if step.Name != "" {
+			return fmt.Sprintf("%s: %s", step.Name, itemStr), true
+		}
+		return itemStr, true
 	}
 
 	// Use configured step name

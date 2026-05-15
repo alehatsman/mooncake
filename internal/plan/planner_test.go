@@ -937,6 +937,60 @@ steps:
 	}
 }
 
+// TestPlanner_ForEach_SliceVariableTemplate is a regression test for
+// manual-test #8 (2026-05-15): for_each with a "{{ slice_var }}" expression
+// must iterate the slice elements, not pongo2-stringify the slice into a
+// reflect.Value repr ("<[]interface {} Value>") and tokenize on whitespace.
+func TestPlanner_ForEach_SliceVariableTemplate(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test.yml")
+
+	configContent := `version: "1.0"
+vars:
+  packages:
+    - neovim
+    - ripgrep
+    - fzf
+steps:
+  - name: "Install package"
+    shell: echo "Installing {{ item }}"
+    for_each: "{{ packages }}"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("new planner: %v", err)
+	}
+	plan, err := planner.BuildPlan(PlannerConfig{ConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("build plan: %v", err)
+	}
+
+	if len(plan.Steps) != 3 {
+		t.Fatalf("expected 3 steps (one per package), got %d", len(plan.Steps))
+	}
+
+	want := []string{"neovim", "ripgrep", "fzf"}
+	for i, step := range plan.Steps {
+		if step.Shell == nil {
+			t.Fatalf("step %d: missing Shell action", i)
+		}
+		expectedCmd := "echo \"Installing " + want[i] + "\""
+		if step.Shell.Cmd != expectedCmd {
+			t.Errorf("step %d Shell.Cmd = %q, want %q", i, step.Shell.Cmd, expectedCmd)
+		}
+		if step.LoopContext == nil {
+			t.Fatalf("step %d: missing LoopContext", i)
+		}
+		if got, _ := step.LoopContext.Item.(string); got != want[i] {
+			t.Errorf("step %d LoopContext.Item = %v, want %s", i, step.LoopContext.Item, want[i])
+		}
+	}
+}
+
 func TestPlanner_Include_PathExpansion(t *testing.T) {
 	// Create config with template in include path
 	tmpDir := t.TempDir()

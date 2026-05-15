@@ -491,12 +491,14 @@ func (p *Planner) expandWithItems(step config.Step, ctx *ExpansionContext, plan 
 		items = step.ForEach.Items
 		loopExpr = "<literal list>"
 	} else {
-		// Scalar form: render and resolve via variables.
-		itemsExpr, err := p.template.Render(step.ForEach.Expr, ctx.Variables)
-		if err != nil {
-			return fmt.Errorf("failed to render for_each expression: %w", err)
-		}
-		items, err = p.evaluateItemsExpression(itemsExpr, ctx.Variables)
+		// Scalar form: resolve via variables directly. Do NOT pass the
+		// expression through the pongo2 renderer first — pongo2 stringifies
+		// a slice variable via reflect.Value.String() ("<[]interface {} Value>")
+		// rather than the underlying slice, which then tokenizes into
+		// nonsense fragments instead of iterating elements.
+		exprStr := stripTemplateExpr(step.ForEach.Expr)
+		var err error
+		items, err = p.evaluateItemsExpression(exprStr, ctx.Variables)
 		if err != nil {
 			return fmt.Errorf("failed to evaluate for_each: %w", err)
 		}
@@ -926,6 +928,19 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 		Tags:       ctx.Tags,
 		Names:      ctx.Names,
 	}
+}
+
+// stripTemplateExpr returns the inner expression of a "{{ ... }}" wrapper,
+// trimmed of surrounding whitespace. If the input is not wrapped, returns
+// the trimmed input unchanged. Used by for_each so that a scalar template
+// like "{{ packages }}" is resolved against vars directly, bypassing the
+// pongo2 renderer which would stringify the slice via reflect.Value.String().
+func stripTemplateExpr(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "{{") && strings.HasSuffix(s, "}}") && len(s) >= 4 {
+		return strings.TrimSpace(s[2 : len(s)-2])
+	}
+	return s
 }
 
 // evaluateItemsExpression evaluates a with_items expression

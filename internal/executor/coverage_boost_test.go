@@ -401,8 +401,8 @@ func TestGetStepDisplayName_WithItem(t *testing.T) {
 	if !hasName {
 		t.Error("Should have name with item")
 	}
-	if displayName != "test-item" {
-		t.Errorf("Display name = %s, want 'test-item'", displayName)
+	if displayName != "Test: test-item" {
+		t.Errorf("Display name = %s, want 'Test: test-item'", displayName)
 	}
 }
 

@@ -522,11 +522,18 @@ func TestGetStepDisplayName(t *testing.T) {
 		t.Errorf("executor.GetStepDisplayName() = (%v, %v), want (My Step, true)", name, hasName)
 	}
 
-	// Test with item
+	// Test with item: name should be combined with item, not clobbered.
 	ec.Scope.User["item"] = "item_value"
 	name, hasName = executor.GetStepDisplayName(step, ec)
+	if name != "My Step: item_value" || !hasName {
+		t.Errorf("executor.GetStepDisplayName() with item = (%v, %v), want (My Step: item_value, true)", name, hasName)
+	}
+
+	// Test with item but no step name: falls back to item value only.
+	stepNoName := config.Step{}
+	name, hasName = executor.GetStepDisplayName(stepNoName, ec)
 	if name != "item_value" || !hasName {
-		t.Errorf("executor.GetStepDisplayName() with item = (%v, %v), want (item_value, true)", name, hasName)
+		t.Errorf("executor.GetStepDisplayName() unnamed step with item = (%v, %v), want (item_value, true)", name, hasName)
 	}
 }
 
