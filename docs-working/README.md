@@ -25,10 +25,17 @@ See **[non-goals.md](./non-goals.md)** for the seven things Mooncake will not be
 22 extended-handler-abi (phase 8 docs remains) · 24 pkg-surface (P6 ABI hooks) ·
 25 text-surface (P5 ABI hooks) · 26 git-actions (ABI hooks) · 27 os-identity (ABI hooks) ·
 28 os-scheduling (non-ufw drivers, deferred) · 32 step-action-dispatch ·
-36 windows-support · disk-partition-action (exploration)
+36 windows-support · **59 typed-observability** seed (`observe.{port,process,http,service}`) ·
+60 observe-system-resources (cpu/memory/disk) · 61 observe-logs ·
+62 observe-gpu · 63 observe-streaming (deferral spec) ·
+disk-partition-action (exploration)
 
 Phases 1–7 of spec-22 are complete (four-method ABI declared + MCP wiring landed).
 Remaining: phase 8 docs, plus final ABI-hook phases for 24–27.
+**Spec-59 is the highest-leverage unbuilt strategic bet** — typed observation
+as the read-side mirror of spec-22's typed mutation; substrate for spec-58 drift,
+`fleet explain`, and the agent loop. See [`analysis/issue-8-changegraph-analysis.md`](./analysis/issue-8-changegraph-analysis.md) §7.
+Specs 60–63 are observability extensions that depend on spec-59 landing first.
 
 **Stream 2 — Safe Agent Runtime**
 
@@ -39,7 +46,7 @@ lives under Stream 1 (spec-22 phases 7–8).
 **Stream 3 — Fleet & Cluster Management**
 45 fleet-discovery (PR13 `fleet init` interactive flow) ·
 52 fleet-exec · 53 fleet-watch · 54 fleet-ps · 55 fleet-doctor ·
-58 fleet-drift
+58 fleet-drift · 64 fleet-observe (cross-peer fan-out)
 
 Fleet is 13/14 PRs; only `fleet init` interactive UX remains from the original plan.
 Specs 52–55 are drafted QoL additions brainstormed from real use.
