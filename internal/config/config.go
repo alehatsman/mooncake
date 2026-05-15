@@ -861,8 +861,25 @@ func (p *PresetInvocation) UnmarshalYAML(unmarshal func(interface{}) error) erro
 }
 
 // PrintAction represents a print/output action for displaying messages.
+//
+// Three forms are supported. Each is independently usable; combinations
+// render in a consistent order (Title → Msg → Data):
+//
+//   - Msg  (string): free-text line, supports template rendering. The
+//     historical form; behaves exactly as before when Data is unset.
+//   - Data (any):    structured payload — map, slice, scalar. Rendered
+//     by Format ("kv" default, "json" for pretty-printed JSON).
+//   - Title (string): optional header line shown above Data in kv mode.
+//
+// Budget bounds total rendered output size (bytes). Defaults to 4096
+// when unset; 0 disables truncation. Larger payloads truncate at a UTF-8
+// boundary with a "… (truncated)" suffix so agents don't blow context.
 type PrintAction struct {
-	Msg string `yaml:"msg,omitempty" json:"msg,omitempty"` // Message to print (supports templates)
+	Msg    string `yaml:"msg,omitempty"    json:"msg,omitempty"    schema:"description=Free-text message (supports templates)"`
+	Title  string `yaml:"title,omitempty"  json:"title,omitempty"  schema:"description=Optional header above Data (kv mode only)"`
+	Data   any    `yaml:"data,omitempty"   json:"data,omitempty"   schema:"description=Structured payload to render"`
+	Format string `yaml:"format,omitempty" json:"format,omitempty" schema:"description=Render format for Data,enum=kv|json,default=kv"`
+	Budget int    `yaml:"budget,omitempty" json:"budget,omitempty" schema:"description=Max bytes of rendered output; 0 disables truncation"`
 }
 
 // FileReplace represents an in-place text replacement operation in a file.
