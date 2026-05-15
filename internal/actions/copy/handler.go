@@ -128,7 +128,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 	if srcInfo.IsDir() {
 		result.Failed = true
-		return result, fmt.Errorf("src is a directory, use recursive copy action instead")
+		return result, fmt.Errorf("src %q is a directory; mooncake's file.copy is single-file only. Use `shell: cp -r ...` to recurse, or copy each file with a `for_each_file:` loop", renderedSrc)
 	}
 
 	// Verify source checksum if provided
@@ -561,7 +561,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	if srcInfo.IsDir() {
 		result.Failed = true
-		return result, fmt.Errorf("src is a directory, use recursive copy action instead")
+		return result, fmt.Errorf("src %q is a directory; mooncake's file.copy is single-file only. Use `shell: cp -r ...` to recurse, or copy each file with a `for_each_file:` loop", src)
 	}
 
 	// Source checksum verification (pre-copy). Failing here is a hard
