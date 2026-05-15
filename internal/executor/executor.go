@@ -936,6 +936,15 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 
 	log.Debugf("Plan built with %d steps", len(planData.Steps))
 
+	// Fail fast on a tag filter that matches no tagged step. Without
+	// this check `--tags deplly` (typo of `deploy`) silently passes —
+	// the filter rejects all tagged steps and only untagged
+	// "scaffolding" steps run; the recap shows green (`failed=0`) so
+	// the user thinks their deploy ran when it didn't.
+	if msg := unmatchedTagsError(startConfig.Tags, planData); msg != "" {
+		return &SetupError{Component: "tags", Issue: msg}
+	}
+
 	// Setup artifact writer if artifacts-dir is specified
 	if startConfig.ArtifactsDir != "" {
 		// Gather system facts for artifact generation
