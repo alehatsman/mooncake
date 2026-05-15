@@ -958,3 +958,241 @@ Total: 26 numbered findings across 4 rounds. The headline pattern —
 #22, #24. Five of the seven HIGH+ findings. That's the single most
 important thing to address: how does Mooncake distinguish "did the
 right thing" from "did nothing while reporting success"?
+
+---
+
+## Continued exploration (round 5)
+
+Probed `assert` variants, `read.json`/`read.yaml`,
+`text.patch.json`/`text.patch.yaml`, `git.clone`, `tool`, and `os.user`.
+Numbering continues from #26.
+
+### 27. Validator's allowed-action list is out of sync with `mooncake actions list` — SEVERITY: HIGH (structural)
+
+**Repro**: try a top-level playbook using any of these advertised
+actions:
+- `read.json`, `read.yaml`
+- `text.patch.json`, `text.patch.yaml`, `text.patch.ini`, `text.line`
+- `git.clone`, `git.config`, `git.checkout`
+- `os.user`, `os.group`, `os.firewall`, `os.cron`, etc.
+- `container`, `container.image`, `tool`, `pkg.list`, `pkg.upgrade`
+
+All rejected at validate-time:
+```
+Line 1: Step must have exactly one action (shell, cmd, file.write,
+  file.template, file.copy, file.download, file.unarchive, text.replace,
+  text.insert, text.delete_range, text.patch, os.service, pkg,
+  repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate,
+  assert, use, log, import, vars, vars.load, or wait)
+```
+
+But `mooncake actions list` advertises 50+ actions including all of the
+above. Confirmed via `mooncake step`: these actions DO exist and DO
+work — they just can't be used in a top-level playbook because the
+validator's allowlist hasn't been updated.
+
+**Why HIGH (structural)**: this means **roughly half of Mooncake's
+typed action surface is dead code from the playbook user's
+perspective**. The only way to invoke them is via `mooncake step`
+(which suffers from #22 truncation) or the MCP `run_plan` tool. The
+user-facing config file can't reach them.
+
+**Likely cause**: the validator has a hardcoded vocabulary in
+`internal/config/schema.json` (or wherever validation lives) that
+wasn't updated when new handlers were registered in
+`internal/register/register.go`. Validator allowlist should be
+auto-generated from the registry.
+
+**Companion**: closes #6 from round 1 — `LLM_GUIDE.md` action list is
+out of date because there's no single source of truth. Fix the
+validator generation and `LLM_GUIDE.md` updates fall out.
+
+---
+
+### 28. `failed_when: false` does not suppress assertion failure — SEVERITY: MEDIUM (semantics)
+
+**Repro**:
+
+```yaml
+- name: assert sha256 (intentionally wrong)
+  assert:
+    file_sha256:
+      path: /tmp/assert-test.txt
+      checksum: "0000…0000"
+  failed_when: false
+```
+
+Recap: `ok=5 changed=1 skipped=0 failed=1`. The step IS counted as
+failed despite `failed_when: false`.
+
+**Why MEDIUM**: `failed_when:` is the documented escape hatch for
+"this step might fail but I don't want it to gate the run".
+`failed_when: false` is the canonical "never fail" form. If
+`failed_when: false` doesn't suppress the failure, the escape hatch
+doesn't exist for assert. Probably the assert handler short-circuits
+with its own failure path before the executor's `failed_when` is
+evaluated.
+
+**Likely fix**: assert (and any other action that hardcodes failure)
+should write its result through the standard executor wrapper that
+respects `failed_when`.
+
+---
+
+### 29. `examples/actions/assert.yml` uses obsolete `cmd:` key — SEVERITY: LOW (doc rot)
+
+**Repro**: the canonical assert example uses `assert: cmd: { cmd:
+..., exit_code: 0 }`. Validator rejects:
+
+```
+validation failed for assert action: assert requires one of: command,
+  file, http, file_sha256, git_clean, or git_diff
+```
+
+So the right key is `command:`, but the example uses `cmd:`. Doc rot.
+
+(Bonus: the error message — `validation failed for assert action: assert
+requires one of: command, file, http, file_sha256, git_clean, or
+git_diff` — is GOOD. Lists exactly what's allowed. Sets a quality bar
+the planner-time validator (#4) doesn't yet meet.)
+
+---
+
+### 30. Step-level validator errors include source location — SEVERITY: positive note (do not regress)
+
+**Repro**: see #29 above. When step-level validation fails (after the
+file-level "is this a valid action?" check has passed), the error
+output is:
+
+```
+Step code (/work/mooncake.yml:8):
+  - name: assert command success
+    assert:
+      cmd:
+        cmd: "test -f /tmp/assert-test.txt"
+        exit_code: 0
+```
+
+File + line, plus the actual step YAML quoted back. Excellent
+error UX. The file-level validator (#4) does NOT do this — it would
+fix #4 to use the same template.
+
+---
+
+### 31. `assert: file_sha256:` correctly detects sha256 mismatches — SEVERITY: positive note
+
+```
+✗ assert sha256 (intentionally wrong)
+  assertion failed (file_sha256): expected sha256:0000…, got sha256:0f8f… (file: /tmp/assert-test.txt)
+```
+
+**Why this matters**: this is the same checksum-verification logic
+that `file.download: sha256:` should be using (#14). Here in `assert`
+it works perfectly — clean error, correct semantics, file path
+included. In `file.download` it's silently bypassed.
+
+That means **the fix for #14 is probably to share / call the same
+verification path that `assert` already uses**, and to do it BEFORE
+the rename. Should be a small change.
+
+---
+
+### 32. `text.patch.json` uses `set:` / `delete:` / `merge:` (not JSON Patch RFC 6902) — SEVERITY: LOW (DX surprise)
+
+**Repro**:
+
+```
+$ mooncake step "text.patch.json: { path: ..., operations: [{op: replace, path: /a, value: 99}] }"
+{"error": "validation failed: text.patch.json: at least one of set, delete, or merge is required"}
+```
+
+Works with:
+```
+$ mooncake step "text.patch.json: { path: ..., set: {b: 99, c: \"new\"}, delete: [a] }"
+```
+
+**Why it matters**: developers familiar with JSON Patch
+(RFC 6902 — `[{op, path, value}]`) will type the standard form first.
+Mooncake's schema is a higher-level set/delete/merge structure
+instead. Either pick:
+- (a) Support both — accept JSON Patch ops alongside set/delete/merge.
+- (b) Reject JSON Patch syntax with a clear hint: "use `set:` /
+  `delete:` / `merge:` instead. Mooncake's patch.json is set-oriented,
+  not RFC 6902."
+
+Same DX shape as #18 (`default('x')` vs `default:'x'`).
+
+---
+
+### 33. `git.clone` param is `repo:` not `url:` — SEVERITY: LOW (DX surprise)
+
+**Repro**:
+
+```
+$ mooncake step "git.clone: { url: ..., dest: ... }"
+{"error": "validation failed for git.clone action: git.clone: repo is required"}
+```
+
+Works with `repo:` instead. Ansible's `ansible.builtin.git` uses
+`repo:`, so this is Ansible-consistent — but most other Mooncake
+actions use `url:` (`file.download`), and `git clone <URL>` in the
+command line is universally called a URL. Worth either:
+- (a) Accept `url:` as an alias.
+- (b) Document the choice loudly.
+
+(Confirmed working: `git.clone` is properly idempotent on second
+call — `changed: false` when dest already exists.)
+
+---
+
+### 34. `os.user` works cleanly — SEVERITY: positive note
+
+```
+$ mooncake step "os.user: { name: alice, state: present }"
+{"changed": true, "action": "os.user", "duration_ms": 68}
+$ id alice
+uid=1001(alice) gid=1001(alice) groups=1001(alice)
+```
+
+No surprises. Properly creates with default group. Don't break this.
+
+---
+
+## Updated suggested filing (round 5)
+
+| # | Severity | Where it should land |
+|---|---|---|
+| **27** | **HIGH** | regenerate validator allowlist from action registry — half the surface is unreachable |
+| 28 | MEDIUM | assert respects `failed_when:` |
+| 29 | LOW | fix `examples/actions/assert.yml` (`cmd:` → `command:`) |
+| 30 | positive | step-validator error format — keep, port to file-validator (#4) |
+| 31 | positive | sha256 verify works in assert — reuse for `file.download` (#14) |
+| 32 | LOW | `text.patch.json` schema — accept JSON Patch or improve error |
+| 33 | LOW | `git.clone` param name — accept `url:` alias or document |
+| 34 | positive | `os.user` works — keep |
+
+---
+
+## Severity rollup (cumulative across 5 rounds)
+
+| Severity | Count |
+|---|---|
+| **CRITICAL** | 2 (#8, #14) |
+| **HIGH** | 6 (#1, #2, #15, #22, #24, #27) |
+| **MEDIUM** | 6 (#3, #4, #16, #17, #23, #28) |
+| **LOW** | 17 |
+| **(keep — don't regress)** | 12+ |
+
+Total: **34 numbered findings** across 5 rounds. The patterns:
+
+1. **Silent success that's actually broken** (#8, #14, #15, #22, #24)
+2. **Validator/registry/docs are not a single source of truth**
+   (#4, #6, #27, #29, plus the `LLM_GUIDE.md` action list)
+3. **Schema surprises that fail with cryptic messages** (#18, #29
+   error format is good; #4 file-validator format is bad; #32 JSON
+   Patch surprise; #33 `repo:` vs `url:`)
+
+A useful structural fix that closes many of these: **codegen the
+validator allowlist, error messages, and `LLM_GUIDE.md` action list
+from `internal/register/register.go`**. One change closes #4, #6,
+#27, and improves #29's quality bar globally.
