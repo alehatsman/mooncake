@@ -116,7 +116,7 @@ func runsApplyCommand(c *cli.Context) error {
 func runsFollowCommand(c *cli.Context) error {
 	runID := c.Args().First()
 	if runID == "" {
-		return fmt.Errorf("usage: mooncake runs follow <run_id>")
+		return cli.Exit("usage: mooncake runs follow <run_id>", 1)
 	}
 	hc, _, err := agentdHTTPClient(c.Bool("system"))
 	if err != nil {
@@ -128,7 +128,7 @@ func runsFollowCommand(c *cli.Context) error {
 func runsGetCommand(c *cli.Context) error {
 	runID := c.Args().First()
 	if runID == "" {
-		return fmt.Errorf("usage: mooncake runs get <run_id>")
+		return cli.Exit("usage: mooncake runs get <run_id>", 1)
 	}
 	hc, _, err := agentdHTTPClient(c.Bool("system"))
 	if err != nil {
@@ -139,12 +139,28 @@ func runsGetCommand(c *cli.Context) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(os.Stdout, resp.Body)
+	// Issue #29 part B: HTTP non-2xx must propagate to a non-zero exit.
+	// Pre-fix `runs get does-not-exist` printed an error-body JSON and
+	// returned 0 — `if mooncake runs get $ID; then …` was broken.
+	if resp.StatusCode/100 != 2 {
+		b, _ := io.ReadAll(resp.Body)
+		return cli.Exit(fmt.Sprintf("runs get %s: HTTP %d: %s", runID, resp.StatusCode, strings.TrimSpace(string(b))), 1)
+	}
+	if _, err := io.Copy(os.Stdout, resp.Body); err != nil {
+		return err
+	}
 	fmt.Println()
 	return nil
 }
 
 func runsListCommand(c *cli.Context) error {
+	// Issue #29 part D: `--format text` historically fell through to the
+	// JSON dump silently. Until a text-mode renderer lands, reject the
+	// non-JSON value explicitly so the operator sees their flag was
+	// ignored rather than getting JSON when they asked for a table.
+	if f := c.String("format"); f != "" && f != "json" {
+		return cli.Exit(fmt.Sprintf("runs list: --format %q not supported (only 'json' is implemented today)", f), 2)
+	}
 	hc, _, err := agentdHTTPClient(c.Bool("system"))
 	if err != nil {
 		return err
@@ -154,7 +170,13 @@ func runsListCommand(c *cli.Context) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(os.Stdout, resp.Body)
+	if resp.StatusCode/100 != 2 {
+		b, _ := io.ReadAll(resp.Body)
+		return cli.Exit(fmt.Sprintf("runs list: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b))), 1)
+	}
+	if _, err := io.Copy(os.Stdout, resp.Body); err != nil {
+		return err
+	}
 	fmt.Println()
 	return nil
 }
@@ -168,12 +190,20 @@ func streamRunEvents(hc *http.Client, runID string) error {
 		return fmt.Errorf("open event stream: %w", err)
 	}
 	defer resp.Body.Close()
+	// Issue #29 part B: surface HTTP non-2xx so `runs follow bad-id`
+	// doesn't silently exit 0 with no output. The event stream endpoint
+	// returns 404 for unknown ids; we must propagate that.
+	if resp.StatusCode/100 != 2 {
+		b, _ := io.ReadAll(resp.Body)
+		return cli.Exit(fmt.Sprintf("runs %s: event stream HTTP %d: %s", runID, resp.StatusCode, strings.TrimSpace(string(b))), 1)
+	}
 
 	scanner := bufio.NewScanner(resp.Body)
 	// SSE events can be larger than the default 64K (long stdout lines).
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	runFailed := false
+	sawRunCompleted := false
 	// Remember each step's action by step_id from step.started so we can
 	// fall back to it as a display name on step.completed/.failed/.skipped
 	// events when the user didn't set a `name:`. Without this fallback
@@ -247,6 +277,7 @@ func streamRunEvents(hc *http.Client, runID string) error {
 			_ = json.Unmarshal(env.Data, &d)
 			fmt.Printf("%s %s  %s\n", color.HiBlackString("-"), display(d.Name, d.StepID), d.Reason)
 		case "run.completed":
+			sawRunCompleted = true
 			var d struct {
 				OK       int    `json:"success_steps"`
 				Changed  int    `json:"changed_steps"`
@@ -279,10 +310,61 @@ func streamRunEvents(hc *http.Client, runID string) error {
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("event stream error: %w", err)
 	}
+	// Issue #29 part A: planner-stage failures complete the run before the
+	// event stream opens, so events.jsonl is empty and the loop exits
+	// having seen no run.completed. Pre-fix this returned nil → exit 0
+	// despite record.status == "failed". Post-fix we poll the record and
+	// fail loudly with the recorded error_message.
+	if !sawRunCompleted {
+		status, errMsg := fetchRunTerminalStatus(hc, runID)
+		switch status {
+		case "failed":
+			if errMsg == "" {
+				errMsg = "(no error message recorded)"
+			}
+			fmt.Printf("\n%s  %s %s\n", color.RedString("RECAP  failed"), color.RedString("✗"), errMsg)
+			return cli.Exit("", 1)
+		case "succeeded", "completed", "ok":
+			// Stream ended cleanly without run.completed but record says
+			// success — pass.
+		default:
+			// Unknown / not terminal yet — keep the historical no-op
+			// behavior so users don't get spurious failures on partial
+			// disconnects. runFailed below still catches the step.failed
+			// signal path.
+		}
+	}
 	if runFailed {
 		return cli.Exit("", 1)
 	}
 	return nil
+}
+
+// fetchRunTerminalStatus reads /v1/runs/{id} and extracts (status,
+// error_message). Returns ("", "") on any failure so callers degrade
+// gracefully rather than swallowing the original outcome.
+func fetchRunTerminalStatus(hc *http.Client, runID string) (string, string) {
+	resp, err := hc.Get("http://localhost/v1/runs/" + runID)
+	if err != nil {
+		return "", ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		return "", ""
+	}
+	var rec struct {
+		Status string `json:"status"`
+		Error  string `json:"error"`
+		ErrMsg string `json:"error_message"`
+	}
+	if decErr := json.NewDecoder(resp.Body).Decode(&rec); decErr != nil {
+		return "", ""
+	}
+	msg := rec.Error
+	if msg == "" {
+		msg = rec.ErrMsg
+	}
+	return rec.Status, msg
 }
 
 func absPath(p string) (string, error) {
