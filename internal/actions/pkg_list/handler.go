@@ -54,6 +54,17 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// pkg.list is a read-only query: no Sudo, no Network. It shells out
+// to dpkg-query (v1 supports apt only) which any unprivileged user
+// can run.
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		RequiredBinaries: []string{"dpkg-query"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	if step.PkgList == nil {
 		return fmt.Errorf("pkg.list requires configuration")

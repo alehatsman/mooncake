@@ -1,6 +1,14 @@
 # Spec 24: `pkg.*` Surface — install / remove / repo
 
-**Status:** Draft
+**Status:** Phases 1–6 complete. P1–P5 shipped earlier (pkg.install
++ pkg.repo + pkg.hold + pkg.upgrade + pkg.list). **Phase 6 (spec-22
+ABI hooks) shipped**: Permissions / Diff / Cost / Reverse declared
+on all four pkg.* sibling handlers, matching the convention proven
+by the legacy `package` handler and spec-26 git work. Reverse on
+pkg.repo / pkg.hold returns refusal pending the apply-time pre-state
+capture refactor; pkg.upgrade is irreversible by design; pkg.list
+deliberately opts out of Reverser (read-only). Phase 7 (docs)
+remains.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** M (1–2 weeks)
 **Value:** High. The existing `pkg` action is declarative
