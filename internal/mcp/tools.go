@@ -439,6 +439,14 @@ func runConfig(configPath string) (string, error) {
 	internalLog := logger.NewTestLogger()
 	runErr := executor.ExecutePlan(planData, "", actions.ModeApply, internalLog, publisher)
 
+	// MT-54: the ChannelPublisher dispatches OnEvent on a per-subscriber
+	// goroutine, so the step.* and run.completed events emitted during
+	// ExecutePlan may still be queued when this function reads col.stats.*
+	// and col.steps. Without Flush, MCP run_plan returned all-zero
+	// counters and a truncated steps list — even though the plan ran
+	// and the side effects landed on disk. Same shape as MT-24.
+	publisher.Flush()
+
 	result := map[string]interface{}{
 		"changed":     col.stats.Changed,
 		"ok":          col.stats.Ok,

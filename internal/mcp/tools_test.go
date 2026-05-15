@@ -143,6 +143,72 @@ func TestHandleCheckPlan_ReturnsCostSummaryAndRequires(t *testing.T) {
 	}
 }
 
+// MT-54: HandleRunPlan must actually report the run's stats. Before
+// the Flush() fix, the run_plan response carried ok=0, changed=0,
+// steps=[one truncated entry] even when the plan ran and changed
+// files — the per-subscriber goroutine hadn't drained the event
+// queue before runConfig encoded the JSON response.
+func TestHandleRunPlan_AggregatesAllStepsAndCounters(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "mt54.txt")
+
+	cfg := filepath.Join(dir, "mc.yml")
+	content := "version: \"1.0\"\nsteps:\n" +
+		"  - name: write\n    file.write:\n      path: " + target + "\n      content: from-mt54\n      state: file\n" +
+		"  - name: verify\n    assert:\n      file:\n        path: " + target + "\n        exists: true\n"
+	if err := os.WriteFile(cfg, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := HandleRunPlan(nil, mustJSON(t, map[string]string{"config": cfg}))
+	if err != nil {
+		t.Fatalf("HandleRunPlan: %v", err)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &resp); err != nil {
+		t.Fatalf("unmarshal: %v\nbody: %s", err, out)
+	}
+
+	// Both steps must appear in the steps array.
+	steps, ok := resp["steps"].([]interface{})
+	if !ok {
+		t.Fatalf(`response missing "steps" array; got: %s`, out)
+	}
+	if len(steps) != 2 {
+		t.Errorf("expected 2 steps in response, got %d: %v", len(steps), steps)
+	}
+
+	// At least one step must register as changed (the file.write).
+	// json numbers decode to float64.
+	changed, _ := resp["changed"].(float64)
+	if changed < 1 {
+		t.Errorf("expected changed >= 1 (file.write ran), got %v; full body: %s", resp["changed"], out)
+	}
+
+	// Either ok or skipped must account for the assert (file existed
+	// after write). Counts vary by whether assert reports ok vs
+	// changed=false, but the total non-failed must be ≥ 1.
+	okN, _ := resp["ok"].(float64)
+	skipN, _ := resp["skipped"].(float64)
+	if okN+skipN+changed < 2 {
+		t.Errorf("counters undercount: ok=%v changed=%v skipped=%v; full body: %s",
+			resp["ok"], resp["changed"], resp["skipped"], out)
+	}
+
+	// duration_ms must be present in the response shape (may be 0 on
+	// very fast tmpfs runs; the bug was the response *not arriving*,
+	// not the timer specifically).
+	if _, has := resp["duration_ms"]; !has {
+		t.Error("response missing duration_ms field")
+	}
+
+	// And the file actually landed on disk.
+	if _, err := os.Stat(target); err != nil {
+		t.Errorf("expected target %q to exist after run_plan: %v", target, err)
+	}
+}
+
 func TestHandleCheckPlan_InspectionsContainDiff(t *testing.T) {
 	// Create a file first, then overwrite it — the file handler's Diff()
 	// should produce a non-nil diff object when content changes.
