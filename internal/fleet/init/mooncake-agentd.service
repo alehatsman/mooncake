@@ -28,6 +28,14 @@ Group=root
 NoNewPrivileges=true
 ProtectSystem=true
 ProtectHome=false
+# Issue #19: ReadWritePaths punches a hole in the ProtectSystem
+# read-only overlay for the one directory `fleet upgrade` needs to
+# write to: the install path where the binary swap lands. Without
+# this, `POST /v1/self/replace` fails with EROFS when copying the
+# staged binary into /usr/local/bin/. The hole is narrowly scoped
+# to a single directory — a runaway plan still can't touch the
+# rest of /usr.
+ReadWritePaths=/usr/local/bin
 
 [Install]
 WantedBy=multi-user.target
