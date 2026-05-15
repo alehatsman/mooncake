@@ -842,6 +842,10 @@ type StartConfig struct {
 	AskBecomePass    bool
 	InsecureSudoPass bool
 	Tags             []string
+	// SkipTags excludes any step whose tags intersect this list
+	// (MT-58, `--skip-tags`). Composes with Tags: a step runs only
+	// when Tags admits it AND SkipTags doesn't exclude it.
+	SkipTags []string
 	// Names is the spec-50 step-name filter (`--step-filter name=<x>`).
 	// AND'd with Tags at plan-build time: a step must pass both.
 	Names []string
@@ -928,6 +932,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		ConfigPath: configFilePath,
 		Variables:  variables,
 		Tags:       startConfig.Tags,
+		SkipTags:   startConfig.SkipTags,
 		Names:      startConfig.Names,
 	})
 	if err != nil {
