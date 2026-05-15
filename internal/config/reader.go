@@ -164,12 +164,66 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 	diagnostics := validator.Validate(parsedConfig, locationMap, path)
 	diagnostics = append(strictDiagnostics, diagnostics...)
 
+	// MT-4: when validateKnownFields already pinpoints a typo'd
+	// step-level or action-level field (e.g. `file.template.content`),
+	// the schema validator's generic "Step must have exactly one
+	// action (artifact.capture, …, file.template, …)" diagnostic
+	// fires alongside it for the same line — misleading because the
+	// step DOES name a valid action; the action just has an unknown
+	// sub-property. Drop the second message when a sharper unknown-
+	// field one is already attached at the same location.
+	diagnostics = suppressRedundantOneOfWhenUnknownField(diagnostics)
+
 	// Validate template syntax in all templatable fields
 	templateValidator := NewTemplateValidator()
 	templateDiagnostics := templateValidator.ValidateSteps(parsedConfig.Steps, locationMap, path)
 	diagnostics = append(diagnostics, templateDiagnostics...)
 
 	return parsedConfig, diagnostics, nil
+}
+
+// suppressRedundantOneOfWhenUnknownField removes "Step must have
+// exactly one action (…)" diagnostics from a file that ALREADY has
+// at least one unknown-field diagnostic. Rationale: the schema
+// validator emits the generic oneOf message on the step header line
+// whenever an action sub-property is unknown, but validateKnownFields
+// has already pinpointed the actual culprit by name. The two messages
+// fire on slightly different lines (header vs. inner property) so a
+// line-level join doesn't catch them; a file-level suppression is
+// strictly better because keeping the oneOf message is what misled
+// users in the first place (they see "Step must have exactly one
+// action: file.template, …" alongside their `file.template:` step
+// and assume the action keyword itself is wrong). Genuinely
+// action-less steps in the same file are still flagged on the next
+// retry once the unknown field is removed.
+//
+// Also suppresses the noise-level "Doesn't validate with …schema…"
+// parent diagnostic that the jsonschema library emits at the step
+// header — it never adds information beyond what's already in the
+// child diagnostic.
+func suppressRedundantOneOfWhenUnknownField(diags []Diagnostic) []Diagnostic {
+	hasUnknown := make(map[string]bool, len(diags))
+	for _, d := range diags {
+		if strings.Contains(d.Message, "unknown field") || strings.Contains(d.Message, "Unknown field") {
+			hasUnknown[d.FilePath] = true
+		}
+	}
+	if len(hasUnknown) == 0 {
+		return diags
+	}
+	out := diags[:0]
+	for _, d := range diags {
+		if hasUnknown[d.FilePath] {
+			if strings.Contains(d.Message, "Step must have exactly one action") {
+				continue
+			}
+			if strings.HasPrefix(d.Message, "Doesn't validate with") {
+				continue
+			}
+		}
+		out = append(out, d)
+	}
+	return out
 }
 
 // validateKnownFields runs a strict YAML decode pass over the
