@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -70,8 +71,17 @@ func stepCommand() *cli.Command {
 
 			raw := c.Args().First()
 
+			// MT-83: enforce the same `additionalProperties: false`
+			// strictness that `mooncake apply` runs at config-read time
+			// (MT-44). Without this, typos like `expected_exit:`
+			// (canonical: `expect_exit:`) get silently dropped by
+			// yaml.v3's permissive decode and the action handler runs
+			// with the default value — agents see a confusing timeout
+			// instead of a "field unknown" error.
 			var step config.Step
-			if err := yaml.Unmarshal([]byte(raw), &step); err != nil {
+			dec := yaml.NewDecoder(bytes.NewReader([]byte(raw)))
+			dec.KnownFields(true)
+			if err := dec.Decode(&step); err != nil {
 				return fmt.Errorf("failed to parse step YAML: %w", err)
 			}
 

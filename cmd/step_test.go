@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"gopkg.in/yaml.v3"
 )
 
 // MT-22 regression tests: `mooncake step` must surface the full
@@ -116,3 +119,72 @@ func TestBuildStepJSON_DataDoesNotShadowSharedScalars(t *testing.T) {
 		t.Errorf("expected Data override (mirroring apply's behavior), got %v", payload["changed"])
 	}
 }
+
+// strictDecodeStep mirrors the decode path inside stepCommand's
+// Action func: yaml.NewDecoder with KnownFields(true) into a
+// config.Step. Exported here so the regression tests in this package
+// can assert the strict shape without rebuilding the cli.Context.
+func strictDecodeStep(raw string) error {
+	var step config.Step
+	dec := yaml.NewDecoder(bytes.NewReader([]byte(raw)))
+	dec.KnownFields(true)
+	return dec.Decode(&step)
+}
+
+// MT-83: `mooncake step` must reject unknown fields the way `apply`
+// does (via MT-44's strict reader pass). The headline repro used
+// `expected_exit:` (the correct key is `expect_exit:`) — pre-fix
+// it was silently dropped and the wait.command handler ran with
+// default expectations, producing a confusing timeout.
+func TestStepStrictDecode_RejectsUnknownNestedField(t *testing.T) {
+	raw := `wait.command: { cmd: 'exit 42', expected_exit: 42 }`
+	err := strictDecodeStep(raw)
+	if err == nil {
+		t.Fatal("expected error for unknown field expected_exit, got nil")
+	}
+	if !errContainsAll(err, "expected_exit", "not found") {
+		t.Errorf("error should name the unknown field; got: %v", err)
+	}
+}
+
+// MT-83: strict decode also rejects unknown step-level fields — the
+// MT-15 / MT-77 aliases (creates:/unless:) and the documented
+// universal fields stay accepted; everything else errors.
+func TestStepStrictDecode_RejectsUnknownStepLevelField(t *testing.T) {
+	raw := `shell: { cmd: 'true' }
+not_a_real_field: true`
+	err := strictDecodeStep(raw)
+	if err == nil {
+		t.Fatal("expected error for unknown step-level field, got nil")
+	}
+	if !errContainsAll(err, "not_a_real_field", "not found") {
+		t.Errorf("error should name the unknown field; got: %v", err)
+	}
+}
+
+// MT-83 regression guard: the correct field name parses cleanly.
+// Without this, a typo in the "fixed" code (e.g. wrong yaml tag in
+// the WaitCommand struct) would only surface as a runtime regression.
+func TestStepStrictDecode_AcceptsKnownField(t *testing.T) {
+	raw := `wait.command: { cmd: 'true', expect_exit: 0 }`
+	if err := strictDecodeStep(raw); err != nil {
+		t.Errorf("expected clean decode for canonical field expect_exit, got: %v", err)
+	}
+}
+
+// errContainsAll reports whether err's message contains every needle.
+// Avoids fmt.Sprintf("%v", err) → strings.Contains repetition.
+func errContainsAll(err error, needles ...string) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	for _, n := range needles {
+		if !bytesContains(s, n) {
+			return false
+		}
+	}
+	return true
+}
+
+func bytesContains(s, n string) bool { return len(n) == 0 || bytes.Contains([]byte(s), []byte(n)) }
