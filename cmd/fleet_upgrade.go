@@ -243,7 +243,7 @@ func upgradeOnePeer(ctx context.Context, w io.Writer, p fleet.Peer, binPath, bin
 	}
 	fmt.Fprintf(w, "[%s] daemon old_pid=%d, waiting for restart…\n", p.Name, rep.OldPID)
 
-	if err := waitForRestart(ctx, client, before.DaemonPID); err != nil {
+	if err := waitForRestart(ctx, client, before.DaemonPID, before.UptimeSec); err != nil {
 		return fmt.Errorf("await restart: %w", err)
 	}
 
@@ -256,14 +256,20 @@ func upgradeOnePeer(ctx context.Context, w io.Writer, p fleet.Peer, binPath, bin
 	return nil
 }
 
-// waitForRestart polls /v1/version every 500ms until daemon_pid !=
-// oldPID. Returns ctx.Err() if the deadline expires before the new
-// daemon appears.
-func waitForRestart(ctx context.Context, client *transport.Client, oldPID int) error {
+// waitForRestart polls /v1/version every 500ms until the peer's daemon
+// confirms a restart. Two valid restart signals:
+//
+//   - PID changed — what happens on the Windows scheduled-task-restart
+//     path (the new process inherits the task slot, not the PID).
+//   - uptime_sec dropped below the pre-restart value — what happens on
+//     the Linux syscall.Exec path. exec replaces the process image but
+//     keeps the same PID, so the only reliable signal is the daemon's
+//     startedAt resetting (uptime collapses from N seconds to ~0).
+//
+// Returns ctx.Err() if the deadline expires before either signal fires.
+func waitForRestart(ctx context.Context, client *transport.Client, oldPID int, oldUptimeSec int64) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-	// First probe usually fails (connection refused mid-exec); the
-	// loop's normal path tolerates that until the new daemon binds.
 	for {
 		select {
 		case <-ctx.Done():
@@ -276,6 +282,9 @@ func waitForRestart(ctx context.Context, client *transport.Client, oldPID int) e
 				continue
 			}
 			if v.DaemonPID != 0 && v.DaemonPID != oldPID {
+				return nil
+			}
+			if v.UptimeSec < oldUptimeSec {
 				return nil
 			}
 		}
