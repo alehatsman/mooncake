@@ -94,6 +94,13 @@ type ActionMetadata struct {
 	// ImplementsCheck indicates whether this action implements idempotency checks.
 	// Actions with idempotency checks verify current state before making changes.
 	ImplementsCheck bool
+
+	// CaptureInPlan declares that this action's result is safe to bind into
+	// Scope.Results during plan mode. Reserved for side-effect-free /
+	// observation-only actions whose result is informative (e.g. read.json,
+	// read.yaml). Default false: mutation actions must not affect vars during
+	// plan. See spec-37.
+	CaptureInPlan bool
 }
 
 // Handler defines the interface that all action handlers must implement.
