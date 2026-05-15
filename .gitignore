@@ -36,8 +36,10 @@ go.work.sum
 *~
 .DS_Store
 
-# Claude temporary files
-.claude/
+# Claude harness state (runtime), but track project-scoped settings + hooks
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 .claude_temp/
 
 # Temporary files
@@ -58,10 +60,6 @@ __debug_bin
 # Vendor directory (if not using modules)
 vendor/
 
-testing-output/
-.claude/
-.claude_temp/
-site/
 artifacts/
 
 .mooncake/

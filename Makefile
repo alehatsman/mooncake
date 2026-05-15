@@ -75,9 +75,19 @@ test-presets-help: ## Show preset testing help
 # ==============================================================================
 
 .PHONY: lint
-lint: ## Run golangci-lint
+lint: ## Run golangci-lint on the full codebase
 	@echo "Running golangci-lint..."
 	@golangci-lint run ./...
+
+.PHONY: lint-new
+lint-new: ## Run golangci-lint on lines changed since HEAD~1 (refactor-friendly)
+	@echo "Running golangci-lint (changes only)..."
+	@golangci-lint run --new-from-rev=HEAD~1 ./...
+
+.PHONY: lint-fix
+lint-fix: ## Auto-fix what golangci-lint can fix (misspell, unconvert, gocritic, staticcheck QF/S, revive)
+	@echo "Running golangci-lint --fix..."
+	@golangci-lint run --fix ./...
 
 .PHONY: fmt
 fmt: ## Format code with gofmt
@@ -86,12 +96,9 @@ fmt: ## Format code with gofmt
 	@echo "✓ Code formatted"
 
 .PHONY: scan
-scan: lint ## Run security scans (gosec + govulncheck)
-	@echo "Running gosec security scan..."
-	@gosec -exclude-generated -exclude=G104,G115,G117,G204,G301,G304,G306,G702,G703,G704 ./...
-	# G304 excluded: mooncake is a file-management tool; operating on user-specified
-	# paths is intentional and all paths are resolved via PathExpander before use.
-	@echo ""
+scan: lint ## Run security scans (gosec via golangci-lint + govulncheck)
+	# gosec runs as part of `make lint` via golangci-lint; excludes live in
+	# .golangci.yml under linters.settings.gosec.excludes (single source).
 	@echo "Running govulncheck..."
 	@govulncheck ./...
 
