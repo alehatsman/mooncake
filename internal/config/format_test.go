@@ -331,3 +331,39 @@ func TestFormatDiagnosticsWithContext(t *testing.T) {
 		})
 	}
 }
+
+// TestExtractStepName_FindsCurrentStepName is a regression test for
+// manual-test #4 (2026-05-15): when the validator anchors an error inside
+// a step (e.g. on an invalid sub-key), the "(in step: X)" hint should
+// surface the CURRENT step's name, not bail out early or echo the
+// previous step's name.
+func TestExtractStepName_FindsCurrentStepName(t *testing.T) {
+	lines := []string{
+		"- name: first step",
+		"  shell: mkdir -p /tmp/foo",
+		"",
+		"- name: failing step",
+		"  file.template:",
+		"    content: hello",
+		"    dest: /tmp/out.txt",
+	}
+	got := extractStepName(lines, 6) // 1-indexed; error on `content: hello`
+	if got != "failing step" {
+		t.Errorf("extractStepName at line 6 = %q, want %q", got, "failing step")
+	}
+}
+
+func TestExtractStepName_StopsAtPreviousStep(t *testing.T) {
+	lines := []string{
+		"- shell: echo a",
+		"  when: true",
+		"- shell: echo b",
+		"  when: false",
+	}
+	// Error on line 4 (second step's body) — previous step lacked a name,
+	// so we shouldn't crawl all the way past it to find a stale name.
+	got := extractStepName(lines, 4)
+	if got != "" {
+		t.Errorf("extractStepName at line 4 = %q, want empty (no name in current step)", got)
+	}
+}

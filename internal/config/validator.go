@@ -123,13 +123,15 @@ func mapValidationErrors(err error, locationMap *LocationMap, filePath string) [
 
 // collectDiagnostics recursively collects diagnostics from validation errors
 func collectDiagnostics(validationErr *jsonschema.ValidationError, locationMap *LocationMap, filePath string, diagnostics *[]Diagnostic) {
-	// Get the instance location (JSON pointer to the problematic data)
-	instancePath := validationErr.InstanceLocation
-
-	// Look up source position
+	// Get the instance location (JSON pointer to the problematic data).
+	// For root-level oneOf failures the instance location is empty even
+	// though the actual failing data is a specific child (e.g. "/1" — the
+	// second step). Walk causes to find the deepest InstanceLocation that
+	// the location map knows about, so the diagnostic anchors to the
+	// failing step's line rather than always falling back to line 1.
+	instancePath := deepestKnownInstance(validationErr, locationMap)
 	pos := locationMap.Get(instancePath)
 	if pos.Line == 0 {
-		// Fallback to line 1 if position not found
 		pos.Line = 1
 		pos.Column = 1
 	}
@@ -167,4 +169,27 @@ func collectDiagnostics(validationErr *jsonschema.ValidationError, locationMap *
 			collectDiagnostics(cause, locationMap, filePath, diagnostics)
 		}
 	}
+}
+
+// deepestKnownInstance returns the most specific InstanceLocation found in
+// this error or any of its transitive causes that has a corresponding entry
+// in the location map. Falls back to the error's own InstanceLocation when
+// no cause matches, preserving the root behavior for plain failures.
+func deepestKnownInstance(v *jsonschema.ValidationError, lm *LocationMap) string {
+	best := v.InstanceLocation
+	bestLine := lm.Get(best).Line
+	var walk func(e *jsonschema.ValidationError)
+	walk = func(e *jsonschema.ValidationError) {
+		if pos := lm.Get(e.InstanceLocation); pos.Line > 0 {
+			if bestLine == 0 || len(e.InstanceLocation) > len(best) {
+				best = e.InstanceLocation
+				bestLine = pos.Line
+			}
+		}
+		for _, c := range e.Causes {
+			walk(c)
+		}
+	}
+	walk(v)
+	return best
 }

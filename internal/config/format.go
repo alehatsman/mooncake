@@ -118,31 +118,30 @@ func loadFileLines(filePath string) []string {
 	return lines
 }
 
-// extractStepName tries to find the step name near the given line
+// extractStepName tries to find the step name near the given line.
+// Walks backwards from errorLine. Returns the name from the nearest
+// "- name:" / "name:" line in the current step. A "- " line that isn't
+// "- name:" marks the start of a previous step — stop there.
 func extractStepName(lines []string, errorLine int) string {
 	if errorLine < 1 || errorLine > len(lines) {
 		return ""
 	}
 
-	// Search backwards from error line to find "name:" field
-	for i := errorLine - 1; i >= 0 && i >= errorLine-10; i-- {
+	for i := errorLine - 1; i >= 0 && i >= errorLine-20; i-- {
 		line := strings.TrimSpace(lines[i])
 
-		// Stop if we hit another step (starts with "- ")
-		if i < errorLine-1 && strings.HasPrefix(line, "- ") {
-			break
-		}
-
-		// Check if this line has a name
-		if strings.HasPrefix(line, "name:") || strings.HasPrefix(line, "- name:") {
-			// Extract the name value
+		// "- name:" is the start of the current step → matches and returns.
+		// Other "- "-prefixed lines (a previous step that doesn't lead with
+		// name:) terminate the search without a match.
+		if strings.HasPrefix(line, "- name:") || strings.HasPrefix(line, "name:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
-				name := strings.TrimSpace(parts[1])
-				// Remove quotes if present
-				name = strings.Trim(name, "\"'")
-				return name
+				return strings.Trim(strings.TrimSpace(parts[1]), "\"'")
 			}
+			return ""
+		}
+		if i < errorLine-1 && strings.HasPrefix(line, "- ") {
+			return ""
 		}
 	}
 
