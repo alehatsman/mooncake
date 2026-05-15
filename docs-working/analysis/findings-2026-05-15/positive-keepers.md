@@ -499,6 +499,49 @@ fleet-as-pipeline story working as advertised.
 
 ---
 
+## ★ `mooncake fleet pair --token-via {stdin|file:|literal:}` — secure-by-default token input
+
+```
+$ mooncake fleet pair --help
+OPTIONS:
+   --name value                 Peer name in peers.toml (default: host portion of addr)
+   --tag value [ --tag value ]  Tag to attach to the peer (repeatable)
+   --token-via value            Where to read the bearer token from:
+                                stdin | file:<path> | literal:<token>
+                                (default: "stdin")
+```
+
+Three modes:
+- `stdin` (default) — pipe via stdin, no shell history leak
+- `file:<path>` — read from a file (good for terraform/ansible-driven setup)
+- `literal:<tok>` — inline for one-off testing (only meaningful with `--insecure-*` style intent)
+
+Choosing `stdin` as default discourages the easy-but-dangerous form
+(`--token mysecret` visible in process list and history). Same DX
+shape as `--ask-become-pass`.
+
+Worth porting to anywhere else mooncake takes secrets: agentd
+token-file, sudo password input. Already does both well.
+
+---
+
+## ★ `mooncake fleet bootstrap` SSH error includes actionable hint
+
+```
+$ mooncake fleet bootstrap fake-user@127.0.0.1
+[127-0-0-1] connecting via ssh
+ssh connect: no auth methods available (start ssh-agent or place ~/.ssh/id_ed25519)
+```
+
+Two parts of this are worth noting:
+1. The `[host-as-tag]` prefix (`[127-0-0-1]` — dots replaced with
+   dashes for log-friendly tagging) — same pattern as fleet exec
+2. The "start ssh-agent or place ~/.ssh/id_ed25519" hint inline with
+   the error — typical of mooncake's "tell users what to do, not just
+   what failed" approach.
+
+---
+
 ## ★ `mooncake fleet doctor <peer>` — probe ladder UX
 
 ```
