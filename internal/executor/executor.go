@@ -538,6 +538,13 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// purely so plan output renders the compound and the run summary
 	// can attribute child outcomes to the right wrapper.
 	if len(step.Try) > 0 && step.TryRole == "" {
+		// Issue #23: capture continue_on_error from the compound so
+		// the try-block resolution path (see ExecuteSteps below) can
+		// honor it. The compound is a structural marker — without
+		// this stash, the flag was being silently dropped.
+		if step.ContinueOnError {
+			ec.tryStateFor(step.ID).ContinueOnError = true
+		}
 		return nil
 	}
 
@@ -799,6 +806,7 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 			if step.TryParent != "" && step.TryRole == "try" {
 				ec.recordTryBodyFailure(step, err)
 				propagated := err
+				lastConsumed := i
 				for j := i + 1; j < len(steps); j++ {
 					next := steps[j]
 					if next.TryParent != step.TryParent {
@@ -816,10 +824,18 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 						}
 						propagated = cbErr
 					}
-					// Advance the outer loop's cursor so we don't re-execute
-					// these children when the outer for resumes — but since
-					// we're returning below, just track i for clarity.
-					_ = j
+					lastConsumed = j
+				}
+				// Issue #23: if the compound carried continue_on_error,
+				// swallow the resolved error and resume the outer iteration
+				// with steps AFTER the try-block. We can't advance the
+				// for-range index directly, so recurse on the slice tail
+				// — same plan, same context, just past the children we
+				// already processed. Matches the leaf-action
+				// ContinueOnError shape: warning logged + run continues.
+				if t := ec.OpenTries[step.TryParent]; t != nil && t.ContinueOnError {
+					ec.Svc.Logger.Infof("  [WARNING] Ignoring try-block failure (continue_on_error: true on the compound): %v", propagated)
+					return ExecuteSteps(steps[lastConsumed+1:], ec)
 				}
 				return propagated
 			}

@@ -43,6 +43,17 @@ type TryState struct {
 	// true the executor reports the catch error rather than the
 	// original try error.
 	CatchFailed bool
+
+	// ContinueOnError mirrors the compound Step's continue_on_error
+	// flag. When the try-block resolves with failure (try child
+	// errored, catch ran but didn't recover, or catch itself
+	// errored), the executor checks this to decide whether to
+	// propagate the error or swallow it and keep the outer run going.
+	// Issue #23: without this, `continue_on_error: true` on a `try:`
+	// compound was silently discarded — operators reasonably expect
+	// the universal Step.ContinueOnError field to compose with
+	// compound shapes too, not just leaf actions.
+	ContinueOnError bool
 }
 
 // tryStateFor returns (or lazily creates) the TryState for a given
