@@ -554,6 +554,25 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
+	// Lstat first so we can recognize a symlink at src without resolving
+	// it. follow_symlinks defaults to true (current behavior — file
+	// content is copied with the link silently flattened). Setting it
+	// to false preserves the link: dest becomes a symlink with the same
+	// target. Common need for dotfile / /usr/local/bin/foo workflows
+	// where the link IS what the user wants.
+	srcLinkInfo, err := os.Lstat(src)
+	if err != nil {
+		result.Failed = true
+		return result, fmt.Errorf("failed to stat source: %w", err)
+	}
+	followSymlinks := true
+	if cp.FollowSymlinks != nil {
+		followSymlinks = *cp.FollowSymlinks
+	}
+	if srcLinkInfo.Mode()&os.ModeSymlink != 0 && !followSymlinks {
+		return h.preserveSymlink(ctx, src, dest, result, cp)
+	}
+
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		result.Failed = true
@@ -669,5 +688,40 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		})
 	}
 
+	return result, nil
+}
+
+// preserveSymlink implements the `follow_symlinks: false` semantics for
+// file.copy: when src is a symlink, dest becomes a symlink with the
+// same target rather than a regular file containing the target's
+// content. Idempotent: if dest is already a symlink to the same
+// target, returns Changed=false. Backup / Force / Mode follow the
+// normal-copy semantics.
+func (h *Handler) preserveSymlink(ctx actions.Context, src, dest string, result *executor.Result, cp *config.Copy) (actions.Result, error) {
+	target, err := os.Readlink(src)
+	if err != nil {
+		result.Failed = true
+		return result, fmt.Errorf("failed to read symlink target: %w", err)
+	}
+
+	if existing, lerr := os.Readlink(dest); lerr == nil {
+		if existing == target && !cp.Force {
+			result.Changed = false
+			return result, nil
+		}
+	}
+
+	if ctx.Mode() == actions.ModeApply {
+		// Idempotency-friendly atomic-ish overwrite: unlink any
+		// existing dest first (regardless of whether it's a file,
+		// directory marker, or stale symlink with a different target).
+		_ = os.Remove(dest)
+		if err := os.Symlink(target, dest); err != nil {
+			result.Failed = true
+			return result, fmt.Errorf("failed to create symlink: %w", err)
+		}
+	}
+	result.Changed = true
+	result.Reason = fmt.Sprintf("symlink %s → %s", dest, target)
 	return result, nil
 }

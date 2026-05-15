@@ -285,14 +285,15 @@ type CommandAction struct {
 
 // Copy represents a file copy operation in a configuration step.
 type Copy struct {
-	Src      string `yaml:"src" json:"src" plan:"path"`                       // Source file path
-	Dest     string `yaml:"dest" json:"dest" plan:"path"`                     // Destination file path
-	Mode     string `yaml:"mode" json:"mode,omitempty"`           // Octal file permissions (e.g., "0644", "0755")
-	Owner    string `yaml:"owner" json:"owner,omitempty"`         // Username or UID
-	Group    string `yaml:"group" json:"group,omitempty"`         // Groupname or GID
-	Backup   bool   `yaml:"backup" json:"backup,omitempty"`       // Create .bak before overwrite
-	Force    bool   `yaml:"force" json:"force,omitempty"`         // Overwrite if exists
-	Checksum string `yaml:"checksum" json:"checksum,omitempty"`   // Expected SHA256 or MD5 checksum
+	Src             string `yaml:"src" json:"src" plan:"path"`                                 // Source file path
+	Dest            string `yaml:"dest" json:"dest" plan:"path"`                               // Destination file path
+	Mode            string `yaml:"mode" json:"mode,omitempty"`                                 // Octal file permissions (e.g., "0644", "0755")
+	Owner           string `yaml:"owner" json:"owner,omitempty"`                               // Username or UID
+	Group           string `yaml:"group" json:"group,omitempty"`                               // Groupname or GID
+	Backup          bool   `yaml:"backup" json:"backup,omitempty"`                             // Create .bak before overwrite
+	Force           bool   `yaml:"force" json:"force,omitempty"`                               // Overwrite if exists
+	Checksum        string `yaml:"checksum" json:"checksum,omitempty"`                         // Expected SHA256 or MD5 checksum
+	FollowSymlinks  *bool  `yaml:"follow_symlinks,omitempty" json:"follow_symlinks,omitempty"` // Resolve src symlinks (default: true; set false to preserve the link)
 }
 
 // Unarchive represents an archive extraction operation in a configuration step.
