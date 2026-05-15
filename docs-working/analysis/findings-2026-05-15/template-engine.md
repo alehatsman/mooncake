@@ -89,6 +89,38 @@ part and emit as int when not.
 
 ---
 
+## #82 — No way to access env vars in templates — LOW (DX gap)
+
+**Repro**:
+```yaml
+- log: { msg: "env={{ env.MY_ENV }}" }      # → "env=" (empty)
+- log: { msg: "env={{ environ.MY_ENV }}" }  # → "env=" (empty)
+- shell: echo MY_ENV=$MY_ENV                 # → "MY_ENV=hello" (works)
+```
+
+Shell commands inherit the parent process env (bash does that
+naturally). But there's no template path to env vars. The variable
+namespaces `env.*` and `environ.*` both silently render empty.
+
+Common patterns this blocks:
+- `path: "{{ env.HOME }}/.config/app"`  — needs facts.user_home
+  instead (works) but only for HOME-like values; arbitrary vars are
+  inaccessible
+- `content: "API_KEY={{ env.MY_API_KEY }}"` — must work around via
+  `shell: echo $MY_API_KEY` + `as:` registered var
+
+**Fix**: add an `env` (or `environ`) variable namespace in template
+context, populated from `os.Environ()` at plan time. Document that
+secrets-in-env should flow through MOONCAKE_SECRET_* or a sealed
+vars file, not direct env access.
+
+(This is also a security/auditability concern — fact-driven and
+overlay-driven configs are auditable; env-var-driven aren't. So the
+"no env access in templates" stance may be intentional. Worth
+documenting either way.)
+
+---
+
 ## #17 — Live metrics not available in apply-time templates (despite docs) — MEDIUM
 
 **Repro**:
