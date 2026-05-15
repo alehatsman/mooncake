@@ -104,6 +104,23 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // user opt-in
 		}
 	}
+	// Issue #18: opt-out for redirect following. Default (nil) matches
+	// Go's http.Client default of 10. Explicit 0 disables following so
+	// the operator can probe the redirect status itself (canonical:
+	// `observe.http --url http://x --expect-status 301`).
+	if o.FollowRedirects != nil {
+		max := *o.FollowRedirects
+		client.CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+			if len(via) >= max {
+				// Returning ErrUseLastResponse stops the redirect chain
+				// and surfaces the response the server gave us (the 3xx)
+				// instead of erroring. Matches the "I want to see the
+				// redirect" intent.
+				return http.ErrUseLastResponse
+			}
+			return nil
+		}
+	}
 
 	rendered, err := ctx.GetTemplate().Render(o.URL, ctx.GetVariables())
 	if err != nil {

@@ -380,6 +380,7 @@ export interface ObserveGpuAction {
 export interface ObserveHttpAction {
   capture_headers?: string[];
   expect_status?: number;
+  follow_redirects?: number;
   method?: string;
   skip_tls_verify?: boolean;
   timeout?: string;
@@ -747,6 +748,10 @@ export interface PkgUpgradeAction {
  * @category data
  */
 export interface ReadJsonAction {
+  max_bytes?: number;
+  path: string;
+  query?: string;
+  redact?: string[];
 }
 
 /**
@@ -754,6 +759,10 @@ export interface ReadJsonAction {
  * @category data
  */
 export interface ReadYamlAction {
+  max_bytes?: number;
+  path: string;
+  query?: string;
+  redact?: string[];
 }
 
 /**

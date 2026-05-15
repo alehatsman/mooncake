@@ -851,6 +851,9 @@
         "expect_status": {
           "type": "integer"
         },
+        "follow_redirects": {
+          "type": "integer"
+        },
         "method": {
           "type": "string"
         },

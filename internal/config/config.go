@@ -1102,6 +1102,14 @@ type ObserveHTTP struct {
 	ExpectStatus   int      `yaml:"expect_status" json:"expect_status,omitempty"`     // If set, Found=false when StatusCode != ExpectStatus
 	CaptureHeaders []string `yaml:"capture_headers" json:"capture_headers,omitempty"` // Headers to expose in HTTPObservation.Headers
 	SkipTLSVerify  bool     `yaml:"skip_tls_verify" json:"skip_tls_verify,omitempty"` // Disable cert verification (use with care)
+
+	// FollowRedirects bounds how many redirects the client will follow
+	// before giving up. Pointer so the zero value (no follow) is
+	// distinguishable from "unset" (default = 10, matches Go's
+	// http.Client default). Set to 0 to probe the redirect itself
+	// (canonical use: pair with `expect_status: 301` to verify an
+	// HTTP→HTTPS redirect is still in place). Issue #18.
+	FollowRedirects *int `yaml:"follow_redirects,omitempty" json:"follow_redirects,omitempty"`
 }
 
 // ObserveService is the spec-59 single-shot read of init-system
