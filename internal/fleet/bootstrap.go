@@ -221,9 +221,14 @@ func existingInstall(ctx context.Context, sess *transport.Session, _ *sudoer, in
 		return "", false, nil
 	}
 	// Service-state probe. Output captured for caller comparison; exit code
-	// is unreliable across systemctl/launchctl, so we look at stdout.
+	// is unreliable across systemctl/launchctl, so we look at stdout. Use
+	// an exact whole-string match — `strings.Contains` matches "active"
+	// inside "inactive", which previously caused a false-positive when the
+	// binary was present but the unit had never been installed: bootstrap
+	// short-circuited steps 4-6 and then failed at step 7 reading a token
+	// path that didn't exist.
 	stateOut, _, _, _ := sess.Run(ctx, inst.IsActiveCmd())
-	active = strings.Contains(stateOut, "active")
+	active = strings.TrimSpace(stateOut) == "active"
 	return version, active, nil
 }
 
