@@ -1,4 +1,4 @@
-package executor
+package filter
 
 import (
 	"strings"
@@ -39,7 +39,7 @@ func TestMT19_UnmatchedTagsError(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			got := unmatchedTagsError(c.filter, c.plan)
+			got := UnmatchedTagsError(c.filter, c.plan)
 			if c.wantEmpty {
 				if got != "" {
 					t.Errorf("expected empty, got %q", got)

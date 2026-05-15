@@ -1,4 +1,11 @@
-package executor
+// Package filter holds plan-time filtering and diagnostic helpers.
+// Per spec-32 the planner is the authority on which steps run; this
+// package houses the diagnostics that surface filter misuses (e.g.,
+// --tags deplly with no matching step) before the executor sees the
+// plan. Lives under internal/plan/ because that's where its inputs
+// (config.Step, plan.Plan) and its consumers (planner, executor's
+// setup phase) cluster.
+package filter
 
 import (
 	"fmt"
@@ -9,7 +16,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/plan"
 )
 
-// unmatchedTagsError returns a user-facing message when a non-empty
+// UnmatchedTagsError returns a user-facing message when a non-empty
 // --tags filter doesn't intersect any tagged step in the plan, and
 // "" when the filter is unused (empty) or at least one tagged step
 // matched. Empty return means "no issue; proceed".
@@ -21,7 +28,7 @@ import (
 // set will run." When that happens we surface the available tags and
 // the closest-match suggestion so they can recover without re-reading
 // the playbook.
-func unmatchedTagsError(filterTags []string, p *plan.Plan) string {
+func UnmatchedTagsError(filterTags []string, p *plan.Plan) string {
 	if len(filterTags) == 0 || p == nil {
 		return ""
 	}
