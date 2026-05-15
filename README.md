@@ -4,180 +4,219 @@
 [![Security](https://github.com/alehatsman/mooncake/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/security.yml)
 [![codecov](https://codecov.io/gh/alehatsman/mooncake/branch/master/graph/badge.svg)](https://codecov.io/gh/alehatsman/mooncake)
 
-**The Standard Runtime for AI System Configuration**
+**A safe execution layer for AI-driven system configuration.**
 
-Mooncake is to AI agents what Docker is to containers - a safe, validated execution layer for system configuration. **Chookity!**
-
-Built for AI-driven infrastructure with idempotency guarantees, dry-run validation, and full observability.
+Mooncake is a single Go binary that turns YAML intent into typed,
+idempotent system mutations — with auto-revert on failure, secrets
+that never leak into logs, and a clean ABI an AI agent can call
+without losing your machine.
 
 ```yaml
-- name: Hello Mooncake
-  shell: echo "Running on {{os}}/{{arch}}"
-
-- name: Create file
-  file:
-    path: /tmp/hello.txt
-    state: file
-    content: "Hello from Mooncake!"
+- name: deploy a new app config atomically
+  transaction:
+    - file.write:
+        path: /etc/myapp/config.yml
+        content: !secret env:APP_CONFIG
+    - os.service:
+        name: myapp
+        state: restarted
+  on_rollback:
+    - log: "deploy failed; previous config restored"
 ```
 
-## Who It's For
+If `os.service: restarted` fails, the `file.write` is automatically
+reverted via the handler's `Reverse()` method and the `on_rollback`
+notification fires. The system ends up byte-identical to its
+pre-transaction state.
 
-**AI Agent Developers** - Build agents that configure systems safely with validated execution, observability, and compliance
+## Who it's for
 
-**Platform Engineers** - Manage AI-driven infrastructure with audit trails and safety guardrails
+- **AI agent developers** — give your agent a typed action vocabulary,
+  dry-run validation, auto-revert on failure, and structured event
+  output. Your agent can't escape the typed ABI; every mutation is
+  observable and reversible.
+- **Solo developers** — manage dotfiles + dev box + a personal fleet
+  of 1–10 machines from one terminal, peer-to-peer, no hub.
+- **Platform engineers** — declarative state with `--dry-run`,
+  structured Diff output per action, run audit log, secret redaction.
 
-**Developers with AI Assistants** - Let AI manage your dotfiles and dev setup with built-in safety and undo
-
-**DevOps Teams** - Simpler alternative to Ansible for personal/team configs with AI workflow integration
-
-## Quick Start
+## Quick start
 
 ```bash
-# Install
 go install github.com/alehatsman/mooncake@latest
 
-# Scaffold a project — creates mooncake.yml, mooncake.vars.yml, .gitignore
+# Scaffold a project.
 mooncake init --template dotfiles
 
-# Preview changes (safe!)
+# Preview changes (typed Diff per action, no side effects).
 mooncake apply --dry-run
 
-# Run it
+# Apply.
 mooncake apply
 ```
 
-`mooncake apply` (and `plan`, `validate`) auto-discover `./mooncake.yml`
-or `./mooncake/main.yml`, so you rarely need `-c`.
+`mooncake apply` (and `plan`, `validate`) auto-discover
+`./mooncake.yml` or `./mooncake/main.yml`, so you rarely need `-c`.
 
-## What You Can Do
+## Agent-safety features
 
-| Action | Purpose | Example |
-|--------|---------|---------|
-| **shell** | Run commands | `shell: echo "hello"` |
-| **file.write** | Create files/directories | `file.write: {path: /tmp/test, state: directory}` |
-| **file.template** | Render configs | `file.template: {src: app.j2, dest: /etc/app.conf}` |
-| **file.copy** | Copy with checksums | `file.copy: {src: ./file, dest: /tmp/file}` |
-| **file.download** | Fetch from URLs | `file.download: {url: https://..., dest: /tmp/file}` |
-| **os.service** | Manage services | `os.service: {name: nginx, state: started}` |
-| **assert** | Verify state | `assert: {command: {cmd: docker --version}}` |
-| **use** | Reusable presets | `use: ollama` |
+Every claim here links to a working example you can run:
 
-**Variables & Facts**: Auto-detected system info - `{{os}}`, `{{arch}}`, `{{cpu_cores}}`, `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`
+- **`transaction:` blocks with auto-revert.** Group N steps; on any
+  failure, previously-completed steps run their `Reverse()` in LIFO
+  order. Filesystem byte-identical to pre-transaction state. Run
+  [`examples/transactions/rollback-demo.yml`](examples/transactions/rollback-demo.yml)
+  to see the rollback fire.
+
+- **Typed secret references that don't leak.** `!secret env:APP_TOKEN`
+  resolves at apply time, is added to the redaction denylist, never
+  appears in plan output, run logs, or `step.stdout`. Three built-in
+  providers: `env:`, `file:`, `stdin:` (interactive). Try
+  [`examples/secrets/env-secret.yml`](examples/secrets/env-secret.yml).
+
+- **Reactive triggers (`on_change:`).** A step's `on_change:` children
+  run only when the parent reported `changed=true`. The standard
+  config-then-reload pattern without Ansible's handler magic. Try
+  [`examples/triggers/on-change-config-reload.yml`](examples/triggers/on-change-config-reload.yml).
+
+- **Structural diffs in plan mode.** `mooncake plan --diff` returns
+  machine-readable `Diff` records per step — what file content
+  changed, what package version, what service state — not just prose
+  output. Used by the MCP server and any AI agent driving Mooncake to
+  decide whether to proceed.
+
+- **Permission preflight.** Every handler declares its
+  `Permissions()` (sudo? network egress? specific binary?). The
+  executor refuses to dispatch a step that needs sudo when the run
+  isn't elevated, surfacing the requirement at plan time instead of
+  as `EACCES` mid-run.
+
+These primitives compose. A `transaction:` of `!secret`-bearing
+`file.write` steps, with `on_change:` to restart services on config
+change, all dry-runnable, with the secret never appearing in plan
+JSON — is one short YAML file.
+
+## What you can do
+
+The full action surface (40+ typed actions). Highlights:
+
+| Action | Purpose |
+|---|---|
+| `file.write` · `file.template` · `file.copy` · `file.download` | File-content management with Reverse() on every shape |
+| `text.line` · `text.replace` · `text.patch.{ini,json,yaml}` | Surgical edits to existing files, all reversible |
+| `pkg` | Cross-platform package install/remove (apt, dnf, brew, pacman) |
+| `os.service` · `os.systemd` · `os.cron` · `os.sysctl` · `os.mount` · `os.firewall` | System-level resources |
+| `os.user` · `os.group` · `os.ssh_key` | Identity management |
+| `git.clone` · `git.checkout` · `git.config` | Repository setup with credentials + submodules |
+| `container.image` · `container` | Container build / run |
+| `repo.search` · `repo.tree` · `repo.patch` | Code-scoped operations for agents |
+| `wait.{port,http,file,command}` | Synchronization primitives |
+| `shell` · `cmd` · `assert` · `log` | Escape hatches + control |
+
+See the full [actions reference](https://mooncake.alehatsman.com/guide/config/actions/).
+
+**Auto-detected facts**: `{{os}}`, `{{arch}}`, `{{cpu_cores}}`,
+`{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`.
+Run `mooncake facts` to see all.
+
+**Control flow**: `when:`, `with_items:`, `with_filetree:`, `tags:`,
+`as_user:`, `--peer-filter tag=os=darwin` for fleet apply.
+
+## Personal fleet
+
+Drive plans across the machines you already own — no hub, no SaaS,
+peer-to-peer.
 
 ```bash
-mooncake facts  # See all available facts
+# Bring a fresh box into the fleet (8-step bootstrap: SSH, install,
+# systemd/launchd unit, start, verify, pair).
+mooncake fleet bootstrap aleh@new-laptop
+
+# Apply a plan across every peer.
+mooncake fleet apply ~/dotfiles/config.yml
+
+# Apply only to darwin peers.
+mooncake fleet apply ~/dotfiles/config.yml --peer-filter tag=os=darwin
+
+# Live status table.
+mooncake fleet status
+
+# Reattach to in-flight runs across the fleet.
+mooncake fleet logs --all
 ```
 
-**Control Flow**: Conditionals (`when`), loops (`with_items`, `with_filetree`), tags, sudo
-
-## Why AI Agents Choose Mooncake
-
-- **Safe by Default** - Dry-run validation, idempotency guarantees, rollback support
-- **Full Observability** - Structured events, audit trails, execution logs
-- **Validated Operations** - Schema validation, type checking, state verification
-- **AI-Friendly Format** - Simple YAML that any AI can generate and understand
-- **Zero Dependencies** - Single binary, no Python, no modules, no setup
-- **Cross-Platform** - Linux, macOS, Windows with unified interface
-- **Dry-run Everything** - Preview all changes before applying
-- **Declarative** - Describe desired state, not steps to get there
+The fleet plumbing is real `golang.org/x/crypto/ssh` + SFTP for
+bootstrap, agentd over HTTP+SSE for everyday transport. See
+[`docs-working/epics/epic-personal-fleet.md`](docs-working/epics/epic-personal-fleet.md)
+for the design rationale.
 
 ## Comparison
 
-| Feature | Mooncake | Ansible | Shell Scripts |
-|---------|----------|---------|---------------|
-| **Setup** | Single binary | Python + modules | Text editor |
-| **Dependencies** | None | Python, modules | System tools |
-| **AI Agent Friendly** | Native support | Complex | Unsafe |
-| **Dry-run** | `mooncake apply --dry-run` | Check mode | Manual |
-| **Idempotency** | Guaranteed | Yes | Manual |
-| **Cross-platform** | Built-in | Limited | OS-specific |
-| **Best For** | AI agents, dotfiles | Enterprise automation | Quick tasks |
+| Capability | Mooncake | Ansible | Shell scripts |
+|---|---|---|---|
+| Single-binary install | ✓ | Python + modules | n/a |
+| Idempotent typed actions | ✓ (40+ with Reverse) | ✓ (untyped) | ✗ |
+| Dry-run with structural diffs | ✓ `plan --diff` | partial (check mode) | ✗ |
+| **Transactions with auto-revert** | ✓ `transaction:` | ✗ | ✗ |
+| **Secret refs that don't leak** | ✓ `!secret env:KEY` | partial (Vault module) | ✗ |
+| Reactive triggers without registry | ✓ `on_change:` | partial (`notify:` + handlers) | ✗ |
+| Cross-platform single config | Linux + macOS + Windows | Limited Windows | OS-specific |
+| Designed for AI agent use | ✓ typed ABI + MCP server | ✗ untyped | ✗ unsafe |
+| Personal-fleet peer-to-peer | ✓ `fleet apply` | hub-style (AWX) | n/a |
+
+Mooncake isn't trying to replace Ansible at enterprise scale — it
+ships the primitives Ansible doesn't have (typed Reverse, transaction
+blocks, typed secrets, agent-safe ABI) while staying a single binary.
 
 ## Documentation
 
-**[Full Documentation](https://mooncake.alehatsman.com)** - Complete guide with examples
+**[Full documentation](https://mooncake.alehatsman.com)** — guides,
+action reference, AI specification.
 
 Quick links:
-- **[Guide](https://mooncake.alehatsman.com/guide/core-concepts/)** - Core concepts and how it works
-- **[Actions](https://mooncake.alehatsman.com/guide/config/actions/)** - All available actions
-- **[Complete Reference](https://mooncake.alehatsman.com/guide/config/reference/)** - All properties and types
-- **[AI Specification](https://mooncake.alehatsman.com/ai-specification/)** - For AI agents and LLMs
-- **[Presets](https://mooncake.alehatsman.com/guide/presets/)** - Reusable workflows
+- [Core concepts](https://mooncake.alehatsman.com/guide/core-concepts/)
+- [Actions reference](https://mooncake.alehatsman.com/guide/config/actions/)
+- [Complete reference](https://mooncake.alehatsman.com/guide/config/reference/)
+- [AI / LLM specification](https://mooncake.alehatsman.com/ai-specification/)
+- [Presets](https://mooncake.alehatsman.com/guide/presets/) — 330+ built-in workflows
 
-### Local Examples
+### Local examples
 
 The [`examples/`](examples/) directory has a curated learning path —
-see **[examples/README.md](examples/README.md)** for the ordered tour.
+see [`examples/README.md`](examples/README.md) for the ordered tour.
+Notable demos for the agent-safety story:
+
+- [`examples/transactions/rollback-demo.yml`](examples/transactions/rollback-demo.yml) — deliberate failure shows auto-revert in action
+- [`examples/secrets/env-secret.yml`](examples/secrets/env-secret.yml) — `!secret env:APP_TOKEN` with redaction
+- [`examples/triggers/on-change-config-reload.yml`](examples/triggers/on-change-config-reload.yml) — reactive reload pattern
 
 ```bash
-# Clone and try
 git clone https://github.com/alehatsman/mooncake.git
 cd mooncake
 
-# Run Hello World
 mooncake apply --config examples/hello-world/config.yml
-
-# Browse the curated path
-cat examples/README.md
-```
-
-## Common Use Cases
-
-**Dotfiles Management**
-```yaml
-- name: Deploy dotfiles
-  shell: cp "{{item.src}}" "~/{{item.name}}"
-  with_filetree: ./dotfiles
-  when: item.is_dir == false
-```
-
-**Development Environment Setup**
-```yaml
-- vars:
-    packages: [neovim, ripgrep, fzf, tmux]
-
-- name: Install dev tools
-  shell: brew install {{item}}
-  with_items: "{{packages}}"
-  when: os == "darwin"
-```
-
-**Multi-OS Configuration**
-```yaml
-- name: Install on Linux
-  shell: apt install neovim
-  become: true
-  when: os == "linux"
-
-- name: Install on macOS
-  shell: brew install neovim
-  when: os == "darwin"
+cat examples/README.md  # ordered learning path
 ```
 
 ## Testing
 
-Thoroughly tested across multiple platforms:
-- **Linux**: Ubuntu, Debian, Alpine, Fedora
-- **macOS**: Intel and Apple Silicon
-- **Windows**: Windows Server
-
-See [Testing Documentation](docs/testing/README.md) for details.
+Tested across Linux (Ubuntu, Debian, Alpine, Fedora, Arch), macOS
+(Intel + Apple Silicon), and Windows Server.
+See [testing docs](docs-next/testing/README.md).
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [Report bugs](https://github.com/alehatsman/mooncake/issues)
 - [Request features](https://github.com/alehatsman/mooncake/issues)
-- [Roadmap](docs/development/roadmap.md)
+- [Roadmap](docs-next/development/roadmap.md)
 
 ## License
 
-MIT License - Copyright (c) 2026 Aleh Atsman
-
-See [LICENSE](LICENSE) file for details.
+MIT — Copyright (c) 2026 Aleh Atsman. See [LICENSE](LICENSE).
 
 ---
 
-**[Read the Full Documentation](https://mooncake.alehatsman.com)** for detailed guides, examples, and reference materials.
+**[Read the full documentation](https://mooncake.alehatsman.com)** for
+detailed guides, examples, and reference materials.
