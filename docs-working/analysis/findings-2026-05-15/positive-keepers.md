@@ -457,6 +457,32 @@ Properly compares content + mode. Don't regress.
 
 ---
 
+## ★ `pkg.hold` / `pkg.upgrade` / `pkg.repo` — typed package management
+
+```
+$ mooncake step "pkg.hold: { name: bash, state: held }"
+{"changed": true, "manager": "apt", "holding": ["bash"], "unholding": null, "targets": ["bash"]}
+
+$ mooncake step "pkg.hold: { name: bash, state: held }"   # run 2
+{"changed": false, "manager": "apt", "holding": null, "unholding": null, "targets": ["bash"]}
+
+$ mooncake step --dry-run "pkg.upgrade: { names: [bash] }"
+{"changed": false, "manager": "apt", "attempted": ["bash"], "autoremove": false}
+
+$ mooncake step "pkg.repo: { name: docker, apt: {...}, state: absent }"
+{"changed": false, "operation": "noop", "name": "docker", "manager": "apt"}
+```
+
+All three:
+- Idempotent (`changed: false` on no-op)
+- Return distinct `holding/unholding/attempted/operation` signals (better than just a bool)
+- Honest `manager: "apt"` so callers know which path ran
+
+Same `operation:` signal pattern as `os.group` — solid convention,
+extend to all stateful actions.
+
+---
+
 ## ★ `os.group` clean lifecycle with `operation:` signal
 
 ```json
