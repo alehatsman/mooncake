@@ -1116,6 +1116,14 @@ type ObserveDisk struct {
 	Path string `yaml:"path" json:"path,omitempty"` // Filesystem path (default: "/")
 }
 
+// ObserveGPU is the spec-62 single-shot read of GPU utilization +
+// memory. Wraps the shared internal/metrics collector so /v1/metrics
+// and observe.gpu share one nvidia-smi/powermetrics sample. Index
+// selects one GPU; unset returns all detected with an aggregate view.
+type ObserveGPU struct {
+	Index *int `yaml:"index" json:"index,omitempty"` // Specific GPU index (default: all)
+}
+
 // WaitPort waits for a TCP port to accept connections.
 // Useful for orchestrating service start → port open → next step.
 type WaitPort struct {
@@ -1261,6 +1269,7 @@ type Step struct {
 	ObserveCPU       *ObserveCPU             `yaml:"observe.cpu"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
 	ObserveMemory    *ObserveMemory          `yaml:"observe.memory"    json:"observe.memory,omitempty"    action:"observe.memory"`
 	ObserveDisk      *ObserveDisk            `yaml:"observe.disk"      json:"observe.disk,omitempty"      action:"observe.disk"`
+	ObserveGPU       *ObserveGPU             `yaml:"observe.gpu"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
 	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
 	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
 	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
@@ -1674,6 +1683,7 @@ func (s *Step) Clone() *Step {
 		ObserveCPU:       s.ObserveCPU,
 		ObserveMemory:    s.ObserveMemory,
 		ObserveDisk:      s.ObserveDisk,
+		ObserveGPU:       s.ObserveGPU,
 		WaitPort:         s.WaitPort,
 		WaitHTTP:         s.WaitHTTP,
 		WaitFile:         s.WaitFile,
