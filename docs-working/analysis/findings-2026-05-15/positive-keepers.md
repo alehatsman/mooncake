@@ -355,6 +355,86 @@ text.* actions should mirror this idempotency story (see #47).
 
 ---
 
+## ★ `on_change:` hooks fire only on real changes — clean reactive triggers
+
+```yaml
+- file.write:
+    path: /tmp/oc-target.txt
+    content: "v1\n"
+  on_change:
+    - file.write: { path: /tmp/oc-reacted.txt, content: "fired\n" }
+    - shell: echo reacted >> /tmp/oc-shell.log
+```
+
+Run 1 (parent changes):
+```
+~ write a file (will change)
+~ react to change
+~ also reacts
+RECAP  changed=3
+```
+
+Run 2 (parent no-op):
+```
+✓ write a file (will change)
+- react to change [on_change: parent step-0001 did not change]
+- also reacts [on_change: parent step-0001 did not change]
+RECAP  ok=1  changed=0  skipped=2
+```
+
+Beautifully clean: parent's `changed=false` → children skipped with
+descriptive reason. The exact reactive-triggers semantics the spec
+promised. Keep.
+
+---
+
+## ★ `file.copy` properly idempotent (content + mode aware)
+
+```
+$ echo "src" > /tmp/src.txt
+$ mooncake step "file.copy: { src: /tmp/src.txt, dest: /tmp/dst.txt, mode: \"0644\" }"
+{"changed": true}
+$ mooncake step "file.copy: { src: /tmp/src.txt, dest: /tmp/dst.txt, mode: \"0644\" }"
+{"changed": false}    ← no-op
+$ echo "src2" > /tmp/src.txt
+$ mooncake step "file.copy: { src: /tmp/src.txt, dest: /tmp/dst.txt, mode: \"0644\" }"
+{"changed": true}     ← detects content change
+```
+
+Properly compares content + mode. Don't regress.
+
+---
+
+## ★ `os.group` clean lifecycle with `operation:` signal
+
+```json
+{"action": "os.group", "changed": true, "name": "testers", "operation": "create"}
+{"action": "os.group", "changed": false, "name": "testers", "operation": "noop"}
+{"action": "os.group", "changed": true, "name": "testers", "operation": "remove"}
+```
+
+The `operation: create|noop|remove` field is a clear signal that
+**other actions could adopt**. Right now most actions surface this
+only through the `changed` boolean + log lines; an explicit
+`operation:` enum is friendlier for agents and dashboards.
+
+---
+
+## ★ `when:` expression engine is comprehensive
+
+Tested combinations that all evaluate correctly:
+- `when: debug_mode` (simple bool)
+- `when: count > 1` (numeric comparison)
+- `when: role == "web"` (string equality)
+- `when: debug_mode and count > 0` (AND)
+- `when: role == "api" or count == 3` (OR)
+- `when: not (role == "api")` (NOT with parens)
+- `when: os == "linux"` (fact comparison)
+
+Skipped step shows the failed expression: `- should NOT run [when: role == "api"]`.
+
+---
+
 ## ★ `text.delete_range` validation error format — best in the CLI
 
 ```
