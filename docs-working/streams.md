@@ -34,8 +34,8 @@ ABI lands.
 | 26 | `git.clone` (incl. credentials + submodules) · `git.checkout` · `git.config` | P1–P4 shipped; P5 (ABI hooks) blocked on 22; P6 (docs) pending |
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped; P4 (ABI hooks) blocked on 22; P5 (docs) pending |
 | 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P5 shipped (ufw driver only; nftables / firewalld deferred); P6 (ABI hooks) blocked on 22 |
-| 37 | Step output capture — collision + plan-mode policy | drafted; prereq for 38 |
-| 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
+| 37 | Step output capture — collision + plan-mode policy | ✅ shipped (`901e013`/`2ee98e7`) |
+| 38 | `read.json` / `read.yaml` | ✅ shipped (`8549c33`/`2ee98e7`) |
 
 **Suggested order:** 37 → 38 (read-side observation gap) → 22 (against a real
 consumer — likely spec-30 transactions as the first concrete user of
@@ -201,7 +201,7 @@ Stream 4 is the most independent — it is primarily UX work on the existing ker
 
 | Priority | Stream | First spec |
 |---|---|---|
-| 1 | Action Surface | **specs 37 + 38** (read.json / read.yaml) — closes the observation gap; concrete user value, no ABI bets |
+| 1 | Action Surface | **specs 37 + 38** (read.json / read.yaml) — ✅ shipped (`901e013`/`8549c33`/`2ee98e7`) |
 | 2 | Safe Agent Runtime | spec-30 (transactions) — first real consumer of `Reverse`, drives the spec-22 design |
 | 3 | Action Surface | spec-22 (extended ABI) once spec-30 has the use case to design against |
 | 4 | Fleet & Cluster | C1 spec (node registry) — write spec first |

@@ -48,18 +48,13 @@ Effort: S (a docs pass, not code). No handler changes.
 
 ---
 
-### P3 — Spec-37 + Spec-38: step output capture + `read.json` / `read.yaml`
+### ~~P3 — Spec-37 + Spec-38: step output capture + `read.json` / `read.yaml`~~ ✅ shipped
 
-**Why third**: closes the single most common "workaround" pattern — shelling
-out to `jq` / `yq` to read a value from a file. In sandboxed agent mode
-(Stream 2 goal), `shell:` disappears and these workarounds break completely.
-
-- Spec-37 (XS, 1 day): define collision policy and plan-mode write policy
-  for `as:` captures. No new actions; pure executor policy.
-- Spec-38 (S, 2–3 days): add `read.json` and `read.yaml` actions. Depends
-  on spec-37's `CaptureInPlan` mechanism.
-
-Both are self-contained. No handler ABI changes.
+Both shipped together (`901e013` spec-37, `8549c33` spec-38, merged in
+`2ee98e7`). The "shell out to jq/yq to read a value from a file"
+workaround now has a typed, redactable, plan-mode-friendly
+alternative. spec-37's `CaptureInPlan` gate is now part of the
+framework; the spec-38 readers are its first real consumer.
 
 ---
 
@@ -164,7 +159,7 @@ Phases:
 | ~~P0~~ | ~~Bug: symlink force plan-mode crash~~ ✅ `fbc993d` | XS | Bug |
 | **P1** | Spec-22 phase 8: docs (phase 7 ✅ `92b58d8`) | S | Stream 2 |
 | ~~P2~~ | ~~Spec-23 §2: try/catch/finally~~ ✅ `f598238`/`7b4d62a` | M | Stream 2 |
-| **P3** | Spec-37 + 38: output capture + read.json/yaml | XS + S | Stream 1 |
+| ~~P3~~ | ~~Spec-37 + 38: output capture + read.json/yaml~~ ✅ `901e013`/`8549c33`/`2ee98e7` | XS + S | Stream 1 |
 | **P4** | Spec-24 P6 + 25 P5: pkg/text ABI hooks | S each | Stream 1 |
 | **P5** | Spec-26 + 27: git/identity ABI hooks | S each | Stream 1 |
 | **P6** | Spec-45 PR13: `fleet init` interactive | S | Stream 3 |
