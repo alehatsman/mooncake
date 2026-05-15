@@ -1601,6 +1601,18 @@ func (s *Step) RetryDelayDuration() string {
 	return s.Retry.Delay
 }
 
+// RetryBackoffStrategy returns the configured backoff strategy, or
+// "fixed" (the default) when unset. The Retry.Backoff field was
+// declared in the schema but never read — `linear` and `exponential`
+// were silently ignored and every retry slept for the bare delay,
+// defeating the point of backoff for external-API integrations.
+func (s *Step) RetryBackoffStrategy() string {
+	if s.Retry == nil || s.Retry.Backoff == "" {
+		return "fixed"
+	}
+	return s.Retry.Backoff
+}
+
 // ShouldBecome reports whether the step requests privilege escalation.
 // True iff AsUser is non-empty (spec-21 collapsed become/become_user) AND
 // the current process is not already running as the target user. When the
