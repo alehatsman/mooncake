@@ -14,14 +14,14 @@
 
 - name: "Example 1: Verify command succeeds"
   assert:
-    cmd:
+    command:
       cmd: echo "test"
       exit_code: 0
   tags: [command]
 
 - name: "Example 2: Check Docker is installed (may fail)"
   assert:
-    cmd:
+    command:
       cmd: docker --version
       exit_code: 0
   when: false  # Set to true if Docker is installed
@@ -29,14 +29,14 @@
 
 - name: "Example 3: Verify directory exists via command"
   assert:
-    cmd:
+    command:
       cmd: test -d /tmp
       exit_code: 0
   tags: [command]
 
 - name: "Example 4: Check command returns specific exit code"
   assert:
-    cmd:
+    command:
       cmd: grep "nonexistent-string" /etc/hosts
       exit_code: 1  # grep returns 1 when no match found
   tags: [command]
@@ -48,7 +48,7 @@
 
 - name: "Example 6: Assert on registered output"
   assert:
-    cmd:
+    command:
       cmd: "echo {{ current_user.stdout }}"
       exit_code: 0
   tags: [command]
@@ -68,42 +68,42 @@
 
 - name: "Example 7: Check file exists"
   assert:
-    file.write:
+    file:
       path: /etc/hosts
       exists: true
   tags: [file]
 
 - name: "Example 8: Check file doesn't exist"
   assert:
-    file.write:
+    file:
       path: /tmp/this-should-not-exist-12345.txt
       exists: false
   tags: [file]
 
 - name: "Example 9: Verify file contains string"
   assert:
-    file.write:
+    file:
       path: /etc/hosts
       contains: "localhost"
   tags: [file]
 
 - name: "Example 10: Check test file content"
   assert:
-    file.write:
+    file:
       path: /tmp/mooncake-assert-test.txt
       contains: "localhost"
   tags: [file]
 
 - name: "Example 11: Verify exact file content"
   assert:
-    file.write:
+    file:
       path: /tmp/mooncake-assert-test.txt
       content: "This file contains the word localhost"
   tags: [file]
 
 - name: "Example 12: Check file permissions"
   assert:
-    file.write:
+    file:
       path: /tmp/mooncake-assert-test.txt
       mode: "0644"
   tags: [file]
@@ -166,21 +166,21 @@
 
 - name: "Example 18: Assert with variables"
   assert:
-    file.write:
+    file:
       path: "{{ test_file }}"
       exists: true
   tags: [variables]
 
 - name: "Example 19: Assert file mode with variable"
   assert:
-    file.write:
+    file:
       path: "{{ test_file }}"
       mode: "{{ expected_mode }}"
   tags: [variables]
 
 - name: "Example 20: Assert content with variable"
   assert:
-    file.write:
+    file:
       path: "{{ test_file }}"
       contains: "{{ search_term }}"
   tags: [variables]
@@ -191,14 +191,14 @@
 
 - name: "Example 21: Assert and register result"
   assert:
-    cmd:
+    command:
       cmd: echo "success"
       exit_code: 0
   as: assert_result
   tags: [register]
 
 - name: "Example 22: Show assertion result"
-  shell: echo "Assertion changed: {{ assert_result.changed }}"
+  shell: 'echo "Assertion changed: {{ assert_result.changed }}"'
   tags: [register]
 
 - name: "Example 23: Verify changed is always false"
@@ -211,7 +211,7 @@
 
 - name: "Example 24: Assert on Linux only"
   assert:
-    cmd:
+    command:
       cmd: which systemctl
       exit_code: 0
   when: os == "linux"
@@ -219,7 +219,7 @@
 
 - name: "Example 25: Assert on macOS only"
   assert:
-    cmd:
+    command:
       cmd: which launchctl
       exit_code: 0
   when: os == "darwin"
@@ -238,7 +238,7 @@
 
 - name: "Example 26: Verify multiple commands exist"
   assert:
-    cmd:
+    command:
       cmd: which {{ item }}
       exit_code: 0
   for_each: "{{ required_commands }}"
@@ -252,7 +252,7 @@
 
 - name: "Example 27: Verify multiple paths exist"
   assert:
-    file.write:
+    file:
       path: "{{ item }}"
       exists: true
   for_each: "{{ files_to_check }}"
@@ -268,14 +268,14 @@
 
 - name: "Example 29: Verify OS is supported"
   assert:
-    cmd:
+    command:
       cmd: "uname -s"
       exit_code: 0
   tags: [real-world]
 
 - name: "Example 30: Check disk space"
   assert:
-    cmd:
+    command:
       cmd: test -d /tmp
       exit_code: 0
   tags: [real-world]
@@ -306,21 +306,21 @@
 
 - name: "Example 34: Verify application binary exists"
   assert:
-    file.write:
+    file:
       path: /tmp/mock-app/app
       exists: true
   tags: [deployment]
 
 - name: "Example 35: Verify binary is executable"
   assert:
-    file.write:
+    file:
       path: /tmp/mock-app/app
       mode: "0755"
   tags: [deployment]
 
 - name: "Example 36: Verify config exists"
   assert:
-    file.write:
+    file:
       path: /tmp/mock-app/config.yml
       exists: true
   tags: [deployment]
@@ -343,7 +343,7 @@
 
 - name: "Example 39: Assert secure permissions"
   assert:
-    file.write:
+    file:
       path: /tmp/secure-file.txt
       mode: "0600"
   tags: [security]
@@ -362,7 +362,7 @@
 
 - name: "Example 42: Check service readiness"
   assert:
-    cmd:
+    command:
       cmd: echo "service ready"
       exit_code: 0
   retry: {attempts: 5, delay: "1s"}
@@ -374,7 +374,7 @@
 
 - name: "Example 43: This assertion will pass"
   assert:
-    cmd:
+    command:
       cmd: echo "test"
       exit_code: 0
   tags: [fail-fast]
