@@ -252,6 +252,16 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 		}
 	}
 
+	// MT-77 regression of MT-27: if the real failure is an
+	// additionalProperties violation buried inside the oneOf tree, the
+	// vocabulary collector finds no /required causes and returns "",
+	// so the message reads "Step must have exactly one action ()" —
+	// useless. Surface the unknown-field error directly so the
+	// diagnostic points at the typo instead of an empty enum.
+	if msg := findUnknownPropertyMessage(err); msg != "" {
+		return msg
+	}
+
 	allowed := collectOneOfActionNames(err)
 
 	if hasRequiredFailure && !hasNotFailure {
@@ -261,6 +271,32 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: " + allowed
 	}
 	return "Step must have exactly one action (" + allowed + ")"
+}
+
+// findUnknownPropertyMessage walks the validation error tree looking
+// for an additionalProperties failure. Returns the existing unknown-
+// field formatter's message when found; otherwise "". Used to short-
+// circuit the generic oneOf vocabulary message when the real problem
+// is a typo'd step-level field.
+func findUnknownPropertyMessage(err *jsonschema.ValidationError) string {
+	var found string
+	var walk func(e *jsonschema.ValidationError)
+	walk = func(e *jsonschema.ValidationError) {
+		if found != "" {
+			return
+		}
+		if strings.HasSuffix(e.KeywordLocation, "/additionalProperties") {
+			if names := extractRequiredNames(e.Message); len(names) > 0 {
+				found = formatAdditionalPropertiesError(e.Message, e.InstanceLocation)
+				return
+			}
+		}
+		for _, c := range e.Causes {
+			walk(c)
+		}
+	}
+	walk(err)
+	return found
 }
 
 // collectOneOfActionNames walks the oneOf validation error's causes and
