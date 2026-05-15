@@ -279,6 +279,52 @@ should accept `--format json` to forward that response verbatim.
 
 ---
 
+## #72 — Top-level dict YAML reports confusing "unknown field log" — LOW (DX)
+
+**Repro**:
+```yaml
+# /work/dict.yml — user forgot the leading dash; this is a dict not a list
+log:
+  msg: hi
+```
+
+```
+$ mooncake apply -c /work/dict.yml
+Error: /work/dict.yml
+  Line 1: unknown field `log` (likely a typo or a renamed field — see docs-next/guide/config/actions.md)
+```
+
+But `log` IS a valid action name. The real problem is that the file is
+a top-level dict instead of `[{log: ...}]` list. The "renamed/typo"
+hint sends users down the wrong path.
+
+**Fix**: detect top-level dict and emit a specific hint:
+```
+Error: /work/dict.yml expected a list of steps; got an object.
+  Add a leading `- ` to each step:
+  - log:
+      msg: hi
+```
+
+---
+
+## #73 — Empty config file says only "EOF" — LOW (DX)
+
+**Repro**:
+```
+$ > /work/empty.yml
+$ mooncake apply -c /work/empty.yml
+planner setup failed: failed to build plan: failed to read config: EOF
+```
+
+Same for whitespace-only files. Bare "EOF" is the yaml library's
+verbatim error. Could surface a specific message:
+```
+config file is empty: /work/empty.yml — expected a list of steps
+```
+
+---
+
 ## #71 — `mooncake doctor` reports "disk-space probe unsupported on this OS" on Linux — LOW (false negative)
 
 **Repro**:
