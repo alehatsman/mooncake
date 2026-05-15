@@ -1,6 +1,6 @@
 # Spec 56: `fleet bootstrap` for Windows targets
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Status:** Draft
 **Effort:** M (~5 days — most cost is in the scheduled-task XML template + idempotent re-apply path)
 **Value:** Medium-high — removes the "Windows host setup lives in dotfiles

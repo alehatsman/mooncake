@@ -436,7 +436,7 @@ substitutes — but worth keeping side-by-side when prioritizing.
 
 ## Recommended next reads
 
-- [`epics/epic-personal-fleet.md`](../epics/epic-personal-fleet.md)
+- [`epics/done/epic-personal-fleet.md`](../epics/done/epic-personal-fleet.md)
   — the solo-dev framing this issue largely inhabits.
 - [`epics/epic-cluster-management.md`](../epics/epic-cluster-management.md)
   — the platform-team framing for the bigger fleet items

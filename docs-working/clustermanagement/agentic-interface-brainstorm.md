@@ -192,7 +192,7 @@ adoption hook.
 
 ## Cross-references
 
-- `epics/epic-personal-fleet.md` — Stream-3 framing this builds on.
+- `epics/done/epic-personal-fleet.md` — Stream-3 framing this builds on.
 - `streams.md` — the unwritten future-spec list mentions policy DSL,
   plan signing, per-action quotas, egress policy, sandbox mode, cost
   classifier, deterministic replay; several map onto items above.

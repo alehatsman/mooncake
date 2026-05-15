@@ -1,6 +1,6 @@
 # Spec 40: SSH Bootstrap Transport
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P2.
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md), sub-epic P2.
 **Status:** Draft
 **Effort:** M (~3–5 days)
 **Value:** High — eliminates the bootstrap-step manual work. A fresh box

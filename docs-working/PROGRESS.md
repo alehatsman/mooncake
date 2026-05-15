@@ -106,14 +106,17 @@ deterministic replay) and in phase 8 of spec-22 (docs).
 
 ### Stream 3 — Fleet & Cluster Management  *(the monetizable wedge)*
 
-Personal Fleet (sub-stream): **13/14 PRs shipped end-to-end** as of
-2026-05-15.
+Personal Fleet (sub-stream): **🎉 14/14 PRs shipped end-to-end** as of
+2026-05-15. Epic moved to
+[`epics/done/epic-personal-fleet.md`](epics/done/epic-personal-fleet.md);
+this stream's flagship is closed.
 
 | Phase | PRs | State |
 |---|---|---|
 | **A** (one peer end-to-end) | 1–5 | ✅ all shipped |
 | **B** (real fleet) | 6 multiplexer ✅, 7 status ✅, 8 logs/facts ✅, 9 native SSH driver ✅, 10 installer templates + 8-step bootstrap ✅, 11 bootstrap/pair ✅ | ✅ complete |
-| **C** (polish) | **12 mDNS ✅** (advertise + browse), 13 `fleet init` ⏳ (interactive flow), 14 overlays/tags ✅ | 2/3 |
+| **C** (polish) | **12 mDNS ✅** (advertise + browse), **13 `fleet init` ✅** (`f3d64c9` — interactive flow), 14 overlays/tags ✅ | ✅ complete |
+| **Post-plan QoL** | `fleet exec` (spec-52, `7e855b0`), `fleet ps` (spec-54, `df3d4dd`), `fleet watch` (spec-53, `e569ad3`), `fleet upgrade`, `fleet doctor` ladder, `fleet apply <machine>`, mDNS slice | ✅ shipped on top |
 
 **Post-PR-14 follow-up specs** (not in original 14-PR plan, drafted from real-world use):
 

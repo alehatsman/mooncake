@@ -1,6 +1,6 @@
 # Spec 54: Fleet PS — list in-flight runs across peers
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Status:** Draft
 **Effort:** XS (~1 day)
 **Value:** Small but daily — answers "is anyone applying anything to my

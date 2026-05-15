@@ -1,6 +1,6 @@
 # Spec 42: `fleet status`, `fleet logs`, `fleet facts`
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P4.
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md), sub-epic P4.
 **Status:** Draft
 **Effort:** S (~3 days)
 **Value:** Medium — the "at-a-glance" command that lets you check on the

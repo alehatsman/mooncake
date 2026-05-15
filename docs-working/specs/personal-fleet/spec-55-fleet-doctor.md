@@ -1,6 +1,6 @@
 # Spec 55: Fleet Doctor — health check across peers
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 Brainstormed in `docs-working/clustermanagement/qol-features.md` §"fleet doctor".
 **Status:** Draft
 **Effort:** S (~3 days)

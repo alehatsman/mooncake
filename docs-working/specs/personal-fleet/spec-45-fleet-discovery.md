@@ -1,6 +1,6 @@
 # Spec 41: Fleet Discovery — mDNS + SSH Config + Static Peers
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P3.
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md), sub-epic P3.
 **Status:** Draft
 **Effort:** M (~1 week)
 **Value:** High — turns "how do I add my four boxes" from a manual TOML-

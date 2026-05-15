@@ -1,6 +1,6 @@
 # Spec 58: Fleet Drift — periodic plan-conformance check + `fleet drift` report
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Sibling framing:** Cluster Management — [`epics/epic-cluster-management.md`](../../epics/epic-cluster-management.md).
 Brainstormed in:
 

@@ -102,9 +102,12 @@ They are complementary, not competing.
 
 - **Enterprise** (`epics/epic-cluster-management.md`) — central hub, RBAC,
   drift heatmaps, AI remediation. For platform teams running 50–10k nodes.
-- **Personal Fleet** (`epics/epic-personal-fleet.md`) — peer-to-peer, no hub,
+- **Personal Fleet** (`epics/done/epic-personal-fleet.md`) — peer-to-peer, no hub,
   trust-on-first-use. For solo devs running their own 1–10 boxes. The DX
-  funnel that gets devs onto Mooncake before they bring it to work.
+  funnel that gets devs onto Mooncake before they bring it to work. **✅
+  Shipped — all 14 PRs landed on `master` as of 2026-05-15, plus the
+  post-PR-14 QoL bundle (`fleet exec` / `ps` / `watch` / `init` /
+  `upgrade` / `doctor` / `apply <machine>` / mDNS).**
 
 **Enterprise sub-epics:**
 
@@ -142,10 +145,11 @@ and 3.
 **Audience:** Individual developers managing personal machines, dotfiles, dev
 environments.
 
-**Flagship epic:** [`epics/epic-personal-fleet.md`](epics/epic-personal-fleet.md)
+**Flagship epic (✅ shipped):** [`epics/done/epic-personal-fleet.md`](epics/done/epic-personal-fleet.md)
 — "multi-machine sync" made concrete: `mooncake fleet apply` across your own
 1–10 boxes, interleaved logs in your terminal, peer-to-peer, no hub. Sits at
 the intersection of Stream 4 (this stream) and Stream 3 (fleet plumbing).
+**14/14 PRs landed on `master` (2026-05-15).**
 
 **Other future work (not yet specced):**
 

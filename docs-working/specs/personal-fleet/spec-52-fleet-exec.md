@@ -1,6 +1,6 @@
 # Spec 52: Fleet Exec — ad-hoc shell across peers
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Status:** Draft
 **Effort:** S (~2–3 days)
 **Value:** High — closes the single biggest fleet DX gap noted in

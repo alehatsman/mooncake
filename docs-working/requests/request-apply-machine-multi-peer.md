@@ -2,7 +2,7 @@
 
 **Status**: User request, not yet specced
 **Filed**: 2026-05-14 by aleh (from the controller side, sitting at x1)
-**Related**: [`epics/epic-personal-fleet.md`](../epics/epic-personal-fleet.md) — this is a concrete deliverable for Stream 4 DX.
+**Related**: [`epics/done/epic-personal-fleet.md`](../epics/done/epic-personal-fleet.md) — this is a concrete deliverable for Stream 4 DX.
 **Affects**: `fleet apply` ergonomics, controller-side UX, `peers.toml` shape.
 
 ---
@@ -189,7 +189,7 @@ during specing.
 ## Why this lands in Stream 4 / Personal Fleet
 
 This is exactly the "personal fleet" thesis from
-[`epic-personal-fleet.md`](../epics/epic-personal-fleet.md):
+[`epic-personal-fleet.md`](../epics/done/epic-personal-fleet.md):
 
 > Mooncake should make controlling 1–10 personal machines from a
 > single terminal feel as natural as controlling one.
@@ -206,7 +206,7 @@ A clean answer here makes `mooncake apply main_pc` feel as obvious as
 
 ## Concrete next step for whoever picks this up
 
-1. Read [`epic-personal-fleet.md`](../epics/epic-personal-fleet.md)
+1. Read [`epic-personal-fleet.md`](../epics/done/epic-personal-fleet.md)
    for the broader Stream 4 framing.
 2. Decide between manifest-in-dotfiles (option a) vs
    peers.toml-extension (option b) vs hybrid — see "Shape of the

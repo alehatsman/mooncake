@@ -1,6 +1,6 @@
 # Spec 43: `fleet bootstrap` UX + Pairing
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P5.
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md), sub-epic P5.
 **Status:** Draft
 **Effort:** S (~2–3 days)
 **Value:** High — the "add a new box in 60 seconds" demo moment. This spec

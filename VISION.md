@@ -471,7 +471,7 @@ GitOps for software state at fleet scale. **Personal-fleet sub-stream
 done**: `fleet apply/status/logs/facts/bootstrap` across N peers,
 peer-to-peer, no hub, validated against a real WSL + Windows testbed.
 **Enterprise sub-stream deferred** (no users asking for hub yet). See
-`docs-working/epics/epic-personal-fleet.md` and
+`docs-working/epics/done/epic-personal-fleet.md` and
 `docs-working/epics/epic-cluster-management.md`.
 
 **Stream 4 — Developer Experience**: The funnel. `mooncake doctor`, drift

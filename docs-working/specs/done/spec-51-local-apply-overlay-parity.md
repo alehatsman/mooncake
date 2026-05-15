@@ -1,6 +1,6 @@
 # Spec 51: Local-Apply Overlay Parity
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Status:** Draft (follow-up to spec-48 PR 14)
 **Effort:** XS (~1 day)
 **Value:** Small but real — closes the asymmetry where `vars/by-host/<name>.yml`

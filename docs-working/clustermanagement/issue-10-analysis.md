@@ -816,7 +816,7 @@ Restated from §4, in the form the issue requested:
 - [`agentic-interface-brainstorm.md`](./agentic-interface-brainstorm.md)
   — agent-centric primitives (typed observability, federated MCP,
   reconciliation loops, capability-scoped trust).
-- [`../epics/epic-personal-fleet.md`](../epics/epic-personal-fleet.md)
+- [`../epics/done/epic-personal-fleet.md`](../epics/done/epic-personal-fleet.md)
   — the solo-dev scope where most of this work lives.
 - [`../epics/epic-cluster-management.md`](../epics/epic-cluster-management.md)
   — the platform-team scope (boundary: "above the OS").

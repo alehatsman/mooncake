@@ -147,7 +147,7 @@ mooncake fleet logs --all
 
 The fleet plumbing is real `golang.org/x/crypto/ssh` + SFTP for
 bootstrap, agentd over HTTP+SSE for everyday transport. See
-[`docs-working/epics/epic-personal-fleet.md`](docs-working/epics/epic-personal-fleet.md)
+[`docs-working/epics/done/epic-personal-fleet.md`](docs-working/epics/done/epic-personal-fleet.md)
 for the design rationale.
 
 ## Comparison

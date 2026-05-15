@@ -1,9 +1,32 @@
 # Epic: Personal Fleet — Mooncake for the Machines You Already Own
 
-> Status: brainstorming / future epic. Sibling to
-> [`epic-cluster-management.md`](epic-cluster-management.md): same primitives,
-> different audience. Iterate here before moving to formal specs under
-> `docs-working/specs/`.
+> # 🎉 SHIPPED — 14/14 PRs landed on master (2026-05-15)
+>
+> **All five Friday-evening-demo criteria are met.** One `peers.toml`,
+> `mooncake fleet apply config.yml` against N peers with interleaved
+> logs, `fleet status` for at-a-glance health, `fleet bootstrap` for
+> 60-second onboarding, and a per-host overlays layer for the
+> per-machine bits. Plus the post-PR-14 QoL bundle — `fleet exec` /
+> `fleet ps` / `fleet watch` / `fleet init` / `fleet upgrade` /
+> `fleet doctor` (probe ladder + SSH fallback) — built directly on
+> the substrate this epic specified.
+>
+> | Phase | PRs | Status |
+> |---|---|---|
+> | A — one peer end-to-end | 1–5 | ✅ |
+> | B — real fleet | 6–11 | ✅ |
+> | C — polish (mDNS, init, overlays) | 12–14 | ✅ |
+> | Post-plan QoL | spec-50, 51, 52, 53, 54, plus fleet doctor + upgrade + apply-machine + mDNS slice | ✅ |
+>
+> See [`../../specs/personal-fleet/implementation-order.md`](../../specs/personal-fleet/implementation-order.md)
+> for the per-PR landing record. The text below is preserved
+> verbatim as the original brainstorming doc — useful as a record of
+> the framing that drove the spec sequence; **not a roadmap**.
+
+> Status: ✅ done — moved to `docs-working/epics/done/`. Sibling to
+> [`epic-cluster-management.md`](../epic-cluster-management.md): same primitives,
+> different audience. Iteration happened under
+> `docs-working/specs/personal-fleet/` and `docs-working/specs/done/`.
 
 ---
 
@@ -19,7 +42,7 @@ are healthy and which have drifted. No hub, no auth server, no provisioning
 pipeline. Just `mooncake fleet apply` from any machine to any other.
 
 This epic is **the developer-experience layer** on top of agentd. The
-[enterprise cluster-management epic](epic-cluster-management.md) covers the
+[enterprise cluster-management epic](../epic-cluster-management.md) covers the
 *platform-team* fleet story (hub, RBAC, drift heatmaps, AI remediation). This
 one covers the *solo-developer* fleet story (peer-to-peer, no central server,
 "my own machines on my own network"). Same kernel, different scope, different

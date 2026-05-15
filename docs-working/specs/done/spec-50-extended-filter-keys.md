@@ -1,6 +1,6 @@
 # Spec 50: Extended Filter Keys for `--peer-filter` / `--step-filter`
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Status:** Draft (follow-up to spec-48 PR 14)
 **Effort:** S–M (~3–5 days depending on which keys land in v1)
 **Value:** Medium — `--peer-filter tag=<x>` covers the common case but

@@ -1,6 +1,6 @@
 # Spec 43: Fleet Network Transport + File Sync + `fleet apply`
 
-**Epic:** Personal Fleet — see [`../../epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P1.
+**Epic:** Personal Fleet — see [`../../epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md), sub-epic P1.
 **Status:** ✅ Shipped 2026-05-14. PR1-5 → 850b65c, PR6 (parallel multiplexer + ^C banner) → d17953f, post-merge polish (empty stdout, peer-filter typo warning, Windows config path, SSE race regression tests) → bd4695a.
 **Effort:** L (~1–2 weeks)
 **Value:** Very High — the everyday path. Turns the existing single-host

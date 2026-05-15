@@ -1,6 +1,6 @@
 # Spec 53: Fleet Watch — live SSE stream across peers
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md).
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md).
 **Status:** Draft
 **Effort:** S (~2 days)
 **Value:** Medium — closes the "what is the fleet doing *right now*" gap.

@@ -1,6 +1,6 @@
 # Spec 48: Per-Host Overlays + Filter Selectors
 
-**Epic:** Personal Fleet — see [`epics/epic-personal-fleet.md`](../../epics/epic-personal-fleet.md), sub-epic P6.
+**Epic:** Personal Fleet — see [`epics/done/epic-personal-fleet.md`](../../epics/done/epic-personal-fleet.md), sub-epic P6.
 **Status:** Draft (PR 14 in progress)
 **Effort:** S (~2–3 days)
 **Value:** Medium — the minimum-viable "same plan, different boxes" story.
