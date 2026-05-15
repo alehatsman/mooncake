@@ -251,6 +251,33 @@ for fleet-level run dashboards.
 
 ---
 
+## ★ `use:` preset parameter validation — enum + unknown-param checks
+
+```
+$ mooncake apply -c <use: { name: jq, with: { state: maybe } }>
+failed to expand preset jq: preset jq parameter validation failed:
+  parameter state has invalid value: got maybe, allowed values: [present absent]
+
+$ mooncake apply -c <use: { name: jq, with: { state: present, bogus_param: true } }>
+failed to expand preset jq: preset jq parameter validation failed:
+  unknown parameter bogus_param (preset jq does not define this parameter)
+
+$ mooncake apply -c <use: { name: nonexistent_xyz }>
+failed to expand preset nonexistent_xyz:
+  preset nonexistent_xyz not found in search paths:
+    [./presets /root/.mooncake/presets /usr/local/share/mooncake/presets /usr/share/mooncake/presets]
+```
+
+Three error paths exercised, all good:
+- Invalid enum value → lists allowed values
+- Unknown parameter → names the parameter and the preset
+- Missing preset → lists all search paths tried
+
+Same `additionalProperties: false` discipline as #44 (validator)
+at the preset-parameter layer. Don't regress.
+
+---
+
 ## ★ `vars.load` and `--vars` use last-write-wins layering
 
 ```
