@@ -1255,7 +1255,36 @@ func createApp() *cli.App {
 		},
 	}
 
+	// MT-66: by default urfave/cli prints the full help dump on a flag
+	// parse error (e.g. `mooncake apply --max-plan-age garbage`) — the
+	// real error scrolls off-screen above 100+ lines of usage. Set
+	// OnUsageError on the app and every command/subcommand so we just
+	// emit the error itself. The error surfaces via log.Fatal in main.
+	app.OnUsageError = quietUsageError
+	applyQuietUsageError(app.Commands)
+
 	return app
+}
+
+// quietUsageError suppresses urfave/cli's default "print full help on
+// any flag parse error" behavior. The error itself is informative;
+// the help dump just buries it. (MT-66)
+func quietUsageError(_ *cli.Context, err error, _ bool) error {
+	return err
+}
+
+// applyQuietUsageError walks the command tree and installs
+// quietUsageError on every command/subcommand that doesn't already
+// declare its own usage-error handler.
+func applyQuietUsageError(cmds []*cli.Command) {
+	for _, c := range cmds {
+		if c.OnUsageError == nil {
+			c.OnUsageError = quietUsageError
+		}
+		if len(c.Subcommands) > 0 {
+			applyQuietUsageError(c.Subcommands)
+		}
+	}
 }
 
 func main() {
