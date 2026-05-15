@@ -100,8 +100,14 @@ func (c *ConsoleSubscriber) renderText(event events.Event) {
 		}
 
 	case events.EventStepStdout, events.EventStepStderr:
-		// Output events are shown via debug logging, not in console subscriber
-		// to avoid duplication
+		// At -l debug stream the captured lines into the console so users
+		// see what their shell steps actually printed; otherwise stay quiet
+		// to keep the default UX uncluttered.
+		if c.logLevel <= DebugLevel {
+			if data, ok := event.Data.(events.StepOutputData); ok {
+				c.renderStepOutput(data, event.Type)
+			}
+		}
 		return
 
 	default:
@@ -151,6 +157,22 @@ func (c *ConsoleSubscriber) renderStepCompleted(data events.StepCompletedData) {
 	}
 
 	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, timing)
+}
+
+// renderStepOutput prints one line of captured stdout/stderr from a shell
+// step. Indented under the step marker and prefixed with a dim "|" so it
+// reads as inline output rather than a separate event. Only called at
+// debug log level.
+func (c *ConsoleSubscriber) renderStepOutput(data events.StepOutputData, et events.EventType) {
+	prefix := color.New(color.Faint).Sprint("|")
+	if et == events.EventStepStderr {
+		prefix = color.RedString("|")
+	}
+	line := data.Line
+	if c.redactor != nil {
+		line = c.redactor.Redact(line)
+	}
+	fmt.Printf("  %s %s\n", prefix, line)
 }
 
 // renderStepFailed renders a step.failed event
