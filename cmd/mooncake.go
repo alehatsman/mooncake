@@ -184,6 +184,10 @@ func applyFlags() []cli.Flag {
 			Aliases: []string{"t"},
 			Usage:   "Filter steps by tags (comma-separated)",
 		},
+		&cli.StringFlag{
+			Name:  "skip-tags",
+			Usage: "Exclude steps whose tags appear in this list (comma-separated). Composes with --tags via AND.",
+		},
 		&cli.BoolFlag{
 			Name:    "dry-run",
 			Aliases: []string{"n"},
@@ -274,6 +278,7 @@ func run(c *cli.Context) error {
 
 	// Parse tags from comma-separated string
 	tags := parseTags(c.String("tags"))
+	skipTags := parseTags(c.String("skip-tags"))
 
 	// Validate password input methods (mutual exclusion)
 	passwordMethods := 0
@@ -366,6 +371,7 @@ func run(c *cli.Context) error {
 		AskBecomePass:    c.Bool("ask-become-pass"),
 		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
 		Tags:             tags,
+		SkipTags:         skipTags,
 
 		// Artifact configuration
 		ArtifactsDir:      c.String("artifacts-dir"),
@@ -563,6 +569,7 @@ func planCommand(c *cli.Context) error {
 
 	// Parse tags
 	tags := parseTags(c.String("tags"))
+	skipTags := parseTags(c.String("skip-tags"))
 
 	// Load variables from each file in order; later files override earlier
 	// on key collision. Matches `apply -v a.yml -v b.yml` semantics.
@@ -589,6 +596,7 @@ func planCommand(c *cli.Context) error {
 		ConfigPath: configPath,
 		Variables:  variables,
 		Tags:       tags,
+		SkipTags:   skipTags,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to build plan: %w", err)
@@ -1013,6 +1021,10 @@ func createApp() *cli.App {
 						Name:    "tags",
 						Aliases: []string{"t"},
 						Usage:   "Filter steps by tags (comma-separated)",
+					},
+					&cli.StringFlag{
+						Name:  "skip-tags",
+						Usage: "Exclude steps whose tags appear in this list (comma-separated)",
 					},
 					&cli.StringFlag{
 						Name:    "format",

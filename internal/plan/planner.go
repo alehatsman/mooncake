@@ -90,6 +90,9 @@ type ExpansionContext struct {
 	Variables  map[string]interface{}
 	CurrentDir string
 	Tags       []string
+	// SkipTags excludes steps whose tags intersect this list
+	// (MT-58 `--skip-tags`). Composes with Tags via AND.
+	SkipTags []string
 	// Names is the spec-50 step-name filter. When non-empty, a step is
 	// only kept (step.Skipped=false) when its name matches one of the
 	// entries. Untagged steps still run on a tag filter; unnamed steps
@@ -102,6 +105,8 @@ type PlannerConfig struct {
 	ConfigPath string
 	Variables  map[string]interface{}
 	Tags       []string
+	// SkipTags excludes steps whose tags intersect this list (MT-58).
+	SkipTags []string
 	// Names is the spec-50 step-name filter; propagated into
 	// ExpansionContext so per-step skip evaluation can consult it.
 	Names []string
@@ -208,6 +213,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		Variables:  variables,
 		CurrentDir: currentDir,
 		Tags:       cfg.Tags,
+		SkipTags:   cfg.SkipTags,
 		Names:      cfg.Names,
 	}
 
@@ -419,6 +425,7 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 		Variables:  ctx.Variables, // Share variables
 		CurrentDir: filepath.Dir(absIncludePath),
 		Tags:       ctx.Tags,
+		SkipTags:   ctx.SkipTags,
 		Names:      ctx.Names,
 	}
 
@@ -704,8 +711,11 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 
 	// Check if step should be skipped by tags. Spec-50: an additional
 	// `--step-filter name=<x>` filter ANDs with the tag check — both must
-	// pass for the step to run.
-	skipped := !utils.MatchesTags(step.Tags, ctx.Tags) || !utils.MatchesNames(step.Name, ctx.Names)
+	// pass for the step to run. MT-58: `--skip-tags` is an exclusion
+	// filter — if the step's tags intersect ctx.SkipTags, skip it.
+	skipped := !utils.MatchesTags(step.Tags, ctx.Tags) ||
+		utils.MatchesSkipTags(step.Tags, ctx.SkipTags) ||
+		!utils.MatchesNames(step.Name, ctx.Names)
 
 	// Render action templates
 	err := p.renderActionTemplates(&step, ctx)
@@ -928,6 +938,7 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 		Variables:  newVars,
 		CurrentDir: ctx.CurrentDir,
 		Tags:       ctx.Tags,
+		SkipTags:   ctx.SkipTags,
 		Names:      ctx.Names,
 	}
 }

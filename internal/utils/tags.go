@@ -29,3 +29,28 @@ func MatchesTags(stepTags, filterTags []string) bool {
 	}
 	return false
 }
+
+// MatchesSkipTags reports whether a step should be excluded by the
+// --skip-tags filter (MT-58). Returns true when at least one of the
+// step's tags appears in skipTags — the step is excluded. Semantics:
+//
+//   - Empty skipTags      → false (no exclusion active).
+//   - Step has no tags    → false (untagged steps are scaffolding;
+//                                  excluding them by tag is a no-op).
+//   - Step has any tag in skipTags → true (exclude).
+//
+// Designed to compose with MatchesTags: a step runs when
+// MatchesTags(...) is true AND MatchesSkipTags(...) is false.
+func MatchesSkipTags(stepTags, skipTags []string) bool {
+	if len(skipTags) == 0 || len(stepTags) == 0 {
+		return false
+	}
+	for _, skip := range skipTags {
+		for _, stepTag := range stepTags {
+			if stepTag == skip {
+				return true
+			}
+		}
+	}
+	return false
+}
