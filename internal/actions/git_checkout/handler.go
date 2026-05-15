@@ -38,6 +38,28 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// git.checkout is a local operation — no Network. Requires the
+// `git` binary on PATH. Sudo is derived from dest: switching refs
+// inside /etc, /opt, etc. needs elevation (it writes index +
+// working-tree files). FilesystemWrite is the dest path.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{
+		RequiredBinaries: []string{"git"},
+	}
+	if step == nil || step.GitCheckout == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.GitCheckout.Dest) {
+		ps.Sudo = true
+	}
+	if step.GitCheckout.Dest != "" {
+		ps.FilesystemWrite = []string{step.GitCheckout.Dest}
+	}
+	return ps
+}
+
 // Validate checks required fields on the step.
 func (h *Handler) Validate(step *config.Step) error {
 	g := step.GitCheckout

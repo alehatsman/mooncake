@@ -1,6 +1,12 @@
 # Spec 26: `git.*` Actions — clone, checkout, config
 
-**Status:** Draft
+**Status:** Phases 1–5 complete. P1–P3 shipped earlier (`git.clone`,
+`git.checkout`, `git.config` core). **Phase 5 (spec-22 ABI hooks)
+shipped**: `Permissions()`, `Diff()`, `Cost()`, `Reverse()` declared
+on all three handlers; new `actions.ResourceGit` kind; `Reverse()`
+returns refusal on all three (git.clone irreversible by design;
+git.checkout / git.config pending apply-time pre-state capture
+refactor). Only phase 6 (docs + examples) remains.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** S (3–5 days)
 **Value:** High. Every AI-agent playbook touches git within the first
@@ -206,3 +212,22 @@ KEYS]` placeholders).
 4. **Should `git.clone` support `branch:` separately from `ref:`?**
    Lean: just `ref:`. Less confusion; `ref:` accepts anything git
    understands.
+
+---
+
+## Phase 5 — ABI hooks (shipped)
+
+All three handlers now declare the four spec-22 sub-interfaces:
+
+| Handler | Permissions | Diff | Cost (Risk / Reversible) | Reverse |
+|---|---|---|---|---|
+| `git.clone` | Network=true, RequiredBinaries=[git], Sudo iff dest under system path, FilesystemWrite=[Dest] | OpCreate / OpUpdate / OpNoop based on cheap inspectDest probe (no network); After.GitCloneSnapshot{Repo,Ref} | 4 / **false** (irreversible by design) | refusal — "irreversible by design; route cleanup through try/catch/finally + file.write absent" |
+| `git.checkout` | No Network, RequiredBinaries=[git], Sudo iff dest under system path, FilesystemWrite=[Dest] | Always OpUpdate with Before.HeadSHA when dest is a repo; After.GitCheckoutSnapshot{Ref} | 3 / true (interface) | refusal — "not yet implemented; needs apply-time HEAD capture" |
+| `git.config` | No Network, RequiredBinaries=[git], Sudo iff scope=system or local-repo under system path | OpUpdate/OpNoop based on Set+Unset emptiness; After.GitConfigSnapshot{Scope,Repo,Entries[]}; entries sorted | 2 / true (interface), Resources=len(Set)+len(Unset) | refusal — "not yet implemented; needs apply-time per-key value capture" |
+
+New `actions.ResourceGit` kind added to handler_abi.go.
+
+Two refactors deferred (consistent with the os.service / git.checkout
+/ git.config pattern): apply-time pre-state capture requires Run() to
+thread a typed Result for handlers that need pre-apply observations.
+Tracked as spec-26 phase 5 follow-up.

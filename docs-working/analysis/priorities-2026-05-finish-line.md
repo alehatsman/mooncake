@@ -74,14 +74,25 @@ interface is already defined.
 
 ---
 
-### P5 — Spec-26 + Spec-27: ABI hooks for `git.*` and `os.*` identity
+### ~~P5 — Spec-26 ABI hooks~~ ✅ shipped · P5b — Spec-27 ABI hooks remains
 
-**Why fifth**: same pattern as P4. Phases 1–4 of spec-26 (git.clone,
-git.checkout, git.config) and phases 1–3 of spec-27 (os.user, os.group,
-os.ssh_key) shipped. The ABI-hook phases remain.
+**Spec-26 P5 shipped** on this worktree
+(`worktree-spec-26-git-abi`). `Permissions()`, `Diff()`, `Cost()`,
+`Reverse()` now declared on `git.clone`, `git.checkout`, `git.config`;
+new `actions.ResourceGit` kind. `Reverse` returns refusal on all
+three (git.clone irreversible by design; git.checkout / git.config
+pending apply-time pre-state capture refactor). All tests + lint
+green on the new files.
 
-Lower priority than P4 because git + identity actions are less frequently
-agent-touched than pkg + text.
+**Still open: Spec-27 P4** — `os.user` / `os.group` / `os.ssh_key`
+ABI hooks. Pattern from spec-26 applies directly: 3 handlers, ~5
+files each (handler.Permissions + diff.go + cost.go + reverse.go +
+tests). Same ResourceKind decision (probably ResourceOther or new
+ResourceUser).
+
+Lower priority than P4 because identity actions are less frequently
+agent-touched than pkg + text. Same pattern means it's mostly
+mechanical now.
 
 ---
 
@@ -161,7 +172,8 @@ Phases:
 | ~~P2~~ | ~~Spec-23 §2: try/catch/finally~~ ✅ `f598238`/`7b4d62a` | M | Stream 2 |
 | ~~P3~~ | ~~Spec-37 + 38: output capture + read.json/yaml~~ ✅ `901e013`/`8549c33`/`2ee98e7` | XS + S | Stream 1 |
 | **P4** | Spec-24 P6 + 25 P5: pkg/text ABI hooks | S each | Stream 1 |
-| **P5** | Spec-26 + 27: git/identity ABI hooks | S each | Stream 1 |
+| ~~P5~~ | ~~Spec-26 ABI hooks (git)~~ ✅ shipped — `worktree-spec-26-git-abi` | S | Stream 1 |
+| **P5b** | Spec-27: os identity ABI hooks (user/group/ssh_key) | S | Stream 1 |
 | **P6** | Spec-45 PR13: `fleet init` interactive | S | Stream 3 |
 | **P7** | Specs 52–55: fleet exec/ps/watch/doctor | XS–S each | Stream 3 |
 | **P8** | Spec-32: step action dispatch collapse | M | Stream 1 |

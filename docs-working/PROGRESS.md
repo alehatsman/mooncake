@@ -72,7 +72,7 @@ The typed mutation vocabulary. Ships everywhere.
 |---|---|---|
 | 24 | `pkg.*` (install/remove/repo/hold/upgrade/list) | P1–P5 shipped, P6 (ABI hooks) waits on spec-22 phase 3 |
 | 25 | `text.line` · `text.patch.{ini,json,yaml}` | P1–P4 shipped, P5 (ABI hooks) waits on spec-22 |
-| 26 | `git.clone` (+creds/submodules) · `git.checkout` · `git.config` | P1–P4 shipped |
+| 26 | `git.clone` (+creds/submodules) · `git.checkout` · `git.config` | P1–P5 shipped (P5: spec-22 ABI hooks across all three handlers + new `ResourceGit` kind). P6 (docs) pending |
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped |
 | 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P5 shipped (ufw only) |
 | 17 | Batched packages + templated `names` | shipped |
