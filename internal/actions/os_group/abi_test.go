@@ -6,6 +6,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -77,15 +78,72 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_RefusesPendingCapture(t *testing.T) {
+func TestReverse_CreatedGroupBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsGroup: &config.OsGroup{Name: "docker"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsGroupReverseInfo{
+		Name:         "docker",
+		AppliedState: "present",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsGroup: &config.OsGroup{Name: "docker"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsGroup == nil {
+		t.Fatal("Reverse must return an os.group step")
+	}
+	if rev.OsGroup.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.OsGroup.State)
+	}
+}
+
+func TestReverse_PriorExistedRestoresGID(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsGroupReverseInfo{
+		Name:         "docker",
+		AppliedState: "absent",
+		PriorExisted: true,
+		PriorGID:     999,
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsGroup: &config.OsGroup{Name: "docker", State: "absent"}}, r)
+	if rev == nil || rev.OsGroup == nil {
+		t.Fatal("Reverse must return a step")
+	}
+	if rev.OsGroup.State != "present" {
+		t.Errorf("State = %s, want present", rev.OsGroup.State)
+	}
+	if rev.OsGroup.GID == nil || *rev.OsGroup.GID != 999 {
+		t.Errorf("GID = %v, want 999", rev.OsGroup.GID)
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, err := h.Reverse(nil, &config.Step{OsGroup: &config.OsGroup{Name: "docker"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil; got %+v", step)
+	}
 }
 
 func TestReverse_NilStep(t *testing.T) {
 	h := Handler{}
 	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{OsGroup: &config.OsGroup{Name: "docker"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

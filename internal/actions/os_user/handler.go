@@ -120,6 +120,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE useradd/usermod/userdel.
+	// `current` is the getent snapshot we already read above.
+	result.ReverseData = &OsUserReverseInfo{
+		Name:         desired.name,
+		AppliedState: desired.state,
+		PriorExisted: current != nil && current.exists,
+		Prior:        snapshotFromState(current),
+	}
+
 	if err := applyPlan(plan, desired); err != nil {
 		return result, err
 	}
