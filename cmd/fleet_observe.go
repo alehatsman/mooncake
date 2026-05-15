@@ -128,9 +128,15 @@ func observeHTTPSubcommand(common []cli.Flag) *cli.Command {
 			&cli.IntFlag{Name: "expect-status", Usage: "Found=false if status != this"},
 			&cli.StringSliceFlag{Name: "capture-header", Usage: "Response header(s) to expose in headers map"},
 			&cli.BoolFlag{Name: "skip-tls-verify", Usage: "Disable cert verification (insecure)"},
+			// Issue #18: --follow-redirects=0 lets operators see the
+			// redirect itself ("is the HTTP→HTTPS redirect still up?").
+			// Pointer-shape on SynthOptions distinguishes "unset" (default
+			// 10) from explicit "0" (stop on first 3xx); urfave/cli's
+			// IntFlag.IsSet() is the gate.
+			&cli.IntFlag{Name: "follow-redirects", Usage: "Max redirects to follow (default 10; 0 = stop on first 3xx)"},
 		}, common...),
 		Action: func(c *cli.Context) error {
-			return runFleetObserve(c, observe.SynthOptions{
+			opts := observe.SynthOptions{
 				Kind:           "http",
 				URL:            c.String("url"),
 				Method:         c.String("method"),
@@ -138,7 +144,12 @@ func observeHTTPSubcommand(common []cli.Flag) *cli.Command {
 				ExpectStatus:   c.Int("expect-status"),
 				CaptureHeaders: c.StringSlice("capture-header"),
 				SkipTLSVerify:  c.Bool("skip-tls-verify"),
-			})
+			}
+			if c.IsSet("follow-redirects") {
+				n := c.Int("follow-redirects")
+				opts.FollowRedirects = &n
+			}
+			return runFleetObserve(c, opts)
 		},
 	}
 }
