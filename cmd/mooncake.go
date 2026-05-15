@@ -1036,6 +1036,14 @@ func createApp() *cli.App {
 		// for 'submit'` — no hint that they're close. Enabling Suggest
 		// adds the standard "Did you mean 'apply'?" line.
 		Suggest: true,
+		// Fleet DX proposal-01: --peer uses commas as AND-group
+		// separators inside `@k=v,k2=v2` selectors. urfave/cli's
+		// default behavior auto-splits StringSliceFlag values on
+		// commas BEFORE the action sees them, which would silently
+		// turn one AND-group into N OR-groups. Disable the cli-level
+		// split; internal parsers (extractStepFilter,
+		// derivePsStatusFilter) already split on commas themselves.
+		DisableSliceFlagSeparator: true,
 
 		Commands: []*cli.Command{
 			initCommand(),
