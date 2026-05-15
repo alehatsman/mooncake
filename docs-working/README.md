@@ -32,9 +32,10 @@ Phases 1–6 of spec-22 are complete (all 4 handler methods declared across prio
 Remaining: MCP wiring (phase 7), docs (phase 8), final ABI-hook phases for 24–28.
 
 **Stream 2 — Safe Agent Runtime**
-23 framework-primitives (§2 try/catch/finally remains; §1 on_change + §3 !secret ✅)
 
-spec-30 transactions ✅ moved to done.
+spec-23 framework-primitives ✅ (all three sections shipped) and
+spec-30 transactions ✅ both moved to done. What remains in this stream
+lives under Stream 1 (spec-22 phases 7–8).
 
 **Stream 3 — Fleet & Cluster Management**
 45 fleet-discovery (PR13 `fleet init` interactive flow) ·

@@ -13,6 +13,7 @@ been moved to `specs/done/`:
 
 | Spec | Topic |
 |---|---|
+| 23 | Framework primitives — §2 `try`/`catch`/`finally` compound steps (`f598238`/`7b4d62a`). All three sections now shipped. |
 | 30 | `transaction:` blocks — LIFO rollback (PR A `7c2c00e` + PR B `15cdc79`) |
 | 35 | `mooncake plan --diff` content diffs |
 | 44 | SSH bootstrap transport (native ssh driver + sftp) |
@@ -29,46 +30,21 @@ Personal Fleet: **13 of 14 PRs shipped** (Phase A + B + C 2/3). Only
 
 ## Open work — ordered by priority
 
-### P0 — Bug (fix before everything)
+> Shipped between 05-14 (top-5 doc) and 05-15 (this doc): **P0 symlink
+> plan-mode bug** (`fbc993d`/`057ece5`), **P1 spec-22 phase 7** MCP
+> wiring (`92b58d8`/`1d43a48`), and **P2 spec-23 §2 try/catch/finally**
+> (`f598238`/`7b4d62a`). Renumbering preserved below for stable
+> cross-references; new P1 is the spec-22 phase-8 docs pass.
 
-**`file.write` symlink + `force: true` aborts `mooncake plan`** when the
-target path is a non-symlink directory. `mooncake apply` works correctly;
-only plan-mode prediction is broken. Real user hit in dotfiles bootstrap.
+### P1 — Spec-22 phase 8 (docs)
 
-- Fix sketched in `bug/bug-symlink-force-plan-inspect.md`.
-- 3 files, ~30 LOC production change + 5 new test cases.
-- No dependencies on any spec.
+**Why first**: phase 7 (planner / MCP wiring of `Diff` + `Cost` +
+`Permissions`) shipped today. Phase 8 is the final close-out — update
+`docs/` to document the four-method ABI surface so handler authors and
+agent consumers can use it without reading source. Unblocks lighthouse-
+user demos. Closes spec-22 entirely.
 
----
-
-### P1 — Spec-22 phases 7–8 (MCP wiring + docs)
-
-**Why first**: the four-method ABI is fully declared across all 15 priority
-handlers (phases 1–6 ✅). Without phase 7, agents and UIs must parse prose
-to learn what a plan would change and how much it would cost. The MCP server
-currently exposes `check_plan` / `run_plan` but not the structural `Diff` or
-`Cost` outputs that make those tools useful for branching.
-
-**Phase 7 scope** (~200–300 LOC):
-- Wire `Diff()` output into `check_plan` / `run_plan` MCP tool responses.
-- Wire `Cost()` aggregate into plan-JSON and MCP responses.
-- Surface `Permissions()` in the MCP `run_plan` tool so the agent can see
-  what capabilities a plan requires before submitting.
-
-**Phase 8 scope**: update `docs/` with the new ABI surface (handler author
-guide + agent consumer guide). Unblocks lighthouse-user demos.
-
----
-
-### P2 — Spec-23 §2: `try` / `catch` / `finally`
-
-**Why second**: §1 (`on_change`) ✅ and §3 (`!secret`) ✅ are done. §2 is
-the last piece of the framework-primitives trio. The spec-30 transactions
-landing resolved the semantic-overlap concern — `try/catch` is user-authored
-rollback; `transaction:` is ABI-automated rollback. They're complementary.
-
-Effort: M (~400–600 LOC). Parser + executor changes. No handler interface
-changes needed.
+Effort: S (a docs pass, not code). No handler changes.
 
 ---
 
@@ -185,9 +161,9 @@ Phases:
 
 | Priority | Item | Effort | Stream |
 |---|---|---|---|
-| **P0** | Bug: symlink force plan-mode crash | XS (30 LOC) | Bug |
-| **P1** | Spec-22 phase 7–8: MCP wiring + docs | S–M | Stream 2 |
-| **P2** | Spec-23 §2: try/catch/finally | M | Stream 2 |
+| ~~P0~~ | ~~Bug: symlink force plan-mode crash~~ ✅ `fbc993d` | XS | Bug |
+| **P1** | Spec-22 phase 8: docs (phase 7 ✅ `92b58d8`) | S | Stream 2 |
+| ~~P2~~ | ~~Spec-23 §2: try/catch/finally~~ ✅ `f598238`/`7b4d62a` | M | Stream 2 |
 | **P3** | Spec-37 + 38: output capture + read.json/yaml | XS + S | Stream 1 |
 | **P4** | Spec-24 P6 + 25 P5: pkg/text ABI hooks | S each | Stream 1 |
 | **P5** | Spec-26 + 27: git/identity ABI hooks | S each | Stream 1 |
