@@ -83,8 +83,11 @@ func Walk(planDir string, maxBytes int64) ([]FileEntry, int64, error) {
 			return nil
 		}
 		if !li.Mode().IsRegular() {
-			// device files, sockets, fifos: refuse to sync.
-			return fmt.Errorf("non-regular file in plan-dir: %s (mode=%s)", p, li.Mode())
+			// Device files, sockets, FIFOs are never plan content. The
+			// common hit is `fleet apply /tmp/x.yml` choking on
+			// /tmp/.X11-unix/X0 (a socket). Skip silently so the
+			// canonical "throw-away file in /tmp" flow works. Issue #15.
+			return nil
 		}
 
 		rel, err := filepath.Rel(planDir, p)

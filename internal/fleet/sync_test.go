@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -113,6 +114,35 @@ func TestWalk_RejectsSymlinks(t *testing.T) {
 	_, _, err := Walk(root, 1<<30)
 	if err == nil || !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("want symlink rejection, got %v", err)
+	}
+}
+
+// TestWalk_SkipsNonRegularFiles guards issue #15. A FIFO (or socket)
+// in the plan-dir must NOT abort the walk — it's never plan content.
+// Without the fix the walker rejected every plan-dir that happened to
+// share /tmp with an X11 socket etc.
+func TestWalk_SkipsNonRegularFiles(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("syscall.Mkfifo unsupported on Windows")
+	}
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "config.yml"), []byte("plan"))
+	// A FIFO stands in for the X11 socket case (both are non-regular).
+	fifo := filepath.Join(root, "fifo")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Skipf("mkfifo on this fs: %v", err)
+	}
+	entries, _, err := Walk(root, 1<<30)
+	if err != nil {
+		t.Fatalf("Walk should ignore non-regular file; got %v", err)
+	}
+	for _, e := range entries {
+		if e.RelPath == "fifo" {
+			t.Errorf("fifo should have been skipped, got entry %+v", e)
+		}
+	}
+	if len(entries) != 1 || entries[0].RelPath != "config.yml" {
+		t.Errorf("expected only config.yml; got %+v", entries)
 	}
 }
 
