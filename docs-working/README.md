@@ -23,25 +23,34 @@ See **[action-design-principles.md](./action-design-principles.md)** for the 11 
 ## Active specs by stream
 
 **Stream 1 — Action Surface**
-32 dispatch · 22 extended-handler-abi · 17 package-batch · 24 pkg-surface ·
-25 text-surface · 26 git-actions · 27 os-identity · 28 os-scheduling ·
+22 extended-handler-abi (phases 7–8 remain) · 24 pkg-surface (P6 ABI hooks) ·
+25 text-surface (P5 ABI hooks) · 26 git-actions (ABI hooks) · 27 os-identity (ABI hooks) ·
+28 os-scheduling (non-ufw drivers) · 32 step-action-dispatch ·
 37 step-output-capture · 38 read-json-yaml
 
-Most action implementations under 24–28 are done; the remaining work is the
-shared spec-22 ABI hook phase plus a few stragglers (`os.firewall`). See
-[streams.md](./streams.md) for the per-spec phase status.
+Phases 1–6 of spec-22 are complete (all 4 handler methods declared across priority set).
+Remaining: MCP wiring (phase 7), docs (phase 8), final ABI-hook phases for 24–28.
 
-**Stream 2 — Safe Agent Runtime** *(needs spec-22 first)*
-23 framework-primitives · 30 transactions
+**Stream 2 — Safe Agent Runtime**
+23 framework-primitives (§2 try/catch/finally remains; §1 on_change + §3 !secret ✅)
+
+spec-30 transactions ✅ moved to done.
 
 **Stream 3 — Fleet & Cluster Management**
-*(no numbered specs yet — see epics/epic-cluster-management.md)*
+45 fleet-discovery (PR13 `fleet init` interactive flow) ·
+52 fleet-exec · 53 fleet-watch · 54 fleet-ps · 55 fleet-doctor
+
+Fleet is 13/14 PRs; only `fleet init` interactive UX remains from the original plan.
+Specs 52–55 are drafted QoL additions brainstormed from real use.
 
 **Stream 4 — Developer Experience**
-*(no specs yet)*
+*(shipped: spec-39 init, 40 config-discovery, 41 doctor, 42 recommend)*
 
 **Stream 5 — Ecosystem**
 31 tier2-plugin-model
+
+**Bugs**
+`bug/bug-symlink-force-plan-inspect.md` — `file.write` `state: link` + `force: true` fails `mooncake plan` when path is a non-symlink dir. Fix sketched; small scope.
 
 ## Shipped specs (specs/done/)
 
@@ -50,7 +59,11 @@ shared spec-22 ABI hook phase plus a few stragglers (`os.firewall`). See
 10 mcp-server · 11 preset-registry · 12 package-summary · 13 single-step ·
 14 snapshot-diff · 15 check-mode · 16 unify-dryrun-execute ·
 18 mooncake-agent-daemon · 19 tool-action · 20 metrics · 21 modernization-cutover ·
-29 wait-primitives · 33 execution-context-split · 34 typed-variable-context
+29 wait-primitives · 30 transactions · 33 execution-context-split ·
+34 typed-variable-context · 35 plan-diff ·
+43 fleet-transport-and-sync · 44 ssh-bootstrap-transport · 46 fleet-status-and-logs ·
+47 fleet-bootstrap-ux · 48 per-host-overlays-and-tags · 49 agentd-on-windows ·
+50 extended-filter-keys · 51 local-apply-overlay-parity
 
 ## Epics (epics/)
 
