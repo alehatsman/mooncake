@@ -309,7 +309,26 @@ treat as binary, rename + chmod +x). Or add explicit `extract: false`.
 
 ---
 
-## #44 — `file.download` silently accepts unknown fields (e.g. `sha256:`) — MEDIUM (security-adjacent)
+## #44 — `file.download` silently accepts unknown fields (e.g. `sha256:`) — ✅ FIXED (round 24)
+
+Per `mooncake validate` and `mooncake apply` both rejecting unknown
+fields now:
+```
+$ mooncake apply -c bad-sum.yml
+Error: /work/bad-sum.yml
+  Line 5: unknown field `sha256` (likely a typo or a renamed field
+    — see docs-next/guide/config/actions.md)
+```
+
+File does NOT land. The `additionalProperties: false` schema is now
+enforced. This was the umbrella for many "silently doesn't work"
+reports — closing it raises confidence in every subsequent finding.
+
+Original report retained below for context:
+
+---
+
+### Original report (now resolved)
 
 **Repro** (post-MT-14 fix):
 
@@ -360,7 +379,7 @@ honor it. Same fix closes #44 and refines #4.
 | 24 | HIGH | open | `artifact.capture` | medium — file-change tracking |
 | 28 | MEDIUM | open | `failed_when:` on assert | small — route through wrapper |
 | 40 | HIGH | open | `tool github-release` bare-binary | small — filename heuristic |
-| 44 | MEDIUM | open | `file.download` unknown-field acceptance | closes with #27 |
+| 44 | MEDIUM | ✅ FIXED | `file.download` unknown-field acceptance | closed by #27 validator fix; verified round 24 |
 | 45 | MEDIUM | ✅ FIXED | `transaction:` recap shows `reverted=N`, `↺ Reverse:` markers visible | landed before round 18 |
 | 46 | MEDIUM | ✅ FIXED | `file.unarchive` not idempotent | landed `1d374c9` |
 | 67 | MEDIUM | open | nested `try:` not recognized | register compound actions in inner path |
