@@ -102,6 +102,9 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 	var firstErr error
 	for i := len(t.Completed) - 1; i >= 0; i-- {
 		entry := t.Completed[i]
+		// MT-45: log the rollback step visibly so the operator can see
+		// what's being undone. The README documents `↺ Reverse:` lines.
+		ec.Svc.Logger.Infof("↺ Reverse: %s", entry.Step.Name)
 		if err := ec.runReverse(entry.Step, entry.Result); err != nil {
 			t.PartialRollback = true
 			if firstErr == nil {
@@ -111,6 +114,18 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 			// is now indeterminate and we'd be guessing about further
 			// undos. Halt and let on_rollback surface the partial state.
 			break
+		}
+		// MT-45: a successful Reverse cancels out the original body
+		// step's reported change. Subtract from the run-wide Changed
+		// counter and bump Reverted so the recap reflects net effect
+		// (rolled-back files no longer count as user-visible writes).
+		if entry.Result != nil && entry.Result.Changed && ec.Svc.Stats != nil {
+			if ec.Svc.Stats.Changed != nil && *ec.Svc.Stats.Changed > 0 {
+				*ec.Svc.Stats.Changed--
+			}
+			if ec.Svc.Stats.Reverted != nil {
+				*ec.Svc.Stats.Reverted++
+			}
 		}
 	}
 	t.RolledBack = true

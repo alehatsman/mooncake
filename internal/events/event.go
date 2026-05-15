@@ -128,6 +128,10 @@ type RunCompletedData struct {
 	FailedSteps   int    `json:"failed_steps"`
 	SkippedSteps  int    `json:"skipped_steps"`
 	ChangedSteps  int    `json:"changed_steps"`
+	// RevertedSteps counts steps whose Changed=true result was undone
+	// by a transaction's LIFO Reverse() pass. Already subtracted from
+	// ChangedSteps so callers don't double-count (MT-45).
+	RevertedSteps int    `json:"reverted_steps,omitempty"`
 	DurationMs    int64  `json:"duration_ms"`
 	Success       bool   `json:"success"`
 	ErrorMessage  string `json:"error_message,omitempty"`

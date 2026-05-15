@@ -229,6 +229,13 @@ func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
 		line = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %s",
 			ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
 			formatDuration(data.DurationMs))
+		if data.RevertedSteps > 0 {
+			// MT-45: surface reverted steps so transaction rollbacks
+			// don't look like silent disappearances of changes.
+			line = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  reverted=%d  %s",
+				ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
+				data.RevertedSteps, formatDuration(data.DurationMs))
+		}
 	}
 
 	if !data.Success && data.ErrorMessage != "" {
