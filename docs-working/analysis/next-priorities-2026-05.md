@@ -5,10 +5,16 @@
 > pressure-test the next 1–2 quarters before committing to specs. Edit freely;
 > cross out what's wrong.
 >
-> **Last updated 2026-05-14**: PR7 (`fleet status`) shipped, spec-49
-> (agentd on Windows) shipped, fleet polish PR shipped. Personal-fleet is
-> now 8/14 PRs in (Phase A done, Phase B half done). Path-A pivot (spec-22
-> ABI) still not started.
+> **STATUS UPDATE 2026-05-15: Path A pivot is shipped.** spec-22 all
+> phases ✅, spec-23 §1+§3 ✅, spec-30 PR A+B ✅, README rewritten to
+> match. 4 of the 5 success criteria below (line 211+) are met; only
+> "land a lighthouse user" remains. The strategic question for the
+> next 2 quarters has changed: see new
+> [§ Post-pivot — what's the next bottleneck?](#post-pivot--whats-the-next-bottleneck) section at the bottom.
+>
+> The original "finish-then-pivot" framing below is preserved as
+> historical context. **The text below now describes the world before
+> 2026-05-15 and is no longer the live strategy.**
 
 ---
 
@@ -240,3 +246,108 @@ answers itself because the positioning is earned.
 - If reality drifts from Path A despite the recommendation, write a new
   brainstorm doc explaining the drift rather than pretending this one
   predicted it.
+
+---
+
+## Post-pivot — what's the next bottleneck?
+
+*(Section added 2026-05-15. The Path A pivot above shipped. Success
+criteria 1, 2, 4, 5 met; only #3 (lighthouse user) remains.)*
+
+The strategic constraint has shifted from **code** to **users**.
+Before the pivot, the bottleneck was clear: ship spec-22 → 23 → 30 so
+the marketing claims become falsifiable. That work is done. The next
+unknown is whether the wedge actually wins an audience. Three plausible
+paths from here:
+
+### Path X — Lighthouse user(s) (the "validation" path)
+
+The brainstorm doc's original success criterion #3. Find 2–3 real
+AI-agent projects or platform teams driving Mooncake against real
+workloads. Likely targets:
+- An open-source agent (Aider, Continue, Cline, Goose) embeds Mooncake
+  as its safe-execution layer for filesystem + shell + service mutations.
+- A solo dev fleet-manages 4–10 personal boxes via `mooncake fleet
+  apply` with `!secret` providers and transactions for atomic upgrades.
+- A small platform team uses transactions + Permissions preflight to
+  let internal AI assistants touch staging without losing trust.
+
+**Pros**: validates the wedge in reality. Surfaces missing primitives
+that the spec process couldn't predict. Builds the case study Phase A
+called for.
+**Cons**: not 100% in your control. Outreach + integration support is
+different shape from coding.
+**Recommendation**: this is the highest-leverage path even though it's
+the least code-shaped. Without users, every subsequent code decision
+is guess.
+
+### Path Y — Round out the wedge (the "complete the trio" path)
+
+What's still open in the agent-safety stream:
+- spec-23 §2 try/catch/finally (~500–700 LOC) — design unblocked by
+  spec-30 landing; closes the framework-primitives trio.
+- Policy DSL v0 (~300 LOC) — `deny: file.write.path matches "/etc/.*"`
+  patterns over the Permissions/Diff ABI. Brainstorm doc's "agent
+  literally cannot do X" gap.
+- spec-30 §138 partial-rollback UI polish (~120 LOC) — close out
+  spec-30 phase 5.
+- More tier-2 secret providers — vault: (HTTP client), 1password:
+  (CLI bridge), age: (decrypt). ~200 LOC each.
+- MCP server enhancements — surface Diff/Permissions/transactions to
+  agent tools. ~300 LOC. Concrete way to make spec-22's structural
+  output reachable from Claude/Cursor.
+
+**Pros**: in-tree, predictable, immediately useful. Each lands in one
+PR and adds capability the README can point at.
+**Cons**: more capability without users is more surface to maintain
+without validation. The pivot just closed the marketing/reality gap;
+re-opening it via untested additions is the risk.
+**Recommendation**: pick MCP enhancements first (validates the agent
+integration story even without a named lighthouse user) and spec-23
+§2 second (completes spec-23). Defer policy DSL until a user asks.
+
+### Path Z — Ecosystem (Stream 5, the "make it a standard" path)
+
+- WASM plugin SDK (spec-31).
+- Preset marketplace — `mooncake install postgres@2.1.0` signed.
+- GitHub Actions / GitLab CI step.
+- IDE extensions (VSCode / Cursor / Zed): "preview this AI change
+  through Mooncake before applying."
+
+**Pros**: converts Mooncake from "a tool" into "a standard." High
+strategic ceiling.
+**Cons**: premature without lighthouse users. A marketplace with no
+publishers is worse than no marketplace.
+**Recommendation**: defer until at least one Path X lighthouse user
+exists.
+
+### What I'd recommend (one sentence)
+
+**Run Path X (lighthouse user outreach) and Path Y (MCP server + spec-23
+§2) in parallel for the next 2 quarters; defer Path Z until at least
+one lighthouse user is real.**
+
+The README rewrite this session puts the project in the strongest
+possible position for Path X outreach — every safety claim is now
+linkable to a working example. The asymmetric bet: Path X has
+asymmetric upside (one good case study reshapes the next year of
+development), Path Y has predictable returns, Path Z is opportunity
+cost.
+
+---
+
+## What success looks like at end of next 2 quarters (revised 2026-05-15)
+
+1. ✅ ~~The README's agent-safety section maps 1:1 to working features~~
+   *(done this session)*
+2. ✅ ~~`transaction:` blocks ship with at least three real-world examples~~
+   *(`rollback-demo.yml`, `file-create-trio.yml`, plus the example in
+   the README top-of-page)*
+3. **One external user (agent project or fleet operator) is running
+   mooncake in something that matters to them.** *(still the open
+   question — Path X)*
+4. ✅ ~~Stream-1 specs' final phases close~~ *(spec-22 phase 5 complete)*
+5. ✅ ~~Unfair-advantage answered~~ *(VISION §13.10 updated this session:
+   "tight coupling of plan + Reverse + audit, all typed")*
+
+**Net**: 4/5 done. The strategic loop closes when Path X delivers.

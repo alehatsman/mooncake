@@ -65,27 +65,45 @@ That last bullet is the wedge. Nobody else is selling this to AI developers.
 
 ---
 
-## 3. Where Mooncake is today (honest snapshot)
+## 3. Where Mooncake is today (honest snapshot, 2026-05-15)
 
 What exists in `internal/`:
 
 | Capability | Module | Maturity |
 |---|---|---|
-| Typed actions (13: file, template, shell, service, …) | `actions/` | Production |
+| Typed actions (40+: file/text/pkg/os/git/container/repo/wait families) | `actions/` | Production |
+| **Extended handler ABI** (`Diff` / `Reverse` / `Cost` / `Permissions`) | `actions/handler_abi.go` | Production — all phases shipped across priority handlers |
+| **`transaction:` blocks with LIFO auto-revert** (spec-30) | `executor/transaction.go` | Production — `examples/transactions/rollback-demo.yml` |
+| **Typed secret refs** (`!secret env:KEY`) + 3 providers (env/file/stdin) | `security/secrets*.go` | Production — resolved values auto-added to Redactor denylist |
+| **Reactive triggers** (`on_change:`) | `executor/`, `plan/` | Production — `examples/triggers/on-change-config-reload.yml` |
 | Preset system (330+ built-in) | `presets/` | Production |
-| Plan compilation, include resolution | `plan/` | Production |
-| Executor with idempotency | `executor/` | Production |
+| Plan compilation, include resolution, structural Diff in JSON output | `plan/` | Production |
+| Executor with idempotency, Permissions preflight, secret resolution | `executor/` | Production |
 | System facts (cached) | `facts/` | Production |
 | MCP server (LLM tool calls) | `mcp/` | Working |
 | Agent loop (iterate-until-done) | `agent/` | Working |
 | Run log, structured events | `runlog/`, `events/` | Working |
 | Snapshot / diff | `snapshot/` | Working |
-| Secret redaction | `security/redact.go` | Working |
+| Secret redaction | `security/redact.go` | Production |
 | Effects system | `effects/` | Working |
 | Artifact capture | `artifacts/` | Working |
+| **Personal fleet** — `mooncake fleet apply/status/logs/bootstrap` across N peers (peer-to-peer, no hub) | `agentd/`, `fleet/` | Production — Phase A+B complete, Phase C partial (mDNS + `fleet init` interactive remain) |
 
-**What this means**: the *kernel* (ring 1) is largely done. The expansion path
-is outward — daemon, fleet, agent SDK, marketplace — not deeper into ring 1.
+**What this means**: ring 1 (kernel) is *complete*, including the spec-22
+ABI + spec-23 §1+§3 + spec-30 transactions that ring 2 (the safe-agent
+runtime) was supposed to need first. The agent-safety wedge that
+`docs-working/analysis/next-priorities-2026-05.md` flagged as the strategic
+pivot now has working primitives — `transaction:` blocks auto-revert,
+`!secret` refs don't leak, `on_change:` triggers fire on real change.
+The README's safety claims map 1:1 to runnable examples in
+`examples/transactions/`, `examples/secrets/`, `examples/triggers/`.
+
+Personal fleet shipped too — bootstrap a fresh box, apply across N
+peers, multiplex logs, peer-tag filter — all working against a real
+WSL + Windows two-peer testbed.
+
+Expansion path from here is outward into ring 3 (economy): marketplace,
+WASM plugins, IDE extensions, lighthouse-user case studies.
 
 ---
 
@@ -391,18 +409,21 @@ These are real forks. Worth deciding intentionally rather than drifting.
 
 ## 11. Possible phasing (6 → 18 months, sketch)
 
-### Phase A — Solidify the kernel + win agent developers (0–6mo)
-- Ship 1.0 of the CLI with a frozen action ABI.
-- Mature MCP server; publish "Claude/Cursor + Mooncake" tutorials.
-- Reverse-plans / snapshot rollback in production.
-- Tiny preset marketplace (signed, GitHub-hosted).
-- Land 2–3 lighthouse agent-developer users; write case studies.
+### Phase A — Solidify the kernel + win agent developers (0–6mo) — **largely done as of 2026-05-15**
+- ✅ Frozen action ABI: spec-22 phases 1–5 shipped across the priority handler set
+- ✅ Reverse-plans + transactional auto-revert: spec-30 PR A+B in production
+- ✅ `!secret` typed refs + 3 providers (env/file/stdin) with redaction
+- ✅ MCP server with `get_facts`/`run_plan`/`check_plan`/`get_snapshot`/`get_metrics`/`fact_query`
+- ⏳ Mature MCP server — surfacing Diff/Permissions/transactions to agent tools is still draft
+- ⏳ Tiny preset marketplace (signed, GitHub-hosted) — Stream 5; not started
+- ⏳ Land 2–3 lighthouse agent-developer users; write case studies — **the next strategic move**
 
-### Phase B — Daemon + lightweight hub (6–12mo)
-- `mooncake agentd` (experimental) with mTLS to a self-hostable hub.
-- Hub MVP: inventory, run history, audit export, approvals, Slack.
-- WASM plugin SDK for custom actions.
-- First commercial pilots.
+### Phase B — Daemon + lightweight hub (6–12mo) — **partially done; personal-fleet shipped**
+- ✅ `mooncake agentd` (production) — TCP + Unix socket, bearer auth, SSE event hub, sandboxed file sync
+- ✅ Personal fleet (peer-to-peer) — `mooncake fleet apply/status/logs/bootstrap` across N peers without a hub
+- ⏳ Enterprise hub MVP: inventory, run history, audit export, approvals, Slack — zero specs yet; deferred until a paying user asks
+- ⏳ WASM plugin SDK for custom actions — spec-31 not started; in-tree Go plugin model still works for the first year
+- ⏳ First commercial pilots — gated on Phase A lighthouse users + a hub need surfacing
 
 ### Phase C — Enterprise polish + ecosystem (12–18mo)
 - RBAC, SSO, compliance packs.
@@ -427,20 +448,31 @@ Stream 4: Developer Experience    ← solo developer wedge (§4.1); the funnel
 Stream 5: Ecosystem               ← ring 3 (economy): marketplace, plugins, integrations
 ```
 
-**Stream 1 — Action Surface**: Complete the typed mutation vocabulary. Extended
-handler ABI (`Diff`, `Reverse`, `Cost`) unblocks streams 2 and 3. New actions:
-`pkg.*`, `text.*`, `git.*`, `os.*`, `wait.*`. Tier-2 plugin model so the
-community fills the long tail without forking.
+**Stream 1 — Action Surface** *(largely done)*: Typed mutation vocabulary
+covers 40+ actions across file/text/pkg/os/git/container/repo/wait families.
+Extended handler ABI (`Diff`, `Reverse`, `Cost`, `Permissions`) shipped
+across the priority handler set. Action breadth is no longer the
+bottleneck — the long tail is community / Tier-2 plugin territory.
 
-**Stream 2 — Safe Agent Runtime**: The most defensible wedge. AI agents get no
-shell — only the Mooncake ABI. Covers: `on_change` triggers, `try/catch/finally`,
-`!secret` refs, `transaction:` blocks with automatic reverse-on-failure, policy
-DSL, plan signing, per-action quotas, egress policy, deterministic replay.
+**Stream 2 — Safe Agent Runtime** *(load-bearing primitives shipped)*: AI
+agents call a typed ABI; every mutation is dry-runnable, reversible, audited.
+**Shipped**: `transaction:` blocks with LIFO auto-revert (spec-30),
+`!secret env:KEY` typed refs + redaction (spec-23 §3, three providers),
+`on_change:` reactive triggers (spec-23 §1), Permissions preflight,
+structural Diff in plan JSON. **Open**: `try/catch/finally` (spec-23 §2,
+design overlap with transactions now resolved), policy DSL (`deny:`
+patterns over Permissions/Diff), plan signing (Sigstore), per-action
+quotas, egress policy, deterministic replay command. The marketing
+claim from the README ("safe execution runtime for AI-driven system
+configuration") is now backed by working primitives, not promises.
 
-**Stream 3 — Fleet & Cluster Management**: GitOps for software state at fleet
-scale. The same guarantees on one node, fanned out to N nodes. Node registry,
-fleet plans with rollout strategies, continuous drift detection, AI-assisted
-remediation. See `docs-working/epics/epic-cluster-management.md`.
+**Stream 3 — Fleet & Cluster Management** *(personal fleet shipped)*:
+GitOps for software state at fleet scale. **Personal-fleet sub-stream
+done**: `fleet apply/status/logs/facts/bootstrap` across N peers,
+peer-to-peer, no hub, validated against a real WSL + Windows testbed.
+**Enterprise sub-stream deferred** (no users asking for hub yet). See
+`docs-working/epics/epic-personal-fleet.md` and
+`docs-working/epics/epic-cluster-management.md`.
 
 **Stream 4 — Developer Experience**: The funnel. `mooncake doctor`, drift
 detection UX, multi-machine sync, TUI dashboard. Gets solo devs adopting
@@ -478,9 +510,16 @@ These are the unknowns I'd want to pull on next:
    default?
 9. **What's the right name for the "agent sandbox runtime"?** It deserves a
    product identity separate from `mooncake` itself.
-10. **What's the unfair advantage?** What can Mooncake do that an Ansible+OPA
-    +AWX combo cannot, even in theory? (Likely: tight coupling of plan,
-    snapshot, and rollback; deterministic agent replay.)
+10. **What's the unfair advantage?** ANSWER (as of 2026-05-15): **tight
+    coupling of plan + Reverse + audit, all typed.** An Ansible+OPA+AWX
+    combo can audit (AWX) and gate (OPA) but cannot automatically revert
+    a half-applied transaction byte-identically to pre-state, because no
+    handler in that stack declares a `Reverse()` method. Mooncake's
+    `transaction:` blocks do that as a built-in. The
+    `examples/transactions/rollback-demo.yml` is the demo that makes the
+    claim falsifiable. **Deterministic agent replay** is the next leg —
+    a `mooncake replay <run-id>` command would close the audit + reproduce
+    loop. Not built yet.
 
 ---
 
