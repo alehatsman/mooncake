@@ -929,6 +929,24 @@ export interface WaitPortAction {
 }
 
 /**
+ * Manage Windows Firewall inbound/outbound rules
+ * 
+ * @platforms windows
+ * @category system
+ */
+export interface WindowsFirewallRuleAction {
+}
+
+/**
+ * Manage Windows Task Scheduler entries
+ * 
+ * @platforms windows
+ * @category system
+ */
+export interface WindowsScheduledTaskAction {
+}
+
+/**
  * A single configuration step
  * 
  * Each step must contain exactly one action (shell, file, service, etc.)
@@ -1220,6 +1238,14 @@ export interface Step {
    * Wait for a TCP port to accept connections
    */
   "wait.port"?: WaitPortAction;
+  /**
+   * Manage Windows Firewall inbound/outbound rules
+   */
+  "windows.firewall_rule"?: WindowsFirewallRuleAction;
+  /**
+   * Manage Windows Task Scheduler entries
+   */
+  "windows.scheduled_task"?: WindowsScheduledTaskAction;
 }
 
 /**

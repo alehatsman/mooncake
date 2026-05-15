@@ -14,22 +14,14 @@ bundle of two or three lands in a day.
 
 ## Tier 1 — small, daily-use, build on what's already there
 
-### 1. `fleet exec '<command>'` — ad-hoc shell across N peers
+### ~~1. `fleet exec '<command>'` — ad-hoc shell across N peers~~ ✅ shipped (spec-52)
 
-The single biggest fleet DX gap. Think `pssh`, `ansible -m shell`, or
-the muscle-memory equivalent of `ssh peer 'cmd'` done N peers at once.
-
-- Transport + multiplexer already exist; just need a one-shot
-  run-submit path that doesn't need a plan file.
-- Could land as a special inline plan synthesized from the command
-  (single `shell` step), submitted to each peer's existing
-  `/v1/runs` endpoint, output interleaved through the existing
-  multiplexer.
-- Estimated ~200 LOC.
-
-Why high-leverage: when something's wrong on the fleet, the first thing
-you reach for is "what does `systemctl status sshd` show on every
-box?" — and writing a plan file for that is friction operators avoid.
+Ships in the same shape predicted here: a synthesized one-step shell
+plan, per-peer `/v1/runs` submission, multiplexed `[peer]` output.
+Adds `--peer-filter`, `--env`, `--cwd`, `--timeout`, `--become`,
+`--shell`, and `--json` (one JSONL record per peer for scripting).
+Exit-code aggregation: 0 if all peers succeeded, 1 if any peer's
+shell returned non-zero, 2 if any peer was unreachable.
 
 ### 2. `fleet watch` — live SSE event stream across peers
 
