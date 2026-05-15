@@ -1878,6 +1878,43 @@ func TestRunCommandArtifactsFlags(t *testing.T) {
 		}
 	})
 
+	// MT-86: same shape for --max-output-bytes / --max-output-lines.
+	// They only affect the artifact bundle; without --artifacts-dir
+	// the truncation is silently ignored.
+	t.Run("MT-86 max-output-bytes requires artifacts-dir", func(t *testing.T) {
+		app := createApp()
+		err := app.Run([]string{"mooncake", "apply", "--max-output-bytes", "100"})
+		if err == nil {
+			t.Fatal("expected error when --max-output-bytes is set without --artifacts-dir")
+		}
+		if !contains(err.Error(), "--max-output-bytes") || !contains(err.Error(), "--artifacts-dir") {
+			t.Errorf("error should name both flags; got: %v", err)
+		}
+	})
+
+	t.Run("MT-86 max-output-lines requires artifacts-dir", func(t *testing.T) {
+		app := createApp()
+		err := app.Run([]string{"mooncake", "apply", "--max-output-lines", "5"})
+		if err == nil {
+			t.Fatal("expected error when --max-output-lines is set without --artifacts-dir")
+		}
+		if !contains(err.Error(), "--max-output-lines") || !contains(err.Error(), "--artifacts-dir") {
+			t.Errorf("error should name both flags; got: %v", err)
+		}
+	})
+
+	// MT-86: a default-valued (unset) flag must NOT trip the
+	// validation — only explicit user-supplied overrides do. Otherwise
+	// every plain `mooncake apply` would fail.
+	t.Run("MT-86 max-output-* unset is fine", func(t *testing.T) {
+		app := createApp()
+		err := app.Run([]string{"mooncake", "apply", "--config", "/tmp/this-config-does-not-exist-mt86.yml"})
+		if err != nil && (contains(err.Error(), "--max-output-bytes requires") ||
+			contains(err.Error(), "--max-output-lines requires")) {
+			t.Errorf("validation should not fire when flags are unset; got: %v", err)
+		}
+	})
+
 	// Check for artifacts flags
 	artifactsFlags := map[string]bool{
 		"artifacts-dir":       false,
