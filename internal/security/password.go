@@ -20,8 +20,17 @@ type PasswordProvider interface {
 type InteractivePasswordProvider struct{}
 
 func (p *InteractivePasswordProvider) GetPassword() (string, error) {
+	// MT-85: term.ReadPassword on a non-TTY stdin returns the OS-level
+	// "inappropriate ioctl for device" error after we've already
+	// printed a useless prompt. Detect non-TTY first and emit a hint
+	// pointing at the file-based alternative so CI / piped invocations
+	// don't burn cycles wondering what an ioctl is.
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		return "", fmt.Errorf("--ask-become-pass requires an interactive terminal; stdin is not a TTY. Use --sudo-pass-file <path> (0600 permissions) instead, or set SUDO_ASKPASS to a helper program")
+	}
 	fmt.Fprint(os.Stderr, "BECOME password: ")
-	password, err := term.ReadPassword(int(os.Stdin.Fd()))
+	password, err := term.ReadPassword(fd)
 	fmt.Fprintln(os.Stderr) // New line after password input
 	if err != nil {
 		return "", fmt.Errorf("failed to read password: %w", err)
