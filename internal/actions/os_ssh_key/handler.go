@@ -56,6 +56,36 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.ssh_key writes to authorized_keys for the target user. Two
+// cases:
+//   - root or system user (e.g. /root/.ssh/authorized_keys, or a
+//     user whose home is under a SystemPathPrefixes root): Sudo
+//     required.
+//   - regular user under /home/<user>/.ssh/authorized_keys: Sudo
+//     required iff the daemon isn't already running as that user
+//     — which the planner can't determine here, so we conservatively
+//     declare Sudo=true.
+//
+// In practice every os.ssh_key step needs sudo (the file is owned
+// by the target user, mode 0600, and the action's apply path
+// chowns + chmods the directory + file). No Network, no required
+// binaries (the action reads/writes plain files via os.* calls).
+//
+// When the step pins a custom Path under a system root, surface it
+// in FilesystemWrite for the policy layer.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{Sudo: true}
+	if step == nil || step.OsSSHKey == nil {
+		return ps
+	}
+	if step.OsSSHKey.Path != "" {
+		ps.FilesystemWrite = []string{step.OsSSHKey.Path}
+	}
+	return ps
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	k := step.OsSSHKey
 	if k == nil {

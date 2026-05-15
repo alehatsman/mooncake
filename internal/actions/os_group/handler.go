@@ -47,6 +47,20 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.group always declares Sudo=true: groupadd/groupdel writes
+// /etc/group. No Network. RequiredBinaries=[groupadd, groupdel]
+// (groupmod isn't used today — the kernel refuses gid renumbering
+// to avoid silent ownership cascades).
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"groupadd", "groupdel"},
+		FilesystemWrite:  []string{"/etc/group"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	g := step.OsGroup
 	if g == nil {
