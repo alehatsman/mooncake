@@ -14,6 +14,7 @@ func registeredChecks() []Check {
 		checkGoRuntime{},
 		// system
 		checkFacts{},
+		checkTLSTrust{}, // MT-21: flag missing ca-certificates pre-emptively
 		// system/metrics deferred: metrics.Collect samples GPU/CPU/net and
 		// costs ~1s on cold start, blowing the wall-time budget for a
 		// check that only reports info. The `mooncake metrics` command
