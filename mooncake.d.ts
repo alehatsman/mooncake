@@ -387,6 +387,21 @@ export interface ObserveHttpAction {
 }
 
 /**
+ * Single-shot read of a log source; returns per-pattern match counts + sample lines
+ * @category system
+ */
+export interface ObserveLogsAction {
+  container?: string;
+  journal_unit?: string;
+  max_bytes?: number;
+  max_lines?: number;
+  path?: string;
+  patterns: string[];
+  sample_lines?: number;
+  since?: string;
+}
+
+/**
  * Single-shot read of memory + swap state (total/used/free/available)
  * @category system
  */
@@ -1299,6 +1314,11 @@ export interface Step {
    * sample
    */
   "observe.http"?: ObserveHttpAction;
+  /**
+   * Single-shot read of a log source; returns per-pattern match counts +
+   * sample lines
+   */
+  "observe.logs"?: ObserveLogsAction;
   /**
    * Single-shot read of memory + swap state (total/used/free/available)
    */

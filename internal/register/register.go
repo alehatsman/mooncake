@@ -57,6 +57,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_disk"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_gpu"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_http"
+	_ "github.com/alehatsman/mooncake/internal/actions/observe_logs"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_memory"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_port"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_process"

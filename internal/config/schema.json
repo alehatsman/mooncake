@@ -873,6 +873,45 @@
       "x-category": "network",
       "x-supports-dry-run": true
     },
+    "observe.logs": {
+      "type": "object",
+      "description": "Single-shot read of a log source; returns per-pattern match counts + sample lines",
+      "properties": {
+        "container": {
+          "type": "string"
+        },
+        "journal_unit": {
+          "type": "string"
+        },
+        "max_bytes": {
+          "type": "integer"
+        },
+        "max_lines": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sample_lines": {
+          "type": "integer"
+        },
+        "since": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "patterns"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
     "observe.memory": {
       "type": "object",
       "description": "Single-shot read of memory + swap state (total/used/free/available)",
@@ -2068,6 +2107,10 @@
           "description": "Single-shot HTTP GET; returns typed status, latency, headers, body sample",
           "$ref": "#/definitions/observe.http"
         },
+        "observe.logs": {
+          "description": "Single-shot read of a log source; returns per-pattern match counts + sample lines",
+          "$ref": "#/definitions/observe.logs"
+        },
         "observe.memory": {
           "description": "Single-shot read of memory + swap state (total/used/free/available)",
           "$ref": "#/definitions/observe.memory"
@@ -2440,6 +2483,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -2765,6 +2813,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -3098,6 +3151,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -3423,6 +3481,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -3756,6 +3819,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -4081,6 +4149,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -4414,6 +4487,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -4739,6 +4817,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -5072,6 +5155,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -5397,6 +5485,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -5730,6 +5823,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -6055,6 +6153,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -6388,6 +6491,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -6713,6 +6821,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -7046,6 +7159,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -7371,6 +7489,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -7704,6 +7827,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -8029,6 +8157,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -8362,6 +8495,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -8687,6 +8825,345 @@
               {
                 "required": [
                   "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.logs"
+          ],
+          "properties": {
+            "observe.logs": {
+              "$ref": "#/definitions/observe.logs"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
                 ]
               },
               {
@@ -9025,6 +9502,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
                 ]
               },
@@ -9350,6 +9832,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -9683,6 +10170,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -10008,6 +10500,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -10341,6 +10838,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -10666,6 +11168,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -10999,6 +11506,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -11324,6 +11836,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -11657,6 +12174,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -11982,6 +12504,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -12315,6 +12842,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -12640,6 +13172,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -12973,6 +13510,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -13298,6 +13840,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -13631,6 +14178,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -13956,6 +14508,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -14289,6 +14846,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -14614,6 +15176,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -14947,6 +15514,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -15272,6 +15844,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -15605,6 +16182,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -15934,6 +16516,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -16259,6 +16846,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -16599,6 +17191,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -16924,6 +17521,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -17257,6 +17859,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -17582,6 +18189,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -17915,6 +18527,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -18240,6 +18857,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -18573,6 +19195,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -18898,6 +19525,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -19231,6 +19863,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -19556,6 +20193,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -19887,6 +20529,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -20210,6 +20857,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -20550,6 +21202,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -20875,6 +21532,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -21208,6 +21870,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -21533,6 +22200,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -21866,6 +22538,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -22191,6 +22868,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
@@ -22524,6 +23206,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -22853,6 +23540,11 @@
               },
               {
                 "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
                   "observe.memory"
                 ]
               },
@@ -23178,6 +23870,11 @@
               {
                 "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
                 ]
               },
               {
