@@ -1,5 +1,6 @@
 # Bug — `fleet apply` fails to walk plan-dir containing non-regular files
 
+**Tracking:** [#15](https://github.com/alehatsman/mooncake/issues/15)
 **Surfaced:** 2026-05-15 during the spec-56 / spec-57 retest cycle, while
 exercising `fleet apply` with a minimal heartbeat plan.
 

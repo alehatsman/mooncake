@@ -1,5 +1,6 @@
 # Bug — `windows.scheduled_task` drift detection unstable across round-trip
 
+**Tracking:** [#14](https://github.com/alehatsman/mooncake/issues/14)
 **Surfaced:** 2026-05-15 during the spec-56 / spec-57 retest cycle.
 Right after a clean `apply`, the next `plan` still reports
 "would update task WSL2-SSH-Keepalive". Subsequent applies converge

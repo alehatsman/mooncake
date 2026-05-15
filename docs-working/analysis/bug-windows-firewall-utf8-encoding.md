@@ -1,5 +1,6 @@
 # Bug — `windows.firewall_rule` action corrupts non-ASCII description via ConvertTo-Json
 
+**Tracking:** [#13](https://github.com/alehatsman/mooncake/issues/13)
 **Surfaced:** 2026-05-15 during the spec-56 / spec-57 redeploy session
 against `main_pc-win`.
 

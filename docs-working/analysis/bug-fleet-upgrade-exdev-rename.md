@@ -1,5 +1,6 @@
 # Bug — `fleet upgrade` linux fails with EXDEV across staging vs install mounts
 
+**Tracking:** [#12](https://github.com/alehatsman/mooncake/issues/12)
 **Surfaced:** 2026-05-15 during the spec-56 / spec-57 redeploy session.
 **Repro frequency:** every linux peer where `/var/lib` and `/usr/local`
 live on different filesystems. On x1's WSL Ubuntu (`main_pc`):
