@@ -84,6 +84,7 @@ nav:
       - Variables: guide/config/variables.md
       - Control Flow: guide/config/control-flow.md
       - Expressions: guide/config/expressions.md
+      - Observability: guide/config/observability.md
       - Advanced: guide/config/advanced.md
     - Commands: guide/commands.md
     - Best Practices: guide/best-practices.md
