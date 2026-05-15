@@ -157,6 +157,12 @@ Examples:
 						Aliases: []string{"d"},
 						Usage:   "Show detailed information",
 					},
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Value:   "text",
+						Usage:   "Output format: text (default), json, yaml",
+					},
 				},
 			},
 			{
@@ -359,20 +365,59 @@ func selectWithFzf(allPresets []presets.PresetInfo) (string, error) {
 	return selectedLine, nil
 }
 
-// listPresetsAction lists all available presets
+// listPresetsAction lists all available presets. --format selects
+// the output shape (text / json / yaml) — json/yaml emit a compact
+// machine-readable record per preset so scripts can pipe through jq
+// or yq for programmatic discovery (MT-38).
 func listPresetsAction(c *cli.Context) error {
 	allPresets, err := presets.DiscoverAllPresets()
 	if err != nil {
 		return fmt.Errorf("failed to discover presets: %w", err)
 	}
 
+	format := strings.ToLower(c.String("format"))
+	switch format {
+	case "", "text":
+		return printPresetsText(allPresets, c.Bool("detailed"))
+	case "json":
+		return printPresetsJSON(allPresets)
+	case "yaml", "yml":
+		return printPresetsYAML(allPresets)
+	default:
+		return fmt.Errorf("unknown --format %q (supported: text, json, yaml)", format)
+	}
+}
+
+// presetListEntry is the canonical machine-readable shape for
+// `presets list --format json|yaml`. Keys mirror the fields exposed
+// in detailed text mode so scripts can rely on a stable schema.
+type presetListEntry struct {
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	Version     string `json:"version" yaml:"version"`
+	Source      string `json:"source" yaml:"source"`
+	Path        string `json:"path" yaml:"path"`
+}
+
+func toPresetListEntries(ps []presets.PresetInfo) []presetListEntry {
+	out := make([]presetListEntry, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, presetListEntry{
+			Name:        p.Name,
+			Description: p.Description,
+			Version:     p.Version,
+			Source:      p.Source,
+			Path:        p.Path,
+		})
+	}
+	return out
+}
+
+func printPresetsText(allPresets []presets.PresetInfo, detailed bool) error {
 	if len(allPresets) == 0 {
 		fmt.Println("No presets found.")
 		return nil
 	}
-
-	detailed := c.Bool("detailed")
-
 	if detailed {
 		fmt.Printf("Found %d preset(s):\n\n", len(allPresets))
 		for _, p := range allPresets {
@@ -388,8 +433,19 @@ func listPresetsAction(c *cli.Context) error {
 			fmt.Printf("%-20s  %s (v%s)\n", p.Name, p.Description, p.Version)
 		}
 	}
-
 	return nil
+}
+
+func printPresetsJSON(allPresets []presets.PresetInfo) error {
+	entries := toPresetListEntries(allPresets)
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(entries)
+}
+
+func printPresetsYAML(allPresets []presets.PresetInfo) error {
+	entries := toPresetListEntries(allPresets)
+	return yaml.NewEncoder(os.Stdout).Encode(entries)
 }
 
 // presetInfoAction shows detailed information about a specific preset
