@@ -226,38 +226,51 @@ func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool { //nolint:un
 
 func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	vars := ec.GetVariables()
-	// Check creates condition
-	if step.UnlessExists != nil {
-		path, err := ec.Svc.Template.Render(*step.UnlessExists, vars)
-		if err != nil {
-			return false, "", &RenderError{Field: "creates path", Cause: err}
-		}
 
-		expandedPath, err := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, vars)
-		if err != nil {
-			return false, "", &RenderError{Field: "creates path", Cause: err}
+	// Collect (creates, unless) pairs from both step-level fields and the
+	// shell-action-level guards. Shell-level guards mirror the universal
+	// step-level fields but live on the action block so users can colocate
+	// "what command to run" with "when to skip it".
+	type guard struct{ creates, unless string }
+	var guards []guard
+	if step.UnlessExists != nil || step.UnlessCommand != nil {
+		g := guard{}
+		if step.UnlessExists != nil {
+			g.creates = *step.UnlessExists
 		}
-
-		if _, err := os.Stat(expandedPath); err == nil {
-			// Path exists - skip step
-			return true, fmt.Sprintf("creates: %s", expandedPath), nil
+		if step.UnlessCommand != nil {
+			g.unless = *step.UnlessCommand
 		}
+		guards = append(guards, g)
+	}
+	if step.Shell != nil && (step.Shell.Creates != "" || step.Shell.Unless != "") {
+		guards = append(guards, guard{creates: step.Shell.Creates, unless: step.Shell.Unless})
 	}
 
-	// Check unless condition
-	if step.UnlessCommand != nil {
-		command, err := ec.Svc.Template.Render(*step.UnlessCommand, vars)
-		if err != nil {
-			return false, "", &RenderError{Field: "unless command", Cause: err}
+	for _, g := range guards {
+		if g.creates != "" {
+			path, err := ec.Svc.Template.Render(g.creates, vars)
+			if err != nil {
+				return false, "", &RenderError{Field: "creates path", Cause: err}
+			}
+			expandedPath, err := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, vars)
+			if err != nil {
+				return false, "", &RenderError{Field: "creates path", Cause: err}
+			}
+			if _, err := os.Stat(expandedPath); err == nil {
+				return true, fmt.Sprintf("creates: %s", expandedPath), nil
+			}
 		}
-
-		// Execute unless command (silently, no logging)
-		// #nosec G204 -- This is a provisioning tool designed to execute commands from user configs.
-		// The command comes from user-provided YAML configuration files for idempotency checks.
-		cmd := exec.Command("sh", "-c", command)
-		if err := cmd.Run(); err == nil {
-			// Command succeeded - skip step
-			return true, fmt.Sprintf("unless: %s", command), nil
+		if g.unless != "" {
+			command, err := ec.Svc.Template.Render(g.unless, vars)
+			if err != nil {
+				return false, "", &RenderError{Field: "unless command", Cause: err}
+			}
+			// #nosec G204 -- This is a provisioning tool designed to execute commands from user configs.
+			cmd := exec.Command("sh", "-c", command)
+			if err := cmd.Run(); err == nil {
+				return true, fmt.Sprintf("unless: %s", command), nil
+			}
 		}
 	}
 

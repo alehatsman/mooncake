@@ -86,7 +86,10 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the shell action.
+// Execute runs the shell action. Action-level creates:/unless: guards are
+// evaluated upstream in the executor's idempotency check, alongside the
+// step-level unless_exists/unless_command — by the time we get here the
+// step is committed to running.
 func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	shellAction := step.Shell
 	shell := strings.Trim(shellAction.Cmd, " \n")

@@ -355,3 +355,81 @@ func TestExecuteStep_IdempotencyIntegration(t *testing.T) {
 		t.Errorf("Expected 0 executed steps, got %d", *ec.Svc.Stats.Executed)
 	}
 }
+
+// TestCheckIdempotencyConditions_ShellLevelCreates is a regression test for
+// manual-test #2 (2026-05-15): action-level guards on the ShellAction
+// (`shell: { cmd:..., creates:... }`) must trigger the same skip path as
+// the step-level unless_exists field. Before the fix the action-level
+// keys were silently dropped, the command ran, and the recap counted it
+// as changed=true.
+func TestCheckIdempotencyConditions_ShellLevelCreates(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "shell-creates-")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	step := config.Step{
+		Shell: &config.ShellAction{
+			Cmd:     "echo would-run",
+			Creates: tmpFile.Name(),
+		},
+	}
+
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template: renderer,
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !shouldSkip {
+		t.Errorf("expected skip when shell.creates points at existing file, got shouldSkip=false reason=%q", reason)
+	}
+	if !strings.Contains(reason, "creates:") || !strings.Contains(reason, tmpFile.Name()) {
+		t.Errorf("expected reason to mention creates+path, got %q", reason)
+	}
+}
+
+func TestCheckIdempotencyConditions_ShellLevelUnless(t *testing.T) {
+	// Pick an unless command that always exits 0 → expect skip.
+	step := config.Step{
+		Shell: &config.ShellAction{
+			Cmd:    "echo would-run",
+			Unless: "true",
+		},
+	}
+
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template: renderer,
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !shouldSkip {
+		t.Errorf("expected skip when shell.unless exits 0, got shouldSkip=false reason=%q", reason)
+	}
+	if !strings.Contains(reason, "unless:") {
+		t.Errorf("expected reason to mention unless:, got %q", reason)
+	}
+}

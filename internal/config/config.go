@@ -223,6 +223,17 @@ type ShellAction struct {
 	// Ignored for non-PowerShell interpreters.
 	ErrorAction string `yaml:"error_action,omitempty" json:"error_action,omitempty"`
 
+	// Creates is an idempotency marker path. If the path exists on the host
+	// when the step runs, the command is not executed and the result is
+	// reported as skipped. Mirrors the Ansible/Puppet/unarchive convention.
+	Creates string `yaml:"creates,omitempty" json:"creates,omitempty" plan:"path"`
+
+	// Unless is an idempotency probe command. The command is executed (via
+	// the default shell, not the configured interpreter) and the main shell
+	// step runs only when it exits non-zero. If it exits zero the main step
+	// is reported as skipped without running.
+	Unless string `yaml:"unless,omitempty" json:"unless,omitempty"`
+
 	// Note: env, cwd, timeout are in Step-level fields for consistency
 	// Note: this enables reuse across shell/command actions
 }

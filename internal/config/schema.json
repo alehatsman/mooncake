@@ -1860,6 +1860,9 @@
           "type": "string",
           "description": "Shell command to execute (required)"
         },
+        "creates": {
+          "type": "string"
+        },
         "error_action": {
           "type": "string",
           "description": "Windows + PowerShell only — sets $ErrorActionPreference (Stop, Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere."
@@ -1875,6 +1878,9 @@
         "stdin": {
           "type": "string",
           "description": "Input to provide to the command via stdin"
+        },
+        "unless": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -1899,6 +1905,9 @@
           "type": "string",
           "description": "Shell command to execute (required)"
         },
+        "creates": {
+          "type": "string"
+        },
         "error_action": {
           "type": "string",
           "description": "Windows + PowerShell only — sets $ErrorActionPreference (Stop, Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere."
@@ -1914,6 +1923,9 @@
         "stdin": {
           "type": "string",
           "description": "Input to provide to the command via stdin"
+        },
+        "unless": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
