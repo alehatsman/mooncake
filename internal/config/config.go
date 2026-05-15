@@ -1072,6 +1072,34 @@ type ObservePort struct {
 	Timeout  string `yaml:"timeout" json:"timeout,omitempty"`   // Dial timeout (default: "2s")
 }
 
+// ObserveProcess is the spec-59 single-shot read of process state.
+// Selector is either Name (exact match against process basename) or
+// Pattern (regex against full argv). At least one must be set.
+type ObserveProcess struct {
+	Name    string `yaml:"name" json:"name,omitempty"`       // Exact match against process basename
+	Pattern string `yaml:"pattern" json:"pattern,omitempty"` // Regex against full argv (alternative to name)
+}
+
+// ObserveHTTP is the spec-59 single-shot HTTP GET observation.
+// Network-flagged via Permissions{Network:true}. Body sample is
+// capped at 2048 bytes; headers are filtered to CaptureHeaders.
+type ObserveHTTP struct {
+	URL            string   `yaml:"url" json:"url"`                                   // Target URL (required)
+	Method         string   `yaml:"method" json:"method,omitempty"`                   // HTTP method (default: "GET")
+	Timeout        string   `yaml:"timeout" json:"timeout,omitempty"`                 // Request timeout (default: "3s")
+	ExpectStatus   int      `yaml:"expect_status" json:"expect_status,omitempty"`     // If set, Found=false when StatusCode != ExpectStatus
+	CaptureHeaders []string `yaml:"capture_headers" json:"capture_headers,omitempty"` // Headers to expose in HTTPObservation.Headers
+	SkipTLSVerify  bool     `yaml:"skip_tls_verify" json:"skip_tls_verify,omitempty"` // Disable cert verification (use with care)
+}
+
+// ObserveService is the spec-59 single-shot read of init-system
+// service state. systemd on Linux, launchd on macOS, sysv fallback
+// elsewhere. Manager defaults to "auto" (detect from facts).
+type ObserveService struct {
+	Name    string `yaml:"name" json:"name"`                 // Service unit name (required)
+	Manager string `yaml:"manager" json:"manager,omitempty"` // "systemd" | "launchd" | "auto"
+}
+
 // WaitPort waits for a TCP port to accept connections.
 // Useful for orchestrating service start → port open → next step.
 type WaitPort struct {
@@ -1211,6 +1239,9 @@ type Step struct {
 	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
 	Assert           *Assert                 `yaml:"assert"            json:"assert,omitempty"            action:"assert"`
 	ObservePort      *ObservePort            `yaml:"observe.port"      json:"observe.port,omitempty"      action:"observe.port"`
+	ObserveProcess   *ObserveProcess         `yaml:"observe.process"   json:"observe.process,omitempty"   action:"observe.process"`
+	ObserveHTTP      *ObserveHTTP            `yaml:"observe.http"      json:"observe.http,omitempty"      action:"observe.http"`
+	ObserveService   *ObserveService         `yaml:"observe.service"   json:"observe.service,omitempty"   action:"observe.service"`
 	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
 	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
 	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
@@ -1618,6 +1649,9 @@ func (s *Step) Clone() *Step {
 		Shell:            s.Shell,
 		Assert:           s.Assert,
 		ObservePort:      s.ObservePort,
+		ObserveProcess:   s.ObserveProcess,
+		ObserveHTTP:      s.ObserveHTTP,
+		ObserveService:   s.ObserveService,
 		WaitPort:         s.WaitPort,
 		WaitHTTP:         s.WaitHTTP,
 		WaitFile:         s.WaitFile,

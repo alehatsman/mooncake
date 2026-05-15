@@ -1,0 +1,63 @@
+# Spec-59 Phase 2 + 3 composition demo.
+#
+# Walks a typical "is my app healthy?" flow using three of the four
+# seed observers (observe.http, observe.service, observe.process)
+# composing via spec-37 `as:` capture and `when:` branching.
+#
+# Run:
+#   $ mooncake apply -c examples/observability/check-app-health.yml
+#
+# What you'll see depends on what's running on the box — the steps
+# branch on the typed observation results, so the output is a
+# self-describing snapshot of the local state.
+
+version: "1.0"
+
+steps:
+  # 1. Quick TCP poke — is anything on port 22 (sshd default)?
+  - name: probe sshd port
+    observe.port:
+      host: localhost
+      port: 22
+      timeout: 500ms
+    as: sshd_port
+
+  - name: report ssh listener
+    log: "sshd port is open"
+    when: "sshd_port.value.open"
+
+  # 2. Process check — is the sshd process actually running?
+  - name: probe sshd process
+    observe.process:
+      name: sshd
+    as: sshd_proc
+    when: "sshd_port.value.open"
+
+  - name: report sshd process
+    log: "sshd pid={{ sshd_proc.value.pid }} args={{ sshd_proc.value.args }}"
+    when: "sshd_port.value.open and sshd_proc.value.running"
+
+  # 3. HTTP health — observe a known endpoint (httpbin.org would work
+  # if reachable; we use a localhost stub for the demo). Comment in
+  # the line below to actually try it.
+  #
+  # - name: probe http
+  #   observe.http:
+  #     url: http://httpbin.org/status/200
+  #     timeout: 3s
+  #     expect_status: 200
+  #     capture_headers: [Server, X-Request-ID]
+  #   as: health
+  #
+  # - name: report http health
+  #   log: "http up — status={{ health.value.status_code }} latency={{ health.value.latency_ms }}ms"
+  #   when: "health.found"
+
+  # 4. Service state — uses systemd (Linux) or launchd (macOS).
+  - name: probe ssh service
+    observe.service:
+      name: ssh
+    as: ssh_svc
+
+  - name: report ssh service
+    log: "ssh service: exists={{ ssh_svc.value.exists }} active={{ ssh_svc.value.active }} enabled={{ ssh_svc.value.enabled }}"

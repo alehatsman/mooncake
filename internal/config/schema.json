@@ -807,6 +807,41 @@
         "print.message"
       ]
     },
+    "observe.http": {
+      "type": "object",
+      "description": "Single-shot HTTP GET; returns typed status, latency, headers, body sample",
+      "properties": {
+        "capture_headers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expect_status": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "skip_tls_verify": {
+          "type": "boolean"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false,
+      "x-category": "network",
+      "x-supports-dry-run": true
+    },
     "observe.port": {
       "type": "object",
       "description": "Single-shot read of TCP/UDP port state (open? listener? pid?)",
@@ -830,6 +865,40 @@
       ],
       "additionalProperties": false,
       "x-category": "network",
+      "x-supports-dry-run": true
+    },
+    "observe.process": {
+      "type": "object",
+      "description": "Single-shot read of process state (running? pid? args?)",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "observe.service": {
+      "type": "object",
+      "description": "Single-shot read of service state (active? enabled?)",
+      "properties": {
+        "manager": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-category": "system",
       "x-supports-dry-run": true
     },
     "os.cron": {
@@ -1945,9 +2014,21 @@
           "type": "string",
           "description": "Name of the step (universal)"
         },
+        "observe.http": {
+          "description": "Single-shot HTTP GET; returns typed status, latency, headers, body sample",
+          "$ref": "#/definitions/observe.http"
+        },
         "observe.port": {
           "description": "Single-shot read of TCP/UDP port state (open? listener? pid?)",
           "$ref": "#/definitions/observe.port"
+        },
+        "observe.process": {
+          "description": "Single-shot read of process state (running? pid? args?)",
+          "$ref": "#/definitions/observe.process"
+        },
+        "observe.service": {
+          "description": "Single-shot read of service state (active? enabled?)",
+          "$ref": "#/definitions/observe.service"
         },
         "on_change": {
           "type": "array",
@@ -2285,7 +2366,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -2579,7 +2675,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -2873,7 +2984,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -3167,7 +3293,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -3461,7 +3602,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -3755,7 +3911,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -4049,7 +4220,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -4343,7 +4529,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -4637,7 +4838,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -4931,7 +5147,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -5225,7 +5456,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -5519,7 +5765,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -5813,7 +6074,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -6107,7 +6383,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -6401,7 +6692,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -6695,7 +7001,331 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.http"
+          ],
+          "properties": {
+            "observe.http": {
+              "$ref": "#/definitions/observe.http"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -6994,6 +7624,639 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.process"
+          ],
+          "properties": {
+            "observe.process": {
+              "$ref": "#/definitions/observe.process"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.service"
+          ],
+          "properties": {
+            "observe.service": {
+              "$ref": "#/definitions/observe.service"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -7288,7 +8551,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -7582,7 +8860,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -7876,7 +9169,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -8170,7 +9478,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -8464,7 +9787,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -8758,7 +10096,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -9052,7 +10405,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -9346,7 +10714,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -9640,7 +11023,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -9934,7 +11332,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -10228,7 +11641,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -10522,7 +11950,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -10816,7 +12259,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -11110,7 +12568,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -11404,7 +12877,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -11698,7 +13186,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -11992,7 +13495,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -12286,7 +13804,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -12580,7 +14113,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -12881,7 +14429,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -13175,7 +14738,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -13469,7 +15047,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -13763,7 +15356,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -14057,7 +15665,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -14351,7 +15974,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -14645,7 +16283,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -14939,7 +16592,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -15233,7 +16901,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -15527,7 +17210,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -15819,7 +17517,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -16111,7 +17824,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -16412,7 +18140,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -16706,7 +18449,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -17000,7 +18758,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -17294,7 +19067,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -17588,7 +19376,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -17882,7 +19685,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -18176,7 +19994,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -18470,7 +20303,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {
@@ -18764,7 +20612,22 @@
               },
               {
                 "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
                 ]
               },
               {

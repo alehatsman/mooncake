@@ -583,7 +583,10 @@ var actionStructByName = map[string]any{
 	"windows.firewall_rule":  &config.WindowsFirewallRule{},
 	"windows.scheduled_task": &config.WindowsScheduledTask{},
 
-	"observe.port": &config.ObservePort{},
+	"observe.port":    &config.ObservePort{},
+	"observe.process": &config.ObserveProcess{},
+	"observe.http":    &config.ObserveHTTP{},
+	"observe.service": &config.ObserveService{},
 }
 
 // getActionStruct returns the reflect.Type for an action's config struct.
