@@ -215,6 +215,30 @@ for fleet-level run dashboards.
 
 ---
 
+## ★ `vars.load` and `--vars` use last-write-wins layering
+
+```
+# base.yml:     app: web, port: 8080, shared: from-base
+# override.yml: port: 9090, extra: from-override
+
+$ mooncake apply --vars base.yml --vars override.yml
+result: app=web port=9090 shared=from-base extra=from-override
+```
+
+Both forms produce identical results:
+```yaml
+- vars.load: base.yml
+- vars.load: override.yml
+```
+```
+$ mooncake apply -v base.yml -v override.yml
+```
+
+Last-load-wins, missing keys preserve earlier values. Same semantics
+as Ansible's `--extra-vars` chain. Clean.
+
+---
+
 ## ★ Multi-file configs / `import:` / `vars.load` work cleanly
 
 ```yaml
