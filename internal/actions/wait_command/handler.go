@@ -69,7 +69,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return r, nil
 	}
 
-	timeout, interval, err := parseTimings(w.Timeout, w.PollInterval)
+	// MT-42: accept `interval:` as an alias for `poll_interval:`.
+	// PollInterval wins when both are set so the canonical name remains
+	// authoritative.
+	intervalField := w.PollInterval
+	if intervalField == "" {
+		intervalField = w.Interval
+	}
+	timeout, interval, err := parseTimings(w.Timeout, intervalField)
 	if err != nil {
 		return nil, err
 	}

@@ -1171,6 +1171,11 @@ type WaitPort struct {
 	Port         int    `yaml:"port" json:"port"`                             // TCP port (required)
 	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
 	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between dial attempts (default: "1s")
+	// Interval is an alias for PollInterval (MT-42). Authors instinctively
+	// write `interval:`; without this the field is silently dropped and
+	// the default 1s is used. Handler precedence: PollInterval wins if
+	// both are set.
+	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
 // WaitHTTP waits for an HTTP endpoint to return one of the accepted
@@ -1183,6 +1188,8 @@ type WaitHTTP struct {
 	Headers      map[string]string `yaml:"headers" json:"headers,omitempty"`               // Optional request headers
 	Timeout      string            `yaml:"timeout" json:"timeout,omitempty"`               // Total timeout duration (default: "60s")
 	PollInterval string            `yaml:"poll_interval" json:"poll_interval,omitempty"`   // Time between requests (default: "1s")
+	// Interval is an alias for PollInterval (MT-42). See WaitPort.
+	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
 // WaitFile waits for a filesystem path to exist, optionally containing
@@ -1192,6 +1199,8 @@ type WaitFile struct {
 	Contains     string `yaml:"contains" json:"contains,omitempty"`           // Optional substring required in file contents
 	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
 	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between checks (default: "1s")
+	// Interval is an alias for PollInterval (MT-42). See WaitPort.
+	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
 // WaitCommand waits for a shell command to exit with the expected code.
@@ -1200,6 +1209,8 @@ type WaitCommand struct {
 	ExpectExit   int    `yaml:"expect_exit" json:"expect_exit,omitempty"`     // Expected exit code (default: 0)
 	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
 	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between attempts (default: "1s")
+	// Interval is an alias for PollInterval (MT-42). See WaitPort.
+	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
 // ArtifactValidate validates artifacts against constraints (change budgets).
