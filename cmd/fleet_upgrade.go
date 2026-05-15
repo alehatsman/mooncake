@@ -19,12 +19,15 @@ import (
 )
 
 // supportedSelfUpgradeOS lists peer OSes that v1 of self-upgrade can
-// drive. Linux only — Windows needs the MoveFile + scheduled-task path
-// which isn't implemented yet. macOS works in principle (it shares the
-// syscall.Exec implementation) but isn't tested, so the CLI rejects it
-// by default until someone trials it.
+// drive. Linux peers use syscall.Exec for in-place process-image
+// replacement; Windows peers use the MoveFile-the-running-exe trick
+// plus a scheduled-task Stop/Start cycle driven by a detached helper.
+// macOS works in principle (shares the Unix syscall.Exec path) but
+// isn't smoke-tested, so the CLI defaults to refusing it until
+// someone trials it with --include-os darwin.
 var supportedSelfUpgradeOS = map[string]struct{}{
-	"linux": {},
+	"linux":   {},
+	"windows": {},
 }
 
 func fleetUpgradeCommand() *cli.Command {
@@ -35,11 +38,12 @@ func fleetUpgradeCommand() *cli.Command {
 		Description: "Streams the local mooncake binary to each selected peer's " +
 			"/v1/self/binary, verifies it on the peer side (--version sanity " +
 			"check), then asks /v1/self/replace to swap the on-disk binary and " +
-			"re-exec. The controller polls the peer's /v1/version until the " +
-			"daemon_pid changes — that's the all-clear signal.\n\n" +
-			"Linux peers only in v1. Windows peers are skipped with a banner; " +
-			"Darwin peers are skipped too (untested). Override with --include-os " +
-			"if you've validated the peer's behaviour yourself.",
+			"restart. The controller polls /v1/version until the daemon comes " +
+			"back (PID changes on Windows scheduled-task restart, or uptime " +
+			"resets on Linux syscall.Exec).\n\n" +
+			"Linux and Windows peers are supported by default. macOS peers are " +
+			"skipped (untested) — override with --include-os darwin if you've " +
+			"validated the peer's behaviour yourself.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "peers",
@@ -215,7 +219,7 @@ func upgradeOnePeer(ctx context.Context, w io.Writer, p fleet.Peer, binPath, bin
 	}
 	if _, ok := allowedOS[peerOS]; !ok {
 		// Skipped, not failed — the user knows; we tell them how to override.
-		msg := fmt.Sprintf("OS %q not in v1-supported set (linux). Pass --include-os %s to override.", peerOS, peerOS)
+		msg := fmt.Sprintf("OS %q not in supported set (linux, windows). Pass --include-os %s to override.", peerOS, peerOS)
 		fmt.Fprintf(w, "[%s] skipped: %s\n", p.Name, msg)
 		return fmt.Errorf("%w: %s", errUpgradeSkipped, msg)
 	}
