@@ -380,10 +380,18 @@ Consistent result shape:
 `observe.http`: `{latency_ms, method, reachable, status_code, url}`
 `observe.cpu`: `{cores, idle_pct, load_15m, load_1m, load_5m, usage_pct}`
 `observe.disk`: `{free_bytes, inodes_total, inodes_used, path, total_bytes, used_bytes}`
+`observe.memory`: `{available_bytes, free_bytes, swap_total_bytes, swap_used_bytes, total_bytes, used_bytes}`
+`observe.logs`: `{identifier, lines_read, matches: [{count, pattern, sample_lines}], source, truncated, window}`
+`observe.gpu`: requires nvidia-smi; clean error if missing
 
 This is the typed-observation primitive spec-59 promised. Live, fast,
 schema-stable. The agent-loop read-side that the rest of the action
 surface needs.
+
+`observe.logs` deserves special note — `patterns:` takes a list of
+regex strings, returns per-pattern `{count, sample_lines}`, includes
+a `window` field for time-bounding. Multi-pattern in one call avoids
+N round trips for "did any of these errors happen?" probes.
 
 ---
 
