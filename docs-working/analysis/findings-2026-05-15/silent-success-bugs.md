@@ -692,6 +692,53 @@ to my missing `.value`.
 
 ---
 
+## #80 — `text.patch` silently no-ops on broken hunks (no error, no signal) — MEDIUM
+
+**Repro**:
+```
+$ echo -e "alpha\nbeta\ngamma" > /work/in.txt
+$ mooncake step "text.patch: {
+    path: /work/in.txt,
+    patch: \"--- a/in.txt\n+++ b/in.txt\n@@ -50,3 +50,3 @@\n alpha\n-beta\n+BETA\n gamma\n\"
+  }"
+{
+  "action": "text.patch",
+  "changed": false,
+  "failed": false,
+  "rc": 0
+  # ← no failed_hunks, no error, no diagnostic
+}
+```
+
+The patch targets line 50 in a 3-line file. The patch can't apply.
+But the action returns clean success: `changed: false, failed: false`.
+No `failed_hunks` count, no error message, no clue.
+
+Compare to a VALID patch result:
+```json
+{"applied_hunks": 1, "failed_hunks": 0, "total_hunks": 1}
+```
+
+The valid case surfaces hunk counters. The broken case omits them
+entirely — agents have no signal that the patch was rejected.
+
+**Why MEDIUM**: this is a *bunch* of silent-success in one place.
+LLM-driven code refactors via `repo.patch` / `text.patch` rely on the
+"did my change land?" signal. With this bug, the agent thinks the
+patch succeeded and moves on — the file is unchanged.
+
+**Fix**: when the patch couldn't apply any hunk, return
+`failed_hunks > 0, total_hunks > 0, changed: false, error: "no
+hunks matched (target file may have drifted)"`. Or: return
+`failed: true` if all hunks failed.
+
+(The idempotent case — patch already applied — should *also* be
+distinguished from this. Today both return identical `changed:
+false, failed: false`. They mean different things and should look
+different.)
+
+---
+
 ## #67 — Nested `try:` blocks fail with "no handler registered for action type: unknown" — MEDIUM
 
 **Repro**:
