@@ -986,7 +986,17 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		if err != nil {
 			return &SetupError{Component: "artifacts", Issue: "failed to create artifact writer", Cause: err}
 		}
+		// MT-53 (events-drop-on-close): the writer subscribes to an
+		// async channel publisher. EventRunCompleted is queued just
+		// before ExecutePlan returns; if we close the writer before
+		// the publisher's forwarding goroutine has drained its channel,
+		// the writer's `closed` flag is set and the queued
+		// run-completed event is silently dropped — including the call
+		// that writes results.json / SUMMARY.md / changed_files.json.
+		// Drain pending events FIRST (LIFO defer order: Flush below
+		// runs *before* the Close above).
 		defer artifactWriter.Close()
+		defer publisher.Flush()
 
 		// Subscribe artifact writer to events
 		publisher.Subscribe(artifactWriter)

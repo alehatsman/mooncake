@@ -679,3 +679,99 @@ func TestWriter_Concurrency(t *testing.T) {
 		t.Errorf("expected %d steps, got %d", 3*eventCount, len(writer.steps))
 	}
 }
+
+// MT-53 (events-drop-on-close): when the writer subscribes to the
+// async channel publisher, EventRunCompleted is queued in the
+// publisher's channel but processed by a forwarding goroutine. If
+// writer.Close() runs before that goroutine drains the channel, the
+// writer flips its `closed` flag and the queued event gets silently
+// dropped — results.json / summary.json never get written. The
+// executor guards this with `defer publisher.Flush()` placed *after*
+// `defer writer.Close()` so Flush runs FIRST (LIFO). This test pins
+// that invariant: publish RunCompleted, Flush, Close, and assert
+// results.json exists.
+func TestWriter_RunCompletedViaAsyncPublisher_FlushBeforeClose(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := Config{BaseDir: tmpDir}
+
+	writer, err := NewWriter(cfg, createTestPlan(), createTestFacts())
+	if err != nil {
+		t.Fatalf("NewWriter failed: %v", err)
+	}
+	runDir := writer.runDir
+
+	publisher := events.NewPublisher()
+	publisher.Subscribe(writer)
+
+	// Same defer order as internal/executor/executor.go's artifact
+	// writer setup: writer.Close runs LAST, Flush FIRST (LIFO).
+	defer writer.Close()
+	defer publisher.Flush()
+	defer publisher.Close()
+
+	publisher.Publish(events.Event{
+		Type:      events.EventStepCompleted,
+		Timestamp: time.Now(),
+		Data: events.StepCompletedData{
+			StepID: "step-1", Name: "step", Level: 0, DurationMs: 10, Changed: true,
+		},
+	})
+	publisher.Publish(events.Event{
+		Type:      events.EventRunCompleted,
+		Timestamp: time.Now(),
+		Data: events.RunCompletedData{
+			TotalSteps: 1, SuccessSteps: 1, ChangedSteps: 1, DurationMs: 10, Success: true,
+		},
+	})
+
+	// Wait for the publisher's goroutine to drain. After Flush returns,
+	// the writer must have written results.json — even though Close
+	// hasn't fired yet (it's still in the deferred chain).
+	publisher.Flush()
+
+	if _, statErr := os.Stat(filepath.Join(runDir, "results.json")); statErr != nil {
+		t.Errorf("results.json should exist after async EventRunCompleted, got: %v", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(runDir, "summary.json")); statErr != nil {
+		t.Errorf("summary.json should exist after async EventRunCompleted, got: %v", statErr)
+	}
+}
+
+// MT-53 regression-shape: without Flush before Close (the pre-fix
+// ordering), the writer would silently miss the queued RunCompleted
+// event. This test reproduces that pathological order — Close fires
+// before Flush — and confirms the writer's `closed` short-circuit is
+// what drops the work. Documenting the bug shape, not the desired
+// behavior.
+func TestWriter_RunCompletedViaAsyncPublisher_CloseBeforeFlushDropsResults(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := Config{BaseDir: tmpDir}
+
+	writer, err := NewWriter(cfg, createTestPlan(), createTestFacts())
+	if err != nil {
+		t.Fatalf("NewWriter failed: %v", err)
+	}
+	runDir := writer.runDir
+
+	publisher := events.NewPublisher()
+	publisher.Subscribe(writer)
+
+	publisher.Publish(events.Event{
+		Type:      events.EventRunCompleted,
+		Timestamp: time.Now(),
+		Data: events.RunCompletedData{
+			TotalSteps: 1, SuccessSteps: 1, DurationMs: 10, Success: true,
+		},
+	})
+
+	// Close BEFORE flush — wrong order. The writer flips `closed`;
+	// any queued events fired by the publisher's forwarding goroutine
+	// hit the early-return guard in OnEvent.
+	writer.Close()
+	publisher.Flush()
+	publisher.Close()
+
+	if _, statErr := os.Stat(filepath.Join(runDir, "results.json")); statErr == nil {
+		t.Error("with Close-before-Flush, results.json should NOT exist — if it does, the writer no longer short-circuits on closed and the executor's defer ordering is no longer load-bearing")
+	}
+}
