@@ -995,6 +995,11 @@ func createApp() *cli.App {
 		Usage:                "Space fighters provisioning tool, Chookity!",
 		Version:              version,
 		EnableBashCompletion: true,
+		// MT-57: when a user types `mooncake runs submit` (real name is
+		// `apply`), urfave/cli's default fallthrough is `No help topic
+		// for 'submit'` — no hint that they're close. Enabling Suggest
+		// adds the standard "Did you mean 'apply'?" line.
+		Suggest: true,
 
 		Commands: []*cli.Command{
 			initCommand(),
