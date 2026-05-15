@@ -279,6 +279,41 @@ should accept `--format json` to forward that response verbatim.
 
 ---
 
+## #61 — Recurring pattern: `error:` populated but `failed: false` — MEDIUM (consistency)
+
+Observed across multiple actions:
+
+```
+observe.process (no matching process):
+  {"failed": false, "error": "no matching process", "found": false}
+
+wait.http (timeout):
+  {"failed": false, "success": false, "error": "wait.http timeout after 1.001s..."}
+
+os.mount (mount failure):
+  {"failed": false, "error": "os.mount: mount /tmp/tmpfs: exit status 32: ...", "operation": "create"}
+
+os.firewall (iptables denied):
+  {"failed": false, "error": "os.firewall: read current rules: Permission denied..."}
+```
+
+**Why MEDIUM**: callers checking `result.failed` see `false` and assume
+success — but the `error:` field is populated with a real diagnostic.
+Three possible meanings, all confusing:
+- "We did our best; the actual side effect failed but we didn't fail the step" (os.mount)
+- "Observation completed; the answer is 'not present'" (observe.process)
+- "Timeout is not a failure" (wait.http)
+
+These should be distinct. **Recommended convention**:
+- `failed: true` when the action couldn't do its job (os.mount couldn't mount; os.firewall couldn't read).
+- `failed: false, found: false` for observe actions returning "not present".
+- `failed: false, success: false, error: ""` for wait actions hitting timeout — with `error` empty (timeout is the answer, not an error).
+
+Today, agents have to parse the `error` string to distinguish. That's
+fragile.
+
+---
+
 ## #58 — No `--skip-tags` exclusion flag — LOW (DX gap)
 
 **Repro**:
