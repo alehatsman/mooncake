@@ -325,6 +325,67 @@ config file is empty: /work/empty.yml — expected a list of steps
 
 ---
 
+## #74 — `--facts-json` output uses PascalCase keys — LOW (style, extends #69)
+
+**Repro**:
+```
+$ mooncake apply --facts-json /work/facts.json
+$ head /work/facts.json
+{
+  "OS": "linux",
+  "Arch": "amd64",
+  "Hostname": "5d49de35216d",
+  "Username": "root",
+  "UserHome": "/root",
+  ...
+}
+```
+
+PascalCase, same outlier as `validate --format json` (#69). Every
+other JSON surface uses snake_case (`os`, `hostname`, `user_home`).
+
+**Fix**: switch to snake_case JSON tags on the FactsSet struct.
+Probably comes from `json:"OS,..."` tags being absent and Go's
+default-PascalCase falling through.
+
+---
+
+## #75 — `plan -o plan.yaml` serializes all union-member null fields per step — LOW (noise)
+
+**Repro**:
+```
+$ mooncake plan -c cfg.yml -o /work/plan.yaml
+$ head -25 /work/plan.yaml
+steps:
+  - name: ""
+    when: ""
+    unless_exists: null
+    unless_command: null
+    creates: null
+    unless: null
+    file.write: null         ← all 60+ action types serialized with null
+    file.template: null
+    file.copy: null
+    file.download: null
+    file.unarchive: null
+    text.line: null
+    text.replace: null
+    text.insert: null
+    ...
+```
+
+Every step gets ~60 lines of `<action>: null` for action types it
+doesn't use. The JSON form (default) omits these (`omitempty`). Only
+YAML serialization keeps them.
+
+**Why LOW**: plans round-trip correctly (`apply --from-plan
+plan.yaml` works). Just noisy and harder to inspect.
+
+**Fix**: add `,omitempty` to YAML tags on action union fields, or use
+inline maps for the action body.
+
+---
+
 ## #71 — `mooncake doctor` reports "disk-space probe unsupported on this OS" on Linux — LOW (false negative)
 
 **Repro**:
