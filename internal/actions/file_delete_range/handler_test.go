@@ -298,9 +298,17 @@ func TestHandler_Execute_StartAnchorNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
-	if err == nil {
-		t.Error("expected error when start anchor not found")
+	// MT-47: missing start anchor is idempotent success.
+	res, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Errorf("expected no error on missing start anchor (MT-47); got %v", err)
+	}
+	if r, ok := res.(*executor.Result); ok && r.Changed {
+		t.Error("Changed should be false when start anchor not found")
+	}
+	got, _ := os.ReadFile(testFile)
+	if string(got) != originalContent {
+		t.Errorf("file mutated despite missing start anchor: %q", got)
 	}
 }
 
@@ -323,9 +331,20 @@ func TestHandler_Execute_EndAnchorNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
-	if err == nil {
-		t.Error("expected error when end anchor not found")
+	// MT-47: missing end anchor is also idempotent success. The handler
+	// returns the original content unchanged (NOT a truncated tail) so
+	// re-runs of a playbook whose first run already deleted the range
+	// don't silently chop off the rest of the file.
+	res, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Errorf("expected no error on missing end anchor (MT-47); got %v", err)
+	}
+	if r, ok := res.(*executor.Result); ok && r.Changed {
+		t.Error("Changed should be false when end anchor not found")
+	}
+	got, _ := os.ReadFile(testFile)
+	if string(got) != originalContent {
+		t.Errorf("file mutated despite missing end anchor: %q", got)
 	}
 }
 

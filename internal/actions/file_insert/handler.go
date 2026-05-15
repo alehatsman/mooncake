@@ -316,7 +316,13 @@ func (h *Handler) performInsertion(content, anchor, insertion, position string, 
 	}
 
 	if count == 0 {
-		return "", 0, fmt.Errorf("anchor not found: %s", anchor)
+		// MT-47: anchor not found is idempotent success — a playbook
+		// that inserted content once won't find the anchor on re-run
+		// (the anchor may have been altered, or the insertion already
+		// happened above/below it). Return the original content
+		// unchanged; the caller's content-equality check folds this
+		// into the "no changes needed" branch.
+		return strings.Join(result, "\n"), 0, nil
 	}
 
 	newContent = strings.Join(result, "\n")

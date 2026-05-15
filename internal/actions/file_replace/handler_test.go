@@ -353,9 +353,13 @@ func TestHandler_Execute_NoMatch(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
-	if err == nil {
-		t.Error("expected error when no matches found")
+	// MT-47: no-match is idempotent success.
+	res, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Errorf("expected no error on no-match (MT-47); got %v", err)
+	}
+	if r, ok := res.(*executor.Result); ok && r.Changed {
+		t.Error("Changed should be false when pattern absent")
 	}
 }
 
@@ -447,24 +451,16 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 		},
 	}
 
-	// First execution - no match
+	// MT-47: no-match is idempotent success — Execute returns no error,
+	// Changed=false, content unchanged. AllowNoMatch is kept on the
+	// struct for backward compatibility but is no longer consulted.
 	result, err := handler.Execute(ctx, step)
-
-	// Should fail because pattern not found and AllowNoMatch is false
-	if err == nil {
-		t.Error("expected error when pattern not found")
-	}
-
-	// Now try with AllowNoMatch
-	step.TextReplace.AllowNoMatch = true
-	result, err = handler.Execute(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Execute() unexpected error: %v", err)
 	}
-
 	execResult := result.(*executor.Result)
 	if execResult.Changed {
-		t.Error("expected result.Changed to be false (idempotent)")
+		t.Error("expected result.Changed to be false (no-match is idempotent)")
 	}
 
 	// Verify content unchanged
@@ -472,7 +468,6 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if string(newContent) != content {
 		t.Error("content was modified when it shouldn't be")
 	}
