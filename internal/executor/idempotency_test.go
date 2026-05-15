@@ -433,3 +433,187 @@ func TestCheckIdempotencyConditions_ShellLevelUnless(t *testing.T) {
 		t.Errorf("expected reason to mention unless:, got %q", reason)
 	}
 }
+
+// --- MT-15 regression tests ----------------------------------------------
+//
+// MT-15: `creates:` / `unless:` were silently ignored on every non-shell
+// action (file.write, text.*, pkg, …) because the executor gated the
+// idempotency check on `step.Shell != nil || step.Cmd != nil`. The fix
+// removes that gate AND adds friendly step-level `creates:` / `unless:`
+// aliases for the existing `unless_exists:` / `unless_command:` fields.
+
+// TestCheckIdempotencyConditions_StepLevelCreatesAlias verifies the
+// alias resolves the same skip path as unless_exists:.
+func TestCheckIdempotencyConditions_StepLevelCreatesAlias(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "mt15-creates-")
+	if err != nil {
+		t.Fatalf("temp: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	step := config.Step{
+		FileWrite: &config.File{Path: tmpFile.Name(), State: "file", Content: "v1\n"},
+		Creates:   strPtr(tmpFile.Name()),
+	}
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template: renderer,
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if !shouldSkip {
+		t.Errorf("step-level creates: alias should trigger skip, got shouldSkip=false reason=%q", reason)
+	}
+	if !strings.Contains(reason, "creates:") {
+		t.Errorf("expected reason to mention creates:, got %q", reason)
+	}
+}
+
+// TestCheckIdempotencyConditions_StepLevelUnlessAlias verifies the
+// step-level unless: alias triggers skip when the command succeeds.
+func TestCheckIdempotencyConditions_StepLevelUnlessAlias(t *testing.T) {
+	step := config.Step{
+		FileWrite: &config.File{Path: "/tmp/mt15-unless-x", State: "file", Content: "v1\n"},
+		Unless:    strPtr("true"),
+	}
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template: renderer,
+			PathUtil: pathutil.NewPathExpander(renderer),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+	shouldSkip, reason, err := executor.CheckIdempotencyConditions(step, ec)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if !shouldSkip {
+		t.Errorf("step-level unless: alias should trigger skip when cmd succeeds, got reason=%q", reason)
+	}
+	if !strings.Contains(reason, "unless:") {
+		t.Errorf("expected reason to mention unless:, got %q", reason)
+	}
+}
+
+// TestExecuteStep_NonShellActionHonorsUnlessExists is the headline
+// MT-15 regression: a step with file.write + unless_exists pointing at
+// an existing file must skip — the executor used to gate this check
+// on Shell/Cmd presence so file.write ran unconditionally.
+func TestExecuteStep_NonShellActionHonorsUnlessExists(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "mt15-fw-")
+	if err != nil {
+		t.Fatalf("temp: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	if _, err := tmpFile.WriteString("v0-already-here\n"); err != nil {
+		t.Fatalf("seed write: %v", err)
+	}
+	tmpFile.Close()
+
+	step := config.Step{
+		Name: "MT-15: file.write guarded by unless_exists",
+		FileWrite: &config.File{
+			Path:    tmpFile.Name(),
+			State:   "file",
+			Content: "v1-from-write\n",
+		},
+		UnlessExists: strPtr(tmpFile.Name()),
+	}
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template:  renderer,
+			PathUtil:  pathutil.NewPathExpander(renderer),
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Logger:    logger.NewConsoleLogger(logger.ErrorLevel),
+			Stats:     executor.NewExecutionStats(),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+	if err := executor.ExecuteStep(step, ec); err != nil {
+		t.Fatalf("ExecuteStep: %v", err)
+	}
+	if *ec.Svc.Stats.Skipped != 1 {
+		t.Errorf("expected 1 skipped, got %d", *ec.Svc.Stats.Skipped)
+	}
+	if *ec.Svc.Stats.Executed != 0 {
+		t.Errorf("expected 0 executed, got %d", *ec.Svc.Stats.Executed)
+	}
+	// Confirm the side effect was suppressed: the seed content
+	// survives. Before the fix file.write rewrote the file.
+	got, rerr := os.ReadFile(tmpFile.Name())
+	if rerr != nil {
+		t.Fatalf("read back: %v", rerr)
+	}
+	if string(got) != "v0-already-here\n" {
+		t.Errorf("file.write should have been skipped — file content changed to %q", string(got))
+	}
+}
+
+// TestExecuteStep_NonShellActionHonorsStepLevelCreatesAlias mirrors
+// the headline regression using the friendly `creates:` alias.
+func TestExecuteStep_NonShellActionHonorsStepLevelCreatesAlias(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "mt15-fw-alias-")
+	if err != nil {
+		t.Fatalf("temp: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	if _, err := tmpFile.WriteString("v0\n"); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	tmpFile.Close()
+
+	step := config.Step{
+		Name: "MT-15: file.write guarded by step-level creates: alias",
+		FileWrite: &config.File{
+			Path:    tmpFile.Name(),
+			State:   "file",
+			Content: "v1\n",
+		},
+		Creates: strPtr(tmpFile.Name()),
+	}
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template:  renderer,
+			PathUtil:  pathutil.NewPathExpander(renderer),
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Logger:    logger.NewConsoleLogger(logger.ErrorLevel),
+			Stats:     executor.NewExecutionStats(),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+	if err := executor.ExecuteStep(step, ec); err != nil {
+		t.Fatalf("ExecuteStep: %v", err)
+	}
+	if *ec.Svc.Stats.Skipped != 1 {
+		t.Errorf("expected 1 skipped (step-level creates: alias), got %d", *ec.Svc.Stats.Skipped)
+	}
+	got, rerr := os.ReadFile(tmpFile.Name())
+	if rerr != nil {
+		t.Fatalf("read back: %v", rerr)
+	}
+	if string(got) != "v0\n" {
+		t.Errorf("step-level creates: alias should skip file.write; content changed to %q", string(got))
+	}
+}

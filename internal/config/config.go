@@ -1246,6 +1246,17 @@ type Step struct {
 	UnlessExists  *string `yaml:"unless_exists" json:"unless_exists,omitempty"`   // Skip if path exists
 	UnlessCommand *string `yaml:"unless_command" json:"unless_command,omitempty"` // Skip if command succeeds
 
+	// Creates / Unless are the friendly step-level aliases for
+	// UnlessExists / UnlessCommand (MT-15). They produce the same skip
+	// semantics; the names match the colocated action-level shell
+	// guards (ShellAction.Creates / ShellAction.Unless) so an operator
+	// who learned the verb on one action doesn't have to relearn it as
+	// `unless_exists:` at step level. Both forms remain supported; the
+	// guards are unioned in checkIdempotencyConditions.
+	Creates *string `yaml:"creates" json:"creates,omitempty" plan:"path"` // Alias: skip if path exists
+	Unless  *string `yaml:"unless"  json:"unless,omitempty"`              // Alias: skip if command succeeds
+
+
 	// Actions (exactly one required).
 	// Action keys are dot-namespaced by domain (spec-21):
 	//   file.*    — file & content management
@@ -1684,6 +1695,8 @@ func (s *Step) Clone() *Step {
 		When:             s.When,
 		UnlessExists:     s.UnlessExists,
 		UnlessCommand:    s.UnlessCommand,
+		Creates:          s.Creates,
+		Unless:           s.Unless,
 		FileWrite:        s.FileWrite,
 		FileTemplate:     s.FileTemplate,
 		FileCopy:         s.FileCopy,

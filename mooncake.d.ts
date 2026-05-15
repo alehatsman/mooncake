@@ -828,6 +828,7 @@ export interface ShellAction {
    * Shell command to execute (required)
    */
   cmd?: string;
+  creates?: string;
   /**
    * Windows + PowerShell only — sets $ErrorActionPreference (Stop,
    * Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere.
@@ -848,6 +849,7 @@ export interface ShellAction {
    * Input to provide to the command via stdin
    */
   stdin?: string;
+  unless?: string;
 }
 
 /**
@@ -864,6 +866,7 @@ export interface ShellActionAction {
    * Shell command to execute (required)
    */
   cmd?: string;
+  creates?: string;
   /**
    * Windows + PowerShell only — sets $ErrorActionPreference (Stop,
    * Continue, SilentlyContinue, ...). Default: Stop. Ignored elsewhere.
@@ -884,6 +887,7 @@ export interface ShellActionAction {
    * Input to provide to the command via stdin
    */
   stdin?: string;
+  unless?: string;
 }
 
 /**
