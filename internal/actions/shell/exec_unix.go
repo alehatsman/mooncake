@@ -5,9 +5,11 @@ package shell
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"runtime"
 	"syscall"
 
@@ -15,6 +17,13 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/security"
+)
+
+// Test seams so we can inject failures without poking PATH/etc-passwd
+// in unit tests. Production paths use the real lookups.
+var (
+	lookPathFunc = exec.LookPath
+	userLookup   = user.Lookup
 )
 
 // defaultInterpreter is the shell interpreter used on this platform when the
@@ -42,6 +51,28 @@ func (h *Handler) buildCommand(
 	if step.ShouldBecome() {
 		if !security.IsBecomeSupported() {
 			return nil, fmt.Errorf("become not supported on %s", runtime.GOOS)
+		}
+
+		// MT-81: pre-flight checks for as_user so failures don't surface
+		// as the generic "command failed with exit code 1" from sudo.
+		// Distinguish:
+		//   - sudo not on PATH
+		//   - target user doesn't exist on this host
+		// Both reasons turn into actionable, specific errors before we
+		// even spawn sudo.
+		if _, err := lookPathFunc("sudo"); err != nil {
+			if step.AsUser != "" {
+				return nil, fmt.Errorf("as_user: %s requires sudo; sudo not on PATH (apt-get install sudo, or run mooncake as the target user directly)", step.AsUser)
+			}
+			return nil, fmt.Errorf("become: sudo not on PATH (apt-get install sudo, or run mooncake elevated)")
+		}
+		if step.AsUser != "" {
+			if _, err := userLookup(step.AsUser); err != nil {
+				if errors.As(err, new(user.UnknownUserError)) {
+					return nil, fmt.Errorf("as_user: %s: user does not exist on this host (check spelling, or `os.user: { name: %s, state: present }` first)", step.AsUser, step.AsUser)
+				}
+				return nil, fmt.Errorf("as_user: %s: cannot resolve user: %w", step.AsUser, err)
+			}
 		}
 
 		args := []string{"-S"}
