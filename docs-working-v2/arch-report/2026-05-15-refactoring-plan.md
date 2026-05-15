@@ -62,18 +62,35 @@ kernel rather than the CLI handler the code happened to grow up in.
 
 ## 1. Plan at a glance
 
-| Phase | Item | Title | Effort | Risk | Depends on |
-|---|---|---|---|---|---|
-| 0 | R0.1 | Promote `transaction` + `trycatch` → `internal/control` | S | low | — |
-| 0 | R0.2 | Move `tag_check` → `internal/plan/filter` | S | low | — |
-| 0 | R0.3 | Promote `secret_resolve` → `internal/secrets/resolver` | S | low | — |
-| 0 | R0.4 | Document soft caps in `CONTRIBUTING.md` / `LLM_GUIDE.md` | XS | none | — |
-| 1 | R1.1 | Extract `internal/apply.Runner` out of `cmd.run` (apply path) | M | medium | R0.1, R0.3 |
-| 2 | R2.1 | Extract `internal/fleet.Orchestrator` out of `cmd/fleet.go` | L | medium | R1.1 |
-| 3 | R3.1 | Rename `internal/registry` → `internal/presets/registry` | S | low | — |
+| Phase | Item | Title | Effort | Risk | Review type | Depends on |
+|---|---|---|---|---|---|---|
+| 0 | R0.1 | Promote `transaction` + `trycatch` → `internal/control` | S | low | mechanical | — |
+| 0 | R0.2 | Move `tag_check` → `internal/plan/filter` | S | low | mechanical | — |
+| 0 | R0.3 | Promote `secret_resolve` → `internal/secrets/resolver` | S | low | mechanical | — |
+| 0 | R0.4 | Document soft caps in `CONTRIBUTING.md` / `LLM_GUIDE.md` | XS | none | doc | — |
+| 1 | **R1.1a** | Pure extraction: `internal/apply.Runner` shim over `cmd.run` (flat `(*RunResult, error)` return) | S | low | mechanical | R0.1, R0.3 |
+| 1 | **R1.1b** | Crystallize `KernelResult` typed return + `Reverse()` method on `apply.Runner` | S–M | medium | **API surface** | R1.1a |
+| 2 | **R2.1a** | Pure extraction: `internal/fleet.Orchestrator` shim over `fleetApplyAction` (flat `(RunSummary, error)` return) | M | medium | mechanical | R1.1a |
+| 2 | **R2.1b** | Compose `FleetKernelResult` from per-peer `apply.KernelResult` + per-peer `Reverse()` | S | low | **API surface** | R1.1b, R2.1a |
+| 3 | R3.1 | Rename `internal/registry` → `internal/presets/registry` | S | low | mechanical | — |
 
 Effort scale: XS = doc only; S = ~1 day, single file moves;
-M = ~2–3 days, single PR; L = ~3–5 days, possibly split into a series.
+M = ~2–3 days, single PR; L = ~3–5 days. After the R1.1 / R2.1 splits
+no remaining item is L.
+
+Review type:
+- **mechanical** = "did the code move correctly?" — 15-min review.
+- **API surface** = "is the typed return shape right? does `Reverse()`
+  handle edge case X?" — deeper review, reviewer needs `vision/kernel.md`
+  context.
+- **doc** = soft caps numbers + rationale; fast review.
+
+The split between R1.1a/R1.1b and R2.1a/R2.1b separates *mechanical
+relocation* (pure code move, no semantic change) from *kernel-surface
+crystallization* (typed return shapes, `Reverse()` semantics). Two
+benefits: (1) mechanical PRs merge fast on any reviewer; (2) the API
+PRs get focused review without being bundled with code moves that
+require no argument.
 
 **Watch-only / deferred items** are listed in §5 — *not actionable
 without a trigger event*.
@@ -253,47 +270,112 @@ each time.
 
 ---
 
-## 3. Phase 1 — Prove the cmd-extraction pattern
+## 3. Phase 1 — Expose the kernel's `Apply()` entry point
 
-### R1.1 — Extract `internal/apply.Runner` out of `cmd.run` (the kernel's `Apply()` entry point)
+R1.1 splits into a pure-extraction PR (R1.1a) and a kernel-surface
+PR (R1.1b). The split separates *mechanical relocation* from *API
+design decision*: R1.1a is reviewable in 15 minutes ("did the code
+move correctly?"); R1.1b is the deeper review ("is `KernelResult` the
+right shape? does `Reverse()` handle edge case X?").
 
-**Source:** arch report §3.1, recommendation 4.
+### R1.1a — Pure extraction: `internal/apply.Runner` shim over `cmd.run`
+
+**Source:** arch report §3.1, recommendation 4. Split out from
+original R1.1.
 
 **Motivation:** `cmd.run` (`cmd/mooncake.go:236`, gocyclo **33**) is
-the kernel's `Apply()` entry point **trapped inside a CLI handler**.
-It does: config resolution, vars layering, tag filtering, plan
-building, plan-or-execute selection, artifacts writing, run audit.
-None of that is "CLI parse → call → render." The MCP server
-(`internal/mcp`) needs this entry point; today it can't have it and
-re-implements parts. Exposing `internal/apply` is the first
-materialization of the kernel API surface from
-[`vision/kernel.md`](../vision/kernel.md): a single function any
-frontend calls to compile → inspect → apply → audit a typed plan.
+the kernel's `Apply()` entry point trapped inside a CLI handler.
+This PR is the **code-move-only** half: lift the body out, leave
+the return shape flat (matching today's behavior), `cmd.run` becomes
+a shim. No new typed API; no `Reverse()` method. That's R1.1b.
 
 **Goal:** turn `cmd.run` into a thin shim that builds a
-`*apply.Config` from CLI flags and calls
-`apply.NewRunner(cfg).Run()`. The runner returns a typed
-`*KernelResult` (see API contract below) that carries the kernel
-shape forward — plan + per-step results + audit substrate + a
-`Reverse()` method — so the *next* frontend to call this (explain,
-rewind, MCP `apply_approved`) doesn't have to re-derive any of it.
+`*apply.Config` from CLI flags and calls `apply.NewRunner(cfg).Run()`.
+Return shape stays whatever the current `cmd.run` body produces
+(typically `error`, possibly with a `*RunResult` carrying the recap).
 
-**API contract (locked decision, Option 2 from kernel discussion):**
+**Files touched:**
+
+New:
+- `internal/apply/runner.go` — `Runner` struct + `Run()` method.
+  Body lifted verbatim from `cmd.run`.
+- `internal/apply/config.go` — `Config` struct (the fields that
+  `cmd.run` accepts as CLI flags).
+- `internal/apply/runner_test.go` — at least one apply-path
+  integration test that exercises the new entry point on an
+  `examples/...` plan.
+- `internal/apply/doc.go` — package doc that cites kernel.md as the
+  rationale for the package's existence.
+
+Modified:
+- `cmd/mooncake.go` — `run` collapses to ~50 LOC of flag parse →
+  `apply.Config` construction → `Runner.Run()` call → recap render.
+- `cmd/cmd_test.go` — relevant tests retargeted to the new API
+  where cheaper. Test set should otherwise be identical.
+
+**DONE when:**
+1. `go test ./...` passes.
+2. `cmd.run` gocyclo is ≤ 10 (currently 33). Measured via
+   `gocyclo cmd/mooncake.go`.
+3. `cmd/mooncake.go` LOC drops by ≥ 300.
+4. `internal/apply/runner.go` exists with `Runner.Run(ctx) error`
+   (or `(*RunResult, error)` — whatever shape the lift naturally
+   produces; do **not** introduce `*KernelResult` here, that's
+   R1.1b).
+5. End-to-end manual: `mooncake apply -c examples/...` produces
+   identical output (recap, exit code, audit events) before and after.
+
+**Blast radius:** medium. Touches the largest file in `cmd/` and the
+most-used CLI path. But no semantic change — every test that passed
+before passes after.
+
+**Risk:** low (mechanical). Three sub-risks:
+- (a) Hidden side effects in `cmd.run` (logging setup, env-var
+  reading) get missed during extraction. *Mitigation:* run the full
+  cmd_test.go suite locally before/after; diff stdout/stderr from a
+  scripted apply on `examples/` plans.
+- (b) The shape of `apply.Config` doesn't accommodate fleet-apply.
+  *Mitigation:* don't try to. R1.1a covers local apply only; fleet
+  apply is R2.1a's problem and uses its own orchestrator that may
+  internally call `apply.Runner` per peer.
+- (c) Circular import. *Mitigation:* run `go list -e ./...` after
+  the move; cycles surface immediately.
+
+**Dependencies:**
+- R0.1 (control package) — soft; if `transaction` has moved to
+  `internal/control`, `apply.Runner` calls into it. If R0.1 slipped,
+  it calls into the in-executor code.
+- R0.3 (secrets resolver) — soft; `apply.Runner` invokes the
+  resolver as a pre-execute walk.
+
+If R0.1 / R0.3 land first, R1.1a is cleaner. If they slip, R1.1a
+still works but imports the unmoved files.
+
+---
+
+### R1.1b — Crystallize `KernelResult` typed return + `Reverse()` method
+
+**Source:** kernel discussion (Option 2 locked); follows R1.1a.
+
+**Motivation:** R1.1a left `apply.Runner` returning a flat shape.
+R1.1b crystallizes the kernel-surface contract from
+[`vision/kernel.md`](../vision/kernel.md): a typed `*KernelResult`
+carrying plan + per-step results + audit substrate + a `Reverse()`
+method, so downstream frontends (explain, rewind, MCP
+`apply_approved`, agent loop's "undo last action") don't re-derive
+any of it.
+
+**API contract (locked decision):**
 
 ```go
 package apply
 
-type Runner struct{ /* …configured from Config… */ }
-
-func NewRunner(cfg *Config) *Runner { ... }
-
-// Run executes the typed plan against the local system and returns
-// a KernelResult carrying everything a downstream frontend needs.
+// Run now returns the typed KernelResult.
 func (r *Runner) Run(ctx context.Context) (*KernelResult, error)
 
 // KernelResult is the kernel's typed "what just happened" shape.
-// Designed to be the input to other kernel entry points (Reverse,
-// Explain) and to MCP/SDK consumers without further re-derivation.
+// Input to Reverse, Explain, and MCP/SDK consumers without further
+// re-derivation.
 type KernelResult struct {
     Plan    *plan.Plan          // the typed plan that was executed
     Steps   []executor.StepResult // per-step outcome (changed/failed/skipped/diff/cost/etc)
@@ -301,7 +383,7 @@ type KernelResult struct {
     Summary RunSummary          // ok/changed/skipped/failed counts + duration
 }
 
-// Reverse builds the inverse plan from this run's ReverseData.
+// Reverse builds the inverse plan from this run's reversible subset.
 // Returns the empty plan if nothing was reversible.
 func (r *KernelResult) Reverse() (*plan.Plan, error)
 ```
@@ -310,138 +392,85 @@ The `Reverse()` method is the load-bearing add. Today, building a
 reverse plan from a completed run is **not exposed as a kernel
 operation** — `transaction:` blocks do it in-process; nothing else
 can. Adding it here unlocks (a) cross-run rewind, (b) MCP rollback
-tools, (c) the agent loop's "undo your last action" affordance —
-all from one function.
+tools, (c) the agent loop's "undo your last action" — all from one
+function.
 
 **Files touched:**
 
 New:
-- `internal/apply/runner.go` — `Runner` struct + `Run()` method
-- `internal/apply/config.go` — `Config` struct (the fields that
-  `cmd.run` accepts as CLI flags)
-- `internal/apply/result.go` — `KernelResult` + `Reverse()` + `RunSummary`
-- `internal/apply/runner_test.go` — at least one apply-path
-  integration test that exercises the new entry point AND asserts
-  `KernelResult.Reverse()` produces an executable inverse plan when
-  the run included reversible steps
-- `internal/apply/doc.go` — package doc that cites kernel.md
+- `internal/apply/result.go` — `KernelResult` + `Reverse()` + `RunSummary`.
 
 Modified:
-- `cmd/mooncake.go` — `run` collapses to ~50 LOC of flag parse +
-  `Runner.Run()` call + recap rendering against `KernelResult`
-- `cmd/cmd_test.go` — relevant tests retargeted to the new API where
-  cheaper
+- `internal/apply/runner.go` — `Run()` signature changes; body
+  builds a `*KernelResult` instead of returning the flat shape.
+- `internal/apply/runner_test.go` — adds a Reverse-coverage test.
+- `cmd/mooncake.go` — recap renderer now reads `KernelResult.Summary`
+  instead of the flat shape.
 
 **DONE when:**
 1. `go test ./...` passes.
-2. `cmd.run` gocyclo is ≤ 10 (currently 33). Measured via
-   `gocyclo cmd/mooncake.go`.
-3. `cmd/mooncake.go` LOC drops by ≥ 300.
-4. `internal/apply/runner.go` exists with the API contract above.
-5. `KernelResult.Reverse()` is covered by a test that:
+2. `Runner.Run` signature is `(ctx context.Context) (*KernelResult, error)`.
+3. `KernelResult.Reverse()` is covered by a test that:
    - runs a plan with at least one reversible step (e.g. `file.write`)
    - calls `Reverse()` on the result
    - asserts the returned plan would restore pre-state if executed
-6. `internal/mcp` package can import `internal/apply` and call
+4. `internal/mcp` package can import `internal/apply` and call
    `Runner.Run` — verified by a single test in `internal/mcp` that
    constructs a `Runner` (doesn't have to actually execute; just
-   prove the import works without circular deps).
-7. End-to-end manual: `mooncake apply -c examples/...` produces
+   prove the import works without circular deps + the returned
+   `*KernelResult` has the documented fields).
+5. End-to-end manual: `mooncake apply -c examples/...` produces
    identical output (recap, exit code, audit events) before and after.
 
-**Blast radius:** medium. Touches the largest file in `cmd/` and the
-most-used CLI path. But no behavior change — every test that passed
-before passes after.
+**Blast radius:** small in code (single new file, two modified). The
+API shape is the substantive change.
 
-**Risk:** medium. Four sub-risks:
-- (a) Hidden side effects in `cmd.run` (logging setup, env-var
-  reading) get missed during extraction. *Mitigation:* run the full
-  cmd_test.go suite locally before/after; diff stdout/stderr from a
-  scripted apply on `examples/` plans.
-- (b) The shape of `apply.Config` doesn't accommodate fleet-apply.
-  *Mitigation:* don't try to. R1.1 covers local apply only; fleet
-  apply is R2.1's problem and uses its own orchestrator that may
-  internally call `apply.Runner` per peer.
-- (c) Circular import: `internal/apply` may want to import
-  `internal/executor`, which is fine — but if the extraction also
-  pulls in `internal/secrets/resolver` (from R0.3), check the
-  resolved import graph doesn't cycle. *Mitigation:* run `go list -e`
-  with cycle detection as part of CI.
+**Risk:** medium (API design). One sub-risk:
 - (d) **`KernelResult.Reverse()` semantics drift.** The method
   has to handle: reversible-step subset (some handlers refuse
   Reverse), transaction-boundary preservation (don't reverse across
   transaction edges in the wrong order), already-reversed steps
   (don't double-reverse). *Mitigation:* the implementation is **lift
-  the existing transaction-rollback walker** from
-  `internal/executor/transaction.go` (or `internal/control/` post
-  R0.1) into a generic "build inverse plan from N step results"
-  helper. Same algorithm, different input shape. Don't invent new
-  Reverse semantics here.
+  the existing transaction-rollback walker** from `internal/control/`
+  (post R0.1) or `internal/executor/transaction.go` (pre R0.1) into
+  a generic "build inverse plan from N step results" helper. Same
+  algorithm, different input shape. Do not invent new Reverse
+  semantics here.
 
 **Dependencies:**
-- R0.1 (control package) — soft; if `transaction` has moved to
-  `internal/control`, `Reverse()` calls into it. If R0.1 slipped,
-  the lift happens against the in-executor code instead.
-- R0.3 (secrets resolver) — soft; `apply.Runner` calls it as a
-  pre-execute pass.
-
-If R0.1 / R0.3 land first, R1.1 is cleaner. If they slip, R1.1 still
-works but imports the unmoved files.
+- R1.1a — hard. R1.1b modifies `apply.Runner.Run`; the package must
+  exist first.
+- R0.1 (control package) — soft; cleaner Reverse-walker lift if the
+  transaction code has moved to `internal/control`.
 
 ---
 
-## 4. Phase 2 — Cmd extraction at scale
+## 4. Phase 2 — Expose the kernel's `FleetApply()` entry point
 
-### R2.1 — Extract `internal/fleet.Orchestrator` out of `cmd/fleet.go` (the kernel's `FleetApply()` entry point)
+R2.1 splits the same way R1.1 did: mechanical extraction (R2.1a)
+followed by kernel-surface crystallization (R2.1b). The split is
+**stronger here** than for R1.1 — `fleetApplyAction` is gocyclo 49
+and the mechanical move alone is M-effort; bundling the typed
+kernel surface on top makes the PR unreviewable.
 
-**Source:** arch report §3.1 table; recommendation 1.
+### R2.1a — Pure extraction: `internal/fleet.Orchestrator` shim over `fleetApplyAction`
+
+**Source:** arch report §3.1 table; recommendation 1. Split out from
+original R2.1.
 
 **Motivation:** `fleetApplyAction` (`cmd/fleet.go:336`) at gocyclo
-**49** is the deepest business-logic function in the project — the
-kernel's `FleetApply()` entry point trapped inside a CLI handler.
-Reading it: peer filtering, plan-snapshot upload, ordered phase
-rollout, per-peer SSE fan-in, recap aggregation, exit-code
-computation — six responsibilities. The pattern from R1.1 applies
-here exactly: each responsibility becomes a method on a
-`fleet.Orchestrator` struct, and the entry point returns a typed
-`*FleetKernelResult` that carries the kernel shape forward — a list
-of per-peer `KernelResult`s — so the *next* frontend (`fleet why`,
-fleet drift remediation, `fleet apply_approved`) doesn't have to
-re-derive any of it.
+**49** is the kernel's `FleetApply()` entry point trapped inside a
+CLI handler. Six responsibilities: peer filtering, plan-snapshot
+upload, ordered phase rollout, per-peer SSE fan-in, recap
+aggregation, exit-code computation. This PR is the **code-move-only**
+half: each responsibility becomes a method on `Orchestrator`,
+`Run()` returns a flat shape matching today's behavior. No typed
+`FleetKernelResult` yet — that's R2.1b.
 
-**API contract (parallel to R1.1, same locked decision):**
-
-```go
-package fleet
-
-type Orchestrator struct{ /* …configured from Config… */ }
-
-func NewOrchestrator(cfg *Config) *Orchestrator { ... }
-
-// Run dispatches the typed plan across the configured peer set and
-// returns a FleetKernelResult — the fleet-scope analog of
-// apply.KernelResult.
-func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error)
-
-// FleetKernelResult is the kernel's typed "what just happened across
-// the fleet" shape. Designed to be the input to fleet-scope frontends
-// (fleet why, fleet drift, MCP fleet tools) without re-derivation.
-type FleetKernelResult struct {
-    Plan    *plan.Plan                       // the plan that was dispatched
-    Peers   map[PeerID]*apply.KernelResult   // per-peer outcome
-    Summary FleetSummary                      // aggregate counts + per-peer status
-}
-
-// Reverse builds an inverse FleetPlan from this run's reversible
-// subset across all peers. Per-peer reverse plans are independently
-// constructed via apply.KernelResult.Reverse().
-func (r *FleetKernelResult) Reverse() (*FleetPlan, error)
-```
-
-The shape composes: a fleet result is a map of per-peer apply
-results plus a fleet-scope summary. No new primitives — just lifting
-R1.1's contract one level up. `FleetKernelResult.Reverse()` builds
-the inverse by calling `peer.Reverse()` on each peer's result.
+**Goal:** turn `fleetApplyAction` into a thin shim that builds a
+`*fleet.Config` from CLI flags and calls
+`fleet.NewOrchestrator(cfg).Run()`. Six private methods on
+`Orchestrator` factor the responsibilities cleanly.
 
 **Files touched:**
 
@@ -450,61 +479,134 @@ New:
   - `(o *Orchestrator) FilterPeers(ctx) ([]Peer, error)`
   - `(o *Orchestrator) UploadPlan(ctx, peer) error`
   - `(o *Orchestrator) ApplyToPhase(ctx, phase []Peer) ([]PeerResult, error)`
-  - `(o *Orchestrator) Run(ctx) (*FleetKernelResult, error)` — top-level
-    entry point
-- `internal/fleet/result.go` — `FleetKernelResult` + `Reverse()` +
-  `FleetSummary` + `FleetPlan`
-- `internal/fleet/orchestrator_test.go`
-- (Optional) split into `internal/fleet/{filter,upload,phase,recap}.go`
-  if each method is large enough to warrant its own file
+  - `(o *Orchestrator) Run(ctx) (RunSummary, error)` — top-level
+    entry point. Flat return; matches today's shape.
+- `internal/fleet/config.go` — `Config` struct (the fields that
+  `fleetApplyAction` accepts as CLI flags).
+- `internal/fleet/orchestrator_test.go` — lock down the exit-code
+  matrix first (partial-success / any-fail / all-skip), then test
+  each method.
 
 Modified:
 - `cmd/fleet.go` — `fleetApplyAction` collapses to flag parse +
-  `Orchestrator.Run()` + render against `FleetKernelResult`
+  `Orchestrator.Run()` + recap render.
 - Probably also touches `cmd/fleet_filter_test.go`, retargeted to
-  test the new package
+  test the new package.
 
 **DONE when:**
 1. `go test ./...` passes.
 2. `fleetApplyAction` gocyclo is ≤ 10 (currently 49). Measured via
    `gocyclo cmd/fleet.go`.
 3. `cmd/fleet.go` LOC drops by ≥ 500.
-4. `internal/fleet/orchestrator.go` exists with the API contract above.
-5. `FleetKernelResult.Reverse()` is covered by a test that:
-   - runs a plan against ≥2 peers with reversible steps on each
-   - calls `Reverse()` on the result
-   - asserts the returned FleetPlan would restore pre-state per peer
-6. The MCP server can call `fleet.NewOrchestrator(cfg).Run(ctx)`
-   without going through `cmd` — verified by a smoke test in
-   `internal/mcp` that constructs an Orchestrator (does not execute).
-7. Manual verification: `mooncake fleet apply -p tag=linux examples/...`
+4. `internal/fleet/orchestrator.go` exists with the six methods.
+5. Exit-code matrix tests pass (all-success → 0, any-fail → 1,
+   partial-success per current rules).
+6. Manual verification: `mooncake fleet apply -p tag=linux examples/...`
    produces identical per-peer output, identical RECAP, identical
    exit code before/after.
 
 **Blast radius:** large within `cmd/fleet.go`, zero elsewhere.
 
-**Risk:** medium. Same three sub-risks as R1.1, plus:
-- (d) Per-peer SSE fan-in has timing semantics (concurrent streams,
-  per-peer phasing). *Mitigation:* preserve the goroutine
-  topology byte-for-byte. The extraction is a code-shape change,
-  not a concurrency model change.
-- (e) Error aggregation across peers. The current code has subtle
-  exit-code logic (any-fail → nonzero, partial-success rules).
-  *Mitigation:* lock the exit-code matrix down as a test case in
-  `orchestrator_test.go` first, then refactor.
+**Risk:** medium (mechanical move of complex code). Three sub-risks:
+- (a) Hidden side effects in `fleetApplyAction`. *Mitigation:* full
+  cmd_test.go suite locally before/after.
+- (b) Per-peer SSE fan-in has timing semantics (concurrent streams,
+  per-peer phasing). *Mitigation:* preserve the goroutine topology
+  byte-for-byte. The extraction is a code-shape change, not a
+  concurrency-model change.
+- (c) Error aggregation across peers — subtle exit-code logic
+  (any-fail → nonzero, partial-success rules). *Mitigation:* lock
+  the exit-code matrix down as the *first* test in
+  `orchestrator_test.go`, then refactor with that suite in place.
 
 **Dependencies:**
-- R1.1 must land first. R1.1 establishes the orchestrator-extraction
-  pattern and proves it with a smaller, simpler target. R2.1 then
-  *follows the same shape*. Trying R2.1 first would mean inventing
-  the pattern on the project's most complex function.
+- R1.1a — hard. The pattern from R1.1a (cmd-handler-becomes-shim,
+  orchestrator-owns-body) is what R2.1a copies. Trying R2.1a first
+  would mean inventing the pattern on the project's most complex
+  function.
 
-**Sub-split option:** if R2.1 is too big for one PR, split into:
-- R2.1a: introduce `Orchestrator` struct with `Run()` that just
-  inlines today's `fleetApplyAction` body unchanged. Pure relocation.
-- R2.1b: factor `Run()` into the five typed methods.
+---
 
-This is a defensible split if the reviewer asks for it; not required.
+### R2.1b — Compose `FleetKernelResult` from per-peer `apply.KernelResult`
+
+**Source:** kernel discussion (Option 2 locked); follows R2.1a +
+R1.1b.
+
+**Motivation:** R2.1a left `Orchestrator.Run` with a flat return.
+R2.1b crystallizes the fleet-scope kernel surface: each peer's
+result is an `apply.KernelResult` (from R1.1b); `FleetKernelResult`
+maps peer → result and composes `Reverse()` from per-peer
+`KernelResult.Reverse()` calls.
+
+This PR is **small** because the shape composes. R1.1b did the
+hard work of typing the per-peer kernel result; R2.1b lifts it one
+level up.
+
+**API contract (parallel to R1.1b, same locked decision):**
+
+```go
+package fleet
+
+// Run signature changes from R2.1a.
+func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error)
+
+// FleetKernelResult is the fleet-scope analog of apply.KernelResult.
+// Input to fleet why, fleet drift, MCP fleet tools without
+// re-derivation.
+type FleetKernelResult struct {
+    Plan    *plan.Plan                       // the plan that was dispatched
+    Peers   map[PeerID]*apply.KernelResult   // per-peer outcome
+    Summary FleetSummary                      // aggregate counts + per-peer status
+}
+
+// Reverse builds an inverse FleetPlan by calling peer.Reverse() on
+// each entry in Peers and assembling the results.
+func (r *FleetKernelResult) Reverse() (*FleetPlan, error)
+```
+
+**Files touched:**
+
+New:
+- `internal/fleet/result.go` — `FleetKernelResult` + `Reverse()` +
+  `FleetSummary` + `FleetPlan`.
+
+Modified:
+- `internal/fleet/orchestrator.go` — `Run()` signature changes;
+  body builds a `*FleetKernelResult` by collecting per-peer
+  `apply.KernelResult`s from the existing `ApplyToPhase` flow.
+- `internal/fleet/orchestrator_test.go` — adds a per-peer
+  `Reverse()` coverage test.
+- `cmd/fleet.go` — recap renderer reads `FleetKernelResult.Summary`.
+
+**DONE when:**
+1. `go test ./...` passes.
+2. `Orchestrator.Run` signature is
+   `(ctx context.Context) (*FleetKernelResult, error)`.
+3. `FleetKernelResult.Reverse()` is covered by a test that:
+   - runs a plan against ≥2 peers with reversible steps on each
+   - calls `Reverse()` on the result
+   - asserts the returned FleetPlan would restore pre-state per peer
+4. `internal/mcp` can call `fleet.NewOrchestrator(cfg).Run(ctx)`
+   and inspect the returned `*FleetKernelResult` — verified by a
+   smoke test in `internal/mcp` that constructs an Orchestrator
+   (does not execute).
+5. Manual verification: `mooncake fleet apply -p tag=linux examples/...`
+   output unchanged.
+
+**Blast radius:** small in code. The fleet-scope API contract is the
+substantive change.
+
+**Risk:** low (API design is mechanical given R1.1b is in place). One
+sub-risk:
+- (d) **`PeerID` shape choice.** `map[PeerID]` requires `PeerID` to
+  be a stable comparable type. *Mitigation:* use the existing
+  `fleet.Peer.Name` (string) as `PeerID`; don't invent a new type.
+
+**Dependencies:**
+- R2.1a — hard. Orchestrator must exist before its return type can
+  change.
+- R1.1b — hard. `FleetKernelResult` composes `apply.KernelResult`;
+  the latter must exist first.
 
 ---
 
@@ -564,53 +666,81 @@ reviewers don't re-discover them.
 
 ## 7. Sequencing & parallelism
 
-```
-                        ┌─────────────────────────────┐
-                        │   Phase 0 (parallel-safe)   │
-                        │                             │
-                        │   R0.1   R0.2   R0.3   R0.4 │
-                        └──────────────┬──────────────┘
-                                       │
-                                       ▼
-                        ┌─────────────────────────────┐
-                        │   Phase 1 (pattern proof)   │
-                        │                             │
-                        │            R1.1             │
-                        │   (soft-depends R0.1, R0.3) │
-                        └──────────────┬──────────────┘
-                                       │
-                                       ▼
-                        ┌─────────────────────────────┐
-                        │   Phase 2 (at scale)        │
-                        │                             │
-                        │            R2.1             │
-                        │      (depends R1.1)         │
-                        └─────────────────────────────┘
+After the R1.1 / R2.1 splits, the plan reads as four sequential
+waves with parallelism within each wave:
 
-                        ┌─────────────────────────────┐
-                        │   Phase 3 (independent)     │
-                        │                             │
-                        │            R3.1             │
-                        │  (no deps; any time)        │
-                        └─────────────────────────────┘
 ```
+       ┌──────────────────────────────────────────────────────────────┐
+       │  Wave 1 — 5 parallel PRs (foundation + housekeeping)         │
+       │                                                              │
+       │  R0.1    R0.2    R0.3    R0.4    R3.1                        │
+       │  control tag    secrets soft    registry                     │
+       │          filter         caps    rename                       │
+       └─────────────────────────────┬────────────────────────────────┘
+                                     │
+                                     ▼
+       ┌──────────────────────────────────────────────────────────────┐
+       │  Wave 2 — single PR (pattern proof, mechanical)              │
+       │                                                              │
+       │  R1.1a — pure extraction: apply.Runner shim over cmd.run     │
+       │          flat return; no KernelResult yet                    │
+       └─────────────────────────────┬────────────────────────────────┘
+                                     │
+                  ┌──────────────────┴──────────────────┐
+                  ▼                                     ▼
+       ┌──────────────────────────┐    ┌──────────────────────────────┐
+       │  Wave 3a (API surface)   │    │  Wave 3b (mechanical, big)   │
+       │                          │    │                              │
+       │  R1.1b — KernelResult    │    │  R2.1a — fleet.Orchestrator  │
+       │          + Reverse()     │    │          shim, flat return   │
+       └──────────────┬───────────┘    └──────────────┬───────────────┘
+                      │                               │
+                      └───────────────┬───────────────┘
+                                      ▼
+       ┌──────────────────────────────────────────────────────────────┐
+       │  Wave 4 — single PR (compose, small)                         │
+       │                                                              │
+       │  R2.1b — FleetKernelResult composed from per-peer            │
+       │          apply.KernelResult; Reverse() composes              │
+       └──────────────────────────────────────────────────────────────┘
+```
+
+**Wave-by-wave reviewer load:**
+
+| Wave | PRs | Wall-clock | Review type | Reviewer load |
+|---|---|---|---|---|
+| 1 | 5 (parallel) | 1–2 days | mechanical × 4 + doc × 1 | low — any Go-fluent reviewer |
+| 2 | 1 | 1 day | mechanical | low |
+| 3 | 2 (parallel) | 1–2 days | API surface + mechanical | one API reviewer + one mechanical reviewer |
+| 4 | 1 | 1 day | API surface (small) | low — composes existing shapes |
+
+**Total: 9 PRs, ~5–7 days wall-clock with a small agent fleet.** The
+key parallelism win is wave 3: once R1.1a lands, R1.1b (API design
+on the local-apply shape) and R2.1a (mechanical fleet extraction)
+touch different files and can run concurrently in separate worktrees.
 
 **Recommended cadence for an agent fleet:**
 
-- **Day 1:** kick off R0.1, R0.2, R0.3, R0.4, R3.1 in five worktrees
-  in parallel. All should land same-day or next-day given the small
-  blast radius.
-- **Day 2:** start R1.1 in one worktree. Single-agent ownership; the
-  pattern proof is the deliverable.
-- **Day 3–4:** review R1.1 carefully — the pattern from this PR is
-  what R2.1 will copy. Don't rush.
-- **Day 5–7:** R2.1 in one worktree. Consider the R2.1a/R2.1b split
-  if reviewer asks.
+- **Day 1:** five worktrees in parallel for wave 1. All should land
+  same-day or next-day given the small blast radius. Review each as
+  a 15-minute mechanical check.
+- **Day 2:** start wave 2 (R1.1a) in one worktree. Single-agent
+  ownership; the pattern proof is the deliverable. Review carefully —
+  R2.1a will copy this PR's shape.
+- **Day 3–4:** wave 3 in two parallel worktrees. Don't bundle them
+  on one agent; they need independent review attention. The API
+  PR (R1.1b) is where `KernelResult` field names and `Reverse()`
+  semantics get argued; that argument should not be diluted by a
+  larger mechanical-move review happening in the same PR.
+- **Day 5:** wave 4 (R2.1b). Small follow-on; composes existing
+  shapes. Should land same-day.
 
-**If using only one agent at a time:** execute in order. Total
-estimated wall-clock: 7–10 days. Total estimated LOC moved: ~3,500.
-Total estimated LOC of new code (besides moves): ~400 (mostly new
-struct types and method bodies that were inlined before).
+**If using only one agent at a time:** execute in order
+R0.1 → R0.2 → R0.3 → R0.4 → R3.1 → R1.1a → R1.1b → R2.1a → R2.1b.
+Total estimated wall-clock: 7–10 days serially. Total estimated LOC
+moved: ~3,500. Total estimated LOC of new code (besides moves):
+~400 (mostly the two typed result structs + `Reverse()` walker
+helper).
 
 ---
 
@@ -671,12 +801,13 @@ After all of Phase 0 + 1 + 2 + 3 land:
 the LOC counts:
 
 - `internal/apply.Runner.Run` exists and returns `*apply.KernelResult`
-  with the locked contract from R1.1.
+  with the locked contract from R1.1b (R1.1a ships with the flat
+  return shape; R1.1b is what materializes the typed contract).
 - `apply.KernelResult.Reverse()` produces an executable inverse
   plan, covered by a test.
 - `internal/fleet.Orchestrator.Run` exists and returns
   `*fleet.FleetKernelResult` composed from per-peer
-  `apply.KernelResult`s.
+  `apply.KernelResult`s (after R2.1b; R2.1a ships flat).
 - `internal/mcp` imports `internal/apply` and `internal/fleet` directly
   for at least one tool path that previously had to shell out to the
   CLI. (Optional for plan completion but strongly preferred as the
@@ -691,13 +822,18 @@ the LOC counts:
   the entire plan is a refactor, not a feature change.
 
 If the structural metrics hold but the kernel-surface checkpoint
-doesn't (e.g. R1.1 ships with a flat `error` return instead of
-`*KernelResult`), the plan **regresses** even though the LOC counts
+doesn't (e.g. R1.1b never lands and `apply.Runner` stays on a flat
+`error` return), the plan **regresses** even though the LOC counts
 moved. The point of the plan is the kernel surface; the LOC counts
 are an artifact.
 
-If any criteria don't hold after Phase 2 lands, **stop and
-re-review** before starting Phase 3. The plan assumes the moves are
-all pure relocations + the two typed return shapes; if observable
-behavior changed or the return shapes drifted, the assumption is
-wrong and the next phase will compound the drift.
+The split makes this failure mode possible to recognize: if R1.1a
+lands and R1.1b stalls in review, the plan is **half-shipped** —
+the code is in `internal/apply/` but the kernel-surface promise
+isn't kept. Don't start R2.1a in that state; finish R1.1b first.
+
+If any criteria don't hold after wave 3 lands, **stop and re-review**
+before starting wave 4. The plan assumes the moves are all pure
+relocations + the two typed return shapes; if observable behavior
+changed or the return shapes drifted, the assumption is wrong and
+the next wave will compound the drift.
