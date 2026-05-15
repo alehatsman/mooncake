@@ -677,6 +677,305 @@ The next architecturally consequential moments:
 
 ---
 
+## 9. Third post-landing reconciliation — spec-60, spec-53 fleet watch, round-4 findings
+
+> **Update**: 5 more commits landed (all on `origin/master` now), including
+> the spec-60 metrics-cohesion test case §8.7 was waiting on, and a sub-
+> package-pattern regression for `fleet watch` that §7.1/§8.4 praised. Both
+> warrant updating.
+
+### 9.1 What shipped
+
+| Commit | Subject | Code surface |
+|---|---|---|
+| `8e954fe`/`7cde62b` | spec-60 — `observe.cpu` / `observe.memory` / `observe.disk` | three new `observe_*` packages |
+| `ad34ac0`/`e569ad3` | spec-53 — `fleet watch`, live SSE multiplex across peers | `cmd/fleet_watch.go` (429 LOC) + `cmd/fleet_watch_test.go` (406 LOC) — **no `internal/fleet/watch/`** |
+| `7cd8ae9` | round 4 manual-test findings | 5 more findings filed; 26 total; **5 of 7 HIGH+ are "silent success that's actually broken"** |
+
+### 9.2 Spec-60 answers §6.3.1 / §8.7's metrics-cohesion question — partially
+
+The implementation choice per the commit message and code:
+
+- **`observe.cpu` wraps `internal/metrics.Collect()`** — same `/proc/stat`
+  sample shared with `/v1/metrics`. No duplicate OS calls. **Path A.** ✅
+- **`observe.memory` reads `/proc/meminfo` directly** — because
+  `internal/metrics` exposes only `Used`, not `Total`/`Free`/`Available`/`SwapTotal`.
+  The handler's package doc explicitly says: *"Distinct from the metrics package
+  because internal/metrics tracks only Used; this handler returns Total / Used /
+  Free / Available / SwapTotal / SwapUsed in bytes so callers can branch on
+  absolute thresholds without doing the percentage math."* **Path B with reason.**
+- **`observe.disk` has `stat_unix.go` + `stat_windows.go`** — also direct OS
+  reads. **Path B.**
+
+This is the right pragmatic choice (don't widen metrics' schema speculatively),
+but it leaves a **concrete architectural debt item**: `internal/metrics`'s
+memory and disk data models are too narrow for the observation surface they
+should serve. Each next consumer that wants the richer shape will either:
+
+- **(a)** widen `internal/metrics` and migrate `observe.memory` / `observe.disk` back to Path A
+- **(b)** add a fourth direct-OS-read site
+
+Path (a) costs once, path (b) compounds. The decision belongs to whoever
+ships the next consumer of memory or disk metrics (the most likely candidate
+is spec-58 fleet drift, which will want typed snapshots of system resources
+per-peer).
+
+### 9.3 Spec-53 fleet watch broke the sub-package pattern §7.1/§8.4 praised
+
+`fleet exec` → `internal/fleet/exec/` (good).
+`fleet ps` → `internal/fleet/ps/` (good, per §8.4).
+`fleet bootstrap` → `internal/fleet/bootstrap.go` (the older shape).
+`fleet watch` → **`cmd/fleet_watch.go`, 429 LOC** (the regression).
+
+Why the regression is worth flagging:
+
+1. **It contradicts what §7.1 called load-bearing.** When that section said
+   the sub-package pattern was now established, three siblings backed it up.
+   The very next fleet command shipped doesn't use it. Two readings:
+   - **Charitable**: `fleet watch` is mostly stream-multiplexing/polling
+     plumbing (the goroutine-per-peer state machine described in the commit
+     message). The "domain logic" might be too thin to justify a peer
+     package. Defensible.
+   - **Less charitable**: the path of least resistance is still adding to
+     `cmd/`, and the convention only sticks for commands with obvious
+     "plan vs. orchestrate" decomposition (like `exec`).
+2. **It's a concrete instance of §2 Smell 1** — `cmd/fleet_watch.go` at
+   429 LOC of non-test code is the same shape of cmd-side accretion the
+   review named originally. Combined with `cmd/fleet.go` (888 LOC) and
+   `cmd/fleet_exec.go` (354 LOC), the cmd/ fleet surface is now ~1670 LOC
+   of CLI-shaped code.
+3. **It changes the §7.4 / §8.6 framing.** The pattern is *available*, not
+   *enforced*. Future fleet commands should justify when they don't use it,
+   rather than the current default of "use cmd/ unless the work splits
+   cleanly."
+
+Recommendation: **don't refactor `cmd/fleet_watch.go` retroactively** —
+that's exactly the kind of churn the project's "ship and iterate" discipline
+avoids. But the *next* fleet command should land in `internal/fleet/<n>/`
+unless there's a written reason not to.
+
+### 9.4 The round-4 manual-test findings reveal a contract-enforcement gap, not a structural smell
+
+The 26-finding total now includes the round-4 doc's observation: *"Five of
+seven HIGH+ findings now share the same shape: silent success that's
+actually broken."* Specifically:
+
+- Step truncates typed-action output (#22, HIGH)
+- `artifact.capture` records 0 changes across all action types (#24, HIGH)
+- `for_each` broken (earlier rounds)
+- Shell guards mis-count as `changed` instead of `skipped` (earlier rounds)
+- `as_user: root` + sudo bug (earlier rounds)
+
+The pattern: each handler is responsible for populating `Result.Changed` /
+`Result.WouldChange` / output payloads correctly, and nothing centrally
+enforces the contract. When a handler gets it wrong, the recap line still
+prints `ok=N`, the audit log still records success, and the bug is invisible
+without manual inspection.
+
+This is **not** a structural smell in the package-LOC / dependency-graph
+sense. But it has a clean architectural framing: **the Handler ABI defines
+the *type* of `Result`, not the *semantics*.** Five things would partially
+close the gap:
+
+1. A handler-conformance test harness that runs a small fixture against
+   every registered handler and checks invariants ("if Changed=true, OutputData
+   must be non-empty", "if WouldChange=true, the same step run twice in apply
+   mode must produce Changed=true the first time and Changed=false the second").
+2. A `Result.Validate()` method on the executor side that the executor
+   itself calls before publishing — moves the contract enforcement from
+   "every handler does it right" to "one site does it right."
+3. A linter that scans handlers for missing `Changed=true` after a
+   demonstrated write.
+4. Mandatory `result.Sanity()` checks in `internal/actions/testutil/`
+   so handler authors trip on their own contract violations during test runs.
+5. The simplest: codify "silent success is the highest-severity bug class
+   in this project" in `action-design-principles.md` so reviewers catch it.
+
+None of these need to land before more code does, but they're the kind of
+discipline-as-code item that pays off compounding. **Option 1 (conformance
+harness)** is highest-leverage and lowest-risk; it would have caught at
+least three of the five HIGH+ findings.
+
+### 9.5 Adjusted refactor list (fourth revision)
+
+Adding two new items based on §9.2 and §9.4; the existing list reorders
+slightly.
+
+| Position | Item | State |
+|---|---|---|
+| 1 | Resolve `internal/effects` | unchanged; observers chose Path B, urgency stays high |
+| 2 | **Widen `internal/metrics` data shape** (new) | so `observe.memory` and `observe.disk` can move from Path B to Path A; gated on the next consumer needing the same shape |
+| 3 | Catch `fleet apply` up to the sub-package pattern | unchanged — but the pattern itself is now "available, not enforced," so this is also a chance to write the *rule* down (§9.3) |
+| 4 | **Handler-conformance test harness** (new) | closes the "silent success" gap that 5 of 7 HIGH+ findings share |
+| 5 | Split `internal/config/config.go` | unchanged |
+| 6 | Decompose `actions/{service,package,os_systemd}` by driver | unchanged |
+| 7 | Promote `executor/transaction.go` + `trycatch.go` to `internal/control/` | unchanged |
+
+Items #2 and #4 are new; everything else slid down one slot or stayed.
+
+### 9.6 Net assessment (fourth revision)
+
+The dominant signal this cycle is **honest pragmatism over architectural
+purity**:
+
+- Spec-60 picked Path A where the existing schema fit and Path B where it
+  didn't, and *documented why in the package comment*. That's good
+  engineering hygiene even though it leaves debt.
+- Spec-53 broke the sub-package pattern, which is unfortunate but
+  defensible for stream-multiplex/polling code; the lesson is that the
+  pattern was previously "convention-by-vibes," not enforced.
+- The round-4 findings reveal that handler correctness (not handler
+  structure) is the project's quiet weak link, and that's a different
+  shape of problem than this review was originally instrumented to
+  detect.
+
+The good news: **none of the new commits made any §2 smell worse.** The
+bad news: **two new architectural debts surfaced** (metrics-shape and
+contract-enforcement), and the sub-package pattern showed it's not yet
+load-bearing.
+
+Three forward-looking items unchanged from §8.7, now joined by two more:
+
+- `internal/effects` resolve-or-fold-in (still gating, still #1).
+- spec-58 (fleet drift) — still the non-goal #3 pressure point.
+- The `for_each` planner bug fix — still adjacent to the 951-LOC `planner.go`.
+- **Widen `internal/metrics`** when the next consumer of memory/disk
+  shape lands.
+- **Handler-conformance test harness** — the cheapest way to make the
+  "silent success" finding class stop recurring.
+
+---
+
+## 10. Fourth post-landing reconciliation — spec-62 and validator-registry drift
+
+> **Update**: 4 more commits landed (already on `origin/master`):
+> `72c6b6f` (fleet-apply plan-dir walk bug filing), `847e617`/`9458642`
+> (spec-62 `observe.gpu`), and `fed91a1` (round-5 findings, 8 more
+> issues, total now 34). Two of these change the §9 reading.
+
+### 10.1 Spec-62 tightens §9.2's Path-A/B pattern
+
+`observe.gpu` wraps `internal/metrics` and shares the nvidia-smi /
+powermetrics sample with `/v1/metrics`. **Path A.** The commit message
+explicitly notes: *"no duplicate vendor-tool calls."* Tightens the
+pattern §9.2 named:
+
+- **Path A is now the dominant choice** across spec-60 + spec-62:
+  `observe.cpu`, `observe.gpu` (full reuse).
+- **Path B is the exception** with documented reason: `observe.memory`
+  (metrics shape too narrow), `observe.disk` (no equivalent in metrics
+  today).
+
+The §9 architectural-debt item (widen `internal/metrics` so memory +
+disk can join Path A) stands, but it's now framed as *converging on
+Path A*, not *picking between A and B*. That's a cleaner story.
+
+Bonus note from the spec-62 commit: *"Cohesion with `internal/facts/gpu`
+(vendor/model/driver) deferred per spec-62 open question #1 — facts is
+run-start static, observe is per-step current state; both stay
+independent for now."* This is the correct call. **`facts` and
+`observe` should not converge** — they sit on opposite sides of a real
+seam (static-at-process-start vs. dynamic-per-step). Worth recording
+because future "let's unify the read-side" pressure may try to merge
+them.
+
+### 10.2 Round-5 finding #27 names a new structural smell — Smell 6
+
+The round-5 doc surfaces a HIGH/structural finding I haven't named in
+§2's five smells. From the commit message: *"validator's allowed-action
+list is out of sync with mooncake actions list — ~half the typed
+action surface (read.*, text.patch.{json,yaml}, git.*, os.user,
+container, tool) is rejected at validate-time but works via mooncake
+step."*
+
+This is **fan-out drift**, and it's a real structural problem. The
+project has at least four surfaces that must stay coherent as actions
+are added:
+
+1. **The action registry** — `internal/register/register.go` lists 50+
+   handler imports (auto-populated via init()).
+2. **The JSON schema** — `internal/config/schema.json` (generated by
+   `internal/schemagen`).
+3. **The Go config struct** — `internal/config/config.go`'s `Step` (the
+   1491-LOC file Smell 3 named).
+4. **The validator's allowed-action list** — the thing finding #27 says
+   has drifted ~50% out of date.
+
+Finding #27 confirms: with 50+ handlers and four parallel surfaces,
+**hand-maintaining any of them produces drift**. The commit message
+also notes that "one codegen fix would close #4, #6, #27 together" —
+meaning multiple HIGH findings collapse to the same root cause.
+
+#### Smell 6 — Action-surface fan-out is maintained in N places, drifts in N-1
+
+- **Evidence**: round-5 finding #27 (HIGH/structural). ~half the typed
+  action surface rejected by validator but works at runtime. Findings
+  #4 and #6 share the root cause.
+- **Why it's a problem**: structurally, each surface should be derived
+  from one source (the registry). Today the registry is one source,
+  the schema is another, the validator is a third, and the docs are a
+  fourth. Each new action means four edits. When any of them is missed,
+  the user-visible symptom is "validate rejects what apply runs" —
+  exactly the kind of silent-confusion bug §9.4 named.
+- **Why it slipped past §2**: §2 was an LOC/instability audit. Drift
+  bugs don't show up in those metrics — they need cross-package
+  coherence checks. The fix shape is *codegen*, not refactor.
+- **Fix shape**: a single source of truth (the handler's `Metadata()`
+  return value already declares the action name + category + capabilities)
+  feeding into schema generation, validator generation, and doc
+  generation. `internal/schemagen` already does part of this for the
+  JSON schema (1799 LOC, instability 0.67 — Smell-territory by itself).
+  The fix is to make the validator and config-struct also derive from
+  the same source, not to add more hand-maintained lists.
+
+This is the **highest-leverage structural improvement** the review has
+named since the original §2. It collapses three HIGH findings to one
+fix and prevents the entire class.
+
+### 10.3 Refactor list — fifth revision
+
+Adding Smell 6's fix as a high-priority item; rest of the list stays.
+
+| Position | Item | State |
+|---|---|---|
+| 1 | **Single-source-of-truth codegen** (new — derives schema + validator + config struct from handler `Metadata()`) | new, top because it closes 3 HIGH findings at once |
+| 2 | Resolve `internal/effects` | unchanged |
+| 3 | Widen `internal/metrics` data shape (so memory + disk converge on Path A) | unchanged |
+| 4 | Catch `fleet apply` up to the sub-package pattern (+ write the rule) | unchanged |
+| 5 | Handler-conformance test harness | unchanged |
+| 6 | Split `internal/config/config.go` | unchanged — but now downstream of #1 (codegen will reshape what stays in config.go) |
+| 7 | Decompose `actions/{service,package,os_systemd}` by driver | unchanged |
+| 8 | Promote `executor/transaction.go` + `trycatch.go` to `internal/control/` | unchanged |
+
+The #1 promotion is significant: it moves a *codegen fix* ahead of
+several refactor items because it closes user-visible bugs at the same
+time as resolving a structural smell. That's a rare two-for-one.
+
+### 10.4 Net assessment (fifth revision)
+
+The cumulative picture across §§7–10:
+
+- **Two new structural smells** (Smell 6 fan-out drift, plus the
+  metrics-schema-too-narrow item from §9.2) have surfaced — both were
+  invisible to the original §2 audit because both are cross-package
+  coordination problems, not LOC/coupling problems.
+- **Spec-59/60/62 family** has stabilized on a coherent pattern:
+  reuse `internal/metrics` where the schema fits, document divergence
+  where it doesn't, no convergence with `facts` (correct seam).
+- **The findings doc has surfaced 34 issues**, 5+ of which are HIGH;
+  most cluster around one of two root causes (silent-success contract
+  gap from §9.4, fan-out drift from §10.2). Closing those two root
+  causes would resolve a disproportionate fraction of the open
+  findings.
+
+The one thing I keep waiting on and not seeing: **`internal/effects`
+resolution**. It's been #1 on the refactor list across §§5/6/7/8/9/10
+and remains undecided. Either commit to it (Path A in §6.3.3) or fold
+it in (Path B). The new code keeps bypassing it, which is the worst-
+of-both-worlds outcome.
+
+---
+
 ## Cross-references
 
 - [`../ARCH_SNAPSHOT.md`](../ARCH_SNAPSHOT.md) — package LOC, instability,
