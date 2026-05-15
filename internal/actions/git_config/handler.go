@@ -45,6 +45,38 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// git.config writes config keys at one of three scopes:
+//   - system → /etc/gitconfig — always needs sudo.
+//   - global → ~/.gitconfig — never needs sudo (user-owned).
+//   - local  → <repo>/.git/config — sudo iff repo lives under a
+//     system path (PathNeedsSudo).
+//
+// No Network. Requires the `git` binary on PATH.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{
+		RequiredBinaries: []string{"git"},
+	}
+	if step == nil || step.GitConfig == nil {
+		return ps
+	}
+	scope := strings.TrimSpace(step.GitConfig.Scope)
+	switch scope {
+	case scopeSystem:
+		ps.Sudo = true
+		ps.FilesystemWrite = []string{"/etc/gitconfig"}
+	case scopeLocal:
+		if actions.PathNeedsSudo(step.GitConfig.Repo) {
+			ps.Sudo = true
+		}
+		if step.GitConfig.Repo != "" {
+			ps.FilesystemWrite = []string{step.GitConfig.Repo + "/.git/config"}
+		}
+	}
+	return ps
+}
+
 // Validate checks required fields on the step.
 func (h *Handler) Validate(step *config.Step) error {
 	g := step.GitConfig

@@ -82,6 +82,7 @@ const (
 	ResourceText    ResourceKind = "text"
 	ResourceShell   ResourceKind = "shell"
 	ResourceVar     ResourceKind = "var"
+	ResourceGit     ResourceKind = "git"
 	ResourceOther   ResourceKind = "other"
 )
 

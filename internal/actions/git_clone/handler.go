@@ -38,6 +38,30 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// git.clone is a network action — declares Network=true and requires
+// the `git` binary on PATH. Sudo is derived from dest: writes to
+// /etc, /usr, /opt and friends need elevation. FilesystemWrite is
+// the dest path; credential helpers may also write under $HOME but
+// that's transient and out of scope here.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{
+		Network:          true,
+		RequiredBinaries: []string{"git"},
+	}
+	if step == nil || step.GitClone == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.GitClone.Dest) {
+		ps.Sudo = true
+	}
+	if step.GitClone.Dest != "" {
+		ps.FilesystemWrite = []string{step.GitClone.Dest}
+	}
+	return ps
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	g := step.GitClone
 	if g == nil {
