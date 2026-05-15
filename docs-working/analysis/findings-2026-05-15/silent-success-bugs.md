@@ -578,6 +578,52 @@ times to get success; if all retries fail, *then* apply
 
 ---
 
+## #70 — `read.json` / `read.yaml` with `as:` leaks Go reflect.Value into templates — HIGH (regression-shape of #8)
+
+**Repro**:
+```yaml
+# /work/data.json: {"service": {"name": "web", "port": 8080}}
+- read.json:
+    path: /work/data.json
+  as: cfg
+- log: { msg: "raw cfg = {{ cfg }}" }
+- log: { msg: "name = {{ cfg.service.name }}" }
+```
+
+Output:
+```
+raw cfg = <map[string]interface {} Value>
+name =
+```
+
+The `as: cfg` captures the data, but templates access an opaque
+`reflect.Value` wrapper. All nested field access returns empty
+strings.
+
+**Why HIGH**: this is **the same bug class** as the original #8
+(for_each `{{ item }}` leaked Go reflect.Value). #8 was fixed at the
+loop-variable binding path. The fix didn't extend to register-style
+`as:` captures for read.* actions.
+
+For an AI agent, `read.json → use cfg in template` is THE primary
+configuration-driven pattern (load config, fan out actions). Right
+now this pattern silently produces empty values everywhere.
+
+**Workaround**: none known via templates. Agent would have to shell
+out to `cat /work/data.json | jq` and pipe text.
+
+**Fix**: when storing register-style results into
+`ExpansionContext.Variables`, unwrap reflect.Value to native
+map/slice/scalar before binding — same change that fixed #8 for the
+iteration path.
+
+**Probably also affects**: `repo.search`'s `as:` (returns
+`results: [...]` map), `pkg.list as:` (returns `packages: [...]`),
+`observe.* as:` (returns `value: {...}`). Every typed-result action
+that uses `as:` is suspect. Worth auditing.
+
+---
+
 ## #67 — Nested `try:` blocks fail with "no handler registered for action type: unknown" — MEDIUM
 
 **Repro**:
