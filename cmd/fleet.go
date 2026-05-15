@@ -522,24 +522,38 @@ func fleetApplyAction(c *cli.Context) error {
 		}
 	}()
 
-	// Multi-phase machine mode: dispatch to the manifest-driven
-	// orchestrator. cfgPeers.Peers (not `selected`) is passed in so the
-	// manifest can resolve any peer in peers.toml — `--peers`-driven
-	// preselection doesn't make sense when the manifest is the
-	// authoritative peer list.
+	// Multi-phase machine mode: dispatch to the manifest-driven orchestrator.
+	// cfgPeers.Peers (not `selected`) is passed in so the manifest can
+	// resolve any peer in peers.toml — `--peers`-driven preselection doesn't
+	// make sense when the manifest is the authoritative peer list.
+	//
+	// peerFilter is the cmd-side predicate adapter: internal/fleet's
+	// RunMachineApply takes a typeless `func(Peer) bool` so it doesn't have
+	// to know about cmd's filterTerm / peerOSResolver shapes. nil =
+	// accept-all (no --peer filter active).
 	if machineManifest != nil {
-		return runMachineApply(
+		var peerFilter func(fleet.Peer) bool
+		if len(peerFilterGroups) > 0 {
+			peerFilter = func(p fleet.Peer) bool {
+				return peerMatchesFilters(p, peerFilterGroups, nil)
+			}
+		}
+		res := fleet.RunMachineApply(
 			applyCtx, w, useColor,
 			machineManifest, machine, cfgPeers.Peers,
 			planDir, varsAbs, tags, stepNames,
 			maxSync, parallel, controllerID,
-			peerFilterGroups, nil, // osFor lazily allocated inside the helper if needed
+			peerFilter,
 		)
+		if res.ExitCode != 0 {
+			return cli.Exit(res.Message, res.ExitCode)
+		}
+		return nil
 	}
 
-	// Single-phase path: filter out non-agentd transports, run the
-	// shared runApplyPhase helper that drives Apply across the selected
-	// peer set.
+	// Single-phase path: filter out non-agentd transports, run the shared
+	// fleet.RunApplyPhase helper that drives Apply across the selected peer
+	// set.
 	agentdPeers := make([]fleet.Peer, 0, len(selected))
 	var skippedPeers []fleet.Peer
 	for _, p := range selected {
@@ -553,7 +567,7 @@ func fleetApplyAction(c *cli.Context) error {
 		return cli.Exit("fleet apply: no agentd-transport peers selected", 1)
 	}
 
-	out := runApplyPhase(applyCtx, w, useColor, applyPhaseInput{
+	out := fleet.RunApplyPhase(applyCtx, w, useColor, fleet.ApplyPhaseInput{
 		PlanAbs:       planAbs,
 		PlanDir:       planDir,
 		Peers:         agentdPeers,

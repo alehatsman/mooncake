@@ -28,14 +28,14 @@ func TestResolveMachinePhase_FindsPeerAndLayersVarsAndTags(t *testing.T) {
 		Vars: []string{"/abs/win.yml"},
 		Tags: []string{"windows"},
 	}
-	in, err := resolveMachinePhase(
-		machinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 2},
+	in, err := fleet.ResolveMachinePhase(
+		fleet.MachinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 2},
 		peers, "/abs/plan-dir",
 		[]string{"/abs/cli.yml"},  // CLI-level --vars-file
 		[]string{"deploy"},        // CLI-level --tags
 		[]string{"install nvim"},  // step-filter names
 		1024, 4, "controller-id",
-		nil, nil, // no peer-filter, no os resolver
+		nil, // no peer filter
 	)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -71,9 +71,9 @@ func TestResolveMachinePhase_FindsPeerAndLayersVarsAndTags(t *testing.T) {
 func TestResolveMachinePhase_UnknownPeerErrors(t *testing.T) {
 	peers := peersForMachineTest()
 	phase := fleet.MachinePhase{Name: "p", Peer: "not-in-peers-toml", Plan: "/p"}
-	_, err := resolveMachinePhase(
-		machinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
-		peers, "/d", nil, nil, nil, 0, 0, "id", nil, nil,
+	_, err := fleet.ResolveMachinePhase(
+		fleet.MachinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
+		peers, "/d", nil, nil, nil, 0, 0, "id", nil,
 	)
 	if err == nil {
 		t.Fatalf("expected error for unknown peer")
@@ -91,9 +91,9 @@ func TestResolveMachinePhase_NonAgentdPeerGoesToSkippedList(t *testing.T) {
 	// phase with zero agentd peers and bails out cleanly.
 	peers := peersForMachineTest()
 	phase := fleet.MachinePhase{Name: "p", Peer: "mac", Plan: "/p"}
-	in, err := resolveMachinePhase(
-		machinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
-		peers, "/d", nil, nil, nil, 0, 0, "id", nil, nil,
+	in, err := fleet.ResolveMachinePhase(
+		fleet.MachinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
+		peers, "/d", nil, nil, nil, 0, 0, "id", nil,
 	)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -118,9 +118,10 @@ func TestResolveMachinePhase_PeerFilterCanZeroOutAPhase(t *testing.T) {
 	if parseErr != nil {
 		t.Fatalf("parse filter: %v", parseErr)
 	}
-	in, err := resolveMachinePhase(
-		machinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
-		peers, "/d", nil, nil, nil, 0, 0, "id", groups, nil,
+	peerFilter := func(p fleet.Peer) bool { return peerMatchesFilters(p, groups, nil) }
+	in, err := fleet.ResolveMachinePhase(
+		fleet.MachinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
+		peers, "/d", nil, nil, nil, 0, 0, "id", peerFilter,
 	)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -136,9 +137,10 @@ func TestResolveMachinePhase_PeerFilterMatchKeepsPhase(t *testing.T) {
 	peers := peersForMachineTest()
 	phase := fleet.MachinePhase{Name: "p", Peer: "main_pc-win", Plan: "/p"}
 	groups, _ := parsePeerFlags([]string{"tag=windows"})
-	in, err := resolveMachinePhase(
-		machinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
-		peers, "/d", nil, nil, nil, 0, 0, "id", groups, nil,
+	peerFilter := func(p fleet.Peer) bool { return peerMatchesFilters(p, groups, nil) }
+	in, err := fleet.ResolveMachinePhase(
+		fleet.MachinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
+		peers, "/d", nil, nil, nil, 0, 0, "id", peerFilter,
 	)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
