@@ -668,6 +668,117 @@ func TestHandler_Execute_CreatesIdempotency(t *testing.T) {
 	}
 }
 
+// MT-46: file.unarchive should be idempotent without requiring an
+// explicit creates: marker. Running the same archive against the
+// same dest twice should report Changed=false on the second run.
+func TestHandler_Execute_ContentIdempotency_Tar(t *testing.T) {
+	h := &Handler{}
+
+	tmpDir := t.TempDir()
+	tarPath := filepath.Join(tmpDir, "test.tar")
+	extractDir := filepath.Join(tmpDir, "extract")
+	createTestTarArchive(t, tarPath)
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		FileUnarchive: &config.Unarchive{
+			Src:  tarPath,
+			Dest: extractDir,
+		},
+	}
+
+	// First run: extract.
+	result, err := h.Execute(ec, step)
+	if err != nil {
+		t.Fatalf("First Execute() error = %v", err)
+	}
+	if !result.(*executor.Result).Changed {
+		t.Fatal("First run should report Changed=true (extracting)")
+	}
+
+	// Second run with fresh ec: should skip via content match.
+	ec2 := mockExecutionContext()
+	result2, err := h.Execute(ec2, step)
+	if err != nil {
+		t.Fatalf("Second Execute() error = %v", err)
+	}
+	if result2.(*executor.Result).Changed {
+		t.Error("Second run should report Changed=false (archive contents already present)")
+	}
+}
+
+// MT-46: same shape but tar.gz to confirm the gzip path also gates.
+func TestHandler_Execute_ContentIdempotency_TarGz(t *testing.T) {
+	h := &Handler{}
+
+	tmpDir := t.TempDir()
+	tarGzPath := filepath.Join(tmpDir, "test.tar.gz")
+	extractDir := filepath.Join(tmpDir, "extract")
+	createTestTarGzArchive(t, tarGzPath)
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		FileUnarchive: &config.Unarchive{
+			Src:  tarGzPath,
+			Dest: extractDir,
+		},
+	}
+
+	if _, err := h.Execute(ec, step); err != nil {
+		t.Fatalf("First Execute() error = %v", err)
+	}
+
+	ec2 := mockExecutionContext()
+	result2, err := h.Execute(ec2, step)
+	if err != nil {
+		t.Fatalf("Second Execute() error = %v", err)
+	}
+	if result2.(*executor.Result).Changed {
+		t.Error("Second tar.gz run should report Changed=false")
+	}
+}
+
+// MT-46: if any extracted file diverges (truncated, modified size),
+// the pre-check must fall through to extract — otherwise drift goes
+// unnoticed.
+func TestHandler_Execute_ContentIdempotency_DivergedFile(t *testing.T) {
+	h := &Handler{}
+
+	tmpDir := t.TempDir()
+	tarPath := filepath.Join(tmpDir, "test.tar")
+	extractDir := filepath.Join(tmpDir, "extract")
+	createTestTarArchive(t, tarPath)
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		FileUnarchive: &config.Unarchive{
+			Src:  tarPath,
+			Dest: extractDir,
+		},
+	}
+
+	// Extract once.
+	if _, err := h.Execute(ec, step); err != nil {
+		t.Fatalf("First Execute() error = %v", err)
+	}
+
+	// Mutate one extracted file so its size diverges.
+	target := filepath.Join(extractDir, "test.txt")
+	if err := os.WriteFile(target, []byte("DIFFERENT"), 0644); err != nil {
+		t.Fatalf("Failed to mutate extracted file: %v", err)
+	}
+
+	// Second run must re-extract (restore content).
+	ec2 := mockExecutionContext()
+	result2, err := h.Execute(ec2, step)
+	if err != nil {
+		t.Fatalf("Second Execute() error = %v", err)
+	}
+	if !result2.(*executor.Result).Changed {
+		t.Error("Second run should re-extract when a target file diverges (Changed=true)")
+	}
+}
+
 func TestHandler_Execute_PathTraversalProtection(t *testing.T) {
 	h := &Handler{}
 

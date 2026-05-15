@@ -198,6 +198,19 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return result, fmt.Errorf("failed to create destination directory: %w", mkdirErr)
 	}
 
+	// MT-46: pre-extract idempotency check. Walk the archive entries
+	// and compare against the destination; if every entry already
+	// exists with matching size (and matching target for symlinks),
+	// skip extraction and report Changed=false. The `creates:` marker
+	// above is still the cheaper short-circuit when authors provide it.
+	matched, checkErr := h.archiveMatchesDest(format, renderedSrc, renderedDest, unarchiveAction.StripComponents)
+	if checkErr != nil {
+		ctx.GetLogger().Debugf("  Idempotency pre-check error (will re-extract): %v", checkErr)
+	} else if matched {
+		ctx.GetLogger().Debugf("  Skipping extraction: archive contents already present at %s", renderedDest)
+		return result, nil
+	}
+
 	// Extract archive based on format
 	ctx.GetLogger().Debugf("  Extracting %s archive: %s -> %s", format.String(), renderedSrc, renderedDest)
 	var stats *ExtractionStats
