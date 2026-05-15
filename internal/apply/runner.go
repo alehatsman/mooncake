@@ -43,15 +43,19 @@ func NewRunner(cfg *Config) *Runner {
 }
 
 // Run validates the Config, sets up the event substrate (publisher
-// + subscribers), installs SIGINT/SIGTERM handling, and dispatches
-// to executor.Start. Returns whatever executor.Start returned —
-// nil on success, a typed error on failure.
+// + subscribers), installs SIGINT/SIGTERM handling, dispatches to
+// executor.Start, and returns a typed *KernelResult plus the run's
+// error (R1.1b). The returned *KernelResult is never nil — on a
+// validation failure or pre-plan error it carries a populated
+// Summary with Success=false and a non-empty ErrorMessage; callers
+// inspecting it after a non-nil error get a consistent shape.
 //
-// Context is currently unused at this layer; reserved for the
-// kernel-API plumbing in R1.1b and future SDK callers.
-func (r *Runner) Run(_ context.Context) error {
+// Context is wired through for future cancellation (the executor
+// does not yet observe it; SIGINT/SIGTERM handling is installed
+// separately). Direct callers (MCP, agent loop) get the same surface.
+func (r *Runner) Run(_ context.Context) (*KernelResult, error) {
 	if err := r.validate(); err != nil {
-		return err
+		return failedResult(err), err
 	}
 
 	// Collect facts early if facts-json requested. Best-effort:
@@ -66,6 +70,14 @@ func (r *Runner) Run(_ context.Context) error {
 	// Event publisher + subscribers.
 	publisher := events.NewPublisher()
 	defer publisher.Close()
+
+	// R1.1b: install an event-tail capture subscriber so the
+	// *KernelResult's Events field carries the run's audit substrate.
+	// Plan + per-step records flow through executor.RunCapture (see
+	// below) rather than the publisher because they need typed step
+	// data that doesn't fit in the JSON event payloads.
+	tail := newCaptureSubscriber()
+	publisher.Subscribe(tail)
 
 	level := parseLogLevel(r.cfg.LogLevel)
 
@@ -118,7 +130,13 @@ func (r *Runner) Run(_ context.Context) error {
 	stopSig := installSignalHandler()
 	defer stopSig()
 
-	return executor.Start(executor.StartConfig{
+	// R1.1b: hand executor.Start a *RunCapture so the kernel result
+	// carries the compiled plan and per-step records. Without this
+	// hook the executor's hot path is identical to the legacy code —
+	// the apply.Runner is the only caller setting it today.
+	capture := &executor.RunCapture{}
+
+	execErr := executor.Start(executor.StartConfig{
 		ConfigFilePath:   r.cfg.ConfigPath,
 		VarsFilePaths:    r.cfg.VarsFiles,
 		SudoPass:         r.cfg.SudoPass,
@@ -133,7 +151,81 @@ func (r *Runner) Run(_ context.Context) error {
 		CaptureFullOutput: r.cfg.CaptureFullOutput,
 		MaxOutputBytes:    r.cfg.MaxOutputBytes,
 		MaxOutputLines:    r.cfg.MaxOutputLines,
+
+		Capture: capture,
 	}, internalLog, publisher)
+
+	// Drain pending events so the audit tail is complete before we
+	// build the KernelResult. Close (deferred above) only waits on
+	// forwarding goroutines; Flush waits on the per-subscriber
+	// inboxes that drive captureSubscriber.OnEvent.
+	publisher.Flush()
+
+	return assembleResult(capture, tail, execErr), execErr
+}
+
+// failedResult returns a KernelResult for early-exit paths where the
+// executor never ran. Used for validate() errors so callers see a
+// consistent shape even when err != nil.
+func failedResult(err error) *KernelResult {
+	msg := ""
+	if err != nil {
+		msg = err.Error()
+	}
+	return &KernelResult{
+		Summary: RunSummary{
+			Success:      false,
+			ErrorMessage: msg,
+		},
+	}
+}
+
+// assembleResult lifts the executor's capture and the publisher's
+// event tail into a typed *KernelResult. Steps are returned in
+// execution order; Events in observed order. The summary is taken
+// from the run.completed event when present, falling back to a
+// minimal Summary when the run failed before run.completed fired.
+func assembleResult(capture *executor.RunCapture, tail *captureSubscriber, execErr error) *KernelResult {
+	out := &KernelResult{Plan: capture.Plan()}
+
+	for _, rec := range capture.Steps() {
+		out.Steps = append(out.Steps, StepResult{
+			Step:   rec.Step,
+			Result: rec.Result,
+		})
+	}
+
+	if tail != nil {
+		tail.mu.Lock()
+		out.Events = append(out.Events, tail.events...)
+		runData := tail.run
+		tail.mu.Unlock()
+
+		out.Summary = RunSummary{
+			TotalSteps:   runData.TotalSteps,
+			Ok:           runData.SuccessSteps,
+			Changed:      runData.ChangedSteps,
+			Skipped:      runData.SkippedSteps,
+			Failed:       runData.FailedSteps,
+			Reverted:     runData.RevertedSteps,
+			DurationMs:   runData.DurationMs,
+			Success:      runData.Success,
+			ErrorMessage: runData.ErrorMessage,
+			CheckMode:    runData.CheckMode,
+		}
+	}
+
+	// If the run never reached run.completed (catastrophic setup
+	// error before plan compilation), the tail summary is the zero
+	// value. Reflect the actual error so consumers see something
+	// useful.
+	if out.Summary.TotalSteps == 0 && execErr != nil {
+		out.Summary.Success = false
+		if out.Summary.ErrorMessage == "" {
+			out.Summary.ErrorMessage = execErr.Error()
+		}
+	}
+	return out
 }
 
 // validate checks the Config's invariants. Run() calls this first;

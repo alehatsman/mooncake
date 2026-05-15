@@ -746,6 +746,12 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// Implementation in transaction.go.
 	ec.recordTxnBodyCompletion(step, ec.CurrentResult)
 
+	// R1.1b: feed the optional RunCapture so internal/apply.Runner can
+	// build a typed *KernelResult. No-op when Capture is nil (every
+	// caller except apply.Runner today). Done before nil-ing
+	// CurrentResult below; the helper deep-copies what it needs.
+	ec.Svc.Capture.appendStep(step, ec.CurrentResult)
+
 	// Clear current result for next step
 	ec.CurrentResult = nil
 
@@ -883,6 +889,11 @@ type StartConfig struct {
 	CaptureFullOutput bool
 	MaxOutputBytes    int
 	MaxOutputLines    int
+
+	// Capture, if non-nil, is populated by Start with the compiled
+	// plan and per-step records. R1.1b's internal/apply.Runner uses
+	// this to build its typed *KernelResult. Other callers leave nil.
+	Capture *RunCapture
 }
 
 // Start begins execution of a mooncake configuration with the given settings.
@@ -1016,13 +1027,28 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 		log.Debugf("Artifacts will be written to: %s/runs/%s", startConfig.ArtifactsDir, "...")
 	}
 
+	// R1.1b: feed Capture.Plan up-front so the Runner sees the compiled
+	// plan even if execution fails partway. No-op when Capture is nil.
+	startConfig.Capture.setPlan(planData)
+
 	// Execute the plan with event publisher
-	return ExecutePlan(planData, sudoPassword, actions.ModeApply, log, publisher)
+	return executePlanWithCapture(planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture)
 }
 
 // ExecutePlan executes a pre-compiled plan.
 // Emits events through the provided publisher for all execution progress.
+//
+// Callers that need the typed *KernelResult substrate (R1.1b) should
+// go through executor.Start with StartConfig.Capture set instead;
+// this entry point does not surface the per-step records.
 func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
+	return executePlanWithCapture(p, sudoPass, mode, log, publisher, nil)
+}
+
+// executePlanWithCapture is the shared implementation behind
+// ExecutePlan and Start. Pass capture=nil to disable the
+// kernel-result substrate (legacy callers).
+func executePlanWithCapture(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -1106,7 +1132,13 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 		FileTree:       fileTreeWalker,
 		Redactor:       redactor,
 		EventPublisher: publisher,
+		Capture:        capture,
 	}
+	// R1.1b: Capture.Plan was already set by Start; for the direct
+	// ExecutePlan entry point (where capture is nil) this is a no-op.
+	// We also call setPlan here so callers that ever wire Capture
+	// directly to ExecutePlan in the future get correct behavior.
+	capture.setPlan(p)
 	scope := &VariableScope{
 		User:          variables,
 		Results:       make(map[string]RegisteredResult),
