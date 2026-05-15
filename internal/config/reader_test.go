@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -400,6 +401,40 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 	// Verify vars
 	if steps[5].Vars == nil {
 		t.Error("vars step should have Vars field set")
+	}
+}
+
+// MT-73: empty / whitespace-only config files must produce a
+// human-readable error, not the raw "EOF" string the yaml decoder
+// returns. Operators new to the tool need to see what shape was
+// expected.
+func TestReadConfigWithValidation_EmptyFileGivesClearError(t *testing.T) {
+	for name, content := range map[string]string{
+		"truly empty":           "",
+		"newlines only":         "\n\n\n",
+		"spaces and newlines":   "   \n   \n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			tmpFile := createTempYAML(t, content)
+			defer os.Remove(tmpFile)
+
+			_, _, err := ReadConfigWithValidation(tmpFile)
+			if err == nil {
+				t.Fatal("expected error for empty config")
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "empty") {
+				t.Errorf("error should mention 'empty', got: %s", msg)
+			}
+			if !strings.Contains(msg, tmpFile) {
+				t.Errorf("error should cite the config path, got: %s", msg)
+			}
+			// Sanity: the raw "EOF" leak from MT-73's original report
+			// must NOT be the whole error any more.
+			if strings.TrimSpace(msg) == "EOF" {
+				t.Errorf("error regressed to raw EOF: %s", msg)
+			}
+		})
 	}
 }
 

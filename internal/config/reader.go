@@ -3,7 +3,9 @@ package config
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -63,6 +65,14 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(&rootNode)
 	if err != nil {
+		// MT-73: yaml.NewDecoder returns io.EOF for empty or
+		// whitespace-only files. The raw "EOF" string in the user-
+		// facing error tells the operator nothing about what was
+		// expected. Surface a clear "what to put here" message
+		// instead.
+		if errors.Is(err, io.EOF) {
+			return nil, nil, fmt.Errorf("config file is empty: %s — expected a list of steps (e.g. `- shell: echo hello`) or a `steps:` block", path)
+		}
 		return nil, nil, err
 	}
 
