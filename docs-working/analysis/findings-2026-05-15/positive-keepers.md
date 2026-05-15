@@ -275,6 +275,35 @@ as Ansible's `--extra-vars` chain. Clean.
 
 ---
 
+## ★ `import:` handles circular imports + template-resolved paths
+
+```
+# a.yml: imports b.yml; b.yml: imports a.yml
+$ mooncake apply -c a.yml
+include cycle detected: /work/a.yml
+Chain: /work/a.yml:1 -> /work/b.yml:1
+
+# self.yml: imports itself
+$ mooncake apply -c self.yml
+include cycle detected: /work/self.yml
+Chain: /work/self.yml:1
+
+# dyn.yml: import: "{{ module }}.yml" with module=nope
+$ mooncake apply -c dyn.yml
+failed to read included config "/work/nope.yml": ... no such file or directory
+```
+
+Three positives:
+- Cycle detection works (both 2-step and self-loop)
+- The `Chain:` trace shows the import path with file:line
+- `import: "{{ module }}.yml"` template-substitutes before resolving
+  the path — dynamic imports work
+
+Don't break this. The Chain output is the right shape for debugging
+include trees.
+
+---
+
 ## ★ Multi-file configs / `import:` / `vars.load` work cleanly
 
 ```yaml
