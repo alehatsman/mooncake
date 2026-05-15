@@ -749,3 +749,212 @@ the recap is green, but the action either did nothing useful or did
 something unverified. That class of bug is the most dangerous because
 nobody learns about it from feedback — they learn about it from
 production incident reports. Worth fixing first.
+
+---
+
+## Continued exploration (round 4)
+
+Probed the AI-agent-facing surfaces: `mooncake step` (single-step JSON),
+`mooncake history`, `mooncake actions list`, `repo.*` family,
+`artifact.*` family, and the `mooncake mcp` stdio server. Numbering
+continues from #21.
+
+### 22. `mooncake step` truncates action-specific structured output — SEVERITY: HIGH (AI-agent UX)
+
+**Repro**:
+
+```
+$ echo "hello" > /tmp/probe.txt
+$ mooncake step "repo.search: { path: /tmp, pattern: hello }"
+{
+  "changed": false,
+  "action": "repo.search",
+  "duration_ms": 0
+}
+```
+
+But the same action via `apply --output-format json` returns:
+
+```json
+{
+  "results":[{"file":"probe.txt","line":1,"column":1,"match":"hello",
+              "context":"hello"}],
+  "total_files":1,
+  "total_matches":1,
+  ...
+}
+```
+
+**Why HIGH**: `mooncake step` is positioned as the canonical "AI agent
+calls one action" entry point — that's literally what its help text
+says: "Execute a single inline step and return JSON result". But for
+any typed action (`repo.search`, `repo.tree`, `text.replace`, etc.),
+the structured payload is dropped. An agent invoking `step` for
+`repo.search` gets back `{"changed": false, "duration_ms": 0}` — no
+way to know what was found.
+
+Confirmed against `repo.tree` (no `tree:` object), `repo.search` (no
+`results:` list). `shell` actions DO surface `stdout` — so the schema
+is shell-special-cased, not action-generic.
+
+**Fix**: `mooncake step`'s JSON should include the full action result
+map, not a manually-selected subset. Whatever `apply
+--output-format json` emits under `result.*` should be available
+verbatim in `step`'s output.
+
+---
+
+### 23. `repo.tree` reports zero files with default settings — SEVERITY: MEDIUM
+
+**Repro**:
+
+```
+$ mkdir -p /tmp/walk/sub && echo a > /tmp/walk/a.txt && echo b > /tmp/walk/sub/b.txt
+$ mooncake apply -c <step that does: repo.tree: { path: /tmp/walk }>
+```
+
+JSON event payload from `step.completed`:
+```json
+"result": {
+  "total_dirs": 1,
+  "total_files": 0,
+  "tree": {"name":"walk","type":"directory","path":""}
+}
+```
+
+`max_depth: 2` and `max_depth: 10` produce the same empty result via
+`mooncake step`.
+
+**Why MEDIUM**: `repo.tree` is supposed to walk a directory. By
+default it returns nothing. Either the default `max_depth` is `0`
+(don't descend, don't list current dir contents), or the action is
+silently broken. Either way the UX is wrong — a no-args
+`repo.tree: { path: ... }` should show the immediate children.
+
+(NB: `mooncake step` showing no payload at all is finding #22; this
+is the separate bug that even via `apply` the tree is empty.)
+
+---
+
+### 24. `artifact.capture` reports 0 file changes across all action types — SEVERITY: HIGH
+
+**Repro 1** — file.write inside artifact.capture:
+
+```yaml
+- artifact.capture:
+    name: test
+    output_dir: /tmp/artifact-out
+    format: both
+    capture_content: true
+    steps:
+    - file.write:
+        path: /tmp/artifact-target/config.txt
+        state: file
+        content: "v1\n"
+```
+
+Output:
+```
+Capturing artifacts to: /tmp/artifact-out/test
+Executing 1 steps within artifact capture
+Captured 0 file changes
+Artifact capture complete: 0 files changed
+```
+
+SUMMARY.md says `Total Files: 0, Files Created: 0` even though the file
+was definitely created (`cat /tmp/artifact-target/config.txt` → `v1`).
+
+**Repro 2** — text.replace inside artifact.capture: same result. 0
+changes recorded, real text.replace executed successfully on disk.
+
+**Why HIGH**: the entire purpose of `artifact.capture` is to record
+what the wrapped steps changed — that's the AI-agent feedback loop
+("here's what you just did"). Recording zero changes when changes
+actually happened defeats the purpose. From the docstring in
+`examples/artifact-capture-example.yml`: "for LLM agent loops" — and
+the agent loop has no signal.
+
+**Also observed**: `initial_vars` dump in `changes.json` includes the
+entire CPU flags list (100+ items per artifact). Should be cleaner —
+either omit `initial_vars` entirely or have an opt-in `capture_facts`
+flag.
+
+---
+
+### 25. MCP server: notification gets a malformed reply — SEVERITY: LOW (protocol)
+
+**Repro**: send `notifications/initialized` (no `id`) — server responds
+with `{"jsonrpc":""}`.
+
+```
+> {"jsonrpc":"2.0","method":"notifications/initialized"}
+< {"jsonrpc":""}
+```
+
+**Why it matters**: JSON-RPC 2.0 (the MCP transport contract) says
+notifications MUST NOT receive responses. Empty-version `jsonrpc` is
+also an invalid spec value. A strict MCP client could refuse to talk
+further. Most won't, but it's a protocol violation worth fixing.
+
+**Fix**: handle notifications without emitting any response on the
+wire.
+
+---
+
+### 26. MCP server: `run_plan` error message has duplicated prefix — SEVERITY: LOW (cosmetic)
+
+```
+> {"method":"tools/call","params":{"name":"run_plan","arguments":{"config":"/tmp/no-such-file.yml"}}}
+< {"error":{"code":-32000,"message":"failed to read config: failed to read config: open /tmp/no-such-file.yml: no such file or directory"}}
+```
+
+`failed to read config:` appears twice. Two layers of error wrapping
+both adding the same prefix. Trim the inner one.
+
+---
+
+## Round 4 keepers (do not regress)
+
+- **`mooncake step`** when used with `shell:` — clean JSON with
+  `stdout`/`stderr`/`changed`/`duration_ms`/`error`. Almost a clean
+  agent-primitive surface, just truncated for typed actions (#22).
+- **`mooncake history list --format json`** — JSONL of past runs,
+  newest-first, with proper timestamps. Good for fleet introspection.
+- **`mooncake actions list`** — the only honest, complete inventory of
+  available actions (and shows `SUDO`/`CHECK` columns). Should be the
+  source of truth that `LLM_GUIDE.md`'s action list is generated
+  from (closes #6).
+- **`mooncake mcp` stdio server** — works, exposes
+  `get_facts` / `get_snapshot` / `fact_query` / `run_plan` /
+  `check_plan` / `get_metrics`. Clean JSON-RPC responses (minor warts
+  in #25/#26). This is the AI-agent integration point and it's real.
+
+---
+
+## Updated suggested filing (round 4)
+
+| # | Severity | Where it should land |
+|---|---|---|
+| **22** | **HIGH** | `mooncake step` JSON should include full action result map |
+| 23 | MEDIUM | `repo.tree` default behavior — list children, not just root |
+| **24** | **HIGH** | `artifact.capture` not recording file changes — agent loop broken |
+| 25 | LOW | MCP — don't reply to notifications |
+| 26 | LOW | MCP — trim duplicated `failed to read config:` prefix |
+
+---
+
+## Severity rollup (cumulative across 4 rounds)
+
+| Severity | Count | Findings |
+|---|---|---|
+| **CRITICAL** | 2 | #8 for_each, #14 sha256 |
+| **HIGH** | 5 | #1 as_user/sudo, #2 shell guard recap, #15 file.write guards, #22 step truncation, #24 artifact.capture |
+| **MEDIUM** | 5 | #3 preset coverage, #4 validator UX, #16 HTML escape, #17 metrics in templates, #23 repo.tree empty |
+| **LOW** | 14 | UX surprises, doc drift, cosmetic protocol issues |
+| **(keep — don't regress)** | many | doctor, init, --output-format json, --from-plan, dry-run safety, MCP server, history, actions list |
+
+Total: 26 numbered findings across 4 rounds. The headline pattern —
+**silent success that's actually broken** — recurs in #8, #14, #15,
+#22, #24. Five of the seven HIGH+ findings. That's the single most
+important thing to address: how does Mooncake distinguish "did the
+right thing" from "did nothing while reporting success"?
