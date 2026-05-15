@@ -11,6 +11,8 @@ package file
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -27,6 +29,17 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// sha256Hex returns the hex-encoded SHA256 of b, or "" for nil. Used by
+// the file.write event-emit path so downstream consumers (artifact.capture
+// with include_checksums:true) get checksums without re-reading the file.
+func sha256Hex(b []byte) string {
+	if b == nil {
+		return ""
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
 
 const (
 	defaultFileMode os.FileMode = 0644
@@ -356,21 +369,38 @@ func (h *Handler) createOrUpdateFile(ctx actions.Context, ec *executor.Execution
 		}
 	}
 
-	// Emit event
+	// Emit event. Populate the before/after metadata fields so downstream
+	// consumers (artifact.capture with include_checksums / capture_content)
+	// don't have to re-read the file off disk to reconstruct it. existingContent
+	// is in scope here either way — fileExists gates whether it represents a
+	// real prior state or zero-bytes (issue #27).
 	publisher := ctx.GetEventPublisher()
 	if publisher != nil {
 		eventType := events.EventFileCreated
 		if fileExists {
 			eventType = events.EventFileUpdated
 		}
+		var beforeBytes []byte
+		var checksumBefore string
+		var sizeBefore int64
+		if fileExists {
+			beforeBytes = existingContent
+			checksumBefore = sha256Hex(existingContent)
+			sizeBefore = int64(len(existingContent))
+		}
 		publisher.Publish(events.Event{
 			Type: eventType,
 			Data: events.FileOperationData{
-				Path:      renderedPath,
-				Mode:      h.formatMode(mode),
-				SizeBytes: int64(len(content)),
-				Changed:   result.Changed,
-				DryRun:    ctx.Mode() == actions.ModePlan,
+				Path:           renderedPath,
+				Mode:           h.formatMode(mode),
+				SizeBytes:      int64(len(content)),
+				SizeBefore:     sizeBefore,
+				Changed:        result.Changed,
+				DryRun:         ctx.Mode() == actions.ModePlan,
+				ChecksumBefore: checksumBefore,
+				ChecksumAfter:  sha256Hex(content),
+				ContentBefore:  beforeBytes,
+				ContentAfter:   content,
 			},
 		})
 	}
@@ -879,6 +909,16 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.ReverseData = CaptureReverseInfo(renderedPath, state)
 	}
 
+	// Issue #27: capture pre-write bytes for downstream consumers
+	// (artifact.capture's size/checksum/content fields). Only meaningful
+	// for the file-write case in Apply mode. If the file doesn't exist,
+	// readErr is non-nil and beforeBytes stays nil — `created` operations
+	// then report a 0/empty before-state, which is the correct semantic.
+	var beforeBytes []byte
+	if state == actionTypeFile && ctx.Mode() == actions.ModeApply {
+		beforeBytes, _ = os.ReadFile(renderedPath) // #nosec G304 -- path is the same target runState writes to
+	}
+
 	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
 	p := ctx.Effects()
 	opts := actions.PerformerOpts{Become: step.ShouldBecome(), Force: file.Force}
@@ -918,7 +958,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	emitFileEvent(ctx, state, primary, renderedPath, mode, h.formatMode)
+	emitFileEvent(ctx, state, primary, renderedPath, mode, h.formatMode, beforeBytes)
 	return result, nil
 }
 
@@ -1040,7 +1080,12 @@ func (h *Handler) checkHardlinkForce(path, desiredTarget string, force bool) err
 // emitFileEvent publishes the appropriate event for the state and
 // effect outcome. Only called in ModeApply. Matches the events the
 // legacy Execute path emitted.
-func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string) {
+//
+// beforeBytes carries the pre-write file content captured by Run()
+// before runState ran. It powers issue-27's downstream artifact.capture
+// size/checksum/content fields. Empty for non-file states or when the
+// target didn't exist pre-write.
+func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string, beforeBytes []byte) {
 	pub := ctx.GetEventPublisher()
 	if pub == nil {
 		return
@@ -1058,21 +1103,41 @@ func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path s
 			},
 		})
 	case actionTypeFile:
+		// Read the just-written file so the after-fields reflect ground
+		// truth (rather than re-rendering content the caller no longer
+		// has). Skipped silently on read error — the event still carries
+		// the path/mode/changed bits, and downstream consumers degrade
+		// rather than crash.
+		afterBytes, _ := os.ReadFile(path) // #nosec G304 -- path is the same target runState just wrote
+		fileExistedBefore := beforeBytes != nil
 		eventType := events.EventFileCreated
-		// Heuristic: if the Effect's Reason indicates an existing file
-		// (contains "differs" or "chmod" or "match"), it's an update.
-		// Cleaner long-term would be for Effect to carry a "was-existing"
-		// bit, but this matches today's observable behavior.
-		if eff.Reason != "" && !contains(eff.Reason, "would create") {
+		if fileExistedBefore {
 			eventType = events.EventFileUpdated
+		} else if eff.Reason != "" && !contains(eff.Reason, "would create") {
+			// Belt-and-suspenders for performers that report an update via
+			// Effect.Reason without our Run() having captured beforeBytes
+			// (e.g. a future planner path bypassing the os.ReadFile probe).
+			eventType = events.EventFileUpdated
+		}
+		var sizeBefore int64
+		var checksumBefore string
+		if fileExistedBefore {
+			sizeBefore = int64(len(beforeBytes))
+			checksumBefore = sha256Hex(beforeBytes)
 		}
 		pub.Publish(events.Event{
 			Type: eventType,
 			Data: events.FileOperationData{
-				Path:    path,
-				Mode:    formatMode(mode),
-				Changed: eff.Performed,
-				DryRun:  false,
+				Path:           path,
+				Mode:           formatMode(mode),
+				SizeBytes:      int64(len(afterBytes)),
+				SizeBefore:     sizeBefore,
+				Changed:        eff.Performed,
+				DryRun:         false,
+				ChecksumBefore: checksumBefore,
+				ChecksumAfter:  sha256Hex(afterBytes),
+				ContentBefore:  beforeBytes,
+				ContentAfter:   afterBytes,
 			},
 		})
 	case "absent":

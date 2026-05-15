@@ -73,10 +73,16 @@ type FileChange struct {
 	Path           string `json:"path"`
 	Operation      string `json:"operation"` // "created", "updated", "template"
 	SizeBytes      int64  `json:"size_bytes"`
+	SizeBefore     int64  `json:"size_before,omitempty"`     // Pre-write size; 0 for new files
 	ChecksumBefore string `json:"checksum_before,omitempty"` // SHA256 before modification
 	ChecksumAfter  string `json:"checksum_after,omitempty"`  // SHA256 after modification
 	DiffFile       string `json:"diff_file,omitempty"`       // Path to unified diff file
 	StepID         string `json:"step_id,omitempty"`         // Step that made the change
+	// ContentBefore / ContentAfter carry raw bytes for downstream consumers
+	// (e.g. artifact.capture with capture_content:true). Not serialised into
+	// the run-artifact JSON — too bulky and only useful in-process.
+	ContentBefore []byte `json:"-"`
+	ContentAfter  []byte `json:"-"`
 }
 
 // RunSummary contains overall run information.

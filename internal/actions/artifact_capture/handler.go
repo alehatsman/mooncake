@@ -163,13 +163,34 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		var beforeContent, afterContent string
 
 		if capture.CaptureContent {
-			// Read content if requested
-			// Note: before content not available in current implementation
-			// Could be enhanced in future with shadow filesystem
-			afterContent, _ = readFileContent(fc.Path, maxDiffSize)
+			// Issue #27: prefer the in-event before/after bytes when the
+			// upstream handler plumbed them through — that gives us a true
+			// pre-write snapshot rather than a post-write disk re-read.
+			// Falls back to reading from disk for handlers that don't carry
+			// content through events yet (other file actions are follow-ups).
+			if fc.ContentBefore != nil {
+				if len(fc.ContentBefore) > maxDiffSize {
+					beforeContent = string(fc.ContentBefore[:maxDiffSize])
+				} else {
+					beforeContent = string(fc.ContentBefore)
+				}
+			}
+			if fc.ContentAfter != nil {
+				if len(fc.ContentAfter) > maxDiffSize {
+					afterContent = string(fc.ContentAfter[:maxDiffSize])
+				} else {
+					afterContent = string(fc.ContentAfter)
+				}
+			} else {
+				afterContent, _ = readFileContent(fc.Path, maxDiffSize)
+			}
 		}
 
 		detailed := artifacts.EnhanceFileChange(&fc, beforeContent, afterContent)
+		if capture.CaptureContent {
+			detailed.ContentBefore = beforeContent
+			detailed.ContentAfter = afterContent
+		}
 		detailedChanges = append(detailedChanges, *detailed)
 	}
 
@@ -440,8 +461,11 @@ func (t *fileChangeTracker) OnEvent(event events.Event) {
 				Path:           data.Path,
 				Operation:      "created",
 				SizeBytes:      data.SizeBytes,
+				SizeBefore:     data.SizeBefore,
 				ChecksumBefore: data.ChecksumBefore,
 				ChecksumAfter:  data.ChecksumAfter,
+				ContentBefore:  data.ContentBefore,
+				ContentAfter:   data.ContentAfter,
 			})
 		}
 
@@ -451,8 +475,11 @@ func (t *fileChangeTracker) OnEvent(event events.Event) {
 				Path:           data.Path,
 				Operation:      "updated",
 				SizeBytes:      data.SizeBytes,
+				SizeBefore:     data.SizeBefore,
 				ChecksumBefore: data.ChecksumBefore,
 				ChecksumAfter:  data.ChecksumAfter,
+				ContentBefore:  data.ContentBefore,
+				ContentAfter:   data.ContentAfter,
 			})
 		}
 
