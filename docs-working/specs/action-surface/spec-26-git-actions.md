@@ -1,12 +1,18 @@
 # Spec 26: `git.*` Actions — clone, checkout, config
 
-**Status:** Phases 1–5 complete. P1–P3 shipped earlier (`git.clone`,
-`git.checkout`, `git.config` core). **Phase 5 (spec-22 ABI hooks)
-shipped**: `Permissions()`, `Diff()`, `Cost()`, `Reverse()` declared
-on all three handlers; new `actions.ResourceGit` kind; `Reverse()`
-returns refusal on all three (git.clone irreversible by design;
-git.checkout / git.config pending apply-time pre-state capture
-refactor). Only phase 6 (docs + examples) remains.
+**Status:** Phases 1–5 complete + reverse-capture v1 shipped.
+P1–P3 shipped earlier (`git.clone`, `git.checkout`, `git.config`
+core). **Phase 5 (spec-22 ABI hooks) shipped**: `Permissions()`,
+`Diff()`, `Cost()`, `Reverse()` declared on all three handlers;
+new `actions.ResourceGit` kind. **Reverse-capture follow-up
+shipped**: `git.checkout` now captures the pre-apply HEAD sha in
+`Run()` (via `GitCheckoutReverseInfo` on `Result.ReverseData`) and
+returns a real reverse step (force-checkout back to the prior sha).
+`git.config` captures per-key prior values + presence (via
+`GitConfigReverseInfo`) and builds an inverse step that restores
+prior values or unsets keys that didn't exist pre-apply.
+`git.clone` is still irreversible by design (rmtree-on-rollback
+foot-gun). Only phase 6 (docs + examples) remains.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** S (3–5 days)
 **Value:** High. Every AI-agent playbook touches git within the first
@@ -222,12 +228,16 @@ All three handlers now declare the four spec-22 sub-interfaces:
 | Handler | Permissions | Diff | Cost (Risk / Reversible) | Reverse |
 |---|---|---|---|---|
 | `git.clone` | Network=true, RequiredBinaries=[git], Sudo iff dest under system path, FilesystemWrite=[Dest] | OpCreate / OpUpdate / OpNoop based on cheap inspectDest probe (no network); After.GitCloneSnapshot{Repo,Ref} | 4 / **false** (irreversible by design) | refusal — "irreversible by design; route cleanup through try/catch/finally + file.write absent" |
-| `git.checkout` | No Network, RequiredBinaries=[git], Sudo iff dest under system path, FilesystemWrite=[Dest] | Always OpUpdate with Before.HeadSHA when dest is a repo; After.GitCheckoutSnapshot{Ref} | 3 / true (interface) | refusal — "not yet implemented; needs apply-time HEAD capture" |
-| `git.config` | No Network, RequiredBinaries=[git], Sudo iff scope=system or local-repo under system path | OpUpdate/OpNoop based on Set+Unset emptiness; After.GitConfigSnapshot{Scope,Repo,Entries[]}; entries sorted | 2 / true (interface), Resources=len(Set)+len(Unset) | refusal — "not yet implemented; needs apply-time per-key value capture" |
+| `git.checkout` | No Network, RequiredBinaries=[git], Sudo iff dest under system path, FilesystemWrite=[Dest] | Always OpUpdate with Before.HeadSHA when dest is a repo; After.GitCheckoutSnapshot{Ref} | 3 / true (interface) | **real reverse** — Run() captures HEAD sha into `GitCheckoutReverseInfo` (Dest + PriorSHA) on `Result.ReverseData`; Reverse builds a force `git.checkout` back to PriorSHA. Noop applies leave ReverseData nil → Reverse returns (nil, nil). |
+| `git.config` | No Network, RequiredBinaries=[git], Sudo iff scope=system or local-repo under system path | OpUpdate/OpNoop based on Set+Unset emptiness; After.GitConfigSnapshot{Scope,Repo,Entries[]}; entries sorted | 2 / true (interface), Resources=len(Set)+len(Unset) | **real reverse** — apply path's drift list already carries `current` + `hadValue` per key; Run() stashes a `GitConfigReverseInfo` (Scope, Repo, per-key entries with PriorValue + HadValue). Reverse rebuilds an inverse step: keys with HadValue=true land in `set:` (prior value), keys with HadValue=false land in `unset:`. |
 
 New `actions.ResourceGit` kind added to handler_abi.go.
 
-Two refactors deferred (consistent with the os.service / git.checkout
-/ git.config pattern): apply-time pre-state capture requires Run() to
-thread a typed Result for handlers that need pre-apply observations.
-Tracked as spec-26 phase 5 follow-up.
+**Reverse-capture v1 shipped** for `git.checkout` + `git.config`.
+The pattern (Run captures into a typed `*ReverseInfo` struct stashed
+on `Result.ReverseData`; Reverse reads it to build the inverse step)
+mirrors the legacy `package` handler and is reusable across the other
+13 handlers that still refuse pending capture (os.service, os.user,
+os.group, os.ssh_key, os.cron, os.sysctl, os.systemd, os.mount,
+os.firewall, pkg.repo, pkg.hold). spec-27 / spec-28 reverse-capture
+work would follow the same shape.

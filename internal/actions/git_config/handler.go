@@ -227,8 +227,16 @@ func apply(_ actions.Context, scope, repo string, drift []driftEntry) (actions.R
 	if len(drift) == 0 {
 		result.SetChanged(false)
 		result.Reason = "all keys already at desired state"
+		// Apply is a noop — leave ReverseData nil so Reverse
+		// returns (nil, nil) per the Reverser contract.
 		return result, nil
 	}
+
+	// Capture pre-mutation state for Reverse() BEFORE shelling out.
+	// driftEntry already carries `current` (observed prior value)
+	// and `hadValue` (whether the key was set before) — exactly the
+	// shape Reverse needs to build the inverse step.
+	result.ReverseData = buildReverseInfo(scope, repo, drift)
 
 	for _, d := range drift {
 		switch d.op {

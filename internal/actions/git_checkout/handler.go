@@ -172,6 +172,8 @@ func apply(ctx actions.Context, g *config.GitCheckout, ref, targetSHA, dest, bef
 		result.SetChanged(false)
 		result.Data["sha"] = targetSHA
 		result.Reason = fmt.Sprintf("already at %s (%s)", shortSHA(targetSHA), ref)
+		// Apply is a noop — leave ReverseData nil so Reverse
+		// returns (nil, nil) per the Reverser contract.
 		return result, nil
 	}
 
@@ -185,6 +187,16 @@ func apply(ctx actions.Context, g *config.GitCheckout, ref, targetSHA, dest, bef
 			result.SetFailed(true)
 			return result, fmt.Errorf("git.checkout: working tree has local changes (set force: true to discard)")
 		}
+	}
+
+	// Capture pre-checkout HEAD for Reverse() BEFORE shelling out.
+	// Once `git checkout` runs the prior sha is no longer reachable
+	// via `git rev-parse HEAD`; transaction rollback would have no
+	// way to find it. beforeSHA was resolved at the top of Run and
+	// is the exact value we want to roll back to.
+	result.ReverseData = &GitCheckoutReverseInfo{
+		Dest:     dest,
+		PriorSHA: beforeSHA,
 	}
 
 	args := []string{"checkout"}
