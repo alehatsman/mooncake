@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟢 Phase 5 complete (slices A–F). All 11 priority handlers declare `Permissions()`, `Diff()`, and `Reverser`. The executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Reverser coverage: `file.write`, `file.copy`, `file.template`, all eight `text.*` handlers, `file.download`, and `pkg` all build genuine inverse Steps via shared helpers (`ReverseInPlaceFileMutation` for filesystem-touching handlers, custom `PkgReverseInfo` for the package manager case with the "was already installed" question handled). `file.unarchive` and `os.service` implement the `Reverser` interface as explicit refusals — they need multi-step reverse support (unarchive) or a handler-shape refactor (service) tracked as slice-F follow-ups. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
+**Status:** 🟢 Phases 1-6 complete. All 11 priority handlers (plus the four `text.*` slice-E additions) declare `Permissions()`, `Diff()`, `Reverser`, and `Coster`. The executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes both the structural Diff and the cost estimate per step (`diff:` + `cost:` fields carrying Resource + Operation + typed Before/After + Risk/Resources/Bytes/Reversible). Text-mode plan output prints a one-line cost summary under each would-change step and a `max-risk=N (band)` aggregate in the plan summary. Phase 5 (Reverse) shipped via slices A–F: file.write, file.copy, file.template, all eight text.* handlers, file.download, and pkg build genuine inverse Steps; file.unarchive and os.service implement Reverser as explicit refusals (follow-ups tracked). Phase 6 (Cost) shipped end-to-end with risk-band semantics: state=absent reads as risk 8 (file.write), state=stopped/restarted as risk 7 (os.service), Upgrade=true as risk 9 (pkg), routine config writes as risk 4. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 7-8 (MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -464,8 +464,42 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      `Reversible` bit and `plan --check-reversible` tooling can
      distinguish "handler refuses today" from "handler has no
      reverse intent at all" cleanly.
-6. **Phase 6** — implement `Cost()` on the same handlers. Surface in
-   recap + JSON.
+6. **Phase 6** ✅ — `Cost()` on all 15 priority/extended handlers.
+   Each handler returns a `CostEstimate{Resources, Bytes, Reversible, Risk}`
+   tuned to its action's shape:
+   - **Risk 4** (routine) — config writes, in-place text edits
+     (file.write/copy/template, all text.* handlers)
+   - **Risk 5** — adjacent ops with one extra failure mode
+     (file.download network involvement; file_patch_apply hunk
+     failures; text.delete_range deletions; file.copy with Force=true;
+     pkg state=present)
+   - **Risk 6** — file.unarchive (drops many files, irreversible
+     in single-step today)
+   - **Risk 7** — file.write state=absent (delete with possible
+     oversized-snapshot refusal); os.service stopped/restarted
+     (user-visible downtime); pkg state=absent (deps cascade)
+   - **Risk 8** — pkg state=latest (upgrade existing, irreversible
+     without version snapshot)
+   - **Risk 9** — pkg Upgrade=true (system-wide upgrade)
+   - **Resources** — 1 for single-target file ops; len(packages)
+     for pkg; -1 for unarchive (unknown until extracted)
+   - **Bytes** — len(Content) for file.write with declared content;
+     src file size for file.copy when stat-able; -1 elsewhere
+     (templating not invoked from Cost — side-effect-free by
+     contract)
+
+   Surfaced two ways: plan JSON exposes a per-step `cost:` object
+   (mirroring the `diff:` wiring — `StepInspection.Cost`,
+   `StepCheckedData.Cost`, executor `runner.(actions.Coster)`
+   type-assert, collector extracts). Text-mode plan output prints
+   a one-line cost summary under each `↑` (would-change) step:
+   `cost: risk 4 (routine) • reversible • 1 resource • 13 bytes`.
+   Plan summary line gains a `max-risk=N (band)` aggregate when
+   anything would change.
+
+   Same-direct-type-assert pattern as Diff (skip ResolveCoster's
+   default fallback) so non-Coster handlers don't pollute the
+   output with `{Risk:5, Resources:-1, Bytes:-1}` placeholders.
 7. **Phase 7** — MCP server exposes Diff/Cost/Permissions in plan tool
    output. Update agent prompt to mention these are available.
 8. **Phase 8** — docs (`docs-next/guide/config/actions.md` updated with

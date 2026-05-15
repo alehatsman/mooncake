@@ -52,6 +52,13 @@ type StepInspection struct {
 	// Consumers wanting structured information about steps that don't
 	// implement Differ should look at Reason + Detail instead.
 	Diff *actions.Diff `json:"diff,omitempty" yaml:"diff,omitempty"`
+
+	// Cost is the spec-22 phase 6 informational cost estimate when
+	// the handler implements actions.Coster. nil for handlers that
+	// haven't opted in. Surfaced in `mooncake plan --format json`
+	// per step so cost-aware tooling (transaction risk gates, agent
+	// safety prompts) can read it without re-running.
+	Cost *actions.CostEstimate `json:"cost,omitempty" yaml:"cost,omitempty"`
 }
 
 // HostFacts captures the minimum set of facts needed to detect a
