@@ -7,7 +7,7 @@ Working documents — specs, epics, and notes. Not canonical docs; those live in
 | Path | Contents |
 |---|---|
 | `streams.md` | Stream overview — goals, audiences, dependencies, what to work on next |
-| `specs/action-surface/` | Stream 1: typed action library (spec-22, 24–28, 32, 36, disk-partition) |
+| `specs/action-surface/` | Stream 1: typed action library (spec-32) |
 | `specs/personal-fleet/` | Stream 3: personal fleet runtime (spec-55, 58, implementation-order) |
 | `specs/ecosystem/` | Stream 5: plugins, marketplace, integrations (spec-31) |
 | `specs/done/` | Shipped specs — read-only reference |
@@ -22,17 +22,14 @@ See **[non-goals.md](./non-goals.md)** for the seven things Mooncake will not be
 ## Active specs by stream
 
 **Stream 1 — Action Surface**
-22 extended-handler-abi (phase 8 docs remains) · 24 pkg-surface (P6 ABI hooks) ·
-25 text-surface (P5 ABI hooks) · 26 git-actions (ABI hooks) · 27 os-identity (ABI hooks) ·
-28 os-scheduling (non-ufw drivers, deferred) · 32 step-action-dispatch ·
-36 windows-support · disk-partition-action (exploration)
+32 step-action-dispatch (only active spec; not started)
 
-Phases 1–7 of spec-22 are complete (four-method ABI declared + MCP wiring landed).
-Remaining: phase 8 docs, plus final ABI-hook phases for 24–27.
-**The full observe.* family shipped** — 9 typed handlers (port, process, http,
-service, cpu, memory, disk, gpu, logs) plus cross-peer fan-out via
-`mooncake fleet observe`. Specs 59–64 all moved to `done/`. Only spec-59
-phase 6 (`--inspect-real` CLI flag) remains as a small follow-up.
+The full action surface shipped: spec-22 (Extended Handler ABI, phases
+1–7), specs 24–28 (pkg / text / git / os identity / os scheduling), spec-36
+(Windows support), and the spec-59–64 observe.* family all moved to `done/`.
+What remains is per-spec docs in `docs-next/` and the spec-32 dispatch
+collapse (structural refactor, not a feature). The `disk-partition-action.md`
+exploration moved to `deferred/`.
 
 **Stream 2 — Safe Agent Runtime**
 
@@ -85,10 +82,11 @@ _Verified 2026-05-15 against current master; ✅ = fixed, 🟡 = still open._
 10 mcp-server · 11 preset-registry · 12 package-summary · 13 single-step ·
 14 snapshot-diff · 15 check-mode · 16 unify-dryrun-execute ·
 17 package-batch-and-template · 18 mooncake-agent-daemon · 19 tool-action ·
-20 metrics · 21 modernization-cutover ·
-23 framework-primitives · 29 wait-primitives · 30 transactions ·
+20 metrics · 21 modernization-cutover · 22 extended-handler-abi ·
+23 framework-primitives · 24 pkg-surface · 25 text-surface · 26 git-actions ·
+27 os-identity · 28 os-scheduling · 29 wait-primitives · 30 transactions ·
 33 execution-context-split · 34 typed-variable-context · 35 plan-diff ·
-37 step-output-capture · 38 read-json-yaml ·
+36 windows-support · 37 step-output-capture · 38 read-json-yaml ·
 39 mooncake-init · 40 config-discovery-and-dry-run · 41 mooncake-doctor ·
 42 onboarding-and-recommend · 43 fleet-transport-and-sync ·
 44 ssh-bootstrap-transport · 45 fleet-discovery · 46 fleet-status-and-logs ·

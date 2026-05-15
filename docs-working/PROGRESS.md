@@ -278,7 +278,7 @@ compliance/audit ✅, check mode (`mooncake plan`) ✅, `mooncake history` ✅.
 **Gap**: macOS preset coverage smaller than Linux. Windows is fresh;
 corners likely. No "agent sandbox" template even though the DX audit
 drafted one. The `unarchive`/`download` actions exist but
-`disk-partition-action.md` is a loose spec, not done.
+the `disk-partition-action.md` exploration moved to `deferred/`.
 
 **Distance to ideal**: ~85%. The kernel can do this; coverage is uneven
 across OSes. macOS especially is "works but presets thinner."
