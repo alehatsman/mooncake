@@ -198,3 +198,21 @@ patterns this is probably wrong; users may want
 `follow_symlinks: false` to preserve link structure.
 
 **Fix**: add `follow_symlinks:` parameter (default true for back-compat).
+
+---
+
+## #52 — `git.*` family has inconsistent path parameter names — LOW (DX surprise)
+
+Each action uses a different param name for "the local repo":
+- `git.clone`: `dest:` (with `url:` or `repo:` for source — closed in MT-33)
+- `git.checkout`: `dest:`
+- `git.config`: `repo:`
+
+So `git.clone → git.config → git.checkout` requires renaming the path
+param twice in adjacent steps. Either standardize on `dest:` everywhere
+or alias all variants. (`git.checkout` accepts `dest:`; `git.config`
+silently accepts a `dest:` field but doesn't use it — per #44 — then
+errors saying `repo is required`.)
+
+**Fix**: pick one name (`dest:` is simplest), alias the others, and
+update the schema's `additionalProperties: false` enforcement once #44 lands.
