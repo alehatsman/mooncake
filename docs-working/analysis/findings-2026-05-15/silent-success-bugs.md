@@ -2,10 +2,17 @@
 
 The dominant pattern in this audit. The recap reports `failed=0` /
 green / "changed=N", but the action either did nothing useful or did
-something unverified. **Five of seven HIGH+ findings live here.**
+something unverified. **The largest cluster of findings.**
 
 > Start fixes from this file. These bugs evade CI because CI sees
 > green. They surface in production.
+
+**Post-MT-fix status** (see [`verification-2026-05-15.md`](./verification-2026-05-15.md)):
+- ✅ **CLOSED**: #8 (for_each), #14 (file.download sha256 verify before rename)
+- 🟡 **PARTIAL**: #2 (nested form fixed; step-level still broken)
+- **NEW**: #44 (file.download silently accepts unknown fields),
+  #45 (transaction recap miscounts reverts),
+  #46 (file.unarchive not idempotent)
 
 ---
 
@@ -354,3 +361,84 @@ honor it. Same fix closes #44 and refines #4.
 | 28 | MEDIUM | open | `failed_when:` on assert | small — route through wrapper |
 | 40 | HIGH | open | `tool github-release` bare-binary | small — filename heuristic |
 | 44 | MEDIUM | open | `file.download` unknown-field acceptance | closes with #27 |
+| 45 | MEDIUM | open | `transaction:` recap miscounts reverted steps | renderer + counter |
+| 46 | MEDIUM | open | `file.unarchive` not idempotent | check dest contents before extract |
+
+---
+
+## #45 — `transaction:` recap miscounts reverted steps as changed — MEDIUM
+
+**Repro**: `examples/transactions/rollback-demo.yml` — three file.writes
+in a transaction; third writes to `/dev/null/cannot-exist-here` which
+fails; first two are rolled back.
+
+```
+▶ create rollback demo a
+~ create rollback demo a
+▶ create rollback demo b
+~ create rollback demo b
+▶ create rollback demo c
+✗ create rollback demo c
+▶ notify rollback occurred
+~ notify rollback occurred
+RECAP  ok=0  changed=3  skipped=0  failed=1
+```
+
+Post-rollback state:
+```
+$ ls /tmp/mc-rollback-demo-*
+/tmp/mc-rollback-demo-marker
+```
+
+Files a and b are GONE (rollback worked). But the recap claims
+`changed=3` — counting the reverted files as changes. The text
+formatter shows them as `~ changed` even though their changes were
+reverted by the transaction's LIFO Reverse() pass.
+
+The README example claims expected output is:
+```
+↺ Reverse: create rollback demo b   (file deleted)
+↺ Reverse: create rollback demo a   (file deleted)
+```
+
+But no `↺ Reverse:` markers appear in actual output. The rollback
+happens silently from the user's perspective; only the missing files
+afterward reveal that anything was undone.
+
+**Why MEDIUM**: same shape as #2 — semantics work, recap lies. A
+fleet operator watching `changed_steps` from JSON output sees `3
+changed` and thinks 3 files persisted; really, only 1 did (the
+on_rollback marker).
+
+**Fix**: when a transaction's child is reverted, set the step's
+result `status` to `reverted` (or `skipped`) rather than `changed`.
+Also surface the `↺ Reverse: <step>` lines the README promises.
+
+---
+
+## #46 — `file.unarchive` is not idempotent — MEDIUM
+
+**Repro**:
+
+```
+$ tar czf /tmp/bundle.tar.gz src/
+$ rm -rf /tmp/dest && mkdir /tmp/dest
+$ mooncake step "file.unarchive: { src: /tmp/bundle.tar.gz, dest: /tmp/dest }"
+{"changed": true, "action": "file.unarchive", "duration_ms": 0}
+
+$ mooncake step "file.unarchive: { src: /tmp/bundle.tar.gz, dest: /tmp/dest }"
+{"changed": true, "action": "file.unarchive", "duration_ms": 0}
+```
+
+Second run reports `changed: true` despite the destination already
+containing the same files. Either:
+- the action doesn't check existing files at all (always re-extracts),
+- or the check is broken.
+
+**Why MEDIUM**: many install patterns are "download archive, unarchive
+to /opt". Idempotent re-runs are a core mooncake promise; this
+breaks it.
+
+**Fix**: before extracting, walk the archive's entries and check
+whether each target file exists with matching content (or matching
+mode + size as a cheap proxy). Skip if all entries already match.

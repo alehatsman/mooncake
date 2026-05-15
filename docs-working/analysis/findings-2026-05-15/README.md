@@ -18,7 +18,7 @@ self-contained; severity-sorted within.
 
 | File | Findings | Theme |
 |---|---:|---|
-| [`silent-success-bugs.md`](./silent-success-bugs.md) | 9 | The "green recap, broken behavior" class. **Start here.** |
+| [`silent-success-bugs.md`](./silent-success-bugs.md) | 11 | The "green recap, broken behavior" class. **Start here.** |
 | [`ssot-drift.md`](./ssot-drift.md) | 8 | Validator, schema, docs, examples not aligned |
 | [`template-engine.md`](./template-engine.md) | 6 | Rendering, escaping, filter syntax, metrics-in-templates |
 | [`coverage-gaps.md`](./coverage-gaps.md) | 7 | Preset gaps, tool action gaps, repo.tree, presets search |
