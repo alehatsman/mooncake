@@ -7,8 +7,10 @@
 package read_json
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -92,6 +94,69 @@ func (h Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, er
 	return result, nil
 }
 
+// parseJSON decodes JSON into dst, preserving the integer/float
+// distinction Go's default decoder loses (MT-79). Without this,
+// `{"port": 8080}` round-trips as `8080.000000` via float64 — ugly
+// in templates and inconsistent with read.yaml, which preserves int
+// types natively.
+//
+// Strategy: decode with json.Decoder.UseNumber() so every numeric
+// becomes a json.Number, then walk the tree converting each
+// json.Number to int64 when it has no fractional/exponent part,
+// float64 otherwise. Existing string/bool/map/slice/null values pass
+// through unchanged.
 func parseJSON(data []byte, dst *any) error {
-	return json.Unmarshal(data, dst)
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var raw any
+	if err := dec.Decode(&raw); err != nil {
+		return err
+	}
+	*dst = normalizeJSONNumbers(raw)
+	return nil
+}
+
+// normalizeJSONNumbers converts json.Number values inside v to int64
+// or float64 depending on whether the source literal had a decimal
+// point or exponent. Walks maps and slices recursively.
+func normalizeJSONNumbers(v any) any {
+	switch x := v.(type) {
+	case json.Number:
+		s := x.String()
+		// Integer when no '.' and no exponent. Use strconv to confirm
+		// the value fits — JSON integers larger than int64 fall back
+		// to float64 to avoid wraparound surprises.
+		hasFractional := false
+		for i := 0; i < len(s); i++ {
+			c := s[i]
+			if c == '.' || c == 'e' || c == 'E' {
+				hasFractional = true
+				break
+			}
+		}
+		if !hasFractional {
+			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+				return n
+			}
+		}
+		// Fall back to float64 (default JSON decode shape).
+		if f, err := x.Float64(); err == nil {
+			return f
+		}
+		// Last resort: keep the raw string so consumers can branch
+		// rather than seeing a zero value.
+		return s
+	case map[string]any:
+		for k, vv := range x {
+			x[k] = normalizeJSONNumbers(vv)
+		}
+		return x
+	case []any:
+		for i, vv := range x {
+			x[i] = normalizeJSONNumbers(vv)
+		}
+		return x
+	default:
+		return v
+	}
 }
