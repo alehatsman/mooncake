@@ -1,11 +1,14 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/urfave/cli/v2"
 
 	"github.com/alehatsman/mooncake/internal/fleet"
 )
@@ -335,5 +338,48 @@ tags = ["darwin"]
 	}
 	if !strings.Contains(err.Error(), "--peer selected 0") {
 		t.Errorf("err = %v, want substring '--peer selected 0'", err)
+	}
+}
+
+// TestFleetApply_PeerAndGroupNotSplitByCLI guards the cli/v2 wiring
+// that disables StringSliceFlag auto-comma-splitting: without it, a
+// single `--peer @tag=linux,role=db` selector would silently become
+// two OR-groups (`tag=linux`, `role=db`) instead of one AND-group.
+// Smoke test on a real fleet caught this; this test pins it.
+//
+// Inspect peerFlag via a custom Action so we can assert what reaches
+// `c.StringSlice("peer")` before any parsing happens. If cli splits
+// commas, we'd see two values; if the App has
+// DisableSliceFlagSeparator=true, we see one value with the comma
+// intact.
+func TestFleetApply_PeerAndGroupNotSplitByCLI(t *testing.T) {
+	var got []string
+	app := &cli.App{
+		DisableSliceFlagSeparator: true,
+		Commands: []*cli.Command{
+			{
+				Name: "fleet",
+				Subcommands: []*cli.Command{
+					{
+						Name: "apply",
+						Flags: []cli.Flag{
+							&cli.StringSliceFlag{Name: "peer"},
+						},
+						Action: func(c *cli.Context) error {
+							got = c.StringSlice("peer")
+							return nil
+						},
+					},
+				},
+			},
+		},
+		Writer:    io.Discard,
+		ErrWriter: io.Discard,
+	}
+	if err := app.Run([]string{"mooncake", "fleet", "apply", "--peer", "@tag=linux,role=db"}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if len(got) != 1 || got[0] != "@tag=linux,role=db" {
+		t.Errorf("peer slice = %v; want one entry with comma intact (cli auto-split is back)", got)
 	}
 }

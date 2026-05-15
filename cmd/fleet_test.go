@@ -20,10 +20,11 @@ import (
 // returns cli.Exit.
 func newTestFleetApp() *cli.App {
 	return &cli.App{
-		Commands:       []*cli.Command{fleetCommand()},
-		Writer:         io.Discard,
-		ErrWriter:      io.Discard,
-		ExitErrHandler: func(*cli.Context, error) {},
+		Commands:                  []*cli.Command{fleetCommand()},
+		Writer:                    io.Discard,
+		ErrWriter:                 io.Discard,
+		ExitErrHandler:            func(*cli.Context, error) {},
+		DisableSliceFlagSeparator: true,
 	}
 }
 
