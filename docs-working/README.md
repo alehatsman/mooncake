@@ -17,6 +17,7 @@ Working documents — specs, epics, and notes. Not canonical docs; those live in
 
 See **[streams.md](./streams.md)** for the full stream breakdown, dependencies, and recommended work order.
 See **[action-design-principles.md](./action-design-principles.md)** for the 11 non-negotiable design rules for any new action.
+See **[non-goals.md](./non-goals.md)** for the seven things Mooncake will not become — check every proposed feature against this list.
 
 ## Active specs by stream
 

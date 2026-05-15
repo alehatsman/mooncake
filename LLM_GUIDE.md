@@ -43,6 +43,7 @@ site once is trivial. Always pay the trivial cost.
 | **Adding actions** | `docs/development/adding-actions.md` | How to add new actions |
 | **Schema validation** | `internal/config/schema.json` | JSON Schema (source of truth) |
 | **Examples** | `examples/*.yml` | Working examples for all features |
+| **Non-goals** | `docs-working/non-goals.md` | Seven things Mooncake will not become — check every feature against this list |
 
 ### Quick Commands
 
