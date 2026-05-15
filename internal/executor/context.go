@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -127,6 +128,45 @@ type ExecutionContext struct {
 	// triggered children can look back at their parents; never copied to
 	// nested Clone() scopes (each scope tracks its own changes).
 	ChangedByStepID map[string]bool
+
+	// OpenTxns tracks per-transaction state for spec-30 transaction:
+	// blocks. Keyed by the transaction-parent step ID (which children
+	// carry as TxnParent). Created lazily when the first body child of
+	// a given TxnParent completes.
+	OpenTxns map[string]*TxnState
+}
+
+// TxnState is the per-transaction state the executor accumulates as it
+// walks a transaction's body children. When a body child fails, the
+// executor walks Completed in reverse and calls Reverse() on each.
+type TxnState struct {
+	// Completed is the in-order list of body children that ran to
+	// completion (no error). Each entry carries the step and the
+	// concrete *Result the handler produced — the Reverser needs the
+	// Result to know what to undo.
+	Completed []TxnCompletedChild
+
+	// Failed is true once any body child of this transaction has
+	// errored. Subsequent body children skip; rollback gets triggered
+	// on the failing child's path.
+	Failed bool
+
+	// RolledBack is true once rollback has been attempted. Set whether
+	// rollback fully succeeded or only partially reverted — it's the
+	// signal to fire on_rollback children regardless.
+	RolledBack bool
+
+	// PartialRollback is true if any Reverse() in the LIFO walk
+	// returned an error. Used to surface ROLLBACK INCOMPLETE in the
+	// final run output.
+	PartialRollback bool
+}
+
+// TxnCompletedChild captures one body child's step + result for later
+// Reverse() consumption.
+type TxnCompletedChild struct {
+	Step   config.Step
+	Result *Result
 }
 
 // Clone creates a new ExecutionContext for a nested execution scope (include or loop).

@@ -46,37 +46,35 @@ func (p *Planner) expandTransaction(step config.Step, ctx *ExpansionContext, pla
 	if err != nil {
 		return fmt.Errorf("transaction %q: compile parent: %w", step.Name, err)
 	}
-	// Clear the children/on_rollback off the parent's plan entry: they
-	// expand as siblings, exactly like on_change. Linkage survives via
-	// the children's TxnParent.
+	// Keep Transaction + OnRollback populated on the parent's plan
+	// entry so config.Step.Validate's transaction-shape branch passes
+	// at executor-time. (Children also expand as siblings — the two
+	// representations live side-by-side in the plan. Plan-output
+	// readers can navigate via either.) The executor recognizes a
+	// transaction-parent step and short-circuits to a no-op completion
+	// rather than trying to dispatch an action.
 	txnChildren := parent.Transaction
 	rollbackChildren := parent.OnRollback
-	parent.Transaction = nil
-	parent.OnRollback = nil
 	plan.Steps = append(plan.Steps, parent)
 
 	parentID := parent.ID
 	for ci := range txnChildren {
 		child := txnChildren[ci]
 		child.TxnParent = parentID
+		child.TxnRole = "body"
 		if err := p.expandStep(child, ctx, plan, 0); err != nil {
 			return fmt.Errorf("transaction %q: expand child %d: %w", step.Name, ci, err)
 		}
 	}
-	// on_rollback children sit at the end. They're tagged with TxnParent
-	// the same way; the executor (PR B) tells them apart from regular
-	// children via a separate marker. For PR A we just emit them so the
-	// shape round-trips through plan serialization.
+	// on_rollback children sit at the end with TxnRole="rollback" so the
+	// executor can gate them on whether the transaction actually rolled
+	// back. The executor skips them when the body committed; it runs
+	// them when rollback fired (whether the rollback fully reverted or
+	// only partially succeeded).
 	for ci := range rollbackChildren {
 		child := rollbackChildren[ci]
 		child.TxnParent = parentID
-		// Distinguish rollback steps from transaction body steps via a
-		// name prefix. PR B will replace this with a typed flag once the
-		// executor has a shape to consume.
-		if child.Name == "" {
-			child.Name = "on_rollback"
-		}
-		child.Name = "rollback: " + child.Name
+		child.TxnRole = "rollback"
 		if err := p.expandStep(child, ctx, plan, 0); err != nil {
 			return fmt.Errorf("transaction %q: expand on_rollback child %d: %w", step.Name, ci, err)
 		}

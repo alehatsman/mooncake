@@ -287,6 +287,14 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 		}
 	}
 
+	// spec-30 transaction gating: body children after a failure skip
+	// (the transaction has already rolled back; their sibling Reverse
+	// path already ran). Rollback children skip when the transaction
+	// committed. Implementation in transaction.go.
+	if reason := ec.txnSkipReason(step); reason != "" {
+		return true, reason, nil
+	}
+
 	// Check when condition
 	if step.When != "" {
 		shouldSkip, err := handleWhenExpression(step, ec)
@@ -439,6 +447,17 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 	}
 	ec.EmitEvent(events.EventStepFailed, failedData)
 
+	// spec-30: a body child's failure triggers LIFO rollback of its
+	// transaction's previously-completed children. Run BEFORE the
+	// ContinueOnError branch — if the step is in a transaction, the
+	// transaction's all-or-nothing semantics override per-step
+	// continue_on_error. The rollback's own outcome is folded into the
+	// step's reported failure; partial rollback is captured on the
+	// TxnState for the run summary to surface.
+	if rbErr := ec.handleTxnBodyFailure(step); rbErr != nil {
+		ec.Svc.Logger.Errorf("rollback for transaction %s reported error: %v", step.TxnParent, rbErr)
+	}
+
 	if step.ContinueOnError {
 		ec.Svc.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
 		if step.As != "" {
@@ -460,6 +479,19 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// Validate step configuration
 	if err := step.Validate(); err != nil {
 		return err
+	}
+
+	// spec-30: a transaction-parent step (Transaction populated,
+	// TxnRole empty — it's the parent, not a child) is a structural
+	// marker, not an action to dispatch. The children expand as
+	// siblings and carry the actions. The parent's presence in the
+	// plan exists so plan-output renders the compound shape and the
+	// run summary can attribute child outcomes to the right wrapper.
+	if len(step.Transaction) > 0 && step.TxnRole == "" {
+		// Treat as a no-op: nothing to dispatch. The executor's main
+		// loop continues to the body children, which the txn state
+		// machine in transaction.go drives.
+		return nil
 	}
 
 	// Check if step should be skipped (when conditions, tags)
@@ -630,6 +662,12 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		ec.ChangedByStepID[step.ID] = changed
 	}
 
+	// spec-30 transaction bookkeeping. A body child that just finished
+	// successfully gets its (step, result) snapshotted so the future
+	// Reverse() of any later-failed sibling can call back into it.
+	// Implementation in transaction.go.
+	ec.recordTxnBodyCompletion(step, ec.CurrentResult)
+
 	// Clear current result for next step
 	ec.CurrentResult = nil
 
@@ -667,6 +705,29 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 		}
 
 		if err := ExecuteStep(step, ec); err != nil {
+			// spec-30: when the failing step is part of a transaction,
+			// look ahead in the plan for same-transaction on_rollback
+			// children and run them before propagating. The body of the
+			// transaction is already toast (rollback ran inside
+			// dispatchStepFailure); on_rollback exists for notification
+			// and cleanup, and operators expect it to fire even when
+			// the failure ultimately propagates upward.
+			if step.TxnParent != "" && step.TxnRole == "body" {
+				for j := i + 1; j < len(steps); j++ {
+					next := steps[j]
+					if next.TxnParent != step.TxnParent {
+						break // left the transaction's contiguous expansion
+					}
+					if next.TxnRole != "rollback" {
+						continue // a body child after the failure — txnSkipReason will skip it
+					}
+					// Best-effort: log but do not propagate rollback-child errors;
+					// the original transaction failure is what bubbles up.
+					if rbErr := ExecuteStep(next, ec); rbErr != nil {
+						ec.Svc.Logger.Errorf("on_rollback step %q errored: %v", next.Name, rbErr)
+					}
+				}
+			}
 			return err
 		}
 	}

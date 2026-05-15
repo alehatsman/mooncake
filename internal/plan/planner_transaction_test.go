@@ -64,10 +64,12 @@ steps:
 	if parent.TxnParent != "" {
 		t.Errorf("parent must not carry TxnParent; got %q", parent.TxnParent)
 	}
-	// Parent's Transaction field is cleared after expansion (linkage
-	// survives via the children's TxnParent).
-	if len(parent.Transaction) != 0 {
-		t.Errorf("parent Transaction should be cleared after expansion; got %d children", len(parent.Transaction))
+	// Parent's Transaction field is KEPT populated after expansion so
+	// config.Step.Validate's transaction-shape branch passes at
+	// executor time (PR B). The children also expand as siblings —
+	// the two representations live side-by-side in the plan.
+	if len(parent.Transaction) != 2 {
+		t.Errorf("parent Transaction should be preserved after expansion; got %d children", len(parent.Transaction))
 	}
 
 	for i, name := range []string{"write a", "write b"} {
@@ -212,10 +214,16 @@ steps:
 		t.Fatalf("expected 3 plan steps; got %d", len(plan.Steps))
 	}
 	rollback := plan.Steps[2]
-	if !strings.HasPrefix(rollback.Name, "rollback:") {
-		t.Errorf("on_rollback step should be prefixed with 'rollback:'; got %q", rollback.Name)
+	if rollback.TxnRole != "rollback" {
+		t.Errorf("on_rollback step TxnRole = %q, want 'rollback'", rollback.TxnRole)
 	}
 	if rollback.TxnParent != plan.Steps[0].ID {
 		t.Errorf("rollback step TxnParent = %q, want %q", rollback.TxnParent, plan.Steps[0].ID)
+	}
+	// Body children should be tagged TxnRole="body" so the executor
+	// can dispatch differently from rollback children.
+	body := plan.Steps[1]
+	if body.TxnRole != "body" {
+		t.Errorf("body step TxnRole = %q, want 'body'", body.TxnRole)
 	}
 }

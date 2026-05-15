@@ -1,0 +1,52 @@
+# Demonstrates spec-30 LIFO rollback on transaction failure.
+#
+# The third child writes to /dev/null/something-which-cannot-exist —
+# /dev/null is a character device, can't be a parent directory, so
+# os.WriteFile returns ENOTDIR. file.write surfaces the error; the
+# transaction fails. The executor walks completed children in reverse
+# order, calls file.write's Reverse() on each (delete the file it
+# created), and fires the on_rollback step.
+#
+# Expected output (apply mode):
+#
+#   ✓ create rollback demo a            (file written)
+#   ✓ create rollback demo b            (file written)
+#   ✗ create rollback demo c            (ENOTDIR)
+#   ↺ Reverse: create rollback demo b   (file deleted)
+#   ↺ Reverse: create rollback demo a   (file deleted)
+#   ✓ on_rollback notify                (marker written)
+#   exit 1
+#
+# After the run:
+#   - /tmp/mc-rollback-demo-a → absent (reverted)
+#   - /tmp/mc-rollback-demo-b → absent (reverted)
+#   - /tmp/mc-rollback-demo-c → never created
+#   - /tmp/mc-rollback-demo-marker → present (notification fired)
+
+version: "1.0"
+
+steps:
+  - name: deliberately-failing transaction
+    transaction:
+      - name: create rollback demo a
+        file.write:
+          path: /tmp/mc-rollback-demo-a
+          content: alpha
+
+      - name: create rollback demo b
+        file.write:
+          path: /tmp/mc-rollback-demo-b
+          content: beta
+
+      - name: create rollback demo c
+        file.write:
+          path: /dev/null/cannot-exist-here
+          content: this-write-will-fail
+
+    on_rollback:
+      - name: notify rollback occurred
+        file.write:
+          path: /tmp/mc-rollback-demo-marker
+          content: |
+            The transaction at <timestamp> failed and was rolled back.
+            All forward-progress side effects have been reverted.

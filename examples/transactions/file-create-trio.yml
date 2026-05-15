@@ -1,30 +1,17 @@
-# All-or-nothing transactions via `transaction:` (spec-30, PR A —
-# parser + plan-time reversibility check).
+# All-or-nothing transactions via `transaction:` (spec-30, full).
 #
-# A `transaction:` step wraps a sequence of children that the planner
-# verifies are all reversible. If any handler in the transaction does
-# not implement actions.Reverser, the plan fails with a clear error
-# pointing at the offending step.
+# Three file.write children commit together or revert together. Run
+# this example twice:
 #
-# What works today (PR A):
-#   - `mooncake plan` accepts and inspects transaction blocks
-#   - Reversibility check rejects irreversible children unless
-#     `allow_irreversible: true` is set
-#   - `mooncake apply` runs the children sequentially (no auto-revert
-#     wiring yet — that ships in PR B once spec-22 phase 5 covers more
-#     handlers)
+#   1. As-is — all three writes succeed; files exist at the end.
+#   2. With a deliberate failure (see rollback-demo.yml) — the
+#      previously-applied steps' Reverse() runs in LIFO order,
+#      leaving the filesystem byte-identical to its pre-transaction
+#      state.
 #
-# What ships in PR B:
-#   - Forward apply with success commit
-#   - Rollback on failure: previously-applied steps Reverse() in LIFO
-#     order, leaving the system byte-identical to pre-transaction state
-#   - `on_rollback:` sugar
-#   - `step.reversed` events
-#
-# Why these three steps? spec-22 phase 5 slice A ships Reverse() on
-# file.write for the create-only case — newly-created files / dirs get
-# deleted on revert. Each child here creates a fresh file, so the
-# rollback path (PR B) will be exercised cleanly.
+# Spec-30 PR A shipped the parser + plan-time reversibility check.
+# PR B shipped the executor state machine: success commit, LIFO
+# rollback on failure, on_rollback firing.
 
 version: "1.0"
 

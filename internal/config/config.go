@@ -1178,9 +1178,21 @@ type Step struct {
 
 	// TxnParent carries the ID of the parent transaction Step when this
 	// Step was expanded from a Transaction child. Mirrors TriggeredBy's
-	// shape; populated by the planner. Used by the executor (PR B) to
-	// track which steps belong to which open transaction.
+	// shape; populated by the planner. Used by the executor to track
+	// which steps belong to which open transaction.
 	TxnParent string `yaml:"txn_parent,omitempty" json:"txn_parent,omitempty"`
+
+	// TxnRole tags an expanded child with its role inside the parent
+	// transaction. Populated by the planner; one of:
+	//   - ""          — regular step (not part of a transaction)
+	//   - "body"      — forward-apply child. On failure, the executor
+	//                    runs Reverse() on previously-completed body
+	//                    children of the same TxnParent in LIFO order.
+	//   - "rollback"  — on_rollback child. Skipped when the transaction
+	//                    committed successfully; runs when it rolled
+	//                    back (regardless of whether rollback itself
+	//                    completed or only partially reverted).
+	TxnRole string `yaml:"txn_role,omitempty" json:"txn_role,omitempty"`
 }
 
 // ForEachField holds the value of a Step's `for_each` keyword. It supports
@@ -1468,6 +1480,7 @@ func (s *Step) Clone() *Step {
 		OnRollback:        append([]Step(nil), s.OnRollback...),
 		AllowIrreversible: s.AllowIrreversible,
 		TxnParent:         s.TxnParent,
+		TxnRole:           s.TxnRole,
 		ID:               s.ID,
 		ActionType:       s.ActionType,
 		Origin:           s.Origin,
