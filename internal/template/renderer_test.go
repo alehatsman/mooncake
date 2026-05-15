@@ -1,6 +1,7 @@
 package template
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -456,6 +457,78 @@ func TestMT16_NoHTMLEscape_ByDefault(t *testing.T) {
 		}
 		if got != c.want {
 			t.Errorf("Render(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+// --- Issue #18: hint Jinja2-style filter args toward Pongo2's colon syntax ---
+//
+// Pongo2 rejects `{{ x | default('y') }}` (Jinja2's filter-call form)
+// in favor of `{{ x | default:'y' }}`. Without a hint, the error
+// `'}}' expected near '('` is opaque. annotateFilterArgError detects
+// the signature and appends a guiding hint.
+
+func TestRender_JinjaFilterParenHint(t *testing.T) {
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	_, err = renderer.Render(`{{ undefined | default('fallback') }}`, nil)
+	if err == nil {
+		t.Fatal("expected parser error for Jinja2-style filter args")
+	}
+	if !strings.Contains(err.Error(), "hint:") || !strings.Contains(err.Error(), "filter:value") {
+		t.Errorf("expected colon-syntax hint, got:\n%s", err.Error())
+	}
+	if !strings.Contains(err.Error(), "default:'fallback'") {
+		t.Errorf("hint should show the corrected form, got:\n%s", err.Error())
+	}
+}
+
+func TestRender_ColonSyntaxStillWorks(t *testing.T) {
+	// Negative: a correctly-formed Pongo2 filter call must NOT trip
+	// the hint (it doesn't even reach annotateFilterArgError because
+	// it parses cleanly).
+	renderer, _ := NewPongo2Renderer()
+	got, err := renderer.Render(`{{ name | default:'anon' }}`, map[string]interface{}{})
+	if err != nil {
+		t.Fatalf("colon-syntax should parse + render, got: %v", err)
+	}
+	if got != "anon" {
+		t.Errorf("default filter not applied: %q", got)
+	}
+}
+
+func TestRender_UnrelatedParseErrorIsNotAnnotated(t *testing.T) {
+	// Negative: a parse error that ISN'T about filter args must
+	// pass through untouched. The hint is a costless additive nudge
+	// only when the user clearly tried the filter-call form.
+	renderer, _ := NewPongo2Renderer()
+	_, err := renderer.Render(`{{ unclosed`, nil) // no closing }}
+	if err == nil {
+		t.Fatal("expected parser error for unclosed expression")
+	}
+	if strings.Contains(err.Error(), "hint:") {
+		t.Errorf("hint must not surface for unrelated parse errors: %v", err)
+	}
+}
+
+func TestLooksLikeFilterCall(t *testing.T) {
+	cases := []struct {
+		in   string
+		want bool
+	}{
+		{`{{ x | default('y') }}`, true},
+		{`{{ x | upper() }}`, true},
+		{`{{ a.b | join(',') }}`, true},
+		{`{{ x | default:'y' }}`, false},
+		{`{{ x }}`, false},
+		{`{{ |notreallyafilter`, false},
+		{`text only`, false},
+	}
+	for _, c := range cases {
+		if got := looksLikeFilterCall(c.in); got != c.want {
+			t.Errorf("looksLikeFilterCall(%q) = %v, want %v", c.in, got, c.want)
 		}
 	}
 }

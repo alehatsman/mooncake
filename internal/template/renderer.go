@@ -159,7 +159,7 @@ func (r *Pongo2Renderer) Render(template string, variables map[string]interface{
 	r.mu.Unlock()
 
 	if err != nil {
-		return "", err
+		return "", annotateFilterArgError(template, err)
 	}
 
 	output, err := pongoTemplate.Execute(variables)
@@ -168,4 +168,70 @@ func (r *Pongo2Renderer) Render(template string, variables map[string]interface{
 	}
 
 	return output, nil
+}
+
+// annotateFilterArgError detects the common-misuse signature of
+// Jinja2-style filter arguments — `{{ x | default('y') }}` — which
+// Pongo2 rejects in favor of its own `filter:value` syntax. When the
+// error matches the signature, append a hint pointing the user at
+// the correct form. Returns err unchanged when no signature match.
+//
+// Issue #18: every Ansible / Jinja2 tutorial uses `default('x')`;
+// users will type it first, see Pongo2's "'}}' expected" pointing at
+// the open paren, and conclude the engine is broken. The hint nudges
+// them to the colon syntax without changing engine behavior.
+func annotateFilterArgError(template string, err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	// Pongo2's parser error for the paren case has both markers:
+	//   - "near '('" (the unexpected character)
+	//   - "'}}' expected" (what it wanted instead)
+	if !strings.Contains(msg, "near '('") || !strings.Contains(msg, "'}}' expected") {
+		return err
+	}
+	// Verify the template actually has a `|<filter>(` pattern so we
+	// don't surface a misleading hint when the open paren is from
+	// some other construct.
+	if !looksLikeFilterCall(template) {
+		return err
+	}
+	return fmt.Errorf("%w\n  hint: Pongo2 uses `{{ x | filter:value }}` (colon), not Jinja2's `filter(value)` (parens). Example: `{{ x | default:'fallback' }}`.", err)
+}
+
+// looksLikeFilterCall returns true when the template contains a
+// pipe-followed-by-identifier-followed-by-open-paren shape, the
+// signature of a Jinja2 filter call. Conservative on purpose:
+// emit the hint only when there's strong evidence the user reached
+// for that form.
+func looksLikeFilterCall(template string) bool {
+	// Walk byte-wise; the shape we need to find is:
+	//   `|` (with optional whitespace) → identifier-rune+ → `(`
+	for i := 0; i < len(template); i++ {
+		if template[i] != '|' {
+			continue
+		}
+		j := i + 1
+		for j < len(template) && (template[j] == ' ' || template[j] == '\t') {
+			j++
+		}
+		// Identifier chars (Pongo2 filter names are ASCII).
+		identStart := j
+		for j < len(template) {
+			c := template[j]
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9' && j > identStart) {
+				j++
+				continue
+			}
+			break
+		}
+		if j == identStart {
+			continue
+		}
+		if j < len(template) && template[j] == '(' {
+			return true
+		}
+	}
+	return false
 }
