@@ -279,6 +279,41 @@ should accept `--format json` to forward that response verbatim.
 
 ---
 
+## #65 — `--max-plan-age` boundary is inclusive (rejects at exactly N) — LOW
+
+**Repro**:
+```
+$ mooncake plan -o /work/plan.json
+$ mooncake apply --from-plan /work/plan.json --max-plan-age 1s
+refusing to apply stale plan: plan is 1s old; --max-plan-age is 1s
+```
+
+Plan is exactly 1s old; `--max-plan-age 1s` rejects. Most users would
+expect `age > max_age` (strict), not `age >= max_age` (inclusive).
+"Older than 1 second" should mean strictly older.
+
+**Fix**: change `>=` to `>` in the comparison; document boundary.
+
+---
+
+## #66 — Bad CLI flag value dumps help text before error — LOW
+
+**Repro**:
+```
+$ mooncake apply --max-plan-age garbage
+... (dumps full --help output) ...
+2026/05/15 19:02:18 invalid value "garbage" for flag -max-plan-age: parse error
+```
+
+The error itself is clean (`invalid value ... parse error`), but it's
+preceded by the entire help output. urfave/cli default behavior.
+Hides the actual error and floods the terminal.
+
+**Fix**: configure urfave/cli to suppress help-on-flag-parse-error, or
+post-process to surface the error first.
+
+---
+
 ## #61 — Recurring pattern: `error:` populated but `failed: false` — MEDIUM (consistency)
 
 Observed across multiple actions:
