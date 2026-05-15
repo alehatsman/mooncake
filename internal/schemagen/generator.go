@@ -569,6 +569,8 @@ var actionStructByName = map[string]any{
 	"wait.http":         &config.WaitHTTP{},
 	"wait.file":         &config.WaitFile{},
 	"wait.command":      &config.WaitCommand{},
+	"read.json":         &config.ReadFile{},
+	"read.yaml":         &config.ReadFile{},
 
 	// Newly-wired up; previously missing from the table which meant
 	// the schema generator emitted an empty `{type: object,

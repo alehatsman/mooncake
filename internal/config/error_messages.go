@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
@@ -235,17 +236,15 @@ func formatAdditionalPropertiesError(message string, _ string) string {
 	return fmt.Sprintf("Unknown field '%s'. Check spelling or remove this field", additionalField)
 }
 
-// formatOneOfError formats a oneOf validation error (mutually exclusive actions)
+// formatOneOfError formats a oneOf validation error (mutually exclusive actions).
+// The list of valid actions is derived from the validation error's own
+// /oneOf/N/required causes so the message stays in sync with whatever
+// vocabulary the embedded schema actually accepts — no hardcoded list.
 func formatOneOfError(err *jsonschema.ValidationError) string {
-	// For oneOf errors related to steps, provide a clear actionable message
-
-	// Check if this is a "no action" vs "multiple actions" case
-	// by looking at the causes
 	hasRequiredFailure := false
 	hasNotFailure := false
-
 	for _, cause := range err.Causes {
-		if strings.Contains(cause.Message, "required property") {
+		if strings.Contains(cause.Message, "required property") || strings.Contains(cause.Message, "missing properties:") {
 			hasRequiredFailure = true
 		}
 		if strings.Contains(cause.KeywordLocation, "/not") {
@@ -253,18 +252,74 @@ func formatOneOfError(err *jsonschema.ValidationError) string {
 		}
 	}
 
-	// If all causes are "required" failures, it means no action is present
+	allowed := collectOneOfActionNames(err)
+
 	if hasRequiredFailure && !hasNotFailure {
-		return "Step has no action. Each step must have exactly ONE of: shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait"
+		return "Step has no action. Each step must have exactly ONE of: " + allowed
 	}
-
-	// If we have "not" failures, it means multiple actions are present
 	if hasNotFailure {
-		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait"
+		return "Step has multiple actions. Only ONE action is allowed per step. Choose either: " + allowed
 	}
+	return "Step must have exactly one action (" + allowed + ")"
+}
 
-	// Generic fallback
-	return "Step must have exactly one action (shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait)"
+// collectOneOfActionNames walks the oneOf validation error's causes and
+// extracts each branch's required action name. Builds the human-readable
+// "A, B, C, or D" list used in error messages so it always reflects the
+// embedded schema's actual vocabulary.
+func collectOneOfActionNames(err *jsonschema.ValidationError) string {
+	seen := make(map[string]bool)
+	var names []string
+	var walk func(e *jsonschema.ValidationError)
+	walk = func(e *jsonschema.ValidationError) {
+		if strings.HasSuffix(e.KeywordLocation, "/required") || strings.Contains(e.KeywordLocation, "/required/") {
+			for _, n := range extractRequiredNames(e.Message) {
+				if !seen[n] {
+					seen[n] = true
+					names = append(names, n)
+				}
+			}
+		}
+		for _, c := range e.Causes {
+			walk(c)
+		}
+	}
+	walk(err)
+	sort.Strings(names)
+	if len(names) == 0 {
+		return ""
+	}
+	if len(names) == 1 {
+		return names[0]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + ", or " + names[len(names)-1]
+}
+
+// extractRequiredNames parses a jsonschema "missing properties" message
+// (e.g. `missing properties: 'read.json'` or `missing properties: 'a', 'b'`)
+// and returns the property names. Handles both the singular `required property
+// 'x'` and the plural `missing properties: 'a', 'b'` shapes the library uses.
+func extractRequiredNames(msg string) []string {
+	var out []string
+	in := false
+	var buf strings.Builder
+	for _, r := range msg {
+		switch r {
+		case '\'':
+			if in {
+				if buf.Len() > 0 {
+					out = append(out, buf.String())
+				}
+				buf.Reset()
+			}
+			in = !in
+		default:
+			if in {
+				buf.WriteRune(r)
+			}
+		}
+	}
+	return out
 }
 
 // formatMinLengthError creates a friendly message for string too short errors
