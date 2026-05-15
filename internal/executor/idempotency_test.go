@@ -401,6 +401,88 @@ func TestCheckIdempotencyConditions_ShellLevelCreates(t *testing.T) {
 	}
 }
 
+// MT-2 (step-level form): when the user writes
+//
+//	- name: ...
+//	  shell: touch /tmp/once.flag
+//	  creates: /tmp/once.flag
+//
+// the YAML produces step.Shell.Cmd = "touch /tmp/once.flag" and
+// step.Creates = "/tmp/once.flag". The verification doc reported
+// this combination still ran on the second pass (recap counted as
+// `changed`). Pin the contract end-to-end so any regression that
+// re-introduces the bug fails here.
+func TestExecuteStep_ShellStepLevelCreatesSkips(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "mt2-step-shell-")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	step := config.Step{
+		Name:    "MT-2: shell step-level creates",
+		Shell:   &config.ShellAction{Cmd: "echo would-run"},
+		Creates: strPtr(tmpFile.Name()),
+	}
+
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template:  renderer,
+			PathUtil:  pathutil.NewPathExpander(renderer),
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Logger:    logger.NewConsoleLogger(logger.InfoLevel),
+			Stats:     executor.NewExecutionStats(),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+
+	if err := executor.ExecuteStep(step, ec); err != nil {
+		t.Fatalf("ExecuteStep: %v", err)
+	}
+	if *ec.Svc.Stats.Skipped != 1 {
+		t.Errorf("expected 1 skipped (step-level creates+shell), got %d", *ec.Svc.Stats.Skipped)
+	}
+	if *ec.Svc.Stats.Executed != 0 {
+		t.Errorf("expected 0 executed (the shell guard should have fired), got %d", *ec.Svc.Stats.Executed)
+	}
+}
+
+// MT-2 (step-level form, unless variant): same shape with `unless:`.
+func TestExecuteStep_ShellStepLevelUnlessSkips(t *testing.T) {
+	step := config.Step{
+		Name:   "MT-2: shell step-level unless",
+		Shell:  &config.ShellAction{Cmd: "echo would-run"},
+		Unless: strPtr("true"), // exits 0 → skip
+	}
+
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	ec := &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template:  renderer,
+			PathUtil:  pathutil.NewPathExpander(renderer),
+			Evaluator: expression.NewGovaluateEvaluator(),
+			Logger:    logger.NewConsoleLogger(logger.InfoLevel),
+			Stats:     executor.NewExecutionStats(),
+		},
+		Scope: executor.NewVariableScope(),
+	}
+
+	if err := executor.ExecuteStep(step, ec); err != nil {
+		t.Fatalf("ExecuteStep: %v", err)
+	}
+	if *ec.Svc.Stats.Skipped != 1 {
+		t.Errorf("expected 1 skipped (step-level unless+shell), got %d", *ec.Svc.Stats.Skipped)
+	}
+}
+
 func TestCheckIdempotencyConditions_ShellLevelUnless(t *testing.T) {
 	// Pick an unless command that always exits 0 → expect skip.
 	step := config.Step{
