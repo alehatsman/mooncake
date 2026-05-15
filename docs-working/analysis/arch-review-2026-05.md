@@ -1129,6 +1129,156 @@ layer. The next concrete refactor task should be the fold-in.
 
 ---
 
+## 12. Fifth post-landing reconciliation — spec-61 closes the observation stream
+
+> **Update**: `ee2a81a`/`aa4f16e` shipped spec-61 `observe.logs`. With
+> this landing, **the spec-59 observation family is structurally
+> complete** — only the deliberately-deferred spec-63 streaming spec
+> remains, and that one explicitly lives outside the plan executor by
+> design.
+
+### 12.1 What shipped — the full observation family at a glance
+
+| Spec | Handler(s) | Pattern |
+|---|---|---|
+| 59 | `observe.port` / `observe.process` / `observe.service` / `observe.http` | seed; established `ObserveResult` envelope + `PlanDeferred` helper |
+| 60 | `observe.cpu` / `observe.memory` / `observe.disk` | mixed Path A/B against `internal/metrics` (§9.2) |
+| 62 | `observe.gpu` | Path A wraps `internal/metrics` (§10.1) |
+| **61** | **`observe.logs`** | **driver-decomposed**: `source_file.go` / `source_journal.go` / `source_container.go` |
+| 64 | `fleet observe` | controller-side fan-out via `internal/fleet/observe/` |
+| 63 | streaming | **deliberately deferred** — explicit boundary (per §6.4) |
+
+**Eight observation handlers + one fleet fan-out**, all sharing one
+`ObserveResult` envelope, all implementing the spec-22 sub-interfaces
+with no-mutation specialization. The mutation/observation symmetry
+this review's §6 called "the missing half of the ABI" is now load-
+bearing in real code.
+
+### 12.2 Spec-61 is the cleanest validation of §2 Smell 4
+
+`observe_logs/` decomposes by driver:
+
+```
+internal/actions/observe_logs/
+├── handler.go            — dispatch + shared cap-bound reader + pattern matcher
+├── source_file.go        — tail last N bytes/lines, mtime gate
+├── source_journal.go     — journalctl -u <unit> --since
+└── source_container.go   — docker logs; podman fallback
+```
+
+This is **exactly the pattern §2 Smell 4 prescribed** for the
+oversized handlers (`service`/`package`/`os_systemd`): handler.go is
+the dispatcher; each driver lives in its own file at handler-sized
+scope. The team reached for it without being asked, because logs have
+three genuinely different sources and the alternative (one 600-LOC
+handler.go) was obviously wrong.
+
+Two things this tells the review:
+
+1. **The driver-decomposition refactor isn't speculative** — it's an
+   already-used idiom in new code. The §11.6 refactor list item #8
+   ("decompose `actions/{service,package,os_systemd}` by driver") is
+   now framed as *retrofitting an existing-pattern fix to existing
+   code*, not introducing a new pattern. Easier conversation.
+2. **The container-source auto-fallback (docker → podman)** mirrors
+   `pkg.install` choosing apt/dnf/brew. The architectural reflex of
+   "first available driver wins" is consistent across both stream-
+   1 mutation actions and stream-2 observation actions. Worth noting
+   as an emergent pattern; could be codified in
+   `action-design-principles.md` as a section on driver dispatch.
+
+### 12.3 Observers continue to bypass `internal/effects` — pattern is now load-bearing
+
+Verified by grep: `observe_logs/*.go` imports neither
+`internal/effects` nor `internal/metrics` nor `internal/pathquery`.
+Across all 8 observation handlers, **zero use `internal/effects`**.
+The new architectural debt is just compounding evidence for §11.7's
+conclusion: the project has, by inaction across 7 review revisions
+plus 8 observation handlers, chosen not to use `internal/effects` as
+a shared plan/execute parity layer.
+
+There is nothing more to say about `effects` until either path is
+taken. The fold-in into `executor` would be a ~half-day refactor;
+the migration of file/copy/template/download/unarchive to route
+through it would be a multi-day commitment. The fact that 8 new
+handlers shipped without making either choice is the answer to the
+question "is this still load-bearing?" — no, it isn't.
+
+### 12.4 What spec-61 does *not* reuse — and why that's correct
+
+The reflex when adding a new observation handler is to ask "what
+should this share with siblings?" Spec-61's answer is "almost
+nothing":
+
+- **Doesn't share `pathquery`** — logs don't have a JSON path subset
+  to query; the matcher is regex over lines, not key extraction.
+- **Doesn't share `internal/metrics`** — logs aren't time-series
+  samples; they're event streams with windowing.
+- **Doesn't share with `wait_http`/`observe_http`** — different
+  shape entirely.
+
+This is **correct minimalism**. The shared surface across the
+observation family is the `ObserveResult` envelope + `PlanDeferred`
+helper + spec-22 ABI specialization. Everything else is per-handler.
+If a fourth pattern-matching consumer surfaces (e.g. a hypothetical
+`observe.events` for JSONL/syslog parsing), the matcher in
+`source_file.go` would graduate into a shared helper — same pattern
+`internal/pathquery` followed (§11.5).
+
+### 12.5 Refactor list — seventh revision (small adjustments)
+
+Only one item materially shifts; rest stays.
+
+| # | Item | State |
+|---|---|---|
+| 1 | Single-source-of-truth codegen (Smell 6) | unchanged |
+| 2 | Fold `internal/effects` into `executor` | **decision now overdue** — 8 observation handlers bypassed it; the pattern is conclusive |
+| 3 | Catch `fleet apply` up to sub-package pattern + audit cmd-side fleet files | unchanged |
+| 4 | Split `cmd/` (broader pass) | unchanged |
+| 5 | Widen `internal/metrics` data shape | unchanged |
+| 6 | Handler-conformance test harness | unchanged |
+| 7 | Split `internal/config/config.go` | unchanged |
+| 8 | **Decompose `actions/{service,package,os_systemd}` by driver** | **reframed** — pattern is now in active use (`observe_logs`), so this is "retrofit existing pattern" not "introduce new pattern" |
+| 9 | Promote `executor/transaction.go` + `trycatch.go` to `internal/control/` | unchanged |
+| 10 | Audit `internal/mcp/tools.go` before it crosses 800 LOC | unchanged |
+
+Item #2's framing sharpens: "decision overdue." Item #8 becomes a
+mechanical job, not an architectural one.
+
+### 12.6 Net assessment (seventh revision)
+
+The observation stream is **complete**, **internally consistent**,
+and **architecturally clean**. It validates two things the original
+review (§§1–5) hoped were true but couldn't prove: (a) the
+opt-in sub-interface ABI scales to a whole new action family without
+modification, and (b) the project will reach for the right
+structural pattern when the use case demands it (driver-
+decomposition in `observe_logs`).
+
+Two things the observation stream **didn't** validate:
+
+- It did not use `internal/effects` — and now never will, absent a
+  forced migration.
+- It did not converge on shared helpers beyond the bare envelope —
+  which is the right call for the current footprint but means the
+  "shared observation infrastructure" some specs hinted at remains
+  theoretical.
+
+The next architectural questions are forward, not backward:
+
+- **Spec-58 fleet drift** — still not started, still the non-goal #3
+  pressure point, and now the natural first major consumer of the
+  observation stream. When it lands, the question "does the drift
+  loop run on agentd-side or via a control-plane controller?"
+  becomes load-bearing.
+- **The codegen fix (Smell 6)** — still the highest-leverage
+  refactor; nothing this cycle changed that.
+- **`internal/effects` fold-in** — the patient is no longer
+  ambiguous; just declare the time of death and move the 932 LOC
+  into `executor`.
+
+---
+
 ## Cross-references
 
 - [`../ARCH_SNAPSHOT.md`](../ARCH_SNAPSHOT.md) — package LOC, instability,
