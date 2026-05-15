@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -277,5 +278,35 @@ func TestDiagnosticFormat(t *testing.T) {
 	parts := strings.Split(got, ":")
 	if len(parts) < 4 {
 		t.Errorf("Diagnostic format should have at least 4 parts separated by ':', got %d parts", len(parts))
+	}
+}
+
+// MT-69: Diagnostic JSON output must use snake_case keys (file_path,
+// not FilePath) so `mooncake validate --format json` matches the rest
+// of mooncake's JSON surface (`os`, `cpu_cores`, etc.).
+func TestDiagnostic_JSONSnakeCase(t *testing.T) {
+	d := Diagnostic{
+		FilePath: "/path/to/file.yml",
+		Line:     42,
+		Column:   7,
+		Message:  "boom",
+		Severity: "error",
+	}
+	data, err := json.Marshal(d)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	got := string(data)
+	wantSnake := []string{`"file_path"`, `"line"`, `"column"`, `"message"`, `"severity"`}
+	for _, key := range wantSnake {
+		if !strings.Contains(got, key) {
+			t.Errorf("JSON missing snake_case key %s; got: %s", key, got)
+		}
+	}
+	notWant := []string{`"FilePath"`, `"Line"`, `"Column"`, `"Message"`, `"Severity"`}
+	for _, key := range notWant {
+		if strings.Contains(got, key) {
+			t.Errorf("JSON should not contain PascalCase key %s; got: %s", key, got)
+		}
 	}
 }

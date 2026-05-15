@@ -5,13 +5,16 @@ import (
 	"strings"
 )
 
-// Diagnostic represents a validation error or warning with source location
+// Diagnostic represents a validation error or warning with source location.
+// MT-69: snake_case json tags so `mooncake validate --format json` emits
+// keys matching the rest of mooncake's JSON surfaces (`os`, `cpu_cores`)
+// rather than Go's default PascalCase.
 type Diagnostic struct {
-	FilePath string
-	Line     int
-	Column   int
-	Message  string
-	Severity string // "error" or "warning"
+	FilePath string `json:"file_path"`
+	Line     int    `json:"line"`
+	Column   int    `json:"column"`
+	Message  string `json:"message"`
+	Severity string `json:"severity"` // "error" or "warning"
 }
 
 // String formats the diagnostic as "path/to/file.yml:line:col: message"
