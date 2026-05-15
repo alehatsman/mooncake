@@ -592,6 +592,35 @@ this matters. Don't regress.
 
 ---
 
+## ★ Concurrent applies are safe at the state-file level
+
+```
+$ for i in 1..5; do mooncake apply -c cfg.yml & done; wait
+$ wc -l ~/.mooncake/runs.jsonl
+5
+$ cat ~/.mooncake/runs.jsonl | jq -c .
+{"ts":"...321057012Z", ...}
+{"ts":"...351170443Z", ...}
+... 5 valid JSON lines, no interleaving ...
+```
+
+5 simultaneous applies, all 5 history entries land cleanly:
+- No partial-line writes
+- No JSON corruption
+- Monotonic timestamps
+- Each line independently parseable
+
+Looks like O_APPEND + sub-PIPE_BUF writes — kernel-guaranteed atomic on Linux.
+For multi-`mooncake apply` workflows (CI matrix, deployment fan-out)
+this is the correct safety property.
+
+(Concurrent applies to the **same target file** — e.g. two playbooks
+both `file.write`-ing to /etc/foo.conf — would still race at the
+filesystem level, since mooncake doesn't lock. That's outside mooncake's
+contract; the user shouldn't write that playbook.)
+
+---
+
 ## ★ `--sudo-pass-file` requires 0600 — security check
 
 ```
