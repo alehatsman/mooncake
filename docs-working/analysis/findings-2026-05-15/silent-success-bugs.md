@@ -775,7 +775,23 @@ different.)
 
 ---
 
-## #67 — Nested `try:` blocks fail with "no handler registered for action type: unknown" — MEDIUM
+## #67 — ✅ FIXED (round 42, commit `cc7ef39`)
+
+Now rejected at plan time with a clear error and an actionable hint:
+```
+planner setup failed: failed to build plan: try block <unnamed>:
+  try child 0 (unknown): nested try: blocks are not supported in v1.
+  Hint: to swallow a single inner step failure, set continue_on_error: true
+  on that step instead of wrapping it in another try:.
+```
+
+Pointing at `continue_on_error: true` as the substitute is exactly
+the right DX move — names the v1 alternative instead of just
+"unsupported". Don't regress.
+
+### Original report (now resolved)
+
+## #67 (original) — Nested `try:` blocks fail with "no handler registered for action type: unknown" — MEDIUM
 
 **Repro**:
 ```yaml

@@ -53,7 +53,19 @@ round 26, **or my original observation conflated** JSON-Unicode-escape
 
 ---
 
-## #79 — `read.json` floats integer values; `read.yaml` preserves them — LOW (consistency)
+## #79 — ✅ FIXED (round 42, commit `99c5f68`)
+
+`read.json` now preserves integer types:
+```
+$ echo '{"port":8080}' > /work/d.json
+$ mooncake apply -c <read.json + log {{ c.value.port }}>
+port=8080      ← was 8080.000000 before MT-79
+```
+Parity with `read.yaml`. Don't regress.
+
+### Original report (now resolved)
+
+## #79 (original) — `read.json` floats integer values; `read.yaml` preserves them — LOW (consistency)
 
 **Repro**:
 ```yaml
