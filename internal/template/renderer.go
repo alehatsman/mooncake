@@ -2,6 +2,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -67,6 +68,17 @@ func NewPongo2Renderer() (Renderer, error) {
 			// Store error for later return
 			filterRegisterError = fmt.Errorf("failed to register expanduser filter: %w", err)
 		}
+		// MT-70: pongo2 renders non-scalar values (maps, slices) as
+		// `<TYPE Value>` — a useless reflect.Value repr that leaks into
+		// log:/print events when users try `{{ cfg }}` to inspect a
+		// `read.json` result. Register `tojson` (and `json` alias) so
+		// users have an explicit, well-defined way to serialize.
+		if err := pongo2.RegisterFilter("tojson", toJSONFilter); err != nil {
+			filterRegisterError = fmt.Errorf("failed to register tojson filter: %w", err)
+		}
+		if err := pongo2.RegisterFilter("json", toJSONFilter); err != nil {
+			filterRegisterError = fmt.Errorf("failed to register json filter: %w", err)
+		}
 	})
 
 	// Check if filter registration failed
@@ -75,6 +87,106 @@ func NewPongo2Renderer() (Renderer, error) {
 	}
 
 	return r, nil
+}
+
+// toJSONFilter serializes any pongo2 Value as JSON. Use as
+// `{{ var | tojson }}` (or the `json` alias). For maps/slices this
+// produces the compact JSON representation instead of pongo2's
+// `<TYPE Value>` reflect repr. Scalars round-trip through JSON encoding
+// too — strings stay quoted, numbers stay numbers — so the filter is
+// safe to apply unconditionally.
+func toJSONFilter(in *pongo2.Value, _ *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	b, err := json.Marshal(in.Interface())
+	if err != nil {
+		return nil, &pongo2.Error{
+			Sender:    "filter:tojson",
+			OrigError: fmt.Errorf("tojson: %w", err),
+		}
+	}
+	return pongo2.AsValue(string(b)), nil
+}
+
+// bareVarRe matches `{{ var }}` or `{{ var.field.field }}` patterns
+// with a dotted identifier chain only — no filters, no arithmetic, no
+// brackets. We rewrite those when the resolved value is a non-scalar
+// so pongo2 doesn't emit `<TYPE Value>`; expressions with explicit
+// filters (`{{ var | upper }}`) are left alone so the user's choice
+// wins.
+var bareVarRe = regexp.MustCompile(`\{\{-?\s*([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\s*-?\}\}`)
+
+// autoJSONNonScalars rewrites `{{ var }}` and `{{ var.field.field }}`
+// references whose resolved value is a Go map or slice into
+// `{{ <path> | tojson }}`. Pongo2 stringifies those types as the
+// useless `<TYPE Value>` form (see pongo2/v6 variable.go); the user
+// almost always meant "show me the content", so we route through the
+// tojson filter. Expressions that already carry a filter or index
+// access fall through to pongo2 unchanged.
+func autoJSONNonScalars(tmpl string, vars map[string]interface{}) string {
+	return bareVarRe.ReplaceAllStringFunc(tmpl, func(match string) string {
+		m := bareVarRe.FindStringSubmatch(match)
+		if len(m) < 2 {
+			return match
+		}
+		v, ok := resolveDottedPath(m[1], vars)
+		if !ok || v == nil {
+			return match
+		}
+		if !isNonScalar(v) {
+			return match
+		}
+		// Inject the filter just before the closing `}}`, preserving
+		// any pongo2 whitespace-control hyphen (`-}}`). Trim trailing
+		// space on the head so `| tojson` sits next to the path.
+		closeIdx := strings.LastIndex(match, "}}")
+		if closeIdx < 0 {
+			return match
+		}
+		head := strings.TrimRight(match[:closeIdx], " \t")
+		return head + " | tojson " + match[closeIdx:]
+	})
+}
+
+// resolveDottedPath walks a dotted access like `cfg.value.service`
+// against the variables map. Returns the resolved value and true when
+// every segment exists; otherwise (nil, false). Only handles map
+// segments — that's all the rewrite needs.
+func resolveDottedPath(path string, vars map[string]interface{}) (interface{}, bool) {
+	parts := strings.Split(path, ".")
+	var cur interface{} = vars
+	for _, part := range parts {
+		m, ok := cur.(map[string]interface{})
+		if !ok {
+			// Try map[string]string as a courtesy — Scope.ToMap merges
+			// in some of those.
+			if ms, okStr := cur.(map[string]string); okStr {
+				v, present := ms[part]
+				if !present {
+					return nil, false
+				}
+				cur = v
+				continue
+			}
+			return nil, false
+		}
+		v, present := m[part]
+		if !present {
+			return nil, false
+		}
+		cur = v
+	}
+	return cur, true
+}
+
+// isNonScalar reports whether v is a Go map or slice — the two shapes
+// pongo2 renders as `<TYPE Value>`. Everything else (strings, numbers,
+// bools, structs, pointers) stays untouched.
+func isNonScalar(v interface{}) bool {
+	switch v.(type) {
+	case map[string]interface{}, map[string]string,
+		[]interface{}, []string, []map[string]interface{}:
+		return true
+	}
+	return false
 }
 
 // expandUserFilter is a custom pongo2 filter for expanding ~ to user home directory
@@ -151,6 +263,15 @@ func (r *Pongo2Renderer) Render(template string, variables map[string]interface{
 	if variables == nil {
 		variables = make(map[string]interface{})
 	}
+
+	// MT-70: pongo2 renders bare `{{ map_var }}` / `{{ slice_var }}` as
+	// `<TYPE Value>` (its `Value.String()` for reflect.Map/Slice). For
+	// our `log:` / `print.message` surface this leaks into JSON event
+	// payloads with no recovery path. Auto-route those through the
+	// `tojson` filter so users get the JSON content instead of an
+	// internal reflect repr. Dotted access (`{{ var.field }}`) and
+	// explicit filter chains keep their current rendering.
+	template = autoJSONNonScalars(template, variables)
 
 	// Lock to prevent race condition in pongo2.FromString
 	// The pongo2 TemplateSet is not thread-safe for concurrent FromString calls
