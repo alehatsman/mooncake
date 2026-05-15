@@ -174,6 +174,20 @@ func streamRunEvents(hc *http.Client, runID string) error {
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	runFailed := false
+	// Remember each step's action by step_id from step.started so we can
+	// fall back to it as a display name on step.completed/.failed/.skipped
+	// events when the user didn't set a `name:`. Without this fallback
+	// `mooncake runs apply` streamed blank rows for unnamed steps (#55).
+	stepActions := map[string]string{}
+	display := func(name, stepID string) string {
+		if name != "" {
+			return name
+		}
+		if a := stepActions[stepID]; a != "" {
+			return "<" + a + ">"
+		}
+		return "<unnamed step>"
+	}
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.HasPrefix(line, "data: ") {
@@ -193,36 +207,45 @@ func streamRunEvents(hc *http.Client, runID string) error {
 		switch env.Type {
 		case "step.started":
 			var d struct {
-				Name string `json:"name"`
+				StepID string `json:"step_id"`
+				Name   string `json:"name"`
+				Action string `json:"action"`
 			}
 			_ = json.Unmarshal(env.Data, &d)
-			fmt.Printf("%s %s\n", color.CyanString("▶"), d.Name)
+			if d.StepID != "" && d.Action != "" {
+				stepActions[d.StepID] = d.Action
+			}
+			fmt.Printf("%s %s\n", color.CyanString("▶"), display(d.Name, d.StepID))
 		case "step.completed":
 			var d struct {
+				StepID  string `json:"step_id"`
 				Name    string `json:"name"`
 				Changed bool   `json:"changed"`
 			}
 			_ = json.Unmarshal(env.Data, &d)
+			name := display(d.Name, d.StepID)
 			if d.Changed {
-				fmt.Printf("%s %s\n", color.YellowString("~"), d.Name)
+				fmt.Printf("%s %s\n", color.YellowString("~"), name)
 			} else {
-				fmt.Printf("%s %s\n", color.GreenString("✓"), d.Name)
+				fmt.Printf("%s %s\n", color.GreenString("✓"), name)
 			}
 		case "step.failed":
 			runFailed = true
 			var d struct {
+				StepID       string `json:"step_id"`
 				Name         string `json:"name"`
 				ErrorMessage string `json:"error_message"`
 			}
 			_ = json.Unmarshal(env.Data, &d)
-			fmt.Printf("%s %s\n  %s\n", color.RedString("✗"), d.Name, d.ErrorMessage)
+			fmt.Printf("%s %s\n  %s\n", color.RedString("✗"), display(d.Name, d.StepID), d.ErrorMessage)
 		case "step.skipped":
 			var d struct {
+				StepID string `json:"step_id"`
 				Name   string `json:"name"`
 				Reason string `json:"reason"`
 			}
 			_ = json.Unmarshal(env.Data, &d)
-			fmt.Printf("%s %s  %s\n", color.HiBlackString("-"), d.Name, d.Reason)
+			fmt.Printf("%s %s  %s\n", color.HiBlackString("-"), display(d.Name, d.StepID), d.Reason)
 		case "run.completed":
 			var d struct {
 				OK       int    `json:"success_steps"`
