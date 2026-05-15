@@ -1318,13 +1318,19 @@ func TestFormatPlanTextWithLoopContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	testConfig := filepath.Join(tmpDir, "test.yml")
 
-	// Write config with loop
-	configContent := `steps:
+	// Write config with for_each (spec-21 renamed `loop` → `for_each`).
+	// for_each is a string in the schema; the inline-list form is an
+	// older shape the runtime still accepts but the validator doesn't,
+	// so use the documented `for_each: <vars-ref>` form here.
+	configContent := `version: "1.0"
+vars:
+  my_items:
+    - item1
+    - item2
+steps:
   - name: test loop
     shell: echo {{ item }}
-    loop:
-      - item1
-      - item2
+    for_each: "{{ my_items }}"
 `
 	if err := os.WriteFile(testConfig, []byte(configContent), 0600); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
@@ -2294,7 +2300,7 @@ func TestPlanCommandWithComplexConfig(t *testing.T) {
 
   - name: loop step
     shell: echo {{ item }}
-    loop: "{{ my_items }}"
+    for_each: "{{ my_items }}"
     as: loop_result
 
   - name: conditional step
