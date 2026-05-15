@@ -161,11 +161,16 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 
 		// Don't sleep after the last attempt
 		if attempt < maxAttempts && step.RetryDelayDuration() != "" {
-			delay, parseErr := time.ParseDuration(step.RetryDelayDuration())
+			base, parseErr := time.ParseDuration(step.RetryDelayDuration())
 			if parseErr != nil {
 				ctx.GetLogger().Debugf("  Invalid retry_delay %q: %v", step.RetryDelayDuration(), parseErr)
 			} else {
-				ctx.GetLogger().Debugf("  Waiting %s before retry...", step.RetryDelayDuration())
+				// MT-62: backoff: linear|exponential were silently
+				// ignored; every retry slept for the bare delay. attempt
+				// is 1-indexed here (we're about to start attempt+1), so
+				// the n-th sleep multiplies the base delay accordingly.
+				delay := ScaleRetryDelay(base, step.RetryBackoffStrategy(), attempt)
+				ctx.GetLogger().Debugf("  Waiting %s before retry (backoff=%s)...", delay, step.RetryBackoffStrategy())
 				time.Sleep(delay)
 			}
 		}
