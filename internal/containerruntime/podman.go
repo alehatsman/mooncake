@@ -19,7 +19,14 @@ func (p *podman) Name() string { return p.bin }
 // inspectFormat encodes the three fields we read off a container in a
 // single line; "|" is safe because none of the captured values contain
 // it (image refs, IDs, and engine status strings are restricted).
-const inspectFormat = "{{.State.Status}}|{{.ImageName}}|{{.Id}}"
+//
+// MT-64: was {{.ImageName}} which doesn't exist on docker's inspect
+// JSON — the field is {{.Config.Image}}. The bad template propagated
+// the engine's parse error up through every second `container:`
+// apply (the idempotency check calls ContainerInspect), so the
+// entire action was effectively single-use. Using .Config.Image
+// works on both docker and podman.
+const inspectFormat = "{{.State.Status}}|{{.Config.Image}}|{{.Id}}"
 
 func (p *podman) ImageExists(ctx context.Context, ref string) (bool, error) {
 	cmd := exec.CommandContext(ctx, p.bin, "image", "inspect", "--format", "{{.Id}}", ref) // #nosec G204 -- bin is fixed, ref is config input
