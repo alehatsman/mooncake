@@ -398,7 +398,18 @@ kind of fix. Marking #15 as ✅ resolved by removal-of-silent-bypass.)
 
 ---
 
-## #76 — `--capture-full-output` silently no-ops without `--artifacts-dir` — LOW (DX)
+## #76 — ✅ FIXED (verified round 32, commit `6366b2d`)
+
+```
+$ mooncake apply -c c.yml --capture-full-output
+--capture-full-output requires --artifacts-dir (the captured logs need a directory to land in)
+```
+
+Clean hard-error matching the help text. No more silent no-op.
+
+### Original report (now resolved)
+
+## #76 (original) — `--capture-full-output` silently no-ops without `--artifacts-dir` — LOW (DX)
 
 **Repro**:
 ```

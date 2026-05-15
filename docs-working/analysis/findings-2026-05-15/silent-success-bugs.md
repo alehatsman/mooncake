@@ -406,7 +406,29 @@ honor it. Same fix closes #44 and refines #4.
 
 ---
 
-## #54 — MCP `run_plan` executes but returns all-zero counters and 1-step truncated result — HIGH (agent-loop)
+## #54 — ✅ FIXED (verified round 32)
+
+MCP run_plan now returns real counters and all step entries:
+```json
+{
+  "ok": 2,
+  "changed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "requires": { "filesystem_write": ["/tmp/mcp-target.txt"] },
+  "steps": [
+    {"name": "greet"},
+    {"name": "write", "changed": true},
+    {"name": "verify"}
+  ]
+}
+```
+
+The agent loop now has the per-step signal it needs.
+
+### Original report (now resolved)
+
+## #54 (original) — MCP `run_plan` executes but returns all-zero counters and 1-step truncated result — HIGH (agent-loop)
 
 **Repro**: 4-step playbook (`vars`, `log`, `file.write`, `assert`) submitted via MCP `run_plan`:
 
@@ -712,7 +734,20 @@ expansion path too, not just at the top level.
 
 ---
 
-## #62 — `retry: backoff: linear|exponential` is silently ignored; delay stays fixed — MEDIUM
+## #62 — ✅ FIXED (verified round 32, commit `80c3468`)
+
+`retry: backoff: exponential` now produces 100→200→400ms delays:
+```
+Waiting 100ms before retry (backoff=exponential)...
+Waiting 200ms before retry (backoff=exponential)...
+Waiting 400ms before retry (backoff=exponential)...
+```
+`backoff: linear` produces 100→200→300ms. `backoff:` label is now
+shown in the debug message — nice touch.
+
+### Original report (now resolved)
+
+## #62 (original) — `retry: backoff: linear|exponential` is silently ignored; delay stays fixed — MEDIUM
 
 **Repro**:
 ```yaml
