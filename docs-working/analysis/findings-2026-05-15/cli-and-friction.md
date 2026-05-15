@@ -74,6 +74,29 @@ map only includes a curated allowlist (bash version in this case).
 **Suggestion**: this is probably an `observe.*` story (spec-59), not
 a snapshot fix per se. Worth noting as input to that spec.
 
+**Round 35 verification**: confirmed the `tools:` map is a *curated
+dev-tools list*. After `apt-get install jq`, jq does NOT appear; but
+after `apt-get install golang`, `go: "1.22.2"` does. So bash/go/likely
+python/node/etc. are detected by name; arbitrary CLIs aren't. This
+is reasonable for runtime context but the docs should say so —
+otherwise users assume snapshot is a `mooncake-aware inventory`.
+
+```json
+"tools": {
+  "bash": "5.2.21",
+  "go": "1.22.2"
+}
+```
+
+JSON diff form is clean:
+```json
+{
+  "hw": {
+    "ram_free_mb": {"from": 23132, "to": 23065}
+  }
+}
+```
+
 ---
 
 ## #12 — `metrics -q <key> --format json` silently ignores `--format` — LOW
