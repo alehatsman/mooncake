@@ -34,15 +34,16 @@ have started an apply yourself.
   operator/agent driving the fleet concurrently.
 - Estimated ~150 LOC.
 
-### 3. `fleet ps` — list in-flight runs across peers
+### ~~3. `fleet ps` — list in-flight runs across peers~~ ✅ shipped (spec-54)
 
-`GET /v1/runs?status=running` fan-out + tabwriter rendering.
-
-- Mirrors `fleet status` table shape (HOST RUN_ID STARTED_AT
-  CURRENT_STEP).
-- Useful for "is anyone else applying right now?" or "which peer is
-  taking so long?"
-- Estimated ~100 LOC.
+Lands in the predicted shape: `GET /v1/runs?status=running` fan-out
+through a new `FetchRunsAll` helper, rendered as a tabwriter table
+(HOST RUN_ID STATUS AGE PLAN). Adds `--all` (terminal runs too),
+`--status running,queued` (multi-status with one daemon call per
+status), `--sort age` (oldest first — "which peer is taking so
+long?"), `--json` JSONL, `--short` for tail-truncated run IDs. Empty
+result prints "no in-flight runs" and exits 0; transport failure
+exits 2 only when every peer is unreachable.
 
 ### 4. `fleet doctor` — `mooncake doctor` fleet-wide
 

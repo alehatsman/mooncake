@@ -30,6 +30,7 @@ func fleetCommand() *cli.Command {
 		Subcommands: []*cli.Command{
 			fleetApplyCommand(),
 			fleetExecCommand(),
+			fleetPsCommand(),
 			fleetStatusCommand(),
 			fleetDoctorCommand(),
 			fleetLogsCommand(),

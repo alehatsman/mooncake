@@ -273,18 +273,49 @@ func (c *Client) GetRun(ctx context.Context, runID string) (*RunRecord, error) {
 	return &rec, nil
 }
 
-// ListRuns fetches recent run records from /v1/runs?limit=N. Returns the
-// runs newest-first. Used by `fleet status` to determine the last run
-// outcome per peer; spec-46 §"wire calls per peer".
+// ListRunsOpts is the extended filter shape for /v1/runs (spec-54).
+// All fields are optional; empty values send no query parameter.
+type ListRunsOpts struct {
+	// Status filters to one of "running", "queued", "success",
+	// "failed", "interrupted". Empty means no filter (all statuses).
+	Status string
+	// Limit caps how many records the daemon returns. <=0 means "use
+	// the daemon's default".
+	Limit int
+	// Before is a cursor (run id or RFC3339 timestamp — the daemon
+	// decides) for pagination; empty means "newest".
+	Before string
+}
+
+// ListRuns fetches recent run records from /v1/runs. Returns the runs
+// newest-first. Used by `fleet status` and `fleet ps`; spec-46 + spec-54.
 //
 // limit <= 0 sends no `limit` query and asks the daemon for its default.
 // In practice callers want 1 (most recent) or a small bounded window.
 func (c *Client) ListRuns(ctx context.Context, limit int) ([]RunRecord, error) {
+	return c.ListRunsWith(ctx, ListRunsOpts{Limit: limit})
+}
+
+// ListRunsWith is the extended-filter variant of ListRuns (spec-54).
+// Splits the API so spec-46's call site stays terse and the new
+// `fleet ps` paths can supply Status + Before without a positional
+// arg explosion.
+func (c *Client) ListRunsWith(ctx context.Context, opts ListRunsOpts) ([]RunRecord, error) {
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
 	u := c.BaseURL + "/v1/runs"
-	if limit > 0 {
-		u += "?limit=" + strconv.Itoa(limit)
+	q := url.Values{}
+	if opts.Status != "" {
+		q.Set("status", opts.Status)
+	}
+	if opts.Limit > 0 {
+		q.Set("limit", strconv.Itoa(opts.Limit))
+	}
+	if opts.Before != "" {
+		q.Set("before", opts.Before)
+	}
+	if len(q) > 0 {
+		u += "?" + q.Encode()
 	}
 	req, err := c.authReq(ctx, http.MethodGet, u, nil)
 	if err != nil {
