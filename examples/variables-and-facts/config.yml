@@ -44,7 +44,8 @@
 
 # Use system facts - Network
 - name: Display network info
-  shell: echo "IP Addresses: {{ip_addresses_string}}"
+  shell: |
+    echo "IP Addresses: {{ip_addresses_string}}"
 
 # Combine custom variables and system facts
 - name: Create version-specific directory
