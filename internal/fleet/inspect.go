@@ -299,3 +299,112 @@ func isTerminalFailure(s string) bool {
 	return s == "failed" || s == "interrupted"
 }
 
+// FetchOpts configures a FetchRuns / FetchRunsAll call (spec-54).
+type FetchOpts struct {
+	// Statuses, if non-empty, restricts results. Multi-value triggers
+	// one daemon call per status (the daemon supports a single
+	// `?status=` query param). Empty = all statuses.
+	Statuses []string
+	// LimitPerPeer caps per-peer records. <=0 lets the daemon decide.
+	LimitPerPeer int
+	// Timeout bounds each per-peer call.
+	Timeout time.Duration
+	// MaxParallel caps in-flight peer probes. 0 = unbounded.
+	MaxParallel int
+}
+
+// PeerRuns is the result of FetchRuns for one peer, mirroring the
+// PeerEvent shape so unreachable peers surface alongside data.
+type PeerRuns struct {
+	Name  string
+	Runs  []transport.RunRecord
+	Error error
+}
+
+// FetchRuns asks one peer for its run records, honoring the spec-54
+// status/limit filters. Multi-status invocations issue one daemon
+// request per status and merge client-side, sorted newest-first by
+// pickTimestamp().
+func FetchRuns(ctx context.Context, peer Peer, opts FetchOpts) ([]transport.RunRecord, error) {
+	client := transport.New(peer.Name, peer.Addr, peer.Token)
+	statuses := opts.Statuses
+	if len(statuses) == 0 {
+		statuses = []string{""}
+	}
+	probeCtx := ctx
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		probeCtx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
+	var all []transport.RunRecord
+	for _, s := range statuses {
+		runs, err := client.ListRunsWith(probeCtx, transport.ListRunsOpts{
+			Status: s,
+			Limit:  opts.LimitPerPeer,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list runs (status=%q): %w", s, err)
+		}
+		all = append(all, runs...)
+	}
+	if len(statuses) > 1 {
+		// One-call-per-status concat: sort merged result newest-first
+		// using the same pickTimestamp() recipe as humanRunAge.
+		sortRunsNewestFirst(all)
+	}
+	return all, nil
+}
+
+// FetchRunsAll fans FetchRuns out across peers in parallel, capped by
+// opts.MaxParallel. Returns one PeerRuns per input peer in input order
+// (unreachable peers carry Error != nil rather than being dropped).
+func FetchRunsAll(ctx context.Context, peers []Peer, opts FetchOpts) []PeerRuns {
+	out := make([]PeerRuns, len(peers))
+	var sem chan struct{}
+	if opts.MaxParallel > 0 {
+		sem = make(chan struct{}, opts.MaxParallel)
+	}
+	var wg sync.WaitGroup
+	for i, p := range peers {
+		wg.Add(1)
+		go func(i int, p Peer) {
+			defer wg.Done()
+			if sem != nil {
+				sem <- struct{}{}
+				defer func() { <-sem }()
+			}
+			runs, err := FetchRuns(ctx, p, opts)
+			out[i] = PeerRuns{Name: p.Name, Runs: runs, Error: err}
+		}(i, p)
+	}
+	wg.Wait()
+	return out
+}
+
+// sortRunsNewestFirst sorts a merged multi-status slice by best
+// available timestamp (finished > started > queued), most-recent first.
+// Stable so within-status order from the daemon is preserved on ties.
+func sortRunsNewestFirst(runs []transport.RunRecord) {
+	// Decorate with the pick timestamp once to avoid re-parsing inside Less.
+	type stamped struct {
+		ts time.Time
+		i  int
+	}
+	stamps := make([]stamped, len(runs))
+	for i, r := range runs {
+		stamps[i] = stamped{ts: pickTimestamp(r.FinishedAt, r.StartedAt, r.QueuedAt), i: i}
+	}
+	// Simple insertion sort — N is small (typically < 50), avoids the
+	// stdlib sort overhead and keeps the algorithm easy to reason about.
+	for i := 1; i < len(stamps); i++ {
+		for j := i; j > 0 && stamps[j].ts.After(stamps[j-1].ts); j-- {
+			stamps[j], stamps[j-1] = stamps[j-1], stamps[j]
+		}
+	}
+	sorted := make([]transport.RunRecord, len(runs))
+	for i, s := range stamps {
+		sorted[i] = runs[s.i]
+	}
+	copy(runs, sorted)
+}
