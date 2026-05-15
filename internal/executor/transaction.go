@@ -3,9 +3,9 @@ package executor
 // transaction.go implements the spec-30 §80–90 transaction-execution
 // state machine on top of the planner's TxnParent / TxnRole tagging
 // (PR A). The planner expanded a `transaction:` Step into a parent +
-// sibling children with TxnRole="body" or TxnRole="rollback"; this file
-// owns the bookkeeping that turns those siblings into all-or-nothing
-// semantics:
+// sibling children with TxnRole="body" or TxnRole="rollback"; this
+// file owns the bookkeeping that turns those siblings into all-or-
+// nothing semantics:
 //
 //   - Each body child's success captures its (step, result) for later
 //     potential Reverse().
@@ -16,76 +16,73 @@ package executor
 //     "transaction rolled back".
 //   - Rollback (on_rollback) children skip when the transaction
 //     committed, run when it rolled back.
+//
+// Post-R0.1: the pure-logic state machine (TxnState struct, skip-
+// reason determination) lives in internal/control. This file is the
+// executor-side glue — it owns the `*Result` snapshot of completed
+// body children (which can't live in control without a circular
+// import) and the handler-dispatch path for Reverse().
 
 import (
 	"fmt"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/control"
 )
 
 // txn returns (or lazily creates) the TxnState for a given parent ID.
 // All transaction bookkeeping flows through this so the map is never
 // touched directly outside transaction.go.
-func (ec *ExecutionContext) txn(parentID string) *TxnState {
+func (ec *ExecutionContext) txn(parentID string) *control.TxnState {
 	if ec.OpenTxns == nil {
-		ec.OpenTxns = make(map[string]*TxnState)
+		ec.OpenTxns = make(map[string]*control.TxnState)
 	}
 	t, ok := ec.OpenTxns[parentID]
 	if !ok {
-		t = &TxnState{}
+		t = &control.TxnState{}
 		ec.OpenTxns[parentID] = t
 	}
 	return t
 }
 
 // txnSkipReason returns a non-empty string when step (a transaction
-// child) should skip this run. The reason is suitable for
-// emitStepSkipped's user-facing message.
-//
-// Body children skip when their transaction has already failed (later
-// children of a rolled-back txn don't run). Rollback children skip
-// when the transaction committed successfully (on_rollback only fires
-// on rollback).
+// child) should skip this run. Thin wrapper over control.TxnSkipReason
+// that handles the executor-side OpenTxns lookup.
 func (ec *ExecutionContext) txnSkipReason(step config.Step) string {
 	if step.TxnParent == "" {
 		return ""
 	}
-	t := ec.OpenTxns[step.TxnParent]
-	if t == nil {
-		// First child of this transaction; no skip.
-		return ""
-	}
-	switch step.TxnRole {
-	case "body":
-		if t.Failed {
-			return "transaction rolled back"
-		}
-	case "rollback":
-		if !t.RolledBack {
-			return "transaction committed (on_rollback skipped)"
-		}
-	}
-	return ""
+	return control.TxnSkipReason(ec.OpenTxns[step.TxnParent], step.TxnRole)
 }
 
 // recordTxnBodyCompletion is called after a body child runs to
 // completion. It snapshots the step + its result so a later Reverse()
 // has the data it needs. Called only for successful runs — failures
 // route through handleTxnBodyFailure instead.
+//
+// The snapshot lives in ec.CompletedByTxn rather than on TxnState
+// because *Result can't cross into internal/control.
 func (ec *ExecutionContext) recordTxnBodyCompletion(step config.Step, result *Result) {
 	if step.TxnParent == "" || step.TxnRole != "body" {
 		return
 	}
-	t := ec.txn(step.TxnParent)
-	t.Completed = append(t.Completed, TxnCompletedChild{Step: step, Result: result})
+	// Ensure the txn state exists so the parent ID is tracked.
+	_ = ec.txn(step.TxnParent)
+	if ec.CompletedByTxn == nil {
+		ec.CompletedByTxn = make(map[string][]TxnCompletedChild)
+	}
+	ec.CompletedByTxn[step.TxnParent] = append(
+		ec.CompletedByTxn[step.TxnParent],
+		TxnCompletedChild{Step: step, Result: result},
+	)
 }
 
 // handleTxnBodyFailure is called when a body child errors out. It
-// marks the transaction failed and walks Completed in reverse,
-// calling Reverse() on each child + dispatching the returned inverse
-// step. Returns the rollback's own outcome — non-nil error means
-// at least one Reverse failed (partial rollback).
+// marks the transaction failed and walks the completed body children
+// in reverse, calling Reverse() on each and dispatching the returned
+// inverse step. Returns the rollback's own outcome — non-nil error
+// means at least one Reverse failed (partial rollback).
 //
 // The original failure-causing step is NOT reversed (its handler
 // failed before producing meaningful state). Only previously-
@@ -97,11 +94,13 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 	t := ec.txn(failedStep.TxnParent)
 	t.Failed = true
 
+	completed := ec.CompletedByTxn[failedStep.TxnParent]
+
 	// LIFO reverse walk. Stop at the first Reverse failure but keep
 	// RolledBack=true so on_rollback still fires for visibility.
 	var firstErr error
-	for i := len(t.Completed) - 1; i >= 0; i-- {
-		entry := t.Completed[i]
+	for i := len(completed) - 1; i >= 0; i-- {
+		entry := completed[i]
 		// MT-45: log the rollback step visibly so the operator can see
 		// what's being undone. The README documents `↺ Reverse:` lines.
 		ec.Svc.Logger.Infof("↺ Reverse: %s", entry.Step.Name)
@@ -134,7 +133,8 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 
 // runReverse runs Reverse() for one completed step and dispatches the
 // returned inverse Step. Returns an error if the handler reports
-// "irreversible" or if the inverse step's apply fails.
+// "irreversible" or if the inverse step's apply fails. Stays in
+// executor because it needs the actions registry + dispatchRunner.
 func (ec *ExecutionContext) runReverse(step config.Step, result *Result) error {
 	actionType := step.ActionType
 	if actionType == "" {
