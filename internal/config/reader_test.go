@@ -438,6 +438,68 @@ func TestReadConfigWithValidation_EmptyFileGivesClearError(t *testing.T) {
 	}
 }
 
+// MT-72: a top-level mapping that lacks RunConfig keys (most often
+// the user forgot the leading `- ` and dropped a step object at the
+// root) must produce a clear "expected a list of steps" hint, not
+// the misleading "unknown field <action-name>" message the schema
+// validator emits when it tries to parse the action key as a
+// top-level field.
+func TestReadConfigWithValidation_TopLevelDictHint(t *testing.T) {
+	tmpFile := createTempYAML(t, "log:\n  msg: hi\n")
+	defer os.Remove(tmpFile)
+
+	_, _, err := ReadConfigWithValidation(tmpFile)
+	if err == nil {
+		t.Fatal("expected error for top-level dict shape")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "expected a list of steps") {
+		t.Errorf("error should say 'expected a list of steps', got: %s", msg)
+	}
+	if !strings.Contains(msg, "leading `- `") {
+		t.Errorf("error should suggest the leading dash fix, got: %s", msg)
+	}
+	// Hint should echo the user's action key so they can see the fix.
+	if !strings.Contains(msg, "log") {
+		t.Errorf("error should name the action key from the file, got: %s", msg)
+	}
+}
+
+// MT-72 regression guard: RunConfig (has `steps:` key) still parses
+// cleanly. Without this, the new shape detector might over-trigger.
+func TestReadConfigWithValidation_RunConfigShapeStillAccepted(t *testing.T) {
+	tmpFile := createTempYAML(t, "version: \"1\"\nsteps:\n  - log:\n      msg: hi\n")
+	defer os.Remove(tmpFile)
+
+	cfg, diags, err := ReadConfigWithValidation(tmpFile)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Errorf("expected 1 step, got %d", len(cfg.Steps))
+	}
+	for _, d := range diags {
+		if d.Severity == "error" {
+			t.Errorf("unexpected error diagnostic: %v", d)
+		}
+	}
+}
+
+// MT-72 regression guard: a plain list of steps (the default v2
+// shape) still parses without tripping the dict-shape detector.
+func TestReadConfigWithValidation_PlainListStillAccepted(t *testing.T) {
+	tmpFile := createTempYAML(t, "- log:\n    msg: hi\n")
+	defer os.Remove(tmpFile)
+
+	cfg, _, err := ReadConfigWithValidation(tmpFile)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Errorf("expected 1 step, got %d", len(cfg.Steps))
+	}
+}
+
 // Helper function to create temporary YAML file
 func createTempYAML(t *testing.T, content string) string {
 	t.Helper()
