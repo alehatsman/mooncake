@@ -15,6 +15,12 @@ authority.
 |---|---|---|
 | 2026-05-15 | [`2026-05-15-arch-report.md`](./2026-05-15-arch-report.md) | Kernel healthy; pressure at edges (`cmd/`, `executor` accretion, `config.go` monotonic growth, handler tail). 4 mechanical extractions recommended. |
 
+## Plans derived from reports
+
+| Date | File | Status |
+|---|---|---|
+| 2026-05-15 | [`2026-05-15-refactoring-plan.md`](./2026-05-15-refactoring-plan.md) | Ready for execution. 7 R-items across 4 phases; ~3,500 LOC of mechanical relocations. |
+
 ## When to write a new one
 
 - After a structural change (package split / merge, new top-level dir,
