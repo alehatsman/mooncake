@@ -140,6 +140,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			res.Reason = fmt.Sprintf("container %s already %s", name, state)
 			return res, nil
 		}
+		// MT-63: a missing container is already "stopped enough" —
+		// don't pull/create/start/stop on the user's behalf.
+		if !cur.Exists && !wantRunning {
+			res.Reason = fmt.Sprintf("container %s does not exist; nothing to stop", name)
+			return res, nil
+		}
 
 		if plan {
 			res.WouldChange = true
@@ -169,22 +175,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			Extra:   c.Extra,
 		}
 
+		// !cur.Exists && !wantRunning is already handled by the MT-63
+		// early-return above. The only remaining missing-container
+		// case is `state: running`: create+start.
 		if !cur.Exists {
-			if wantRunning {
-				ctx.GetLogger().Infof("  Creating container %s (image=%s) via %s", name, image, rt.Name())
-				if err := rt.ContainerCreate(bg, spec); err != nil {
-					return nil, err
-				}
-				res.SetChanged(true)
-				return res, nil
-			}
-			// stopped + absent: create then stop, so subsequent runs see
-			// the configured spec.
-			ctx.GetLogger().Infof("  Creating stopped container %s (image=%s) via %s", name, image, rt.Name())
+			ctx.GetLogger().Infof("  Creating container %s (image=%s) via %s", name, image, rt.Name())
 			if err := rt.ContainerCreate(bg, spec); err != nil {
-				return nil, err
-			}
-			if err := rt.ContainerStop(bg, name); err != nil {
 				return nil, err
 			}
 			res.SetChanged(true)
@@ -223,7 +219,9 @@ func planReason(cur containerruntime.ContainerState, name, image, state string, 
 	case !cur.Exists && state == stateRunning:
 		return fmt.Sprintf("would create+start container %s (image=%s)", name, image)
 	case !cur.Exists && state == stateStopped:
-		return fmt.Sprintf("would create container %s (image=%s) and leave stopped", name, image)
+		// MT-63: a missing container is already "stopped" enough — we
+		// don't pre-create it on the user's behalf.
+		return fmt.Sprintf("container %s does not exist; nothing to stop", name)
 	case recreate:
 		return fmt.Sprintf("would recreate container %s (image=%s)", name, image)
 	case state == stateRunning:

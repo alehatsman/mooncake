@@ -218,7 +218,31 @@ func TestRun_Plan_Reports(t *testing.T) {
 	}
 }
 
-func TestRun_Stopped_Missing_CreatesThenStops(t *testing.T) {
+// TestRun_Stopped_Missing_Plan covers the plan-mode side of MT-63:
+// the plan output must reflect the no-op contract (WouldChange=false)
+// so users running `mooncake apply --dry-run` see the same answer
+// as a real apply.
+func TestRun_Stopped_Missing_Plan(t *testing.T) {
+	fake := containerruntime.NewFake()
+	withFake(t, fake)
+
+	step := &config.Step{Container: &config.Container{Name: "web", Image: "alpine:3.20", State: "stopped"}}
+	res, err := (&Handler{}).Run(newCtx(t, actions.ModePlan), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.WouldChange {
+		t.Errorf("plan must NOT report WouldChange for stopped+missing")
+	}
+}
+
+// MT-63: `state: stopped` against a missing container is a no-op,
+// not "create then stop". The old code pulled the image, created
+// the container, started it, and stopped it — doing far more than
+// the user asked. The new contract: a missing container is already
+// "stopped enough" and we don't materialize anything.
+func TestRun_Stopped_Missing_IsNoop(t *testing.T) {
 	fake := containerruntime.NewFake()
 	withFake(t, fake)
 
@@ -228,11 +252,14 @@ func TestRun_Stopped_Missing_CreatesThenStops(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 	r := res.(*executor.Result)
-	if !r.Changed {
-		t.Errorf("expected Changed=true")
+	if r.Changed {
+		t.Errorf("expected Changed=false on stopped+missing (MT-63 no-op)")
 	}
-	if fake.Containers["web"] == nil || fake.Containers["web"].Running {
-		t.Errorf("container should exist and be stopped; got %+v", fake.Containers["web"])
+	if fake.Containers["web"] != nil {
+		t.Errorf("container must NOT be created on stopped+missing; got %+v", fake.Containers["web"])
+	}
+	if fake.Images["alpine:3.20"] {
+		t.Errorf("image must NOT be pulled on stopped+missing")
 	}
 }
 
