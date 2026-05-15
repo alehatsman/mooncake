@@ -1,7 +1,7 @@
 # Spec 28: `os.*` System Config — cron, systemd, firewall, mount, sysctl
 
-**Status:** Phases 1–6 complete + os.cron + os.sysctl reverse-
-capture shipped. P1–P5 shipped earlier (os.systemd, os.cron,
+**Status:** Phases 1–6 complete + reverse-capture shipped on all
+five handlers (modulo the os.systemd modify-rollback caveat below). P1–P5 shipped earlier (os.systemd, os.cron,
 os.sysctl, os.firewall ufw driver, os.mount). **Phase 6 (spec-22
 ABI hooks) shipped**: Permissions / Diff / Cost / Reverse declared
 on all five handlers using the testutil helpers. Reverse-capture
@@ -27,11 +27,27 @@ shipped for two handlers so far:
   case "manually mounted with no fstab entry" since os.mount can't
   express it.
 
-Reverse on the other two (os.systemd, os.firewall) still refuses
-pending each handler's apply-time capture (own follow-up). Phase 7
-(docs + non-ufw firewall drivers + macOS launchd if added later) is
-the only outstanding work; non-ufw drivers remain deferred per the
-spec's original scope.
+- **os.firewall** (v5): captures `{Backend, AppliedState,
+  AddedRules[], RemovedRules[]}`. By computePlan's design only one
+  direction is populated per apply (state=present only adds,
+  state=absent only removes), so the reverse is always single-
+  direction. Reverse emits an os.firewall step with the inverse
+  state and the captured rule list.
+- **os.systemd** (v5, partial): captures `{Name, Path,
+  PriorExisted, PriorContent, PriorEnabled, HadPriorEnabled,
+  PriorActive, HadPriorActive}`. Reverse covers the canonical
+  create-then-rollback path (`PriorExisted=false` →
+  `state=absent` which handles delete+stop+disable in one
+  pass). Modify-rollback (`PriorExisted=true`) is refused
+  explicitly — faithful restore needs unit-file content rewrite +
+  daemon-reload + enabled/active flag restoration as a compound
+  step, which today's single-step Reverser can't express. Tracked
+  as a v6 follow-up.
+
+All five spec-28 handlers now have capture-backed Reverse with
+documented scope limits. Phase 7 (docs + non-ufw firewall drivers
++ macOS launchd if added later) is the only outstanding work;
+non-ufw drivers remain deferred per the spec's original scope.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** L (2 weeks)
 **Value:** Medium-high. Closes the "remaining OS config" gap. Less

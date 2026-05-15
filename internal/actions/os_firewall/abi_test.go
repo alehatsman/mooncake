@@ -6,6 +6,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -96,10 +97,89 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_Refuses(t *testing.T) {
+func TestReverse_AddedRulesGetRemoved(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsFirewall: &config.OsFirewall{Rule: &config.FirewallRule{Port: 22}}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsFirewallReverseInfo{
+		Backend:      "ufw",
+		AppliedState: "present",
+		AddedRules: []FirewallRuleSnapshot{
+			{Port: 22, Protocol: "tcp", Action: "allow", From: "any"},
+			{Port: 443, Protocol: "tcp", Action: "allow", From: "any"},
+		},
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsFirewall: &config.OsFirewall{}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsFirewall == nil {
+		t.Fatal("Reverse must return an os.firewall step")
+	}
+	if rev.OsFirewall.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.OsFirewall.State)
+	}
+	if len(rev.OsFirewall.Rules) != 2 {
+		t.Errorf("Rules = %v, want 2 entries", rev.OsFirewall.Rules)
+	}
+	if rev.OsFirewall.Rules[0].Port != 22 {
+		t.Errorf("Rules[0].Port = %d, want 22", rev.OsFirewall.Rules[0].Port)
+	}
+}
+
+func TestReverse_RemovedRulesGetAddedBack(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsFirewallReverseInfo{
+		Backend:      "ufw",
+		AppliedState: "absent",
+		RemovedRules: []FirewallRuleSnapshot{
+			{Port: 80, Protocol: "tcp", Action: "allow", From: "any"},
+		},
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsFirewall: &config.OsFirewall{}}, r)
+	if rev == nil || rev.OsFirewall == nil {
+		t.Fatal("Reverse must return a step")
+	}
+	if rev.OsFirewall.State != "present" {
+		t.Errorf("State = %s, want present", rev.OsFirewall.State)
+	}
+	if len(rev.OsFirewall.Rules) != 1 || rev.OsFirewall.Rules[0].Port != 80 {
+		t.Errorf("Rules = %v, want [port 80]", rev.OsFirewall.Rules)
+	}
+}
+
+func TestReverse_NoMutationIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsFirewallReverseInfo{Backend: "ufw"}
+	step, _ := h.Reverse(nil, &config.Step{OsFirewall: &config.OsFirewall{}}, r)
+	if step != nil {
+		t.Errorf("Reverse with empty mutation must return nil; got %+v", step)
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, _ := h.Reverse(nil, &config.Step{OsFirewall: &config.OsFirewall{}}, r)
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil; got %+v", step)
+	}
+}
+
+func TestReverse_NilStep(t *testing.T) {
+	h := Handler{}
+	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{OsFirewall: &config.OsFirewall{}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

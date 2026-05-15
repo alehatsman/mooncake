@@ -194,6 +194,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE applyPlan.
+	// computePlan already read the file content and queried
+	// systemctl is-enabled / is-active where relevant; we re-read
+	// here to capture all three pieces, even ones the plan didn't
+	// look at (e.g. if Enabled/Started weren't pinned the plan
+	// skipped the systemctl calls).
+	result.ReverseData = captureReverseInfo(rendered.name, plan.path)
+
 	if err := applyPlan(plan); err != nil {
 		return result, err
 	}

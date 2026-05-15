@@ -159,6 +159,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply mutation list for Reverse() BEFORE applyPlan.
+	// Per computePlan's design, only one of toAdd / toRemove is
+	// populated per apply (state=present only adds, state=absent only
+	// removes), so the reverse is always single-direction.
+	result.ReverseData = &OsFirewallReverseInfo{
+		Backend:        backend,
+		AppliedState:   normalizeState(f.State),
+		AddedRules:     ruleSliceToSnapshot(plan.toAdd),
+		RemovedRules:   ruleSliceToSnapshot(plan.toRemove),
+	}
+
 	if err := applyPlan(plan); err != nil {
 		return result, err
 	}
