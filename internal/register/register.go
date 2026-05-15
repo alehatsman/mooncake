@@ -59,6 +59,8 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/wait_file"
 	_ "github.com/alehatsman/mooncake/internal/actions/wait_http"
 	_ "github.com/alehatsman/mooncake/internal/actions/wait_port"
+	_ "github.com/alehatsman/mooncake/internal/actions/windows_firewall_rule"
+	_ "github.com/alehatsman/mooncake/internal/actions/windows_scheduled_task"
 
 	// All handlers migrated! 🎉
 )

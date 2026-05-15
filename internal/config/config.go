@@ -640,6 +640,75 @@ type FirewallRule struct {
 	Comment  string `yaml:"comment" json:"comment,omitempty"`           // Human-readable note appended to the rule
 }
 
+// WindowsFirewallRule declares an inbound/outbound Windows Firewall
+// rule. spec-57. Identity is `name` (Windows Firewall's DisplayName).
+// Idempotent: re-applying with the same fields is a no-op; changing
+// any non-identity field updates the existing rule rather than
+// creating a duplicate.
+type WindowsFirewallRule struct {
+	Name        string   `yaml:"name" json:"name"`                                     // DisplayName (identity, required)
+	State       string   `yaml:"state" json:"state,omitempty"`                         // present|absent (default: present)
+	Description string   `yaml:"description" json:"description,omitempty"`             // Optional free-form metadata
+	Direction   string   `yaml:"direction" json:"direction,omitempty"`                 // inbound|outbound (default: inbound)
+	Protocol    string   `yaml:"protocol" json:"protocol,omitempty"`                   // tcp|udp|icmpv4|icmpv6|any (default: tcp)
+	LocalPort   []string `yaml:"local_port" json:"local_port,omitempty"`               // List of ports / ranges ("7878" / "8000-8010")
+	RemotePort  []string `yaml:"remote_port" json:"remote_port,omitempty"`             // Same shape as local_port; default any
+	Action      string   `yaml:"action" json:"action,omitempty"`                       // allow|block (default: allow)
+	Profile     []string `yaml:"profile" json:"profile,omitempty"`                     // any|domain|private|public; default [domain, private]
+	Enabled     *bool    `yaml:"enabled" json:"enabled,omitempty"`                     // Default true
+}
+
+// WindowsScheduledTask declares a Task Scheduler entry. spec-57.
+// Identity is `name` (TaskName). The trigger shape is the union of
+// what spec-57 promises (boot, logon, repetition); fields not
+// relevant to the chosen trigger type are ignored.
+type WindowsScheduledTask struct {
+	Name        string                       `yaml:"name" json:"name"`                                 // TaskName (identity, required)
+	State       string                       `yaml:"state" json:"state,omitempty"`                     // present|absent (default: present)
+	Description string                       `yaml:"description" json:"description,omitempty"`         // Optional
+	Trigger     *WindowsScheduledTaskTrigger `yaml:"trigger" json:"trigger,omitempty"`                 // Single-trigger shape (mutually exclusive with triggers)
+	Triggers    []WindowsScheduledTaskTrigger `yaml:"triggers" json:"triggers,omitempty"`              // Multi-trigger shape
+	Actions     []WindowsScheduledTaskAction `yaml:"actions" json:"actions"`                           // Required, at least one
+	Principal   *WindowsScheduledTaskPrincipal `yaml:"principal" json:"principal,omitempty"`           // Optional; defaults to S4U + HighestAvailable
+	Settings    *WindowsScheduledTaskSettings  `yaml:"settings" json:"settings,omitempty"`             // Optional
+}
+
+// WindowsScheduledTaskTrigger is one entry in the <Triggers> block.
+type WindowsScheduledTaskTrigger struct {
+	Type        string `yaml:"type" json:"type"`                            // boot|logon|repetition
+	UserID      string `yaml:"user_id" json:"user_id,omitempty"`            // For type=logon: limits to a specific user; empty = any user
+	Interval    string `yaml:"interval" json:"interval,omitempty"`          // For type=repetition: Go-style duration ("5m") or ISO8601 ("PT5M")
+	Duration    string `yaml:"duration" json:"duration,omitempty"`          // Optional total window; same format as interval
+	StartBoundary string `yaml:"start_boundary" json:"start_boundary,omitempty"` // ISO8601 timestamp; defaults to "now" for repetition triggers
+}
+
+// WindowsScheduledTaskAction is one entry in the <Actions> block.
+type WindowsScheduledTaskAction struct {
+	Execute          string `yaml:"execute" json:"execute"`                              // Path to the binary (required)
+	Arguments        string `yaml:"arguments" json:"arguments,omitempty"`                // Command-line arguments
+	WorkingDirectory string `yaml:"working_directory" json:"working_directory,omitempty"` // Optional cwd
+}
+
+// WindowsScheduledTaskPrincipal is the user identity the task runs as.
+type WindowsScheduledTaskPrincipal struct {
+	User      string `yaml:"user" json:"user,omitempty"`             // e.g. "DESKTOP-X\\aleh"; default: current user
+	LogonType string `yaml:"logon_type" json:"logon_type,omitempty"` // s4u|interactive|password|service_account (default: s4u)
+	RunLevel  string `yaml:"run_level" json:"run_level,omitempty"`   // highest|limited (default: highest)
+}
+
+// WindowsScheduledTaskSettings maps to the <Settings> block.
+type WindowsScheduledTaskSettings struct {
+	StartWhenAvailable         *bool  `yaml:"start_when_available" json:"start_when_available,omitempty"`
+	AllowStartIfOnBatteries    *bool  `yaml:"allow_start_if_on_batteries" json:"allow_start_if_on_batteries,omitempty"`
+	DontStopIfGoingOnBatteries *bool  `yaml:"dont_stop_if_going_on_batteries" json:"dont_stop_if_going_on_batteries,omitempty"`
+	RunOnlyIfNetworkAvailable  *bool  `yaml:"run_only_if_network_available" json:"run_only_if_network_available,omitempty"`
+	MultipleInstances          string `yaml:"multiple_instances" json:"multiple_instances,omitempty"` // parallel|ignore_new|queue|stop_existing
+	ExecutionTimeLimit         string `yaml:"execution_time_limit" json:"execution_time_limit,omitempty"` // Go duration or ISO8601; 0 = unbounded
+	RestartCount               int    `yaml:"restart_count" json:"restart_count,omitempty"`
+	RestartInterval            string `yaml:"restart_interval" json:"restart_interval,omitempty"`
+	Hidden                     *bool  `yaml:"hidden" json:"hidden,omitempty"`
+}
+
 // OsMount declares a filesystem mount: an `/etc/fstab` entry plus the
 // matching live mount state. Identity is the destination mount point
 // (one fstab entry per dest). Linux-only for v1.
@@ -1084,6 +1153,8 @@ type Step struct {
 	OsSystemd        *OsSystemd              `yaml:"os.systemd"        json:"os.systemd,omitempty"        action:"os.systemd"`
 	OsMount          *OsMount                `yaml:"os.mount"          json:"os.mount,omitempty"          action:"os.mount"`
 	OsFirewall       *OsFirewall             `yaml:"os.firewall"       json:"os.firewall,omitempty"       action:"os.firewall"`
+	WindowsFirewallRule  *WindowsFirewallRule  `yaml:"windows.firewall_rule"   json:"windows.firewall_rule,omitempty"   action:"windows.firewall_rule"`
+	WindowsScheduledTask *WindowsScheduledTask `yaml:"windows.scheduled_task"  json:"windows.scheduled_task,omitempty"  action:"windows.scheduled_task"`
 	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
 	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
