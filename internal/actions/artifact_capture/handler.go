@@ -14,6 +14,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/plan"
 )
 
@@ -143,6 +144,14 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 	duration := time.Since(startTime)
 
+	// Drain in-flight events before reading the tracker — the channel
+	// publisher dispatches OnEvent on a per-subscriber goroutine, so any
+	// EventFileCreated/EventFileUpdated emitted by an inner file.write
+	// or text.* step may still be queued when ExecuteStep returns. Without
+	// this Flush, GetFileChanges() saw an empty slice and the artifact
+	// reported "0 file changes" despite the writes succeeding.
+	ec.Svc.EventPublisher.Flush()
+
 	// Collect file changes from tracker
 	fileChanges := tracker.GetFileChanges()
 
@@ -190,10 +199,17 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	if shouldEmbedPlan && len(capture.Steps) <= maxPlanSteps {
+		// Capture only user-set variables, not facts/metrics — agents want
+		// to see what the playbook configured, not the 100+ entries of
+		// system inventory (cpu_flags, etc.) that bloated changes.json.
+		// The planner pre-merges facts into Scope.User for template
+		// availability, so subtract the facts keyset to leave only the
+		// playbook-supplied vars. Facts can be re-derived on replay; user
+		// vars are what the run actually parameterized on.
 		metadata.Plan = &artifacts.EmbeddedPlan{
 			StepCount:   len(capture.Steps),
 			Steps:       capture.Steps,
-			InitialVars: ec.GetVariables(), // Capture initial variables for reproducibility
+			InitialVars: userVarsOnly(ec.Scope.User),
 		}
 		ec.Svc.Logger.Debugf("Embedded plan with %d steps in artifact", len(capture.Steps))
 	} else {
@@ -372,6 +388,35 @@ func writeMarkdownSummary(dir string, metadata artifacts.ArtifactMetadata) error
 	}
 
 	return nil
+}
+
+// userVarsOnly returns a copy of scopeUser with any key that comes from
+// the system facts table removed. The planner pre-merges facts into
+// Scope.User so templates can read them as plain `{{ foo }}` lookups; for
+// the artifact metadata we want only the playbook-supplied parameters.
+//
+// The execute-time scope's typed Facts pointer is nil (it's populated by
+// the CLI's step / facts paths, not by ExecutePlan), so we snapshot the
+// fact keyset directly from facts.Collect() to know what to filter.
+func userVarsOnly(scopeUser map[string]interface{}) map[string]interface{} {
+	if len(scopeUser) == 0 {
+		return nil
+	}
+	factKeys := map[string]struct{}{}
+	for k := range facts.Collect().ToMap() {
+		factKeys[k] = struct{}{}
+	}
+	out := make(map[string]interface{}, len(scopeUser))
+	for k, v := range scopeUser {
+		if _, isFact := factKeys[k]; isFact {
+			continue
+		}
+		out[k] = v
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // fileChangeTracker tracks file changes via events.
