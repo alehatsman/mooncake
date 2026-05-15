@@ -98,14 +98,21 @@ func (s *Server) Serve(ctx context.Context) error {
 			continue
 		}
 
-		resp := s.dispatch(ctx, &req)
-		_ = enc.Encode(resp)
+		resp, send := s.dispatch(ctx, &req)
+		if send {
+			_ = enc.Encode(resp)
+		}
 	}
 }
 
 // DispatchBytes handles a single JSON-RPC request line and returns the
 // JSON-encoded response. Used by HTTP transports (e.g. agentd's POST /v1/mcp);
 // the stdio Serve loop has its own framing.
+//
+// Returns (nil, nil) when the input is a JSON-RPC notification — by spec
+// notifications MUST NOT receive responses. Callers should treat nil
+// output as "do not write a reply" (HTTP transports typically use HTTP
+// 204 No Content in that case).
 //
 // Read-only methods (tools/list, initialize, ping, and the read-only tool
 // handlers) are safe to call concurrently. Mutating tool handlers — notably
@@ -120,12 +127,27 @@ func (s *Server) DispatchBytes(ctx context.Context, line []byte) ([]byte, error)
 			Error:   &rpcError{Code: -32700, Message: "parse error"},
 		})
 	}
-	resp := s.dispatch(ctx, &req)
+	resp, send := s.dispatch(ctx, &req)
+	if !send {
+		return nil, nil
+	}
 	return json.Marshal(resp)
 }
 
-func (s *Server) dispatch(ctx context.Context, req *rpcRequest) rpcResponse {
+// dispatch returns the response plus a flag indicating whether it
+// should be sent. JSON-RPC 2.0 spec: a notification (request with no
+// `id` field, or any method whose name starts with `notifications/`)
+// MUST NOT receive a response. Previously we emitted `{"jsonrpc":""}`
+// for `notifications/initialized` because the zero-value rpcResponse
+// marshalled despite having no ID, which violates spec and could make
+// strict clients refuse to continue.
+func (s *Server) dispatch(ctx context.Context, req *rpcRequest) (rpcResponse, bool) {
 	base := rpcResponse{JSONRPC: "2.0", ID: req.ID}
+	// Notification: per spec, no response. Detect by either the
+	// canonical method-prefix shape or the absence of `id`.
+	if isNotification(req) {
+		return rpcResponse{}, false
+	}
 
 	switch req.Method {
 	case "initialize":
@@ -135,15 +157,11 @@ func (s *Server) dispatch(ctx context.Context, req *rpcRequest) rpcResponse {
 			"serverInfo":      map[string]interface{}{"name": "mooncake", "version": "0.2.0"},
 		}
 
-	case "notifications/initialized", "initialized":
-		// notification — no response ID; return nothing useful
-		return rpcResponse{}
-
 	case "tools/list":
 		base.Result = map[string]interface{}{"tools": s.tools}
 
 	case "tools/call":
-		return s.handleToolCall(ctx, req, base)
+		return s.handleToolCall(ctx, req, base), true
 
 	case "ping":
 		base.Result = map[string]interface{}{}
@@ -152,7 +170,24 @@ func (s *Server) dispatch(ctx context.Context, req *rpcRequest) rpcResponse {
 		base.Error = &rpcError{Code: -32601, Message: fmt.Sprintf("method not found: %s", req.Method)}
 	}
 
-	return base
+	return base, true
+}
+
+// isNotification reports whether the request is a JSON-RPC notification:
+// either an empty / absent `id`, or a method name in the
+// `notifications/*` namespace (MCP convention). Callers must not emit
+// a response for these.
+func isNotification(req *rpcRequest) bool {
+	if len(req.ID) == 0 || string(req.ID) == "null" {
+		return true
+	}
+	if req.Method == "initialized" {
+		return true
+	}
+	if len(req.Method) >= len("notifications/") && req.Method[:len("notifications/")] == "notifications/" {
+		return true
+	}
+	return false
 }
 
 func (s *Server) handleToolCall(ctx context.Context, req *rpcRequest, base rpcResponse) rpcResponse {

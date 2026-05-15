@@ -162,3 +162,47 @@ func TestServer_GetSnapshot(t *testing.T) {
 		t.Error("snapshot text is empty")
 	}
 }
+
+// TestMT25_NotificationsHaveNoResponse is a regression test for
+// manual-test #25 (2026-05-15): JSON-RPC 2.0 spec says notifications
+// MUST NOT receive responses, but the dispatcher used to emit the
+// zero-value rpcResponse for notifications/initialized which
+// marshalled as {"jsonrpc":""} (empty version field too — doubly
+// invalid). Strict MCP clients could refuse to talk further.
+func TestMT25_NotificationsHaveNoResponse(t *testing.T) {
+	s := New(nil, nil)
+	cases := []string{
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+		`{"jsonrpc":"2.0","method":"initialized"}`,
+		`{"jsonrpc":"2.0","method":"notifications/anything"}`,
+		`{"jsonrpc":"2.0","method":"initialize","id":null}`,
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c, func(t *testing.T) {
+			out, err := s.DispatchBytes(context.Background(), []byte(c))
+			if err != nil {
+				t.Fatalf("DispatchBytes: %v", err)
+			}
+			if out != nil {
+				t.Errorf("notification produced a response: %q", string(out))
+			}
+		})
+	}
+}
+
+func TestMT25_RequestsStillGetResponses(t *testing.T) {
+	// Regression guard the other direction: actual requests (with an
+	// id) MUST still receive a response.
+	s := New(nil, nil)
+	out, err := s.DispatchBytes(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) == 0 {
+		t.Error("ping returned no response")
+	}
+	if !strings.Contains(string(out), `"id":1`) {
+		t.Errorf("response missing id: %s", string(out))
+	}
+}
