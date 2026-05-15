@@ -279,6 +279,55 @@ should accept `--format json` to forward that response verbatim.
 
 ---
 
+## #71 — `mooncake doctor` reports "disk-space probe unsupported on this OS" on Linux — LOW (false negative)
+
+**Repro**:
+```
+$ mooncake doctor
+...
+State
+  ℹ /root/.mooncake does not exist (will be created on first run)
+  ℹ no run history yet
+  ℹ disk-space probe unsupported on this OS    ← Linux ubuntu:24.04
+```
+
+But `mooncake facts` and `observe.disk` both successfully report disk
+space on the same machine. `mooncake doctor` has its own probe that
+returns "unsupported" on Linux containers — must use a different
+codepath than facts/observe.
+
+**Fix**: route doctor's disk check through the same path as
+`observe.disk` / `facts.disk_free_gb` (both work on this OS). Or
+mark it `ℹ` (info, expected) on cgroup-limited environments.
+
+(Cosmetic — `ℹ` is informational, not an error.)
+
+---
+
+## ★ `mooncake snapshot --budget N` — token-budget summary for LLM consumption
+
+```
+$ mooncake snapshot --budget 100      # ~400 char budget (1 token ≈ 4 chars)
+os: linux/ubuntu amd64  kernel: ... host: ...
+hw: 32 cores ...  ram: ... disk: ...
+uptime: 5h 40m
+
+tools:
+  bash:    5.2.21
+
+$ mooncake snapshot --budget 50       # ~200 char budget
+os: linux/ubuntu amd64  kernel: ...
+hw: 32 cores ...
+uptime: 5h 40m
+# tools: section dropped to fit budget
+```
+
+This is a thoughtful surface for LLM agents that need to pack
+system context into a small prompt. Drops the most-expensive sections
+first. Worth promoting in agent-integration docs.
+
+---
+
 ## #68 — `validate --format` vs `apply --output-format` — naming inconsistency — LOW (DX)
 
 **Repro**:
