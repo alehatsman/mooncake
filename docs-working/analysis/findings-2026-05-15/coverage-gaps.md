@@ -267,6 +267,61 @@ github-release pages. Keep.
 
 ---
 
+## #63 — `container: state: stopped` starts container even when absent — MEDIUM (semantic)
+
+**Repro**:
+```
+$ docker ps -a | grep mc-test-nginx
+(nothing)
+
+$ mooncake step "container: { name: mc-test-nginx, image: nginx:alpine, state: stopped }"
+{"changed": true, "duration_ms": 4923}
+
+$ docker ps -a | grep mc-test-nginx
+mc-test-nginx Exited (0) Less than a second ago
+```
+
+`state: stopped` against a *missing* container does:
+1. Pull image
+2. Create container
+3. Start it
+4. Stop it
+
+Expected: ensure-stopped from existing — should be a no-op if nothing's
+there (or maybe `state: stopped` shouldn't be reachable without `state:
+running` having happened earlier).
+
+**Fix**: `state: stopped` should be no-op when container doesn't exist;
+add a separate `state: created_stopped` if "create and leave stopped"
+is needed.
+
+---
+
+## #64 — `container: state: absent` leaks a Go-template parse error — MEDIUM
+
+**Repro**:
+```
+$ docker ps -a | grep mc-test-nginx        # exists, stopped
+mc-test-nginx ... Exited
+
+$ mooncake step "container: { name: mc-test-nginx, image: nginx:alpine, state: absent }"
+{
+  "changed": false,
+  "error": "container: inspect mc-test-nginx: docker container inspect mc-test-nginx failed: exit status 1 (output: template parsing error: template: :1:20: executing \"\" at <.ImageName>: map has no entry for key \"ImageName\")",
+  "failed": false   ← per #61
+}
+```
+
+The internal Go template referenced `.ImageName` but the docker
+container struct has `.Config.Image` (or similar). The template error
+leaks through as the user-facing error. And the container wasn't
+removed (still exists).
+
+**Fix**: correct the template field path, add a unit test for the
+container-inspect parsing.
+
+---
+
 ## #52 — `git.*` family has inconsistent path parameter names — LOW (DX surprise)
 
 Each action uses a different param name for "the local repo":
