@@ -1,11 +1,13 @@
 package os_systemd //nolint:revive // package name follows action convention
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -102,10 +104,72 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_Refuses(t *testing.T) {
+func TestReverse_CreateThenRollbackBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsSystemd: &config.OsSystemd{Name: "x.service"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsSystemdReverseInfo{
+		Name:         "myapp.service",
+		Path:         "/etc/systemd/system/myapp.service",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsSystemd: &config.OsSystemd{Name: "myapp.service"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsSystemd == nil {
+		t.Fatal("Reverse must return an os.systemd step")
+	}
+	if rev.OsSystemd.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.OsSystemd.State)
+	}
+	if rev.OsSystemd.Name != "myapp.service" {
+		t.Errorf("Name = %s, want myapp.service", rev.OsSystemd.Name)
+	}
+}
+
+func TestReverse_ModifyRollbackRefuses(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsSystemdReverseInfo{
+		Name:         "myapp.service",
+		Path:         "/etc/systemd/system/myapp.service",
+		PriorExisted: true,
+		PriorContent: "[Unit]\nDescription=old\n",
+	}
+	_, err := h.Reverse(nil, &config.Step{OsSystemd: &config.OsSystemd{Name: "myapp.service"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must refuse when PriorExisted=true (v5 scope)")
+	}
+	if !strings.Contains(err.Error(), "modify-rollback") {
+		t.Errorf("refusal should mention 'modify-rollback'; got: %s", err)
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, err := h.Reverse(nil, &config.Step{OsSystemd: &config.OsSystemd{Name: "x.service"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil; got %+v", step)
+	}
+}
+
+func TestReverse_NilStep(t *testing.T) {
+	h := Handler{}
+	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{OsSystemd: &config.OsSystemd{Name: "x.service"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {
