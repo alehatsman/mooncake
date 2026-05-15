@@ -29,3 +29,56 @@ See **[LLM_GUIDE.md](./LLM_GUIDE.md)** for the complete project reference guide.
 **Status**: Production-ready, 13 actions migrated ✅
 
 For complete details, examples, and patterns → **[LLM_GUIDE.md](./LLM_GUIDE.md)**
+
+---
+
+## Architecture soft caps
+
+Three review-time prompts (not CI gates) that keep the architecture
+self-policing as the project grows. When a PR crosses one of these
+thresholds, the reviewer asks the question; nothing auto-blocks.
+
+Grounded in the 2026-05-15 arch report
+(`docs-working-v2/arch-report/2026-05-15-arch-report.md`).
+
+### 1. Handler LOC > 1,500 → split
+
+Reason: handlers that grow past ~1,500 LOC are almost always
+cross-platform multiplexers (file, service, package, os_mount) that
+accreted per-OS branches into one file. Past the cap, split into
+per-OS sub-packages (`internal/actions/<name>/{linux,darwin,windows}`)
+or into sibling action types.
+
+### 2. `internal/config.Step` universal-field count > 40 → flag
+
+Reason: every universal field on `Step` is a concept every step type
+must ignore or honor. The closed action set is the kernel's moat
+(see `docs-working-v2/vision/kernel.md`); the cost of that is a
+monotonically-growing `config.go`. Today's count is ≈25. Past 40,
+the field has become a tag everyone has to ignore, and the question
+"why does *every* step need this?" stops having a good answer.
+
+### 3. `gocyclo` > 35 in any non-test function → refactor on next touch
+
+Reason: gocyclo > 35 means six or more independent decision branches
+in one function — almost always a CLI handler doing business logic
+that belongs in an `internal/` package. The cap doesn't force a
+refactor; it surfaces the smell on the next PR that touches the
+function.
+
+### Today's known violations (tracked, not blocking)
+
+- `internal/actions/file` — 2,044 LOC
+- `internal/actions/tool` — 1,676 LOC
+- `internal/actions/service` — 1,466 LOC (just under)
+- `copy.Execute` — gocyclo 41
+- `os_systemd.computePlan` — gocyclo 34 (just under)
+- `fleetApplyAction` — gocyclo 49 (will be fixed by R2.1a in the
+  refactor plan)
+
+These are documented, not hidden. New violations should be
+explicitly defended in the PR description that lands them.
+
+See `docs-working-v2/arch-report/2026-05-15-refactoring-plan.md` §2
+(R0.4) for the rationale; this is the project's first formal soft-cap
+policy.
