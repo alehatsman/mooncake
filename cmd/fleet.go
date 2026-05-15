@@ -36,6 +36,7 @@ func fleetCommand() *cli.Command {
 			fleetBootstrapCommand(),
 			fleetPairCommand(),
 			fleetDiscoverCommand(),
+			fleetUpgradeCommand(),
 		},
 	}
 }
