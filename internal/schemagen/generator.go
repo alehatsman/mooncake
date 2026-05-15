@@ -591,6 +591,7 @@ var actionStructByName = map[string]any{
 	"observe.memory":  &config.ObserveMemory{},
 	"observe.disk":    &config.ObserveDisk{},
 	"observe.gpu":     &config.ObserveGPU{},
+	"observe.logs":    &config.ObserveLogs{},
 }
 
 // getActionStruct returns the reflect.Type for an action's config struct.

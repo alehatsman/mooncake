@@ -1136,6 +1136,34 @@ type ObserveGPU struct {
 	Index *int `yaml:"index" json:"index,omitempty"` // Specific GPU index (default: all)
 }
 
+// ObserveLogs is the spec-61 single-shot read of a log source within
+// a time / line window. Exactly one of Path / JournalUnit / Container
+// must be set. Patterns are regexes evaluated line-by-line; per-pattern
+// match counts + sample lines (capped) are returned in the typed
+// LogObservation.
+type ObserveLogs struct {
+	// Source selectors — exactly one must be set.
+	Path         string `yaml:"path" json:"path,omitempty"`                   // Log file path (tail mode)
+	JournalUnit  string `yaml:"journal_unit" json:"journal_unit,omitempty"`   // systemd unit (Linux)
+	Container    string `yaml:"container" json:"container,omitempty"`         // Docker/Podman container name
+
+	// Window — relative duration (e.g. "60s", "5m"). Default "60s".
+	Since string `yaml:"since" json:"since,omitempty"`
+
+	// Patterns are regexes matched against each line. Required.
+	Patterns []string `yaml:"patterns" json:"patterns"`
+
+	// SampleLines caps the per-pattern sample lines retained in the
+	// LogMatchGroup. Default 5.
+	SampleLines int `yaml:"sample_lines" json:"sample_lines,omitempty"`
+
+	// MaxBytes caps the total bytes read. Default 1 MiB.
+	MaxBytes int64 `yaml:"max_bytes" json:"max_bytes,omitempty"`
+
+	// MaxLines caps the total lines scanned. Default 10000.
+	MaxLines int `yaml:"max_lines" json:"max_lines,omitempty"`
+}
+
 // WaitPort waits for a TCP port to accept connections.
 // Useful for orchestrating service start → port open → next step.
 type WaitPort struct {
@@ -1282,6 +1310,7 @@ type Step struct {
 	ObserveMemory    *ObserveMemory          `yaml:"observe.memory"    json:"observe.memory,omitempty"    action:"observe.memory"`
 	ObserveDisk      *ObserveDisk            `yaml:"observe.disk"      json:"observe.disk,omitempty"      action:"observe.disk"`
 	ObserveGPU       *ObserveGPU             `yaml:"observe.gpu"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
+	ObserveLogs      *ObserveLogs            `yaml:"observe.logs"      json:"observe.logs,omitempty"      action:"observe.logs"`
 	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
 	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
 	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
@@ -1706,6 +1735,7 @@ func (s *Step) Clone() *Step {
 		ObserveMemory:    s.ObserveMemory,
 		ObserveDisk:      s.ObserveDisk,
 		ObserveGPU:       s.ObserveGPU,
+		ObserveLogs:      s.ObserveLogs,
 		WaitPort:         s.WaitPort,
 		WaitHTTP:         s.WaitHTTP,
 		WaitFile:         s.WaitFile,

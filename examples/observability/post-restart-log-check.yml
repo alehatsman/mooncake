@@ -1,0 +1,38 @@
+# Spec-61 observe.logs demo: did the service start cleanly?
+#
+# Pattern: restart → observe.logs → branch on the per-pattern match
+# count. The canonical 3am deploy-time question — "are there errors
+# in the last 30 seconds of the log?" — without shelling out to
+# tail + grep.
+#
+# Run:
+#   $ mooncake apply -c examples/observability/post-restart-log-check.yml
+#
+# What you'll see depends on whether /var/log/syslog has recent
+# error lines. The example is plan-mode safe (observe.logs defers to
+# apply) and reads a generic system log so it works without root on
+# most Linux distros.
+
+version: "1.0"
+
+steps:
+  - name: probe syslog for recent errors
+    observe.logs:
+      path: /var/log/syslog
+      since: 60s
+      patterns:
+        - 'ERROR|FATAL|panic'
+        - 'connection refused'
+        - 'permission denied'
+      sample_lines: 3
+      max_bytes: 524288   # 512 KiB
+      max_lines: 5000
+    as: syslog
+
+  - name: report syslog scan
+    log: "syslog scan complete — read {{ syslog.value.lines_read }} lines (truncated={{ syslog.value.truncated }})"
+    when: "syslog.found"
+
+  - name: report syslog read failed
+    log: "couldn't read syslog: {{ syslog.error }}"
+    when: "not syslog.found"
