@@ -44,6 +44,16 @@ type Peer struct {
 	Token     string    `toml:"token,omitempty"`
 	Tags      []string  `toml:"tags,omitempty"`
 	Roles     []string  `toml:"roles,omitempty"`
+
+	// SSH is an optional fallback transport spec used by `fleet doctor`
+	// (and future diagnostic flows). Format: `user@host:port` — the
+	// same shape `mooncake fleet bootstrap` accepts. Empty means no
+	// SSH fallback is configured; doctor's --ssh flag becomes a no-op.
+	//
+	// The SSH transport is NEVER used to apply runs — it's strictly a
+	// diagnostic channel. Keeping the field optional means existing
+	// peers.toml files load unchanged.
+	SSH string `toml:"ssh,omitempty"`
 }
 
 // Config is the top-level shape of peers.toml.
