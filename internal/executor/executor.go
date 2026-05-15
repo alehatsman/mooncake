@@ -1039,10 +1039,24 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 // Emits events through the provided publisher for all execution progress.
 //
 // Callers that need the typed *KernelResult substrate (R1.1b) should
-// go through executor.Start with StartConfig.Capture set instead;
-// this entry point does not surface the per-step records.
+// use ExecutePlanWithCapture or go through executor.Start with
+// StartConfig.Capture set; this entry point does not surface the
+// per-step records.
 func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
 	return executePlanWithCapture(p, sudoPass, mode, log, publisher, nil)
+}
+
+// ExecutePlanWithCapture runs a pre-compiled plan and fills the
+// caller-supplied *RunCapture with the plan + per-step results, so
+// the result can be lifted into an *apply.KernelResult.
+//
+// This is the from-saved-plan analog of executor.Start with Capture
+// set. Used by apply.NewRunnerFromPlan (R1.1c) so the saved-plan
+// path produces the same typed kernel result as the
+// compiled-from-config path. capture may be nil — equivalent to
+// calling ExecutePlan directly.
+func ExecutePlanWithCapture(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
+	return executePlanWithCapture(p, sudoPass, mode, log, publisher, capture)
 }
 
 // executePlanWithCapture is the shared implementation behind
