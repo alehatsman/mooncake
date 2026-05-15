@@ -38,10 +38,13 @@ spec-30 transactions ✅ moved to done.
 
 **Stream 3 — Fleet & Cluster Management**
 45 fleet-discovery (PR13 `fleet init` interactive flow) ·
-52 fleet-exec · 53 fleet-watch · 54 fleet-ps · 55 fleet-doctor
+52 fleet-exec · 53 fleet-watch · 54 fleet-ps · 55 fleet-doctor ·
+58 fleet-drift
 
 Fleet is 13/14 PRs; only `fleet init` interactive UX remains from the original plan.
 Specs 52–55 are drafted QoL additions brainstormed from real use.
+Spec 58 (drift detection) is the highest-leverage candidate from
+GitHub issue #11 — see `clustermanagement/issue-11-analysis.md`.
 
 **Stream 4 — Developer Experience**
 *(shipped: spec-39 init, 40 config-discovery, 41 doctor, 42 recommend)*
