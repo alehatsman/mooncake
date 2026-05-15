@@ -178,6 +178,26 @@ actually registered. Should be the source of truth for
 
 ---
 
+## ★ `--artifacts-dir` produces a clean run bundle
+
+```
+$ mooncake apply --artifacts-dir /tmp/artifacts --capture-full-output
+$ ls /tmp/artifacts/runs/20260515-182225-ff1bf0/
+events.jsonl    JSONL event stream (richest)
+plan.json       full plan with input_files_hash for audit
+facts.json      point-in-time facts snapshot (good for repro)
+stdout.log      "[step-NNNN] line" prefixed captured output
+stderr.log      same shape for stderr
+```
+
+Run-bundle directory naming `<timestamp>-<hash>` is sortable and unique.
+The `stdout.log` format with `[step-NNNN] line` prefix is *exactly*
+what the default-renderer is missing per #5 — that hint should
+flow back into the text formatter. This artifact directory is what
+fleet replay / forensic debugging will be built on; keep it.
+
+---
+
 ## ★ `mooncake history` — clean run audit trail
 
 ```

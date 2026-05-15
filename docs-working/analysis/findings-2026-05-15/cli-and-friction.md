@@ -208,3 +208,27 @@ this too.
 | 25 | LOW | MCP notification reply | don't respond to notifications |
 | 26 | LOW | MCP error prefix dup | trim outer wrapper |
 | 20 | LOW | bad-checksum + missing parent | subsumed by #14 |
+
+---
+
+## #53 — `--artifacts-dir` produces no `results.json` despite CLI help — LOW (doc/feature drift)
+
+**Repro**:
+```
+$ mooncake apply -c hello-world/config.yml --artifacts-dir /tmp/artifacts --capture-full-output
+$ ls /tmp/artifacts/runs/*/
+events.jsonl  facts.json  plan.json  stderr.log  stdout.log
+```
+
+But `mooncake apply --help` says:
+- `--max-output-bytes value  Max bytes of output per step in results.json (default: 1048576)`
+- `--max-output-lines value  Max lines of output per step in results.json (default: 1000)`
+
+Both flags reference a `results.json` that is never written.
+
+**Fix**: either generate `results.json` (a per-step result summary makes sense
+alongside the raw `events.jsonl`) or drop the references from `--max-output-*`
+help text.
+
+(The rest of the bundle is good — `stdout.log` is prefixed `[step-0001] line`
+which is exactly what the default-renderer is missing per #5. Worth promoting.)
