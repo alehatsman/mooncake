@@ -132,6 +132,30 @@ func TestInstaller_IsActiveCmd_Windows(t *testing.T) {
 	}
 }
 
+// TestInstaller_Render_LinuxHasReadWritePaths is the issue #19
+// regression. ProtectSystem=true makes /usr read-only inside the
+// daemon's mount namespace, so `fleet upgrade`'s self-replace cannot
+// write the new binary into /usr/local/bin/ without ReadWritePaths
+// punching a narrow hole back open. Without this assertion a future
+// hardening tweak could quietly drop the line and re-introduce the
+// EROFS failure that issue-19 (and the cross-fs path from issue-12)
+// surfaced.
+func TestInstaller_Render_LinuxHasReadWritePaths(t *testing.T) {
+	body, err := Installer{OS: "linux", Port: 7878}.Render()
+	if err != nil {
+		t.Fatalf("Render linux: %v", err)
+	}
+	if !strings.Contains(string(body), "ReadWritePaths=/usr/local/bin") {
+		t.Errorf("linux unit missing ReadWritePaths=/usr/local/bin (issue #19):\n%s", body)
+	}
+	// ProtectSystem stays in place — the test asserts the combination,
+	// not just the new line on its own. The fix is meaningless without
+	// the underlying restriction.
+	if !strings.Contains(string(body), "ProtectSystem=true") {
+		t.Errorf("ProtectSystem=true dropped — ReadWritePaths is a no-op without it:\n%s", body)
+	}
+}
+
 func TestInstaller_Render_PortSubstitution(t *testing.T) {
 	body, err := Installer{OS: "linux", Port: 7878}.Render()
 	if err != nil {
