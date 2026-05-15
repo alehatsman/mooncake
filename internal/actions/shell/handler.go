@@ -126,7 +126,13 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	return nil
 }
 
-// executeWithRetry wraps command execution with retry logic
+// executeWithRetry wraps command execution with retry logic. MT-48:
+// retry decisions are based on the *raw* exit code, not the post-
+// failed_when verdict — otherwise `retry: 3` + `failed_when: false`
+// would mask the first failure and skip retries entirely. Each
+// attempt runs the command without applying failed_when; only the
+// final attempt's result has failed_when / changed_when overrides
+// applied.
 func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
 	maxAttempts := step.RetryAttempts() + 1
 	if maxAttempts < 1 {
@@ -141,8 +147,12 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt-1, step.RetryAttempts())
 		}
 
-		result, err := h.executeShellCommand(ctx, step, renderedCommand)
+		result, err := h.executeShellCommandRaw(ctx, step, renderedCommand)
 		if err == nil {
+			// Raw success — apply overrides once and return.
+			if rr, ok := result.(*executor.Result); ok {
+				return h.finishResult(ctx, step, rr)
+			}
 			return result, nil
 		}
 
@@ -161,15 +171,86 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 		}
 	}
 
-	// All attempts failed
+	// Every attempt failed. Apply overrides once — failed_when may
+	// still mask the final failure (the documented "retry N times
+	// and don't fail the run no matter what" pattern). changed_when
+	// override applies to the final result the same way.
+	//
+	// Only apply overrides when lastResult reflects a real exec
+	// attempt (Failed=true means processCommandResult set it on a
+	// non-nil execErr). For pre-exec failures (invalid timeout,
+	// template render error) lastResult.Failed is false; in that
+	// path we just propagate lastErr without consulting failed_when
+	// — failed_when is for command outcomes, not setup errors.
+	if r, ok := lastResult.(*executor.Result); ok && r.Failed {
+		if err := h.evaluateResultOverrides(ctx, step, r); err != nil {
+			return r, err
+		}
+		if !r.Failed {
+			// failed_when masked it — successful end state.
+			return r, nil
+		}
+		if step.RetryAttempts() > 0 {
+			return r, fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
+		}
+		return r, lastErr
+	}
+
 	if step.RetryAttempts() > 0 {
 		return lastResult, fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
 	}
 	return lastResult, lastErr
 }
 
-// executeShellCommand executes the actual shell command
+// finishResult applies changed_when / failed_when overrides to the
+// final result returned from the retry loop. Returns the same result
+// with potentially-modified Changed/Failed/Rc fields and a non-nil
+// error iff result.Failed is still true after overrides.
+func (h *Handler) finishResult(ctx actions.Context, step *config.Step, result *executor.Result) (actions.Result, error) {
+	if err := h.evaluateResultOverrides(ctx, step, result); err != nil {
+		return result, err
+	}
+	if result.Failed {
+		return result, fmt.Errorf("command failed with exit code %d", result.Rc)
+	}
+	return result, nil
+}
+
+// executeShellCommand executes the actual shell command and applies
+// changed_when / failed_when overrides. Kept for callers outside the
+// retry loop (no current internal callers — see executeShellCommandRaw
+// for the retry-friendly variant).
 func (h *Handler) executeShellCommand(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
+	r, err := h.executeShellCommandRaw(ctx, step, renderedCommand)
+	if err != nil {
+		// Still apply overrides on failure so failed_when can mask it.
+		if rr, ok := r.(*executor.Result); ok {
+			if oerr := h.evaluateResultOverrides(ctx, step, rr); oerr != nil {
+				return rr, oerr
+			}
+			if !rr.Failed {
+				return rr, nil
+			}
+		}
+		return r, err
+	}
+	if rr, ok := r.(*executor.Result); ok {
+		if oerr := h.evaluateResultOverrides(ctx, step, rr); oerr != nil {
+			return rr, oerr
+		}
+		if rr.Failed {
+			return rr, fmt.Errorf("command failed with exit code %d", rr.Rc)
+		}
+	}
+	return r, nil
+}
+
+// executeShellCommandRaw runs the command and returns a result whose
+// Failed/Rc reflect the underlying process exit code only — NO
+// changed_when / failed_when applied. The retry loop uses this so a
+// failed_when:false override on intermediate attempts doesn't fool
+// the loop into thinking the command succeeded (MT-48).
+func (h *Handler) executeShellCommandRaw(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
 	// Create result
 	result := executor.NewResult()
 	result.StartTime = time.Now()
@@ -334,8 +415,12 @@ func (h *Handler) streamOutput(pipe io.Reader, buf *bytes.Buffer, ctx actions.Co
 	}
 }
 
-// processCommandResult processes the command execution result
-func (h *Handler) processCommandResult(ctx actions.Context, step *config.Step, result *executor.Result, stdout, stderr string, execErr error) (*executor.Result, error) {
+// processCommandResult records the *raw* outcome of the command —
+// stdout, stderr, exit code, raw Failed. MT-48: changed_when and
+// failed_when are NOT applied here; they live in finishResult so
+// the retry loop can decide on raw failure without being fooled by
+// an intermediate `failed_when: false` mask.
+func (h *Handler) processCommandResult(_ actions.Context, _ *config.Step, result *executor.Result, stdout, stderr string, execErr error) (*executor.Result, error) {
 	result.Stdout = stdout
 	result.Stderr = stderr
 
@@ -351,15 +436,6 @@ func (h *Handler) processCommandResult(ctx actions.Context, step *config.Step, r
 			result.Rc = 1
 		}
 		result.Failed = true
-	}
-
-	// Apply result overrides (changed_when, failed_when)
-	if err := h.evaluateResultOverrides(ctx, step, result); err != nil {
-		return result, err
-	}
-
-	// Return error if command failed (after overrides)
-	if result.Failed {
 		return result, fmt.Errorf("command failed with exit code %d", result.Rc)
 	}
 
