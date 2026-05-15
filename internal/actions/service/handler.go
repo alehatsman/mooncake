@@ -105,7 +105,31 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return nil, fmt.Errorf("invalid context type")
 	}
 
-	return nil, HandleService(*step, ec)
+	// Same reverse-capture wrap as Run's apply path (v6). Execute
+	// is the legacy Spec-1 entry point; Run is the Spec-16 one.
+	// Either can dispatch depending on registration shape, so both
+	// share runApply.
+	return runApply(step, ec)
+}
+
+// runApply wraps HandleService with reverse-capture: on Linux, it
+// queries systemctl is-active / is-enabled BEFORE delegating, then
+// bolts the captured snapshot onto ec.CurrentResult.ReverseData
+// after HandleService returns (HandleService writes its Result via
+// a deferred side-effect into ec.CurrentResult — we don't change
+// that contract). Non-Linux paths skip capture; their Reverse refuses.
+func runApply(step *config.Step, ec *executor.ExecutionContext) (actions.Result, error) {
+	var priorInfo *OsServiceReverseInfo
+	if runtime.GOOS == "linux" && step.OsService != nil {
+		priorInfo = captureSystemdPriorState(step.OsService.Name, *step, ec)
+	}
+
+	err := HandleService(*step, ec)
+
+	if ec.CurrentResult != nil && priorInfo != nil && ec.CurrentResult.Changed {
+		ec.CurrentResult.ReverseData = priorInfo
+	}
+	return ec.CurrentResult, err
 }
 
 // DryRun logs what the service operation would do.
@@ -1210,7 +1234,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if ctx.Mode() != actions.ModePlan {
-		return nil, HandleService(*step, ec)
+		return runApply(step, ec)
 	}
 
 	result := executor.NewResult()
