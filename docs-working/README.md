@@ -47,6 +47,11 @@ Specs 52–55 are drafted QoL additions brainstormed from real use.
 Spec 58 (drift detection) is the highest-leverage candidate from
 GitHub issue #11 — see `clustermanagement/issue-11-analysis.md`.
 
+GitHub issue #8 (ChangeGraph as core primitive) audited against current
+state in `analysis/issue-8-changegraph-analysis.md` — ~60% already shipped
+under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
+`explain`, `discover`, `rewind`.
+
 **Stream 4 — Developer Experience**
 *(shipped: spec-39 init, 40 config-discovery, 41 doctor, 42 recommend)*
 
