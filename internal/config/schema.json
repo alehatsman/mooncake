@@ -428,6 +428,9 @@
           "type": "string",
           "minLength": 1
         },
+        "follow_symlinks": {
+          "type": "boolean"
+        },
         "force": {
           "type": "boolean"
         },
@@ -742,6 +745,9 @@
       "type": "object",
       "description": "Idempotently manage git config keys at local, global, or system scope",
       "properties": {
+        "dest": {
+          "type": "string"
+        },
         "repo": {
           "type": "string"
         },
@@ -2120,8 +2126,18 @@
           }
         },
         "for_each": {
-          "type": "string",
-          "description": "Variable expression for iterating over items (universal)"
+          "description": "Iterate over items (universal). Accepts a template-variable string or an inline list.",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Variable expression rendered through templates and resolved to a list"
+            },
+            {
+              "type": "array",
+              "description": "Inline / block literal list of items",
+              "items": {}
+            }
+          ]
         },
         "for_each_file": {
           "type": "string",
