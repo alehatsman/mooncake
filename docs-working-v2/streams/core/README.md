@@ -58,6 +58,23 @@ None.
   os.service) that still return refusal stubs. Not blocking; ship as
   per-handler PRs when motivated.
 
+## Proposals
+
+Ten draft proposals live in [`proposals/`](./proposals/README.md):
+
+- **01–06** — audit-distilled kernel discipline (result schema, recap
+  counters, validator parity, typed plan diff, ABI capability flags,
+  failed/error taxonomy). Distilled from the 2026-05-15 manual-tester
+  pass.
+- **07–10** — user-filed feature requests from the 2026-05-16 dotfiles
+  migration (`pkg.install: manager: yay`, `pkg.repo` brew taps +
+  tolerant rc, working template `now`/`apply_started_at`, `wait_http`
+  POST + body).
+
+None are specced yet. See the proposals README for the recommended
+ordering — audit-discipline batch wants sequencing (01 unblocks 02/06);
+user-filed batch is mostly independent and can ship piecemeal.
+
 ## Design principles for new actions
 
 Before adding any action, read

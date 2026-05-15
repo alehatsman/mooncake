@@ -1,14 +1,21 @@
 # core Proposals
 
-Six proposals for the kernel — action handlers, planner, executor,
-the four-method ABI. Distilled from the 2026-05-15 manual-tester
-audit (~50 actions tested, dozens of result-shape inconsistencies
-catalogued in `findings-2026-05-15/silent-success-bugs.md` and
-`cli-and-friction.md`).
+Proposals for the kernel — action handlers, planner, executor, the
+four-method ABI, template renderer.
 
-These are brainstormed proposals, not specs. The pattern most of
-them push toward: **codify what's informally consistent in the wild,
-make divergent handlers conform**.
+Two source streams feed this folder:
+
+1. **Audit-distilled (01–06)** — from the 2026-05-15 manual-tester
+   pass (~50 actions tested, result-shape inconsistencies catalogued
+   in `findings-2026-05-15/silent-success-bugs.md` and
+   `cli-and-friction.md`). Pattern: **codify what's informally
+   consistent in the wild, make divergent handlers conform**.
+2. **User-filed feature requests (07–10)** — gaps surfaced while
+   migrating real dotfiles from `shell:` blocks to typed actions on
+   2026-05-16. Pattern: **a real shell workaround exists; the typed
+   action equivalent is one missing field away**.
+
+These are brainstormed proposals, not specs.
 
 | # | Proposal | Effort | Value | Why |
 |---|---|---|---|---|
@@ -18,8 +25,14 @@ make divergent handlers conform**.
 | [04](./proposal-04-typed-plan-diff.md) | Typed plan diffs (per-action-type, not just file) | M | High | `plan --diff` is the safety story; only file diffs are useful today |
 | [05](./proposal-05-action-capability-flags.md) | Surface `Permissions/Diff/Cost/Reverse` capability flags | XS | Medium | spec-22 shipped the methods; make their outputs inspectable |
 | [06](./proposal-06-failed-vs-error-distinction.md) | Reconcile `failed: false` + `error: "..."`; query vs. mutation taxonomy | S | Medium | Recurring confusion across observe/wait/os actions (#61 umbrella) |
+| [07](./proposal-07-pkg-aur-support.md) | `pkg.install: manager: yay` / `paru` for Arch AUR | S | Medium | Today's AUR install is a 20-line `shell: yay -S` block — no idempotency, no plan diff |
+| [08](./proposal-08-pkg-brew-taps-and-tolerant-rc.md) | `pkg.repo: manager: brew` for taps; tolerate idempotent non-zero rc | S | Medium | `brew tap` exits 1 on re-tap; cask vs. formula is shell-only today |
+| [09](./proposal-09-template-now-filter.md) | Working `now` / `apply_started_at` for timestamped strings | XS | Medium | Pongo2's `{% now %}` silently no-ops; blocks rolling backup patterns |
+| [10](./proposal-10-wait-http-post-body.md) | `wait_http`: POST + headers + body | S | Medium | GET-only blocks polling services with no health endpoint (e.g. vLLM embeddings) |
 
 ## Recommended order
+
+### Audit-distilled (kernel discipline)
 
 1. **03 step validator** — XS, no controversy, fixes #83
 2. **05 capability flags** — XS, no controversy, exposes existing data
@@ -31,6 +44,19 @@ make divergent handlers conform**.
 The first two are pure cleanup. The middle three are the disciplined
 refactor of the result + recap surface. The last is new functionality
 that builds on the disciplined surface.
+
+### User-filed (independent; ship when motivated)
+
+- **09 template `now`** — XS, unblocks rolling-backup patterns; no
+  dependency on the kernel-discipline batch.
+- **10 wait_http POST** — S, additive on the existing `wait_http`
+  handler; no schema breakage.
+- **07 pkg.install yay/paru** — S, additive `manager:` value; reuses
+  the pacman driver.
+- **08 pkg.repo brew taps + tolerant rc** — S, but pairs with the
+  broader question of what `pkg.repo`'s driver framework looks like
+  on non-APT/yum managers. Worth sequencing after a pkg-driver
+  audit.
 
 ## Cross-cutting themes
 
@@ -92,3 +118,13 @@ Findings from 2026-05-15 that motivate these proposals:
   spec-22 phases declared the methods
 - **Proposal 06**: #61 again — query/wait/mutation taxonomy is
   the unifier
+
+User-filed receipts (2026-05-16 dotfiles migration):
+- **Proposal 07**: `platforms/arch/packages.yml` — 15-package
+  `shell: yay -S` block
+- **Proposal 08**: `platforms/macos/packages.yml` — `brew tap
+  ... 2>&1 | grep -v "already tapped"` workaround
+- **Proposal 09**: `components/zsh/index.yml` (and 4 sibling
+  components) — `cp ~/.zshrc ~/.dotfiles-backup/.zshrc.$(date +...)`
+- **Proposal 10**: `components/mcsearch/server.yml` — 60s polling
+  loop for `POST /v1/embeddings`
