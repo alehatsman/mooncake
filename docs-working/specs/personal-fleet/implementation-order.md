@@ -24,12 +24,11 @@ the wow factor.
 
 ## Progress snapshot (2026-05-15)
 
-**13 of 14 PRs shipped end-to-end.** Phase A, Phase B, and Phase C (2/3) are complete.
+**14 of 14 PRs shipped end-to-end.** All three phases complete.
 
 | Status | PRs |
 |---|---|
-| ✅ Shipped | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 (full — auto-promoted when PR 10 landed), 12 (mDNS — `70476f6`/`beb495e`), 14 |
-| ⏳ Not started | 13 (`fleet init` interactive flow) |
+| ✅ Shipped | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 (full — auto-promoted when PR 10 landed), 12 (mDNS — `70476f6`/`beb495e`), 13 (`fleet init` interactive flow — spec-45 PR13), 14 |
 
 Sidecar specs that shipped alongside:
 
@@ -70,7 +69,7 @@ These are loose drafts in `specs/personal-fleet/`. Sequence them after PR 12/13 
 | 11 | `fleet bootstrap` + `fleet pair` CLI | 47 | ✅ | CLI wrappers, peers.toml upsert with diff, three token-source paths for pair | PR3, PR10 | **🎯 `mooncake fleet bootstrap aleh@new-box` adds a peer in one command** | ~300 |
 | **Phase C — polish** |||||||
 | 12 | mDNS advertise (daemon) + query (controller) + SSH config parser | 45 | ✅ | zeroconf wrapper, agentd advertise goroutine, ssh_config parser | PR1, PR4 | `mooncake fleet discover` finds `_mooncake._tcp.local` responders on LAN | ~450 |
-| 13 | `fleet init` interactive flow | 45 | ⏳ | Aggregator, prompt loop, token paste / `--ssh-fetch` paths | PR11, PR12 | **🎯 `mooncake fleet init` walks through adding 4 boxes** | ~350 |
+| 13 | `fleet init` interactive flow | 45 | ✅ | Aggregator (already in `internal/fleet/discovery/`) + prompt loop + atomic Upsert | PR11, PR12 | **🎯 `mooncake fleet init` walks through adding new boxes** | ~370 |
 | 14 | Per-host overlays + tag selectors | 48 | ✅ | `internal/fleet/overlays.go`, `--peer-filter`/`--step-filter` parsing, wire vars_files into submit | PR5 | `vars/by-host/macbook.yml` is applied when targeting macbook | ~250 |
 | **Follow-up specs (not in original plan)** |||||||
 | 15 | Extended filter keys (`os=`, `name=`, `role=`) | 50 | ✅ | Validator + evaluator extension to spec-48's predicate DSL — no new flags | PR14 | `mooncake fleet apply --peer-filter os=darwin` filters peers from `/v1/version` | ~250 |
@@ -145,13 +144,16 @@ yet.
 
 ## What's still open (as of 2026-05-15)
 
-Phase A, Phase B, and Phase C (2/3) are complete. Only one item remains:
+All 14 PRs of the original plan are shipped. Phase A, Phase B, and
+Phase C are complete end-to-end. PR 13 (`fleet init` interactive
+flow) landed last: aggregator + prompt loop + atomic `peers.toml`
+Upsert; manual paste is the v1 token path (auto-fetch / SSH-pull
+deferred to spec-47 follow-ups).
 
-1. **PR 13** — `fleet init` interactive flow. Builds on PR 12 (mDNS ✅) + PR 11 (bootstrap/pair ✅). Pure UX polish; no capability gap behind it.
+PRs 15 (spec-50 ✅) and 16 (spec-51 ✅) both shipped. mDNS (PR 12) shipped (`70476f6`/`beb495e`).
 
-PRs 15 (spec-50 ✅) and 16 (spec-51 ✅) both shipped. mDNS (PR 12) also shipped (`70476f6`/`beb495e`).
-
-`fleet init` is the only remaining Phase C item. Defer until a real user reports friction with hand-editing peers.toml — or pull it forward as a small cooldown task.
+Post-PR-14 QoL specs (`fleet exec` / `ps` / `watch`) also shipped on
+top of the personal-fleet substrate.
 
 ---
 
