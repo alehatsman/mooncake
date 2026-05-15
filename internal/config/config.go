@@ -1150,6 +1150,20 @@ type Step struct {
 	// the Step is a compound transaction node, not a leaf action.
 	Transaction []Step `yaml:"transaction,omitempty" json:"transaction,omitempty"`
 
+	// Try / Catch / Finally (spec-23 §2) declares user-authored error
+	// recovery: Try runs sequentially; on the first error, Catch runs
+	// (steps can inspect the failure); Finally always runs at the end.
+	// The Step is a compound node — no action field may be set
+	// alongside Try, and Catch/Finally without Try is invalid.
+	//
+	// Distinct from Transaction: this is user-authored rollback, not
+	// ABI-automated. Even when Catch handles the failure, the compound
+	// Step's outcome is failure (exit code non-zero) — Catch is for
+	// notification / cleanup, not for swallowing the error.
+	Try     []Step `yaml:"try,omitempty" json:"try,omitempty"`
+	Catch   []Step `yaml:"catch,omitempty" json:"catch,omitempty"`
+	Finally []Step `yaml:"finally,omitempty" json:"finally,omitempty"`
+
 	// OnRollback (spec-30) — sibling to OnChange. Steps that run after
 	// the transaction's rollback finishes (successful or partial), for
 	// notification / cleanup. Must be empty if Transaction is empty.
@@ -1193,6 +1207,22 @@ type Step struct {
 	//                    back (regardless of whether rollback itself
 	//                    completed or only partially reverted).
 	TxnRole string `yaml:"txn_role,omitempty" json:"txn_role,omitempty"`
+
+	// TryParent carries the ID of the parent compound Step when this
+	// Step was expanded from a Try / Catch / Finally branch. Mirrors
+	// TxnParent's shape. Populated by the planner; empty for steps
+	// outside a try-block.
+	TryParent string `yaml:"try_parent,omitempty" json:"try_parent,omitempty"`
+
+	// TryRole tags an expanded child with its role inside the parent
+	// compound. Populated by the planner; one of:
+	//   - ""        — regular step (not part of a try-block)
+	//   - "try"     — body branch. Skipped if a prior try child of the
+	//                 same TryParent failed.
+	//   - "catch"   — error-recovery branch. Skipped when try ran to
+	//                 completion without error.
+	//   - "finally" — always-run branch. Never gated.
+	TryRole string `yaml:"try_role,omitempty" json:"try_role,omitempty"`
 }
 
 // ForEachField holds the value of a Step's `for_each` keyword. It supports
@@ -1388,7 +1418,24 @@ func (s *Step) Validate() error {
 	if len(s.OnRollback) > 0 && len(s.Transaction) == 0 {
 		return fmt.Errorf("Step %s: on_rollback requires transaction: on the same step", s.Name)
 	}
+	if len(s.Transaction) > 0 && len(s.Try) > 0 {
+		return fmt.Errorf("Step %s: cannot combine transaction: with try: (nest one inside the other)", s.Name)
+	}
 	if len(s.Transaction) > 0 {
+		// Compound Step — no action discriminator required/allowed.
+		return nil
+	}
+
+	// spec-23 §2 try / catch / finally rules. A Step with Try is a
+	// compound node; it cannot also carry a leaf action. Catch /
+	// Finally without Try is invalid (orphan branches).
+	if len(s.Try) > 0 && s.countActions() > 0 {
+		return fmt.Errorf("Step %s: cannot combine try: with an action field", s.Name)
+	}
+	if len(s.Try) == 0 && (len(s.Catch) > 0 || len(s.Finally) > 0) {
+		return fmt.Errorf("Step %s: catch:/finally: requires try: on the same step", s.Name)
+	}
+	if len(s.Try) > 0 {
 		// Compound Step — no action discriminator required/allowed.
 		return nil
 	}
@@ -1481,6 +1528,11 @@ func (s *Step) Clone() *Step {
 		AllowIrreversible: s.AllowIrreversible,
 		TxnParent:         s.TxnParent,
 		TxnRole:           s.TxnRole,
+		Try:               append([]Step(nil), s.Try...),
+		Catch:             append([]Step(nil), s.Catch...),
+		Finally:           append([]Step(nil), s.Finally...),
+		TryParent:         s.TryParent,
+		TryRole:           s.TryRole,
 		ID:               s.ID,
 		ActionType:       s.ActionType,
 		Origin:           s.Origin,

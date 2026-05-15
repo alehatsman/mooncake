@@ -150,6 +150,12 @@ type StepStartedData struct {
 	// (spec-23 §1). Carries the parent step's ID so consumers can render
 	// parent→child relationships in logs / UIs / replays.
 	TriggeredBy string `json:"triggered_by,omitempty"`
+	// TryParent / TryRole are set on steps expanded from a try-block
+	// branch (spec-23 §2). TryParent is the compound parent's step ID;
+	// TryRole is one of "try", "catch", "finally". Consumers can render
+	// the compound shape and attribute outcomes back to the wrapper.
+	TryParent string `json:"try_parent,omitempty"`
+	TryRole   string `json:"try_role,omitempty"`
 }
 
 // StepCompletedData contains data for step.completed events
@@ -166,6 +172,9 @@ type StepCompletedData struct {
 	// completed events lets log-only consumers attribute changes back to
 	// the triggering parent without holding state across event types.
 	TriggeredBy string `json:"triggered_by,omitempty"`
+	// TryParent / TryRole mirror StepStartedData (spec-23 §2).
+	TryParent string `json:"try_parent,omitempty"`
+	TryRole   string `json:"try_role,omitempty"`
 }
 
 // StepSkippedData contains data for step.skipped events
@@ -179,6 +188,11 @@ type StepSkippedData struct {
 	// for the "parent didn't change → skipped" path: the consumer sees
 	// both the reason string and the structured parent reference.
 	TriggeredBy string `json:"triggered_by,omitempty"`
+	// TryParent / TryRole mirror StepStartedData (spec-23 §2). Most
+	// useful here for "try-block already failed" / "try succeeded
+	// (catch skipped)" paths.
+	TryParent string `json:"try_parent,omitempty"`
+	TryRole   string `json:"try_role,omitempty"`
 }
 
 // StepFailedData contains data for step.failed events

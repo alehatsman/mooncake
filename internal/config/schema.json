@@ -1630,6 +1630,13 @@
           "description": "Verify conditions without changing system state",
           "$ref": "#/definitions/assert"
         },
+        "catch": {
+          "type": "array",
+          "description": "Steps that run when any try child errors. Requires try: on the same step (spec-23 §2)",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
         "changed_when": {
           "type": "string",
           "description": "Expression to override changed result"
@@ -1682,6 +1689,13 @@
         "file.write": {
           "description": "Manage files, directories, links, and permissions",
           "$ref": "#/definitions/file.write"
+        },
+        "finally": {
+          "type": "array",
+          "description": "Steps that always run after try (and catch, if it ran). Requires try: on the same step (spec-23 §2)",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
         },
         "for_each": {
           "type": "string",
@@ -1872,6 +1886,21 @@
         "triggered_by": {
           "type": "string",
           "description": "(plan metadata) Parent step ID when expanded from an on_change child"
+        },
+        "try": {
+          "type": "array",
+          "description": "Sequence of steps run with structured error recovery; on first failure runs catch (if set) then finally (spec-23 §2)",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
+        "try_parent": {
+          "type": "string",
+          "description": "(plan metadata) Parent compound step ID when expanded from a try/catch/finally branch"
+        },
+        "try_role": {
+          "type": "string",
+          "description": "(plan metadata) Role of this step inside its parent compound: 'try', 'catch', or 'finally'"
         },
         "txn_parent": {
           "type": "string",
@@ -2160,6 +2189,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -2420,6 +2454,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -2688,6 +2727,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -2948,6 +2992,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -3216,6 +3265,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -3476,6 +3530,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -3744,6 +3803,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -4004,6 +4068,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -4272,6 +4341,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -4532,6 +4606,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -4800,6 +4879,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -5060,6 +5144,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -5328,6 +5417,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -5588,6 +5682,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -5856,6 +5955,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -6116,6 +6220,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -6384,6 +6493,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -6644,6 +6758,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -6912,6 +7031,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -7172,6 +7296,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -7440,6 +7569,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -7700,6 +7834,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -7968,6 +8107,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -8228,6 +8372,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -8496,6 +8645,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -8756,6 +8910,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -9024,6 +9183,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -9284,6 +9448,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -9552,6 +9721,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -9812,6 +9986,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -10080,6 +10259,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -10344,6 +10528,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -10604,6 +10793,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -10879,6 +11073,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -11139,6 +11338,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -11407,6 +11611,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -11667,6 +11876,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -11935,6 +12149,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -12195,6 +12414,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -12463,6 +12687,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -12723,6 +12952,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -12991,6 +13225,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -13255,6 +13494,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -13513,6 +13757,278 @@
               {
                 "required": [
                   "tool"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "try"
+          ],
+          "properties": {
+            "try": {}
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
                 ]
               },
               {
@@ -13793,6 +14309,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "vars"
                 ]
               },
@@ -14053,6 +14574,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -14321,6 +14847,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -14581,6 +15112,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {
@@ -14849,6 +15385,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -15113,6 +15654,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -15373,6 +15919,11 @@
               {
                 "required": [
                   "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
                 ]
               },
               {

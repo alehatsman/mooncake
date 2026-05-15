@@ -291,6 +291,15 @@ func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan
 		return p.expandTransaction(step, ctx, plan, stepIndex)
 	}
 
+	// spec-23 §2: Try / Catch / Finally compound step. Parent emits a
+	// no-action plan entry carrying the branches; each child expands
+	// as a sibling tagged with TryParent + TryRole. Executor uses the
+	// tags to gate execution (try/catch skip logic) and run finally
+	// after a try failure (see executor/trycatch.go and ExecuteSteps).
+	if len(step.Try) > 0 {
+		return p.expandTry(step, ctx, plan, stepIndex)
+	}
+
 	// Handle include directives
 	if step.Import != nil {
 		return p.expandInclude(step, ctx, plan, stepIndex)

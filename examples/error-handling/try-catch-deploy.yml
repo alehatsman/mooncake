@@ -1,0 +1,58 @@
+# Demonstrates spec-23 §2 try / catch / finally — user-authored
+# error recovery. Distinct from spec-30 transaction:, which is
+# ABI-automated rollback.
+#
+# What happens on apply:
+#
+#   ✓ deploy: write config        (try child 1)
+#   ✗ deploy: write seed          (try child 2 — fails on ENOTDIR)
+#   ⏭ deploy: write app           (try child 3 — skipped, prior try failed)
+#   ✓ deploy: log failure         (catch ran because try failed)
+#   ✓ deploy: write marker        (finally always runs)
+#   exit 1
+#
+# After the run:
+#   - /tmp/mc-try-config → present (the first try child wrote it)
+#   - /tmp/mc-try-seed   → never created (write failed)
+#   - /tmp/mc-try-app    → never created (try child after failure
+#                          skips — that's the structured-error point)
+#   - /tmp/mc-try-marker → present (finally writes its marker)
+#
+# Compare to spec-30 transactions: the first try child's file is NOT
+# reverted. try/catch/finally is user-authored cleanup, not automatic
+# rollback. If you want the first write undone, wrap the body in a
+# transaction: instead and rely on Reverse().
+
+version: "1.0"
+
+steps:
+  - name: deploy app
+    try:
+      - name: write config
+        file.write:
+          path: /tmp/mc-try-config
+          content: |
+            APP_ENV=staging
+            APP_PORT=8080
+
+      - name: write seed
+        file.write:
+          path: /dev/null/cannot-exist-here
+          content: this-write-will-fail
+
+      - name: write app
+        file.write:
+          path: /tmp/mc-try-app
+          content: this-step-is-skipped-because-prior-try-failed
+
+    catch:
+      - name: log failure
+        log: "deploy failed during try; catch is running cleanup"
+
+    finally:
+      - name: write marker
+        file.write:
+          path: /tmp/mc-try-marker
+          content: |
+            deploy finished — outcome is in the run log.
+            (finally always runs, regardless of try success)
