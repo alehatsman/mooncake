@@ -242,6 +242,22 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("--capture-full-output requires --artifacts-dir (the captured logs need a directory to land in)")
 	}
 
+	// MT-86: --max-output-bytes / --max-output-lines only affect the
+	// artifact bundle (stdout.log / stderr.log). Without --artifacts-dir
+	// they're silently ignored — and the truncation never reaches the
+	// step.completed JSON either. Same shape as MT-76: hard-error when
+	// the user explicitly sets either flag without the partner.
+	// c.IsSet skips the case where the default-valued flag is silently
+	// in scope; we only complain about a user-supplied override.
+	if c.String("artifacts-dir") == "" {
+		if c.IsSet("max-output-bytes") {
+			return fmt.Errorf("--max-output-bytes requires --artifacts-dir (the truncation limit only applies to the artifact bundle's stdout.log/stderr.log)")
+		}
+		if c.IsSet("max-output-lines") {
+			return fmt.Errorf("--max-output-lines requires --artifacts-dir (the truncation limit only applies to the artifact bundle's stdout.log/stderr.log)")
+		}
+	}
+
 	// --dry-run short-circuits to the plan path. Sugar over `mooncake plan`.
 	if c.Bool("dry-run") {
 		if c.String("from-plan") != "" {
