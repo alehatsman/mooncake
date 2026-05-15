@@ -459,6 +459,54 @@ with `toml: cannot store a table in a slice` — see #78 below.)
 
 ---
 
+## ★ `mooncake fleet doctor <peer>` — probe ladder UX
+
+```
+$ mooncake fleet doctor local
+local → 127.0.0.1:7878
+✓ resolve 127.0.0.1 (literal)
+✓ tcp     connected in 104µs
+✓ http    HTTP 401 (auth required — expected)
+✓ auth    HTTP 200 mooncake=dev uptime=1s
+✓ facts   HTTP 200 os=linux arch=amd64
+
+→ healthy
+```
+
+This is the right shape for diagnosing peer connectivity:
+- DNS resolve / TCP connect / HTTP / auth / facts probe, one line each
+- Each rung shows a tiny success signal (latency, status code, version)
+- The "401 auth required — expected" line teaches users that an
+  unauthenticated probe SHOULD 401 (not a failure)
+- Trailing `→ healthy` summary
+
+Port this template to `mooncake doctor` and `mooncake fleet status`.
+
+---
+
+## ★ `mooncake fleet ps / logs / facts <peer>` — all work as expected
+
+```
+$ mooncake fleet ps
+no in-flight runs (1 peer(s) accessible, 0 unreachable)
+
+$ mooncake fleet logs local
+fleet logs: 1 peer(s)
+[local] attached to run 01KRPJCV12M1WXJNGSD8HMDQHA
+[local]   ▸ fleet-exec
+[local]       done                   ← stdout from remote
+[local]     ✔ fleet-exec
+[local] ✔ run complete success: 1/1 changed, 0 failed, 0 skipped (1604ms)
+
+$ mooncake fleet facts local
+{ "apk_available": false, "apt_available": true, ... }
+```
+
+ULID run IDs, `[peer]` line prefixes, JSON facts dump. The
+local-fleet-of-one is fully exercised. Keep.
+
+---
+
 ## ★ `mooncake fleet` actionable error messages
 
 Without peers configured:
