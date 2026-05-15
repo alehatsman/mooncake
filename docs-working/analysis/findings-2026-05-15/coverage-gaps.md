@@ -320,6 +320,22 @@ removed (still exists).
 **Fix**: correct the template field path, add a unit test for the
 container-inspect parsing.
 
+**Update**: this bug is broader than `state: absent`. Any second
+invocation of `container:` against an existing container hits the
+template error because the idempotency check calls `docker container
+inspect` to compare desired-vs-actual state. Repro:
+```
+$ mooncake step "container: { name: mc, image: alpine:3.21, command: [sleep,30], state: running }"
+{"changed": true}     ← first run, no inspect needed
+$ mooncake step "container: { name: mc, image: alpine:3.21, command: [sleep,30], state: running }"
+{"changed": false, "error": "template: :1:20: at <.ImageName>: map has no entry for key \"ImageName\""}
+```
+
+So `container:` is **effectively single-use** today. Any second
+apply (the entire point of an idempotent config-mgmt tool) fails the
+inspect path. Bumping severity in my own head from MEDIUM → HIGH but
+keeping the number at #64 since the fix is the same one.
+
 ---
 
 ## #52 — `git.*` family has inconsistent path parameter names — LOW (DX surprise)
