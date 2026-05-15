@@ -25,17 +25,17 @@ See **[non-goals.md](./non-goals.md)** for the seven things Mooncake will not be
 22 extended-handler-abi (phase 8 docs remains) · 24 pkg-surface (P6 ABI hooks) ·
 25 text-surface (P5 ABI hooks) · 26 git-actions (ABI hooks) · 27 os-identity (ABI hooks) ·
 28 os-scheduling (non-ufw drivers, deferred) · 32 step-action-dispatch ·
-36 windows-support · **59 typed-observability** seed (`observe.{port,process,http,service}`) ·
+36 windows-support · **59 typed-observability seed ✅** (`observe.{port,process,http,service}` shipped) ·
 60 observe-system-resources (cpu/memory/disk) · 61 observe-logs ·
 62 observe-gpu · 63 observe-streaming (deferral spec) ·
 disk-partition-action (exploration)
 
 Phases 1–7 of spec-22 are complete (four-method ABI declared + MCP wiring landed).
 Remaining: phase 8 docs, plus final ABI-hook phases for 24–27.
-**Spec-59 is the highest-leverage unbuilt strategic bet** — typed observation
-as the read-side mirror of spec-22's typed mutation; substrate for spec-58 drift,
-`fleet explain`, and the agent loop. See [`analysis/issue-8-changegraph-analysis.md`](./analysis/issue-8-changegraph-analysis.md) §7.
-Specs 60–63 are observability extensions that depend on spec-59 landing first.
+**Spec-59 seed landed** (`27d61a7` / `b26acbf`) — typed observation is now the
+read-side mirror of spec-22's typed mutation. Phases 4 (docs page) + 5
+(--inspect-real CLI flag) remain. Specs 60–63 (observability extensions) and
+spec-64 (cross-peer `fleet observe`) are now unblocked.
 
 **Stream 2 — Safe Agent Runtime**
 

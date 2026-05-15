@@ -1,6 +1,17 @@
 # Spec 59: Typed Observability — `observe.*` Action Family
 
-**Status:** Draft
+**Status:** 🟢 **Seed shipped.** Phases 1–3 complete — all four seed
+handlers landed (`observe.port` `27d61a7`, `observe.process` /
+`observe.service` / `observe.http` `b26acbf`). The shared
+`actions.ObserveResult` envelope + `ObserveValueToMap` /
+`PlanDeferred` helpers are in place for spec-60+ to reuse. The agent
+loop (observe → reason → act) closes end-to-end via spec-37 `as:`
+capture + `when:` branching, exercised by
+`examples/observability/check-port.yml` and
+`examples/observability/check-app-health.yml`. Phases 4
+(cross-handler composition tests beyond the example), 5
+(`docs-next/guide/observability.md`), and 6 (`--inspect-real`
+plan-mode opt-in) remain.
 **Epic:** E9 Modern Action Surface — bucket E9.4
 **Effort:** M (4 seed handlers, ~2–3 weeks)
 **Value:** **Highest unbuilt strategic bet.** Mutation has a typed ABI
