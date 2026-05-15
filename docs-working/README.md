@@ -69,6 +69,7 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 - [Cross-device EXDEV in `fleet upgrade` linux replace](analysis/bug-fleet-upgrade-exdev-rename.md) — `os.Rename` from `/var/lib/.../upgrade/` to `/usr/local/bin/` fails on WSL / multi-fs hosts. Fall back to copy+remove on EXDEV.
 - [`windows.firewall_rule` corrupts non-ASCII via ConvertTo-Json](analysis/bug-windows-firewall-utf8-encoding.md) — PowerShell's default OEM codepage maps non-ASCII bytes to `0x1a` on stdout, breaking the action's drift-detection query. Force UTF-8 output in `realPSRun`.
 - [`windows.scheduled_task` drift detection unstable](analysis/bug-scheduled-task-drift-unstable.md) — Task Scheduler injects schema-defaulted elements on register that `NormaliseTaskXML` doesn't strip; plan always reports "would update" even after a clean apply. Cosmetic but breaks the "plan after apply is empty" invariant.
+- [`fleet apply` fails on non-regular files in plan-dir](analysis/bug-fleet-apply-plan-dir-walk.md) — Plan-dir sync refuses to walk past a socket / FIFO; running `fleet apply /tmp/x.yml` chokes on `/tmp/.X11-unix/X0`. Skip non-regular files in the walker; warn (don't fail) when --plan-dir is a shared scratch dir.
 
 ## Shipped specs (specs/done/)
 
