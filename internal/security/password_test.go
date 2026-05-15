@@ -3,6 +3,7 @@ package security
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -10,6 +11,33 @@ func TestInteractivePasswordProvider_Source(t *testing.T) {
 	provider := &InteractivePasswordProvider{}
 	if provider.Source() != "interactive" {
 		t.Errorf("Expected source 'interactive', got '%s'", provider.Source())
+	}
+}
+
+// MT-85: when stdin isn't a TTY (CI, piped input, redirected),
+// --ask-become-pass should fail with a helpful message naming the
+// alternatives — not the raw "inappropriate ioctl for device" leak
+// from term.ReadPassword.
+//
+// `go test` runs with stdin not connected to a TTY, so calling
+// GetPassword in this environment exercises the non-TTY branch
+// directly.
+func TestInteractivePasswordProvider_NonTTYErrorIsActionable(t *testing.T) {
+	provider := &InteractivePasswordProvider{}
+	_, err := provider.GetPassword()
+	if err == nil {
+		t.Fatal("expected error when stdin is not a TTY")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "interactive terminal") {
+		t.Errorf("error should mention interactive terminal; got: %s", msg)
+	}
+	if !strings.Contains(msg, "--sudo-pass-file") {
+		t.Errorf("error should redirect to --sudo-pass-file; got: %s", msg)
+	}
+	// Original repro shape MUST NOT come through — that's the bug.
+	if strings.Contains(msg, "ioctl") {
+		t.Errorf("error regressed to raw ioctl message: %s", msg)
 	}
 }
 
