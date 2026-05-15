@@ -1797,13 +1797,26 @@ func TestRunCommandOutputFormatValidation(t *testing.T) {
 
 	// Verify run command has output-format flag
 	hasOutputFormat := false
+	hasFormatAlias := false
 	for _, flag := range runCmd.Flags {
 		if f, ok := flag.(*cli.StringFlag); ok && f.Name == "output-format" {
 			hasOutputFormat = true
 			if f.Value != "text" {
 				t.Errorf("output-format default should be 'text', got %q", f.Value)
 			}
+			// MT-68: `--format` is an alias for `--output-format` on
+			// apply, matching every other subcommand. Without this
+			// users typing `mooncake apply --format json` (the
+			// universal pattern) hit "flag provided but not defined".
+			for _, a := range f.Aliases {
+				if a == "format" {
+					hasFormatAlias = true
+				}
+			}
 		}
+	}
+	if !hasFormatAlias {
+		t.Error("MT-68: apply --output-format should expose --format as an alias")
 	}
 
 	if !hasOutputFormat {

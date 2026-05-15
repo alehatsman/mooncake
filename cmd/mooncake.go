@@ -198,7 +198,12 @@ func applyFlags() []cli.Flag {
 			Value: false,
 			Usage: "Use the animated TUI subscriber (default: raw console output)",
 		},
-		&cli.StringFlag{Name: "output-format", Value: "text", Usage: "Output format: text or json (json requires not using --tui)"},
+		&cli.StringFlag{
+			Name:    "output-format",
+			Aliases: []string{"format"}, // MT-68: every other command uses --format; accept the shorter name here too
+			Value:   "text",
+			Usage:   "Output format: text or json (json requires not using --tui)",
+		},
 		&cli.StringFlag{Name: "artifacts-dir", Value: "", Usage: "Directory to store run artifacts (e.g., .mooncake)"},
 		&cli.BoolFlag{Name: "capture-full-output", Value: false, Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)"},
 		&cli.IntFlag{Name: "max-output-bytes", Value: defaultMaxOutputBytes, Usage: "Max bytes of step output captured to the artifacts bundle (stdout.log/stderr.log)"},
