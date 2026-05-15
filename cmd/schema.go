@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -74,6 +75,16 @@ Examples:
 						Aliases:  []string{"s"},
 						Required: true,
 						Usage:    "Schema file to validate",
+					},
+					&cli.BoolFlag{
+						Name:  "strict",
+						Value: true,
+						Usage: "Validate against the strict-mode schema (must match the --strict setting used at generate time)",
+					},
+					&cli.BoolFlag{
+						Name:  "extensions",
+						Value: true,
+						Usage: "Validate against the schema that includes x- extensions (must match the --extensions setting used at generate time)",
 					},
 				},
 				Action: validateSchemaAction,
@@ -201,11 +212,17 @@ func validateSchemaAction(c *cli.Context) error {
 		return fmt.Errorf("failed to read schema file: %w", err)
 	}
 
-	// Generate current schema
+	// Issue #28: mirror `schema generate`'s defaults — both `--strict`
+	// and `--extensions` default to true there. Earlier this hardcoded
+	// {Strict:false, Extensions:true}, producing a schema that never
+	// matched the just-written file (which was generated with strict
+	// validation enabled by default). The two flags are now also
+	// available on `validate` so anyone who generated with a non-default
+	// setting can validate with the same setting.
 	opts := schemagen.GeneratorOptions{
-		IncludeExtensions: true,
+		IncludeExtensions: c.Bool("extensions"),
 		IncludeExamples:   false,
-		StrictValidation:  false,
+		StrictValidation:  c.Bool("strict"),
 		OutputFormat:      "json",
 	}
 	generator := schemagen.NewGenerator(opts)
@@ -214,14 +231,19 @@ func validateSchemaAction(c *cli.Context) error {
 		return fmt.Errorf("failed to generate current schema: %w", err)
 	}
 
-	// Marshal current schema
-	currentData, err := currentSchema.MarshalJSON()
-	if err != nil {
-		return fmt.Errorf("failed to marshal current schema: %w", err)
+	// Serialise via the same writer that `schema generate` uses so the
+	// byte-compare lines up. Issue #28: previously this called
+	// Schema.MarshalJSON() (compact, HTML-escaped) while `generate`
+	// emits indented 2-space JSON with HTML escaping off — so the
+	// just-saved file never byte-matched and validate always reported
+	// out-of-date.
+	var buf bytes.Buffer
+	if err := schemagen.NewWriter("json").Write(currentSchema, &buf); err != nil {
+		return fmt.Errorf("failed to render current schema: %w", err)
 	}
+	currentData := buf.Bytes()
 
-	// Compare schemas (simple byte comparison for now)
-	if string(schemaData) == string(currentData) {
+	if bytes.Equal(schemaData, currentData) {
 		fmt.Println("✓ Schema is up to date")
 		return nil
 	}
