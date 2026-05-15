@@ -429,3 +429,132 @@ func (c *Client) httpErr(op string, status int, body []byte) error {
 func (c *Client) wrap(op string, err error) error {
 	return fmt.Errorf("peer %s: %s: %w", c.Name, op, err)
 }
+
+// UploadBinaryResponse mirrors the daemon's 202 JSON from
+// PUT /v1/self/binary.
+type UploadBinaryResponse struct {
+	StagedPath string `json:"staged_path"`
+	SHA256     string `json:"sha256"`
+}
+
+// UploadBinary streams a candidate replacement binary to the peer and
+// returns the staged-file metadata. The daemon hashes the body, refuses
+// on sha/os/arch mismatch, and runs `<staged> --version` before
+// confirming. binSHA256 must be the hex-encoded sha256 of the bytes at
+// binPath; the daemon verifies it, so a mismatch is caller-side
+// corruption.
+//
+// targetOS / targetArch tell the daemon what flavour of binary the
+// controller built — typically `runtime.GOOS` / `runtime.GOARCH` of the
+// peer, learned via GetVersion. The daemon rejects with HTTP 400 when
+// either disagrees with its own runtime values.
+func (c *Client) UploadBinary(ctx context.Context, binPath, binSHA256, targetOS, targetArch string) (*UploadBinaryResponse, error) {
+	if binSHA256 == "" {
+		return nil, errors.New("UploadBinary: sha256 is required")
+	}
+	if targetOS == "" || targetArch == "" {
+		return nil, errors.New("UploadBinary: targetOS and targetArch are required")
+	}
+
+	// Uploads can be slow on a busy LAN. Bump the per-request deadline
+	// for this one call so a 25 MiB push over WiFi doesn't trip the
+	// default 30s cap.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	f, err := os.Open(binPath)
+	if err != nil {
+		return nil, c.wrap("PUT /v1/self/binary: open "+binPath, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	info, err := f.Stat()
+	if err != nil {
+		return nil, c.wrap("PUT /v1/self/binary: stat", err)
+	}
+
+	req, err := c.authReq(ctx, http.MethodPut, c.BaseURL+"/v1/self/binary", f)
+	if err != nil {
+		return nil, err
+	}
+	req.ContentLength = info.Size()
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("X-Mooncake-Binary-SHA256", binSHA256)
+	req.Header.Set("X-Mooncake-Binary-OS", targetOS)
+	req.Header.Set("X-Mooncake-Binary-Arch", targetArch)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("PUT /v1/self/binary", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("PUT /v1/self/binary: read body", err)
+	}
+	if resp.StatusCode != http.StatusAccepted {
+		return nil, c.httpErr("PUT /v1/self/binary", resp.StatusCode, body)
+	}
+	var out UploadBinaryResponse
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, c.wrap("PUT /v1/self/binary: decode", err)
+	}
+	return &out, nil
+}
+
+// SelfReplaceResponse mirrors the daemon's 202 JSON from
+// POST /v1/self/replace.
+type SelfReplaceResponse struct {
+	OldPID     int    `json:"old_pid"`
+	OldVersion string `json:"old_version"`
+	NewVersion string `json:"new_version"`
+}
+
+// SelfReplace tells the peer to swap its on-disk binary with the
+// previously-uploaded staged file and re-exec. The HTTP response
+// returns BEFORE the actual exec — the caller is expected to poll
+// /v1/version afterwards and confirm `daemon_pid` changed. `force` lets
+// the operator override the daemon's "runs in flight" guard.
+func (c *Client) SelfReplace(ctx context.Context, stagedPath, sha256 string, force bool) (*SelfReplaceResponse, error) {
+	if stagedPath == "" || sha256 == "" {
+		return nil, errors.New("SelfReplace: stagedPath and sha256 are required")
+	}
+
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+
+	body, err := json.Marshal(struct {
+		StagedPath string `json:"staged_path"`
+		SHA256     string `json:"sha256"`
+		Force      bool   `json:"force,omitempty"`
+	}{stagedPath, sha256, force})
+	if err != nil {
+		return nil, c.wrap("POST /v1/self/replace: marshal", err)
+	}
+
+	req, err := c.authReq(ctx, http.MethodPost, c.BaseURL+"/v1/self/replace", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("POST /v1/self/replace", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	respBody, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("POST /v1/self/replace: read body", err)
+	}
+	if resp.StatusCode != http.StatusAccepted {
+		return nil, c.httpErr("POST /v1/self/replace", resp.StatusCode, respBody)
+	}
+	var out SelfReplaceResponse
+	if err := json.Unmarshal(respBody, &out); err != nil {
+		return nil, c.wrap("POST /v1/self/replace: decode", err)
+	}
+	return &out, nil
+}
