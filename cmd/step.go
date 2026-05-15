@@ -20,13 +20,31 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type stepResult struct {
-	Changed    bool   `json:"changed"`
-	Action     string `json:"action"`
-	Stdout     string `json:"stdout,omitempty"`
-	Stderr     string `json:"stderr,omitempty"`
-	Error      string `json:"error,omitempty"`
-	DurationMs int64  `json:"duration_ms"`
+// buildStepJSON assembles the JSON payload for `mooncake step`. Mirrors
+// the shape `apply --output-format json` exposes under `result.*`: the
+// shared scalar fields (stdout / stderr / changed / …) plus every
+// action-specific key the handler called SetData() with. MT-22: prior to
+// this generalization the output was a hard-coded subset (changed,
+// action, stdout, stderr, error, duration_ms), which silently dropped
+// typed actions' payloads — `repo.search` results, `read.json` value,
+// etc. — and made `step` useless for agents that need the structured
+// output, while shell still worked by accident because stdout is in the
+// subset.
+func buildStepJSON(actionType string, result *executor.Result, execErr error) map[string]any {
+	var payload map[string]any
+	if result != nil {
+		// RegisteredResult.ToMap is the canonical surface — same shape
+		// `apply --output-format json` ships in run records and the
+		// same shape templates see via `{{ result.foo }}`.
+		payload = result.ToRegisteredResult().ToMap()
+	} else {
+		payload = map[string]any{}
+	}
+	payload["action"] = actionType
+	if execErr != nil {
+		payload["error"] = execErr.Error()
+	}
+	return payload
 }
 
 func stepCommand() *cli.Command {
@@ -108,22 +126,18 @@ func stepCommand() *cli.Command {
 			execErr := executor.DispatchStepAction(step, ec)
 			durationMs := time.Since(start).Milliseconds()
 
-			res := stepResult{
-				Action:     actionType,
-				DurationMs: durationMs,
-			}
-			if ec.CurrentResult != nil {
-				res.Changed = ec.CurrentResult.Changed
-				res.Stdout = ec.CurrentResult.Stdout
-				res.Stderr = ec.CurrentResult.Stderr
-			}
-			if execErr != nil {
-				res.Error = execErr.Error()
-			}
+			payload := buildStepJSON(actionType, ec.CurrentResult, execErr)
+			// duration_ms in the registered-result map is sourced from
+			// Result.Duration which the dispatcher does not always set
+			// (the per-action handlers fill it for shell, but not all
+			// typed actions). Use the controller-side wall clock so the
+			// field is always present and meaningful, matching what
+			// `apply --output-format json` does at the run level.
+			payload["duration_ms"] = durationMs
 
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
-			_ = enc.Encode(res)
+			_ = enc.Encode(payload)
 
 			if execErr != nil {
 				os.Exit(1)
