@@ -43,6 +43,19 @@ the MCP `run_plan` tool.
 were registered. Validator allowlist should be auto-generated from
 the registry.
 
+**Update (round 19)**: ✅ FIXED. `mooncake validate` now reports:
+```
+Line 1: unknown field `nothere` (likely a typo or a renamed field
+  — see docs-next/guide/config/actions.md)
+Line 1: Step must have exactly one action (artifact.capture, ...,
+  62 action names listed including read.json, text.patch.json,
+  git.*, os.*, container, container.image, tool, transaction, try,
+  windows.firewall_rule, windows.scheduled_task)
+```
+
+Vocabulary now matches `mooncake actions list`. The "renamed field"
+hint pointing at the docs is a nice DX touch.
+
 ---
 
 ## #35 — `mooncake schema generate` produces the registry-complete schema (closes #27)

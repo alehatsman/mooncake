@@ -279,6 +279,54 @@ should accept `--format json` to forward that response verbatim.
 
 ---
 
+## #68 — `validate --format` vs `apply --output-format` — naming inconsistency — LOW (DX)
+
+**Repro**:
+```
+$ mooncake apply --output-format json     # works
+$ mooncake validate --output-format json
+Incorrect Usage: flag provided but not defined: -output-format
+
+$ mooncake validate --format json          # works
+```
+
+Same concept (output format), different flag name across commands.
+`metrics`, `snapshot`, `history list`, `plan`, `presets list`,
+`schema generate`, `validate` all use `--format`. Only `apply` (and
+`runs apply`) uses `--output-format`.
+
+**Fix**: standardize on `--format` everywhere; alias `--output-format`
+on `apply` for back-compat.
+
+---
+
+## #69 — `validate --format json` uses PascalCase field names — LOW (style)
+
+**Repro**:
+```
+$ mooncake validate -c bad.yml --format json
+{
+  "valid": false,
+  "diagnostics": [
+    {
+      "FilePath": "/work/bad.yml",       ← PascalCase
+      "Line": 1,                         ← PascalCase
+      "Column": 1,
+      "Message": "...",
+      "Severity": "error"
+    }
+  ]
+}
+```
+
+Every other JSON surface (`apply --output-format json`, `metrics
+--format json`, `step` result, MCP responses) uses snake_case
+(`step_id`, `duration_ms`, `as_of`). validate is the outlier.
+
+**Fix**: emit `file_path`, `line`, `column`, `message`, `severity`.
+
+---
+
 ## #65 — `--max-plan-age` boundary is inclusive (rejects at exactly N) — LOW
 
 **Repro**:
