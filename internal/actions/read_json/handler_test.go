@@ -127,6 +127,70 @@ func TestRun_WholeDocument(t *testing.T) {
 	}
 }
 
+// MT-79: integer JSON literals must round-trip as int64 (not
+// float64), matching read.yaml's preservation of int vs float. Before
+// the fix, `{"port": 8080}` came back as 8080.0 in templates —
+// "--port 8080.000000" in command strings.
+func TestRun_IntegerLiteralsStayInt64(t *testing.T) {
+	dir := t.TempDir()
+	p := writeFile(t, dir, "ints.json", `{"port":8080,"workers":4,"rate":0.5,"big":2147483648,"neg":-7}`)
+
+	ctx := newExecCtx(t, dir, actions.ModeApply)
+	res, err := runRead(t, ctx, &config.ReadFile{Path: p})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	val := res.Data["value"].(map[string]any)
+
+	if got, ok := val["port"].(int64); !ok || got != 8080 {
+		t.Errorf("port: want int64(8080), got %T %v", val["port"], val["port"])
+	}
+	if got, ok := val["workers"].(int64); !ok || got != 4 {
+		t.Errorf("workers: want int64(4), got %T %v", val["workers"], val["workers"])
+	}
+	if got, ok := val["rate"].(float64); !ok || got != 0.5 {
+		t.Errorf("rate: want float64(0.5), got %T %v", val["rate"], val["rate"])
+	}
+	if got, ok := val["big"].(int64); !ok || got != 2147483648 {
+		t.Errorf("big: want int64(2147483648), got %T %v", val["big"], val["big"])
+	}
+	if got, ok := val["neg"].(int64); !ok || got != -7 {
+		t.Errorf("neg: want int64(-7), got %T %v", val["neg"], val["neg"])
+	}
+}
+
+// MT-79: nested structures (maps in slices, slices in maps) must
+// also walk for json.Number conversion. The recursive normalizer
+// touches every numeric leaf, not just top-level ones.
+func TestRun_IntegerLiteralsInNestedStructures(t *testing.T) {
+	dir := t.TempDir()
+	p := writeFile(t, dir, "nested.json", `{
+		"pkg": {"name": "jq", "deps": [{"name": "oniguruma", "version_major": 6}]},
+		"counts": [1, 2, 3]
+	}`)
+
+	ctx := newExecCtx(t, dir, actions.ModeApply)
+	res, err := runRead(t, ctx, &config.ReadFile{Path: p})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	val := res.Data["value"].(map[string]any)
+
+	pkg := val["pkg"].(map[string]any)
+	deps := pkg["deps"].([]any)
+	dep0 := deps[0].(map[string]any)
+	if got, ok := dep0["version_major"].(int64); !ok || got != 6 {
+		t.Errorf("dep0.version_major: want int64(6), got %T %v", dep0["version_major"], dep0["version_major"])
+	}
+
+	counts := val["counts"].([]any)
+	for i, want := range []int64{1, 2, 3} {
+		if got, ok := counts[i].(int64); !ok || got != want {
+			t.Errorf("counts[%d]: want int64(%d), got %T %v", i, want, counts[i], counts[i])
+		}
+	}
+}
+
 func TestRun_QueryHits(t *testing.T) {
 	dir := t.TempDir()
 	p := writeFile(t, dir, "a.json", `{"tools":[{"name":"go"},{"name":"gopls"}]}`)
@@ -203,9 +267,10 @@ func TestRun_RedactPatternApplies(t *testing.T) {
 	if v["token"] != "[REDACTED]" {
 		t.Errorf("expected redacted token, got %v", v["token"])
 	}
-	// Non-string scalar untouched.
-	if v["port"].(float64) != 80 {
-		t.Errorf("expected port=80, got %v", v["port"])
+	// Non-string scalar untouched. MT-79: integer JSON literals come
+	// back as int64 (not float64) so templated values render cleanly.
+	if v["port"].(int64) != 80 {
+		t.Errorf("expected port=80 (int64), got %v (%T)", v["port"], v["port"])
 	}
 }
 
