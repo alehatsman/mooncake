@@ -454,6 +454,11 @@ func psQuote(s string) string {
 }
 
 func realPSRun(script string) (string, error) {
+	// Issue #13: prepend the UTF-8 output prelude so Export-ScheduledTask
+	// and any other cmdlet that emits non-ASCII data doesn't get
+	// re-encoded to the OEM codepage on the way out (which would corrupt
+	// to 0x1A and break the controller-side decode).
+	script = winutil.WithUTF8Output(script)
 	utf16le := utf16.Encode([]rune(script))
 	buf := bytes.Buffer{}
 	for _, r := range utf16le {
