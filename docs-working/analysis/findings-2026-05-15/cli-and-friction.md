@@ -232,3 +232,61 @@ help text.
 
 (The rest of the bundle is good — `stdout.log` is prefixed `[step-0001] line`
 which is exactly what the default-renderer is missing per #5. Worth promoting.)
+
+---
+
+## #55 — `mooncake runs apply` streams empty step names — LOW
+
+**Repro** (agentd running on 127.0.0.1:7878):
+```yaml
+# /tmp/r/cfg.yml — no name: on steps
+- log: { msg: "hi from daemon" }
+- file.write: { path: /tmp/from-daemon.txt, content: "yes" }
+```
+
+```
+$ mooncake runs apply -c /tmp/r/cfg.yml
+Run 01KRPEH07KHKNGN8KVT8F7M4DV submitted; streaming events...
+
+▶ 
+✓ 
+▶ 
+~ 
+
+RECAP  ok=2  changed=1
+```
+
+Step markers print but with empty names. Local `mooncake apply` on the
+same config also renders empty names, but at least falls back to the
+action name in some places. The runs-streaming channel should
+fall back to action name (`shell`, `log`, `file.write`) when `name:`
+is omitted, like the artifact `stdout.log` does (`[step-0001]`).
+
+(File lands correctly; this is purely rendering UX.)
+
+---
+
+## #56 — `mooncake runs list --format json` errors — LOW
+
+```
+$ mooncake runs list --format json
+flag provided but not defined: -format
+```
+
+Same gap as #38 (`presets list --format json`). The runs-list command
+on the daemon side returns JSON natively (`/v1/runs`); the CLI side
+should accept `--format json` to forward that response verbatim.
+
+---
+
+## #57 — `runs` subcommand error format inconsistent — LOW
+
+```
+$ mooncake runs submit /path/to/cfg
+No help topic for 'submit'
+```
+
+`submit` is a guess — the real subcommand is `apply`. But the CLI
+reports "No help topic" instead of "unknown subcommand: submit (try
+apply / follow / get / list)". The `gh` CLI style ("unknown command
+'submit', did you mean 'apply'?") would be a better template.
