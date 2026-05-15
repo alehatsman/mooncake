@@ -351,6 +351,19 @@ export interface LogAction {
 }
 
 /**
+ * Single-shot HTTP GET; returns typed status, latency, headers, body sample
+ * @category network
+ */
+export interface ObserveHttpAction {
+  capture_headers?: string[];
+  expect_status?: number;
+  method?: string;
+  skip_tls_verify?: boolean;
+  timeout?: string;
+  url: string;
+}
+
+/**
  * Single-shot read of TCP/UDP port state (open? listener? pid?)
  * @category network
  */
@@ -359,6 +372,24 @@ export interface ObservePortAction {
   port: number;
   protocol?: string;
   timeout?: string;
+}
+
+/**
+ * Single-shot read of process state (running? pid? args?)
+ * @category system
+ */
+export interface ObserveProcessAction {
+  name?: string;
+  pattern?: string;
+}
+
+/**
+ * Single-shot read of service state (active? enabled?)
+ * @category system
+ */
+export interface ObserveServiceAction {
+  manager?: string;
+  name: string;
 }
 
 /**
@@ -1222,9 +1253,22 @@ export interface Step {
    */
   log?: LogAction;
   /**
+   * Single-shot HTTP GET; returns typed status, latency, headers, body
+   * sample
+   */
+  "observe.http"?: ObserveHttpAction;
+  /**
    * Single-shot read of TCP/UDP port state (open? listener? pid?)
    */
   "observe.port"?: ObservePortAction;
+  /**
+   * Single-shot read of process state (running? pid? args?)
+   */
+  "observe.process"?: ObserveProcessAction;
+  /**
+   * Single-shot read of service state (active? enabled?)
+   */
+  "observe.service"?: ObserveServiceAction;
   /**
    * Manage a cron job via /etc/cron.d/<name>
    */
