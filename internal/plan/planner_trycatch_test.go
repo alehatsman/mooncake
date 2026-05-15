@@ -124,3 +124,82 @@ steps:
 		t.Errorf("child TryRole = %q, want 'try'", p.Steps[1].TryRole)
 	}
 }
+
+// TestPlanner_Try_RejectsNestedTry guards issue #67. A try: block
+// containing another try: in any branch (try / catch / finally) must
+// fail at plan time with a clear "not supported in v1" message and a
+// hint at continue_on_error: for the swallow-failure case. The
+// pre-fix behavior fell through to "no handler registered for action
+// type: unknown" — opaque, blamed the wrong layer.
+func TestPlanner_Try_RejectsNestedTry(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			"nested in try branch",
+			`version: "1.0"
+steps:
+  - try:
+      - try:
+          - log: { msg: inner }
+        catch:
+          - log: { msg: inner-catch }
+    catch:
+      - log: { msg: outer-catch }
+`,
+		},
+		{
+			"nested in catch branch",
+			`version: "1.0"
+steps:
+  - try:
+      - shell: { cmd: "exit 1" }
+    catch:
+      - try:
+          - log: { msg: nested-in-catch }
+`,
+		},
+		{
+			"nested in finally branch",
+			`version: "1.0"
+steps:
+  - try:
+      - log: { msg: body }
+    finally:
+      - try:
+          - log: { msg: nested-in-finally }
+`,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			cfg := filepath.Join(tmp, "nested.yml")
+			if err := os.WriteFile(cfg, []byte(c.body), 0o644); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			planner, _ := plan.NewPlanner()
+			_, err := planner.BuildPlan(plan.PlannerConfig{ConfigPath: cfg})
+			if err == nil {
+				t.Fatal("expected planner error for nested try; got nil")
+			}
+			msg := err.Error()
+			if !contains(msg, "nested try") {
+				t.Errorf("error should call out nested try; got %v", err)
+			}
+			if !contains(msg, "continue_on_error") {
+				t.Errorf("error should point at continue_on_error: for the swallow case; got %v", err)
+			}
+		})
+	}
+}
+
+func contains(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
