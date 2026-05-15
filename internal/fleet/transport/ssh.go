@@ -341,29 +341,40 @@ func (s *Session) openSFTP() error {
 	return nil
 }
 
-// DetectPlatform runs `uname -s` and `uname -m` on the remote and
-// normalizes the output to (os, arch) where os ∈ {linux, darwin} and arch
-// ∈ {amd64, arm64}. Returns a clear error for unsupported combinations so
-// the caller surfaces the gap rather than silently downloading the wrong
-// binary.
+// DetectPlatform runs an OS probe on the remote and normalises the
+// output to (os, arch) where os ∈ {linux, darwin, windows} and
+// arch ∈ {amd64, arm64}. Returns a clear error for unsupported
+// combinations so the caller surfaces the gap rather than silently
+// downloading the wrong binary.
+//
+// Strategy: try `uname -s && uname -m` first (Linux/macOS). If that
+// fails (non-zero exit OR an error trying to fork — Windows OpenSSH
+// with PowerShell as the default shell does not have a `uname`),
+// fall back to a PowerShell probe that emits the same two-line shape
+// using $PSVersionTable + $env:PROCESSOR_ARCHITECTURE.
 func (s *Session) DetectPlatform(ctx context.Context) (osName, arch string, err error) {
 	out, _, code, runErr := s.Run(ctx, "uname -s && uname -m")
-	if runErr != nil {
-		return "", "", fmt.Errorf("detect platform: %w", runErr)
+	if runErr == nil && code == 0 {
+		return parseUnameOutput(out)
 	}
-	if code != 0 {
-		return "", "", fmt.Errorf("detect platform: uname exited %d", code)
+	// uname failed — could be Windows (no uname) or a genuinely
+	// broken remote. Try the PowerShell probe; if it also fails,
+	// surface a combined error.
+	winOut, _, winCode, winErr := s.Run(ctx,
+		`powershell -NoProfile -Command "Write-Output 'Windows'; Write-Output $env:PROCESSOR_ARCHITECTURE"`)
+	if winErr != nil || winCode != 0 {
+		return "", "", fmt.Errorf("detect platform: uname failed (code=%d) and powershell probe failed (code=%d): %w",
+			code, winCode, runErr)
 	}
-	return parseUnameOutput(out)
+	return parseWindowsProbe(winOut)
 }
 
-// parseUnameOutput is the pure-function side of DetectPlatform. Exposed
-// as a package-private helper so tests can drive it without an SSH server.
+// parseUnameOutput is the pure-function side of DetectPlatform on
+// Unix-like remotes. Exposed as a package-private helper so tests can
+// drive it without an SSH server.
 //
 // Expected input: two lines — `uname -s` (kernel) followed by `uname -m`
-// (machine). Both case-insensitive on match; uname's casing is consistent
-// in practice (`Linux`/`Darwin`/`x86_64`/`arm64`/`aarch64`) but we don't
-// rely on it.
+// (machine). Both case-insensitive on match.
 func parseUnameOutput(out string) (osName, arch string, err error) {
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	if len(lines) < 2 {
@@ -378,7 +389,7 @@ func parseUnameOutput(out string) (osName, arch string, err error) {
 	case "darwin":
 		osName = "darwin"
 	default:
-		return "", "", fmt.Errorf("unsupported OS %q (only linux/darwin)", kernel)
+		return "", "", fmt.Errorf("unsupported OS %q (only linux/darwin/windows)", kernel)
 	}
 
 	switch machine {
@@ -390,6 +401,31 @@ func parseUnameOutput(out string) (osName, arch string, err error) {
 		return "", "", fmt.Errorf("unsupported arch %q (only amd64/arm64)", machine)
 	}
 	return osName, arch, nil
+}
+
+// parseWindowsProbe is the pure-function side of the PowerShell
+// fallback DetectPlatform takes when uname fails.
+//
+// Expected input: two lines — the literal "Windows" then the
+// $PROCESSOR_ARCHITECTURE value (AMD64 / ARM64 / X86 / IA64).
+func parseWindowsProbe(out string) (osName, arch string, err error) {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		return "", "", fmt.Errorf("windows probe: expected 2 lines, got %d: %q", len(lines), out)
+	}
+	kernel := strings.ToLower(strings.TrimSpace(lines[0]))
+	machine := strings.ToLower(strings.TrimSpace(lines[1]))
+	if kernel != "windows" {
+		return "", "", fmt.Errorf("windows probe: first line %q is not 'Windows'", kernel)
+	}
+	switch machine {
+	case "amd64", "x86_64":
+		return "windows", "amd64", nil
+	case "arm64", "aarch64":
+		return "windows", "arm64", nil
+	default:
+		return "", "", fmt.Errorf("windows probe: unsupported arch %q (only amd64/arm64)", machine)
+	}
 }
 
 // --- auth + host key helpers ---

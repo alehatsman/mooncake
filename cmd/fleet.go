@@ -48,12 +48,15 @@ func fleetBootstrapCommand() *cli.Command {
 		ArgsUsage: "<user@host>",
 		Description: "Production bootstrap (spec-44 §88, 8-step sequence):\n" +
 			" 1. SSH to <user@host> using ssh-agent or ~/.ssh/id_ed25519.\n" +
-			" 2. Detect platform (linux+darwin × amd64+arm64).\n" +
+			" 2. Detect platform (linux+darwin+windows × amd64+arm64).\n" +
 			" 3. Skip steps 4-6 if the same version is already installed and active.\n" +
-			" 4. SFTP the mooncake binary, sudo-install to /usr/local/bin.\n" +
-			" 5. Render + install a systemd unit (Linux) or launchd plist (macOS).\n" +
+			" 4. SFTP the mooncake binary; sudo-install to /usr/local/bin (linux/darwin)\n" +
+			"    or Move-Item to %LOCALAPPDATA%\\Mooncake\\bin\\mooncake.exe (windows).\n" +
+			" 5. Render + install a systemd unit (Linux), launchd plist (macOS),\n" +
+			"    or Task Scheduler XML (Windows). Windows: also opens host firewall.\n" +
 			" 6. Enable + start the service; wait for /v1/version reachable.\n" +
-			" 7. Read /etc/mooncake/agentd.token over sudo cat.\n" +
+			" 7. Read the bearer token (sudo cat on linux/darwin, Get-Content on\n" +
+			"    windows from %LOCALAPPDATA%\\Mooncake\\agentd.token).\n" +
 			" 8. Upsert a [[peers]] entry in peers.toml.",
 		Flags: []cli.Flag{
 			&cli.IntFlag{Name: "port", Aliases: []string{"p"}, Usage: "SSH port", Value: 22},
