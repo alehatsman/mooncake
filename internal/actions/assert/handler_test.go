@@ -298,6 +298,94 @@ func TestHandler_Execute_CommandAssertion_Failure(t *testing.T) {
 	}
 }
 
+// MT-28: failed_when: false on a failing assert must suppress the
+// failure. Before the fix, assert.Execute returned the error
+// unconditionally and the executor's failed_when path never ran.
+func TestHandler_Execute_AssertionFailure_FailedWhenFalse(t *testing.T) {
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+	defer os.RemoveAll(ctx.CurrentDir)
+
+	step := &config.Step{
+		Assert: &config.Assert{
+			Command: &config.AssertCommand{
+				Cmd:      "exit 1",
+				ExitCode: 0,
+			},
+		},
+		FailedWhen: "false",
+	}
+
+	result, err := h.Execute(ctx, step)
+	if err != nil {
+		t.Fatalf("Execute() returned err despite failed_when: false: %v", err)
+	}
+	if result == nil {
+		t.Fatal("Result should not be nil")
+	}
+
+	pub := ctx.Svc.EventPublisher.(*testutil.MockPublisher)
+	if len(pub.Events) == 0 {
+		t.Fatal("Expected an event to be emitted")
+	}
+	lastEvent := pub.Events[len(pub.Events)-1]
+	if lastEvent.Type != events.EventAssertPassed {
+		t.Errorf("Event type = %v, want %v (suppressed failure should emit passed)",
+			lastEvent.Type, events.EventAssertPassed)
+	}
+}
+
+// MT-28: failed_when: predicate inspecting actual/expected should
+// allow conditional suppression. Confirms the evaluation context
+// exposes the assertion's observed values.
+func TestHandler_Execute_AssertionFailure_FailedWhenPredicate(t *testing.T) {
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+	defer os.RemoveAll(ctx.CurrentDir)
+
+	step := &config.Step{
+		Assert: &config.Assert{
+			Command: &config.AssertCommand{
+				Cmd:      "exit 1",
+				ExitCode: 0,
+			},
+		},
+		// Suppress only when the observed exit code is exactly 1.
+		FailedWhen: `actual != "exit code 1"`,
+	}
+
+	result, err := h.Execute(ctx, step)
+	if err != nil {
+		t.Fatalf("Execute() returned err despite failed_when matching predicate: %v", err)
+	}
+	if result == nil {
+		t.Fatal("Result should not be nil")
+	}
+}
+
+// MT-28: failed_when: true must NOT silently suppress when the
+// assertion already failed; the existing failure path should fire.
+func TestHandler_Execute_AssertionFailure_FailedWhenTrue(t *testing.T) {
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+	defer os.RemoveAll(ctx.CurrentDir)
+
+	step := &config.Step{
+		Assert: &config.Assert{
+			Command: &config.AssertCommand{
+				Cmd:      "exit 1",
+				ExitCode: 0,
+			},
+		},
+		FailedWhen: "true",
+	}
+
+	_, err := h.Execute(ctx, step)
+	if err == nil {
+		t.Fatal("Execute() should return error when failed_when: true on a failing assert")
+	}
+}
+
 func TestHandler_Execute_CommandAssertion_NonexistentCommand(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()

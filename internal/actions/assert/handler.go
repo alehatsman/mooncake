@@ -115,15 +115,44 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	result.Changed = false // Assertions never change state
 
 	if err != nil {
-		// Emit failure event
 		assertionErr, isAssertion := err.(*executor.AssertionError)
+		assertType := ""
+		if isAssertion {
+			assertType = assertionErr.Type
+		}
+
+		// failed_when: lets authors override the default "any error fails the step".
+		// Mirrors the command/shell handlers; without this, assert's hard-coded
+		// failure path bypasses the documented escape hatch.
+		if step.FailedWhen != "" {
+			shouldFail, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
+				"expected": expected,
+				"actual":   actual,
+				"type":     assertType,
+				"failed":   true,
+			})
+			if evalErr != nil {
+				return result, fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
+			}
+			if !shouldFail {
+				// User-suppressed failure: emit a passed event with the
+				// observed expected/actual so the run log still records
+				// what was checked.
+				ec.EmitEvent(events.EventAssertPassed, events.AssertionData{
+					Expected: expected,
+					Actual:   actual,
+					Failed:   false,
+					Type:     assertType,
+				})
+				return result, nil
+			}
+		}
+
 		failureData := events.AssertionData{
 			Expected: expected,
 			Actual:   actual,
 			Failed:   true,
-		}
-		if isAssertion {
-			failureData.Type = assertionErr.Type
+			Type:     assertType,
 		}
 		ec.EmitEvent(events.EventAssertFailed, failureData)
 		return result, err
@@ -809,4 +838,24 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 	return res, nil
+}
+
+// evaluateBoolExpression renders and evaluates a boolean expression
+// against the supplied context, mirroring the helper used by the
+// command and shell handlers. Used by Execute to honor failed_when:
+// on assertions.
+func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string, evalContext map[string]interface{}) (bool, error) {
+	rendered, err := ctx.GetTemplate().Render(expression, evalContext)
+	if err != nil {
+		return false, fmt.Errorf("failed to render expression: %w", err)
+	}
+	result, err := ctx.GetEvaluator().Evaluate(rendered, evalContext)
+	if err != nil {
+		return false, fmt.Errorf("failed to evaluate expression: %w", err)
+	}
+	boolResult, ok := result.(bool)
+	if !ok {
+		return false, fmt.Errorf("expression evaluated to %T, expected bool", result)
+	}
+	return boolResult, nil
 }
