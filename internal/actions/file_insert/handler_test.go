@@ -3,6 +3,7 @@ package file_insert
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -207,6 +208,130 @@ func TestHandler_Execute_InsertAfter(t *testing.T) {
 	expected := "line1\nimport foo\nimport bar\nline3"
 	if string(newContent) != expected {
 		t.Errorf("expected content:\n%s\ngot:\n%s", expected, string(newContent))
+	}
+}
+
+// MT-84: text.insert must be idempotent. Running the same insert
+// against a file that already has the insertion immediately after
+// the anchor must NOT duplicate the line — Changed=false instead.
+func TestHandler_Execute_InsertAfter_Idempotent(t *testing.T) {
+	handler := &Handler{}
+	ctx := createTestContext(t)
+
+	testFile := filepath.Join(ctx.CurrentDir, "idem.txt")
+	originalContent := "line1\nimport foo\nline3"
+	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	step := &config.Step{
+		TextInsert: &config.FileInsert{
+			Path:     testFile,
+			Anchor:   "import foo",
+			Position: "after",
+			Content:  "import bar",
+		},
+	}
+
+	// First run: changes are made.
+	if _, err := handler.Execute(ctx, step); err != nil {
+		t.Fatalf("first Execute: %v", err)
+	}
+	afterFirst, _ := os.ReadFile(testFile)
+	want := "line1\nimport foo\nimport bar\nline3"
+	if string(afterFirst) != want {
+		t.Fatalf("after first run:\nwant: %s\ngot:  %s", want, afterFirst)
+	}
+
+	// Second run: same step, content already in place — must be no-op.
+	res2, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Fatalf("second Execute: %v", err)
+	}
+	if res2.(*executor.Result).Changed {
+		t.Errorf("second run should report Changed=false (content already present)")
+	}
+	afterSecond, _ := os.ReadFile(testFile)
+	if string(afterSecond) != want {
+		t.Errorf("second run mutated file:\nwant: %s\ngot:  %s", want, afterSecond)
+	}
+}
+
+// MT-84: same shape for position=before — the previous line, not
+// the next.
+func TestHandler_Execute_InsertBefore_Idempotent(t *testing.T) {
+	handler := &Handler{}
+	ctx := createTestContext(t)
+
+	testFile := filepath.Join(ctx.CurrentDir, "idem-before.txt")
+	originalContent := "line1\nimport foo\nline3"
+	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	step := &config.Step{
+		TextInsert: &config.FileInsert{
+			Path:     testFile,
+			Anchor:   "import foo",
+			Position: "before",
+			Content:  "import bar",
+		},
+	}
+
+	if _, err := handler.Execute(ctx, step); err != nil {
+		t.Fatalf("first Execute: %v", err)
+	}
+	want := "line1\nimport bar\nimport foo\nline3"
+	if got, _ := os.ReadFile(testFile); string(got) != want {
+		t.Fatalf("after first run:\nwant: %s\ngot:  %s", want, got)
+	}
+
+	res2, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Fatalf("second Execute: %v", err)
+	}
+	if res2.(*executor.Result).Changed {
+		t.Errorf("second run should report Changed=false (content already present)")
+	}
+}
+
+// MT-84: multi-line insertion content must check all lines, not
+// just the first.
+func TestHandler_Execute_InsertAfter_Idempotent_MultiLine(t *testing.T) {
+	handler := &Handler{}
+	ctx := createTestContext(t)
+
+	testFile := filepath.Join(ctx.CurrentDir, "idem-multi.txt")
+	originalContent := "line1\n[server]\nline3"
+	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	step := &config.Step{
+		TextInsert: &config.FileInsert{
+			Path:     testFile,
+			Anchor:   "[server]",
+			Position: "after",
+			Content:  "host=localhost\nport=8080",
+		},
+	}
+
+	if _, err := handler.Execute(ctx, step); err != nil {
+		t.Fatalf("first Execute: %v", err)
+	}
+	res2, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Fatalf("second Execute: %v", err)
+	}
+	if res2.(*executor.Result).Changed {
+		t.Errorf("second run should report Changed=false for multi-line insertion already present")
+	}
+
+	got, _ := os.ReadFile(testFile)
+	// Expect a single instance of "host=localhost\nport=8080" after
+	// the anchor — not duplicated.
+	if c := strings.Count(string(got), "host=localhost"); c != 1 {
+		t.Errorf("expected exactly 1 occurrence of insertion content; got %d in: %s", c, got)
 	}
 }
 

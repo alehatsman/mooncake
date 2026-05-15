@@ -274,59 +274,116 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	return nil
 }
 
-// performInsertion performs the actual text insertion
+// performInsertion performs the actual text insertion.
+//
+// MT-84: idempotency. For position=after, peek at the line(s)
+// immediately following the matched anchor; if they already equal
+// insertion, skip this match. For position=before, peek at the
+// line(s) preceding the anchor in the output buffer. Multi-line
+// insertion content is supported — the comparison splits on "\n"
+// and matches the same number of lines.
 func (h *Handler) performInsertion(content, anchor, insertion, position string, useRegex, allowMultiple bool) (newContent string, count int, err error) {
 	lines := strings.Split(content, "\n")
-	var result []string
-	inserted := false
+	insertionLines := strings.Split(insertion, "\n")
 
-	for _, line := range lines {
-		matched := false
-
-		if useRegex {
-			// Regex matching
-			re, compileErr := regexp.Compile(anchor)
-			if compileErr != nil {
-				return "", 0, fmt.Errorf("invalid regex: %w", compileErr)
-			}
-			matched = re.MatchString(line)
-		} else {
-			// Literal matching
-			matched = strings.Contains(line, anchor)
-		}
-
-		if matched {
-			// Check if we should insert (first match only or allow multiple)
-			if !inserted || allowMultiple {
-				count++
-				inserted = true
-
-				if position == positionBefore {
-					result = append(result, insertion, line)
-				} else { // after
-					result = append(result, line, insertion)
-				}
-			} else {
-				// Already inserted at first match and allowMultiple=false
-				result = append(result, line)
-			}
-		} else {
-			result = append(result, line)
+	var (
+		result     []string
+		inserted   bool
+		compiledRE *regexp.Regexp
+	)
+	if useRegex {
+		var compileErr error
+		compiledRE, compileErr = regexp.Compile(anchor)
+		if compileErr != nil {
+			return "", 0, fmt.Errorf("invalid regex: %w", compileErr)
 		}
 	}
 
+	matches := func(line string) bool {
+		if useRegex {
+			return compiledRE.MatchString(line)
+		}
+		return strings.Contains(line, anchor)
+	}
+
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		if !matches(line) {
+			result = append(result, line)
+			continue
+		}
+		if inserted && !allowMultiple {
+			result = append(result, line)
+			continue
+		}
+
+		// MT-84: check for the already-inserted shape before mutating.
+		// For position=after, the next N lines in the source buffer
+		// should equal insertionLines. For position=before, the last N
+		// lines accumulated into the result buffer should equal them.
+		if position == positionAfter {
+			if sliceEqual(lines, i+1, insertionLines) {
+				// Already inserted in a prior run; treat as no-op for
+				// this match. Don't set `inserted=true` — that would
+				// suppress inserts at later anchors when
+				// allowMultiple=false, which is wrong. Just emit the
+				// anchor unchanged.
+				result = append(result, line)
+				continue
+			}
+			result = append(result, line)
+			result = append(result, insertionLines...)
+		} else { // before
+			if tailEqual(result, insertionLines) {
+				result = append(result, line)
+				continue
+			}
+			result = append(result, insertionLines...)
+			result = append(result, line)
+		}
+		count++
+		inserted = true
+	}
+
 	if count == 0 {
-		// MT-47: anchor not found is idempotent success — a playbook
-		// that inserted content once won't find the anchor on re-run
-		// (the anchor may have been altered, or the insertion already
-		// happened above/below it). Return the original content
-		// unchanged; the caller's content-equality check folds this
-		// into the "no changes needed" branch.
+		// MT-47 / MT-84: anchor not found OR every match already had
+		// the insertion in place. Either way: idempotent success.
+		// Caller's content-equality check folds this into "no changes".
 		return strings.Join(result, "\n"), 0, nil
 	}
 
 	newContent = strings.Join(result, "\n")
 	return newContent, count, nil
+}
+
+// sliceEqual reports whether lines[start : start+len(want)] equals
+// want. Returns false if start is out of range. Used by MT-84's
+// position=after peek.
+func sliceEqual(lines []string, start int, want []string) bool {
+	if start < 0 || start+len(want) > len(lines) {
+		return false
+	}
+	for i, w := range want {
+		if lines[start+i] != w {
+			return false
+		}
+	}
+	return true
+}
+
+// tailEqual reports whether the last len(want) entries in result
+// equal want. Used by MT-84's position=before peek.
+func tailEqual(result, want []string) bool {
+	if len(result) < len(want) {
+		return false
+	}
+	off := len(result) - len(want)
+	for i, w := range want {
+		if result[off+i] != w {
+			return false
+		}
+	}
+	return true
 }
 
 // writeAtomic writes content to file using atomic write pattern (temp file + rename)
