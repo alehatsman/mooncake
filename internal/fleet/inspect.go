@@ -81,6 +81,14 @@ type Status struct {
 	// ProbeDuration is how long the slowest of the three probes took.
 	// Useful for diagnosing slow peers and surfaced in --json.
 	ProbeDuration time.Duration `json:"probe_duration_ns"`
+
+	// LastSeenAt is the controller's persisted timestamp of the most
+	// recent successful version probe for this peer. Zero when there
+	// is no prior contact on this controller. The table renderer
+	// surfaces "last seen Xh ago" in the per-peer footnote when the
+	// current probe failed AND LastSeenAt is non-zero, so the user
+	// can tell "freshly broken" apart from "never worked".
+	LastSeenAt time.Time `json:"last_seen_at,omitempty"`
 }
 
 // Probe runs the three status GETs against peer in parallel and returns
@@ -100,6 +108,13 @@ func Probe(ctx context.Context, name, addr, token string, timeout time.Duration)
 
 	client := transport.New(name, addr, token)
 	out := Status{Name: name, Addr: addr, QueueDepth: -1, RunsRunning: -1}
+
+	// Seed last-seen from persisted state. Best-effort: a missing or
+	// poisoned state file is not a probe failure — we just leave
+	// LastSeenAt zero and continue.
+	if prior, err := LoadPeerState(name); err == nil {
+		out.LastSeenAt = prior.LastSeenAt
+	}
 
 	type result struct {
 		ver   *transport.Version
@@ -163,6 +178,18 @@ func Probe(ctx context.Context, name, addr, token string, timeout time.Duration)
 	}
 	out.Accessible = true
 	out.Running = out.State == StateRunning
+
+	// Reachable → persist a fresh contact stamp. We capture the moment
+	// the version probe completed (not Probe entry) so the timestamp
+	// matches the data it summarises. Best-effort: a write failure
+	// (read-only home, ENOSPC) shouldn't fail the probe.
+	now := time.Now().UTC()
+	out.LastSeenAt = now
+	_ = SavePeerState(name, PeerState{
+		LastSeenAt:   now,
+		LastAddr:     addr,
+		LastMooncake: r.ver.Version,
+	})
 	return out
 }
 

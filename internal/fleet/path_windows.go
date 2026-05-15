@@ -28,3 +28,15 @@ func userConfigDir() (string, error) {
 	}
 	return "", errors.New("locate %LOCALAPPDATA%: not set and %USERPROFILE% missing")
 }
+
+// userStateDir returns the per-user state root on Windows. Windows
+// doesn't have an XDG equivalent for state-vs-config; both live under
+// %LOCALAPPDATA%. We tuck state under a `Mooncake\State\` subdirectory
+// so it's easy to wipe without touching peers.toml.
+func userStateDir() (string, error) {
+	cfg, err := userConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cfg, "Mooncake", "State"), nil
+}
