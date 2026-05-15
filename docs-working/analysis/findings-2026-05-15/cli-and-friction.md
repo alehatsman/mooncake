@@ -325,6 +325,43 @@ config file is empty: /work/empty.yml — expected a list of steps
 
 ---
 
+## #76 — `--capture-full-output` silently no-ops without `--artifacts-dir` — LOW (DX)
+
+**Repro**:
+```
+$ mooncake apply -c hello-world/config.yml --capture-full-output
+# runs normally, no warning, no capture (since --artifacts-dir is unset)
+```
+
+Per `mooncake apply --help`:
+> `--capture-full-output  Capture full stdout/stderr to artifacts (requires --artifacts-dir)`
+
+The help text says "requires --artifacts-dir" but supplying
+`--capture-full-output` alone doesn't error — it just silently does
+nothing. Users who set the flag expecting capture get no warning
+that they forgot the partner flag.
+
+**Fix**: either warn at startup ("--capture-full-output ignored
+because --artifacts-dir is not set"), or hard-error matching the
+help text's "requires".
+
+(Reverse case: `--artifacts-dir` without `--capture-full-output` is
+valid — it just emits the JSONL/plan/facts but no captured
+stdout/stderr. That's already correct behavior.)
+
+---
+
+## ★ `--tui --output-format json` is properly mutually-exclusive
+
+```
+$ mooncake apply --tui --output-format json
+--output-format json cannot be combined with --tui
+```
+
+Clean error. Right kind of validation for incompatible flag pairs.
+
+---
+
 ## #74 — `--facts-json` output uses PascalCase keys — LOW (style, extends #69)
 
 **Repro**:
