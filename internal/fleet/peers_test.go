@@ -18,6 +18,33 @@ func TestLoadPeers_MissingFileReturnsEmpty(t *testing.T) {
 	}
 }
 
+// TestLoadPeers_DottedKeyFormHints (MT-78) covers the natural mistake
+// of writing `[peers.local]` instead of `[[peers]]`. Pre-fix the
+// underlying TOML error ("cannot store a table in a slice") leaked
+// through unchanged — accurate but useless to a user who picked the
+// wrong shape. The annotated error now spells out the correct form.
+func TestLoadPeers_DottedKeyFormHints(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "peers.toml")
+	body := `[peers.local]
+addr = "127.0.0.1:7878"
+token = "tok"
+`
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := LoadPeers(path)
+	if err == nil {
+		t.Fatal("expected parse error for [peers.X] form")
+	}
+	msg := err.Error()
+	for _, want := range []string{"[[peers]]", "array-of-tables", "name = \""} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("MT-78: expected hint %q, got %q", want, msg)
+		}
+	}
+}
+
 func TestLoadPeers_RoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "peers.toml")
 

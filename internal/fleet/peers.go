@@ -4,11 +4,13 @@
 package fleet
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -151,12 +153,37 @@ func LoadPeers(path string) (*Config, error) {
 	}
 	var cfg Config
 	if err := toml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
+		return nil, fmt.Errorf("parse %s: %w", path, annotateTOMLParseError(data, err))
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate %s: %w", path, err)
 	}
 	return &cfg, nil
+}
+
+// annotateTOMLParseError catches the common dotted-key vs
+// array-of-tables mistake — `[peers.local]` instead of `[[peers]]` —
+// and decorates the underlying TOML parser error with the right form.
+// The default error ("cannot store a table in a slice") is technically
+// correct but tells the user nothing about the schema. (MT-78)
+func annotateTOMLParseError(data []byte, err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	// pelletier/go-toml/v2 surfaces "cannot store a table in a slice"
+	// for [peers.X] when Peers is `[]Peer`. The file string is the
+	// other reliable signal — users who write [peers.X] are mapping
+	// from a different config language and benefit from seeing the
+	// canonical form spelled out.
+	if !strings.Contains(msg, "cannot store a table in a slice") &&
+		!bytes.Contains(data, []byte("[peers.")) {
+		return err
+	}
+	return fmt.Errorf(
+		"%w (hint: peers.toml uses TOML array-of-tables `[[peers]]` with `name = \"...\"` inside, not `[peers.<name>]` dotted-key form — see `mooncake fleet --help`)",
+		err,
+	)
 }
 
 // Upsert inserts or replaces a peer by Name in peers.toml at path. The file
