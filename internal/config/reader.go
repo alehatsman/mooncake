@@ -2,8 +2,10 @@ package config
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -115,23 +117,33 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		}
 	}
 
+	// Strict-mode pass: re-decode the post-substitution YAML tree with
+	// KnownFields(true) so unknown step / action fields surface as
+	// diagnostics instead of being silently dropped. Without this, a
+	// typo like `register:` (post-spec-21 rename, now `as:`) or
+	// `sha256:` inside `file.download` (correct field is `checksum:`)
+	// disappears at parse time and the user sees a "successful" apply
+	// that didn't capture or didn't verify. Closes finding #44 and
+	// guards every future field rename. The permissive decode above
+	// stays unchanged — strict errors are diagnostics, not parse-aborts.
+	strictDiagnostics := validateKnownFields(&rootNode, locationMap, path)
+
 	// Run schema validation
 	validator, err := NewSchemaValidator()
 	if err != nil {
 		// If schema validation setup fails, fall back to basic validation
 		// This ensures the system still works even if schema is broken
-		return parsedConfig, []Diagnostic{
-			{
-				FilePath: path,
-				Line:     1,
-				Column:   1,
-				Message:  "schema validator initialization failed: " + err.Error(),
-				Severity: "warning",
-			},
-		}, nil
+		return parsedConfig, append(strictDiagnostics, Diagnostic{
+			FilePath: path,
+			Line:     1,
+			Column:   1,
+			Message:  "schema validator initialization failed: " + err.Error(),
+			Severity: "warning",
+		}), nil
 	}
 
 	diagnostics := validator.Validate(parsedConfig, locationMap, path)
+	diagnostics = append(strictDiagnostics, diagnostics...)
 
 	// Validate template syntax in all templatable fields
 	templateValidator := NewTemplateValidator()
@@ -139,6 +151,114 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 	diagnostics = append(diagnostics, templateDiagnostics...)
 
 	return parsedConfig, diagnostics, nil
+}
+
+// validateKnownFields runs a strict YAML decode pass over the
+// already-parsed root node and returns a diagnostic for each unknown
+// field encountered. Implementation: marshal the (secret-tag-
+// substituted) rootNode back to bytes, then decode WITH
+// KnownFields(true) so the yaml.v3 library does the unknown-key
+// detection for us — including nested action structs like
+// file.download (the strict mode applies recursively through every
+// typed struct in the tree).
+//
+// Returns an empty slice on success or schema-shape ambiguity. Any
+// error is surfaced as one error-severity Diagnostic; the YAML
+// library reports the first unknown field per decode pass, so users
+// fix one, retry, see the next.
+func validateKnownFields(rootNode *yaml.Node, locationMap *LocationMap, path string) []Diagnostic {
+	buf, err := yaml.Marshal(rootNode)
+	if err != nil {
+		// Should be unreachable — rootNode came from yaml.Decode and
+		// is well-formed. Surface as a warning so it doesn't block.
+		return []Diagnostic{{
+			FilePath: path,
+			Line:     1,
+			Column:   1,
+			Message:  "strict-mode validation skipped: marshal root: " + err.Error(),
+			Severity: "warning",
+		}}
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(buf))
+	dec.KnownFields(true)
+
+	var decodeErr error
+	if isArrayFormat(rootNode) {
+		var steps []Step
+		decodeErr = dec.Decode(&steps)
+	} else {
+		var rc RunConfig
+		decodeErr = dec.Decode(&rc)
+	}
+	if decodeErr == nil {
+		return nil
+	}
+	// yaml.v3's error message looks like:
+	//   "yaml: unmarshal errors:\n  line 4: field register not found in type config.Step"
+	// Try to parse the line number to anchor the diagnostic.
+	msg := decodeErr.Error()
+	line, col := 1, 1
+	if li := extractYAMLLine(msg); li > 0 {
+		line = li
+	}
+	return []Diagnostic{{
+		FilePath: path,
+		Line:     line,
+		Column:   col,
+		Message:  formatStrictFieldError(msg),
+		Severity: "error",
+	}}
+}
+
+// extractYAMLLine pulls the first "line N:" number out of a yaml.v3
+// unmarshal-errors message. Returns 0 if not found.
+func extractYAMLLine(msg string) int {
+	const marker = "line "
+	idx := strings.Index(msg, marker)
+	if idx < 0 {
+		return 0
+	}
+	rest := msg[idx+len(marker):]
+	end := strings.Index(rest, ":")
+	if end <= 0 {
+		return 0
+	}
+	n := 0
+	for i := 0; i < end; i++ {
+		c := rest[i]
+		if c < '0' || c > '9' {
+			return 0
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
+}
+
+// formatStrictFieldError turns the yaml.v3 raw message into a single
+// user-facing line. The library's wording is fine but the prefix
+// "yaml: unmarshal errors: line N:" is noisy when we already attach
+// the line via Diagnostic.Line.
+func formatStrictFieldError(msg string) string {
+	// Strip the "yaml: unmarshal errors:\n  line N: " prefix.
+	if i := strings.Index(msg, "field "); i > 0 {
+		core := strings.TrimSpace(msg[i:])
+		// Drop the leading "field " from the library wording so the
+		// composed sentence reads cleanly.
+		core = strings.TrimPrefix(core, "field ")
+		return "unknown field `" + truncBeforeSpace(core, "not found in type ") +
+			"` (likely a typo or a renamed field — see docs-next/guide/config/actions.md)"
+	}
+	return "strict-mode validation: " + msg
+}
+
+// truncBeforeSpace returns the prefix of s up to the first occurrence
+// of marker. Used to pull "register" out of "register not found in
+// type config.Step".
+func truncBeforeSpace(s, marker string) string {
+	if i := strings.Index(s, marker); i > 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return s
 }
 
 // isArrayFormat checks if the YAML root node represents an array (old format)
