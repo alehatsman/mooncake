@@ -565,6 +565,33 @@ fleet-as-pipeline story working as advertised.
 
 ---
 
+## ★ Unicode + special-char content handled correctly
+
+```yaml
+- vars:
+    greeting: "héllo wörld 🌙"
+    chinese: "你好世界"
+    emoji: "🚀💾"
+- file.write:
+    path: "/tmp/has spaces and 你好.txt"
+    state: file
+    content: "{{ greeting }}\n{{ chinese }}\n{{ emoji }}\n"
+```
+
+All three render and write correctly:
+- Multi-byte UTF-8 in template substitution: ✓
+- Emoji + Chinese in file content: ✓
+- Filenames with spaces AND unicode: ✓
+- Tab / newline / quote escapes in YAML double-quoted strings: ✓ (per YAML spec)
+- Chained filter pipelines `{{ x | upper | lower | upper }}`: ✓
+- 50KB single-line content: written cleanly
+
+For an LLM-driven config tool that may emit non-ASCII content in
+templates (commit messages, user-facing text, JSON with unicode),
+this matters. Don't regress.
+
+---
+
 ## ★ `--sudo-pass-file` requires 0600 — security check
 
 ```
