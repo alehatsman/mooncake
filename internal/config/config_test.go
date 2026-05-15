@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -778,6 +779,60 @@ func TestStep_DetermineActionType_AllFields(t *testing.T) {
 			}
 			if got := c.step.countActions(); got != 1 {
 				t.Errorf("countActions() = %d for %q, want 1", got, c.key)
+			}
+		})
+	}
+}
+
+// TestStep_ShouldBecome_NoEscalationWhenAlreadyTargetUser is a regression
+// test for manual-test #1 (2026-05-15): when the current process already
+// has the effective uid of the AsUser target, ShouldBecome must report
+// false so callers skip the sudo wrapper. Without this, presets using
+// as_user: root fail in minimal containers (ubuntu:24.04, alpine:3.21)
+// that don't ship the sudo binary.
+func TestStep_ShouldBecome_NoEscalationWhenAlreadyTargetUser(t *testing.T) {
+	euidIsRoot := os.Geteuid() == 0
+
+	cases := []struct {
+		name    string
+		asUser  string
+		want    bool
+		skipMsg string
+	}{
+		{name: "empty AsUser → no escalation", asUser: "", want: false},
+		{name: "as_user:alice → escalate", asUser: "alice", want: true},
+	}
+	if euidIsRoot {
+		cases = append(cases,
+			struct {
+				name    string
+				asUser  string
+				want    bool
+				skipMsg string
+			}{name: "as_user:root + euid=0 → skip sudo", asUser: "root", want: false},
+			struct {
+				name    string
+				asUser  string
+				want    bool
+				skipMsg string
+			}{name: "as_user:0 + euid=0 → skip sudo", asUser: "0", want: false},
+		)
+	} else {
+		cases = append(cases, struct {
+			name    string
+			asUser  string
+			want    bool
+			skipMsg string
+		}{name: "as_user:root + non-root → escalate", asUser: "root", want: true})
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			step := Step{AsUser: c.asUser}
+			if got := step.ShouldBecome(); got != c.want {
+				t.Errorf("Step{AsUser:%q}.ShouldBecome() = %v, want %v (euid=%d)",
+					c.asUser, got, c.want, os.Geteuid())
 			}
 		})
 	}

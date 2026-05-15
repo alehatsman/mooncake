@@ -131,6 +131,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 )
 
@@ -1493,9 +1494,19 @@ func (s *Step) RetryDelayDuration() string {
 }
 
 // ShouldBecome reports whether the step requests privilege escalation.
-// True iff AsUser is non-empty (spec-21 collapsed become/become_user).
+// True iff AsUser is non-empty (spec-21 collapsed become/become_user) AND
+// the current process is not already running as the target user. When the
+// current euid is 0 and AsUser targets root ("root" or "0"), no escalation
+// is needed — short-circuits sudo invocation so presets work in minimal
+// containers (ubuntu:24.04, alpine:3.21) that don't ship sudo.
 func (s *Step) ShouldBecome() bool {
-	return s.AsUser != ""
+	if s.AsUser == "" {
+		return false
+	}
+	if (s.AsUser == "root" || s.AsUser == "0") && os.Geteuid() == 0 {
+		return false
+	}
+	return true
 }
 
 // Origin tracks source location and include chain for plan traceability

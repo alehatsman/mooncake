@@ -380,9 +380,11 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 		t.Errorf("file mode = %q, want '0755'", steps[0].FileWrite.Mode)
 	}
 
-	// Verify become flag
-	if !steps[2].ShouldBecome() {
-		t.Error("step with sudo should have Become = true")
+	// Verify as_user was parsed correctly. (Don't call ShouldBecome here:
+	// it now returns false when the test process is already running as
+	// root targeting root — that runtime short-circuit is tested separately.)
+	if steps[2].AsUser != "root" {
+		t.Errorf("step[2].AsUser = %q, want %q", steps[2].AsUser, "root")
 	}
 
 	// Verify include
