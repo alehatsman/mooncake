@@ -382,12 +382,25 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 		return 0, fmt.Errorf("failed to create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
+	// Track lifecycle of the temp file so the deferred cleanup only
+	// touches state that's still valid:
+	//   - tmpFileClosed: true once we've explicitly closed the handle
+	//     (the defer must not re-Close → "file already closed" noise).
+	//   - tmpFileMoved:  true once the file has been renamed/moved to
+	//     dest (the defer must not Remove → "no such file" noise).
+	// Both flags get flipped on success paths below.
+	tmpFileClosed := false
+	tmpFileMoved := false
 	defer func() {
-		if closeErr := tmpFile.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close temp file: %v", closeErr)
+		if !tmpFileClosed {
+			if closeErr := tmpFile.Close(); closeErr != nil {
+				ctx.GetLogger().Debugf("Failed to close temp file: %v", closeErr)
+			}
 		}
-		if removeErr := os.Remove(tmpPath); removeErr != nil {
-			ctx.GetLogger().Debugf("Failed to remove temp file %s: %v", tmpPath, removeErr)
+		if !tmpFileMoved {
+			if removeErr := os.Remove(tmpPath); removeErr != nil && !os.IsNotExist(removeErr) {
+				ctx.GetLogger().Debugf("Failed to remove temp file %s: %v", tmpPath, removeErr)
+			}
 		}
 	}()
 
@@ -401,10 +414,31 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 	if err := tmpFile.Close(); err != nil {
 		return 0, fmt.Errorf("failed to close temp file: %w", err)
 	}
+	tmpFileClosed = true
 
 	// Set permissions on temp file
 	if err := os.Chmod(tmpPath, mode); err != nil {
 		return 0, fmt.Errorf("failed to set permissions: %w", err)
+	}
+
+	// MT-14 fix: verify the checksum on the temp file BEFORE we move
+	// it to dest. The earlier shape ran VerifyChecksum on dest after
+	// the rename, which means a mismatched download still left bytes
+	// at dest (and tripped a confusing pair of debug-level cleanup
+	// errors when the action did return failure later). Verifying
+	// here keeps the atomic-write guarantee: dest is created only if
+	// the bytes match.
+	if action.Checksum != "" {
+		matches, verr := utils.VerifyChecksum(tmpPath, action.Checksum)
+		if verr != nil {
+			return 0, fmt.Errorf("failed to verify checksum: %w", verr)
+		}
+		if !matches {
+			actual := actualChecksum(tmpPath, action.Checksum)
+			return 0, fmt.Errorf(
+				"checksum mismatch: declared %s, actual %s (url: %s)",
+				action.Checksum, actual, url)
+		}
 	}
 
 	// Move temp file to destination (atomic)
@@ -422,8 +456,27 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 			return 0, fmt.Errorf("failed to move file: %w", err)
 		}
 	}
+	tmpFileMoved = true
 
 	return downloadedSize, nil
+}
+
+// actualChecksum recomputes the file's checksum in the same format
+// as the declared one, for inclusion in the mismatch error message.
+// Best-effort: if recompute fails we return "<unreadable>" rather
+// than overshadowing the original mismatch with a read error.
+func actualChecksum(path, declared string) string {
+	switch len(declared) {
+	case 64: // SHA256
+		if s, err := utils.CalculateSHA256(path); err == nil {
+			return s
+		}
+	case 32: // MD5
+		if s, err := utils.CalculateMD5(path); err == nil {
+			return s
+		}
+	}
+	return "<unreadable>"
 }
 
 func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
