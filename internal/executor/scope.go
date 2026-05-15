@@ -51,6 +51,14 @@ type VariableScope struct {
 	// Metrics holds live daemon metrics (cpu_usage_pct, memory_used_pct, etc.)
 	// Set once at run start, read-only during execution.
 	Metrics *metrics.Metrics
+
+	// Env holds the parent-process environment as a string→string map.
+	// Exposed to templates as `env.*` so users can write
+	// `{{ env.HOME }}` or `{{ env.MY_API_KEY }}`. Set once at run start
+	// by AddGlobalVariables; read-only during execution. Secrets-in-env
+	// flow this way too — auditors should treat env-driven values the
+	// same way as user vars, not as system facts.
+	Env map[string]string
 }
 
 // NewVariableScope returns an empty scope ready for use.
@@ -63,7 +71,10 @@ func NewVariableScope() *VariableScope {
 }
 
 // ToMap merges all sections into map[string]interface{} for the template/expression engine.
-// Priority (higher overwrites lower): Facts < Metrics < User < Results < Loop.
+// Priority (higher overwrites lower): Facts < Metrics < Env < User < Results < Loop.
+// Env sits below User so a config-level `vars: { env: ... }` can shadow
+// the namespace if a playbook needs to (matches the same shadowing
+// freedom user vars already have over facts/metrics).
 func (s *VariableScope) ToMap() map[string]interface{} {
 	m := make(map[string]interface{}, 64)
 	if s.Facts != nil {
@@ -75,6 +86,15 @@ func (s *VariableScope) ToMap() map[string]interface{} {
 		for k, v := range s.Metrics.ToMap() {
 			m[k] = v
 		}
+	}
+	if len(s.Env) > 0 {
+		// Wrap in a map[string]interface{} so pongo2's dotted access
+		// (`{{ env.HOME }}`) resolves cleanly.
+		envMap := make(map[string]interface{}, len(s.Env))
+		for k, v := range s.Env {
+			envMap[k] = v
+		}
+		m["env"] = envMap
 	}
 	for k, v := range s.User {
 		m[k] = v
@@ -216,5 +236,10 @@ func (s *VariableScope) Clone() *VariableScope {
 		Results:       newResults,
 		ResultOrigins: newOrigins,
 		Metrics:       s.Metrics,
+		// Env is set once at run start and read-only thereafter; share
+		// the parent's map by reference — same convention as Facts /
+		// Metrics — to avoid copying the entire process environment on
+		// every step.
+		Env: s.Env,
 	}
 }
