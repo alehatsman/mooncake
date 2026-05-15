@@ -363,6 +363,65 @@ honor it. Same fix closes #44 and refines #4.
 | 44 | MEDIUM | open | `file.download` unknown-field acceptance | closes with #27 |
 | 45 | MEDIUM | open | `transaction:` recap miscounts reverted steps | renderer + counter |
 | 46 | MEDIUM | open | `file.unarchive` not idempotent | check dest contents before extract |
+| 54 | HIGH | open | MCP `run_plan` returns all-zero counters despite executing | agent-loop broken |
+
+---
+
+## #54 — MCP `run_plan` executes but returns all-zero counters and 1-step truncated result — HIGH (agent-loop)
+
+**Repro**: 4-step playbook (`vars`, `log`, `file.write`, `assert`) submitted via MCP `run_plan`:
+
+```yaml
+- vars: { name: alice }
+- name: greet
+  log: { msg: "hi {{ name }}" }
+- name: write
+  file.write: { path: /tmp/mcp-target.txt, state: file, content: "from mcp\n" }
+- name: verify
+  assert: { file: { path: /tmp/mcp-target.txt, exists: true } }
+```
+
+MCP response:
+```json
+{
+  "changed": 0, "ok": 0, "failed": 0, "skipped": 0,
+  "duration_ms": 0,
+  "steps": [{"name": "greet"}],
+  "requires": {"filesystem_write": ["/tmp/mcp-target.txt"]}
+}
+```
+
+But on disk: `/tmp/mcp-target.txt` exists with content `from mcp`. **The
+plan ran**; the result counters lie. Only one of the four step names is
+in `steps`, and every counter is zero.
+
+**Why HIGH**: this is `mooncake mcp` exposing `run_plan` as the
+canonical agent-integration entry point. An agent calling
+`run_plan` to apply changes to a host gets back `{ok:0, changed:0,
+failed:0}` regardless of what actually happened — so it can't tell
+whether the run succeeded, partially succeeded, or did anything at
+all. Same shape as #22 (step result truncation) but at the MCP layer.
+
+The `requires:` field — `{filesystem_write: ["/tmp/mcp-target.txt"]}` —
+is actually a nice pre-execution permission summary. Keep that. But
+the post-execution counters need to reflect reality.
+
+**Also observed in same test**: MCP `check_plan` (dry-run) appears to
+*execute the assert step* even though no preceding step has produced
+the file. Test playbook above failed `check_plan` with `assertion
+failed (file): expected file exists, got file does not exist` — but
+the write step (dry-run) hadn't created the file. So `check_plan`
+is mixing real-execution of asserts into a plan that's supposed to
+be side-effect-free preview. Either asserts shouldn't run in
+check_plan, or the plan should virtualize the future filesystem
+state for assert evaluation.
+
+**Fix**:
+1. `run_plan` result counters and `steps` list should reflect all
+   plan steps and their actual outcomes.
+2. `check_plan` should NOT evaluate asserts that depend on
+   not-yet-applied state, or should virtualize the planned changes
+   when doing so.
 
 ---
 
