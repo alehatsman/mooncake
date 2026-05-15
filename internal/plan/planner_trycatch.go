@@ -23,7 +23,17 @@ import (
 // Order in the emitted plan: parent, try children, catch children,
 // finally children. The executor walks the slice sequentially and
 // relies on TryRole + TryState to decide what runs.
+//
+// Nesting: nested try: blocks are NOT supported in v1 (issue #67).
+// Spec-23 §2 doesn't pin down the propagation semantics when an
+// inner try fails and an outer try would also catch — every plausible
+// answer is a forward-incompatible wedge. Mirrors spec-30's rejection
+// of nested transactions. The "swallow a single inner step's failure"
+// pattern is covered by `continue_on_error: true` on the leaf step.
 func (p *Planner) expandTry(step config.Step, ctx *ExpansionContext, plan *Plan, _ int) error {
+	if err := checkTryChildrenNoNesting(step); err != nil {
+		return err
+	}
 	parent, err := p.compilePlanStep(step, ctx, nil)
 	if err != nil {
 		return fmt.Errorf("try %q: compile parent: %w", step.Name, err)
@@ -57,6 +67,43 @@ func (p *Planner) expandTryBranch(children []config.Step, parentID, role, parent
 		child.TryRole = role
 		if err := p.expandStep(child, ctx, plan, 0); err != nil {
 			return fmt.Errorf("try %q: expand %s child %d: %w", parentName, role, ci, err)
+		}
+	}
+	return nil
+}
+
+// checkTryChildrenNoNesting walks the try / catch / finally branches
+// of a compound step and rejects any child that itself declares a
+// try: block. Issue #67: without this, nested try children fell
+// through to expandStep with no compound-handling, the dispatch saw
+// `action: ""`, and the user got an opaque "no handler registered
+// for action type: unknown" with no hint at the actual cause.
+//
+// The hint at continue_on_error: routes most "I just want to swallow
+// this inner failure" cases — the common reason people reach for
+// nested try.
+func checkTryChildrenNoNesting(step config.Step) error {
+	branches := []struct {
+		name     string
+		children []config.Step
+	}{
+		{"try", step.Try},
+		{"catch", step.Catch},
+		{"finally", step.Finally},
+	}
+	for _, b := range branches {
+		for i, child := range b.children {
+			if len(child.Try) > 0 {
+				name := step.Name
+				if name == "" {
+					name = "<unnamed>"
+				}
+				return fmt.Errorf(
+					"try block %q: %s child %d (%s): nested try: blocks are not supported in v1.\n"+
+						"  Hint: to swallow a single inner step's failure, set `continue_on_error: true` on that step instead of wrapping it in another try:.",
+					name, b.name, i, displayName(child),
+				)
+			}
 		}
 	}
 	return nil
