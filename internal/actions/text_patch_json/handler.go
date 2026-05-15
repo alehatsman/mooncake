@@ -66,7 +66,16 @@ func (h *Handler) Validate(step *config.Step) error {
 		return fmt.Errorf("text.patch.json: path is required")
 	}
 	if len(p.Set) == 0 && len(p.Delete) == 0 && len(p.Merge) == 0 {
-		return fmt.Errorf("text.patch.json: at least one of set, delete, or merge is required")
+		// MT-32: users who reach for RFC 6902 JSON Patch
+		// (operations: [{op, path, value}]) silently lose the field
+		// (it's not in the schema) and land here with a generic
+		// error. Spell out the supported shape so they don't waste
+		// time wondering why the standard form failed.
+		return fmt.Errorf(
+			"text.patch.json: at least one of set, delete, or merge is required " +
+				"(note: RFC 6902 JSON Patch operations: [{op, path, value}] is NOT supported; " +
+				"use the higher-level set:/delete:/merge: keys instead)",
+		)
 	}
 	if !validMergeStrategies[p.MergeStrategy] {
 		return fmt.Errorf("text.patch.json: invalid merge_strategy %q (valid: append_unique|append|replace)", p.MergeStrategy)

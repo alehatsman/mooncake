@@ -119,6 +119,24 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// MT-32: the "no ops" validate error should explicitly call out
+// RFC 6902 / JSON Patch operations: as unsupported, since that's
+// the canonical form users from a json-patch background type
+// first.
+func TestValidate_NoOpsErrorMentionsRFC6902(t *testing.T) {
+	step := &config.Step{TextPatchJSON: &config.TextPatchJSON{Path: "/tmp/a.json"}}
+	err := (&Handler{}).Validate(step)
+	if err == nil {
+		t.Fatal("expected validate to error on no ops")
+	}
+	if !strings.Contains(err.Error(), "RFC 6902") {
+		t.Errorf("error should cite RFC 6902 explicitly; got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "set:") || !strings.Contains(err.Error(), "delete:") || !strings.Contains(err.Error(), "merge:") {
+		t.Errorf("error should redirect to set:/delete:/merge:; got: %v", err)
+	}
+}
+
 func TestSet_PreservesOrderAndIndent(t *testing.T) {
 	src := `{
   "name": "myapp",
