@@ -459,6 +459,46 @@ with `toml: cannot store a table in a slice` — see #78 below.)
 
 ---
 
+## ★ `mooncake fleet exec --peer-filter` — tag- and name-based targeting
+
+```toml
+# peers.toml
+[[peers]]
+name = "local"
+tags = ["test", "dev"]
+[[peers]]
+name = "alpha"
+tags = ["test"]
+```
+
+```
+$ mooncake fleet exec "echo hi" --peer-filter tag=test
+fleet exec: 2 peer(s), command = "echo hi"
+[local] ✔ run complete success: 1/1 changed (1102ms)
+[alpha] ✗ version probe: ... connection refused (port open but no listener — agentd not running?)
+fleet exec: 1/2 ok — unreachable: alpha
+
+$ mooncake fleet exec "echo hi" --peer-filter name=local
+fleet exec: 1 peer(s), command = "echo hi"
+[local] ✔ run complete
+
+$ mooncake fleet exec "echo nope" --peer-filter tag=nonexistent
+fleet exec: --peer-filter selected 0 of 2 peer(s); nothing to do
+```
+
+What's nice:
+- `--peer-filter tag=test` matches all peers with that tag
+- `--peer-filter name=local` exact-match
+- Empty filter set produces a clear "nothing to do" message
+- **The diagnostic hint** when a peer is unreachable:
+  `connection refused (port open but no listener — agentd not running?)`
+  → tells the user the most likely cause inline.
+
+Combined with `[local]` / `[alpha]` line prefixes, this is the
+fleet-as-pipeline story working as advertised.
+
+---
+
 ## ★ `mooncake fleet doctor <peer>` — probe ladder UX
 
 ```
