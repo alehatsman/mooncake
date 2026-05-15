@@ -1,6 +1,14 @@
 # Spec 28: `os.*` System Config — cron, systemd, firewall, mount, sysctl
 
-**Status:** Draft
+**Status:** Phases 1–6 complete. P1–P5 shipped earlier (os.systemd,
+os.cron, os.sysctl, os.firewall ufw driver, os.mount). **Phase 6
+(spec-22 ABI hooks) shipped**: Permissions / Diff / Cost / Reverse
+declared on all five handlers using the testutil helpers. Reverse
+refuses on all five pending the apply-time pre-state capture
+refactor (tracked as a follow-up — same blocker as spec-26 / 27).
+Phase 7 (docs + non-ufw firewall drivers + macOS launchd if added
+later) is the only outstanding work; firewall non-ufw drivers
+remain deferred per the spec's original scope.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** L (2 weeks)
 **Value:** Medium-high. Closes the "remaining OS config" gap. Less
