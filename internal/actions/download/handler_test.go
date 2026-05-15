@@ -339,6 +339,100 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 	}
 }
 
+// TestHandler_Execute_ChecksumMismatch_DestNotCreated is the regression
+// test for MT-14: when a download's declared checksum does not match
+// the bytes pulled from the URL, the destination file MUST NOT be
+// created. The earlier shape verified after the rename and left the
+// mismatched bytes at dest — a silent supply-chain risk. The fix
+// verifies on the temp file before the rename.
+func TestHandler_Execute_ChecksumMismatch_DestNotCreated(t *testing.T) {
+	h := &Handler{}
+
+	testContent := "real upstream payload"
+	// 64 hex chars = SHA256 of "definitely not this content"
+	wrongSha256 := "0000000000000000000000000000000000000000000000000000000000000000"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(testContent))
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+	destPath := filepath.Join(tmpDir, "should-not-exist")
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		FileDownload: &config.Download{
+			URL:      server.URL,
+			Dest:     destPath,
+			Checksum: wrongSha256,
+		},
+	}
+
+	_, err := h.Execute(ec, step)
+	if err == nil {
+		t.Fatal("Execute() should error on checksum mismatch")
+	}
+	if !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Errorf("Error should mention 'checksum mismatch', got: %v", err)
+	}
+	// Error message should carry the declared + actual hashes so the
+	// operator can audit what was rejected without re-running the
+	// download.
+	if !strings.Contains(err.Error(), wrongSha256) {
+		t.Errorf("Error should include the declared checksum %q, got: %v", wrongSha256, err)
+	}
+
+	// The actual regression check: dest must not exist on disk. The
+	// bad bytes must never have been written there.
+	if _, statErr := os.Stat(destPath); statErr == nil {
+		t.Errorf("destination file %s was created despite checksum mismatch (MT-14 regression)", destPath)
+	} else if !os.IsNotExist(statErr) {
+		t.Errorf("unexpected stat error on dest: %v", statErr)
+	}
+}
+
+// TestHandler_Execute_ChecksumMatch_DestCreated is the positive
+// counterpart: when the declared checksum matches, the file lands
+// at dest as before. Ensures the MT-14 fix didn't break the happy
+// path.
+func TestHandler_Execute_ChecksumMatch_DestCreated(t *testing.T) {
+	h := &Handler{}
+
+	testContent := "correct payload"
+	correctSha256 := fmt.Sprintf("%x", sha256.Sum256([]byte(testContent)))
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(testContent))
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+	destPath := filepath.Join(tmpDir, "good.txt")
+
+	ec := mockExecutionContext()
+	step := &config.Step{
+		FileDownload: &config.Download{
+			URL:      server.URL,
+			Dest:     destPath,
+			Checksum: correctSha256,
+		},
+	}
+
+	if _, err := h.Execute(ec, step); err != nil {
+		t.Fatalf("Execute() unexpected error: %v", err)
+	}
+	got, err := os.ReadFile(destPath) // #nosec G304 -- test fixture
+	if err != nil {
+		t.Fatalf("dest not created: %v", err)
+	}
+	if string(got) != testContent {
+		t.Errorf("dest content = %q, want %q", got, testContent)
+	}
+}
+
 func TestHandler_Execute_IdempotencyWithChecksum(t *testing.T) {
 	h := &Handler{}
 
