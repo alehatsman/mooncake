@@ -106,14 +106,19 @@ func ValidateForApply(p *Plan, opts ValidateOptions) error {
 		}
 	}
 
-	// 3. Age
+	// 3. Age — MT-65: the comparison is strict (age > max), but
+	// rounding the displayed age to whole seconds made a 1.005s plan
+	// look identical to a 1s limit in the error message ("plan is 1s
+	// old; --max-plan-age is 1s"). Show millisecond precision so the
+	// operator can see the reported age really did exceed the
+	// configured max.
 	if opts.MaxAge > 0 && !p.GeneratedAt.IsZero() {
 		age := time.Since(p.GeneratedAt)
 		if age > opts.MaxAge {
 			se := &StaleError{
 				Reason: StaleReasonAgeExceeded,
 				Message: fmt.Sprintf("plan is %s old; --max-plan-age is %s",
-					age.Round(time.Second), opts.MaxAge),
+					age.Round(time.Millisecond), opts.MaxAge),
 			}
 			if !opts.AllowStale {
 				return se

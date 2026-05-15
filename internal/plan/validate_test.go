@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,6 +170,49 @@ func TestValidateForApply_AgeExceeded(t *testing.T) {
 	// Zero MaxAge should disable the check.
 	if err := ValidateForApply(p, ValidateOptions{}); err != nil {
 		t.Errorf("zero MaxAge should disable age check, got %v", err)
+	}
+}
+
+// MT-65: when a plan is rejected for age, the error message must
+// show enough precision that the operator can see the age exceeds
+// the configured max. Before the fix the age was rounded to whole
+// seconds, so a 1.005s plan vs --max-plan-age 1s rendered as
+// "plan is 1s old; --max-plan-age is 1s" — looking inclusive when
+// the check was actually strict.
+func TestValidateForApply_AgeExceeded_MessageShowsSubsecondPrecision(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "main.yml")
+	_ = os.WriteFile(cfg, []byte("steps: []\n"), 0o644)
+	hash, _ := HashInputFiles([]string{cfg})
+	// Plan is 1.5s old; max-age is 1s. Pre-fix message rounded to
+	// "plan is 2s old; --max-plan-age is 1s" (or "1s" with 1.4s) —
+	// the rounding boundary made it confusing either way.
+	p := &Plan{
+		Version:        "1.0",
+		GeneratedAt:    time.Now().Add(-1500 * time.Millisecond),
+		GeneratedOn:    currentHost(),
+		RootFile:       cfg,
+		InputFiles:     []string{cfg},
+		InputFilesHash: hash,
+	}
+
+	err := ValidateForApply(p, ValidateOptions{MaxAge: 1 * time.Second})
+	if err == nil {
+		t.Fatal("expected stale error from age limit")
+	}
+	var se *StaleError
+	if !errors.As(err, &se) {
+		t.Fatalf("expected StaleError, got %v", err)
+	}
+	// Millisecond-rounded display preserves the sub-second component
+	// rather than collapsing 1.5s into "2s" or "1s".
+	if !strings.Contains(se.Message, "ms") && !strings.Contains(se.Message, ".5s") &&
+		!strings.Contains(se.Message, "1.5s") {
+		t.Errorf("error should show ms-precision age, got: %s", se.Message)
+	}
+	// Sanity: must still cite both the age and the limit.
+	if !strings.Contains(se.Message, "--max-plan-age") {
+		t.Errorf("error should cite --max-plan-age flag, got: %s", se.Message)
 	}
 }
 
