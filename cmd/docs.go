@@ -1,12 +1,26 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/alehatsman/mooncake/internal/docgen"
 	"github.com/urfave/cli/v2"
 )
+
+// generatedHeaderLine matches the `<!-- Version: ... | Generated: ... -->`
+// preamble so we can compare generator output to disk while ignoring the
+// timestamp/version, which would otherwise force a write on every run.
+var generatedHeaderLine = regexp.MustCompile(`(?m)^<!-- Version: .* \| Generated: .* -->\r?\n`)
+
+func docContentEqual(a, b []byte) bool {
+	return bytes.Equal(
+		generatedHeaderLine.ReplaceAll(a, nil),
+		generatedHeaderLine.ReplaceAll(b, nil),
+	)
+}
 
 // docsCommand creates the docs command with subcommands.
 func docsCommand() *cli.Command {
@@ -75,36 +89,29 @@ func generateDocsAction(c *cli.Context) error {
 		appVersion = "dev"
 	}
 
-	// Create generator
 	generator := docgen.NewGenerator(appVersion)
 
-	// Determine output writer
-	var writer *os.File
-	var err error
-
 	if output == "" || dryRun {
-		writer = os.Stdout
-	} else {
-		writer, err = os.Create(output) // #nosec G304 -- output path provided by user via CLI flag
-		if err != nil {
-			return fmt.Errorf("failed to create output file: %w", err)
-		}
-		defer func() {
-			if closeErr := writer.Close(); closeErr != nil {
-				fmt.Fprintf(os.Stderr, "warning: failed to close output file: %v\n", closeErr)
-			}
-		}()
+		return generator.GenerateSection(section, os.Stdout, presetsDir)
 	}
 
-	// Generate documentation
-	if err := generator.GenerateSection(section, writer, presetsDir); err != nil {
+	var buf bytes.Buffer
+	if err := generator.GenerateSection(section, &buf, presetsDir); err != nil {
 		return fmt.Errorf("failed to generate documentation: %w", err)
 	}
 
-	// Print success message if writing to file
-	if output != "" && !dryRun {
-		fmt.Fprintf(os.Stderr, "✓ Generated %s documentation to %s\n", section, output)
+	mode := os.FileMode(0o644)
+	if info, err := os.Stat(output); err == nil {
+		if docContent, readErr := os.ReadFile(output); readErr == nil && docContentEqual(docContent, buf.Bytes()) {
+			fmt.Fprintf(os.Stderr, "✓ %s already up to date (%s)\n", section, output)
+			return nil
+		}
+		mode = info.Mode().Perm()
 	}
 
+	if err := os.WriteFile(output, buf.Bytes(), mode); err != nil { // #nosec G304 -- output path provided by user via CLI flag
+		return fmt.Errorf("failed to write output file: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "✓ Generated %s documentation to %s\n", section, output)
 	return nil
 }
