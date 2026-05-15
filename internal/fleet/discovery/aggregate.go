@@ -32,6 +32,17 @@ type Options struct {
 	// ProbeTimeout per-peer; default 2 seconds. Aggregate runs probes
 	// in parallel so the wall-clock cost is one timeout, not N.
 	ProbeTimeout time.Duration
+
+	// MDNS, when non-nil and *MDNS=true, runs an mDNS browse alongside
+	// peers.toml + ssh_config and merges responders into the candidate
+	// list. Nil → enabled by default for `fleet discover`. Pointer
+	// shape so test callers can deterministically disable it without
+	// fighting zero-value semantics.
+	MDNS *bool
+
+	// MDNSTimeout caps the mDNS browse wall-clock. Default 3 seconds,
+	// matching spec-45 §mDNS interactive flow timing.
+	MDNSTimeout time.Duration
 }
 
 // Aggregate loads candidates from peers.toml and ~/.ssh/config, dedupes
@@ -74,7 +85,33 @@ func Aggregate(ctx context.Context, opts Options) ([]Candidate, error) {
 		}
 	}
 
+	// mDNS browse runs in parallel with the on-disk source loads above
+	// — it's the slowest source (bounded by MDNSTimeout, not by file
+	// stats) so we want its wall-clock to overlap with the others.
+	// Note: we kick it off here rather than top-of-function so a
+	// peers.toml or ssh_config parse error bails out before we waste
+	// the timeout.
+	var mdnsCands []Candidate
+	enableMDNS := true
+	if opts.MDNS != nil {
+		enableMDNS = *opts.MDNS
+	}
+	if enableMDNS {
+		mdnsTimeout := opts.MDNSTimeout
+		if mdnsTimeout <= 0 {
+			mdnsTimeout = 3 * time.Second
+		}
+		// QueryMDNS is best-effort: a failure (no multicast iface, fw
+		// drops, etc.) is downgraded to "no mDNS candidates" rather
+		// than aborting the whole aggregate. Operators with peers.toml
+		// configured still get useful output.
+		var mdnsErr error
+		mdnsCands, mdnsErr = QueryMDNS(ctx, MDNSQueryOptions{Timeout: mdnsTimeout})
+		_ = mdnsErr // intentionally swallowed; see comment above
+	}
+
 	merged := merge(peerCands, sshCands)
+	merged = mergeMDNS(merged, mdnsCands)
 
 	probe := true
 	if opts.Probe != nil {
@@ -104,6 +141,41 @@ func candidatesFromPeers(peers []fleet.Peer) []Candidate {
 			Sources: []string{SourcePeersTOML},
 			Tags:    append([]string(nil), p.Tags...),
 		})
+	}
+	return out
+}
+
+// mergeMDNS layers mDNS responders onto an already-merged peers.toml +
+// ssh-config list. mDNS hits whose Name matches an existing candidate
+// get tagged with SourceMDNS (and a version field, if mDNS supplied
+// one and the existing entry didn't). Unmatched responders are
+// appended as fresh candidates.
+//
+// Why separate from `merge`: mDNS arrives later (after a network
+// timeout) and is the least authoritative source — peers.toml is
+// operator-curated, ssh-config is operator-curated, mDNS is auto-
+// discovered. We never let mDNS overwrite operator-set fields.
+func mergeMDNS(existing, mdnsCands []Candidate) []Candidate {
+	byName := make(map[string]int, len(existing)+len(mdnsCands))
+	for i := range existing {
+		byName[existing[i].Name] = i
+	}
+	out := existing
+	for _, m := range mdnsCands {
+		if idx, ok := byName[m.Name]; ok {
+			out[idx].Sources = append(out[idx].Sources, SourceMDNS)
+			// mDNS reports a version string in the TXT record. If the
+			// existing candidate didn't have one (e.g. ssh-only peer
+			// without a /v1/version probe), accept the mDNS-reported
+			// version. Don't overwrite an already-set value — the
+			// probe path is more authoritative.
+			if out[idx].AgentdVersion == "" && m.AgentdVersion != "" {
+				out[idx].AgentdVersion = m.AgentdVersion
+			}
+			continue
+		}
+		out = append(out, m)
+		byName[m.Name] = len(out) - 1
 	}
 	return out
 }

@@ -9,8 +9,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/fleet/discovery"
 	"github.com/alehatsman/mooncake/internal/mcp"
 )
 
@@ -144,6 +147,41 @@ func (s *Server) Serve(ctx context.Context) error {
 		"pid", os.Getpid(),
 	)
 
+	// Spec-45 §Task 1 — mDNS advertise. Only when TCP is bound (no
+	// point advertising a unix-socket-only daemon over the LAN) and
+	// AdvertiseMDNS is on. Runs for the lifetime of ctx and shuts down
+	// cleanly when ctx is canceled; errors here are non-fatal (the
+	// daemon stays useful even if advertising fails — operators can
+	// fall back to peers.toml).
+	if s.cfg.BindAddr != "" && s.cfg.AdvertiseMDNS {
+		port, err := tcpPortFromBindAddr(s.cfg.BindAddr)
+		if err != nil {
+			s.log.Warn("mDNS advertise disabled: cannot parse bind addr", "bind", s.cfg.BindAddr, "err", err)
+		} else {
+			instance := s.cfg.AdvertiseName
+			if instance == "" {
+				instance = trimHostnameFirstLabel(s.hostname)
+			}
+			s.log.Info("agentd advertising via mDNS",
+				"service", discovery.MDNSServiceType,
+				"instance", instance,
+				"port", port,
+			)
+			go func() {
+				err := discovery.Advertise(ctx, discovery.AdvertiseOptions{
+					InstanceName: instance,
+					Port:         port,
+					Version:      s.version,
+					Hostname:     trimHostnameFirstLabel(s.hostname),
+					SystemMode:   s.cfg.SystemMode,
+				})
+				if err != nil && !errors.Is(err, context.Canceled) {
+					s.log.Warn("mDNS advertise exited with error", "err", err)
+				}
+			}()
+		}
+	}
+
 	errCh := make(chan error, 2)
 	if s.unixSrv != nil {
 		go func() {
@@ -174,6 +212,32 @@ func (s *Server) Serve(ctx context.Context) error {
 		_ = s.shutdown()
 		return err
 	}
+}
+
+// tcpPortFromBindAddr extracts the integer port from a "host:port"
+// bind address. Used by the mDNS advertise goroutine which needs the
+// port in numeric form for the SRV record.
+func tcpPortFromBindAddr(addr string) (int, error) {
+	_, p, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0, err
+	}
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		return 0, fmt.Errorf("non-integer port %q: %w", p, err)
+	}
+	return port, nil
+}
+
+// trimHostnameFirstLabel strips the trailing `.local` (or any other
+// trailing DNS label) so the advertised name matches the operator's
+// mental model. macOS's os.Hostname() reports `MacBook-Air.local`; the
+// operator wants `MacBook-Air` in peers.toml and in `dns-sd` output.
+func trimHostnameFirstLabel(h string) string {
+	if i := strings.Index(h, "."); i >= 0 {
+		return h[:i]
+	}
+	return h
 }
 
 // buildHandler composes the middleware stack for a listener. requireAuth=true

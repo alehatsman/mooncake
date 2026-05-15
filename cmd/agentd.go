@@ -46,6 +46,14 @@ func agentdCommand() *cli.Command {
 				Value: "info",
 				Usage: "Log level: debug, info, warn, error",
 			},
+			&cli.BoolFlag{
+				Name:  "no-mdns",
+				Usage: "Disable mDNS advertise (`_mooncake._tcp.local`). Default: advertise when --bind is set.",
+			},
+			&cli.StringFlag{
+				Name:  "name",
+				Usage: "Override the mDNS instance name. Defaults to the OS hostname with `.local` stripped. Useful on macOS to dodge Bonjour collision renames.",
+			},
 		},
 		Action: agentdRun,
 	}
@@ -75,6 +83,14 @@ func agentdRun(c *cli.Context) error {
 		cfg.MaxSyncBytes = v
 	}
 	cfg.LogLevel = c.String("log-level")
+
+	// Spec-45 §Task 1: mDNS advertise defaults on whenever TCP is bound.
+	// --no-mdns disables it (operator-driven opt-out: privacy, captive-
+	// network behaviour, etc.). --name overrides the auto-derived
+	// instance name; useful on macOS where Bonjour aggressively renames
+	// collisions.
+	cfg.AdvertiseMDNS = !c.Bool("no-mdns")
+	cfg.AdvertiseName = c.String("name")
 
 	// Windows convenience: if the user didn't ask for either listener
 	// explicitly, default to TCP-only on loopback. Spec-49 §"CLI changes".

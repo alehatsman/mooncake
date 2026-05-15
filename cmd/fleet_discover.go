@@ -47,6 +47,15 @@ func fleetDiscoverCommand() *cli.Command {
 				Usage: "Per-peer agentd probe timeout",
 			},
 			&cli.BoolFlag{
+				Name:  "no-mdns",
+				Usage: "Skip the mDNS browse for `_mooncake._tcp.local`. Useful on captive networks where multicast is unreliable, or when you want a pure peers.toml + ssh_config list.",
+			},
+			&cli.DurationFlag{
+				Name:  "mdns-timeout",
+				Value: 3 * time.Second,
+				Usage: "mDNS browse wall-clock timeout. Responses arriving after the timeout are dropped.",
+			},
+			&cli.BoolFlag{
 				Name:  "json",
 				Usage: "Emit candidates as a JSON array (one object per candidate) instead of the text table",
 			},
@@ -57,11 +66,14 @@ func fleetDiscoverCommand() *cli.Command {
 
 func fleetDiscoverAction(c *cli.Context) error {
 	probe := !c.Bool("no-probe")
+	mdns := !c.Bool("no-mdns")
 	opts := discovery.Options{
 		PeersPath:     c.String("peers-file"),
 		SSHConfigPath: c.String("ssh-config"),
 		Probe:         &probe,
 		ProbeTimeout:  c.Duration("probe-timeout"),
+		MDNS:          &mdns,
+		MDNSTimeout:   c.Duration("mdns-timeout"),
 	}
 	cands, err := discovery.Aggregate(c.Context, opts)
 	if err != nil {
