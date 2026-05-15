@@ -158,3 +158,43 @@ support missing).
 | 39 | MEDIUM | `tool github-release` tag prefix | try multiple prefixes |
 | 33 | LOW | `git.clone` `repo:` vs `url:` | accept alias |
 | 40 | HIGH | `tool github-release` bare binaries | see silent-success-bugs.md |
+
+---
+
+## #50 — `file.copy` on a directory errors with vague "use recursive copy action" — LOW
+
+**Repro**:
+```
+$ mooncake step "file.copy: { src: /tmp/srcdir, dest: /tmp/dstdir }"
+{
+  "error": "src is a directory, use recursive copy action instead",
+  "failed": true
+}
+```
+
+The error tells you what NOT to use, but not what TO use. There's no
+`file.copy_recursive`, no `file.copy_tree`, no `file.dir` in the schema.
+Closest is `shell: cp -r ...` but that's not what the error implies.
+
+**Fix**: either name the action explicitly in the error (`use shell: cp -r ...`)
+or add a `recursive:` flag on `file.copy` (simplest).
+
+---
+
+## #51 — `file.copy` silently follows symlinks — LOW (semantic)
+
+**Repro**:
+```
+$ ln -s /tmp/srcdir/a.txt /tmp/sym
+$ mooncake step "file.copy: { src: /tmp/sym, dest: /tmp/syml-dst }"
+{"changed": true}
+$ ls -la /tmp/syml-dst
+-rw-r--r-- ... /tmp/syml-dst   ← regular file, not a symlink
+```
+
+The destination is a regular file with the symlink's *target* content.
+The link itself was not preserved. For dotfile/`/usr/local/bin/foo`
+patterns this is probably wrong; users may want
+`follow_symlinks: false` to preserve link structure.
+
+**Fix**: add `follow_symlinks:` parameter (default true for back-compat).
