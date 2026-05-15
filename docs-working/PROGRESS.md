@@ -1,22 +1,21 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `b82fc12`, 2026-05-15, revision 10).
+(master @ `4e1fe89`, 2026-05-15, revision 11).
 
-> **What changed since revision 9**: **The `transaction:` keyword is
-> in master.** Spec-30 PR A (`7c2c00e`/`e3276e0`) shipped: a parser
-> for `transaction:` blocks plus a plan-time reversibility check that
-> refuses to plan a transaction containing irreversible steps unless
-> `allow_irreversible: true` is set. **`Reverse()` is also expanding
-> fast** — phase 5 slices C+D (`40fa747`/`b82fc12`) added `Reverse()`
-> for `link`/`hardlink` modes of `file.write`, plus `file.copy` and
-> `file.template`. The file family of `Reverse()` is largely
-> complete. Phase 5 slice E in flight in `worktree-spec-22-phase5e`
-> — probably the remaining handlers (text family, pkg, os.service,
-> file.download/unarchive). Spec-30 PR B+ (execution semantics +
-> reverse-on-failure orchestration) is presumably next in
-> `worktree-spec-30-parser`. **The agent-safety demo is one PR away**
-> from being a falsifiable claim.
+> **What changed since revision 10 — THE AGENT-SAFETY PIVOT IS SHIPPED.**
+> Spec-22 phase 5 slices E (`09c315b`/`0170893`) + F (`757c431`/`c001475`)
+> closed `Reverse()` across every priority handler (text family + pkg +
+> download + unarchive + service). Spec-30 PR B (`15cdc79`/`dd097ea`)
+> shipped the executor LIFO rollback state machine + on_rollback gating
+> + the rollback-demo example. The README rewrite (`4f5f239`/`4e1fe89`)
+> closed the marketing/reality gap that the brainstorm doc flagged as
+> the strategic motivation. The demo claim — *"agent edits N files,
+> Kth fails, mooncake auto-reverts"* — is now runnable via
+> `examples/transactions/rollback-demo.yml`. 4 of the 5 success criteria
+> in `next-priorities-2026-05.md` are met; only lighthouse-user
+> acquisition (Path X in the post-pivot section) remains. The
+> strategic constraint has shifted from **code** to **users**.
 
 ---
 
