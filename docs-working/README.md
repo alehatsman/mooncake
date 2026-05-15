@@ -75,6 +75,7 @@ _Verified 2026-05-15 against current master; ✅ = fixed, 🟡 = still open._
 - ✅ [#20](https://github.com/alehatsman/mooncake/issues/20) `for_each: [list]` inline form — fixed; both inline + variable forms now plan/apply cleanly. `with_items` doc rot still standing (separate ticket worthy). [analysis](analysis/issue-20-for-each-list-form-rejected.md)
 - ✅ [#21](https://github.com/alehatsman/mooncake/issues/21) `failed_when` fabricated exit code — fixed; message now reads `step marked failed by failed_when expression "X" (underlying command exited Y)` (matches the proposed wording). [analysis](analysis/issue-21-failed-when-fabricates-exit-code.md)
 - ✅ [#23](https://github.com/alehatsman/mooncake/issues/23) `continue_on_error` doesn't compose with `try` — closed upstream. [analysis](analysis/issue-23-continue-on-error-doesnt-compose-with-try.md)
+- 🟡 [#26](https://github.com/alehatsman/mooncake/issues/26) `git.clone` silently reports ✓ when `update:false` and `ref:` differs from cloned ref ([analysis](analysis/issue-26-git-clone-silent-noop-on-ref-mismatch.md)) — plan declares ref=test, dest is on master, mooncake says ok with no signal. Same silent-success family as findings/silent-success-bugs.md. Fix: mark `skipped` with reason instead of `ok`.
 
 ## Shipped specs (specs/done/)
 
