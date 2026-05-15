@@ -427,3 +427,35 @@ if err != nil {
 		})
 	}
 }
+
+// TestMT16_NoHTMLEscape_ByDefault is a regression test for manual-test
+// #16 (2026-05-15): pongo2 inherits Django's HTML-autoescape default
+// which corrupted CLI output (`<` → `&lt;`, `>` → `&gt;`, `&` → `&amp;`)
+// in the `log:` action and elsewhere. Mooncake renders nothing to
+// HTML, so SetAutoescape(false) must be called from
+// NewPongo2Renderer's init.
+func TestMT16_NoHTMLEscape_ByDefault(t *testing.T) {
+	r, err := NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("NewPongo2Renderer: %v", err)
+	}
+	cases := []struct {
+		in, want string
+		vars     map[string]interface{}
+	}{
+		{"angle <x>", "angle <x>", nil},
+		{"amp A&B", "amp A&B", nil},
+		{"{{ undefined | default:'<unset>' }}", "<unset>", nil},
+		{"{{ s }}", "<value>&with&special chars", map[string]interface{}{"s": "<value>&with&special chars"}},
+	}
+	for _, c := range cases {
+		got, err := r.Render(c.in, c.vars)
+		if err != nil {
+			t.Errorf("Render(%q): %v", c.in, err)
+			continue
+		}
+		if got != c.want {
+			t.Errorf("Render(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
