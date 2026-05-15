@@ -348,6 +348,48 @@ config file is empty: /work/empty.yml — expected a list of steps
 
 ---
 
+## #81 — `as_user: <name>` errors are generic when sudo is missing or user doesn't exist — LOW
+
+**Repro** (running as root, sudo not installed):
+```yaml
+- shell: id
+  as_user: alice
+```
+```
+$ mooncake apply -c cfg.yml
+command failed with exit code 1
+```
+
+```yaml
+- shell: id
+  as_user: nobodyxyz   # nonexistent user
+```
+```
+$ mooncake apply -c cfg.yml
+command failed with exit code 1
+```
+
+Both errors are identical and generic. The user has no way to tell:
+- "sudo isn't installed" vs.
+- "the named user doesn't exist" vs.
+- "the shell command itself failed"
+
+**Compare with MT-1 fix**: `as_user: root` correctly short-circuits
+when uid=0. The same pre-flight check should look at sudo
+availability and `getent passwd <user>` before invoking, and emit
+specific errors:
+```
+as_user: alice requires sudo; sudo not on PATH
+  fix: apt-get install sudo (or run as the target user directly)
+
+as_user: nobodyxyz: user does not exist on this host
+  fix: check spelling, or os.user: { name: nobodyxyz, state: present } first
+```
+
+Same template as `mooncake doctor` already uses for missing tools.
+
+---
+
 ## #78 — `peers.toml` TOML parse error is unhelpful for the wrong-but-plausible form — LOW (DX)
 
 **Repro** — natural mistake when writing `~/.config/mooncake/peers.toml`:
