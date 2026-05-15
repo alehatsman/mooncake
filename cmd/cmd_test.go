@@ -89,19 +89,30 @@ func TestWriteFactsJSON(t *testing.T) {
 		t.Errorf("writeFactsJSON() did not create file")
 	}
 
-	// Verify file content
+	// Verify file content. MT-74: keys are snake_case (matching the
+	// template scope and /v1/facts endpoint), so unmarshal into a
+	// map[string]any rather than the typed *facts.Facts struct.
 	data, err := os.ReadFile(testPath)
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	}
 
-	var result facts.Facts
+	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Errorf("writeFactsJSON() produced invalid JSON: %v", err)
 	}
 
-	if result.OS != f.OS || result.Arch != f.Arch || result.CPUCores != f.CPUCores {
-		t.Errorf("writeFactsJSON() content mismatch")
+	if got := result["os"]; got != f.OS {
+		t.Errorf("os mismatch: got %v, want %v", got, f.OS)
+	}
+	if got := result["arch"]; got != f.Arch {
+		t.Errorf("arch mismatch: got %v, want %v", got, f.Arch)
+	}
+	if got, _ := result["cpu_cores"].(float64); int(got) != f.CPUCores {
+		t.Errorf("cpu_cores mismatch: got %v, want %v", got, f.CPUCores)
+	}
+	if _, hasPascal := result["OS"]; hasPascal {
+		t.Errorf("MT-74 regression: JSON has PascalCase 'OS' key — must be snake_case")
 	}
 
 	// Test invalid path
@@ -1573,26 +1584,26 @@ func TestWriteFactsJSONMarshalCheck(t *testing.T) {
 		t.Errorf("writeFactsJSON() error = %v", err)
 	}
 
-	// Verify JSON content
+	// Verify JSON content. MT-74: keys are snake_case (matching the
+	// template scope and /v1/facts endpoint).
 	data, err := os.ReadFile(testPath)
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	}
 
-	var result facts.Facts
+	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Errorf("writeFactsJSON() produced invalid JSON: %v", err)
 	}
 
-	// Verify a few key fields
-	if result.OS != f.OS {
-		t.Errorf("OS mismatch: got %v, want %v", result.OS, f.OS)
+	if got := result["os"]; got != f.OS {
+		t.Errorf("os mismatch: got %v, want %v", got, f.OS)
 	}
-	if result.Hostname != f.Hostname {
-		t.Errorf("Hostname mismatch: got %v, want %v", result.Hostname, f.Hostname)
+	if got := result["hostname"]; got != f.Hostname {
+		t.Errorf("hostname mismatch: got %v, want %v", got, f.Hostname)
 	}
-	if result.CPUCores != f.CPUCores {
-		t.Errorf("CPUCores mismatch: got %v, want %v", result.CPUCores, f.CPUCores)
+	if got, _ := result["cpu_cores"].(float64); int(got) != f.CPUCores {
+		t.Errorf("cpu_cores mismatch: got %v, want %v", got, f.CPUCores)
 	}
 }
 

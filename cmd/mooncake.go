@@ -536,7 +536,10 @@ func displayActionsTable(actionsList []actions.ActionMetadata) {
 }
 
 func writeFactsJSON(f *facts.Facts, path string) error {
-	data, err := json.MarshalIndent(f, "", "  ")
+	// MT-74: marshal via ToMap() so keys are snake_case, matching the
+	// daemon's /v1/facts endpoint and the template scope (`{{ os }}`).
+	// Direct json.Marshal(*Facts) would emit PascalCase Go field names.
+	data, err := json.MarshalIndent(f.ToMap(), "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal facts: %w", err)
 	}
