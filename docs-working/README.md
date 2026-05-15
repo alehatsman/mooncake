@@ -7,10 +7,8 @@ Working documents — specs, epics, and notes. Not canonical docs; those live in
 | Path | Contents |
 |---|---|
 | `streams.md` | Stream overview — goals, audiences, dependencies, what to work on next |
-| `specs/action-surface/` | Stream 1: typed action library (spec-17, 22, 24–29, 32) |
-| `specs/safe-agent-runtime/` | Stream 2: LLM execution safety (spec-23, 30) |
-| `specs/fleet-cluster/` | Stream 3: declarative cluster management (future specs) |
-| `specs/developer-experience/` | Stream 4: solo dev UX (future specs) |
+| `specs/action-surface/` | Stream 1: typed action library (spec-22, 24–28, 32, 36, disk-partition) |
+| `specs/personal-fleet/` | Stream 3: personal fleet runtime (spec-45, 52–55, 58, implementation-order) |
 | `specs/ecosystem/` | Stream 5: plugins, marketplace, integrations (spec-31) |
 | `specs/done/` | Shipped specs — read-only reference |
 | `epics/` | Epic-level planning docs |
@@ -23,13 +21,13 @@ See **[action-design-principles.md](./action-design-principles.md)** for the 11 
 ## Active specs by stream
 
 **Stream 1 — Action Surface**
-22 extended-handler-abi (phases 7–8 remain) · 24 pkg-surface (P6 ABI hooks) ·
+22 extended-handler-abi (phase 8 docs remains) · 24 pkg-surface (P6 ABI hooks) ·
 25 text-surface (P5 ABI hooks) · 26 git-actions (ABI hooks) · 27 os-identity (ABI hooks) ·
-28 os-scheduling (non-ufw drivers) · 32 step-action-dispatch ·
-37 step-output-capture · 38 read-json-yaml
+28 os-scheduling (non-ufw drivers, deferred) · 32 step-action-dispatch ·
+36 windows-support · disk-partition-action (exploration)
 
-Phases 1–6 of spec-22 are complete (all 4 handler methods declared across priority set).
-Remaining: MCP wiring (phase 7), docs (phase 8), final ABI-hook phases for 24–28.
+Phases 1–7 of spec-22 are complete (four-method ABI declared + MCP wiring landed).
+Remaining: phase 8 docs, plus final ABI-hook phases for 24–27.
 
 **Stream 2 — Safe Agent Runtime**
 
@@ -59,7 +57,7 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 31 tier2-plugin-model
 
 **Bugs**
-`bug/bug-symlink-force-plan-inspect.md` — `file.write` `state: link` + `force: true` fails `mooncake plan` when path is a non-symlink dir. Fix sketched; small scope.
+None open.
 
 ## Shipped specs (specs/done/)
 
