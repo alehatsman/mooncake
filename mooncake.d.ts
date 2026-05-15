@@ -301,6 +301,7 @@ export interface GitCloneAction {
   ref?: string;
   repo: string;
   update?: boolean;
+  url?: string;
 }
 
 /**
@@ -1061,6 +1062,7 @@ export interface VarsLoadAction {
 export interface WaitCommandAction {
   cmd: string;
   expect_exit?: number;
+  interval?: string;
   poll_interval?: string;
   timeout?: string;
 }
@@ -1071,6 +1073,7 @@ export interface WaitCommandAction {
  */
 export interface WaitFileAction {
   contains?: string;
+  interval?: string;
   path: string;
   poll_interval?: string;
   timeout?: string;
@@ -1083,6 +1086,7 @@ export interface WaitFileAction {
 export interface WaitHttpAction {
   body_contains?: string;
   headers?: Record<string, any>;
+  interval?: string;
   method?: string;
   poll_interval?: string;
   status?: number[];
@@ -1096,6 +1100,7 @@ export interface WaitHttpAction {
  */
 export interface WaitPortAction {
   host?: string;
+  interval?: string;
   poll_interval?: string;
   port: number;
   timeout?: string;

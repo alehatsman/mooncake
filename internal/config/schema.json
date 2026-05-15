@@ -723,6 +723,9 @@
         },
         "update": {
           "type": "boolean"
+        },
+        "url": {
+          "type": "string"
         }
       },
       "required": [
@@ -24609,6 +24612,9 @@
         "expect_exit": {
           "type": "integer"
         },
+        "interval": {
+          "type": "string"
+        },
         "poll_interval": {
           "type": "string"
         },
@@ -24629,6 +24635,9 @@
       "description": "Wait for a file or directory to exist (optionally containing a substring)",
       "properties": {
         "contains": {
+          "type": "string"
+        },
+        "interval": {
           "type": "string"
         },
         "path": {
@@ -24660,6 +24669,9 @@
         "headers": {
           "type": "object",
           "additionalProperties": true
+        },
+        "interval": {
+          "type": "string"
         },
         "method": {
           "type": "string"
@@ -24694,6 +24706,9 @@
       "description": "Wait for a TCP port to accept connections",
       "properties": {
         "host": {
+          "type": "string"
+        },
+        "interval": {
           "type": "string"
         },
         "poll_interval": {

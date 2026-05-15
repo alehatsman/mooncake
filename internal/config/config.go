@@ -1544,7 +1544,17 @@ func (f *ForEachField) UnmarshalJSON(data []byte) error {
 // RetryPolicy controls per-step retry behavior (spec-21).
 // Replaces the legacy flat Retries + RetryDelay fields with a single
 // structured block; future-compat for backoff strategies.
+//
+// Semantics (MT-49):
+//   - `attempts:` is the number of *retries* after the initial try.
+//   - Total executions therefore = attempts + 1 (e.g. attempts:3 →
+//     up to 4 executions: 1 initial + 3 retries).
+//   - Matches Ansible's `until: … retries:` convention, but call it
+//     out here because the field name is otherwise ambiguous and
+//     operators sometimes read "attempts: 3" as "exactly 3 tries".
 type RetryPolicy struct {
+	// Attempts is the number of retries after the initial try.
+	// Total executions = Attempts + 1. Set to 0 to disable retry.
 	Attempts int    `yaml:"attempts" json:"attempts,omitempty"`
 	Delay    string `yaml:"delay" json:"delay,omitempty"`
 	Backoff  string `yaml:"backoff" json:"backoff,omitempty"` // "fixed", "linear", "exponential"
