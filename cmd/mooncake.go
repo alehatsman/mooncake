@@ -1249,8 +1249,11 @@ func createApp() *cli.App {
 						Usage:   "Path to a variables file. Repeat to layer multiple files; later wins on key collision.",
 					},
 					&cli.StringFlag{
+						// MT-68: accept --output-format too so users
+						// who learned the verb on `apply` don't get a
+						// "flag not defined" error on `validate`.
 						Name:    "format",
-						Aliases: []string{"f"},
+						Aliases: []string{"f", "output-format"},
 						Value:   "text",
 						Usage:   "Output format: text or json",
 					},
