@@ -211,6 +211,22 @@ schema-check: build ## Check if generated schema is up to date
 	fi
 
 # ==============================================================================
+# Architecture
+# ==============================================================================
+
+.PHONY: arch-snapshot
+arch-snapshot: ## Generate docs-working/ARCH_SNAPSHOT.md (package graph + metrics for LLM review)
+	@bash ./scripts/arch-snapshot.sh
+
+.PHONY: arch-tools
+arch-tools: ## Install optional analyzers used by arch-snapshot (gocyclo, goda)
+	@echo "Installing gocyclo..."
+	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+	@echo "Installing goda..."
+	@go install github.com/loov/goda@latest
+	@echo "✓ Done. Re-run 'make arch-snapshot' to pick them up."
+
+# ==============================================================================
 # Release
 # ==============================================================================
 
