@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -342,23 +341,55 @@ func fleetApplyAction(c *cli.Context) error {
 		}
 	}
 
-	// Machine convention: bare name (no slash, no .yml) and
-	// <plan-dir>/machines/<name>/index.yml exists. Each machine owns a
-	// directory so it can carry its own vars.yml / fixtures alongside
-	// the entry plan.
+	// Machine convention: bare name (no slash, no .yml) → look for a
+	// machine layout under <plan-dir>/machines/<name>/. Two layouts are
+	// recognised, checked in this order:
+	//
+	//  1. fleet.yml — multi-phase apply (spec for `mooncake apply <name>`
+	//     against a Windows+WSL box that needs ordered host-then-guest
+	//     phases). Dispatches to runMachineApply later.
+	//  2. index.yml — single-phase apply (the original spec-48 machine
+	//     convention; one peer named <name>, one entry plan).
+	//
+	// Each machine owns a directory so it can carry its own vars.yml /
+	// fixtures alongside the entry plan.
 	machine := ""
+	var machineManifest *fleet.MachineManifest
 	if !strings.ContainsAny(planArg, "/\\") && !strings.HasSuffix(planArg, ".yml") {
 		root := planDir
 		if root == "" {
 			pwd, _ := os.Getwd()
 			root = pwd
 		}
-		entry := filepath.Join(root, "machines", planArg, "index.yml")
-		if st, err := os.Stat(entry); err == nil && !st.IsDir() {
+		// First try the multi-phase manifest. A missing file falls
+		// through to the index.yml single-phase check.
+		manifestPath, found, lookupErr := fleet.LookupMachineManifest(root, planArg)
+		if lookupErr != nil {
+			return cli.Exit("fleet apply: "+lookupErr.Error(), 2)
+		}
+		if found {
+			m, err := fleet.LoadMachineManifest(manifestPath)
+			if err != nil {
+				return cli.Exit("fleet apply: "+err.Error(), 2)
+			}
 			machine = planArg
-			planArg = entry
+			machineManifest = m
 			if planDir == "" {
 				planDir = root
+			}
+			// Set planArg to the manifest so error messages and the
+			// planAbs derivation below have a sensible string. The
+			// multi-phase path doesn't use planAbs directly; it uses
+			// each phase's own Plan field.
+			planArg = manifestPath
+		} else {
+			entry := filepath.Join(root, "machines", planArg, "index.yml")
+			if st, err := os.Stat(entry); err == nil && !st.IsDir() {
+				machine = planArg
+				planArg = entry
+				if planDir == "" {
+					planDir = root
+				}
 			}
 		}
 	}
@@ -472,48 +503,12 @@ func fleetApplyAction(c *cli.Context) error {
 	}
 
 	w := c.App.Writer
-
-	// Filter out non-agentd transports up-front. Skipped peers are reported
-	// after the orchestrator banner so the output order is consistent:
-	// banner → unknown-peer warning → skips → per-peer events → summary.
-	agentdPeers := make([]fleet.Peer, 0, len(selected))
-	var skipped []fleet.Peer
-	for _, p := range selected {
-		if p.Transport != fleet.TransportAgentd {
-			skipped = append(skipped, p)
-			continue
-		}
-		agentdPeers = append(agentdPeers, p)
-	}
-	if len(agentdPeers) == 0 {
-		return cli.Exit("fleet apply: no agentd-transport peers selected", 1)
-	}
-
-	peerNames := make([]string, 0, len(agentdPeers))
-	for _, p := range agentdPeers {
-		peerNames = append(peerNames, p.Name)
-	}
 	useColor := fleet.ShouldColor(w, c.Bool("no-color"))
-	mux := fleet.NewMultiplexer(w, peerNames, useColor)
-	mux.Banner(fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)))
-	if len(unknown) > 0 {
-		mux.Banner("warning: unknown peer name(s) in --peers filter: " + strings.Join(unknown, ", "))
-	}
-	for _, p := range skipped {
-		mux.Banner(fmt.Sprintf("skipped %s: transport %q not supported (agentd only)", p.Name, p.Transport))
-	}
+	parallel := c.Int("parallel")
 
-	// One event channel feeds the single Multiplexer. Buffer ~64 events per
-	// peer to keep producers off the critical path during bursty step.stdout
-	// runs (e.g. packer.nvim parallel git clones).
-	events := make(chan fleet.PeerEvent, 64*len(agentdPeers))
-	drained := make(chan struct{})
-	go func() {
-		mux.Drain(events)
-		close(drained)
-	}()
-
-	// SIGINT: first → cancel & banner; second → hard exit.
+	// SIGINT: first → cancel & banner; second → hard exit. Owned at the
+	// outer fleetApplyAction level so a single ^C cancels every in-flight
+	// phase at once in machine mode.
 	applyCtx, cancel := context.WithCancel(c.Context)
 	defer cancel()
 	sigCh := make(chan os.Signal, 2)
@@ -522,104 +517,72 @@ func fleetApplyAction(c *cli.Context) error {
 	go func() {
 		select {
 		case <-sigCh:
-			mux.Banner("⚠ ^C closes the log stream only — remote runs continue.")
-			mux.Banner("  See `mooncake fleet logs <host>` to reattach.")
+			fmt.Fprintln(w, "⚠ ^C closes the log stream only — remote runs continue.")
+			fmt.Fprintln(w, "  See `mooncake fleet logs <host>` to reattach.")
 			cancel()
 			select {
 			case <-sigCh:
-				// Second signal: bypass the orderly shutdown.
 				os.Exit(130)
 			case <-applyCtx.Done():
-				// Apply finished on its own after first ^C.
 			}
 		case <-applyCtx.Done():
 		}
 	}()
 
-	// Optional semaphore. parallel <= 0 → unbounded.
-	parallel := c.Int("parallel")
-	var sem chan struct{}
-	if parallel > 0 {
-		sem = make(chan struct{}, parallel)
+	// Multi-phase machine mode: dispatch to the manifest-driven
+	// orchestrator. cfgPeers.Peers (not `selected`) is passed in so the
+	// manifest can resolve any peer in peers.toml — `--peers`-driven
+	// preselection doesn't make sense when the manifest is the
+	// authoritative peer list.
+	if machineManifest != nil {
+		return runMachineApply(
+			applyCtx, w, useColor,
+			machineManifest, machine, cfgPeers.Peers,
+			planDir, varsAbs, tags, stepNames,
+			maxSync, parallel, controllerID,
+			peerFilterGroups, nil, // osFor lazily allocated inside the helper if needed
+		)
 	}
 
-	results := make([]fleet.ApplyResult, len(agentdPeers))
-	errs := make([]error, len(agentdPeers))
-	var wg sync.WaitGroup
-	for i, p := range agentdPeers {
-		wg.Add(1)
-		go func(i int, p fleet.Peer) {
-			defer wg.Done()
-			if sem != nil {
-				sem <- struct{}{}
-				defer func() { <-sem }()
-			}
-			client := transport.New(p.Name, p.Addr, p.Token)
-			// Per-peer vars-file list: overlay resolution (vars/common.yml,
-			// vars/by-tag/<tag>.yml per peer tag, vars/by-host/<name>.yml)
-			// comes first; explicit --vars-file args come last so they
-			// override on key collision — matching mooncake's existing
-			// later-wins var-file semantics.
-			overlayVars := fleet.ResolveVarsFiles(planDir, p)
-			peerVars := append(append([]string{}, overlayVars...), varsAbs...)
-			results[i], errs[i] = fleet.Apply(applyCtx, fleet.ApplyOptions{
-				PeerName:     p.Name,
-				Peer:         client,
-				PlanDir:      planDir,
-				PlanPath:     planAbs,
-				VarsFiles:    peerVars,
-				Tags:         tags,
-				Names:        stepNames,
-				ControllerID: controllerID,
-				MaxSyncBytes: maxSync,
-				Events:       events,
-			})
-		}(i, p)
-	}
-	wg.Wait()
-	close(events)
-	<-drained
-
-	// Aggregate exit code:
-	//   0 → every peer's run reached "success"
-	//   1 → at least one peer ran but ended failed/interrupted
-	//   2 → at least one peer was unreachable (sync/version/submit failed)
-	ok, runFailed, unreachable := 0, 0, 0
-	var failedPeers []string
-	for i, r := range results {
-		switch {
-		case r.Status == "success":
-			ok++
-		case r.Status == "failed" || r.Status == "interrupted":
-			runFailed++
-			failedPeers = append(failedPeers, agentdPeers[i].Name)
-		default:
-			// Status == "" → never made it to a terminal SSE event.
-			// errs[i] should be set in that case (transport/sync/submit).
-			if errs[i] != nil {
-				unreachable++
-				failedPeers = append(failedPeers, agentdPeers[i].Name)
-			}
+	// Single-phase path: filter out non-agentd transports, run the
+	// shared runApplyPhase helper that drives Apply across the selected
+	// peer set.
+	agentdPeers := make([]fleet.Peer, 0, len(selected))
+	var skippedPeers []fleet.Peer
+	for _, p := range selected {
+		if p.Transport != fleet.TransportAgentd {
+			skippedPeers = append(skippedPeers, p)
+			continue
 		}
+		agentdPeers = append(agentdPeers, p)
 	}
-	mux.Banner(fmt.Sprintf("fleet apply: %d/%d ok", ok, len(agentdPeers)))
+	if len(agentdPeers) == 0 {
+		return cli.Exit("fleet apply: no agentd-transport peers selected", 1)
+	}
+
+	out := runApplyPhase(applyCtx, w, useColor, applyPhaseInput{
+		PlanAbs:       planAbs,
+		PlanDir:       planDir,
+		Peers:         agentdPeers,
+		UnknownPeers:  unknown,
+		SkippedPeers:  skippedPeers,
+		VarsAbs:       varsAbs,
+		Tags:          tags,
+		StepNames:     stepNames,
+		MaxSyncBytes:  maxSync,
+		Parallel:      parallel,
+		ControllerID:  controllerID,
+		BannerHeading: fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)),
+	})
 
 	switch {
-	case unreachable > 0:
-		return cli.Exit("fleet apply: unreachable peer(s): "+strings.Join(failedPeers, ", "), 2)
-	case runFailed > 0:
-		return cli.Exit("fleet apply: failed on peer(s): "+strings.Join(failedPeers, ", "), 1)
+	case out.Unreachable > 0:
+		return cli.Exit("fleet apply: unreachable peer(s): "+strings.Join(out.FailedNames, ", "), 2)
+	case out.RunFailed > 0:
+		return cli.Exit("fleet apply: failed on peer(s): "+strings.Join(out.FailedNames, ", "), 1)
 	}
-	// Belt + braces: surface a stray error that didn't map to either bucket.
-	var firstErr error
-	for _, e := range errs {
-		if e != nil && !errors.Is(e, context.Canceled) {
-			firstErr = e
-			break
-		}
-	}
-	if firstErr != nil {
-		return errors.Join(firstErr)
+	if out.FirstErr != nil {
+		return errors.Join(out.FirstErr)
 	}
 	return nil
 }

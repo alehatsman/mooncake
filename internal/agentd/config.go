@@ -46,6 +46,19 @@ type Config struct {
 	// MaxSyncBytes caps the body of a single PUT /v1/files request.
 	// Defaults to DefaultMaxSyncBytes when zero.
 	MaxSyncBytes int64
+
+	// AdvertiseMDNS enables `_mooncake._tcp.local` Bonjour advertising
+	// on the TCP bind address. Spec-45: lets `mooncake fleet discover`
+	// find this daemon on the LAN without operator-maintained
+	// peers.toml entries. Only meaningful when BindAddr != ""; the
+	// advertise goroutine is a no-op on unix-socket-only daemons.
+	AdvertiseMDNS bool
+
+	// AdvertiseName overrides the mDNS instance name (TXT `hn=`). When
+	// empty, defaults to os.Hostname() with `.local` stripped. Useful
+	// on macOS where Bonjour aggressively renames instances on
+	// collision ("desktop (2)").
+	AdvertiseName string
 }
 
 // Default returns the platform-appropriate per-user (or per-system) config.
