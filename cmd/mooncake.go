@@ -316,7 +316,8 @@ func run(c *cli.Context) error {
 		MaxOutputLines:    c.Int("max-output-lines"),
 		FactsJSONPath:     c.String("facts-json"),
 	}
-	return apply.NewRunner(cfg).Run(c.Context)
+	_, runErr := apply.NewRunner(cfg).Run(c.Context)
+	return runErr
 }
 
 func runFromPlan(c *cli.Context, planPath string) error {

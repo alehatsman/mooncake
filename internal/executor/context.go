@@ -73,6 +73,11 @@ type RunServices struct {
 	Mode           actions.Mode
 	Tags           []string
 	SudoPass       string
+	// Capture, if non-nil, records the compiled plan and per-step
+	// outcomes for callers that want the typed *KernelResult shape
+	// (internal/apply.Runner for R1.1b). nil for the legacy
+	// executor.Start callers that only care about the error return.
+	Capture *RunCapture
 }
 
 // LoopContext holds the current loop iteration state for a step executing
