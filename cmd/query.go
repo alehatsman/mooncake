@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -56,6 +57,35 @@ func queryMap(m map[string]interface{}, queries []string) error {
 		}
 	}
 
+	if missing {
+		return cli.Exit("", 1)
+	}
+	return nil
+}
+
+// queryMapJSON is the JSON counterpart to queryMap: emits a single JSON
+// object keyed by the original query strings (dot-form preserved) so the
+// caller can `jq .cpu_usage_pct` regardless of how many keys were asked
+// for. Missing keys yield a null value rather than being omitted, so the
+// shape of the response is stable across invocations.
+func queryMapJSON(m map[string]interface{}, queries []string) error {
+	missing := false
+	out := make(map[string]interface{}, len(queries))
+	for _, q := range queries {
+		key := strings.ReplaceAll(q, ".", "_")
+		val, ok := m[key]
+		if !ok || val == nil {
+			out[q] = nil
+			missing = true
+			continue
+		}
+		out[q] = val
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		return err
+	}
 	if missing {
 		return cli.Exit("", 1)
 	}

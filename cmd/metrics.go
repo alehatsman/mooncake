@@ -27,8 +27,14 @@ func metricsCommand(c *cli.Context) error {
 
 	mm := m.ToMap()
 
-	// --query mode mirrors `mooncake facts --query`.
+	// --query mode mirrors `mooncake facts --query`. Honor --format json
+	// here so `metrics --format json -q cpu_usage_pct` emits an object
+	// rather than the default key=value text — matches what users expect
+	// from a flag pair that works on `--fields`.
 	if queries := c.StringSlice("query"); len(queries) > 0 {
+		if c.String("format") == outputFormatJSON {
+			return queryMapJSON(mm, queries)
+		}
 		return queryMap(mm, queries)
 	}
 
