@@ -86,15 +86,27 @@ func InstallURL(_ context.Context, spec Spec, plan Plan, facts FactSnapshot, loc
 	}
 	finalChecksum := got // always record the computed one (canonical form)
 
-	// Extract into <installDir>.tmp then rename atomically.
+	// Install into <installDir>.tmp then rename atomically. Detect whether
+	// the downloaded artifact is an archive (.tar.gz/.tgz/.tar/.zip) or a
+	// bare binary (no recognized extension) — many GitHub releases ship
+	// the latter (jq, hadolint, kind, kubectl, k9s, gh, mc, etc.) and the
+	// archive-only path used to error out with "unsupported archive
+	// format" before the binary could be installed at all.
 	tmpDir := installDir + ".tmp"
 	_ = os.RemoveAll(tmpDir) // clean any prior crashed extract
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return Outcome{}, fmt.Errorf("create tmp install dir: %w", err)
 	}
-	if err := extractArchive(tmpFile, tmpDir, plan.StripComponents); err != nil {
-		_ = os.RemoveAll(tmpDir)
-		return Outcome{}, fmt.Errorf("extract: %w", err)
+	if detectFormat(tmpFile) == formatUnknown {
+		if err := installBareBinary(tmpFile, tmpDir, spec, plan); err != nil {
+			_ = os.RemoveAll(tmpDir)
+			return Outcome{}, fmt.Errorf("install bare binary: %w", err)
+		}
+	} else {
+		if err := extractArchive(tmpFile, tmpDir, plan.StripComponents); err != nil {
+			_ = os.RemoveAll(tmpDir)
+			return Outcome{}, fmt.Errorf("extract: %w", err)
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(installDir), 0o755); err != nil {
 		_ = os.RemoveAll(tmpDir)
