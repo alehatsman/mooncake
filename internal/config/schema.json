@@ -1746,6 +1746,27 @@
     "read.json": {
       "type": "object",
       "description": "Read a JSON file and optionally extract a value by path",
+      "properties": {
+        "max_bytes": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "string"
+        },
+        "redact": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "path"
+      ],
       "additionalProperties": false,
       "x-category": "data",
       "x-supports-dry-run": true,
@@ -1754,6 +1775,27 @@
     "read.yaml": {
       "type": "object",
       "description": "Read a YAML file and optionally extract a value by path",
+      "properties": {
+        "max_bytes": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "string"
+        },
+        "redact": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "path"
+      ],
       "additionalProperties": false,
       "x-category": "data",
       "x-supports-dry-run": true,

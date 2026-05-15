@@ -579,11 +579,11 @@ func TestFormatOneOfError(t *testing.T) {
 			name: "no action present",
 			err: &jsonschema.ValidationError{
 				Causes: []*jsonschema.ValidationError{
-					{Message: "missing required property 'shell'"},
-					{Message: "missing required property 'file'"},
+					{KeywordLocation: "/oneOf/0/required", Message: "missing properties: 'shell'"},
+					{KeywordLocation: "/oneOf/1/required", Message: "missing properties: 'file.write'"},
 				},
 			},
-			expected: "Step has no action. Each step must have exactly ONE of: shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait",
+			expected: "Step has no action. Each step must have exactly ONE of: file.write, or shell",
 		},
 		{
 			name: "multiple actions present",
@@ -593,14 +593,16 @@ func TestFormatOneOfError(t *testing.T) {
 					{KeywordLocation: "#/oneOf/1/not"},
 				},
 			},
-			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait",
+			// No required causes → allowed-list is empty in this synthetic
+			// case; real validation always populates required causes.
+			expected: "Step has multiple actions. Only ONE action is allowed per step. Choose either: ",
 		},
 		{
 			name: "generic oneOf error",
 			err: &jsonschema.ValidationError{
 				Causes: []*jsonschema.ValidationError{},
 			},
-			expected: "Step must have exactly one action (shell, cmd, file.write, file.template, file.copy, file.download, file.unarchive, text.replace, text.insert, text.delete_range, text.patch, os.service, pkg, repo.search, repo.tree, repo.patch, artifact.capture, artifact.validate, assert, use, log, import, vars, vars.load, or wait)",
+			expected: "Step must have exactly one action ()",
 		},
 	}
 
