@@ -293,6 +293,14 @@ type Copy struct {
 	Backup   bool   `yaml:"backup" json:"backup,omitempty"`       // Create .bak before overwrite
 	Force    bool   `yaml:"force" json:"force,omitempty"`         // Overwrite if exists
 	Checksum string `yaml:"checksum" json:"checksum,omitempty"`   // Expected SHA256 or MD5 checksum
+	// FollowSymlinks controls how symbolic links at the source path are
+	// handled (MT-51). Default (nil or true): the link is dereferenced
+	// and the target's content is copied to dest as a regular file.
+	// When set to false: the link itself is preserved — dest becomes
+	// a symlink with the same target string. Pointer so unset is
+	// distinguishable from explicit false; back-compat default is
+	// "follow".
+	FollowSymlinks *bool `yaml:"follow_symlinks,omitempty" json:"follow_symlinks,omitempty"`
 }
 
 // Unarchive represents an archive extraction operation in a configuration step.
