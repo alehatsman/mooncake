@@ -1144,9 +1144,15 @@ func createApp() *cli.App {
 						Action: runsGetCommand,
 					},
 					{
-						Name:   "list",
-						Usage:  "List runs known to the daemon",
-						Flags:  []cli.Flag{&cli.BoolFlag{Name: "system"}},
+						Name:  "list",
+						Usage: "List runs known to the daemon",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{Name: "system"},
+							// Daemon already returns JSON natively; accept the
+							// flag for symmetry with metrics / snapshot / facts
+							// so `--format json` doesn't error (#56).
+							&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Value: "json", Usage: "Output format (currently only 'json' is supported)"},
+						},
 						Action: runsListCommand,
 					},
 				},
