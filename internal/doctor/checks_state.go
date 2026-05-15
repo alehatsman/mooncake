@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -94,16 +95,27 @@ func (checkDiskSpace) Section() string { return "state" }
 func (checkDiskSpace) Name() string    { return "disk-space" }
 func (checkDiskSpace) Run(ctx Context) Result {
 	r := Result{Section: "state", Name: "disk-space"}
-	free, err := diskFree(ctx.HomeDir)
+	// MT-71: ctx.HomeDir is `~/.mooncake/` which may not exist on a
+	// fresh install. statfs returns ENOENT in that case, which the
+	// old code surfaced as "unsupported on this OS" — a false
+	// negative on every Linux machine where mooncake hadn't run
+	// yet. Walk up to the nearest existing ancestor before probing.
+	probeDir, err := existingAncestor(ctx.HomeDir)
 	if err != nil {
 		r.Status = StatusInfo
 		r.Message = "disk-space probe unsupported on this OS"
 		return r
 	}
-	r.Detail = fmt.Sprintf("%.1f GiB free in %s", float64(free)/1024/1024/1024, ctx.HomeDir)
+	free, err := diskFree(probeDir)
+	if err != nil {
+		r.Status = StatusInfo
+		r.Message = "disk-space probe unsupported on this OS"
+		return r
+	}
+	r.Detail = fmt.Sprintf("%.1f GiB free in %s", float64(free)/1024/1024/1024, probeDir)
 	if free < minFreeBytes {
 		r.Status = StatusWarning
-		r.Message = fmt.Sprintf("less than 100 MiB free in %s", ctx.HomeDir)
+		r.Message = fmt.Sprintf("less than 100 MiB free in %s", probeDir)
 		r.Fix = "free up space; mooncake stores plan artifacts and run history under ~/.mooncake/"
 		return r
 	}
@@ -111,6 +123,26 @@ func (checkDiskSpace) Run(ctx Context) Result {
 	r.Message = r.Detail
 	r.Detail = ""
 	return r
+}
+
+// existingAncestor walks dir's parent chain until os.Stat resolves a
+// path. Used by checkDiskSpace so the statfs probe lands on an
+// existing directory even when ~/.mooncake hasn't been created yet
+// (MT-71).
+func existingAncestor(dir string) (string, error) {
+	if dir == "" {
+		return "", errors.New("empty path")
+	}
+	for cur := dir; ; {
+		if _, err := os.Stat(cur); err == nil {
+			return cur, nil
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return "", errors.New("no existing ancestor")
+		}
+		cur = parent
+	}
 }
 
 // formatAge is intentionally lossy — doctor doesn't need second-level
