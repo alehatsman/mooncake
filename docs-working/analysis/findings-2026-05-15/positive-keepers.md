@@ -483,6 +483,34 @@ extend to all stateful actions.
 
 ---
 
+## ★ `os.cron` / `os.sysctl` / `os.ssh_key` — clean file-based system management
+
+```
+$ mooncake step "os.cron: { name: backup, schedule: \"0 3 * * *\", command: /usr/local/bin/backup.sh, user: root, state: present }"
+{"changed": true, "operation": "create", "name": "backup", "path": "/etc/cron.d/backup"}
+
+$ mooncake step "os.cron: ..."   # run 2
+{"changed": false, "operation": "noop", "name": "backup", "path": "/etc/cron.d/backup"}
+
+$ mooncake step "os.sysctl: { name: vm.swappiness, value: 10, state: present }"
+{"changed": true, "operation": "create", "name": "vm.swappiness", "path": "/etc/sysctl.d/99-mooncake.conf"}
+
+$ mooncake step "os.ssh_key: { user: root, key: \"ssh-ed25519 ...\", state: present }"
+{"changed": true, "added": 1, "removed": 0, "path": "/root/.ssh/authorized_keys"}
+```
+
+Each:
+- Writes a file under the right system dir (`/etc/cron.d/`, `/etc/sysctl.d/`, `~/.ssh/authorized_keys`) — file-managed not crontab/sysctl-runtime-modified
+- Surfaces `path:` so users know where the change landed
+- Idempotent (`operation: noop` or `added: 0` on no-op)
+- `added/removed` counters mirror pkg.hold's `holding/unholding` pattern — a per-action "what changed" enum is the convention
+
+Worth promoting as a portable Mooncake convention: every stateful
+action should surface `operation:` (or equivalent counts) so callers
+can audit without parsing log strings.
+
+---
+
 ## ★ `os.group` clean lifecycle with `operation:` signal
 
 ```json
