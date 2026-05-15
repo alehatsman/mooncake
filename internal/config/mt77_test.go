@@ -13,10 +13,14 @@ import (
 // only walks /required causes and the underlying additionalProperties
 // failure carries none. Surface the unknown-field diagnostic instead.
 func TestMT77_UnknownStepFieldNotEmptyVocab(t *testing.T) {
+	// Use a field that is genuinely absent from Step — the original
+	// repro used `creates:` but that's since been promoted to a real
+	// step-level alias for `unless_exists:`. `definitely_unknown:`
+	// stays future-proof against more step-level fields being added.
 	yaml := `- file.write:
     path: /tmp/guarded.txt
     content: "v1"
-  creates: /tmp/guarded.txt
+  definitely_unknown: oops
 `
 	tmp, err := os.CreateTemp("", "mt77-*.yml")
 	if err != nil {
@@ -34,11 +38,12 @@ func TestMT77_UnknownStepFieldNotEmptyVocab(t *testing.T) {
 		if strings.Contains(d.Message, "exactly one action ()") {
 			t.Errorf("regression: empty action vocabulary in diagnostic: %q", d.Message)
 		}
-		if strings.Contains(d.Message, "Unknown field 'creates'") {
+		if strings.Contains(d.Message, "definitely_unknown") &&
+			(strings.Contains(d.Message, "unknown field") || strings.Contains(d.Message, "Unknown field")) {
 			return // happy path
 		}
 	}
-	t.Errorf("expected 'Unknown field creates' diagnostic, got %d diags: %+v", len(diags), diags)
+	t.Errorf("expected an unknown-field diagnostic mentioning definitely_unknown, got %d diags: %+v", len(diags), diags)
 }
 
 // TestMT77_NoActionStillShowsVocab guards against an over-correction:
