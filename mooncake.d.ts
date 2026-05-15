@@ -366,6 +366,14 @@ export interface ObserveDiskAction {
 }
 
 /**
+ * Single-shot read of GPU utilization + memory (NVIDIA/Apple)
+ * @category system
+ */
+export interface ObserveGpuAction {
+  index?: number;
+}
+
+/**
  * Single-shot HTTP GET; returns typed status, latency, headers, body sample
  * @category network
  */
@@ -1282,6 +1290,10 @@ export interface Step {
    * Single-shot read of filesystem space / inode usage for a path
    */
   "observe.disk"?: ObserveDiskAction;
+  /**
+   * Single-shot read of GPU utilization + memory (NVIDIA/Apple)
+   */
+  "observe.gpu"?: ObserveGpuAction;
   /**
    * Single-shot HTTP GET; returns typed status, latency, headers, body
    * sample
