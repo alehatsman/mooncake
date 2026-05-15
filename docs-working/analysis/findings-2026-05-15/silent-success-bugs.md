@@ -578,49 +578,57 @@ times to get success; if all retries fail, *then* apply
 
 ---
 
-## #70 — `read.json` / `read.yaml` with `as:` leaks Go reflect.Value into templates — HIGH (regression-shape of #8)
+## #70 — Direct `{{ map_var }}` stringify leaks Go reflect.Value; need `cfg.value.X` to access JSON content — MEDIUM (DX + display)
 
-**Repro**:
+**Original report was wrong** — after auditing across action types,
+the bug is narrower than feared.
+
+**What actually happens**:
 ```yaml
-# /work/data.json: {"service": {"name": "web", "port": 8080}}
-- read.json:
-    path: /work/data.json
+- read.json: { path: /work/data.json }   # {"service":{"name":"web","port":8080}}
   as: cfg
+- log: { msg: "via .value: {{ cfg.value.service.name }}" }
 - log: { msg: "raw cfg = {{ cfg }}" }
-- log: { msg: "name = {{ cfg.service.name }}" }
 ```
 
 Output:
 ```
-raw cfg = <map[string]interface {} Value>
-name =
+via .value: web              ← drilling WORKS via .value.X.Y
+raw cfg = <map[string]interface {} Value>   ← top-level stringify broken
 ```
 
-The `as: cfg` captures the data, but templates access an opaque
-`reflect.Value` wrapper. All nested field access returns empty
-strings.
+So:
+- ✅ `read.json` returns `{value: {...}}` — same wrapping as `observe.*` actions
+- ✅ `cfg.value.service.name` drills correctly → `"web"`
+- ❌ `{{ cfg }}` (direct stringify) produces `<map[string]interface {} Value>` (Go reflect.Value String())
+- ⚠️ JSON numbers stringify as floats with `.0` suffix: `port=8080.000000`, `replicas=3.000000` — cosmetic
 
-**Why HIGH**: this is **the same bug class** as the original #8
-(for_each `{{ item }}` leaked Go reflect.Value). #8 was fixed at the
-loop-variable binding path. The fix didn't extend to register-style
-`as:` captures for read.* actions.
+**Audit across action types** (round 21):
+- `read.json as:` — drilling via `.value` works; top-level stringify broken
+- `repo.search as: r` — `r.total_matches=2` ✓, `r.results.0.file` empty (array index access via `.0` broken)
+- `observe.cpu as: c` — `c.value.cores=32` ✓, fields accessible
+- `pkg.list as: p` — `p.count=92` ✓, `p.manager=apt` ✓
+- `shell as: s` — `s.stdout`, `s.rc` ✓
 
-For an AI agent, `read.json → use cfg in template` is THE primary
-configuration-driven pattern (load config, fan out actions). Right
-now this pattern silently produces empty values everywhere.
+So **most `as:` paths work**; what's broken is:
+1. **Direct stringify of a non-scalar variable** → reflect.Value repr
+2. **Array-index access** `r.results.0.file` returns empty (could be Pongo2 syntax — try `r.results.0|attr:"file"` or `r.results[0].file`)
 
-**Workaround**: none known via templates. Agent would have to shell
-out to `cat /work/data.json | jq` and pipe text.
+**Documentation needed**: every typed-result action result has a
+`.value` wrapper (or a flat top-level for actions returning multiple
+named fields like `pkg.list`). Users following `{{ cfg.service.name }}`
+silently get empty.
 
-**Fix**: when storing register-style results into
-`ExpansionContext.Variables`, unwrap reflect.Value to native
-map/slice/scalar before binding — same change that fixed #8 for the
-iteration path.
+**Fix**:
+1. When stringifying a map/slice variable directly, marshal to
+   JSON/YAML instead of falling through to Go reflect.Value String().
+2. Document the `.value` wrapper in templates docs (every `as:`-capable
+   action's result page should show the template path).
+3. Support array indexing `.0`, `.1` consistently (currently `.results.0` returns empty for repo.search).
 
-**Probably also affects**: `repo.search`'s `as:` (returns
-`results: [...]` map), `pkg.list as:` (returns `packages: [...]`),
-`observe.* as:` (returns `value: {...}`). Every typed-result action
-that uses `as:` is suspect. Worth auditing.
+Severity downgraded from HIGH → MEDIUM since the data IS accessible
+once users learn `.value`; the original report's "all empty" was due
+to my missing `.value`.
 
 ---
 
