@@ -24,9 +24,12 @@ func (g *Generator) generatePlatformMatrix(w io.Writer) error {
 	platforms := []string{"linux", "darwin", "windows", "freebsd"}
 	platformNames := []string{"Linux", "macOS", "Windows", "FreeBSD"}
 
-	// Generate table header
+	// Generate table header. strings.Repeat("-------|", N) already
+	// supplies the trailing pipe — don't double it in the format
+	// string. (Spotted in issue-28; the generateCapabilities table
+	// below uses literal pipes and is unaffected.)
 	write(w, "| Action | %s |\n", strings.Join(platformNames, " | "))
-	write(w, "|--------|%s|\n", strings.Repeat("-------|", len(platforms)))
+	write(w, "|--------|%s\n", strings.Repeat("-------|", len(platforms)))
 
 	// Generate table rows
 	for _, action := range actionList {
