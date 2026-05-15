@@ -351,6 +351,17 @@ export interface LogAction {
 }
 
 /**
+ * Single-shot read of TCP/UDP port state (open? listener? pid?)
+ * @category network
+ */
+export interface ObservePortAction {
+  host?: string;
+  port: number;
+  protocol?: string;
+  timeout?: string;
+}
+
+/**
  * Manage a cron job via /etc/cron.d/<name>
  * 
  * @platforms linux
@@ -383,6 +394,22 @@ export interface OsCronAction {
  * @category system
  */
 export interface OsFirewallAction {
+  backend?: string;
+  rule?: {
+    action: string;
+    comment: string;
+    from: string;
+    port: number;
+    protocol: string;
+  };
+  rules?: {
+    action: string;
+    comment: string;
+    from: string;
+    port: number;
+    protocol: string;
+  }[];
+  state?: string;
 }
 
 /**
@@ -393,6 +420,10 @@ export interface OsFirewallAction {
  * @category system
  */
 export interface OsGroupAction {
+  gid?: number;
+  name: string;
+  state?: string;
+  system?: boolean;
 }
 
 /**
@@ -403,6 +434,14 @@ export interface OsGroupAction {
  * @category system
  */
 export interface OsMountAction {
+  backup?: boolean;
+  dest: string;
+  dump?: number;
+  fstype?: string;
+  options?: string[];
+  pass?: number;
+  src?: string;
+  state?: string;
 }
 
 /**
@@ -488,6 +527,17 @@ export interface OsSysctlAction {
  * @category system
  */
 export interface OsSystemdAction {
+  enabled?: boolean;
+  install?: Record<string, any>;
+  name: string;
+  path?: string;
+  reload_on_change?: boolean;
+  service?: Record<string, any>;
+  socket?: Record<string, any>;
+  started?: boolean;
+  state?: string;
+  timer?: Record<string, any>;
+  unit?: Record<string, any>;
 }
 
 /**
@@ -831,6 +881,12 @@ export interface TextPatchIniAction {
  * @category file
  */
 export interface TextPatchJsonAction {
+  backup?: boolean;
+  delete?: string[];
+  merge?: Record<string, any>;
+  merge_strategy?: string;
+  path: string;
+  set?: Record<string, any>;
 }
 
 /**
@@ -838,6 +894,12 @@ export interface TextPatchJsonAction {
  * @category file
  */
 export interface TextPatchYamlAction {
+  backup?: boolean;
+  delete?: string[];
+  merge?: Record<string, any>;
+  merge_strategy?: string;
+  path: string;
+  set?: Record<string, any>;
 }
 
 /**
@@ -957,6 +1019,16 @@ export interface WaitPortAction {
  * @category system
  */
 export interface WindowsFirewallRuleAction {
+  action?: string;
+  description?: string;
+  direction?: string;
+  enabled?: boolean;
+  local_port?: string[];
+  name: string;
+  profile?: string[];
+  protocol?: string;
+  remote_port?: string[];
+  state?: string;
 }
 
 /**
@@ -966,6 +1038,44 @@ export interface WindowsFirewallRuleAction {
  * @category system
  */
 export interface WindowsScheduledTaskAction {
+  actions: {
+    arguments: string;
+    execute: string;
+    working_directory: string;
+  }[];
+  description?: string;
+  name: string;
+  principal?: {
+    logon_type: string;
+    run_level: string;
+    user: string;
+  };
+  settings?: {
+    allow_start_if_on_batteries: boolean;
+    dont_stop_if_going_on_batteries: boolean;
+    execution_time_limit: string;
+    hidden: boolean;
+    multiple_instances: string;
+    restart_count: number;
+    restart_interval: string;
+    run_only_if_network_available: boolean;
+    start_when_available: boolean;
+  };
+  state?: string;
+  trigger?: {
+    duration: string;
+    interval: string;
+    start_boundary: string;
+    type: string;
+    user_id: string;
+  };
+  triggers?: {
+    duration: string;
+    interval: string;
+    start_boundary: string;
+    type: string;
+    user_id: string;
+  }[];
 }
 
 /**
@@ -1111,6 +1221,10 @@ export interface Step {
    * Display messages and structured data to the user
    */
   log?: LogAction;
+  /**
+   * Single-shot read of TCP/UDP port state (open? listener? pid?)
+   */
+  "observe.port"?: ObservePortAction;
   /**
    * Manage a cron job via /etc/cron.d/<name>
    */

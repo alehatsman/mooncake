@@ -582,6 +582,8 @@ var actionStructByName = map[string]any{
 	"text.patch.yaml":        &config.TextPatchYAML{},
 	"windows.firewall_rule":  &config.WindowsFirewallRule{},
 	"windows.scheduled_task": &config.WindowsScheduledTask{},
+
+	"observe.port": &config.ObservePort{},
 }
 
 // getActionStruct returns the reflect.Type for an action's config struct.

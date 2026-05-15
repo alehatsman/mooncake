@@ -807,6 +807,31 @@
         "print.message"
       ]
     },
+    "observe.port": {
+      "type": "object",
+      "description": "Single-shot read of TCP/UDP port state (open? listener? pid?)",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        }
+      },
+      "required": [
+        "port"
+      ],
+      "additionalProperties": false,
+      "x-category": "network",
+      "x-supports-dry-run": true
+    },
     "os.cron": {
       "type": "object",
       "description": "Manage a cron job via /etc/cron.d/\u003cname\u003e",
@@ -1920,6 +1945,10 @@
           "type": "string",
           "description": "Name of the step (universal)"
         },
+        "observe.port": {
+          "description": "Single-shot read of TCP/UDP port state (open? listener? pid?)",
+          "$ref": "#/definitions/observe.port"
+        },
         "on_change": {
           "type": "array",
           "description": "Reactive triggers: child steps that run only if this step reports changed=true (spec-23)",
@@ -2256,6 +2285,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -2541,6 +2575,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -2834,6 +2873,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -3119,6 +3163,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -3412,6 +3461,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -3697,6 +3751,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -3990,6 +4049,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -4275,6 +4339,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -4568,6 +4637,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -4853,6 +4927,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -5146,6 +5225,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -5431,6 +5515,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -5724,6 +5813,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -6009,6 +6103,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -6302,6 +6401,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -6587,6 +6691,305 @@
               {
                 "required": [
                   "import"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.port"
+          ],
+          "properties": {
+            "observe.port": {
+              "$ref": "#/definitions/observe.port"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
                 ]
               },
               {
@@ -6885,6 +7288,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.firewall"
                 ]
               },
@@ -7170,6 +7578,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -7463,6 +7876,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -7748,6 +8166,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -8041,6 +8464,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -8326,6 +8754,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -8619,6 +9052,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -8904,6 +9342,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -9197,6 +9640,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -9482,6 +9930,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -9775,6 +10228,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -10060,6 +10518,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -10353,6 +10816,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -10638,6 +11106,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -10931,6 +11404,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -11216,6 +11694,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -11509,6 +11992,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -11798,6 +12286,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -12083,6 +12576,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -12383,6 +12881,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -12668,6 +13171,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -12961,6 +13469,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -13246,6 +13759,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -13539,6 +14057,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -13824,6 +14347,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -14117,6 +14645,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -14402,6 +14935,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -14695,6 +15233,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -14980,6 +15523,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -15271,6 +15819,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -15554,6 +16107,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -15854,6 +16412,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -16139,6 +16702,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -16432,6 +17000,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -16717,6 +17290,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -17010,6 +17588,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -17295,6 +17878,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
@@ -17588,6 +18176,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -17877,6 +18470,11 @@
               },
               {
                 "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
                   "os.cron"
                 ]
               },
@@ -18162,6 +18760,11 @@
               {
                 "required": [
                   "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
                 ]
               },
               {
