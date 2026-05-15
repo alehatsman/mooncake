@@ -348,9 +348,22 @@ type ArtifactCaptureData struct {
 	DurationMs   int64  `json:"duration_ms,omitempty"`   // Duration in milliseconds (only in complete event)
 }
 
-// PrintData contains data for print.message events
+// PrintData contains data for print.message events.
+//
+// Message is the fully-rendered output line(s) — always populated and
+// preserves the legacy contract for consumers that only care about the
+// human-readable form.
+//
+// Title, Format, and Data carry the structured-log payload from the
+// epic-read-and-report D3 deliverable. They are nil/empty for legacy
+// msg-only steps, and populated when the YAML used the structured form
+// (title / data / format). Agent JSONL consumers can read Data to get
+// the typed payload without re-parsing Message.
 type PrintData struct {
-	Message string `json:"message"` // The message that was printed
+	Message string `json:"message"`
+	Title   string `json:"title,omitempty"`
+	Format  string `json:"format,omitempty"`
+	Data    any    `json:"data,omitempty"`
 }
 
 // PackageManagedData contains data for package.managed events

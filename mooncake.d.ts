@@ -321,11 +321,33 @@ export interface ImportAction {
 }
 
 /**
- * Display messages to the user
+ * Display messages and structured data to the user
  * @category output
  */
 export interface LogAction {
+  /**
+   * Max bytes of rendered output; 0 disables truncation
+   */
+  budget?: number;
+  /**
+   * Structured payload to render
+   */
+  data?: any;
+  /**
+   * Render format for Data
+   * 
+   * @values kv | json
+   * @default kv
+   */
+  format?: "kv" | "json";
+  /**
+   * Free-text message (supports templates)
+   */
   msg?: string;
+  /**
+   * Optional header above Data (kv mode only)
+   */
+  title?: string;
 }
 
 /**
@@ -1086,7 +1108,7 @@ export interface Step {
    */
   "git.config"?: GitConfigAction;
   /**
-   * Display messages to the user
+   * Display messages and structured data to the user
    */
   log?: LogAction;
   /**

@@ -36,6 +36,8 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleCheckPlan)
 		case "get_metrics":
 			srv.RegisterTool(def, HandleGetMetrics)
+		case "query_file":
+			srv.RegisterTool(def, HandleQueryFile)
 		}
 	}
 }
@@ -108,6 +110,16 @@ func AllTools() []ToolDef {
 				},
 				"refresh": boolProp("If true, force-refresh metrics (bypass TTL)."),
 			}, nil),
+		},
+		{
+			Name:        "query_file",
+			Description: "Read a JSON or YAML file and extract a value by dotted path. Mirrors the `mooncake query` CLI. Returns {found:bool, value:any, format:string}. Path syntax: dotted keys (a.b.c) and bracketed integer indices (a[0]).",
+			InputSchema: objSchema(map[string]interface{}{
+				"path":      strProp("Absolute or relative path to the file"),
+				"query":     strProp("Optional dotted path to extract. Empty returns the whole document."),
+				"format":    strProp("Optional format override: 'json' or 'yaml'. Default: auto-detect from extension."),
+				"max_bytes": map[string]interface{}{"type": "integer", "description": "Optional. Refuse to load files larger than this size in bytes. Default: 4194304."},
+			}, []string{"path"}),
 		},
 	}
 }

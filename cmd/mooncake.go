@@ -988,6 +988,7 @@ func createApp() *cli.App {
 			fleetCommand(),
 			stepCommand(),
 			toolCommand(),
+			queryCommand(),
 			{
 				Name:   "apply",
 				Usage:  "Apply a playbook or saved plan. Use --dry-run to preview without changes.",

@@ -772,10 +772,31 @@
     },
     "log": {
       "type": "object",
-      "description": "Display messages to the user",
+      "description": "Display messages and structured data to the user",
       "properties": {
+        "budget": {
+          "type": "integer",
+          "description": "Max bytes of rendered output; 0 disables truncation"
+        },
+        "data": {
+          "description": "Structured payload to render"
+        },
+        "format": {
+          "type": "string",
+          "description": "Render format for Data",
+          "enum": [
+            "kv",
+            "json"
+          ],
+          "default": "kv"
+        },
         "msg": {
-          "type": "string"
+          "type": "string",
+          "description": "Free-text message (supports templates)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional header above Data (kv mode only)"
         }
       },
       "additionalProperties": false,
@@ -1738,7 +1759,7 @@
           "description": "Path to YAML file with steps to import"
         },
         "log": {
-          "description": "Display messages to the user",
+          "description": "Display messages and structured data to the user",
           "$ref": "#/definitions/log"
         },
         "name": {
