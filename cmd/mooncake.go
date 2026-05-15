@@ -227,6 +227,16 @@ func applyFlags() []cli.Flag {
 }
 
 func run(c *cli.Context) error {
+	// MT-76: --capture-full-output is a no-op without --artifacts-dir
+	// because there's no bundle to write to. The flag's help text says
+	// "requires --artifacts-dir"; honor that instead of silently
+	// dropping the capture and leaving the user wondering where their
+	// logs went. Check before --dry-run / --from-plan so the validation
+	// fires consistently regardless of mode.
+	if c.Bool("capture-full-output") && c.String("artifacts-dir") == "" {
+		return fmt.Errorf("--capture-full-output requires --artifacts-dir (the captured logs need a directory to land in)")
+	}
+
 	// --dry-run short-circuits to the plan path. Sugar over `mooncake plan`.
 	if c.Bool("dry-run") {
 		if c.String("from-plan") != "" {

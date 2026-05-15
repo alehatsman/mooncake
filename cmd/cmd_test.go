@@ -1816,6 +1816,44 @@ func TestRunCommandArtifactsFlags(t *testing.T) {
 		t.Fatal("run command not found")
 	}
 
+	// MT-76: --capture-full-output alone (without --artifacts-dir)
+	// must hard-error instead of silently no-opping. Pinned here so a
+	// future refactor that drops the early-return slips the test.
+	t.Run("MT-76 capture-full-output requires artifacts-dir", func(t *testing.T) {
+		app := createApp()
+		err := app.Run([]string{"mooncake", "apply", "--capture-full-output"})
+		if err == nil {
+			t.Fatal("expected error when --capture-full-output is set without --artifacts-dir")
+		}
+		if !contains(err.Error(), "--capture-full-output") || !contains(err.Error(), "--artifacts-dir") {
+			t.Errorf("error should name both flags; got: %v", err)
+		}
+	})
+
+	// MT-76: setting both flags must NOT trigger the validation (it's
+	// the partnership the help text promises).
+	t.Run("MT-76 capture-full-output + artifacts-dir is valid", func(t *testing.T) {
+		app := createApp()
+		// Use a guaranteed-nonexistent config path so the run aborts
+		// after our validation passes but before any real apply work.
+		err := app.Run([]string{
+			"mooncake", "apply",
+			"--capture-full-output",
+			"--artifacts-dir", "/tmp/mooncake-mt76-test",
+			"--config", "/tmp/this-config-does-not-exist-mt76.yml",
+		})
+		if err == nil {
+			// We expect the config-not-found error, not nil.
+			return
+		}
+		// Whatever error fires, it must NOT be the MT-76 partnership
+		// check — that one would carry the "--capture-full-output requires"
+		// phrasing.
+		if contains(err.Error(), "--capture-full-output requires") {
+			t.Errorf("validation should pass when both flags set; got: %v", err)
+		}
+	})
+
 	// Check for artifacts flags
 	artifactsFlags := map[string]bool{
 		"artifacts-dir":       false,
