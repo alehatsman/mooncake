@@ -77,27 +77,43 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	return h.executeWithRetry(ctx, step, renderedArgv)
 }
 
-// executeWithRetry executes the command with retry logic if configured.
+// executeWithRetry executes the command with retry logic if
+// configured. MT-48: the retry decision is based on the underlying
+// exit code, NOT the post-failed_when verdict — otherwise
+// `retry: 3` + `failed_when: false` would mask the first failure
+// and skip retries entirely. We run executeCommandRaw on each
+// attempt (no failed_when applied); only the final result has
+// failed_when / changed_when applied via evaluateResultOverrides.
 func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, renderedArgv []string) (actions.Result, error) {
 	maxAttempts := step.RetryAttempts() + 1
+
+	var lastResult actions.Result
+	var lastErr error
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt, maxAttempts)
 		}
 
-		result, err := h.executeCommand(ctx, step, renderedArgv)
+		result, err := h.executeCommandRaw(ctx, step, renderedArgv)
 		if err == nil {
+			// Raw success — apply overrides and return.
+			if r, ok := result.(*executor.Result); ok {
+				if oerr := h.applyOverrides(ctx, step, r); oerr != nil {
+					return r, oerr
+				}
+				if r.Failed {
+					return r, fmt.Errorf("command marked as failed by failed_when condition")
+				}
+			}
 			return result, nil
 		}
 
-		// If this was the last attempt or no more retries, return the error
-		if attempt >= maxAttempts {
-			return result, err
-		}
+		lastResult = result
+		lastErr = err
 
 		// Sleep before retry if configured
-		if step.RetryDelayDuration() != "" {
+		if attempt < maxAttempts && step.RetryDelayDuration() != "" {
 			delay, parseErr := time.ParseDuration(step.RetryDelayDuration())
 			if parseErr == nil && delay > 0 {
 				ctx.GetLogger().Debugf("  Waiting %v before retry", delay)
@@ -106,8 +122,56 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 		}
 	}
 
-	// Should never reach here
-	return nil, fmt.Errorf("retry logic failed unexpectedly")
+	// All attempts failed — apply overrides to the final result.
+	// failed_when:false masks the failure; otherwise we propagate.
+	if r, ok := lastResult.(*executor.Result); ok && r.Failed {
+		if oerr := h.applyOverrides(ctx, step, r); oerr != nil {
+			return r, oerr
+		}
+		if !r.Failed {
+			return r, nil
+		}
+	}
+	return lastResult, lastErr
+}
+
+// executeCommandRaw is the post-MT-48 retry-friendly variant of
+// executeCommand. It runs the command exactly once and returns the
+// raw result — failed_when / changed_when are NOT applied here so
+// the retry loop above can decide retry based on the raw exit code
+// (otherwise failed_when:false would mask the first failure and
+// short-circuit retry).
+func (h *Handler) executeCommandRaw(ctx actions.Context, step *config.Step, renderedArgv []string) (actions.Result, error) {
+	return h.executeCommand(ctx, step, renderedArgv)
+}
+
+// applyOverrides applies changed_when / failed_when to a final
+// result. Lives outside executeCommand so the retry loop can call
+// it once after all attempts finish.
+func (h *Handler) applyOverrides(ctx actions.Context, step *config.Step, result *executor.Result) error {
+	if step.FailedWhen != "" {
+		failed, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
+			"rc":     result.Rc,
+			"stdout": result.Stdout,
+			"stderr": result.Stderr,
+		})
+		if evalErr != nil {
+			return fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
+		}
+		result.Failed = failed
+	}
+	if step.ChangedWhen != "" {
+		changed, evalErr := h.evaluateBoolExpression(ctx, step.ChangedWhen, map[string]interface{}{
+			"rc":     result.Rc,
+			"stdout": result.Stdout,
+			"stderr": result.Stderr,
+		})
+		if evalErr != nil {
+			return fmt.Errorf("failed to evaluate changed_when: %w", evalErr)
+		}
+		result.Changed = changed
+	}
+	return nil
 }
 
 // executeCommand executes a command once without retry logic.
@@ -171,69 +235,21 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 	result.Stdout = strings.TrimSpace(stdout.String())
 	result.Stderr = strings.TrimSpace(stderr.String())
 
-	// Handle command execution error
+	// Handle command execution error. MT-48: record the raw outcome
+	// only — failed_when / changed_when are applied later by the
+	// retry loop's caller (applyOverrides), so the retry decision
+	// sees the underlying exit code unmasked.
+	result.Changed = true
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			result.Rc = exitErr.ExitCode()
 		} else {
 			result.Rc = 1
 		}
-
-		// Check failed_when condition before marking as failed
-		if step.FailedWhen != "" {
-			failed, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
-				"rc":     result.Rc,
-				"stdout": result.Stdout,
-				"stderr": result.Stderr,
-			})
-			if evalErr != nil {
-				return result, fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
-			}
-			result.Failed = failed
-		} else {
-			result.Failed = true
-		}
-
-		if result.Failed {
-			return result, fmt.Errorf("command failed with exit code %d", result.Rc)
-		}
-	} else {
-		result.Rc = 0
-
-		// Even on success, check failed_when
-		if step.FailedWhen != "" {
-			failed, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
-				"rc":     result.Rc,
-				"stdout": result.Stdout,
-				"stderr": result.Stderr,
-			})
-			if evalErr != nil {
-				return result, fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
-			}
-			result.Failed = failed
-
-			if result.Failed {
-				return result, fmt.Errorf("command marked as failed by failed_when condition")
-			}
-		}
+		result.Failed = true
+		return result, fmt.Errorf("command failed with exit code %d", result.Rc)
 	}
-
-	// Determine if command made changes
-	if step.ChangedWhen != "" {
-		changed, evalErr := h.evaluateBoolExpression(ctx, step.ChangedWhen, map[string]interface{}{
-			"rc":     result.Rc,
-			"stdout": result.Stdout,
-			"stderr": result.Stderr,
-		})
-		if evalErr != nil {
-			return result, fmt.Errorf("failed to evaluate changed_when: %w", evalErr)
-		}
-		result.Changed = changed
-	} else {
-		// Default: command execution is considered a change
-		result.Changed = true
-	}
-
+	result.Rc = 0
 	return result, nil
 }
 
