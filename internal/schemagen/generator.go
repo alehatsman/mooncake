@@ -569,6 +569,19 @@ var actionStructByName = map[string]any{
 	"wait.http":         &config.WaitHTTP{},
 	"wait.file":         &config.WaitFile{},
 	"wait.command":      &config.WaitCommand{},
+
+	// Newly-wired up; previously missing from the table which meant
+	// the schema generator emitted an empty `{type: object,
+	// additionalProperties: false}` for them — and any YAML plan
+	// using these actions failed JSON-schema validation at apply time.
+	"os.firewall":            &config.OsFirewall{},
+	"os.group":               &config.OsGroup{},
+	"os.mount":               &config.OsMount{},
+	"os.systemd":             &config.OsSystemd{},
+	"text.patch.json":        &config.TextPatchJSON{},
+	"text.patch.yaml":        &config.TextPatchYAML{},
+	"windows.firewall_rule":  &config.WindowsFirewallRule{},
+	"windows.scheduled_task": &config.WindowsScheduledTask{},
 }
 
 // getActionStruct returns the reflect.Type for an action's config struct.

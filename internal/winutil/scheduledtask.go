@@ -295,11 +295,29 @@ func RenderXML(t Task) (string, error) {
 	b.WriteString("  </Principals>\r\n")
 
 	// <Settings>
+	// Element order matches the Task Scheduler XML schema
+	// (https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings).
+	// Wrong order makes Register-ScheduledTask error out with
+	// "The task XML contains an unexpected node".
+	//
+	// Notable absences: <AllowStartIfOnBatteries> is NOT in the
+	// schema — the semantics are expressed via the negative-form
+	// <DisallowStartIfOnBatteries> only. The Settings struct still
+	// accepts AllowStartIfOnBatteries for ergonomics; withDefaults()
+	// folds it into the DisallowStartIfOnBatteries value before we
+	// emit.
 	b.WriteString("  <Settings>\r\n")
+	if t.Settings.RestartCount > 0 {
+		b.WriteString("    <RestartOnFailure>\r\n")
+		b.WriteString("      <Interval>")
+		b.WriteString(durationToISO8601(t.Settings.RestartInterval))
+		b.WriteString("</Interval>\r\n")
+		b.WriteString(fmt.Sprintf("      <Count>%d</Count>\r\n", t.Settings.RestartCount))
+		b.WriteString("    </RestartOnFailure>\r\n")
+	}
 	writeBool(&b, "MultipleInstancesPolicy", string(t.Settings.MultipleInstancesPolicy), 4)
 	writeBoolPtr(&b, "DisallowStartIfOnBatteries", t.Settings.DisallowStartIfOnBatteries, 4)
 	writeBoolPtr(&b, "StopIfGoingOnBatteries", boolPtrNot(t.Settings.DontStopIfGoingOnBatteries), 4)
-	writeBoolPtr(&b, "AllowStartIfOnBatteries", t.Settings.AllowStartIfOnBatteries, 4)
 	writeBoolPtr(&b, "StartWhenAvailable", t.Settings.StartWhenAvailable, 4)
 	writeBoolPtr(&b, "RunOnlyIfNetworkAvailable", t.Settings.RunOnlyIfNetworkAvailable, 4)
 	writeBoolPtr(&b, "Hidden", t.Settings.Hidden, 4)
@@ -310,14 +328,6 @@ func RenderXML(t Task) (string, error) {
 	} else {
 		// 0 = unbounded → PT0S is the canonical wire form.
 		b.WriteString("    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>\r\n")
-	}
-	if t.Settings.RestartCount > 0 {
-		b.WriteString("    <RestartOnFailure>\r\n")
-		b.WriteString("      <Interval>")
-		b.WriteString(durationToISO8601(t.Settings.RestartInterval))
-		b.WriteString("</Interval>\r\n")
-		b.WriteString(fmt.Sprintf("      <Count>%d</Count>\r\n", t.Settings.RestartCount))
-		b.WriteString("    </RestartOnFailure>\r\n")
 	}
 	b.WriteString("  </Settings>\r\n")
 
