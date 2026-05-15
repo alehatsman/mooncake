@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -204,20 +205,23 @@ func HandleFactQuery(_ context.Context, args json.RawMessage) (string, error) {
 
 // stepResult is a single step entry in run_plan / check_plan output.
 type stepResult struct {
-	Name       string `json:"name"`
-	Action     string `json:"action"`
-	Changed    bool   `json:"changed,omitempty"`
-	WouldChange bool   `json:"would_change,omitempty"`
-	Skipped    bool   `json:"skipped,omitempty"`
-	Failed     bool   `json:"failed,omitempty"`
-	DurationMs int64  `json:"duration_ms,omitempty"`
-	Error      string `json:"error,omitempty"`
+	Name        string                 `json:"name"`
+	Action      string                 `json:"action,omitempty"`
+	Changed     bool                   `json:"changed,omitempty"`
+	WouldChange bool                   `json:"would_change,omitempty"`
+	Skipped     bool                   `json:"skipped,omitempty"`
+	Failed      bool                   `json:"failed,omitempty"`
+	DurationMs  int64                  `json:"duration_ms,omitempty"`
+	Error       string                 `json:"error,omitempty"`
+	Diff        *actions.Diff          `json:"diff,omitempty"`
+	Cost        *actions.CostEstimate  `json:"cost,omitempty"`
 }
 
 // runCollector subscribes to run events and collects step results.
 type runCollector struct {
-	steps []stepResult
-	stats struct {
+	steps         []stepResult
+	inspByStepID  map[string]plan.StepInspection
+	stats         struct {
 		Changed    int
 		Ok         int
 		Skipped    int
@@ -233,12 +237,16 @@ func (c *runCollector) OnEvent(ev events.Event) {
 		if !ok {
 			return
 		}
-		c.steps = append(c.steps, stepResult{
+		sr := stepResult{
 			Name:       d.Name,
-			Action:     "",
 			Changed:    d.Changed,
 			DurationMs: d.DurationMs,
-		})
+		}
+		if insp, hasInsp := c.inspByStepID[d.StepID]; hasInsp {
+			sr.Diff = insp.Diff
+			sr.Cost = insp.Cost
+		}
+		c.steps = append(c.steps, sr)
 
 	case events.EventStepSkipped:
 		d, ok := ev.Data.(events.StepSkippedData)
@@ -277,18 +285,147 @@ func (c *runCollector) OnEvent(ev events.Event) {
 
 func (c *runCollector) Close() {}
 
+// aggregatePermissions walks the plan steps and merges each handler's declared
+// PermissionSet into a single plan-level summary. Returns nil when no step
+// declares any permissions.
+func aggregatePermissions(p *plan.Plan) *actions.PermissionSet {
+	var merged actions.PermissionSet
+	anySet := false
+	for i := range p.Steps {
+		step := &p.Steps[i]
+		actionType := step.DetermineActionType()
+		h, ok := actions.Get(actionType)
+		if !ok {
+			continue
+		}
+		perm, ok2 := h.(actions.Permitter)
+		if !ok2 {
+			continue
+		}
+		ps := perm.Permissions(step)
+		if ps.Sudo {
+			merged.Sudo = true
+			anySet = true
+		}
+		if ps.Network {
+			merged.Network = true
+			anySet = true
+		}
+		if len(ps.RequiredBinaries) > 0 {
+			merged.RequiredBinaries = appendUnique(merged.RequiredBinaries, ps.RequiredBinaries)
+			anySet = true
+		}
+		if len(ps.FilesystemWrite) > 0 {
+			merged.FilesystemWrite = append(merged.FilesystemWrite, ps.FilesystemWrite...)
+			anySet = true
+		}
+		if len(ps.Notes) > 0 {
+			merged.Notes = append(merged.Notes, ps.Notes...)
+			anySet = true
+		}
+	}
+	if !anySet {
+		return nil
+	}
+	return &merged
+}
+
+// appendUnique appends elements from src to dst, skipping duplicates.
+func appendUnique(dst, src []string) []string {
+	seen := make(map[string]struct{}, len(dst))
+	for _, s := range dst {
+		seen[s] = struct{}{}
+	}
+	for _, s := range src {
+		if _, ok := seen[s]; !ok {
+			dst = append(dst, s)
+			seen[s] = struct{}{}
+		}
+	}
+	return dst
+}
+
+// aggregateCost summarises a slice of step inspections into a plan-level
+// cost object. Returns nil when no step has cost information.
+func aggregateCost(inspections []plan.StepInspection) map[string]interface{} {
+	maxRisk := 0
+	totalResources := 0
+	wouldChange := 0
+	hasCost := false
+	for _, ins := range inspections {
+		if ins.Cost == nil {
+			continue
+		}
+		hasCost = true
+		if ins.Cost.Risk > maxRisk {
+			maxRisk = ins.Cost.Risk
+		}
+		if ins.Cost.Resources > 0 {
+			totalResources += ins.Cost.Resources
+		}
+		if ins.WouldChange {
+			wouldChange++
+		}
+	}
+	if !hasCost {
+		return nil
+	}
+	band := "low"
+	switch {
+	case maxRisk >= 7:
+		band = "high"
+	case maxRisk >= 4:
+		band = "medium"
+	}
+	return map[string]interface{}{
+		"max_risk":           maxRisk,
+		"risk_band":          band,
+		"total_resources":    totalResources,
+		"would_change_count": wouldChange,
+	}
+}
+
+// buildInspectionIndex returns a map from StepID to StepInspection for quick
+// lookup when merging inspection data into apply-mode step results.
+func buildInspectionIndex(inspections []plan.StepInspection) map[string]plan.StepInspection {
+	idx := make(map[string]plan.StepInspection, len(inspections))
+	for _, ins := range inspections {
+		idx[ins.StepID] = ins
+	}
+	return idx
+}
+
 func runConfig(configPath string) (string, error) {
+	// Build the plan once so we can (a) run InspectPlan for Diff/Cost/Permissions
+	// and (b) feed the same *plan.Plan to ExecutePlan without re-parsing.
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		return "", err
+	}
+	planData, err := planner.BuildPlan(plan.PlannerConfig{ConfigPath: configPath})
+	if err != nil {
+		return "", err
+	}
+
+	// Pre-inspect: collect predicted Diff + Cost per step (ModePlan).
+	// The Diff is a prediction, not a post-apply observation.
+	inspLog := logger.NewTestLogger()
+	inspections, err := executor.InspectPlan(planData, "", inspLog)
+	if err != nil {
+		// Non-fatal: proceed with apply even if inspection fails.
+		inspections = nil
+	}
+
 	publisher := events.NewPublisher()
 	defer publisher.Close()
 
-	col := &runCollector{}
+	col := &runCollector{
+		inspByStepID: buildInspectionIndex(inspections),
+	}
 	publisher.Subscribe(col)
 
 	internalLog := logger.NewTestLogger()
-
-	runErr := executor.Start(executor.StartConfig{
-		ConfigFilePath: configPath,
-	}, internalLog, publisher)
+	runErr := executor.ExecutePlan(planData, "", actions.ModeApply, internalLog, publisher)
 
 	result := map[string]interface{}{
 		"changed":     col.stats.Changed,
@@ -297,6 +434,12 @@ func runConfig(configPath string) (string, error) {
 		"failed":      col.stats.Failed,
 		"duration_ms": col.stats.DurationMs,
 		"steps":       col.steps,
+	}
+	if reqs := aggregatePermissions(planData); reqs != nil {
+		result["requires"] = reqs
+	}
+	if costSum := aggregateCost(inspections); costSum != nil {
+		result["cost_summary"] = costSum
 	}
 	if runErr != nil {
 		result["error"] = runErr.Error()
@@ -345,14 +488,22 @@ func HandleCheckPlan(_ context.Context, args json.RawMessage) (string, error) {
 		return "", err
 	}
 
+	result := map[string]interface{}{
+		"root_file":    planData.RootFile,
+		"generated_on": planData.GeneratedOn,
+		"inspections":  inspections,
+	}
+	if reqs := aggregatePermissions(planData); reqs != nil {
+		result["requires"] = reqs
+	}
+	if costSum := aggregateCost(inspections); costSum != nil {
+		result["cost_summary"] = costSum
+	}
+
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(map[string]interface{}{
-		"root_file":   planData.RootFile,
-		"generated_on": planData.GeneratedOn,
-		"inspections": inspections,
-	}); err != nil {
+	if err := enc.Encode(result); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
