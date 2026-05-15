@@ -5,7 +5,7 @@ Mooncake uses a Pongo2-flavored template engine (`{{ var | filter }}`,
 
 ---
 
-## #16 — Template engine HTML-escapes by default in `log: msg:` — MEDIUM (correctness/DX)
+## #16 — ✅ FIXED (or originally mis-reported) — Template engine HTML-escape
 
 **Repro**:
 ```yaml
@@ -31,6 +31,25 @@ escape — wrong for any downstream consumer that isn't a browser.
 **Likely cause**: pongo2 / template engine has `autoescape: true` on
 by default. Should be `false` for Mooncake's surface (or scoped to
 actions that emit to HTML, of which there are none).
+
+**Round 26 verification** (2026-05-15 later):
+```
+# /work/cfg.yml: file.write content "literal <value> here"
+$ cat /tmp/html-test.txt
+literal <value> here              ← raw angle brackets, no escape
+
+$ apply --output-format json
+"message":"literal angle test: <unset>"
+```
+
+File content: ✅ literal angle brackets. JSON output: `<` is the
+standard Go json.Marshal escape for `<` (decoder restores it to `<`).
+Decode the JSON and you get back the literal string `<unset>`.
+
+**Either the bug was fixed silently** between the original report and
+round 26, **or my original observation conflated** JSON-Unicode-escape
+(correct) with HTML-entity-escape (would be wrong). Marking
+✅ resolved — no action needed.
 
 ---
 
