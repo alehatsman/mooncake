@@ -692,6 +692,42 @@ to my missing `.value`.
 
 ---
 
+## #83 — `mooncake step` doesn't enforce `additionalProperties: false`; `apply` does — MEDIUM (regression of #44)
+
+**Repro**:
+```
+$ mooncake step "wait.command: { cmd: \"exit 42\", expected_exit: 42 }"
+{"action": "wait.command", "error": "wait.command timeout after 1s; last exit 42"}
+# step ran — unknown field expected_exit (correct is expect_exit) was silently ignored
+```
+
+vs.
+
+```
+$ echo "- wait.command: { cmd: 'exit 42', expected_exit: 42 }" > /work/c.yml
+$ mooncake apply -c /work/c.yml
+Error: /work/c.yml
+  Line 1: unknown field `expected_exit` ...
+```
+
+`apply` (via validate) properly rejects unknown fields per #44.
+`step` doesn't — it goes straight to the action handler, which only
+validates its own required fields. So the user gets:
+- `apply`: clear "unknown field X" error → fix and retry
+- `step`: silent ignore + timeout → confusing failure → user doesn't
+  realize the field was misspelled
+
+**Why MEDIUM**: same shape as the umbrella #44 issue, but in the
+agent-facing entry point. Agents calling `step` for one-shot
+operations have a strictly weaker safety story than YAML-file
+authors using `apply`.
+
+**Fix**: `mooncake step` should run the inline YAML through the same
+schema validator that `mooncake validate` / `apply` use, before
+dispatching to the handler.
+
+---
+
 ## #80 — `text.patch` silently no-ops on broken hunks (no error, no signal) — MEDIUM
 
 **Repro**:
