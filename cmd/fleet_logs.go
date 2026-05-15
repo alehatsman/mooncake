@@ -41,9 +41,9 @@ func fleetLogsCommand() *cli.Command {
 				Name:  "all",
 				Usage: "Attach to every peer's latest run, multiplexed",
 			},
-			&cli.StringFlag{
-				Name:  "peers",
-				Usage: "Comma-separated peer names to target (only with --all)",
+			&cli.StringSliceFlag{
+				Name:  "peer",
+				Usage: "Select peers (only with --all): repeat to UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
 			&cli.StringFlag{
 				Name:  "peers-file",
@@ -104,10 +104,20 @@ func fleetLogsAction(c *cli.Context) error {
 		return streamPeers(c.Context, w, []fleet.Peer{peer}, map[string]string{peer.Name: runID}, c.Bool("no-color"))
 	}
 
-	// --all: resolve peer filter (subset by --peers if given) and stream every selected agentd peer.
-	selected, unknown := selectPeers(cfg.Peers, c.String("peers"))
+	// --all: stream every selected agentd peer. Fleet DX proposal-01:
+	// single unified --peer flag.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfg.Peers, c.App.Writer)
+	}
+	sel, err := resolvePeers(cfg.Peers, peerFlag, osFor)
+	if err != nil {
+		return cli.Exit("fleet logs: "+err.Error(), 2)
+	}
+	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		return cli.Exit("fleet logs: no peers matched filter", 1)
+		return cli.Exit("fleet logs: --peer selected 0 peers", 1)
 	}
 	agentdPeers := make([]fleet.Peer, 0, len(selected))
 	for _, p := range selected {

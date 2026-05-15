@@ -10,116 +10,18 @@ import (
 	"github.com/alehatsman/mooncake/internal/fleet"
 )
 
-func TestParseFilterFlags(t *testing.T) {
-	tests := []struct {
-		name    string
-		args    []string
-		want    [][]filterTerm
-		wantErr string
-	}{
-		{
-			name: "empty input",
-			args: nil,
-			want: nil,
-		},
-		{
-			name: "single flag, single term",
-			args: []string{"tag=a"},
-			want: [][]filterTerm{{{key: "tag", value: "a"}}},
-		},
-		{
-			name: "single flag, AND within commas",
-			args: []string{"tag=a,tag=b"},
-			want: [][]filterTerm{{
-				{key: "tag", value: "a"},
-				{key: "tag", value: "b"},
-			}},
-		},
-		{
-			name: "multiple flags, OR across",
-			args: []string{"tag=a", "tag=b"},
-			want: [][]filterTerm{
-				{{key: "tag", value: "a"}},
-				{{key: "tag", value: "b"}},
-			},
-		},
-		{
-			name: "AND-within + OR-across",
-			args: []string{"tag=a,tag=b", "tag=c"},
-			want: [][]filterTerm{
-				{{key: "tag", value: "a"}, {key: "tag", value: "b"}},
-				{{key: "tag", value: "c"}},
-			},
-		},
-		{
-			name: "value can contain equals (key=value where value itself has =)",
-			args: []string{"tag=os=darwin"},
-			want: [][]filterTerm{{{key: "tag", value: "os=darwin"}}},
-		},
-		{
-			name: "whitespace trimmed",
-			args: []string{"  tag  =  a  , tag=b "},
-			want: [][]filterTerm{{
-				{key: "tag", value: "a"},
-				{key: "tag", value: "b"},
-			}},
-		},
-		{
-			name: "empty comma slot is skipped",
-			args: []string{"tag=a,,tag=b"},
-			want: [][]filterTerm{{
-				{key: "tag", value: "a"},
-				{key: "tag", value: "b"},
-			}},
-		},
-		{
-			name:    "missing equals",
-			args:    []string{"justtag"},
-			wantErr: "expected key=value",
-		},
-		{
-			name:    "empty key",
-			args:    []string{"=value"},
-			wantErr: "key and value must be non-empty",
-		},
-		{
-			name:    "empty value",
-			args:    []string{"tag="},
-			wantErr: "key and value must be non-empty",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseFilterFlags(tt.args)
-			if tt.wantErr != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatalf("err = %v, want substring %q", err, tt.wantErr)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected err: %v", err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("got %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestValidatePeerFilterKeys(t *testing.T) {
-	// Spec-50 expands the allowlist from {tag} to {tag, name, os, role}.
-	// All four keys must validate; an off-list key must produce an error
-	// that lists the valid keys (G3).
+	// Spec-50 allowlist: {tag, name, os, role}. All four must validate;
+	// an off-list key must produce an error that lists the valid keys.
 	for _, args := range [][]string{
 		{"tag=darwin"},
 		{"name=laptop"},
 		{"role=db"},
 		{"os=linux"},
-		{"tag=a,name=b,role=c,os=d"},
+		{"@tag=a,name=b,role=c,os=d"},
 		{"tag=a", "name=b"},
 	} {
-		groups, err := parseFilterFlags(args)
+		groups, err := parsePeerFlags(args)
 		if err != nil {
 			t.Fatalf("parse %v: %v", args, err)
 		}
@@ -128,7 +30,7 @@ func TestValidatePeerFilterKeys(t *testing.T) {
 		}
 	}
 
-	bad, _ := parseFilterFlags([]string{"arch=arm64"})
+	bad, _ := parsePeerFlags([]string{"arch=arm64"})
 	err := validatePeerFilterKeys(bad)
 	if err == nil {
 		t.Fatal("arch= should be rejected (not in spec-50 allowlist)")
@@ -147,7 +49,7 @@ func TestPeerMatchesFilters(t *testing.T) {
 
 	mustParse := func(t *testing.T, args ...string) [][]filterTerm {
 		t.Helper()
-		g, err := parseFilterFlags(args)
+		g, err := parsePeerFlags(args)
 		if err != nil {
 			t.Fatalf("parse %v: %v", args, err)
 		}
@@ -163,26 +65,26 @@ func TestPeerMatchesFilters(t *testing.T) {
 		{"empty filter matches all", nil, mac, true},
 		{"single tag hit", mustParse(t, "tag=darwin"), mac, true},
 		{"single tag miss", mustParse(t, "tag=darwin"), desk, false},
-		{"AND within group hit", mustParse(t, "tag=linux,tag=gpu"), desk, true},
-		{"AND within group miss", mustParse(t, "tag=linux,tag=gpu"), vps, false},
-		{"OR across groups hit on left", mustParse(t, "tag=darwin", "tag=server"), mac, true},
-		{"OR across groups hit on right", mustParse(t, "tag=darwin", "tag=server"), vps, true},
-		{"OR across groups miss both", mustParse(t, "tag=darwin", "tag=server"), desk, false},
+		{"AND within group hit", mustParse(t, "@tag=linux,tag=gpu"), desk, true},
+		{"AND within group miss", mustParse(t, "@tag=linux,tag=gpu"), vps, false},
+		{"OR across flags hit on left", mustParse(t, "tag=darwin", "tag=server"), mac, true},
+		{"OR across flags hit on right", mustParse(t, "tag=darwin", "tag=server"), vps, true},
+		{"OR across flags miss both", mustParse(t, "tag=darwin", "tag=server"), desk, false},
 		{
 			name:   "(A AND B) OR C — left hits",
-			filter: mustParse(t, "tag=linux,tag=gpu", "tag=workstation"),
+			filter: mustParse(t, "@tag=linux,tag=gpu", "tag=workstation"),
 			peer:   desk,
 			want:   true,
 		},
 		{
 			name:   "(A AND B) OR C — right hits",
-			filter: mustParse(t, "tag=linux,tag=gpu", "tag=workstation"),
+			filter: mustParse(t, "@tag=linux,tag=gpu", "tag=workstation"),
 			peer:   mac,
 			want:   true,
 		},
 		{
 			name:   "(A AND B) OR C — both miss",
-			filter: mustParse(t, "tag=linux,tag=gpu", "tag=workstation"),
+			filter: mustParse(t, "@tag=linux,tag=gpu", "tag=workstation"),
 			peer:   vps,
 			want:   false,
 		},
@@ -200,10 +102,10 @@ func TestPeerMatchesFilters(t *testing.T) {
 		{"role= miss against peer with no roles", mustParse(t, "role=db"), vps, false},
 		{"role= miss against peer with different roles", mustParse(t, "role=db"), mac, false},
 		// Spec-50 §Open question 2 — cross-key AND/OR semantics
-		{"AND within group: name= AND tag=", mustParse(t, "name=macbook,tag=darwin"), mac, true},
-		{"AND within group: name hit, tag miss", mustParse(t, "name=macbook,tag=linux"), mac, false},
+		{"AND within group: name= AND tag=", mustParse(t, "@name=macbook,tag=darwin"), mac, true},
+		{"AND within group: name hit, tag miss", mustParse(t, "@name=macbook,tag=linux"), mac, false},
 		{
-			name:   "OR across groups: name= OR tag=",
+			name:   "OR across flags: name= OR tag=",
 			filter: mustParse(t, "name=macbook", "tag=gpu"),
 			peer:   desk, // matches tag=gpu group
 			want:   true,
@@ -235,7 +137,7 @@ func TestPeerMatchesFilters_OS(t *testing.T) {
 		return o, ok
 	}
 
-	groups, _ := parseFilterFlags([]string{"os=darwin"})
+	groups, _ := parsePeerFlags([]string{"os=darwin"})
 	if !peerMatchesFilters(mac, groups, resolver) {
 		t.Errorf("os=darwin should match mac")
 	}
@@ -260,7 +162,7 @@ func TestPeerMatchesFilters_OS(t *testing.T) {
 // TestPeerFilterGroupsUseKey asserts the cheap presence-check the caller
 // uses to skip the probe pass entirely when no os= term is present.
 func TestPeerFilterGroupsUseKey(t *testing.T) {
-	groups, _ := parseFilterFlags([]string{"tag=a,name=b", "role=c"})
+	groups, _ := parsePeerFlags([]string{"@tag=a,name=b", "role=c"})
 	if peerFilterGroupsUseKey(groups, "os") {
 		t.Errorf("no os= term, should be false")
 	}
@@ -271,7 +173,7 @@ func TestPeerFilterGroupsUseKey(t *testing.T) {
 		t.Errorf("name= present, should be true")
 	}
 
-	withOS, _ := parseFilterFlags([]string{"os=darwin"})
+	withOS, _ := parsePeerFlags([]string{"os=darwin"})
 	if !peerFilterGroupsUseKey(withOS, "os") {
 		t.Errorf("os= present, should be true")
 	}
@@ -357,10 +259,10 @@ func TestExtractStepFilter(t *testing.T) {
 	}
 }
 
-// TestFleetApply_PeerFilterRejectsUnsupportedKey exercises the apply Action
-// end-to-end to confirm --peer-filter parse errors propagate as a cli.Exit(2)
+// TestFleetApply_PeerRejectsUnsupportedKey exercises the apply Action
+// end-to-end to confirm --peer parse errors propagate as a cli.Exit(2)
 // rather than leaking through as a generic error.
-func TestFleetApply_PeerFilterRejectsUnsupportedKey(t *testing.T) {
+func TestFleetApply_PeerRejectsUnsupportedKey(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "xdg"))
 
@@ -383,21 +285,20 @@ tags = ["darwin"]
 	err := app.Run([]string{
 		"mooncake", "fleet", "apply",
 		"--peers-file", peersPath,
-		"--peer-filter", "arch=arm64", // unsupported key — spec-50 added name/os/role but not arch
+		"--peer", "arch=arm64", // unsupported key — spec-50 allowlist is {tag,name,os,role}
 		planPath,
 	})
 	if err == nil {
-		t.Fatal("want error for unsupported peer-filter key")
+		t.Fatal("want error for unsupported --peer key")
 	}
-	if !strings.Contains(err.Error(), "unsupported --peer-filter key") {
-		t.Errorf("err = %v, want substring 'unsupported --peer-filter key'", err)
+	if !strings.Contains(err.Error(), "unsupported --peer key") {
+		t.Errorf("err = %v, want substring 'unsupported --peer key'", err)
 	}
 }
 
-// TestFleetApply_PeerFilterNoMatch verifies the user-facing error when
-// --peer-filter excludes every peer (vs. when --peers does — different code
-// path, different message).
-func TestFleetApply_PeerFilterNoMatch(t *testing.T) {
+// TestFleetApply_PeerNoMatch verifies the user-facing error when
+// --peer excludes every peer.
+func TestFleetApply_PeerNoMatch(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "xdg"))
 
@@ -426,13 +327,13 @@ tags = ["darwin"]
 	err := app.Run([]string{
 		"mooncake", "fleet", "apply",
 		"--peers-file", peersPath,
-		"--peer-filter", "tag=nonexistent",
+		"--peer", "tag=nonexistent",
 		planPath,
 	})
 	if err == nil {
-		t.Fatal("want error when peer-filter excludes all peers")
+		t.Fatal("want error when --peer excludes all peers")
 	}
-	if !strings.Contains(err.Error(), "--peer-filter selected 0") {
-		t.Errorf("err = %v, want substring '--peer-filter selected 0'", err)
+	if !strings.Contains(err.Error(), "--peer selected 0") {
+		t.Errorf("err = %v, want substring '--peer selected 0'", err)
 	}
 }

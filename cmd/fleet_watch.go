@@ -31,12 +31,11 @@ func fleetWatchCommand() *cli.Command {
 		Usage:       "Stream live events from every peer; `tail -f` for the fleet",
 		Description: "Subscribes to every selected peer's in-flight runs and surfaces events as they happen. New runs that start later appear without re-running the command. ^C exits cleanly; remote runs continue.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "peers", Usage: "Comma-separated peer names (default: all in peers.toml)"},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.StringSliceFlag{
-				Name:  "peer-filter",
-				Usage: "Filter peers by `key=value` (tag=, name=, os=, role=); same DSL as fleet apply",
+				Name:  "peer",
+				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
+			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.DurationFlag{
 				Name:  "poll-interval",
 				Usage: "How often a peer is polled for new in-flight runs (jittered ±25%)",
@@ -79,35 +78,22 @@ func loadWatchPeers(c *cli.Context) ([]fleet.Peer, error) {
 	if len(cfg.Peers) == 0 {
 		return nil, cli.Exit("fleet watch: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
-	selected, unknown := selectPeers(cfg.Peers, c.String("peers"))
-	if len(unknown) > 0 {
-		fmt.Fprintf(c.App.ErrWriter, "fleet watch: unknown peer(s) in --peers: %s\n", strings.Join(unknown, ", "))
+	// Fleet DX proposal-01: single unified --peer flag.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfg.Peers, c.App.Writer)
 	}
-	if len(selected) == 0 {
-		return nil, cli.Exit("fleet watch: no peers selected", 1)
-	}
-	groups, err := parseFilterFlags(c.StringSlice("peer-filter"))
+	sel, err := resolvePeers(cfg.Peers, peerFlag, osFor)
 	if err != nil {
 		return nil, cli.Exit("fleet watch: "+err.Error(), 2)
 	}
-	if err := validatePeerFilterKeys(groups); err != nil {
-		return nil, cli.Exit("fleet watch: "+err.Error(), 2)
+	selected, unknown := sel.Matched, sel.UnknownNames
+	if len(unknown) > 0 {
+		fmt.Fprintf(c.App.ErrWriter, "fleet watch: unknown peer name(s): %s\n", strings.Join(unknown, ", "))
 	}
-	if len(groups) > 0 {
-		var osFor peerOSResolver
-		if peerFilterGroupsUseKey(groups, "os") {
-			osFor = newPeerOSCache(c.Context, selected, c.App.Writer)
-		}
-		filtered := make([]fleet.Peer, 0, len(selected))
-		for _, p := range selected {
-			if peerMatchesFilters(p, groups, osFor) {
-				filtered = append(filtered, p)
-			}
-		}
-		if len(filtered) == 0 {
-			return nil, cli.Exit("fleet watch: --peer-filter selected 0 peers; nothing to do", 1)
-		}
-		selected = filtered
+	if len(selected) == 0 {
+		return nil, cli.Exit("fleet watch: --peer selected 0 peers", 1)
 	}
 	out := make([]fleet.Peer, 0, len(selected))
 	var skipped []string

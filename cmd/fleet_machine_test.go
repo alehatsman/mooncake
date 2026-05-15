@@ -107,14 +107,14 @@ func TestResolveMachinePhase_NonAgentdPeerGoesToSkippedList(t *testing.T) {
 }
 
 func TestResolveMachinePhase_PeerFilterCanZeroOutAPhase(t *testing.T) {
-	// --peer-filter on the command line is AND'd with the manifest's
+	// --peer on the command line is AND'd with the manifest's
 	// pinned peer. When the phase's peer doesn't match the filter, we
 	// return an empty in.Peers so the caller can print a "skipped by
-	// --peer-filter" banner and move on rather than failing the run.
+	// --peer" banner and move on rather than failing the run.
 	peers := peersForMachineTest()
 	phase := fleet.MachinePhase{Name: "p", Peer: "main_pc-win", Plan: "/p"}
 	// Filter for linux peers: main_pc-win (tagged windows) shouldn't match.
-	groups, parseErr := parseFilterFlags([]string{"tag=linux"})
+	groups, parseErr := parsePeerFlags([]string{"tag=linux"})
 	if parseErr != nil {
 		t.Fatalf("parse filter: %v", parseErr)
 	}
@@ -126,7 +126,7 @@ func TestResolveMachinePhase_PeerFilterCanZeroOutAPhase(t *testing.T) {
 		t.Fatalf("resolve: %v", err)
 	}
 	if len(in.Peers) != 0 {
-		t.Errorf("expected --peer-filter to zero out the phase, got %v", in.Peers)
+		t.Errorf("expected --peer to zero out the phase, got %v", in.Peers)
 	}
 }
 
@@ -135,7 +135,7 @@ func TestResolveMachinePhase_PeerFilterMatchKeepsPhase(t *testing.T) {
 	// phase runs normally (in.Peers has one entry).
 	peers := peersForMachineTest()
 	phase := fleet.MachinePhase{Name: "p", Peer: "main_pc-win", Plan: "/p"}
-	groups, _ := parseFilterFlags([]string{"tag=windows"})
+	groups, _ := parsePeerFlags([]string{"tag=windows"})
 	in, err := resolveMachinePhase(
 		machinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 1},
 		peers, "/d", nil, nil, nil, 0, 0, "id", groups, nil,

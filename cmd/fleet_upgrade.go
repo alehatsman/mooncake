@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,9 +47,9 @@ func fleetUpgradeCommand() *cli.Command {
 			"skipped (untested) — override with --include-os darwin if you've " +
 			"validated the peer's behaviour yourself.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "peers",
-				Usage: "Comma-separated peer names to upgrade (default: all agentd peers)",
+			&cli.StringSliceFlag{
+				Name:  "peer",
+				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every agentd peer.",
 			},
 			&cli.StringFlag{
 				Name:  "peers-file",
@@ -120,9 +121,19 @@ func fleetUpgradeAction(c *cli.Context) error {
 		return cli.Exit("fleet upgrade: no peers configured", 1)
 	}
 
-	selected, unknown := selectPeers(cfgPeers.Peers, c.String("peers"))
+	// Fleet DX proposal-01: single unified --peer flag.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
+	}
+	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
+	if err != nil {
+		return cli.Exit("fleet upgrade: "+err.Error(), 2)
+	}
+	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		msg := "fleet upgrade: no peers matched filter " + c.String("peers")
+		msg := "fleet upgrade: --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
 		if len(unknown) > 0 {
 			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
 		}

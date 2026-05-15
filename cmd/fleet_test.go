@@ -92,7 +92,11 @@ func TestFleetApply_NoPeersConfigured(t *testing.T) {
 	}
 }
 
-func TestFleetApply_PeersFilterNoMatch(t *testing.T) {
+// TestFleetApply_PeerBareNameNoMatch exercises the apply Action's
+// error path when `--peer <name>` references a peer that isn't in
+// peers.toml. The error must surface the unknown name so the user
+// can spot a typo.
+func TestFleetApply_PeerBareNameNoMatch(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "xdg"))
 
@@ -114,58 +118,17 @@ token = "t"
 	err := app.Run([]string{
 		"mooncake", "fleet", "apply",
 		"--peers-file", peersPath,
-		"--peers", "nonexistent",
+		"--peer", "nonexistent",
 		planPath,
 	})
 	if err == nil {
-		t.Fatal("want error when filter matches no peers")
+		t.Fatal("want error when --peer matches no peers")
 	}
-	if !strings.Contains(err.Error(), "no peers matched") {
-		t.Errorf("err = %v, want substring 'no peers matched'", err)
+	if !strings.Contains(err.Error(), "--peer selected 0") {
+		t.Errorf("err = %v, want substring '--peer selected 0'", err)
 	}
-	// Q3 contract: the unknown name appears in the error so the user can
-	// see the typo without re-reading their --peers argument.
 	if !strings.Contains(err.Error(), "unknown: nonexistent") {
 		t.Errorf("err = %v, want substring 'unknown: nonexistent'", err)
-	}
-}
-
-// TestSelectPeers_TableDriven covers the new (matched, unknown) signature
-// directly: empty filter returns all, known names filter correctly, and
-// unknown names surface for the caller to warn about.
-func TestSelectPeers_TableDriven(t *testing.T) {
-	peers := []fleet.Peer{
-		{Name: "alpha"},
-		{Name: "beta"},
-		{Name: "gamma"},
-	}
-	tests := []struct {
-		name        string
-		filter      string
-		wantMatched []string
-		wantUnknown []string
-	}{
-		{"empty filter returns all", "", []string{"alpha", "beta", "gamma"}, nil},
-		{"single match", "beta", []string{"beta"}, nil},
-		{"multi match preserves config order", "gamma,alpha", []string{"alpha", "gamma"}, nil},
-		{"unknown only", "nope", nil, []string{"nope"}},
-		{"mixed known + unknown", "alpha,typo", []string{"alpha"}, []string{"typo"}},
-		{"whitespace and dedupe", "  alpha ,alpha,, beta", []string{"alpha", "beta"}, nil},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			matched, unknown := selectPeers(peers, tt.filter)
-			gotNames := make([]string, len(matched))
-			for i, p := range matched {
-				gotNames[i] = p.Name
-			}
-			if !stringSliceEq(gotNames, tt.wantMatched) {
-				t.Errorf("matched = %v, want %v", gotNames, tt.wantMatched)
-			}
-			if !stringSliceEq(unknown, tt.wantUnknown) {
-				t.Errorf("unknown = %v, want %v", unknown, tt.wantUnknown)
-			}
-		})
 	}
 }
 
@@ -326,14 +289,3 @@ func TestStatusExitCode(t *testing.T) {
 	}
 }
 
-func stringSliceEq(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}

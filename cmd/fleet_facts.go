@@ -41,9 +41,9 @@ func fleetFactsCommand() *cli.Command {
 				Name:  "query",
 				Usage: "Dot-path key (e.g. go_version, os.distribution) to compare across all peers",
 			},
-			&cli.StringFlag{
-				Name:  "peers",
-				Usage: "Comma-separated peer names to target (only with --query)",
+			&cli.StringSliceFlag{
+				Name:  "peer",
+				Usage: "Select peers (only with --query): repeat to UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
 			&cli.StringFlag{
 				Name:  "peers-file",
@@ -81,14 +81,23 @@ func fleetFactsAction(c *cli.Context) error {
 		if len(args) > 0 {
 			return cli.Exit("fleet facts: --query takes no positional args", 2)
 		}
-		selected, unknown := selectPeers(cfg.Peers, c.String("peers"))
-		if len(selected) == 0 {
-			return cli.Exit("fleet facts: no peers matched filter", 1)
+		// Fleet DX proposal-01: single unified --peer flag.
+		peerFlag := c.StringSlice("peer")
+		var osFor peerOSResolver
+		if peerFlagsReferenceOSKey(peerFlag) {
+			osFor = newPeerOSCache(c.Context, cfg.Peers, c.App.Writer)
 		}
-		if len(unknown) > 0 {
-			fmt.Fprintln(c.App.ErrWriter, "warning: unknown peer name(s): "+strings.Join(unknown, ", "))
+		sel, err := resolvePeers(cfg.Peers, peerFlag, osFor)
+		if err != nil {
+			return cli.Exit("fleet facts: "+err.Error(), 2)
 		}
-		return renderFactsQuery(c.Context, w, selected, query)
+		if len(sel.Matched) == 0 {
+			return cli.Exit("fleet facts: --peer selected 0 peers", 1)
+		}
+		if len(sel.UnknownNames) > 0 {
+			fmt.Fprintln(c.App.ErrWriter, "warning: unknown peer name(s): "+strings.Join(sel.UnknownNames, ", "))
+		}
+		return renderFactsQuery(c.Context, w, sel.Matched, query)
 	}
 
 	// Single-peer mode: 1 or 2 args.

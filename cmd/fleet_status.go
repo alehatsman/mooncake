@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -22,9 +23,9 @@ func fleetStatusCommand() *cli.Command {
 			"unreachable) alongside OS, mooncake version, queue depth, and " +
 			"the last run's outcome. --json switches to JSONL for scripts.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "peers",
-				Usage: "Comma-separated list of peer names to probe (default: all in peers.toml)",
+			&cli.StringSliceFlag{
+				Name:  "peer",
+				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
 			&cli.StringFlag{
 				Name:  "peers-file",
@@ -75,9 +76,19 @@ func fleetStatusAction(c *cli.Context) error {
 			" or run `mooncake fleet bootstrap` / `mooncake fleet pair`.", 1)
 	}
 
-	selected, unknown := selectPeers(cfgPeers.Peers, c.String("peers"))
+	// Fleet DX proposal-01: single unified --peer flag.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
+	}
+	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
+	if err != nil {
+		return cli.Exit("fleet status: "+err.Error(), 2)
+	}
+	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		msg := "fleet status: no peers matched filter " + c.String("peers")
+		msg := "fleet status: --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
 		if len(unknown) > 0 {
 			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
 		}

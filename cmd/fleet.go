@@ -265,9 +265,9 @@ func fleetApplyCommand() *cli.Command {
 			"run via agentd, and stream [host]-prefixed log lines back. Peers " +
 			"are processed in parallel; output is line-atomic per peer.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "peers",
-				Usage: "Comma-separated list of peer names to target (default: all in peers.toml)",
+			&cli.StringSliceFlag{
+				Name:  "peer",
+				Usage: "Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml (or the machine name when invoked as `fleet apply <machine>`).",
 			},
 			&cli.StringFlag{
 				Name:  "peers-file",
@@ -286,12 +286,6 @@ func fleetApplyCommand() *cli.Command {
 			&cli.StringSliceFlag{
 				Name:  "vars-file",
 				Usage: "Vars file to load (relative to plan-dir or absolute); may be repeated",
-			},
-			&cli.StringSliceFlag{
-				Name: "peer-filter",
-				Usage: "Filter peers by `key=value` (v1: tag=<x>). " +
-					"Commas within one flag = AND; repeating the flag = OR. " +
-					"Intersected with --peers. Example: --peer-filter tag=os=darwin",
 			},
 			&cli.StringSliceFlag{
 				Name: "step-filter",
@@ -324,7 +318,7 @@ func fleetApplyCommand() *cli.Command {
 //	    plan      = <plan-dir>/machines/main_pc/index.yml
 //	    plan-dir  = $PWD (unless --plan-dir given)
 //	    vars      = shared/variables.yml + machines/main_pc/vars.yml (if present)
-//	    --peers   = main_pc (unless --peers given)
+//	    --peer    = main_pc (unless --peer given)
 //
 // Peers are applied in parallel (capped by --parallel). One PeerEvent
 // channel feeds a single Multiplexer that owns stdout; per-peer goroutines
@@ -431,49 +425,39 @@ func fleetApplyAction(c *cli.Context) error {
 		return cli.Exit("fleet apply: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
-	// Peer filter: explicit --peers wins; otherwise if the machine
-	// convention fired, default to that single peer.
-	peersFilter := c.String("peers")
-	if peersFilter == "" && machine != "" {
-		peersFilter = machine
+	// Fleet DX proposal-01: single unified --peer flag. The machine
+	// convention defaults --peer to the machine name when no --peer
+	// values were given explicitly.
+	peerFlag := c.StringSlice("peer")
+	if len(peerFlag) == 0 && machine != "" {
+		peerFlag = []string{machine}
 	}
-	selected, unknown := selectPeers(cfgPeers.Peers, peersFilter)
+
+	// Spec-50 §Phase B: `os=` predicates require a /v1/version probe.
+	// Build the cache only when --peer references os=.
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
+	}
+
+	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
+	if err != nil {
+		return cli.Exit("fleet apply: "+err.Error(), 2)
+	}
+	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		msg := "fleet apply: no peers matched filter " + peersFilter
+		msg := "fleet apply: --peer selected 0 of " +
+			strconv.Itoa(len(cfgPeers.Peers)) + " peer(s); nothing to do"
 		if len(unknown) > 0 {
 			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
 		}
 		return cli.Exit(msg, 1)
 	}
 
-	// --peer-filter applies on top of the --peers name filter.
-	peerFilterGroups, err := parseFilterFlags(c.StringSlice("peer-filter"))
-	if err != nil {
-		return cli.Exit("fleet apply: "+err.Error(), 2)
-	}
-	if err := validatePeerFilterKeys(peerFilterGroups); err != nil {
-		return cli.Exit("fleet apply: "+err.Error(), 2)
-	}
-	if len(peerFilterGroups) > 0 {
-		// Spec-50 §Phase B: `os=` requires a /v1/version probe. Run that
-		// pass only when at least one term needs it; cache results so a
-		// single `fleet apply` doesn't re-probe the same peer for each
-		// AND-group it appears in.
-		var osFor peerOSResolver
-		if peerFilterGroupsUseKey(peerFilterGroups, "os") {
-			osFor = newPeerOSCache(c.Context, selected, c.App.Writer)
-		}
-		filtered := make([]fleet.Peer, 0, len(selected))
-		for _, p := range selected {
-			if peerMatchesFilters(p, peerFilterGroups, osFor) {
-				filtered = append(filtered, p)
-			}
-		}
-		if len(filtered) == 0 {
-			return cli.Exit("fleet apply: --peer-filter selected 0 of "+strconv.Itoa(len(selected))+" peer(s); nothing to do", 1)
-		}
-		selected = filtered
-	}
+	// peerFilterGroups is forwarded to the machine-manifest apply path
+	// (runMachineApply) so it can re-AND those filters against each
+	// manifest phase's peer set.
+	peerFilterGroups, _ := parsePeerFlags(peerFlag)
 
 	// Resolve vars files relative to plan-dir, absolute on the controller.
 	// When the machine convention is active, prepend conventional vars
@@ -596,84 +580,12 @@ func fleetApplyAction(c *cli.Context) error {
 	return nil
 }
 
-// selectPeers filters peers by a comma-separated name list. An empty filter
-// returns all peers and no unknowns. Names from the filter that don't match
-// any peer are returned in `unknown` so callers can warn the user (typos in
-// --peers used to silently no-op).
-func selectPeers(peers []fleet.Peer, filter string) (matched []fleet.Peer, unknown []string) {
-	if filter == "" {
-		matched = make([]fleet.Peer, len(peers))
-		copy(matched, peers)
-		return matched, nil
-	}
-	known := make(map[string]struct{}, len(peers))
-	for _, p := range peers {
-		known[p.Name] = struct{}{}
-	}
-	seen := make(map[string]struct{})
-	for _, raw := range strings.Split(filter, ",") {
-		n := strings.TrimSpace(raw)
-		if n == "" {
-			continue
-		}
-		if _, dup := seen[n]; dup {
-			continue
-		}
-		seen[n] = struct{}{}
-		if _, ok := known[n]; !ok {
-			unknown = append(unknown, n)
-		}
-	}
-	for _, p := range peers {
-		if _, ok := seen[p.Name]; ok {
-			matched = append(matched, p)
-		}
-	}
-	return matched, unknown
-}
-
-// filterTerm is a single `key=value` predicate inside a --peer-filter or
-// --step-filter expression. v1 only accepts key="tag"; the parser is generic
-// so the planned extension (spec-49 extended-filter-keys) lands as a
-// validator change.
+// filterTerm is a single `key=value` predicate inside a --peer or
+// --step-filter expression. The parser is generic over keys; the
+// allowlist is enforced by validatePeerFilterKeys.
 type filterTerm struct {
 	key   string
 	value string
-}
-
-// parseFilterFlags converts the raw string slice from cli.StringSlice into
-// AND-groups. Each flag value contributes one group; commas inside a value
-// separate AND-terms within that group. The peer/step must match every term
-// in at least one group.
-//
-//	--peer-filter tag=a,tag=b                       → [[a, b]]            (a AND b)
-//	--peer-filter tag=a --peer-filter tag=b         → [[a], [b]]          (a OR b)
-//	--peer-filter tag=a,tag=b --peer-filter tag=c   → [[a, b], [c]]       ((a AND b) OR c)
-func parseFilterFlags(args []string) ([][]filterTerm, error) {
-	var groups [][]filterTerm
-	for _, arg := range args {
-		var group []filterTerm
-		for _, raw := range strings.Split(arg, ",") {
-			tok := strings.TrimSpace(raw)
-			if tok == "" {
-				continue
-			}
-			eq := strings.IndexByte(tok, '=')
-			if eq < 0 {
-				return nil, fmt.Errorf("invalid filter %q: expected key=value", tok)
-			}
-			key := strings.TrimSpace(tok[:eq])
-			val := strings.TrimSpace(tok[eq+1:])
-			if key == "" || val == "" {
-				return nil, fmt.Errorf("invalid filter %q: key and value must be non-empty", tok)
-			}
-			group = append(group, filterTerm{key: key, value: val})
-		}
-		if len(group) > 0 {
-			groups = append(groups, group)
-		}
-	}
-	return groups, nil
 }
 
 // peerFilterKeys is the allowlist enforced by validatePeerFilterKeys. Kept
@@ -681,7 +593,7 @@ func parseFilterFlags(args []string) ([][]filterTerm, error) {
 // (spec-50 §G3: the unknown-key error lists the valid keys explicitly).
 var peerFilterKeys = []string{"tag", "name", "os", "role"}
 
-// validatePeerFilterKeys rejects any --peer-filter key not in peerFilterKeys.
+// validatePeerFilterKeys rejects any --peer key not in peerFilterKeys.
 // Spec-50 extends the v1 allowlist (`tag`) with `name`, `os`, and `role`;
 // the parser is already generic over keys, so this is a validator change
 // only.
@@ -690,7 +602,7 @@ func validatePeerFilterKeys(groups [][]filterTerm) error {
 		for _, t := range g {
 			if !isPeerFilterKey(t.key) {
 				return fmt.Errorf(
-					"unsupported --peer-filter key %q (valid: %s)",
+					"unsupported --peer key %q (valid: %s)",
 					t.key, strings.Join(peerFilterKeys, ", "))
 			}
 		}
