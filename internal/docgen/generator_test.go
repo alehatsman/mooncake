@@ -52,6 +52,28 @@ func TestGeneratePlatformMatrix(t *testing.T) {
 		t.Error("missing table separator")
 	}
 
+	// Regression (issue-28 secondary): the separator row used to
+	// finish with a doubled `||` because strings.Repeat already
+	// supplied the trailing pipe AND the format string did too.
+	// Most markdown renderers ignore it but the output is wrong.
+	if strings.Contains(output, "-------||") {
+		t.Errorf("regression: separator row has doubled trailing pipe (`-------||`):\n%s", output)
+	}
+	// Positive: the separator row must have exactly the same
+	// pipe-column count as the header row.
+	for _, line := range strings.Split(output, "\n") {
+		if !strings.HasPrefix(line, "|--------|") {
+			continue
+		}
+		// 4 platforms → 5 cells → 6 pipes (one per cell boundary + leading).
+		got := strings.Count(line, "|")
+		const want = 6
+		if got != want {
+			t.Errorf("separator row pipe count = %d, want %d: %q", got, want, line)
+		}
+		break
+	}
+
 	// Check that some actions are present (should have at least a few registered)
 	lines := strings.Split(output, "\n")
 	actionRows := 0
