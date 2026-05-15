@@ -1,7 +1,33 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `d963c25`, 2026-05-15, revision 13).
+(master @ `2ee98e7`, 2026-05-15, revision 14).
+
+> **What changed since revision 13**: two more Stream-1 specs landed.
+> **Spec-37 (Step Output Capture)** shipped (`901e013`/`2ee98e7`) — a
+> `CaptureInPlan` capability on `ActionMetadata` lets plan-mode bind
+> `as:` results into `Scope.Results` for opted-in actions (mutation
+> actions still stay invisible to vars during plan). The three
+> executor write sites + a new plan-mode capture path all funnel
+> through one `captureResult` helper that also emits a collision
+> warning on `as:` overwrite — for_each-sibling iterations are
+> exempt via `step.Origin`-keyed detection. Dry-run wording:
+> "Would register result as:" → "Would capture result as:".
+> **Spec-38 (`read.json` + `read.yaml`)** shipped (`8549c33`/`2ee98e7`) —
+> two tier-1 read-only actions that close the gap forcing every
+> "read a value from a file" flow to shell out to `jq`/`yq`. Both
+> set `CaptureInPlan: true` so plan-mode runs publish the value into
+> the run scope; downstream `when: pkg.found` clauses branch
+> correctly in plan preview. New `internal/pathquery/` package
+> (dotted + integer-index path subset, reserved for future spec-25);
+> `security.Redactor` gains `AddPattern` + `RedactValue` deep
+> walker. New surface: `read.json` / `read.yaml` with `path`,
+> `query`, `max_bytes` (default 4 MiB), `redact:` regex list.
+> read.yaml rejects multi-document files at parse time. The
+> shell-out-to-jq pattern that breaks completely in sandboxed
+> agent mode now has a typed, redactable, plan-mode-friendly
+> alternative. The strategic constraint stays where rev11–rev13
+> put it — at **users**, not code.
 
 > **What changed since revision 12**: a large catch-up rev — eight
 > meaningful landings on top of rev12, plus three new drafted specs.
@@ -50,8 +76,8 @@ The typed mutation vocabulary. Ships everywhere.
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped |
 | 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P5 shipped (ufw only) |
 | 17 | Batched packages + templated `names` | shipped |
-| 37 | Step output capture (collision + plan-mode) | drafted |
-| 38 | `read.json` / `read.yaml` | drafted; depends on 37 |
+| 37 | Step output capture (collision + plan-mode) | ✅ shipped (`901e013`/`2ee98e7`). `CaptureInPlan` capability + `for_each`-aware collision warning + new plan-mode capture path; framework-only, zero new YAML surface |
+| 38 | `read.json` / `read.yaml` | ✅ shipped (`8549c33`/`2ee98e7`). Tier-1 read-only actions; `CaptureInPlan: true`; `query:` (pathquery), `max_bytes:`, `redact:`; read.yaml rejects multi-document files |
 | 32 | Collapse step action dispatch | not started |
 | **22** | **Extended Handler ABI (`Diff`/`Reverse`/`Cost`/`Permissions`)** | **🟡 in progress** — phases 1+2 ✅, **3 ✅** (`Permissions()` across 5/5 families), **4 ✅** (`Diff()` across 5/5 families + JSON plan-output wiring), **5 ✅** (`Reverse()` across the full priority handler set: file family + text family + pkg + os.service + download + unarchive, slices A–F all merged), **6 ✅** (`Cost()` across all 15 handlers + plan JSON + recap-line surface, `6469608`/`7d382f5`), **7 ✅** (`92b58d8`/`1d43a48` — `Diff`/`Cost`/`Permissions` wired into MCP `check_plan` and `run_plan` responses so agents consume structural deltas + cost + permission requirements directly). Only phase **8** (docs) remains on spec-22. |
 
