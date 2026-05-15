@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"debug/elf"
+	"debug/pe"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
@@ -99,6 +100,10 @@ func fleetUpgradeAction(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("hash %s: %w", binPath, err)
 	}
+	binOS, binArch, err := detectBinaryTarget(binPath)
+	if err != nil {
+		return fmt.Errorf("inspect %s: %w (binary must be a Linux ELF or Windows PE)", binPath, err)
+	}
 
 	peersPath := c.String("peers-file")
 	if peersPath == "" {
@@ -133,8 +138,8 @@ func fleetUpgradeAction(c *cli.Context) error {
 	}
 
 	w := c.App.Writer
-	fmt.Fprintf(w, "fleet upgrade: %s (%d bytes, sha256 %s…) → %d peer(s)\n",
-		binPath, binSize, binSHA[:12], len(selected))
+	fmt.Fprintf(w, "fleet upgrade: %s (%s/%s, %d bytes, sha256 %s…) → %d peer(s)\n",
+		binPath, binOS, binArch, binSize, binSHA[:12], len(selected))
 	if len(unknown) > 0 {
 		fmt.Fprintf(w, "  warning: unknown peer name(s) in --peers: %s\n", strings.Join(unknown, ", "))
 	}
@@ -158,7 +163,7 @@ func fleetUpgradeAction(c *cli.Context) error {
 		}
 
 		peerCtx, cancel := context.WithTimeout(c.Context, timeout)
-		err := upgradeOnePeer(peerCtx, w, p, binPath, binSHA, allowedOS, force)
+		err := upgradeOnePeer(peerCtx, w, p, binPath, binSHA, binOS, binArch, allowedOS, force)
 		cancel()
 
 		switch {
@@ -203,8 +208,11 @@ func fleetUpgradeAction(c *cli.Context) error {
 var errUpgradeSkipped = errors.New("skipped")
 
 // upgradeOnePeer runs the four-step pipeline against a single peer:
-// version probe, upload, replace, post-restart probe.
-func upgradeOnePeer(ctx context.Context, w io.Writer, p fleet.Peer, binPath, binSHA string, allowedOS map[string]struct{}, force bool) error {
+// version probe, upload, replace, post-restart probe. binOS/binArch
+// describe the binary's actual target (extracted from its PE/ELF
+// header in fleetUpgradeAction); the peer must match or we refuse
+// before touching the wire.
+func upgradeOnePeer(ctx context.Context, w io.Writer, p fleet.Peer, binPath, binSHA, binOS, binArch string, allowedOS map[string]struct{}, force bool) error {
 	client := transport.New(p.Name, p.Addr, p.Token)
 
 	fmt.Fprintf(w, "[%s] probe…\n", p.Name)
@@ -224,17 +232,21 @@ func upgradeOnePeer(ctx context.Context, w io.Writer, p fleet.Peer, binPath, bin
 		return fmt.Errorf("%w: %s", errUpgradeSkipped, msg)
 	}
 
-	// Arch isn't on the version response yet — we trust the controller
-	// to have built a binary that matches the peer. The daemon
-	// re-verifies on its side before staging, so a mismatch errors out
-	// with a clear "arch_mismatch" code from the agentd.
-	peerArch := runtime.GOARCH
-	if a := strings.TrimSpace(os.Getenv("MOONCAKE_FLEET_UPGRADE_ARCH")); a != "" {
-		peerArch = a
+	// Refuse cross-OS uploads up-front. Without this check we'd waste a
+	// ~25 MiB round-trip just to hit `binary_unhealthy` on the daemon
+	// when it tries `<staged> --version` against an incompatible
+	// executable. Same applies to mismatched arch (e.g. amd64 binary
+	// → arm64 peer). Arch isn't in /v1/version yet, so we only enforce
+	// OS here; arch mismatches still surface as the daemon's
+	// `arch_mismatch` error after upload — fine because that case is
+	// rare in single-architecture fleets.
+	if peerOS != binOS {
+		return fmt.Errorf("%w: binary is %s/%s but peer is %s/* — pass --binary <path-to-%s-build>",
+			errUpgradeSkipped, binOS, binArch, peerOS, peerOS)
 	}
 
-	fmt.Fprintf(w, "[%s] upload %s/%s …\n", p.Name, peerOS, peerArch)
-	staged, err := client.UploadBinary(ctx, binPath, binSHA, peerOS, peerArch)
+	fmt.Fprintf(w, "[%s] upload %s/%s …\n", p.Name, binOS, binArch)
+	staged, err := client.UploadBinary(ctx, binPath, binSHA, binOS, binArch)
 	if err != nil {
 		return fmt.Errorf("upload: %w", err)
 	}
@@ -310,5 +322,41 @@ func sha256AndSize(path string) (string, int64, error) {
 		return "", 0, err
 	}
 	return hex.EncodeToString(h.Sum(nil)), st.Size(), nil
+}
+
+// detectBinaryTarget identifies a binary's (GOOS, GOARCH) by sniffing
+// its file header. Supports ELF (Linux) and PE (Windows) — mooncake's
+// two upgrade targets. Mach-O (darwin) isn't recognised; users
+// upgrading a hypothetical macOS peer must pass --include-os darwin
+// AND accept that the OS-match check is skipped.
+//
+// Detection is best-effort but deterministic: either the file parses
+// as ELF/PE with a recognised machine value, or we return an error.
+// Garbage / wrong-magic bytes are rejected here rather than at the
+// daemon — saves a 25 MiB round-trip.
+func detectBinaryTarget(path string) (goos, goarch string, err error) {
+	if ef, e := elf.Open(path); e == nil {
+		defer func() { _ = ef.Close() }()
+		switch ef.Machine {
+		case elf.EM_X86_64:
+			return "linux", "amd64", nil
+		case elf.EM_AARCH64:
+			return "linux", "arm64", nil
+		default:
+			return "", "", fmt.Errorf("ELF binary has unsupported machine %v", ef.Machine)
+		}
+	}
+	if pf, e := pe.Open(path); e == nil {
+		defer func() { _ = pf.Close() }()
+		switch pf.Machine {
+		case pe.IMAGE_FILE_MACHINE_AMD64:
+			return "windows", "amd64", nil
+		case pe.IMAGE_FILE_MACHINE_ARM64:
+			return "windows", "arm64", nil
+		default:
+			return "", "", fmt.Errorf("PE binary has unsupported machine 0x%x", pf.Machine)
+		}
+	}
+	return "", "", errors.New("binary is neither ELF (Linux) nor PE (Windows)")
 }
 
