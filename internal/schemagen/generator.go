@@ -569,6 +569,7 @@ var actionStructByName = map[string]any{
 	"wait.http":         &config.WaitHTTP{},
 	"wait.file":         &config.WaitFile{},
 	"wait.command":      &config.WaitCommand{},
+	"observe.port":      &config.ObservePort{},
 }
 
 // getActionStruct returns the reflect.Type for an action's config struct.

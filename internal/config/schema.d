@@ -329,6 +329,17 @@ export interface LogAction {
 }
 
 /**
+ * Single-shot read of TCP/UDP port state (open? listener? pid?)
+ * @category network
+ */
+export interface ObservePortAction {
+  host?: string;
+  port: number;
+  protocol?: string;
+  timeout?: string;
+}
+
+/**
  * Manage a cron job via /etc/cron.d/<name>
  * 
  * @platforms linux
@@ -1089,6 +1100,10 @@ export interface Step {
    * Display messages to the user
    */
   log?: LogAction;
+  /**
+   * Single-shot read of TCP/UDP port state (open? listener? pid?)
+   */
+  "observe.port"?: ObservePortAction;
   /**
    * Manage a cron job via /etc/cron.d/<name>
    */

@@ -1043,6 +1043,18 @@ type ArtifactCapture struct {
 	Steps            []Step   `yaml:"steps" json:"steps"`                                       // Steps to execute and capture (required)
 }
 
+// ObservePort is the spec-59 single-shot read of TCP/UDP port state.
+// The polling cousin is wait.port; observe.port returns the current
+// state once and lets the next step branch on it via spec-37 `as:`
+// capture. Read-only by contract — Changed=false, empty Diff, nil
+// Reverse, Cost{Risk:1, Reversible:true}.
+type ObservePort struct {
+	Host     string `yaml:"host" json:"host,omitempty"`         // Host to probe (default: "localhost")
+	Port     int    `yaml:"port" json:"port"`                   // Port (required)
+	Protocol string `yaml:"protocol" json:"protocol,omitempty"` // "tcp" (default) | "udp"
+	Timeout  string `yaml:"timeout" json:"timeout,omitempty"`   // Dial timeout (default: "2s")
+}
+
 // WaitPort waits for a TCP port to accept connections.
 // Useful for orchestrating service start → port open → next step.
 type WaitPort struct {
@@ -1181,6 +1193,7 @@ type Step struct {
 	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate" json:"artifact.validate,omitempty" action:"artifact.validate"`
 	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
 	Assert           *Assert                 `yaml:"assert"            json:"assert,omitempty"            action:"assert"`
+	ObservePort      *ObservePort            `yaml:"observe.port"      json:"observe.port,omitempty"      action:"observe.port"`
 	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
 	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
 	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
@@ -1587,6 +1600,7 @@ func (s *Step) Clone() *Step {
 		ArtifactValidate: s.ArtifactValidate,
 		Shell:            s.Shell,
 		Assert:           s.Assert,
+		ObservePort:      s.ObservePort,
 		WaitPort:         s.WaitPort,
 		WaitHTTP:         s.WaitHTTP,
 		WaitFile:         s.WaitFile,

@@ -53,6 +53,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/text_line"
 	_ "github.com/alehatsman/mooncake/internal/actions/text_patch_ini"
 	_ "github.com/alehatsman/mooncake/internal/actions/text_patch_json"
+	_ "github.com/alehatsman/mooncake/internal/actions/observe_port"
 	_ "github.com/alehatsman/mooncake/internal/actions/text_patch_yaml"
 	_ "github.com/alehatsman/mooncake/internal/actions/tool"
 	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"

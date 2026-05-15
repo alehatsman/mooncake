@@ -1,0 +1,37 @@
+# Demonstrates spec-59 typed observability: observe.port
+#
+# Single-shot read of a TCP port's state. The result is captured via
+# spec-37 `as:` so the next step can branch on the typed payload.
+#
+# Compare to wait.port: wait.port BLOCKS until the port opens (or
+# timeout). observe.port returns the current state once. Use observe.*
+# when you want to read and branch; use wait.* when you want to gate
+# the next step on a state change.
+#
+# Run:
+#
+#   $ mooncake apply -c examples/observability/check-port.yml
+#   ▶ check if anything is on localhost:9   # nothing should be (port 9 = "discard"; usually closed)
+#   ✓ check if anything is on localhost:9
+#   ▶ note that the port is closed
+#   ✓ note that the port is closed
+#
+# Modify port: 80 (or any open port) to see the "open" branch fire.
+
+version: "1.0"
+
+steps:
+  - name: check if anything is on localhost:9
+    observe.port:
+      host: localhost
+      port: 9                # discard port — typically nothing listening
+      timeout: 500ms
+    as: probe
+
+  - name: note that the port is open
+    log: "port {{ probe.value.port }} is OPEN (listener: {{ probe.value.listener|default('unknown') }})"
+    when: "probe.value.open"
+
+  - name: note that the port is closed
+    log: "port {{ probe.value.port }} is CLOSED — no listener detected"
+    when: "not probe.value.open"
