@@ -15,7 +15,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/effects"
-	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -320,51 +319,18 @@ func run(c *cli.Context) error {
 	return runErr
 }
 
+// runFromPlan is now a CLI shim over apply.NewRunnerFromPlan (R1.1c).
+// The plan-load + spec-16 stale-plan validation + executor dispatch
+// live in internal/apply alongside the config-path Runner so both
+// apply entry points produce the same typed *KernelResult.
 func runFromPlan(c *cli.Context, planPath string) error {
-	// Load plan from file
-	planData, err := plan.LoadPlanFromFile(planPath)
-	if err != nil {
-		return fmt.Errorf("failed to load plan: %w", err)
-	}
-
-	// Spec 16 stale-plan policy: refuse to apply a plan that was built
-	// for a different host, against source files that have changed, or
-	// older than --max-plan-age. --allow-stale demotes all rejections
-	// to warnings.
-	validateOpts := plan.ValidateOptions{
-		MaxAge:     c.Duration("max-plan-age"),
+	_, err := apply.NewRunnerFromPlan(planPath, apply.FromPlanOptions{
+		SudoPass:   c.String("sudo-pass"),
+		LogLevel:   c.String("log-level"),
+		MaxPlanAge: c.Duration("max-plan-age"),
 		AllowStale: c.Bool("allow-stale"),
-	}
-	if err := plan.ValidateForApply(planData, validateOpts); err != nil {
-		return fmt.Errorf("refusing to apply stale plan: %w (use --allow-stale to override)", err)
-	}
-
-	// Setup logger
-	logLevel := c.String("log-level")
-
-	// Always use event-driven architecture
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-
-	// Parse log level
-	level := logger.InfoLevel
-	switch logLevel {
-	case "debug":
-		level = logger.DebugLevel
-	case "error":
-		level = logger.ErrorLevel
-	}
-
-	// Create console subscriber for text output
-	subscriber := logger.NewConsoleSubscriber(level, outputFormatText)
-	publisher.Subscribe(subscriber)
-	publisher.Subscribe(logger.NewRunLogSubscriber(planPath))
-
-	// Create minimal logger for internal use
-	internalLog := logger.NewLogger(level)
-
-	// Execute plan with event publisher
-	return executor.ExecutePlan(planData, c.String("sudo-pass"), actions.ModeApply, internalLog, publisher)
+	}).Run(c.Context)
+	return err
 }
 
 func factsCommand(c *cli.Context) error {

@@ -26,13 +26,21 @@ const (
 )
 
 // Runner is the kernel's local-apply entry point. Construct with
-// NewRunner, then call Run(ctx).
-//
-// Today Run returns a flat error matching the pre-extraction CLI
-// shape; R1.1b crystallizes the typed *KernelResult contract on top
-// of this. Direct callers (MCP, agent loop) get the same surface.
+// NewRunner for the config-path apply, or NewRunnerFromPlan for the
+// saved-plan apply (R1.1c). Both call Run(ctx) and return the same
+// *KernelResult shape so downstream consumers (MCP, agent loop,
+// future SDK) compose uniformly across input sources.
 type Runner struct {
+	// config-path mode
 	cfg *Config
+
+	// from-plan mode (R1.1c). When fromPlan is true, fromPlanPath
+	// and fromPlanOpts drive the saved-plan apply path instead of
+	// compiling from cfg.ConfigPath. fromPlan and cfg are mutually
+	// exclusive — set by exactly one constructor.
+	fromPlan     bool
+	fromPlanPath string
+	fromPlanOpts FromPlanOptions
 }
 
 // NewRunner constructs a Runner around the given Config. cfg must
@@ -53,7 +61,15 @@ func NewRunner(cfg *Config) *Runner {
 // Context is wired through for future cancellation (the executor
 // does not yet observe it; SIGINT/SIGTERM handling is installed
 // separately). Direct callers (MCP, agent loop) get the same surface.
-func (r *Runner) Run(_ context.Context) (*KernelResult, error) {
+func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
+	// R1.1c: dispatch to the saved-plan path when constructed via
+	// NewRunnerFromPlan. The two paths share publisher / capture /
+	// result-assembly plumbing but diverge on what the executor
+	// receives (a config-file path vs a pre-built plan).
+	if r.fromPlan {
+		return r.runFromPlan(ctx)
+	}
+
 	if err := r.validate(); err != nil {
 		return failedResult(err), err
 	}
