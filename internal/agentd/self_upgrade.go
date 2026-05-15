@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -130,6 +129,7 @@ func (s *Server) selfBinaryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stagedPath := filepath.Join(upgradeDir, "staged-"+gotSHA[:8]+stagedSuffix())
+	// #nosec G302 -- staged binary must be executable (0755)
 	if err := os.Chmod(tmpPath, 0o755); err != nil {
 		_ = os.Remove(tmpPath)
 		writeError(w, http.StatusInternalServerError, "chmod_tmp", err.Error())
@@ -275,7 +275,7 @@ func fileSHA256(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return "", err
@@ -288,8 +288,8 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
+	defer in.Close() //nolint:errcheck
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755) // #nosec G302 -- binary must be executable
 	if err != nil {
 		return err
 	}
@@ -297,10 +297,7 @@ func copyFile(src, dst string) error {
 		_ = out.Close()
 		return err
 	}
-	if err := out.Close(); err != nil {
-		return err
-	}
-	return nil
+	return out.Close()
 }
 
 // stagedSuffix returns the executable suffix for the host OS so paths
@@ -313,7 +310,3 @@ func stagedSuffix() string {
 	return ""
 }
 
-// shutterError is a sentinel for an unimplemented OS in the swap/reExec
-// codepath. Returned by selfReplace_windows.go / selfReplace_other.go
-// until Windows lands.
-var errSelfUpgradeUnsupportedOS = errors.New("self-upgrade not supported on this OS in this build")

@@ -442,7 +442,7 @@ func buildAuthMethods(identityFiles []string) ([]ssh.AuthMethod, error) {
 // actionable error on mismatch.
 func buildHostKeyCallback(knownHostsFile string, insecure bool) (ssh.HostKeyCallback, error) {
 	if insecure {
-		return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // gated by InsecureSkipHostKey flag
+		return ssh.InsecureIgnoreHostKey(), nil // #nosec G106 -- gated by InsecureSkipHostKey flag
 	}
 	path := knownHostsFile
 	if path == "" {

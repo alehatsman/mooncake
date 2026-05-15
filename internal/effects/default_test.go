@@ -3,6 +3,7 @@ package effects
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -224,6 +225,95 @@ func TestSymlink_AlreadyCorrect(t *testing.T) {
 		Symlink(target, link, actions.PerformerOpts{})
 	if !got.AlreadyOk {
 		t.Errorf("AlreadyOk expected, got %+v", got)
+	}
+}
+
+func TestSymlink_NonSymlink_NoForce(t *testing.T) {
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "target")
+	dir := filepath.Join(tmp, "existing-dir")
+	_ = os.Mkdir(dir, 0o755)
+
+	got := newTestPerformer(actions.ModePlan).
+		Symlink(target, dir, actions.PerformerOpts{Force: false})
+	if got.Err == nil {
+		t.Fatal("expected error when path is a directory and Force=false")
+	}
+	if got.WouldChange {
+		t.Error("WouldChange should be false on error")
+	}
+}
+
+func TestSymlink_NonSymlinkDir_Force_PlanMode(t *testing.T) {
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "target")
+	dir := filepath.Join(tmp, "existing-dir")
+	_ = os.Mkdir(dir, 0o755)
+
+	got := newTestPerformer(actions.ModePlan).
+		Symlink(target, dir, actions.PerformerOpts{Force: true})
+	if got.Err != nil {
+		t.Fatalf("unexpected error: %v", got.Err)
+	}
+	if !got.WouldChange {
+		t.Error("WouldChange expected")
+	}
+	if !strings.Contains(got.Reason, "directory") {
+		t.Errorf("reason should mention 'directory', got: %q", got.Reason)
+	}
+	// dir must still exist — plan mode must not remove it
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		t.Error("plan mode must not remove the existing directory")
+	}
+}
+
+func TestSymlink_NonSymlinkFile_Force_PlanMode(t *testing.T) {
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "target")
+	existing := filepath.Join(tmp, "existing-file")
+	_ = os.WriteFile(existing, []byte("x"), 0o644)
+
+	got := newTestPerformer(actions.ModePlan).
+		Symlink(target, existing, actions.PerformerOpts{Force: true})
+	if got.Err != nil {
+		t.Fatalf("unexpected error: %v", got.Err)
+	}
+	if !got.WouldChange {
+		t.Error("WouldChange expected")
+	}
+	if !strings.Contains(got.Reason, "file") {
+		t.Errorf("reason should mention 'file', got: %q", got.Reason)
+	}
+}
+
+func TestSymlink_WrongTarget_Force_PlanMode(t *testing.T) {
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "target-new")
+	existing := filepath.Join(tmp, "existing-link")
+	_ = os.Symlink(filepath.Join(tmp, "target-old"), existing)
+
+	got := newTestPerformer(actions.ModePlan).
+		Symlink(target, existing, actions.PerformerOpts{Force: true})
+	if got.Err != nil {
+		t.Fatalf("unexpected error: %v", got.Err)
+	}
+	if !got.WouldChange {
+		t.Error("WouldChange expected for symlink with wrong target")
+	}
+}
+
+func TestSymlink_Absent_PlanMode(t *testing.T) {
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "target")
+	link := filepath.Join(tmp, "new-link")
+
+	got := newTestPerformer(actions.ModePlan).
+		Symlink(target, link, actions.PerformerOpts{})
+	if got.Err != nil {
+		t.Fatalf("unexpected error: %v", got.Err)
+	}
+	if !got.WouldChange {
+		t.Error("WouldChange expected for absent path")
 	}
 }
 

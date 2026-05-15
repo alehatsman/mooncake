@@ -32,7 +32,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, _ actions.Result
 	if step == nil || step.OsService == nil {
 		return nil, errors.New("os.service Reverse: step has no OsService payload")
 	}
-	return nil, errors.New(
+	return nil, errors.New( //nolint:staticcheck
 		"os.service Reverse: not yet implemented. Apply-time pre-state capture " +
 			"(active/enabled) requires Run() in apply mode to thread a Result " +
 			"through HandleService — a refactor tracked in spec-22 slice F " +

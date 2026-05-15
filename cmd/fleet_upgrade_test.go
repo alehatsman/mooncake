@@ -12,6 +12,9 @@ import (
 // the test binary is an ELF amd64; on Windows it's PE amd64. Either
 // way we expect detectBinaryTarget to identify it correctly.
 func TestDetectBinaryTarget_RecognisesRunningTestBinary(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "windows" {
+		t.Skipf("detectBinaryTarget only handles ELF/PE; skipping on %s", runtime.GOOS)
+	}
 	self, err := os.Executable()
 	if err != nil {
 		t.Skipf("os.Executable not supported: %v", err)

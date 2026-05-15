@@ -44,19 +44,18 @@ func setDocumentContent(doc, child *yaml.Node) {
 }
 
 // mappingLookup scans a MappingNode's interleaved key/value pairs and
-// returns the key node, value node, and its index in Content for the
-// given string key.
-func mappingLookup(m *yaml.Node, key string) (keyNode, valNode *yaml.Node, idx int) {
+// returns the value node and its index in Content for the given string key.
+func mappingLookup(m *yaml.Node, key string) (valNode *yaml.Node, idx int) {
 	if m == nil || m.Kind != yaml.MappingNode {
-		return nil, nil, -1
+		return nil, -1
 	}
 	for i := 0; i < len(m.Content); i += 2 {
 		k := m.Content[i]
 		if k.Kind == yaml.ScalarNode && k.Value == key {
-			return k, m.Content[i+1], i
+			return m.Content[i+1], i
 		}
 	}
-	return nil, nil, -1
+	return nil, -1
 }
 
 // walk descends segs from root, returning the parent container, the
@@ -110,7 +109,7 @@ func walk(root *yaml.Node, segs []segment, create bool) (parent *yaml.Node, last
 			}
 			return nil, segment{}, nil, false, nil
 		}
-		_, val, _ := mappingLookup(cur, seg.Key)
+		val, _ := mappingLookup(cur, seg.Key)
 		if isLast {
 			return cur, seg, val, val != nil, nil
 		}
@@ -187,7 +186,7 @@ func setAt(root *yaml.Node, path string, value *yaml.Node) (bool, error) {
 		parent.Content[last.Index] = value
 		return true, nil
 	}
-	_, _, idx := mappingLookup(parent, last.Key)
+	_, idx := mappingLookup(parent, last.Key)
 	if idx >= 0 {
 		parent.Content[idx+1] = value
 		return true, nil
@@ -216,7 +215,7 @@ func deleteAt(root *yaml.Node, path string) (bool, error) {
 		parent.Content = append(parent.Content[:last.Index], parent.Content[last.Index+1:]...)
 		return true, nil
 	}
-	_, _, idx := mappingLookup(parent, last.Key)
+	_, idx := mappingLookup(parent, last.Key)
 	if idx < 0 {
 		return false, nil
 	}
@@ -240,7 +239,7 @@ func mergeAt(root *yaml.Node, path string, value *yaml.Node, strategy string) (b
 		if last.IsIndex {
 			parent.Content[last.Index] = value
 		} else {
-			_, _, idx := mappingLookup(parent, last.Key)
+			_, idx := mappingLookup(parent, last.Key)
 			if idx >= 0 {
 				parent.Content[idx+1] = value
 			} else {
@@ -263,7 +262,7 @@ func mergeAt(root *yaml.Node, path string, value *yaml.Node, strategy string) (b
 		if last.IsIndex {
 			parent.Content[last.Index] = merged
 		} else {
-			_, _, idx := mappingLookup(parent, last.Key)
+			_, idx := mappingLookup(parent, last.Key)
 			parent.Content[idx+1] = merged
 		}
 		return true, nil
@@ -277,7 +276,7 @@ func mergeMapping(dst, src *yaml.Node) bool {
 	for i := 0; i < len(src.Content); i += 2 {
 		srcKey := src.Content[i]
 		srcVal := src.Content[i+1]
-		_, dstVal, idx := mappingLookup(dst, srcKey.Value)
+		dstVal, idx := mappingLookup(dst, srcKey.Value)
 		if idx < 0 {
 			dst.Content = append(dst.Content, srcKey, srcVal)
 			added = true

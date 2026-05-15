@@ -190,19 +190,19 @@ func Upsert(path string, p Peer) (added bool, diff []string, err error) {
 	return added, diff, nil
 }
 
-func peerDiff(old, new Peer) []string {
+func peerDiff(old, newer Peer) []string {
 	var out []string
-	if old.Addr != new.Addr {
-		out = append(out, fmt.Sprintf("addr: %s → %s", old.Addr, new.Addr))
+	if old.Addr != newer.Addr {
+		out = append(out, fmt.Sprintf("addr: %s → %s", old.Addr, newer.Addr))
 	}
-	if old.Transport != new.Transport {
-		out = append(out, fmt.Sprintf("transport: %s → %s", old.Transport, new.Transport))
+	if old.Transport != newer.Transport {
+		out = append(out, fmt.Sprintf("transport: %s → %s", old.Transport, newer.Transport))
 	}
-	if old.Token != new.Token {
+	if old.Token != newer.Token {
 		out = append(out, "token: (rotated)")
 	}
-	if !stringSlicesEqual(old.Tags, new.Tags) {
-		out = append(out, fmt.Sprintf("tags: %v → %v", old.Tags, new.Tags))
+	if !stringSlicesEqual(old.Tags, newer.Tags) {
+		out = append(out, fmt.Sprintf("tags: %v → %v", old.Tags, newer.Tags))
 	}
 	return out
 }

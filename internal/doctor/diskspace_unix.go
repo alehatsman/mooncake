@@ -12,5 +12,5 @@ func diskFree(dir string) (uint64, error) {
 	if err := syscall.Statfs(dir, &s); err != nil {
 		return 0, err
 	}
-	return uint64(s.Bavail) * uint64(s.Bsize), nil
+	return s.Bavail * uint64(s.Bsize), nil
 }
