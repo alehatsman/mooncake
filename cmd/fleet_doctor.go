@@ -118,6 +118,11 @@ const (
 	rungHTTP    rungName = "http"
 	rungAuth    rungName = "auth"
 	rungFacts   rungName = "facts"
+	// rungSSHDiag is added at the end when peer.SSH is set AND a prior
+	// rung failed — it shells in over SSH and runs the OS-appropriate
+	// "is mooncake-agentd healthy" probe. Strictly supplementary; the
+	// ladder remains useful without an SSH fallback configured.
+	rungSSHDiag rungName = "ssh-diag"
 )
 
 // rungResult is one row of the doctor table. Detail is the short
@@ -149,23 +154,43 @@ func runDoctorLadder(ctx context.Context, peer fleet.Peer, perRung time.Duration
 	}
 	r := doctorReport{Peer: peer.Name, Addr: peer.Addr}
 
+	// Tracks whether *any* rung failed; gates the SSH supplementary rung.
+	anyFailed := func() bool {
+		for _, rg := range r.Rungs {
+			if !rg.OK && !rg.Skipped {
+				return true
+			}
+		}
+		return false
+	}
+
+	// finalize: when the (agentd) ladder is done — successful or not —
+	// optionally tack on an SSH-fallback rung if the user configured one
+	// AND something earlier failed. Reaches into the OS to ask "what
+	// does systemctl/launchctl/Task Scheduler think?"
+	finalize := func() doctorReport {
+		if peer.SSH != "" && anyFailed() {
+			r.Rungs = append(r.Rungs, sshDiagRung(ctx, peer, perRung))
+		}
+		return r
+	}
+
 	host, _, err := net.SplitHostPort(peer.Addr)
 	if err != nil {
-		// Bad address: skip everything but record the failure.
 		r.Rungs = append(r.Rungs, rungResult{
 			Name:   rungResolve,
 			OK:     false,
 			Detail: "invalid addr in peers.toml: " + err.Error(),
 			Hint:   "Fix the [[peers]] entry — addr must be host:port (e.g. 192.168.1.10:7878).",
 		})
-		return r
+		return finalize()
 	}
 
 	// === Rung 1: Resolve ===
 	res := resolveRung(ctx, host, perRung)
 	r.Rungs = append(r.Rungs, res)
 	if !res.OK {
-		return r
+		return finalize()
 	}
 
 	// === Rung 2: TCP ===
@@ -173,17 +198,15 @@ func runDoctorLadder(ctx context.Context, peer fleet.Peer, perRung time.Duration
 	r.Rungs = append(r.Rungs, tcp)
 	if !tcp.OK {
 		r.Rungs = append(r.Rungs, skipped(rungHTTP), skipped(rungAuth), skipped(rungFacts))
-		return r
+		return finalize()
 	}
 
-	// === Rung 3: HTTP (anonymous) — proves the daemon is speaking HTTP
-	// at all; a healthy agentd answers 401 here, which we treat as ✓ for
-	// "daemon reachable, middleware working".
+	// === Rung 3: HTTP (anonymous) ===
 	httpR := httpAnonRung(ctx, peer.Addr, perRung)
 	r.Rungs = append(r.Rungs, httpR)
 	if !httpR.OK {
 		r.Rungs = append(r.Rungs, skipped(rungAuth), skipped(rungFacts))
-		return r
+		return finalize()
 	}
 
 	// === Rung 4: Auth ===
@@ -191,18 +214,55 @@ func runDoctorLadder(ctx context.Context, peer fleet.Peer, perRung time.Duration
 	r.Rungs = append(r.Rungs, auth)
 	if !auth.OK {
 		r.Rungs = append(r.Rungs, skipped(rungFacts))
-		return r
+		return finalize()
 	}
 
 	// === Rung 5: Facts ===
 	facts := factsRung(ctx, peer.Addr, peer.Token, perRung)
 	r.Rungs = append(r.Rungs, facts)
 	if !facts.OK {
-		return r
+		return finalize()
 	}
 
 	r.Healthy = true
-	return r
+	return finalize()
+}
+
+// sshDiagRung wraps fleet.RunSSHDiagnostic into a doctor rung. Always
+// stamped as OK=true when the SSH call itself succeeded — the captured
+// stdout *is* the diagnostic, whether the remote command exited 0 or 3
+// (systemctl's "inactive" code). Hard SSH failures become OK=false with
+// the dial error in Detail.
+func sshDiagRung(ctx context.Context, peer fleet.Peer, perRung time.Duration) rungResult {
+	start := time.Now()
+	diag, err := fleet.RunSSHDiagnostic(ctx, peer, perRung)
+	took := time.Since(start)
+	if err != nil {
+		return rungResult{
+			Name:   rungSSHDiag,
+			OK:     false,
+			Detail: err.Error(),
+			Hint:   "Could not reach the peer over SSH for fallback diagnostics. Confirm `ssh " + peer.SSH + "` works from this controller.",
+			Took:   took,
+		}
+	}
+	detail := "os=" + string(diag.OS) + " exit=" + fmt.Sprintf("%d", diag.ExitCode)
+	if diag.Stdout != "" {
+		// Indent stdout one extra level so it visually nests under the rung line.
+		detail += "\n" + indentLines(diag.Stdout, "    ")
+	}
+	if diag.Stderr != "" {
+		detail += "\n  stderr:\n" + indentLines(diag.Stderr, "    ")
+	}
+	return rungResult{Name: rungSSHDiag, OK: true, Detail: detail, Took: took}
+}
+
+func indentLines(s, prefix string) string {
+	lines := strings.Split(s, "\n")
+	for i, ln := range lines {
+		lines[i] = prefix + ln
+	}
+	return strings.Join(lines, "\n")
 }
 
 func skipped(n rungName) rungResult {
