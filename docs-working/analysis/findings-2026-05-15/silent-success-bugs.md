@@ -114,7 +114,26 @@ Same logic should be called from `file.download` before rename.
 
 ---
 
-## #15 — `creates:` and `unless:` are silently ignored on `file.write` — HIGH
+## #15 — ✅ RESOLVED (round 29): silently-ignored → now validator-rejected
+
+Step-level `creates:` / `unless:` on `file.write` are now rejected at
+validate time (the validator complains "exactly one action" — see
+[`cli-and-friction.md` #77](./cli-and-friction.md#77) for that
+error-message bug). Either way: no more silent bypass. Users learn
+about the issue immediately.
+
+The remaining open question is *what's the right syntax for guarded
+file.write*. Options:
+- Nest creates under shell: only (status quo for shell; doesn't help file.write)
+- Add `state: file_if_absent` enum value to file.write (idempotent by
+  construction)
+- Step-level `creates:` for all actions (the original promise)
+
+Pick one; document it.
+
+---
+
+### Original report (now resolved)
 
 **Repro**:
 ```yaml

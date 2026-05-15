@@ -325,6 +325,42 @@ config file is empty: /work/empty.yml — expected a list of steps
 
 ---
 
+## #77 — Validator error "Step must have exactly one action ()" with EMPTY action list — LOW (regression of #27 vocabulary)
+
+**Repro**:
+```yaml
+- file.write:
+    path: /tmp/guarded.txt
+    content: "v1\n"
+  creates: /tmp/guarded.txt    # step-level creates: no longer allowed?
+```
+
+```
+$ mooncake apply -c cfg.yml
+Line 1: Step must have exactly one action ()
+  - file.write:
+```
+
+The error message has an EMPTY parenthesized list `()` where it
+should list the valid action vocabulary (per #27 fix that landed
+showing 62 action names). For this specific case `creates:` at
+step-level + `file.write:` at step-level evidently makes the
+validator see "more than one action" — but instead of saying that,
+it lists an empty enum.
+
+Probably an off-by-one in the vocabulary-printing path when the
+"too many actions" branch fires instead of the "no action" branch.
+
+**Fix**: when the error is "too many actions", say so, and list which
+keys looked like actions. When it's "unknown action", list the
+vocabulary.
+
+(Aside: step-level `creates:` on `file.write` used to silently no-op
+per the original #15. Now it errors at validate time — a different
+kind of fix. Marking #15 as ✅ resolved by removal-of-silent-bypass.)
+
+---
+
 ## #76 — `--capture-full-output` silently no-ops without `--artifacts-dir` — LOW (DX)
 
 **Repro**:
