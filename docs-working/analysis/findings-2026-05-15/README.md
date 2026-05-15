@@ -18,22 +18,27 @@ self-contained; severity-sorted within.
 
 | File | Findings | Theme |
 |---|---:|---|
-| [`silent-success-bugs.md`](./silent-success-bugs.md) | 8 | The "green recap, broken behavior" class. **Start here.** |
+| [`silent-success-bugs.md`](./silent-success-bugs.md) | 9 | The "green recap, broken behavior" class. **Start here.** |
 | [`ssot-drift.md`](./ssot-drift.md) | 8 | Validator, schema, docs, examples not aligned |
 | [`template-engine.md`](./template-engine.md) | 6 | Rendering, escaping, filter syntax, metrics-in-templates |
 | [`coverage-gaps.md`](./coverage-gaps.md) | 7 | Preset gaps, tool action gaps, repo.tree, presets search |
 | [`cli-and-friction.md`](./cli-and-friction.md) | 7 | Minimal-container friction, CLI nits, error-message quality |
 | [`positive-keepers.md`](./positive-keepers.md) | 7 | Features to feature; "do not regress" list |
+| [`verification-2026-05-15.md`](./verification-2026-05-15.md) | (status) | Fix-status after 9 MT-N fix commits landed |
 
-## Severity rollup
+## Severity rollup (post-MT-fix verification — see `verification-2026-05-15.md`)
 
-| Severity | Count | Where |
-|---|---:|---|
-| **CRITICAL** | 2 | for_each broken (#8); `file.download sha256:` bypassed (#14) |
-| **HIGH** | 7 | sudo (#1), shell guards (#2), file.write guards (#15), step truncation (#22), artifact.capture (#24), validator drift (#27), tool bare-binary (#40) |
-| **MEDIUM** | 9 | preset coverage (#3), validator UX (#4), HTML escape (#16), metrics in templates (#17), repo.tree (#23), failed_when (#28), presets search (#37), tool tag prefix (#39) |
-| **LOW** | 19 | Various DX nits and doc drift |
-| **(positive — keep)** | ≥12 | doctor, init, --output-format json, MCP, schema/docs generate, etc. |
+| Severity | Original | After MT fixes |
+|---|---:|---:|
+| **CRITICAL** | 2 | **0** (#8 ✅, #14 ✅) |
+| **HIGH** | 7 | 5 (#1 ✅, #2 partial) |
+| **MEDIUM** | 9 | 8 (#4 partial, #12 ✅, plus new #44) |
+| **LOW** | 19 | 14 (#5 ✅, #6 ✅, #13 ✅) |
+| **(positive — keep)** | ≥12 | ≥14 (the MT-fixes themselves now belong here) |
+
+Both **CRITICAL** bugs were fixed within the same session — see
+[`verification-2026-05-15.md`](./verification-2026-05-15.md) for the
+full breakdown.
 
 ## Top three fixes (highest ROI per LoC)
 

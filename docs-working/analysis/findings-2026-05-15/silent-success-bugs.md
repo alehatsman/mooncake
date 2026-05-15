@@ -300,15 +300,57 @@ treat as binary, rename + chmod +x). Or add explicit `extract: false`.
 
 ---
 
+---
+
+## #44 — `file.download` silently accepts unknown fields (e.g. `sha256:`) — MEDIUM (security-adjacent)
+
+**Repro** (post-MT-14 fix):
+
+```yaml
+- file.download:
+    url: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+    dest: /tmp/dl/jq-bad
+    sha256: "0000...0000"        # ← unknown field, not in schema
+    mode: "0755"
+```
+
+```
+$ mooncake apply -c bad-sum.yml
+~ download with WRONG sha256
+RECAP  ok=0  changed=1  skipped=0  failed=0
+$ ls /tmp/dl/
+jq-bad
+```
+
+The schema defines `file.download` properties as `checksum`, `dest`,
+`url`, etc. — `sha256:` is not a valid field. But the validator
+accepts it without warning. The user *thinks* they declared a
+checksum; they didn't; the verification path never runs.
+
+**Why MEDIUM (security-adjacent)**: same shape as #14, but the
+trigger is "user typed the wrong field name". A defense-in-depth
+problem: even after MT-14 fixed the verify-before-rename ordering,
+unknown-field acceptance reopens the same hole through a different
+door. Users may have been writing `sha256:` because `LLM_GUIDE.md`
+referenced sha256 verification.
+
+**Fix**: this is a symptom of [#27](./ssot-drift.md#27). The
+`mooncake schema generate` output already has `additionalProperties:
+false` on each action's properties block. Wire the validator to
+honor it. Same fix closes #44 and refines #4.
+
+---
+
 ## Summary table
 
-| # | Sev | Action / Surface | Fix size |
-|---|---|---|---|
-| 8 | CRITICAL | `for_each` | medium — planner refactor |
-| 14 | CRITICAL | `file.download sha256:` | small — reorder verify-before-rename |
-| 15 | HIGH | `creates:`/`unless:` on `file.write` | small — extend exec wrapper |
-| 2 | HIGH | shell guard recap mark | tiny — set status=skipped |
-| 22 | HIGH | `mooncake step` JSON shape | small — emit full result map |
-| 24 | HIGH | `artifact.capture` | medium — file-change tracking |
-| 28 | MEDIUM | `failed_when:` on assert | small — route through wrapper |
-| 40 | HIGH | `tool github-release` bare-binary | small — filename heuristic |
+| # | Sev | Status | Action / Surface | Fix size |
+|---|---|---|---|---|
+| 8 | CRITICAL | ✅ FIXED | `for_each` | landed `e8d1fc6` |
+| 14 | CRITICAL | ✅ FIXED | `file.download checksum:` | landed `a09e12e` |
+| 15 | HIGH | open | `creates:`/`unless:` on `file.write` | small — extend exec wrapper |
+| 2 | HIGH | 🟡 partial | shell guard recap mark | nested form fixed; step-level still |
+| 22 | HIGH | open | `mooncake step` JSON shape | small — emit full result map |
+| 24 | HIGH | open | `artifact.capture` | medium — file-change tracking |
+| 28 | MEDIUM | open | `failed_when:` on assert | small — route through wrapper |
+| 40 | HIGH | open | `tool github-release` bare-binary | small — filename heuristic |
+| 44 | MEDIUM | open | `file.download` unknown-field acceptance | closes with #27 |
