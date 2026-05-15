@@ -427,6 +427,9 @@ func (c *Client) httpErr(op string, status int, body []byte) error {
 }
 
 func (c *Client) wrap(op string, err error) error {
+	if cause := classifyNetErr(err); cause != "" {
+		return fmt.Errorf("peer %s: %s: %s: %w", c.Name, op, cause, err)
+	}
 	return fmt.Errorf("peer %s: %s: %w", c.Name, op, err)
 }
 
