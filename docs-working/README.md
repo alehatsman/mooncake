@@ -25,17 +25,14 @@ See **[non-goals.md](./non-goals.md)** for the seven things Mooncake will not be
 22 extended-handler-abi (phase 8 docs remains) · 24 pkg-surface (P6 ABI hooks) ·
 25 text-surface (P5 ABI hooks) · 26 git-actions (ABI hooks) · 27 os-identity (ABI hooks) ·
 28 os-scheduling (non-ufw drivers, deferred) · 32 step-action-dispatch ·
-36 windows-support · **59 typed-observability seed ✅** (`observe.{port,process,http,service}` shipped) ·
-60 observe-system-resources (cpu/memory/disk) · 61 observe-logs ·
-62 observe-gpu · 63 observe-streaming (deferral spec) ·
-disk-partition-action (exploration)
+36 windows-support · disk-partition-action (exploration)
 
 Phases 1–7 of spec-22 are complete (four-method ABI declared + MCP wiring landed).
 Remaining: phase 8 docs, plus final ABI-hook phases for 24–27.
-**Spec-59 seed landed** (`27d61a7` / `b26acbf`) — typed observation is now the
-read-side mirror of spec-22's typed mutation. Phases 4 (docs page) + 5
-(--inspect-real CLI flag) remain. Specs 60–63 (observability extensions) and
-spec-64 (cross-peer `fleet observe`) are now unblocked.
+**The full observe.* family shipped** — 9 typed handlers (port, process, http,
+service, cpu, memory, disk, gpu, logs) plus cross-peer fan-out via
+`mooncake fleet observe`. Specs 59–64 all moved to `done/`. Only spec-59
+phase 6 (`--inspect-real` CLI flag) remains as a small follow-up.
 
 **Stream 2 — Safe Agent Runtime**
 
@@ -46,7 +43,7 @@ lives under Stream 1 (spec-22 phases 7–8).
 **Stream 3 — Fleet & Cluster Management**
 45 fleet-discovery (PR13 `fleet init` interactive flow) ·
 52 fleet-exec · 53 fleet-watch · 54 fleet-ps · 55 fleet-doctor ·
-58 fleet-drift · 64 fleet-observe (cross-peer fan-out)
+58 fleet-drift
 
 Fleet is 13/14 PRs; only `fleet init` interactive UX remains from the original plan.
 Specs 52–55 are drafted QoL additions brainstormed from real use.
@@ -83,7 +80,9 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 34 typed-variable-context · 35 plan-diff ·
 43 fleet-transport-and-sync · 44 ssh-bootstrap-transport · 46 fleet-status-and-logs ·
 47 fleet-bootstrap-ux · 48 per-host-overlays-and-tags · 49 agentd-on-windows ·
-50 extended-filter-keys · 51 local-apply-overlay-parity
+50 extended-filter-keys · 51 local-apply-overlay-parity ·
+59 typed-observability · 60 observe-system-resources · 61 observe-logs ·
+62 observe-gpu · 63 observe-streaming (deferral) · 64 fleet-observe
 
 ## Epics (epics/)
 
