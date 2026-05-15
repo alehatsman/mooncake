@@ -6,8 +6,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
+	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -50,6 +52,7 @@ func (h *Handler) buildCommand(
 
 		//#nosec G204 — provisioning tool designed to execute shell commands
 		command := exec.CommandContext(cmdCtx, "sudo", args...)
+		installProcessGroupKill(command)
 
 		if step.Shell.Stdin != "" {
 			renderedStdin, err := ctx.GetTemplate().Render(step.Shell.Stdin, ctx.GetVariables())
@@ -65,6 +68,7 @@ func (h *Handler) buildCommand(
 
 	//#nosec G204 — provisioning tool designed to execute shell commands
 	command := exec.CommandContext(cmdCtx, interpreter, "-c", renderedCommand)
+	installProcessGroupKill(command)
 
 	if step.Shell.Stdin != "" {
 		renderedStdin, err := ctx.GetTemplate().Render(step.Shell.Stdin, ctx.GetVariables())
@@ -75,4 +79,30 @@ func (h *Handler) buildCommand(
 	}
 
 	return command, nil
+}
+
+// installProcessGroupKill puts the spawned shell into its own process
+// group and arranges for context cancellation (timeout) to SIGKILL the
+// entire group, not just the shell. Without this, compound commands
+// like `sleep 30; echo done` would orphan their children: bash itself
+// gets killed, but the already-forked `sleep` keeps running until its
+// own duration elapses with init as the new parent. Issue #16.
+//
+// The default exec.CommandContext cancel only signals cmd.Process.Pid,
+// reaching the shell process; setting Cancel ourselves replaces that
+// behavior with a group-wide kill via the negative-pid pattern.
+func installProcessGroupKill(c *exec.Cmd) {
+	if c.SysProcAttr == nil {
+		c.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	c.SysProcAttr.Setpgid = true
+	c.Cancel = func() error {
+		if c.Process == nil {
+			return os.ErrProcessDone
+		}
+		// Kill the entire process group; the negative pid form addresses
+		// the group whose pgid == c.Process.Pid (because we set
+		// Setpgid=true above).
+		return syscall.Kill(-c.Process.Pid, syscall.SIGKILL)
+	}
 }
