@@ -86,6 +86,15 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 	// Build location map from yaml.Node tree
 	locationMap := buildLocationMap(&rootNode)
 
+	// MT-72: catch the common "forgot the leading dash" mistake before
+	// the schema validator does — its error blames the action name
+	// ("unknown field `log`") and sends users to docs for typos instead
+	// of pointing at the actual problem (top-level dict instead of a
+	// list of step objects).
+	if hint := detectTopLevelDictShape(&rootNode); hint != "" {
+		return nil, nil, fmt.Errorf("%s: %s", path, hint)
+	}
+
 	// Parse config - supports both old format (array) and new format (object with steps)
 	var parsedConfig *ParsedConfig
 	if isArrayFormat(&rootNode) {
@@ -280,6 +289,49 @@ func isArrayFormat(node *yaml.Node) bool {
 		return firstNode.Kind == yaml.SequenceNode
 	}
 	return node.Kind == yaml.SequenceNode
+}
+
+// detectTopLevelDictShape returns a human-readable hint when the YAML
+// root is a mapping that LOOKS like the user forgot the leading `- ` —
+// i.e. it's an object instead of a list of step objects, and none of
+// its top-level keys are recognized RunConfig fields (`version`,
+// `vars`, `steps`). Returns an empty string when the shape is fine.
+// MT-72.
+func detectTopLevelDictShape(node *yaml.Node) string {
+	root := node
+	if root.Kind == yaml.DocumentNode {
+		if len(root.Content) == 0 {
+			return ""
+		}
+		root = root.Content[0]
+	}
+	if root.Kind != yaml.MappingNode {
+		return ""
+	}
+	// Mapping content is alternating key/value scalar nodes.
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		key := root.Content[i]
+		if key.Kind != yaml.ScalarNode {
+			continue
+		}
+		switch key.Value {
+		case "version", "vars", "steps":
+			// Looks like a RunConfig; let the regular path handle it.
+			return ""
+		}
+	}
+	// Top-level mapping with no RunConfig keys — almost certainly a
+	// stray step where the leading `- ` was forgotten.
+	var firstKey string
+	if len(root.Content) > 0 && root.Content[0].Kind == yaml.ScalarNode {
+		firstKey = root.Content[0].Value
+	}
+	indent := "      "
+	example := "  - <action>:\n" + indent + "<args>"
+	if firstKey != "" {
+		example = "  - " + firstKey + ":\n" + indent + "..."
+	}
+	return "expected a list of steps; got a top-level object. Add a leading `- ` to each step:\n" + example
 }
 
 // attachSourceLocations populates SourceLocation for each step from the locationMap.
