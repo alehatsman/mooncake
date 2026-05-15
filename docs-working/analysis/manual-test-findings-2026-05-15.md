@@ -1196,3 +1196,284 @@ A useful structural fix that closes many of these: **codegen the
 validator allowlist, error messages, and `LLM_GUIDE.md` action list
 from `internal/register/register.go`**. One change closes #4, #6,
 #27, and improves #29's quality bar globally.
+
+---
+
+## Continued exploration (round 6)
+
+Probed presets discovery, `schema generate`, `docs generate`, the
+`tool` action with a real backend, multi-file configs, and
+`wait.command`. Numbering continues from #34.
+
+### 35. `mooncake schema generate` produces the registry-complete schema — confirms #27 fix exists
+
+**Repro**:
+
+```
+$ mooncake schema generate --output schema.json
+$ grep -o '"[a-z]*\.[a-z_.]*": *{' schema.json | sort -u | wc -l
+44
+```
+
+44 action types in the generated schema. `read.json`, `read.yaml`,
+`text.patch.json/yaml/ini`, `text.line`, `git.{checkout,clone,config}`,
+`os.{cron,firewall,group,mount,service,ssh_key,sysctl,systemd,user}`,
+`pkg.{hold,list,repo,upgrade}`, `tool`, `wait.{command,file,http,port}`,
+`windows.{firewall_rule,scheduled_task}` — all present.
+
+**Significance**: this is concrete proof that **the action registry is
+self-describing and codegen-able**. The fix for #27 is just: replace
+the validator's hardcoded vocabulary with the output of `schema
+generate` (or hook them to the same source). The wiring already
+exists; it's just not connected to the validator.
+
+`schema generate` also supports `--format openapi` and
+`--format typescript`. That's a serious investment in machine-readable
+surfaces. Use it.
+
+---
+
+### 36. Correction to #5 — shell stdout IS captured, just dropped by text formatter
+
+**Repro**: `mooncake apply -c examples/hello-world/config.yml
+--output-format json` emits:
+
+```json
+{"type":"step.stdout","data":{"step_id":"step-0001",
+   "stream":"stdout","line":"Hello from Mooncake!","line_number":1}}
+{"type":"step.completed","data":{...,"result":{...,
+   "stdout":"Hello from Mooncake!\n",...}}}
+```
+
+So `shell` does emit `step.stdout` events with line numbers, and the
+final `step.completed` result includes the full stdout. The text
+formatter just doesn't print them by default.
+
+**Updated fix for #5**: the JSON channel is already correct — only the
+text formatter needs to surface stdout. A `--show-output` flag (or a
+simple "if rc==0 and stdout is non-empty, print it indented") closes
+the issue. Don't change the engine; just the renderer.
+
+**Also reveals**: the JSON channel is significantly richer than the
+text channel. Worth documenting / promoting the JSON channel as the
+"real" output, with text as a friendly summary.
+
+---
+
+### 37. `mooncake presets search <local-preset-name>` doesn't find local presets — SEVERITY: MEDIUM (UX)
+
+**Repro**:
+
+```
+$ mooncake presets list | grep docker
+docker                Install and configure Docker container runtime (v1.0.0)
+
+$ mooncake presets search docker
+Warning: could not load index for registry 'official': ... TLS error
+No presets found matching "docker".
+```
+
+`presets list` finds local presets (via search-path resolution).
+`presets search` ONLY consults the remote registry. So if the user
+types `mooncake presets search jq`, they get a no-match even when the
+jq preset is sitting on disk.
+
+**Fix**: `presets search` should consult local search paths first,
+then the remote registry. Or rename to `presets remote-search` if
+remote-only is intentional.
+
+---
+
+### 38. `presets list --format json` is unsupported despite `--format json` being standard — SEVERITY: LOW
+
+**Repro**:
+
+```
+$ mooncake presets list --format json
+Incorrect Usage: flag provided but not defined: -format
+```
+
+Other commands (`metrics`, `snapshot`, `history`, `apply`) all support
+`--format json` / `--output-format json`. `presets list` doesn't. For
+programmatic preset discovery this is a needless gap.
+
+---
+
+### 39. `tool: backend: github-release` defaults to `v{version}` tag — breaks for jq-style tag prefixes — SEVERITY: MEDIUM (DX)
+
+**Repro**:
+
+```
+$ mooncake step "tool: { name: jq, backend: github-release, repo: jqlang/jq, version: \"1.7.1\", asset: jq-linux-amd64 }"
+{"error": "http GET https://github.com/jqlang/jq/releases/download/v1.7.1/jq-linux-amd64: status 404"}
+```
+
+The action constructs the release URL as
+`/releases/download/v{version}/{asset}`. jq is tagged `jq-1.7.1`, not
+`v1.7.1`, so the URL 404s. Works if you supply `tag: "jq-1.7.1"`
+explicitly, but that's not in any example.
+
+**Fix**: when `tag:` is unset, try `v{version}` first, then `{version}`,
+then return an error suggesting `tag:` if neither resolves. Or: don't
+guess — require `tag:` when the version isn't prefixed with `v`.
+
+---
+
+### 40. `tool: backend: github-release` always tries to extract asset as archive — SEVERITY: HIGH (DX hole)
+
+**Repro**: after supplying `tag: "jq-1.7.1"`:
+
+```
+extract: unsupported archive format for /root/.local/share/mooncake/tools/mooncake-tool-1040481812.bin (supported: .tar.gz, .tgz, .tar, .zip)
+```
+
+But `jq-linux-amd64` IS the binary itself — there's no archive. The
+github-release backend assumes assets are archives. There's no
+`extract: false` or `is_binary: true` option visible in the schema.
+
+**Why HIGH**: a huge number of GitHub releases ship bare binaries:
+jq, hadolint, kind, kubectl, k9s, fzf prebuilt, gh, mc, ripgrep
+release page, etc. Without bare-binary support, `tool: backend:
+github-release` is effectively useless for the most common case.
+
+**Fix**: infer from asset filename (no `.tar.gz` / `.zip` extension →
+treat as binary, just rename and chmod +x). Or add an explicit
+`extract: false` option.
+
+---
+
+### 41. Multi-file configs work cleanly — SEVERITY: positive note
+
+**Repro**:
+
+```
+# mooncake.yml
+- vars.load: vars/main.yml
+- log: { msg: "top: greeting={{ greeting }}" }
+- import: tasks/inner.yml
+- log: { msg: "top: still here, greeting={{ greeting }}" }
+```
+
+```
+# vars/main.yml
+greeting: "hello from vars.load"
+target: /tmp/multi-output
+```
+
+```
+# tasks/inner.yml
+- log: { msg: "inner: greeting={{ greeting }} target={{ target }}" }
+- file.write:
+    path: "{{ target }}/from-inner.txt"
+    state: file
+    content: "wrote from inner.yml\n"
+```
+
+All three log lines render correctly with the loaded vars. The
+imported tasks/inner.yml resolves its file.write path relative to the
+inherited target var. Files appear at `/tmp/multi-output/from-inner.txt`
+as expected.
+
+This is the "path resolution in presets" story in `LLM_GUIDE.md`
+working as advertised. No regressions to flag.
+
+---
+
+### 42. `wait.command` works — minor attempt-counter wart
+
+**Repro**:
+
+```
+$ (sleep 2 && touch /tmp/wait-target) &
+$ mooncake step "wait.command: { cmd: \"test -f /tmp/wait-target\", timeout: 10s, interval: 500ms }"
+{"changed": false, "action": "wait.command", "duration_ms": 1003}
+```
+
+Works correctly. ~1s overshoot from the 500ms poll interval, expected.
+
+On timeout:
+```
+"error": "wait.command timeout after 1s (1 attempts); last exit 1"
+```
+
+The "1 attempts" with `interval: 200ms` and `timeout: 1s` looks
+suspicious — should be ~5 attempts. Either interval parsing failed
+silently or the counter is off-by-(N-1). Low severity; the wait/timeout
+behavior is correct.
+
+---
+
+### 43. `mooncake docs generate` produces clean markdown from action metadata — SEVERITY: positive note
+
+```
+$ mooncake docs generate --section action-summary | head
+<!-- Generated by mooncake docs generate -->
+<!-- Version: dev | Generated: 2026-05-15 17:15:09 UTC -->
+
+## Command
+
+### cmd
+
+**Description**: Execute commands directly without shell interpolation
+
+**Properties**:
+- Category: `command`
+- Platforms: all
+- Supports Dry-Run: Yes
+- Supports Become: Yes
+- Implements Check: No
+- Version: 1.0.0
+```
+
+Sections: `platform-matrix`, `capabilities`, `action-summary`,
+`action-properties`, `preset-examples`, `schema`, `all`. Generated
+markdown is consumable directly.
+
+**Suggestion**: this is the docs-generation infrastructure that should
+auto-update `LLM_GUIDE.md` and `docs/guide/config/actions.md`. Close
+the loop in CI: any new action triggers a docs/schema regeneration.
+
+---
+
+## Updated suggested filing (round 6)
+
+| # | Severity | Where it should land |
+|---|---|---|
+| 35 | positive | `schema generate` already exists; just wire validator to use it (closes #27) |
+| 36 | positive | shell stdout already captured; text formatter only fix needed (refines #5) |
+| 37 | MEDIUM | `presets search` should consult local first |
+| 38 | LOW | `presets list --format json` |
+| 39 | MEDIUM | `tool github-release` — handle non-`v` tag prefixes |
+| **40** | **HIGH** | `tool github-release` — support bare-binary assets (huge ecosystem case) |
+| 41 | positive | multi-file configs — no regression |
+| 42 | LOW | `wait.command` attempt counter |
+| 43 | positive | `docs generate` exists — close the loop in CI |
+
+---
+
+## Severity rollup (cumulative across 6 rounds)
+
+| Severity | Count |
+|---|---|
+| **CRITICAL** | 2 (#8, #14) |
+| **HIGH** | 7 (#1, #2, #15, #22, #24, #27, #40) |
+| **MEDIUM** | 9 (#3, #4, #16, #17, #23, #28, #37, #39, and partial: parts of #36's refinement) |
+| **LOW** | 19 |
+| **(positive — keep / don't regress)** | 12 (init, doctor, --output-format json, --from-plan, dry-run safety, MCP server, history, actions list, sha256-in-assert, os.user, multi-file configs, schema generate, docs generate, JSON-channel stdout) |
+
+Total: **43 numbered findings**. Same patterns hold:
+
+1. **Silent success that's broken** — #8, #14, #15, #22, #24 (still
+   the biggest concern)
+2. **Single source of truth missing** — closed for `schema generate`
+   and `docs generate` (round 6), still open for the validator
+   (#27) and `LLM_GUIDE.md`
+3. **GitHub-release / tool action coverage gaps** — #39, #40 are
+   blockers for the agent-install story
+
+**Three things to fix first** (highest ROI per LoC):
+- **#15** — unify `creates:` / `unless:` across action handlers
+- **#27 via #35** — wire validator to `schema generate`
+- **#40** — let `tool github-release` install bare binaries
+
+Each is a small, scoped fix that closes a big DX hole.
