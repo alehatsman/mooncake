@@ -151,10 +151,12 @@ func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[stri
 
 // BuildPlan generates a deterministic execution plan from a config file
 func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
-	// Read config with validation
+	// Read config with validation. readRunConfig already wraps with
+	// "failed to read config:" — passing the error through avoids the
+	// doubled prefix MT-26 reported via the MCP run_plan surface.
 	runConfig, err := p.readRunConfig(cfg.ConfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config: %w", err)
+		return nil, err
 	}
 
 	// Initialize plan

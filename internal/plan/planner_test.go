@@ -3,11 +3,37 @@ package plan
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/filetree"
 )
+
+// MT-26: BuildPlan used to wrap readRunConfig's already-prefixed error
+// with "failed to read config:" a second time, producing
+// "failed to read config: failed to read config: open ...". The MCP
+// run_plan tool exposed this to LLM consumers verbatim. The wrap was
+// removed; this test pins the single-prefix contract.
+func TestPlanner_BuildPlan_MissingConfigErrorIsNotDoubleWrapped(t *testing.T) {
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("Failed to create planner: %v", err)
+	}
+	_, err = planner.BuildPlan(PlannerConfig{
+		ConfigPath: "/tmp/this-path-does-not-exist-mt26.yml",
+	})
+	if err == nil {
+		t.Fatal("BuildPlan on a missing path should error")
+	}
+	msg := err.Error()
+	// Single occurrence of "failed to read config:" — duplicates are
+	// the original bug.
+	count := strings.Count(msg, "failed to read config:")
+	if count != 1 {
+		t.Errorf(`expected "failed to read config:" exactly once, got %d times in: %s`, count, msg)
+	}
+}
 
 func TestPlanner_BuildPlan_Simple(t *testing.T) {
 	// Create a temporary config file
