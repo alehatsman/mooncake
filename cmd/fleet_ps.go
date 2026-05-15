@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -26,12 +27,11 @@ func fleetPsCommand() *cli.Command {
 		ArgsUsage:   "",
 		Description: "Read-only fan-out across all selected peers. Default shows running runs; --all also shows recently terminal ones. Pair with jq via --json for scripting.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "peers", Usage: "Comma-separated peer names (default: all in peers.toml)"},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.StringSliceFlag{
-				Name:  "peer-filter",
-				Usage: "Filter peers by `key=value` (tag=, name=, os=, role=); same DSL as fleet apply",
+				Name:  "peer",
+				Usage: "Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default (no --peer): every peer in peers.toml.",
 			},
+			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
 			&cli.DurationFlag{Name: "timeout", Usage: "Per-peer probe timeout", Value: 3 * time.Second},
 			&cli.StringFlag{
@@ -111,36 +111,24 @@ func loadPsPeers(c *cli.Context) ([]fleet.Peer, error) {
 		return nil, cli.Exit("fleet ps: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
-	selected, unknown := selectPeers(cfg.Peers, c.String("peers"))
-	if len(unknown) > 0 {
-		fmt.Fprintf(c.App.Writer, "fleet ps: unknown peer(s) in --peers: %s\n", strings.Join(unknown, ", "))
+	// Fleet DX proposal-01: single unified --peer flag. resolvePeers
+	// builds the os-probe cache lazily (only when an `os=` predicate
+	// is in scope) and returns matched + any bare-name typos.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfg.Peers, c.App.Writer)
 	}
-	if len(selected) == 0 {
-		return nil, cli.Exit("fleet ps: no peers selected", 1)
-	}
-
-	groups, err := parseFilterFlags(c.StringSlice("peer-filter"))
+	sel, err := resolvePeers(cfg.Peers, peerFlag, osFor)
 	if err != nil {
 		return nil, cli.Exit("fleet ps: "+err.Error(), 2)
 	}
-	if err := validatePeerFilterKeys(groups); err != nil {
-		return nil, cli.Exit("fleet ps: "+err.Error(), 2)
+	if len(sel.UnknownNames) > 0 {
+		fmt.Fprintf(c.App.Writer, "fleet ps: unknown peer name(s): %s\n", strings.Join(sel.UnknownNames, ", "))
 	}
-	if len(groups) > 0 {
-		var osFor peerOSResolver
-		if peerFilterGroupsUseKey(groups, "os") {
-			osFor = newPeerOSCache(c.Context, selected, c.App.Writer)
-		}
-		filtered := make([]fleet.Peer, 0, len(selected))
-		for _, p := range selected {
-			if peerMatchesFilters(p, groups, osFor) {
-				filtered = append(filtered, p)
-			}
-		}
-		if len(filtered) == 0 {
-			return nil, cli.Exit("fleet ps: --peer-filter selected 0 peers; nothing to do", 1)
-		}
-		selected = filtered
+	selected := sel.Matched
+	if len(selected) == 0 {
+		return nil, cli.Exit("fleet ps: --peer selected 0 of "+strconv.Itoa(len(cfg.Peers))+" peer(s)", 1)
 	}
 
 	// Skip non-agentd peers; ps is a /v1/runs probe.

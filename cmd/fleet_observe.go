@@ -33,12 +33,11 @@ import (
 //	mooncake fleet observe gpu
 func fleetObserveCommand() *cli.Command {
 	commonFlags := []cli.Flag{
-		&cli.StringFlag{Name: "peers", Usage: "Comma-separated peer names (default: all in peers.toml)"},
-		&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 		&cli.StringSliceFlag{
-			Name:  "peer-filter",
-			Usage: "Filter peers by `key=value` (tag=, name=, os=, role=). Commas within = AND; repeated = OR.",
+			Name:  "peer",
+			Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 		},
+		&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 		&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
 		&cli.StringFlag{Name: "format", Usage: "Output format: table (default) or json", Value: "table"},
 	}
@@ -47,8 +46,8 @@ func fleetObserveCommand() *cli.Command {
 		Name:  "observe",
 		Usage: "Read typed state across peers (spec-64): port, process, http, service, cpu, memory, disk, gpu",
 		Description: "Fan-out a single observation across selected peers; renders the " +
-			"typed result as a comparison table. Compose with --peer-filter for " +
-			"selective queries (e.g. `fleet observe gpu --peer-filter tag=inference`).",
+			"typed result as a comparison table. Compose with --peer for " +
+			"selective queries (e.g. `fleet observe gpu --peer tag=inference`).",
 		Subcommands: []*cli.Command{
 			observePortSubcommand(commonFlags),
 			observeProcessSubcommand(commonFlags),
@@ -282,37 +281,23 @@ func resolveObservePeers(c *cli.Context) ([]execPeerEntry, error) {
 		return nil, cli.Exit("fleet observe: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
-	selected, unknown := selectPeers(cfgPeers.Peers, c.String("peers"))
+	// Fleet DX proposal-01: single unified --peer flag.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
+	}
+	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
+	if err != nil {
+		return nil, cli.Exit("fleet observe: "+err.Error(), 2)
+	}
+	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		msg := "fleet observe: no peers matched filter " + c.String("peers")
+		msg := "fleet observe: --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
 		if len(unknown) > 0 {
 			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
 		}
 		return nil, cli.Exit(msg, 1)
-	}
-
-	groups, err := parseFilterFlags(c.StringSlice("peer-filter"))
-	if err != nil {
-		return nil, cli.Exit("fleet observe: "+err.Error(), 2)
-	}
-	if err := validatePeerFilterKeys(groups); err != nil {
-		return nil, cli.Exit("fleet observe: "+err.Error(), 2)
-	}
-	if len(groups) > 0 {
-		var osFor peerOSResolver
-		if peerFilterGroupsUseKey(groups, "os") {
-			osFor = newPeerOSCache(c.Context, selected, c.App.Writer)
-		}
-		filtered := make([]fleet.Peer, 0, len(selected))
-		for _, p := range selected {
-			if peerMatchesFilters(p, groups, osFor) {
-				filtered = append(filtered, p)
-			}
-		}
-		if len(filtered) == 0 {
-			return nil, cli.Exit("fleet observe: --peer-filter selected 0 of "+strconv.Itoa(len(selected))+" peer(s)", 1)
-		}
-		selected = filtered
 	}
 
 	var entries []execPeerEntry

@@ -35,13 +35,11 @@ func fleetExecCommand() *cli.Command {
 			"For --json output one JSONL record per peer is emitted; pair " +
 			"with jq for scripting.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "peers", Usage: "Comma-separated peer names (default: all in peers.toml)"},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.StringSliceFlag{
-				Name: "peer-filter",
-				Usage: "Filter peers by `key=value` (tag=, name=, os=, role=). " +
-					"Commas within one flag = AND; repeating the flag = OR.",
+				Name:  "peer",
+				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
+			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
 			&cli.StringSliceFlag{Name: "env", Usage: "KEY=VAL forwarded to the shell step (repeatable)"},
 			&cli.StringFlag{Name: "cwd", Usage: "Working directory on the peer"},
@@ -138,9 +136,9 @@ type execPeerEntry struct {
 	Client *transport.Client
 }
 
-// resolveExecPeers loads peers.toml, applies --peers + --peer-filter,
-// and rejects non-agentd transports with a banner. Same selector
-// pipeline as fleet apply.
+// resolveExecPeers loads peers.toml, applies --peer, and rejects
+// non-agentd transports with a banner. Same selector pipeline as
+// fleet apply.
 func resolveExecPeers(c *cli.Context) ([]execPeerEntry, error) {
 	peersPath := c.String("peers-file")
 	if peersPath == "" {
@@ -158,37 +156,23 @@ func resolveExecPeers(c *cli.Context) ([]execPeerEntry, error) {
 		return nil, cli.Exit("fleet exec: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
-	selected, unknown := selectPeers(cfgPeers.Peers, c.String("peers"))
+	// Fleet DX proposal-01: single unified --peer flag.
+	peerFlag := c.StringSlice("peer")
+	var osFor peerOSResolver
+	if peerFlagsReferenceOSKey(peerFlag) {
+		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
+	}
+	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
+	if err != nil {
+		return nil, cli.Exit("fleet exec: "+err.Error(), 2)
+	}
+	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		msg := "fleet exec: no peers matched filter " + c.String("peers")
+		msg := "fleet exec: --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
 		if len(unknown) > 0 {
 			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
 		}
 		return nil, cli.Exit(msg, 1)
-	}
-
-	groups, err := parseFilterFlags(c.StringSlice("peer-filter"))
-	if err != nil {
-		return nil, cli.Exit("fleet exec: "+err.Error(), 2)
-	}
-	if err := validatePeerFilterKeys(groups); err != nil {
-		return nil, cli.Exit("fleet exec: "+err.Error(), 2)
-	}
-	if len(groups) > 0 {
-		var osFor peerOSResolver
-		if peerFilterGroupsUseKey(groups, "os") {
-			osFor = newPeerOSCache(c.Context, selected, c.App.Writer)
-		}
-		filtered := make([]fleet.Peer, 0, len(selected))
-		for _, p := range selected {
-			if peerMatchesFilters(p, groups, osFor) {
-				filtered = append(filtered, p)
-			}
-		}
-		if len(filtered) == 0 {
-			return nil, cli.Exit("fleet exec: --peer-filter selected 0 of "+strconv.Itoa(len(selected))+" peer(s); nothing to do", 1)
-		}
-		selected = filtered
 	}
 
 	// Skip non-agentd transports with a banner. v1: SSH-bootstrap peers

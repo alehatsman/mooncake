@@ -68,7 +68,7 @@ func runApplyPhase(applyCtx context.Context, w io.Writer, useColor bool, in appl
 	mux := fleet.NewMultiplexer(w, peerNames, useColor)
 	mux.Banner(in.BannerHeading)
 	if len(in.UnknownPeers) > 0 {
-		mux.Banner("warning: unknown peer name(s) in --peers filter: " + strings.Join(in.UnknownPeers, ", "))
+		mux.Banner("warning: unknown peer name(s) in --peer: " + strings.Join(in.UnknownPeers, ", "))
 	}
 	for _, p := range in.SkippedPeers {
 		mux.Banner(fmt.Sprintf("skipped %s: transport %q not supported (agentd only)", p.Name, p.Transport))
@@ -186,7 +186,7 @@ func resolveMachinePhase(
 	if found == nil {
 		return applyPhaseInput{}, fmt.Errorf("phase %q: peer %q not in peers.toml", mInput.Phase.Name, mInput.Phase.Peer)
 	}
-	// Apply --peer-filter on the manifest-pinned peer. Phases whose peer
+	// Apply --peer on the manifest-pinned peer. Phases whose peer
 	// doesn't match are signaled to the caller by an empty Peers slice.
 	peers := []fleet.Peer{*found}
 	if len(peerFilterGroups) > 0 {
@@ -262,9 +262,10 @@ func resolveMachinePhase(
 // sequentially, fail-fast: a phase that doesn't reach "every peer ok"
 // stops subsequent phases. Returns the overall exit error (or nil).
 //
-// peerFilterGroups is the parsed --peer-filter from the CLI; it's AND'd
-// with each phase's manifest-pinned peer. osFor is the lazy /v1/version
-// probe cache (may be nil when no os= predicate is present).
+// peerFilterGroups is the parsed --peer selector groups from the CLI;
+// each group is AND'd against each phase's manifest-pinned peer. osFor
+// is the lazy /v1/version probe cache (may be nil when no os= predicate
+// is present).
 func runMachineApply(
 	applyCtx context.Context,
 	w io.Writer,
@@ -304,10 +305,10 @@ func runMachineApply(
 		}
 
 		if len(in.Peers) == 0 {
-			// --peer-filter filtered out the phase's peer. Don't treat
+			// --peer filtered out the phase's peer. Don't treat
 			// as failure — print a banner and continue, matching how
-			// --peer-filter behaves in single-phase mode.
-			fmt.Fprintf(w, "phase %d/%d — %s · peer %s skipped by --peer-filter\n",
+			// --peer behaves in single-phase mode.
+			fmt.Fprintf(w, "phase %d/%d — %s · peer %s skipped by --peer\n",
 				i+1, total, phase.Name, phase.Peer)
 			continue
 		}
