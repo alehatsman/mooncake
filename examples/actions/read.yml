@@ -1,0 +1,73 @@
+# read.json / read.yaml — typed file readers (spec-38).
+#
+# Both actions read a file, optionally extract a value via a small
+# dotted/indexed `query:` path, optionally redact regex matches in
+# string leaves, and publish a typed result under the step's `as:`
+# name. They are side-effect-free: no Changed=true, no system
+# mutation, no `shell` shell-out.
+#
+# Plan-mode behavior: spec-37's CaptureInPlan capability is on, so
+# `mooncake plan` against this file binds `pkg`/`config`/... into
+# the run scope just like `mooncake apply` does — downstream
+# `when: pkg.found` clauses branch correctly in plan preview.
+#
+# Result fields published under `as:`:
+#   {{ name.value }}      # the extracted value (or whole document)
+#   {{ name.found }}      # bool — false when query missed
+#   {{ name.path }}       # absolute path that was read
+#   {{ name.query }}      # the query string (empty if unset)
+#   {{ name.bytes_read }} # int — bytes actually read
+
+steps:
+  # ── read.json: whole document ────────────────────────────────────────
+  - read.json:
+      path: ./package.json
+    as: pkg_full
+
+  # ── read.json: extract a scalar by dotted query ──────────────────────
+  - read.json:
+      path: ./package.json
+      query: version
+    as: pkg_version
+  - log:
+      msg: "version is {{ pkg_version.value }} (read {{ pkg_version.bytes_read }} bytes)"
+
+  # ── read.json: array index + nested key ──────────────────────────────
+  # Reads { "tools": [ { "name": "go" }, { "name": "gopls" } ] }
+  - read.json:
+      path: ./tools.json
+      query: tools[1].name
+    as: second_tool
+
+  # ── read.json: redact pattern ────────────────────────────────────────
+  # GitHub-PAT-shaped strings in the file are masked to [REDACTED] in
+  # both the bound value and any downstream log line.
+  - read.json:
+      path: ./secrets.json
+      redact:
+        - 'ghp_[A-Za-z0-9]{20,}'
+        - '(?i)(token|secret)'
+    as: scrubbed
+
+  # ── read.yaml: byte-identical surface to read.json, different parser ─
+  - read.yaml:
+      path: ./config.yml
+      query: service.port
+    as: port
+
+  # ── Plan-mode-friendly branching: query miss is not an error ─────────
+  # `pkg_version.found` is false when the query path misses, so a
+  # downstream step can skip cleanly under both `mooncake plan` and
+  # `mooncake apply`.
+  - log:
+      msg: "package has explicit version"
+    when: pkg_version.found
+
+  # ── Bounded reads ────────────────────────────────────────────────────
+  # Default cap is 4 MiB; set explicitly for large files such as
+  # package-lock.json.
+  - read.json:
+      path: ./package-lock.json
+      max_bytes: 33554432   # 32 MiB
+      query: lockfileVersion
+    as: lockver
