@@ -99,7 +99,21 @@ mooncake/
 **1. Actions** (`internal/actions/`)
 - Self-contained handlers, no dispatcher updates needed
 - 4 methods: `Metadata()`, `Validate()`, `Execute()`, `DryRun()`
-- 13 actions: print, vars, shell, command, include_vars, file, template, copy, download, unarchive, assert, preset, service
+- Action vocabulary lives in `internal/config/config.go` (search for the
+  `action:"..."` struct tags on `Step`) — that's the single source of
+  truth; the JSON schema (`internal/config/schema.json`) and the
+  validator's allowed-action list are generated from it.
+- Top-level shape, by domain:
+  - foundational: `shell`, `cmd`, `assert`, `use`, `import`, `vars`, `vars.load`, `log`, `wait.command`, `wait.file`, `wait.http`, `wait.port`, `tool`
+  - file & content: `file.write`, `file.template`, `file.copy`, `file.download`, `file.unarchive`
+  - structured text editing: `text.replace`, `text.insert`, `text.delete_range`, `text.line`, `text.patch`, `text.patch.ini`, `text.patch.json`, `text.patch.yaml`
+  - packages: `pkg`, `pkg.hold`, `pkg.list`, `pkg.repo`, `pkg.upgrade`
+  - OS resources: `os.service`, `os.user`, `os.group`, `os.cron`, `os.mount`, `os.sysctl`, `os.systemd`, `os.ssh_key`, `os.firewall`
+  - repo & artifact: `repo.search`, `repo.tree`, `repo.patch`, `artifact.capture`, `artifact.validate`
+  - git: `git.clone`, `git.checkout`, `git.config`
+  - read & observe: `read.json`, `read.yaml`, `observe.cpu`, `observe.memory`, `observe.disk`, `observe.gpu`, `observe.port`, `observe.process`, `observe.service`, `observe.http`
+  - container: `container`, `container.image`
+  - Windows: `windows.firewall_rule`, `windows.scheduled_task`
 - Registry: Thread-safe auto-registration
 
 **2. Presets** (`internal/presets/`)
