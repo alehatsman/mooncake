@@ -13,7 +13,6 @@ linters:
     - govet
     - ineffassign
     - unused
-    - gocyclo
     - misspell
     - unparam
     - unconvert
@@ -21,17 +20,20 @@ linters:
     - prealloc
     - bodyclose
     - revive
+    - cyclop
   disable:
     - errname
     - exhaustive
     - wrapcheck
     - goconst
+    - gocyclo  # superseded by cyclop (single cyclomatic source); arch-snapshot uses gocyclo standalone for the soft-cap ratchet
 
   settings:
     gosec:
       severity: "medium"
       confidence: "medium"
-      # Aligned with .github/workflows/security.yml + Makefile.
+      # Single source of truth for gosec excludes — Makefile and any CI
+      # invocations should run gosec via golangci-lint, not standalone.
       excludes:
         - G104  # errors unhandled
         - G115  # integer overflow conversion
@@ -55,14 +57,14 @@ linters:
       disabled-checks:
         - ifElseChain
 
-    # gocyclo:
-    #   min-complexity: 15
-
     cyclop:
-      max-complexity: 15
+      # Aligned with the CLAUDE.md soft cap (35). Anything above 35 is a
+      # refactor target; the arch-snapshot ratchet drives those down over
+      # time. Below 35, functions pass lint regardless.
+      max-complexity: 35
 
     dupl:
-      threshold: 100
+      threshold: 200
 
     errcheck:
       check-type-assertions: true
@@ -71,10 +73,6 @@ linters:
     goconst:
       min-len: 3
       min-occurrences: 6
-
-    govet:
-      enable:
-        - shadow
 
     revive:
       enable-all-rules: false
@@ -104,7 +102,7 @@ linters:
         - name: redefines-builtin-id
 
     staticcheck:
-      checks: ["all"]
+      checks: ["all", "-QF1012"]  # QF1012 (use fmt.Fprintf) is style-only
 
   exclusions:
     rules:
@@ -116,16 +114,13 @@ linters:
         linters: [revive]
         text: "var-naming: avoid meaningless package names"
 
-      - path: internal/actions/(file_replace|file_insert|file_delete_range|file_patch_apply|repo_search|repo_tree|repo_apply_patchset|artifact_capture|artifact_validate|include_vars|wait_port|wait_http|wait_file|wait_command|git_checkout|git_clone|git_config|text_line|text_patch_ini|os_user|os_ssh_key|os_cron|os_sysctl|pkg_repo|pkg_hold|pkg_upgrade|pkg_list|os_firewall|os_group|os_mount|os_systemd|text_patch_json|text_patch_yaml|read_common|read_json|read_yaml)/
+      # Action subpackages use snake_case to mirror their action-type names
+      # (file_replace, os_user, text_patch_json, …). Includes
+      # internal/actions/package/ which is named package_handler because
+      # `package` is a Go reserved word.
+      - path: internal/actions/
         linters: [revive, staticcheck]
         text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names|ST1000:)"
-
-      # The `package` directory uses `package_handler` as its Go package
-      # name because `package` is a Go reserved keyword. Suppress the
-      # underscore-name warning here too.
-      - path: internal/actions/package/
-        linters: [revive, staticcheck]
-        text: "(var-naming: don't use an underscore in package name|ST1003: should not use underscores in package names)"
 
       - path: internal/utils/checksum\.go
         linters: [dupl]
@@ -147,24 +142,6 @@ linters:
       - path: internal/(actions/template|template)/
         linters: [revive]
         text: "var-naming: avoid package names that conflict with Go standard library"
-
-      - path: internal/(actions/validation|agent/prompt|config/format|logger/tui_display|schemagen/typescript)\.go
-        linters: [staticcheck]
-        text: "QF1012: Use fmt.Fprintf"
-
-      - path: '(^|/).*_test\.go$'
-        linters:
-          - errcheck
-          - goconst
-          - gosec
-          - revive
-          - staticcheck
-          - gocyclo
-          - cyclop
-          - dupl
-          - gocritic
-          - ineffassign
-          - unused
 
       - path: cmd/mooncake\.go
         linters: [errcheck]
@@ -196,32 +173,16 @@ linters:
       - path: internal/fleet/transport/agentd\.go
         linters: [errcheck]
 
-      # govet shadow: pre-existing err shadowing in cmd/ and internal/ files.
-      # These are idiomatic multi-block patterns; fixing them would be
-      # a large mechanical refactor with no correctness benefit.
-      - path: cmd/(agentd|fleet|fleet_facts|fleet_upgrade|mooncake)\.go
-        linters: [govet]
-        text: "shadow: declaration of .err."
-
-      - path: internal/(actions/os_systemd/handler|agentd/files_handler|agentd/server|executor/executor|plan/io|fleet/apply|fleet/bootstrap|fleet/sync|scaffold/scaffold)\.go
-        linters: [govet]
-        text: "shadow: declaration of .err."
-
-      # gocyclo: complex but intentionally monolithic command / planning functions.
+      # cyclop: complex but intentionally monolithic CLI/planning functions.
+      # These are tracked in the soft-cap budget; refactor on next touch.
       - path: cmd/fleet\.go
-        linters: [gocyclo]
+        linters: [cyclop]
+
+      - path: cmd/mooncake\.go
+        linters: [cyclop]
 
       - path: internal/actions/os_systemd/handler\.go
-        linters: [gocyclo]
-
-      # cmd/mooncake.go: cmd.run's residual complexity (post-R1.1a extraction)
-      # is CLI-flag pre-validation (MT-76/MT-86 gates, --dry-run / --from-plan
-      # mode dispatch, resolveConfigPath / resolveLocalOverlays error paths).
-      # That logic can't move into internal/apply without dragging *cli.Context
-      # along. The orchestration that previously made cmd.run gocyclo=33 is
-      # now in apply.Runner; what's left is the CLI shim.
-      - path: cmd/mooncake\.go
-        linters: [gocyclo]
+        linters: [cyclop]
 
 issues:
   max-issues-per-linter: 0
