@@ -361,8 +361,9 @@ honor it. Same fix closes #44 and refines #4.
 | 28 | MEDIUM | open | `failed_when:` on assert | small — route through wrapper |
 | 40 | HIGH | open | `tool github-release` bare-binary | small — filename heuristic |
 | 44 | MEDIUM | open | `file.download` unknown-field acceptance | closes with #27 |
-| 45 | MEDIUM | open | `transaction:` recap miscounts reverted steps | renderer + counter |
-| 46 | MEDIUM | open | `file.unarchive` not idempotent | check dest contents before extract |
+| 45 | MEDIUM | ✅ FIXED | `transaction:` recap shows `reverted=N`, `↺ Reverse:` markers visible | landed before round 18 |
+| 46 | MEDIUM | ✅ FIXED | `file.unarchive` not idempotent | landed `1d374c9` |
+| 67 | MEDIUM | open | nested `try:` not recognized | register compound actions in inner path |
 | 54 | HIGH | open | MCP `run_plan` returns all-zero counters despite executing | agent-loop broken |
 
 ---
@@ -574,6 +575,48 @@ retry never runs.
 **Fix**: evaluate order should be **retry → failed_when**. Try N
 times to get success; if all retries fail, *then* apply
 `failed_when` to mask the final result.
+
+---
+
+## #67 — Nested `try:` blocks fail with "no handler registered for action type: unknown" — MEDIUM
+
+**Repro**:
+```yaml
+- try:
+    - log: { msg: outer-before }
+    - try:                          # ← nested try
+        - shell: exit 1
+      catch:
+        - log: { msg: inner-catch }
+    - log: { msg: outer-after }
+  catch:
+    - log: { msg: outer-catch }
+```
+
+Output:
+```
+▶ 
+✓ 
+no handler registered for action type: unknown
+▶ 
+✗ 
+RECAP  ok=1  changed=0  skipped=0  failed=1
+```
+
+Inner `try:` is treated as `action: unknown`. The executor doesn't
+recognize compound actions (`try`, `transaction`) when they appear
+inside another compound block.
+
+**Why MEDIUM**: realistic use case — "atomically update config, but
+if the migration sub-step fails, run its own cleanup, while the
+outer block still handles other failures". With nested try broken,
+users must flatten control flow.
+
+**Workaround for now**: only top-level `try:` works; refactor nested
+into sequential blocks at the top level.
+
+**Fix**: register `try` and `transaction` action types in the inner
+expansion path too, not just at the top level.
 
 ---
 
