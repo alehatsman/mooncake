@@ -47,6 +47,24 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.user always declares Sudo=true: useradd/usermod/userdel modify
+// /etc/passwd, /etc/shadow, and (with create_home) the user's home
+// directory under /home. No Network. The action shells to
+// useradd/usermod/userdel — these are required binaries.
+//
+// FilesystemWrite lists the canonical identity files; consumers
+// that care about the home directory have to infer it from the
+// step's Home field (or the system default).
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"useradd", "usermod", "userdel"},
+		FilesystemWrite:  []string{"/etc/passwd", "/etc/shadow", "/etc/group"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	u := step.OsUser
 	if u == nil {

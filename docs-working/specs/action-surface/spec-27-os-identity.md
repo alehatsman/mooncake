@@ -1,6 +1,11 @@
 # Spec 27: `os.*` Identity — user, group, ssh_key
 
-**Status:** Draft
+**Status:** Phases 1–4 complete. P1–P3 shipped earlier (os.user,
+os.group, os.ssh_key core). **Phase 4 (spec-22 ABI hooks) shipped**:
+Permissions / Diff / Cost / Reverse declared on all three handlers
+using the testutil helpers from spec-24 P6. Reverse refuses on all
+three pending apply-time getent / authorized_keys snapshot capture
+(tracked as a follow-up). Phase 5 (docs + examples) remains.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** M (1 week)
 **Value:** High. "Set up a server" is the canonical Mooncake use case

@@ -78,24 +78,22 @@ bump.
 
 ---
 
-### ~~P5 — Spec-26 ABI hooks~~ ✅ shipped · P5b — Spec-27 ABI hooks remains
+### ~~P5 — Spec-26 ABI hooks~~ ✅ shipped · ~~P5b — Spec-27 P4~~ ✅ shipped
 
-**Spec-26 P5 shipped** on this worktree
-(`worktree-spec-26-git-abi`). `Permissions()`, `Diff()`, `Cost()`,
-`Reverse()` now declared on `git.clone`, `git.checkout`, `git.config`;
-new `actions.ResourceGit` kind. `Reverse` returns refusal on all
-three (git.clone irreversible by design; git.checkout / git.config
-pending apply-time pre-state capture refactor). All tests + lint
-green on the new files.
+**Spec-26 P5 shipped** — see earlier rev. `Permissions()`, `Diff()`,
+`Cost()`, `Reverse()` declared on `git.clone`, `git.checkout`,
+`git.config`; new `actions.ResourceGit` kind.
 
-**Still open: Spec-27 P4** — `os.user` / `os.group` / `os.ssh_key`
-ABI hooks. Pattern from spec-26 applies directly: 3 handlers, ~5
-files each (handler.Permissions + diff.go + cost.go + reverse.go +
-tests). Same ResourceKind decision (probably ResourceOther or new
-ResourceUser).
+**Spec-27 P4 shipped** on this worktree
+(`worktree-spec-27-os-identity-abi`). ABI hooks now declared on
+`os.user`, `os.group`, `os.ssh_key` — all three use the testutil
+helpers (`AssertReverseRefuses`, `AssertNilStepErrors`) from spec-24
+P6. Resource.Kind = ResourceOther with `Attributes["kind"]` carrying
+the action name. Reverse refuses on all three pending the apply-time
+pre-state capture refactor.
 
-Lower priority than P4 because identity actions are less frequently
-agent-touched than pkg + text. Same pattern means it's mostly
+Identity actions are less frequently agent-touched than pkg + text;
+same pattern means this was mostly
 mechanical now.
 
 ---
@@ -177,7 +175,7 @@ Phases:
 | ~~P3~~ | ~~Spec-37 + 38: output capture + read.json/yaml~~ ✅ `901e013`/`8549c33`/`2ee98e7` | XS + S | Stream 1 |
 | ~~P4~~ | ~~Spec-24 P6: pkg.* ABI hooks~~ ✅ shipped — `worktree-spec-24-pkg-abi` (+ shared testutil) | S | Stream 1 |
 | ~~P5~~ | ~~Spec-26 ABI hooks (git)~~ ✅ shipped — `worktree-spec-26-git-abi` | S | Stream 1 |
-| **P5b** | Spec-27: os identity ABI hooks (user/group/ssh_key) | S | Stream 1 |
+| ~~P5b~~ | ~~Spec-27 P4: os identity ABI hooks~~ ✅ shipped — `worktree-spec-27-os-identity-abi` | S | Stream 1 |
 | **P6** | Spec-45 PR13: `fleet init` interactive | S | Stream 3 |
 | **P7** | Specs 52–55: fleet exec/ps/watch/doctor | XS–S each | Stream 3 |
 | **P8** | Spec-32: step action dispatch collapse | M | Stream 1 |
