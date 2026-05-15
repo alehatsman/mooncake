@@ -6,6 +6,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/control"
 	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -138,44 +139,32 @@ type ExecutionContext struct {
 	// OpenTxns tracks per-transaction state for spec-30 transaction:
 	// blocks. Keyed by the transaction-parent step ID (which children
 	// carry as TxnParent). Created lazily when the first body child of
-	// a given TxnParent completes.
-	OpenTxns map[string]*TxnState
+	// a given TxnParent completes. The state type lives in
+	// internal/control — see kernel.md for the kernel-sub-system
+	// rationale (R0.1).
+	OpenTxns map[string]*control.TxnState
+
+	// CompletedByTxn tracks the in-order list of body children that
+	// ran to completion (no error) for each transaction, keyed by the
+	// transaction-parent step ID. Each entry carries the step and the
+	// concrete *Result the handler produced — the Reverser needs the
+	// Result to know what to undo. This slot lives in executor (not
+	// in control alongside TxnState) because *Result is an
+	// executor-package type and moving it would create a circular
+	// import.
+	CompletedByTxn map[string][]TxnCompletedChild
 
 	// OpenTries tracks per-try-block state for spec-23 §2 try / catch /
 	// finally. Keyed by the compound-parent step ID (which children
 	// carry as TryParent). Created lazily by the executor's trycatch.go
-	// when a try child's failure has to be recorded.
-	OpenTries map[string]*TryState
-}
-
-// TxnState is the per-transaction state the executor accumulates as it
-// walks a transaction's body children. When a body child fails, the
-// executor walks Completed in reverse and calls Reverse() on each.
-type TxnState struct {
-	// Completed is the in-order list of body children that ran to
-	// completion (no error). Each entry carries the step and the
-	// concrete *Result the handler produced — the Reverser needs the
-	// Result to know what to undo.
-	Completed []TxnCompletedChild
-
-	// Failed is true once any body child of this transaction has
-	// errored. Subsequent body children skip; rollback gets triggered
-	// on the failing child's path.
-	Failed bool
-
-	// RolledBack is true once rollback has been attempted. Set whether
-	// rollback fully succeeded or only partially reverted — it's the
-	// signal to fire on_rollback children regardless.
-	RolledBack bool
-
-	// PartialRollback is true if any Reverse() in the LIFO walk
-	// returned an error. Used to surface ROLLBACK INCOMPLETE in the
-	// final run output.
-	PartialRollback bool
+	// when a try child's failure has to be recorded. The state type
+	// lives in internal/control.
+	OpenTries map[string]*control.TryState
 }
 
 // TxnCompletedChild captures one body child's step + result for later
-// Reverse() consumption.
+// Reverse() consumption. Stored in ExecutionContext.CompletedByTxn —
+// the *Result field keeps this type out of internal/control.
 type TxnCompletedChild struct {
 	Step   config.Step
 	Result *Result
