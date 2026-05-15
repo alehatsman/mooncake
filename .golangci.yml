@@ -214,6 +214,15 @@ linters:
       - path: internal/actions/os_systemd/handler\.go
         linters: [gocyclo]
 
+      # cmd/mooncake.go: cmd.run's residual complexity (post-R1.1a extraction)
+      # is CLI-flag pre-validation (MT-76/MT-86 gates, --dry-run / --from-plan
+      # mode dispatch, resolveConfigPath / resolveLocalOverlays error paths).
+      # That logic can't move into internal/apply without dragging *cli.Context
+      # along. The orchestration that previously made cmd.run gocyclo=33 is
+      # now in apply.Runner; what's left is the CLI shim.
+      - path: cmd/mooncake\.go
+        linters: [gocyclo]
+
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

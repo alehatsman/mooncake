@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
+	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -247,10 +246,9 @@ func run(c *cli.Context) error {
 	// MT-86: --max-output-bytes / --max-output-lines only affect the
 	// artifact bundle (stdout.log / stderr.log). Without --artifacts-dir
 	// they're silently ignored — and the truncation never reaches the
-	// step.completed JSON either. Same shape as MT-76: hard-error when
-	// the user explicitly sets either flag without the partner.
-	// c.IsSet skips the case where the default-valued flag is silently
-	// in scope; we only complain about a user-supplied override.
+	// step.completed JSON either. Hard-error when the user explicitly
+	// sets either flag without the partner. c.IsSet skips the case
+	// where the default-valued flag is silently in scope.
 	if c.String("artifacts-dir") == "" {
 		if c.IsSet("max-output-bytes") {
 			return fmt.Errorf("--max-output-bytes requires --artifacts-dir (the truncation limit only applies to the artifact bundle's stdout.log/stderr.log)")
@@ -295,136 +293,30 @@ func run(c *cli.Context) error {
 	resolvedVars = append(resolvedVars, overlayVars...)
 	resolvedVars = append(resolvedVars, explicitVars...)
 
-	tui := c.Bool("tui")
-	logLevel := c.String("log-level")
-	outputFormat := c.String("output-format")
-
-	// Validate output format
-	if outputFormat != outputFormatText && outputFormat != outputFormatJSON && outputFormat != outputFormatAgent && outputFormat != outputFormatQuiet {
-		return fmt.Errorf("invalid output-format: %s (must be 'text', 'json', 'agent', or 'quiet')", outputFormat)
-	}
-
-	// JSON format requires raw mode
-	if outputFormat == outputFormatJSON && tui {
-		return fmt.Errorf("--output-format json cannot be combined with --tui")
-	}
-
-	// Parse tags from comma-separated string
-	tags := parseTags(c.String("tags"))
-	skipTags := parseTags(c.String("skip-tags"))
-
-	// Validate password input methods (mutual exclusion)
-	passwordMethods := 0
-	if c.String("sudo-pass") != "" {
-		passwordMethods++
-	}
-	if c.Bool("ask-become-pass") {
-		passwordMethods++
-	}
-	if c.String("sudo-pass-file") != "" {
-		passwordMethods++
-	}
-
-	if passwordMethods > 1 {
-		return fmt.Errorf("only one password method can be specified (--sudo-pass, --ask-become-pass, --sudo-pass-file)")
-	}
-
-	// Security warning for --sudo-pass
-	if c.String("sudo-pass") != "" && !c.Bool("insecure-sudo-pass") {
-		return fmt.Errorf("--sudo-pass requires --insecure-sudo-pass flag (WARNING: password will be visible in shell history and process list)")
-	}
-
-	// Collect facts early if facts-json requested
-	factsJSONPath := c.String("facts-json")
-	if factsJSONPath != "" {
-		systemFacts := facts.Collect()
-		if err := writeFactsJSON(systemFacts, factsJSONPath); err != nil {
-			log.Printf("Warning: failed to write facts JSON: %v", err)
-			// Non-fatal, continue execution
-		}
-	}
-
-	// Always use event-driven architecture
-	// Create event publisher
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-
-	// Parse log level for subscriber
-	level := logger.InfoLevel
-	switch logLevel {
-	case "debug":
-		level = logger.DebugLevel
-	case "error":
-		level = logger.ErrorLevel
-	}
-
-	// Always emit structured JSON errors to stderr on step failures.
-	publisher.Subscribe(logger.NewStderrErrorSubscriber())
-
-	// Always record run history (best-effort).
-	publisher.Subscribe(logger.NewRunLogSubscriber(configPath))
-
-	// One-shot next-step hint after the first successful run on this host.
-	// The subscriber is self-suppressing for non-text formats and respects
-	// MOONCAKE_NO_HINTS=1.
-	publisher.Subscribe(logger.NewFirstRunHintSubscriber(os.Stdout, outputFormat))
-
-	// Create appropriate subscriber based on mode
-	if outputFormat == outputFormatAgent {
-		publisher.Subscribe(logger.NewAgentSubscriber())
-	} else if outputFormat == outputFormatQuiet {
-		publisher.Subscribe(logger.NewQuietSubscriber())
-	} else if tui && logger.IsTUISupported() {
-		// Use TUI subscriber when explicitly requested.
-		tuiSubscriber, err := logger.NewTUISubscriber(level)
-		if err != nil {
-			// Fallback to console subscriber if TUI initialization fails
-			subscriber := logger.NewConsoleSubscriber(level, outputFormat)
-			publisher.Subscribe(subscriber)
-		} else {
-			tuiSubscriber.Start()
-			defer tuiSubscriber.Stop()
-			publisher.Subscribe(tuiSubscriber)
-		}
-	} else {
-		// Use console subscriber for raw/JSON output
-		subscriber := logger.NewConsoleSubscriber(level, outputFormat)
-		publisher.Subscribe(subscriber)
-	}
-
-	// Create a minimal logger for internal use (errors, etc.)
-	internalLog := logger.NewLogger(level)
-
-	// issue-87: install a SIGINT/SIGTERM handler so Ctrl-C actually
-	// terminates the run. Pre-fix the shell child died (process-group
-	// signal delivery) but mooncake's own process stayed alive — the
-	// executor caught the canceled-step error and proceeded as if the
-	// step had merely failed, then sat in the next step waiting on its
-	// shell etc. We exit on the first signal (after stopping the
-	// handler so a follow-up Ctrl-C during shutdown can still
-	// hard-kill). Graceful "interrupted at step N" run-log entries
-	// require plumbing context through executor.Start and are left
-	// for a follow-up.
-	stopSig := installApplySignalHandler()
-	defer stopSig()
-
-	// Execute with event publisher
-	return executor.Start(executor.StartConfig{
-		ConfigFilePath:   configPath,
-		VarsFilePaths:    resolvedVars,
-		SudoPass:         c.String("sudo-pass"),
-		SudoPassFile:     c.String("sudo-pass-file"),
-		AskBecomePass:    c.Bool("ask-become-pass"),
-		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
-		Tags:             tags,
-		SkipTags:         skipTags,
-
-		// Artifact configuration
+	// R1.1a: orchestration lives in internal/apply. cmd.run is now a
+	// flag-parse + Config-construct + Runner.Run shim. The kernel's
+	// Apply() entry point is callable directly from MCP / agent loop /
+	// future SDK without going through CLI parsing. See
+	// docs-working-v2/vision/kernel.md for the kernel framing.
+	cfg := &apply.Config{
+		ConfigPath:        configPath,
+		VarsFiles:         resolvedVars,
+		Tags:              parseTags(c.String("tags")),
+		SkipTags:          parseTags(c.String("skip-tags")),
+		SudoPass:          c.String("sudo-pass"),
+		SudoPassFile:      c.String("sudo-pass-file"),
+		AskBecomePass:     c.Bool("ask-become-pass"),
+		InsecureSudoPass:  c.Bool("insecure-sudo-pass"),
+		TUI:               c.Bool("tui"),
+		LogLevel:          c.String("log-level"),
+		OutputFormat:      c.String("output-format"),
 		ArtifactsDir:      c.String("artifacts-dir"),
 		CaptureFullOutput: c.Bool("capture-full-output"),
 		MaxOutputBytes:    c.Int("max-output-bytes"),
 		MaxOutputLines:    c.Int("max-output-lines"),
-	}, internalLog, publisher)
+		FactsJSONPath:     c.String("facts-json"),
+	}
+	return apply.NewRunner(cfg).Run(c.Context)
 }
 
 func runFromPlan(c *cli.Context, planPath string) error {
@@ -1421,36 +1313,6 @@ func reorderArgs(args []string, app *cli.App) []string {
 	return out
 }
 
-// installApplySignalHandler installs a SIGINT/SIGTERM handler that
-// terminates the apply with the standard exit code (130 for SIGINT,
-// 143 for SIGTERM). Shell / cmd children get the signal via the
-// process group and die on their own — the handler ensures mooncake's
-// own process doesn't stay alive after they go (the issue-87 bug).
-//
-// The returned stop func unregisters the handler — caller defers it
-// so signals after a clean apply don't keep the goroutine spinning.
-// issue-87.
-func installApplySignalHandler() (stop func()) {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		select {
-		case sig := <-sigCh:
-			fmt.Fprintf(os.Stderr, "\n⚠ received %s, aborting apply\n", sig)
-			// Stop listening so a follow-up signal during shutdown
-			// can hit the default handler and hard-kill if we hang.
-			signal.Stop(sigCh)
-			code := 130 // SIGINT
-			if sig == syscall.SIGTERM {
-				code = 143
-			}
-			os.Exit(code)
-		case <-done:
-		}
-	}()
-	return func() {
-		signal.Stop(sigCh)
-		close(done)
-	}
-}
+// installApplySignalHandler used to live here; the apply orchestration
+// moved to internal/apply (R1.1a). The signal handler lives there now
+// alongside the executor.Start call it gates.
