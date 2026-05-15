@@ -120,6 +120,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/plan"
+	"github.com/alehatsman/mooncake/internal/plan/filter"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/alehatsman/mooncake/internal/utils"
@@ -972,7 +973,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	// the filter rejects all tagged steps and only untagged
 	// "scaffolding" steps run; the recap shows green (`failed=0`) so
 	// the user thinks their deploy ran when it didn't.
-	if msg := unmatchedTagsError(startConfig.Tags, planData); msg != "" {
+	if msg := filter.UnmatchedTagsError(startConfig.Tags, planData); msg != "" {
 		return &SetupError{Component: "tags", Issue: msg}
 	}
 
