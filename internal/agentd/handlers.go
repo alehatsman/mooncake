@@ -140,6 +140,13 @@ func (s *Server) mcpHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "mcp_dispatch_failed", err.Error())
 		return
 	}
+	// JSON-RPC notifications produce no response (DispatchBytes returns
+	// nil). HTTP transport sends 204 No Content per RFC 7231 — same body
+	// semantics, distinguishable from "tool returned empty result".
+	if resp == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(resp)
