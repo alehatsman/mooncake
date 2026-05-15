@@ -7,7 +7,7 @@ Working documents — specs, epics, and notes. Not canonical docs; those live in
 | Path | Contents |
 |---|---|
 | `streams.md` | Stream overview — goals, audiences, dependencies, what to work on next |
-| `specs/action-surface/` | Stream 1: typed action library (spec-32) |
+| `specs/action-surface/` | Stream 1: typed action library (empty — all specs shipped) |
 | `specs/personal-fleet/` | Stream 3: personal fleet runtime (spec-55, 58, implementation-order) |
 | `specs/ecosystem/` | Stream 5: plugins, marketplace, integrations (spec-31) |
 | `specs/done/` | Shipped specs — read-only reference |
@@ -22,14 +22,14 @@ See **[non-goals.md](./non-goals.md)** for the seven things Mooncake will not be
 ## Active specs by stream
 
 **Stream 1 — Action Surface**
-32 step-action-dispatch (only active spec; not started)
+*(no active specs)*
 
 The full action surface shipped: spec-22 (Extended Handler ABI, phases
-1–7), specs 24–28 (pkg / text / git / os identity / os scheduling), spec-36
-(Windows support), and the spec-59–64 observe.* family all moved to `done/`.
-What remains is per-spec docs in `docs-next/` and the spec-32 dispatch
-collapse (structural refactor, not a feature). The `disk-partition-action.md`
-exploration moved to `deferred/`.
+1–7), specs 24–28 (pkg / text / git / os identity / os scheduling), spec-32
+(step-action-dispatch refactor, `9ffc684`), spec-36 (Windows support),
+and the spec-59–64 observe.* family all moved to `done/`. What remains is
+per-spec docs in `docs-next/`. The `disk-partition-action.md` exploration
+moved to `deferred/`.
 
 **Stream 2 — Safe Agent Runtime**
 
@@ -85,7 +85,8 @@ _Verified 2026-05-15 against current master; ✅ = fixed, 🟡 = still open._
 20 metrics · 21 modernization-cutover · 22 extended-handler-abi ·
 23 framework-primitives · 24 pkg-surface · 25 text-surface · 26 git-actions ·
 27 os-identity · 28 os-scheduling · 29 wait-primitives · 30 transactions ·
-33 execution-context-split · 34 typed-variable-context · 35 plan-diff ·
+32 step-action-dispatch · 33 execution-context-split ·
+34 typed-variable-context · 35 plan-diff ·
 36 windows-support · 37 step-output-capture · 38 read-json-yaml ·
 39 mooncake-init · 40 config-discovery-and-dry-run · 41 mooncake-doctor ·
 42 onboarding-and-recommend · 43 fleet-transport-and-sync ·
