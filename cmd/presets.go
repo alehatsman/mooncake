@@ -1185,18 +1185,43 @@ func truncate(s string, maxLen int) string {
 func searchPresetsAction(c *cli.Context) error {
 	query := strings.ToLower(c.Args().First())
 
+	type result struct {
+		name    string
+		regName string
+		desc    string
+	}
+
+	var results []result
+
+	// MT-37: search local first, then registries. `presets list` finds
+	// local presets via the search-path resolver but `presets search`
+	// historically only consulted the remote registry — the operator
+	// who wrote `presets search docker` after `presets list | grep
+	// docker` showed a hit got "no presets found", which is wrong:
+	// the local one exists, the search just wasn't looking there.
+	// The "registry" column shows the preset's Source ("local",
+	// "user", "system") for local hits; the remote registry's Name
+	// for remote hits.
+	localPresets, localErr := presets.DiscoverAllPresets()
+	if localErr != nil {
+		fmt.Printf("Warning: could not discover local presets: %v\n", localErr)
+	}
+	for _, p := range localPresets {
+		if query == "" ||
+			strings.Contains(strings.ToLower(p.Name), query) ||
+			strings.Contains(strings.ToLower(p.Description), query) {
+			results = append(results, result{
+				name:    p.Name,
+				regName: p.Source, // "local" / "user" / "system"
+				desc:    p.Description,
+			})
+		}
+	}
+
 	cfg, err := registry.LoadRegistriesConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load registries config: %w", err)
 	}
-
-	type result struct {
-		name     string
-		regName  string
-		desc     string
-	}
-
-	var results []result
 
 	for _, reg := range cfg.Registries {
 		index, cacheErr := registry.LoadCachedIndex(reg.Name)
@@ -1226,7 +1251,7 @@ func searchPresetsAction(c *cli.Context) error {
 		if query != "" {
 			fmt.Printf("No presets found matching %q.\n", query)
 		} else {
-			fmt.Println("No presets found in any registry.")
+			fmt.Println("No presets found locally or in any registry.")
 		}
 		return nil
 	}
