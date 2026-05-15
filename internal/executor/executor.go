@@ -139,15 +139,25 @@ func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) { //
 	captureResult(ec, step, result.ToRegisteredResult())
 }
 
-// AddGlobalVariables populates scope.Facts and scope.Metrics from the system.
-// Facts (capabilities, configuration) come from facts.Collect; metrics
-// (live CPU/GPU/memory/load/network) come from metrics.Collect with
-// per-metric TTL caching. Keys across the two are disjoint by contract —
-// see metrics.disjoint_test.go.
+// AddGlobalVariables populates scope.Facts, scope.Metrics, and scope.Env
+// from the system. Facts (capabilities, configuration) come from
+// facts.Collect; metrics (live CPU/GPU/memory/load/network) come from
+// metrics.Collect with per-metric TTL caching; env is a snapshot of
+// the parent process environment exposed to templates as `env.*` so
+// users can reference `{{ env.HOME }}`, `{{ env.MY_API_KEY }}`, etc.
+// Keys across facts and metrics are disjoint by contract — see
+// metrics.disjoint_test.go.
 func AddGlobalVariables(scope *VariableScope) {
 	scope.Facts = facts.Collect()
 	if m, _, err := metrics.Collect(nil); err == nil {
 		scope.Metrics = m
+	}
+	envSlice := os.Environ()
+	scope.Env = make(map[string]string, len(envSlice))
+	for _, kv := range envSlice {
+		if i := strings.IndexByte(kv, '='); i >= 0 {
+			scope.Env[kv[:i]] = kv[i+1:]
+		}
 	}
 }
 
