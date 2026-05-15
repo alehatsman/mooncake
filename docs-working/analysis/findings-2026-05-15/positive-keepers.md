@@ -278,6 +278,45 @@ at the preset-parameter layer. Don't regress.
 
 ---
 
+## ★ `--host` overlay + `MOONCAKE_HOST` env var
+
+```
+# vars/common.yml:           greeting: from-common, shared: yes
+# vars/by-host/special.yml:  greeting: from-special-host, extra: special
+```
+
+```
+$ mooncake apply -c cfg.yml                   # auto-detect: uses actual hostname
+greeting=from-common shared=yes extra=<none>
+
+$ mooncake apply -c cfg.yml --host special    # explicit host
+greeting=from-special-host shared=yes extra=special
+
+$ MOONCAKE_HOST=special mooncake apply -c cfg.yml   # env var
+greeting=from-special-host shared=yes extra=special
+
+$ mooncake apply -c cfg.yml --overlays off    # no overlays at all
+greeting= shared=<none> extra=<none>
+
+$ mooncake apply -c cfg.yml --host nonexistent  # explicit-but-missing
+overlay file not found for host "nonexistent": /work/vars/by-host/nonexistent.yml does not exist
+```
+
+Five distinct paths, all correct:
+- `vars/common.yml` always loaded; `vars/by-host/<host>.yml` layered on top
+- explicit `--host X` overrides auto-detect
+- explicit `MOONCAKE_HOST=X` env equivalent (precedence vs. --host
+  not tested here — likely env loses to flag)
+- explicit `--host X` with missing by-host file is an error, not silent
+  (correctly catches typos)
+- `--overlays off` opts out of both common.yml and by-host/<host>.yml
+
+The "explicit-name-required-file-missing" failure is the right call:
+auto-detect can fall back when no by-host file matches; explicit
+`--host X` must error if its file isn't there.
+
+---
+
 ## ★ `vars.load` and `--vars` use last-write-wins layering
 
 ```
