@@ -398,6 +398,50 @@ for a similar 5000-step playbook. Good engineering.
 
 ---
 
+## #87 — `mooncake apply` doesn't exit on SIGINT (Ctrl-C) mid-run — MEDIUM
+
+**Repro**:
+```yaml
+- shell: "touch /tmp/before && sleep 30 && touch /tmp/after"
+```
+
+```
+$ mooncake apply -c slow.yml &
+$ MOON_PID=$!
+$ sleep 2
+$ kill -INT $MOON_PID
+$ sleep 3
+$ test -f /tmp/before && echo before-yes      # yes (child started)
+$ test -f /tmp/after && echo after-yes         # no (sleep killed)
+$ kill -0 $MOON_PID && echo "STILL ALIVE"      # ← STILL ALIVE
+```
+
+Behavior:
+- The shell child (sleep) is killed (good — SIGINT propagates to
+  the process group)
+- But `mooncake apply` itself stays alive forever
+- No "interrupted" line in `~/.mooncake/runs.jsonl`
+- User has to `kill -KILL` to terminate
+
+This makes interactive Ctrl-C unusable for long-running runs. Users
+hitting Ctrl-C expect either:
+- (a) immediate exit with non-zero status + history entry showing
+  "interrupted at step N"
+- (b) prompt to confirm (Ctrl-C again to force)
+
+Right now: silent hang.
+
+**Fix**: install a SIGINT/SIGTERM handler that:
+1. Cancels the current step's context (kills its child processes)
+2. Records the run as interrupted in `~/.mooncake/runs.jsonl`
+3. Exits with code 130 (SIGINT) or 143 (SIGTERM) — standard convention
+
+(Found while testing concurrency / agentd lifecycle. Worth fixing
+before fleet exec gets used in production — orphan children +
+zombie agentd state are the same root cause.)
+
+---
+
 ## #85 — `--ask-become-pass` without TTY emits `inappropriate ioctl for device` — LOW
 
 **Repro**:
