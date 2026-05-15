@@ -1877,6 +1877,10 @@
           "type": "string",
           "description": "(plan metadata) Parent transaction step ID when expanded from a transaction child"
         },
+        "txn_role": {
+          "type": "string",
+          "description": "(plan metadata) Role of this step inside its parent transaction: 'body' or 'rollback'"
+        },
         "unless_command": {
           "type": "string",
           "description": "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)"

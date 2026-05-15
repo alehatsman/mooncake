@@ -205,6 +205,10 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "(plan metadata) Parent transaction step ID when expanded from a transaction child",
 		},
+		"txn_role": {
+			Type:        "string",
+			Description: "(plan metadata) Role of this step inside its parent transaction: 'body' or 'rollback'",
+		},
 	}
 
 	for name, prop := range universalFields {
