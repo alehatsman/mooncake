@@ -1282,16 +1282,22 @@ func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // Step represents a single configuration step that can perform various actions.
+//
+// MT-75: every YAML tag carries `,omitempty` so `plan -o plan.yaml`
+// doesn't print 60+ `null` action members for each step. The JSON tags
+// already had it, but `gopkg.in/yaml.v3` honors omitempty independently
+// — without it, every nil pointer / zero string serializes as `null` /
+// `""` and a 1-step plan blows up to ~580 lines.
 type Step struct {
 	// Identification
-	Name string `yaml:"name" json:"name,omitempty"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Conditionals
-	When string `yaml:"when" json:"when,omitempty"`
+	When string `yaml:"when,omitempty" json:"when,omitempty"`
 
 	// Idempotency controls
-	UnlessExists  *string `yaml:"unless_exists" json:"unless_exists,omitempty"`   // Skip if path exists
-	UnlessCommand *string `yaml:"unless_command" json:"unless_command,omitempty"` // Skip if command succeeds
+	UnlessExists  *string `yaml:"unless_exists,omitempty" json:"unless_exists,omitempty"`   // Skip if path exists
+	UnlessCommand *string `yaml:"unless_command,omitempty" json:"unless_command,omitempty"` // Skip if command succeeds
 
 	// Creates / Unless are the friendly step-level aliases for
 	// UnlessExists / UnlessCommand (MT-15). They produce the same skip
@@ -1300,8 +1306,8 @@ type Step struct {
 	// who learned the verb on one action doesn't have to relearn it as
 	// `unless_exists:` at step level. Both forms remain supported; the
 	// guards are unioned in checkIdempotencyConditions.
-	Creates *string `yaml:"creates" json:"creates,omitempty" plan:"path"` // Alias: skip if path exists
-	Unless  *string `yaml:"unless"  json:"unless,omitempty"`              // Alias: skip if command succeeds
+	Creates *string `yaml:"creates,omitempty" json:"creates,omitempty" plan:"path"` // Alias: skip if path exists
+	Unless  *string `yaml:"unless,omitempty"  json:"unless,omitempty"`              // Alias: skip if command succeeds
 
 
 	// Actions (exactly one required).
@@ -1315,94 +1321,94 @@ type Step struct {
 	//   artifact.* — artifact capture / validation
 	// Flat keys (shell, assert, wait, vars, log, use, import) are foundational
 	// or control-flow primitives that do not warrant a namespace.
-	FileWrite        *File                   `yaml:"file.write"        json:"file.write,omitempty"        action:"file.write"`
-	FileTemplate     *Template               `yaml:"file.template"     json:"file.template,omitempty"     action:"file.template"`
-	FileCopy         *Copy                   `yaml:"file.copy"         json:"file.copy,omitempty"         action:"file.copy"`
-	FileDownload     *Download               `yaml:"file.download"     json:"file.download,omitempty"     action:"file.download"`
-	FileUnarchive    *Unarchive              `yaml:"file.unarchive"    json:"file.unarchive,omitempty"    action:"file.unarchive"`
-	TextLine         *TextLine               `yaml:"text.line"         json:"text.line,omitempty"         action:"text.line"`
-	TextReplace      *FileReplace            `yaml:"text.replace"      json:"text.replace,omitempty"      action:"text.replace"`
-	TextInsert       *FileInsert             `yaml:"text.insert"       json:"text.insert,omitempty"       action:"text.insert"`
-	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range" json:"text.delete_range,omitempty" action:"text.delete_range"`
-	TextPatch        *FilePatchApply         `yaml:"text.patch"        json:"text.patch,omitempty"        action:"text.patch"`
-	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini"    json:"text.patch.ini,omitempty"   action:"text.patch.ini"`
-	TextPatchJSON    *TextPatchJSON          `yaml:"text.patch.json"   json:"text.patch.json,omitempty"  action:"text.patch.json"`
-	TextPatchYAML    *TextPatchYAML          `yaml:"text.patch.yaml"   json:"text.patch.yaml,omitempty"  action:"text.patch.yaml"`
-	Pkg              *Package                `yaml:"pkg"               json:"pkg,omitempty"               action:"pkg"`
-	PkgRepo          *PkgRepo                `yaml:"pkg.repo"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
-	PkgHold          *PkgHold                `yaml:"pkg.hold"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
-	PkgUpgrade       *PkgUpgrade             `yaml:"pkg.upgrade"       json:"pkg.upgrade,omitempty"       action:"pkg.upgrade"`
-	PkgList          *PkgList                `yaml:"pkg.list"          json:"pkg.list,omitempty"          action:"pkg.list"`
-	Tool             *Tool                   `yaml:"tool"              json:"tool,omitempty"              action:"tool"`
-	OsService        *ServiceAction          `yaml:"os.service"        json:"os.service,omitempty"        action:"os.service"`
-	OsUser           *OsUser                 `yaml:"os.user"           json:"os.user,omitempty"           action:"os.user"`
-	OsGroup          *OsGroup                `yaml:"os.group"          json:"os.group,omitempty"          action:"os.group"`
-	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
-	OsCron           *OsCron                 `yaml:"os.cron"           json:"os.cron,omitempty"           action:"os.cron"`
-	OsSysctl         *OsSysctl               `yaml:"os.sysctl"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
-	OsSystemd        *OsSystemd              `yaml:"os.systemd"        json:"os.systemd,omitempty"        action:"os.systemd"`
-	OsMount          *OsMount                `yaml:"os.mount"          json:"os.mount,omitempty"          action:"os.mount"`
-	OsFirewall       *OsFirewall             `yaml:"os.firewall"       json:"os.firewall,omitempty"       action:"os.firewall"`
-	WindowsFirewallRule  *WindowsFirewallRule  `yaml:"windows.firewall_rule"   json:"windows.firewall_rule,omitempty"   action:"windows.firewall_rule"`
-	WindowsScheduledTask *WindowsScheduledTask `yaml:"windows.scheduled_task"  json:"windows.scheduled_task,omitempty"  action:"windows.scheduled_task"`
-	ContainerImage   *ContainerImage         `yaml:"container.image"   json:"container.image,omitempty"   action:"container.image"`
-	Container        *Container              `yaml:"container"         json:"container,omitempty"         action:"container"`
-	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
-	RepoSearch       *RepoSearch             `yaml:"repo.search"       json:"repo.search,omitempty"       action:"repo.search"`
-	RepoTree         *RepoTree               `yaml:"repo.tree"         json:"repo.tree,omitempty"         action:"repo.tree"`
-	ReadJSON         *ReadFile               `yaml:"read.json"         json:"read.json,omitempty"         action:"read.json"`
-	ReadYAML         *ReadFile               `yaml:"read.yaml"         json:"read.yaml,omitempty"         action:"read.yaml"`
-	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch"        json:"repo.patch,omitempty"        action:"repo.patch"`
-	GitClone         *GitClone               `yaml:"git.clone"         json:"git.clone,omitempty"         action:"git.clone"`
-	GitCheckout      *GitCheckout            `yaml:"git.checkout"      json:"git.checkout,omitempty"      action:"git.checkout"`
-	GitConfig        *GitConfig              `yaml:"git.config"        json:"git.config,omitempty"        action:"git.config"`
-	ArtifactCapture  *ArtifactCapture        `yaml:"artifact.capture"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
-	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate" json:"artifact.validate,omitempty" action:"artifact.validate"`
-	Shell            *ShellAction            `yaml:"shell"             json:"shell,omitempty"             action:"shell"`
-	Assert           *Assert                 `yaml:"assert"            json:"assert,omitempty"            action:"assert"`
-	ObservePort      *ObservePort            `yaml:"observe.port"      json:"observe.port,omitempty"      action:"observe.port"`
-	ObserveProcess   *ObserveProcess         `yaml:"observe.process"   json:"observe.process,omitempty"   action:"observe.process"`
-	ObserveHTTP      *ObserveHTTP            `yaml:"observe.http"      json:"observe.http,omitempty"      action:"observe.http"`
-	ObserveService   *ObserveService         `yaml:"observe.service"   json:"observe.service,omitempty"   action:"observe.service"`
-	ObserveCPU       *ObserveCPU             `yaml:"observe.cpu"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
-	ObserveMemory    *ObserveMemory          `yaml:"observe.memory"    json:"observe.memory,omitempty"    action:"observe.memory"`
-	ObserveDisk      *ObserveDisk            `yaml:"observe.disk"      json:"observe.disk,omitempty"      action:"observe.disk"`
-	ObserveGPU       *ObserveGPU             `yaml:"observe.gpu"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
-	ObserveLogs      *ObserveLogs            `yaml:"observe.logs"      json:"observe.logs,omitempty"      action:"observe.logs"`
-	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
-	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
-	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
-	WaitCommand      *WaitCommand            `yaml:"wait.command"      json:"wait.command,omitempty"      action:"wait.command"`
-	Log              *PrintAction            `yaml:"log"               json:"log,omitempty"               action:"log"`
-	Use              *PresetInvocation       `yaml:"use"               json:"use,omitempty"               action:"use"`
-	Import           *string                 `yaml:"import"            json:"import,omitempty"            action:"import"`
-	VarsLoad         *string                 `yaml:"vars.load"         json:"vars.load,omitempty"         action:"vars.load"`
-	Vars             *map[string]interface{} `yaml:"vars"              json:"vars,omitempty"              action:"vars"`
+	FileWrite        *File                   `yaml:"file.write,omitempty"        json:"file.write,omitempty"        action:"file.write"`
+	FileTemplate     *Template               `yaml:"file.template,omitempty"     json:"file.template,omitempty"     action:"file.template"`
+	FileCopy         *Copy                   `yaml:"file.copy,omitempty"         json:"file.copy,omitempty"         action:"file.copy"`
+	FileDownload     *Download               `yaml:"file.download,omitempty"     json:"file.download,omitempty"     action:"file.download"`
+	FileUnarchive    *Unarchive              `yaml:"file.unarchive,omitempty"    json:"file.unarchive,omitempty"    action:"file.unarchive"`
+	TextLine         *TextLine               `yaml:"text.line,omitempty"         json:"text.line,omitempty"         action:"text.line"`
+	TextReplace      *FileReplace            `yaml:"text.replace,omitempty"      json:"text.replace,omitempty"      action:"text.replace"`
+	TextInsert       *FileInsert             `yaml:"text.insert,omitempty"       json:"text.insert,omitempty"       action:"text.insert"`
+	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range,omitempty" json:"text.delete_range,omitempty" action:"text.delete_range"`
+	TextPatch        *FilePatchApply         `yaml:"text.patch,omitempty"        json:"text.patch,omitempty"        action:"text.patch"`
+	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini,omitempty"    json:"text.patch.ini,omitempty"    action:"text.patch.ini"`
+	TextPatchJSON    *TextPatchJSON          `yaml:"text.patch.json,omitempty"   json:"text.patch.json,omitempty"   action:"text.patch.json"`
+	TextPatchYAML    *TextPatchYAML          `yaml:"text.patch.yaml,omitempty"   json:"text.patch.yaml,omitempty"   action:"text.patch.yaml"`
+	Pkg              *Package                `yaml:"pkg,omitempty"               json:"pkg,omitempty"               action:"pkg"`
+	PkgRepo          *PkgRepo                `yaml:"pkg.repo,omitempty"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
+	PkgHold          *PkgHold                `yaml:"pkg.hold,omitempty"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
+	PkgUpgrade       *PkgUpgrade             `yaml:"pkg.upgrade,omitempty"       json:"pkg.upgrade,omitempty"       action:"pkg.upgrade"`
+	PkgList          *PkgList                `yaml:"pkg.list,omitempty"          json:"pkg.list,omitempty"          action:"pkg.list"`
+	Tool             *Tool                   `yaml:"tool,omitempty"              json:"tool,omitempty"              action:"tool"`
+	OsService        *ServiceAction          `yaml:"os.service,omitempty"        json:"os.service,omitempty"        action:"os.service"`
+	OsUser           *OsUser                 `yaml:"os.user,omitempty"           json:"os.user,omitempty"           action:"os.user"`
+	OsGroup          *OsGroup                `yaml:"os.group,omitempty"          json:"os.group,omitempty"          action:"os.group"`
+	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key,omitempty"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
+	OsCron           *OsCron                 `yaml:"os.cron,omitempty"           json:"os.cron,omitempty"           action:"os.cron"`
+	OsSysctl         *OsSysctl               `yaml:"os.sysctl,omitempty"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
+	OsSystemd        *OsSystemd              `yaml:"os.systemd,omitempty"        json:"os.systemd,omitempty"        action:"os.systemd"`
+	OsMount          *OsMount                `yaml:"os.mount,omitempty"          json:"os.mount,omitempty"          action:"os.mount"`
+	OsFirewall       *OsFirewall             `yaml:"os.firewall,omitempty"       json:"os.firewall,omitempty"       action:"os.firewall"`
+	WindowsFirewallRule  *WindowsFirewallRule  `yaml:"windows.firewall_rule,omitempty"   json:"windows.firewall_rule,omitempty"   action:"windows.firewall_rule"`
+	WindowsScheduledTask *WindowsScheduledTask `yaml:"windows.scheduled_task,omitempty"  json:"windows.scheduled_task,omitempty"  action:"windows.scheduled_task"`
+	ContainerImage   *ContainerImage         `yaml:"container.image,omitempty"   json:"container.image,omitempty"   action:"container.image"`
+	Container        *Container              `yaml:"container,omitempty"         json:"container,omitempty"         action:"container"`
+	Cmd              *CommandAction          `yaml:"cmd,omitempty"               json:"cmd,omitempty"               action:"cmd"`
+	RepoSearch       *RepoSearch             `yaml:"repo.search,omitempty"       json:"repo.search,omitempty"       action:"repo.search"`
+	RepoTree         *RepoTree               `yaml:"repo.tree,omitempty"         json:"repo.tree,omitempty"         action:"repo.tree"`
+	ReadJSON         *ReadFile               `yaml:"read.json,omitempty"         json:"read.json,omitempty"         action:"read.json"`
+	ReadYAML         *ReadFile               `yaml:"read.yaml,omitempty"         json:"read.yaml,omitempty"         action:"read.yaml"`
+	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch,omitempty"        json:"repo.patch,omitempty"        action:"repo.patch"`
+	GitClone         *GitClone               `yaml:"git.clone,omitempty"         json:"git.clone,omitempty"         action:"git.clone"`
+	GitCheckout      *GitCheckout            `yaml:"git.checkout,omitempty"      json:"git.checkout,omitempty"      action:"git.checkout"`
+	GitConfig        *GitConfig              `yaml:"git.config,omitempty"        json:"git.config,omitempty"        action:"git.config"`
+	ArtifactCapture  *ArtifactCapture        `yaml:"artifact.capture,omitempty"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
+	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate,omitempty" json:"artifact.validate,omitempty" action:"artifact.validate"`
+	Shell            *ShellAction            `yaml:"shell,omitempty"             json:"shell,omitempty"             action:"shell"`
+	Assert           *Assert                 `yaml:"assert,omitempty"            json:"assert,omitempty"            action:"assert"`
+	ObservePort      *ObservePort            `yaml:"observe.port,omitempty"      json:"observe.port,omitempty"      action:"observe.port"`
+	ObserveProcess   *ObserveProcess         `yaml:"observe.process,omitempty"   json:"observe.process,omitempty"   action:"observe.process"`
+	ObserveHTTP      *ObserveHTTP            `yaml:"observe.http,omitempty"      json:"observe.http,omitempty"      action:"observe.http"`
+	ObserveService   *ObserveService         `yaml:"observe.service,omitempty"   json:"observe.service,omitempty"   action:"observe.service"`
+	ObserveCPU       *ObserveCPU             `yaml:"observe.cpu,omitempty"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
+	ObserveMemory    *ObserveMemory          `yaml:"observe.memory,omitempty"    json:"observe.memory,omitempty"    action:"observe.memory"`
+	ObserveDisk      *ObserveDisk            `yaml:"observe.disk,omitempty"      json:"observe.disk,omitempty"      action:"observe.disk"`
+	ObserveGPU       *ObserveGPU             `yaml:"observe.gpu,omitempty"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
+	ObserveLogs      *ObserveLogs            `yaml:"observe.logs,omitempty"      json:"observe.logs,omitempty"      action:"observe.logs"`
+	WaitPort         *WaitPort               `yaml:"wait.port,omitempty"         json:"wait.port,omitempty"         action:"wait.port"`
+	WaitHTTP         *WaitHTTP               `yaml:"wait.http,omitempty"         json:"wait.http,omitempty"         action:"wait.http"`
+	WaitFile         *WaitFile               `yaml:"wait.file,omitempty"         json:"wait.file,omitempty"         action:"wait.file"`
+	WaitCommand      *WaitCommand            `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
+	Log              *PrintAction            `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
+	Use              *PresetInvocation       `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
+	Import           *string                 `yaml:"import,omitempty"            json:"import,omitempty"            action:"import"`
+	VarsLoad         *string                 `yaml:"vars.load,omitempty"         json:"vars.load,omitempty"         action:"vars.load"`
+	Vars             *map[string]interface{} `yaml:"vars,omitempty"              json:"vars,omitempty"              action:"vars"`
 
 	// Privilege escalation (spec-21: collapsed from become/become_user).
 	// Empty = current user; "root" = sudo to root; "<name>" = sudo to <name>.
-	AsUser string `yaml:"as_user" json:"as_user,omitempty"`
+	AsUser string `yaml:"as_user,omitempty" json:"as_user,omitempty"`
 
 	// Environment
-	Env map[string]string `yaml:"env" json:"env,omitempty"`
-	Cwd string            `yaml:"cwd" json:"cwd,omitempty"`
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+	Cwd string            `yaml:"cwd,omitempty" json:"cwd,omitempty"`
 
 	// Execution control
-	Timeout         string       `yaml:"timeout" json:"timeout,omitempty"`
-	Retry           *RetryPolicy `yaml:"retry" json:"retry,omitempty"`
-	ContinueOnError bool         `yaml:"continue_on_error" json:"continue_on_error,omitempty"`
+	Timeout         string       `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	Retry           *RetryPolicy `yaml:"retry,omitempty" json:"retry,omitempty"`
+	ContinueOnError bool         `yaml:"continue_on_error,omitempty" json:"continue_on_error,omitempty"`
 
 	// Result overrides
-	ChangedWhen string `yaml:"changed_when" json:"changed_when,omitempty"`
-	FailedWhen  string `yaml:"failed_when" json:"failed_when,omitempty"`
+	ChangedWhen string `yaml:"changed_when,omitempty" json:"changed_when,omitempty"`
+	FailedWhen  string `yaml:"failed_when,omitempty" json:"failed_when,omitempty"`
 
 	// Loops
-	ForEach     *ForEachField `yaml:"for_each" json:"for_each,omitempty"`
-	ForEachFile *string       `yaml:"for_each_file" json:"for_each_file,omitempty"`
+	ForEach     *ForEachField `yaml:"for_each,omitempty" json:"for_each,omitempty"`
+	ForEachFile *string       `yaml:"for_each_file,omitempty" json:"for_each_file,omitempty"`
 
 	// Tags and outputs
-	Tags []string `yaml:"tags" json:"tags,omitempty"`
-	As   string   `yaml:"as" json:"as,omitempty"`
+	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
+	As   string   `yaml:"as,omitempty" json:"as,omitempty"`
 
 	// Reactive triggers (spec-23 §1). Children run iff the parent step's
 	// outputs reported `changed: true`. Otherwise skipped with reason
