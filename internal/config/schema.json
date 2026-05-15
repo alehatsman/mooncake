@@ -807,6 +807,25 @@
         "print.message"
       ]
     },
+    "observe.cpu": {
+      "type": "object",
+      "description": "Single-shot read of CPU utilization + load averages",
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "observe.disk": {
+      "type": "object",
+      "description": "Single-shot read of filesystem space / inode usage for a path",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
     "observe.http": {
       "type": "object",
       "description": "Single-shot HTTP GET; returns typed status, latency, headers, body sample",
@@ -840,6 +859,13 @@
       ],
       "additionalProperties": false,
       "x-category": "network",
+      "x-supports-dry-run": true
+    },
+    "observe.memory": {
+      "type": "object",
+      "description": "Single-shot read of memory + swap state (total/used/free/available)",
+      "additionalProperties": false,
+      "x-category": "system",
       "x-supports-dry-run": true
     },
     "observe.port": {
@@ -2014,9 +2040,21 @@
           "type": "string",
           "description": "Name of the step (universal)"
         },
+        "observe.cpu": {
+          "description": "Single-shot read of CPU utilization + load averages",
+          "$ref": "#/definitions/observe.cpu"
+        },
+        "observe.disk": {
+          "description": "Single-shot read of filesystem space / inode usage for a path",
+          "$ref": "#/definitions/observe.disk"
+        },
         "observe.http": {
           "description": "Single-shot HTTP GET; returns typed status, latency, headers, body sample",
           "$ref": "#/definitions/observe.http"
+        },
+        "observe.memory": {
+          "description": "Single-shot read of memory + swap state (total/used/free/available)",
+          "$ref": "#/definitions/observe.memory"
         },
         "observe.port": {
           "description": "Single-shot read of TCP/UDP port state (open? listener? pid?)",
@@ -2366,7 +2404,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -2675,7 +2728,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -2984,7 +3052,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -3293,7 +3376,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -3602,7 +3700,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -3911,7 +4024,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -4220,7 +4348,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -4529,7 +4672,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -4838,7 +4996,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -5147,7 +5320,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -5456,7 +5644,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -5765,7 +5968,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -6074,7 +6292,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -6383,7 +6616,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -6692,7 +6940,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -7001,7 +7264,670 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.cpu"
+          ],
+          "properties": {
+            "observe.cpu": {
+              "$ref": "#/definitions/observe.cpu"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.disk"
+          ],
+          "properties": {
+            "observe.disk": {
+              "$ref": "#/definitions/observe.disk"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -7315,6 +8241,345 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.memory"
+          ],
+          "properties": {
+            "observe.memory": {
+              "$ref": "#/definitions/observe.memory"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
                   "observe.port"
                 ]
               },
@@ -7624,7 +8889,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -7933,7 +9213,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -8242,7 +9537,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -8551,7 +9861,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -8860,7 +10185,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -9169,7 +10509,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -9478,7 +10833,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -9787,7 +11157,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -10096,7 +11481,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -10405,7 +11805,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -10714,7 +12129,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -11023,7 +12453,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -11332,7 +12777,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -11641,7 +13101,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -11950,7 +13425,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -12259,7 +13749,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -12568,7 +14073,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -12877,7 +14397,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -13186,7 +14721,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -13495,7 +15045,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -13804,7 +15369,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -14113,7 +15693,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -14429,7 +16024,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -14738,7 +16348,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -15047,7 +16672,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -15356,7 +16996,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -15665,7 +17320,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -15974,7 +17644,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -16283,7 +17968,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -16592,7 +18292,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -16901,7 +18616,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -17210,7 +18940,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -17517,7 +19262,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -17824,7 +19584,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -18140,7 +19915,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -18449,7 +20239,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -18758,7 +20563,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -19067,7 +20887,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -19376,7 +21211,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -19685,7 +21535,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -19994,7 +21859,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -20303,7 +22183,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {
@@ -20612,7 +22507,22 @@
               },
               {
                 "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
                   "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
                 ]
               },
               {

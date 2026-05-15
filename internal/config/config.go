@@ -1100,6 +1100,22 @@ type ObserveService struct {
 	Manager string `yaml:"manager" json:"manager,omitempty"` // "systemd" | "launchd" | "auto"
 }
 
+// ObserveCPU is the spec-60 single-shot read of CPU utilization +
+// load averages. Pulls from the shared internal/metrics collector.
+type ObserveCPU struct{}
+
+// ObserveMemory is the spec-60 single-shot read of RAM / swap state.
+// Total + Used + Free + Available + Swap fields are read directly
+// from /proc/meminfo on Linux, sysctl on macOS.
+type ObserveMemory struct{}
+
+// ObserveDisk is the spec-60 single-shot read of a filesystem path.
+// Path defaults to "/" if unset. ReadOnly and inode counts are
+// best-effort (platform-dependent).
+type ObserveDisk struct {
+	Path string `yaml:"path" json:"path,omitempty"` // Filesystem path (default: "/")
+}
+
 // WaitPort waits for a TCP port to accept connections.
 // Useful for orchestrating service start → port open → next step.
 type WaitPort struct {
@@ -1242,6 +1258,9 @@ type Step struct {
 	ObserveProcess   *ObserveProcess         `yaml:"observe.process"   json:"observe.process,omitempty"   action:"observe.process"`
 	ObserveHTTP      *ObserveHTTP            `yaml:"observe.http"      json:"observe.http,omitempty"      action:"observe.http"`
 	ObserveService   *ObserveService         `yaml:"observe.service"   json:"observe.service,omitempty"   action:"observe.service"`
+	ObserveCPU       *ObserveCPU             `yaml:"observe.cpu"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
+	ObserveMemory    *ObserveMemory          `yaml:"observe.memory"    json:"observe.memory,omitempty"    action:"observe.memory"`
+	ObserveDisk      *ObserveDisk            `yaml:"observe.disk"      json:"observe.disk,omitempty"      action:"observe.disk"`
 	WaitPort         *WaitPort               `yaml:"wait.port"         json:"wait.port,omitempty"         action:"wait.port"`
 	WaitHTTP         *WaitHTTP               `yaml:"wait.http"         json:"wait.http,omitempty"         action:"wait.http"`
 	WaitFile         *WaitFile               `yaml:"wait.file"         json:"wait.file,omitempty"         action:"wait.file"`
@@ -1652,6 +1671,9 @@ func (s *Step) Clone() *Step {
 		ObserveProcess:   s.ObserveProcess,
 		ObserveHTTP:      s.ObserveHTTP,
 		ObserveService:   s.ObserveService,
+		ObserveCPU:       s.ObserveCPU,
+		ObserveMemory:    s.ObserveMemory,
+		ObserveDisk:      s.ObserveDisk,
 		WaitPort:         s.WaitPort,
 		WaitHTTP:         s.WaitHTTP,
 		WaitFile:         s.WaitFile,

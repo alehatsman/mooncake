@@ -1,0 +1,46 @@
+# Spec-60 composition demo: cpu / memory / disk observers gating a
+# subsequent action.
+#
+# Pattern: observe → assert/log → proceed-or-bail. This is the
+# canonical "pre-flight check" shape — the agent loop reads typed
+# system state, branches on absolute thresholds, and decides whether
+# to apply mutating steps.
+#
+# Run:
+#   $ mooncake apply -c examples/observability/system-health-gate.yml
+
+version: "1.0"
+
+steps:
+  - name: probe cpu
+    observe.cpu: {}
+    as: cpu
+
+  - name: probe memory
+    observe.memory: {}
+    as: mem
+
+  - name: probe disk
+    observe.disk:
+      path: /tmp
+    as: tmpfs
+
+  - name: report cpu
+    log: "cpu — {{ cpu.value.cores }} cores, {{ cpu.value.usage_pct }}% used, load1m={{ cpu.value.load_1m }}"
+
+  - name: report memory
+    log: "memory — total={{ mem.value.total_bytes }} bytes, used={{ mem.value.used_bytes }} bytes, available={{ mem.value.available_bytes }} bytes"
+
+  - name: report disk
+    log: "disk {{ tmpfs.value.path }} — total={{ tmpfs.value.total_bytes }} bytes, free={{ tmpfs.value.free_bytes }} bytes"
+
+  # Branch on the typed value. Real pipelines would replace the
+  # second log with a meaningful next step (file.write, pkg.install,
+  # service restart, …) gated on the observation.
+  - name: tmp space ok
+    log: "/tmp has plenty of room ({{ tmpfs.value.free_bytes }} bytes free)"
+    when: "tmpfs.value.free_bytes > 104857600"
+
+  - name: tmp space tight
+    log: "/tmp has only {{ tmpfs.value.free_bytes }} bytes free — would refuse to proceed"
+    when: "tmpfs.value.free_bytes <= 104857600"

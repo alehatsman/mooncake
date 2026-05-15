@@ -587,6 +587,9 @@ var actionStructByName = map[string]any{
 	"observe.process": &config.ObserveProcess{},
 	"observe.http":    &config.ObserveHTTP{},
 	"observe.service": &config.ObserveService{},
+	"observe.cpu":     &config.ObserveCPU{},
+	"observe.memory":  &config.ObserveMemory{},
+	"observe.disk":    &config.ObserveDisk{},
 }
 
 // getActionStruct returns the reflect.Type for an action's config struct.
