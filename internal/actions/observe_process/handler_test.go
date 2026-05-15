@@ -93,6 +93,15 @@ func TestRun_NoMatch_NotFound(t *testing.T) {
 	if found, _ := data["found"].(bool); found {
 		t.Errorf("expected found=false for nonexistent process")
 	}
+	// MT-61: a missing process is the normal "found=false" answer,
+	// not a probe failure. ObserveResult.Error's contract reserves
+	// the field for real lookup failures (ps fork failure, /proc
+	// unreadable). Pre-fix the "no matching process" sentinel
+	// leaked into Error, so consumers had to parse the message to
+	// distinguish "the process isn't there" from "we couldn't ask".
+	if errMsg, _ := data["error"].(string); errMsg != "" {
+		t.Errorf("MT-61 regression: Error populated for absent process: %q", errMsg)
+	}
 }
 
 func TestRun_PlanMode_Defers(t *testing.T) {
