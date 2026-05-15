@@ -197,8 +197,8 @@ func applyFlags() []cli.Flag {
 		&cli.StringFlag{Name: "output-format", Value: "text", Usage: "Output format: text or json (json requires not using --tui)"},
 		&cli.StringFlag{Name: "artifacts-dir", Value: "", Usage: "Directory to store run artifacts (e.g., .mooncake)"},
 		&cli.BoolFlag{Name: "capture-full-output", Value: false, Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)"},
-		&cli.IntFlag{Name: "max-output-bytes", Value: defaultMaxOutputBytes, Usage: "Max bytes of output per step in results.json"},
-		&cli.IntFlag{Name: "max-output-lines", Value: defaultMaxOutputLines, Usage: "Max lines of output per step in results.json"},
+		&cli.IntFlag{Name: "max-output-bytes", Value: defaultMaxOutputBytes, Usage: "Max bytes of step output captured to the artifacts bundle (stdout.log/stderr.log)"},
+		&cli.IntFlag{Name: "max-output-lines", Value: defaultMaxOutputLines, Usage: "Max lines of step output captured to the artifacts bundle (stdout.log/stderr.log)"},
 		&cli.StringFlag{Name: "from-plan", Usage: "Apply from saved plan file (JSON or YAML)"},
 		&cli.StringFlag{Name: "facts-json", Usage: "Path to write collected facts as JSON"},
 
