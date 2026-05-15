@@ -3,6 +3,7 @@ package tool
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/config"
@@ -47,7 +48,7 @@ func (githubReleaseBackend) Validate(t *config.Tool) error {
 }
 
 func (githubReleaseBackend) Plan(_ context.Context, spec Spec, facts FactSnapshot) (Plan, error) {
-	url := githubAssetURL(spec.Repo, spec.Tag, spec.Asset, spec.Version, facts)
+	url := resolveGithubAssetURL(spec.Repo, spec.Tag, spec.Asset, spec.Version, facts)
 	return Plan{
 		URL:               url,
 		Checksum:          spec.InlineChecksum,
@@ -78,4 +79,67 @@ func githubAssetURL(repo, tag, asset, version string, facts FactSnapshot) string
 	}
 	asset = renderURL(asset, version, facts)
 	return "https://github.com/" + repo + "/releases/download/" + tag + "/" + asset
+}
+
+// resolveGithubAssetURL picks the download URL when `tag` is unset, by
+// trying the conventional schemes in order. Most projects ship with
+// "v{version}" (terraform, gh, hashicorp, kubernetes); some prefix with
+// the binary name ("jq-{version}"), some omit the v ("{version}"). When
+// `tag` is set, we trust the user and don't probe. When unset, we HEAD
+// each candidate and stop at the first one that responds 2xx/3xx, so
+// the common case "just works" without forcing users to learn the
+// per-project tag scheme. This is the only network touch in Plan; it's
+// cheap (HEAD) and avoids the alternative of always failing with a 404
+// that doesn't tell the user how to recover.
+func resolveGithubAssetURL(repo, tag, asset, version string, facts FactSnapshot) string {
+	if tag != "" {
+		return githubAssetURL(repo, tag, asset, version, facts)
+	}
+	candidates := []string{
+		"v" + version,
+		version,
+	}
+	// jq-style: the binary name as a prefix of the tag. spec.Repo is
+	// "owner/name", so reuse "name" — projects that adopt this scheme
+	// (jq, dive, ...) usually align tag prefix with the repo name.
+	if idx := strings.LastIndex(repo, "/"); idx > 0 && idx+1 < len(repo) {
+		name := repo[idx+1:]
+		candidates = append(candidates, name+"-"+version)
+	}
+	for i, candidate := range candidates {
+		url := githubAssetURL(repo, candidate, asset, version, facts)
+		if i == len(candidates)-1 {
+			// Last fallback — return without HEAD so users get a real
+			// download error from the install pipeline rather than two
+			// layers of network noise.
+			return url
+		}
+		if urlReachable(url) {
+			return url
+		}
+	}
+	return githubAssetURL(repo, "v"+version, asset, version, facts)
+}
+
+// urlReachable does a cheap HEAD to see whether an asset URL would
+// actually serve (2xx/3xx). 4xx/5xx → not reachable; any transport
+// error → conservatively false so the next candidate gets a chance.
+// Caller-visible side effect is one extra HEAD per failed candidate
+// (typically zero or one, given the two-element default list).
+//
+// Indirected through a package-level var so unit tests can inject a
+// hermetic stub instead of making real GitHub HEAD requests during
+// Plan() — github-release backend is the only place we probe a URL
+// outside the install pipeline.
+var urlReachable = func(url string) bool {
+	req, err := http.NewRequest(http.MethodHead, url, nil)
+	if err != nil {
+		return false
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode >= 200 && resp.StatusCode < 400
 }
