@@ -1,46 +1,42 @@
-package executor
+package resolver
 
-// secret_resolve.go implements the apply-time half of spec-23 §3
-// (`!secret <ref>`). The YAML pre-pass in internal/config/secret_tag.go
-// rewrites tagged scalars to sentinel-marker strings that flow through
-// plan compilation untouched. Just before each handler runs, we walk
-// the step's action struct fields, replace any marker with the resolved
-// value from security.DefaultRegistry, and add the resolved value to
-// the run's Redactor denylist so it can't leak into events / runlog /
-// step.stdout.
+// resolve.go implements spec-23 §3 (`!secret <ref>`) resolution as a
+// pure kernel-side walk. The YAML pre-pass in
+// internal/config/secret_tag.go rewrites tagged scalars to sentinel-
+// marker strings that flow through plan compilation untouched.
+// Resolve() walks the step's action struct fields, replaces any marker
+// with the resolved value from security.DefaultRegistry, and adds the
+// resolved value to the supplied Redactor's denylist so it can't leak
+// into events / runlog / step.stdout.
 //
-// Plan mode (ec.Mode() == actions.ModePlan) is intentionally a no-op —
-// the markers stay in-memory and get rewritten as `"!secret <ref>"`
-// when the planner serializes JSON for `mooncake plan --format json`.
+// Callers (executor apply path, MCP check_plan, agent loop pre-submit,
+// future apply_approved hash-then-sign flow) decide whether to invoke
+// the walk; the resolver itself is mode-agnostic. Plan-mode skip lives
+// in the caller.
 
 import (
 	"fmt"
 	"reflect"
 
-	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// resolveStepSecrets walks step's action fields, resolves any sentinel-
-// marker strings to actual secret values, and adds the resolved values
-// to ec.Redactor. Mutates step in place — the caller has already cloned
-// the step out of the plan if it cares about isolation.
+// Resolve walks step's action fields, resolving any sentinel-marker
+// strings to actual secret values via security.ResolveMarker. Mutates
+// step in place — the caller has already cloned the step out of the
+// plan if it cares about isolation. If redactor is non-nil, every
+// resolved value is added to its denylist.
 //
 // Returns the first resolution error encountered; the underlying
 // provider error is wrapped with the offending field's path for
 // debuggability. The error redacts the secret path beyond the provider
 // prefix (handled in security.Registry.Resolve).
-func resolveStepSecrets(step *config.Step, ec *ExecutionContext) error {
-	if ec.Mode() == actions.ModePlan {
-		return nil
-	}
+//
+// nil step is a no-op (returns nil).
+func Resolve(step *config.Step, redactor *security.Redactor) error {
 	if step == nil {
 		return nil
-	}
-	var redactor *security.Redactor
-	if ec.Svc != nil {
-		redactor = ec.Svc.Redactor
 	}
 	return walkAndResolveSecrets(reflect.ValueOf(step).Elem(), redactor)
 }

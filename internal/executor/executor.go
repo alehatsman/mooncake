@@ -120,6 +120,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/plan"
+	"github.com/alehatsman/mooncake/internal/secrets/resolver"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/alehatsman/mooncake/internal/utils"
@@ -1197,9 +1198,17 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	// spec-23 §3: resolve any `!secret env:FOO` markers to their actual
 	// values just before the handler sees them. No-op in plan mode —
 	// markers stay so plan output redaction can rewrite them as
-	// `"!secret env:FOO"` rather than leaking the value.
-	if err := resolveStepSecrets(&step, ec); err != nil {
-		return err
+	// `"!secret env:FOO"` rather than leaking the value. The pure walk
+	// lives in internal/secrets/resolver so frontends (MCP check_plan,
+	// agent loop pre-submit) can call it without dragging in executor.
+	if ec.Mode() != actions.ModePlan {
+		var redactor *security.Redactor
+		if ec.Svc != nil {
+			redactor = ec.Svc.Redactor
+		}
+		if err := resolver.Resolve(&step, redactor); err != nil {
+			return err
+		}
 	}
 	result, err := runner.Run(ec, &step)
 
