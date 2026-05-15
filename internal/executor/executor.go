@@ -295,6 +295,14 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 		return true, reason, nil
 	}
 
+	// spec-23 §2 try-block gating: try children skip after a sibling
+	// try failure; catch children skip when the try-block succeeded;
+	// finally children never skip on this basis. Implementation in
+	// trycatch.go.
+	if reason := ec.trySkipReason(step); reason != "" {
+		return true, reason, nil
+	}
+
 	// Check when condition
 	if step.When != "" {
 		shouldSkip, err := handleWhenExpression(step, ec)
@@ -419,6 +427,8 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 		Reason:      skipReason,
 		Depth:       depth,
 		TriggeredBy: step.TriggeredBy,
+		TryParent:   step.TryParent,
+		TryRole:     step.TryRole,
 	})
 }
 
@@ -491,6 +501,15 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		// Treat as a no-op: nothing to dispatch. The executor's main
 		// loop continues to the body children, which the txn state
 		// machine in transaction.go drives.
+		return nil
+	}
+
+	// spec-23 §2: a try-parent step (Try populated, TryRole empty) is
+	// the same shape — structural wrapper, no leaf action. Its branches
+	// expand as siblings and carry the real actions; this entry exists
+	// purely so plan output renders the compound and the run summary
+	// can attribute child outcomes to the right wrapper.
+	if len(step.Try) > 0 && step.TryRole == "" {
 		return nil
 	}
 
@@ -606,6 +625,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		Depth:       depth,
 		DryRun:      ec.Mode() == actions.ModePlan,
 		TriggeredBy: step.TriggeredBy,
+		TryParent:   step.TryParent,
+		TryRole:     step.TryRole,
 	})
 
 	// Track start time for duration
@@ -651,6 +672,8 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		Depth:       depth,
 		DryRun:      ec.Mode() == actions.ModePlan,
 		TriggeredBy: step.TriggeredBy,
+		TryParent:   step.TryParent,
+		TryRole:     step.TryRole,
 	})
 
 	// Record the changed bit by step ID so any sibling that carries this
@@ -727,6 +750,42 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 						ec.Svc.Logger.Errorf("on_rollback step %q errored: %v", next.Name, rbErr)
 					}
 				}
+			}
+			// spec-23 §2: when the failing step is a try-block "try"
+			// child, walk the remaining same-block siblings (catch +
+			// finally) before propagating. recordTryBodyFailure marks
+			// the TryState so the executor's trySkipReason will let
+			// catch run and skip remaining try children. Catch can fail
+			// too — when it does we replace the propagated error with
+			// the catch error per spec ("the compound Step propagates
+			// the later error"). Finally always runs; a finally error
+			// is also propagated as the latest error.
+			if step.TryParent != "" && step.TryRole == "try" {
+				ec.recordTryBodyFailure(step, err)
+				propagated := err
+				for j := i + 1; j < len(steps); j++ {
+					next := steps[j]
+					if next.TryParent != step.TryParent {
+						break // left the try-block's contiguous expansion
+					}
+					if cbErr := ExecuteStep(next, ec); cbErr != nil {
+						// Catch / finally errored; surface as the propagated
+						// error per spec. We deliberately do NOT short-circuit
+						// the loop — finally still has to run after a failed
+						// catch, and a later finally child would still get the
+						// chance to run after an earlier finally failure (same
+						// "best effort" shape as on_rollback above).
+						if next.TryRole == "catch" {
+							ec.recordTryCatchFailure(next)
+						}
+						propagated = cbErr
+					}
+					// Advance the outer loop's cursor so we don't re-execute
+					// these children when the outer for resumes — but since
+					// we're returning below, just track i for clarity.
+					_ = j
+				}
+				return propagated
 			}
 			return err
 		}

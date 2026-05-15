@@ -134,6 +134,12 @@ type ExecutionContext struct {
 	// carry as TxnParent). Created lazily when the first body child of
 	// a given TxnParent completes.
 	OpenTxns map[string]*TxnState
+
+	// OpenTries tracks per-try-block state for spec-23 §2 try / catch /
+	// finally. Keyed by the compound-parent step ID (which children
+	// carry as TryParent). Created lazily by the executor's trycatch.go
+	// when a try child's failure has to be recorded.
+	OpenTries map[string]*TryState
 }
 
 // TxnState is the per-transaction state the executor accumulates as it

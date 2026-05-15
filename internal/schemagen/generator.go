@@ -209,6 +209,35 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "(plan metadata) Role of this step inside its parent transaction: 'body' or 'rollback'",
 		},
+		"try": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Sequence of steps run with structured error recovery; on first failure runs catch (if set) then finally (spec-23 §2)",
+		},
+		"catch": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Steps that run when any try child errors. Requires try: on the same step (spec-23 §2)",
+		},
+		"finally": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Steps that always run after try (and catch, if it ran). Requires try: on the same step (spec-23 §2)",
+		},
+		"try_parent": {
+			Type:        "string",
+			Description: "(plan metadata) Parent compound step ID when expanded from a try/catch/finally branch",
+		},
+		"try_role": {
+			Type:        "string",
+			Description: "(plan metadata) Role of this step inside its parent compound: 'try', 'catch', or 'finally'",
+		},
 	}
 
 	for name, prop := range universalFields {
@@ -250,11 +279,12 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 		def.Properties[meta.Name] = actionProp
 	}
 
-	// Add "import" and "transaction" to action names for oneOf generation.
-	// "import" is a special string field (not a registered action).
-	// "transaction" (spec-30) is a compound node, not a leaf action.
-	// Both are special-cased rather than registered as actions.
-	actionNames = append(actionNames, "import", "transaction")
+	// Add "import", "transaction", and "try" to action names for oneOf
+	// generation. "import" is a special string field (not a registered
+	// action). "transaction" (spec-30) and "try" (spec-23 §2) are
+	// compound nodes, not leaf actions. All three are special-cased
+	// rather than registered as actions.
+	actionNames = append(actionNames, "import", "transaction", "try")
 
 	// Sort action names for deterministic schema generation
 	sort.Strings(actionNames)
@@ -328,6 +358,13 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 			// universalFields above (array of #/definitions/step). The
 			// oneOf branch here just asserts the property exists; the
 			// universalFields entry constrains its shape.
+			actionProp = &Property{}
+		case "try":
+			// spec-23 §2: same shape as transaction — a compound-step
+			// wrapper, not an action. The full property shape is
+			// declared in universalFields above. catch/finally are NOT
+			// in the oneOf list because they aren't standalone wrappers
+			// (they require try: to be present, enforced by Step.Validate).
 			actionProp = &Property{}
 		default:
 			actionProp = &Property{
