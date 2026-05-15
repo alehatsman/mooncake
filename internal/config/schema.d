@@ -191,6 +191,7 @@ export interface FileCopyAction {
   backup?: boolean;
   checksum?: string;
   dest: string;
+  follow_symlinks?: boolean;
   force?: boolean;
   group?: string;
   mode?: string;
@@ -309,6 +310,7 @@ export interface GitCloneAction {
  * @category system
  */
 export interface GitConfigAction {
+  dest?: string;
   repo?: string;
   scope: string;
   set?: Record<string, any>;
@@ -1215,9 +1217,10 @@ export interface Step {
    */
   for_each_file?: string;
   /**
-   * Variable expression for iterating over items (universal)
+   * Iterate over items (universal). Accepts a template-variable string or
+   * an inline list.
    */
-  for_each?: string;
+  for_each?: string | any[];
   /**
    * Environment variables for the step
    */

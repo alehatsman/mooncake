@@ -135,8 +135,21 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Description: "Directory path for iterating over files (universal)",
 		},
 		"for_each": {
-			Type:        "string",
-			Description: "Variable expression for iterating over items (universal)",
+			// for_each accepts three shapes, all handled by the
+			// ForEachField custom UnmarshalYAML in internal/config/config.go:
+			//   for_each: items_var          # template variable
+			//   for_each: [a, b, c]          # inline literal list
+			//   for_each:                    # block literal list
+			//     - a
+			//     - b
+			// The schema must accept the same union; otherwise the JSON-
+			// schema validator runs before yaml-decode and rejects the
+			// list forms (issue #20).
+			OneOf: []*Property{
+				{Type: "string", Description: "Variable expression rendered through templates and resolved to a list"},
+				{Type: "array", Items: &Property{}, Description: "Inline / block literal list of items"},
+			},
+			Description: "Iterate over items (universal). Accepts a template-variable string or an inline list.",
 		},
 		"env": {
 			Type:            "object",
