@@ -120,12 +120,23 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
-	// Verify source exists
-	srcInfo, err := os.Stat(renderedSrc)
+	// Verify source exists. MT-51: when follow_symlinks=false, use
+	// Lstat so a symlink at src reports as a symlink (not its target).
+	followSymlinks := true
+	if copyAction.FollowSymlinks != nil {
+		followSymlinks = *copyAction.FollowSymlinks
+	}
+	var srcInfo os.FileInfo
+	if followSymlinks {
+		srcInfo, err = os.Stat(renderedSrc)
+	} else {
+		srcInfo, err = os.Lstat(renderedSrc)
+	}
 	if err != nil {
 		result.Failed = true
 		return result, fmt.Errorf("failed to stat source: %w", err)
 	}
+	srcIsSymlink := !followSymlinks && srcInfo.Mode()&os.ModeSymlink != 0
 	if srcInfo.IsDir() {
 		result.Failed = true
 		return result, fmt.Errorf("src %q is a directory; mooncake's file.copy is single-file only. Use `shell: cp -r ...` to recurse, or copy each file with a `for_each_file:` loop", renderedSrc)
@@ -145,18 +156,37 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		}
 	}
 
-	// Check if destination exists
-	destInfo, err := os.Stat(renderedDest)
+	// Check if destination exists. MT-51: when follow_symlinks=false
+	// we Lstat dest so an existing symlink reports as itself, not as
+	// whatever it points to — that lets the idempotency check below
+	// compare symlink targets directly.
+	var destInfo os.FileInfo
+	if followSymlinks {
+		destInfo, err = os.Stat(renderedDest)
+	} else {
+		destInfo, err = os.Lstat(renderedDest)
+	}
 	destExists := err == nil
 
 	// Determine if copy is needed
 	needsCopy := !destExists || copyAction.Force
 	if destExists && !copyAction.Force {
-		// Compare file sizes and modification times for idempotency
-		if destInfo.Size() == srcInfo.Size() && destInfo.ModTime().Equal(srcInfo.ModTime()) {
-			needsCopy = false
-		} else {
+		switch {
+		case srcIsSymlink && destInfo.Mode()&os.ModeSymlink != 0:
+			// Both src and dest are symlinks: compare targets.
+			srcTarget, srcErr := os.Readlink(renderedSrc)
+			destTarget, dstErr := os.Readlink(renderedDest)
+			needsCopy = srcErr != nil || dstErr != nil || srcTarget != destTarget
+		case srcIsSymlink && destInfo.Mode()&os.ModeSymlink == 0:
+			// Source is a symlink, dest is a regular file — replace.
 			needsCopy = true
+		default:
+			// Regular-file path: compare sizes and modtimes.
+			if destInfo.Size() == srcInfo.Size() && destInfo.ModTime().Equal(srcInfo.ModTime()) {
+				needsCopy = false
+			} else {
+				needsCopy = true
+			}
 		}
 	}
 
@@ -179,6 +209,33 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 			return result, fmt.Errorf("failed to create backup: %w", err)
 		}
 		ctx.GetLogger().Debugf("  Backup created: %s", backupPath)
+	}
+
+	// MT-51: when follow_symlinks=false and the source is a symlink,
+	// recreate the symlink at dest with the same target string rather
+	// than copying the file content. Skip the rest of the file-copy
+	// pipeline (checksum verify, ownership chown) since those don't
+	// apply meaningfully to a symlink.
+	if srcIsSymlink {
+		target, readErr := os.Readlink(renderedSrc)
+		if readErr != nil {
+			result.Failed = true
+			return result, fmt.Errorf("failed to read symlink target: %w", readErr)
+		}
+		// Remove an existing dest so Symlink doesn't fail with EEXIST.
+		// Idempotency was already decided above (needsCopy).
+		if destExists {
+			if rmErr := os.Remove(renderedDest); rmErr != nil {
+				result.Failed = true
+				return result, fmt.Errorf("failed to remove existing dest before symlink: %w", rmErr)
+			}
+		}
+		if symErr := os.Symlink(target, renderedDest); symErr != nil {
+			result.Failed = true
+			return result, fmt.Errorf("failed to create symlink: %w", symErr)
+		}
+		ctx.GetLogger().Debugf("  Preserved symlink: %s -> %s (target: %s)", renderedSrc, renderedDest, target)
+		return result, nil
 	}
 
 	// Copy file

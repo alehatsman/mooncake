@@ -287,6 +287,128 @@ func TestHandler_Execute_BasicCopy(t *testing.T) {
 	}
 }
 
+// MT-51: when FollowSymlinks: false and src is a symlink, dest must
+// be a symlink with the same target — not a regular file containing
+// the target's bytes.
+func TestHandler_Execute_FollowSymlinksFalse_PreservesLink(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+
+	target := filepath.Join(tmpDir, "target.txt")
+	if err := os.WriteFile(target, []byte("payload"), 0o644); err != nil {
+		t.Fatalf("write target: %v", err)
+	}
+	link := filepath.Join(tmpDir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	dest := filepath.Join(tmpDir, "dest")
+
+	followFalse := false
+	step := &config.Step{
+		FileCopy: &config.Copy{
+			Src:            link,
+			Dest:           dest,
+			FollowSymlinks: &followFalse,
+		},
+	}
+	res, err := h.Execute(mockExecutionContext(), step)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !res.(*executor.Result).Changed {
+		t.Error("first copy should report Changed=true")
+	}
+	destInfo, err := os.Lstat(dest)
+	if err != nil {
+		t.Fatalf("Lstat dest: %v", err)
+	}
+	if destInfo.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("dest should be a symlink when follow_symlinks: false")
+	}
+	gotTarget, err := os.Readlink(dest)
+	if err != nil {
+		t.Fatalf("Readlink dest: %v", err)
+	}
+	if gotTarget != target {
+		t.Errorf("dest symlink target = %q, want %q", gotTarget, target)
+	}
+}
+
+// MT-51: by default (FollowSymlinks unset / true), the existing
+// behavior is preserved — dest is a regular file with the link
+// target's bytes.
+func TestHandler_Execute_FollowSymlinksDefault_DereferencesLink(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+
+	target := filepath.Join(tmpDir, "target.txt")
+	if err := os.WriteFile(target, []byte("payload"), 0o644); err != nil {
+		t.Fatalf("write target: %v", err)
+	}
+	link := filepath.Join(tmpDir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	dest := filepath.Join(tmpDir, "dest")
+
+	step := &config.Step{FileCopy: &config.Copy{Src: link, Dest: dest}}
+	if _, err := h.Execute(mockExecutionContext(), step); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	destInfo, err := os.Lstat(dest)
+	if err != nil {
+		t.Fatalf("Lstat dest: %v", err)
+	}
+	if destInfo.Mode()&os.ModeSymlink != 0 {
+		t.Error("dest should be a regular file when follow_symlinks defaults to true")
+	}
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("ReadFile dest: %v", err)
+	}
+	if string(body) != "payload" {
+		t.Errorf("dest content = %q, want %q", string(body), "payload")
+	}
+}
+
+// MT-51: running the preserve-symlink path twice in a row reports
+// Changed=false on the second run (idempotency).
+func TestHandler_Execute_FollowSymlinksFalse_Idempotent(t *testing.T) {
+	h := &Handler{}
+	tmpDir := t.TempDir()
+
+	target := filepath.Join(tmpDir, "target.txt")
+	if err := os.WriteFile(target, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write target: %v", err)
+	}
+	link := filepath.Join(tmpDir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	dest := filepath.Join(tmpDir, "dest")
+
+	followFalse := false
+	step := &config.Step{
+		FileCopy: &config.Copy{
+			Src:            link,
+			Dest:           dest,
+			FollowSymlinks: &followFalse,
+		},
+	}
+
+	if _, err := h.Execute(mockExecutionContext(), step); err != nil {
+		t.Fatalf("first Execute: %v", err)
+	}
+	res2, err := h.Execute(mockExecutionContext(), step)
+	if err != nil {
+		t.Fatalf("second Execute: %v", err)
+	}
+	if res2.(*executor.Result).Changed {
+		t.Error("second run should report Changed=false when symlink already matches")
+	}
+}
+
 func TestHandler_Execute_SourceNotFound(t *testing.T) {
 	h := &Handler{}
 
