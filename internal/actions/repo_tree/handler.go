@@ -127,12 +127,15 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		maxDepth = *rt.MaxDepth
 	}
 
-	// Determine if files should be included (default: true)
+	// Determine if files should be included (default: true; opt-out via
+	// explicit `include_files: false`). Pointer field so we can tell
+	// "unset" from "set to false" — the previous bool-field design
+	// silently defaulted to false because the zero-value path collapsed
+	// both cases together, making repo.tree report zero files for any
+	// playbook that didn't explicitly set the key.
 	includeFiles := true
-	if !rt.IncludeFiles {
-		// Only set to false if explicitly set to false
-		// This handles the zero value case
-		includeFiles = rt.IncludeFiles
+	if rt.IncludeFiles != nil {
+		includeFiles = *rt.IncludeFiles
 	}
 
 	// Build exclude map for faster lookup
@@ -233,7 +236,7 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 		ctx.GetLogger().Infof("            Exclude dirs: %v", rt.ExcludeDirs)
 	}
 
-	if !rt.IncludeFiles {
+	if rt.IncludeFiles != nil && !*rt.IncludeFiles {
 		ctx.GetLogger().Infof("            Include files: false (directories only)")
 	}
 
