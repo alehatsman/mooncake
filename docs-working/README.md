@@ -8,7 +8,7 @@ Working documents — specs, epics, and notes. Not canonical docs; those live in
 |---|---|
 | `streams.md` | Stream overview — goals, audiences, dependencies, what to work on next |
 | `specs/action-surface/` | Stream 1: typed action library (spec-22, 24–28, 32, 36, disk-partition) |
-| `specs/personal-fleet/` | Stream 3: personal fleet runtime (spec-45, 52–55, 58, implementation-order) |
+| `specs/personal-fleet/` | Stream 3: personal fleet runtime (spec-55, 58, implementation-order) |
 | `specs/ecosystem/` | Stream 5: plugins, marketplace, integrations (spec-31) |
 | `specs/done/` | Shipped specs — read-only reference |
 | `epics/` | Epic-level planning docs |
@@ -41,14 +41,13 @@ spec-30 transactions ✅ both moved to done. What remains in this stream
 lives under Stream 1 (spec-22 phases 7–8).
 
 **Stream 3 — Fleet & Cluster Management**
-45 fleet-discovery (PR13 `fleet init` interactive flow) ·
-52 fleet-exec · 53 fleet-watch · 54 fleet-ps · 55 fleet-doctor ·
-58 fleet-drift
+55 fleet-doctor (fan-out wrapper) · 58 fleet-drift
 
-Fleet is 13/14 PRs; only `fleet init` interactive UX remains from the original plan.
-Specs 52–55 are drafted QoL additions brainstormed from real use.
-Spec 58 (drift detection) is the highest-leverage candidate from
-GitHub issue #11 — see `clustermanagement/issue-11-analysis.md`.
+Fleet is **14/14 PRs** — original plan complete (PR13 interactive `fleet init`
+shipped `a43db9c`/`f3d64c9` on 2026-05-15). Specs 45 / 52 / 53 / 54 moved to
+`done/`. Spec 55 (fan-out doctor) is drafted — the single-host probe ladder
+has already shipped. Spec 58 (drift detection) is the highest-leverage
+candidate from GitHub issue #11 — see `clustermanagement/issue-11-analysis.md`.
 
 GitHub issue #8 (ChangeGraph as core primitive) audited against current
 state in `analysis/issue-8-changegraph-analysis.md` — ~60% already shipped
@@ -81,12 +80,18 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 06 quiet-mode · 07 step-display · 08 run-history · 09 structured-errors ·
 10 mcp-server · 11 preset-registry · 12 package-summary · 13 single-step ·
 14 snapshot-diff · 15 check-mode · 16 unify-dryrun-execute ·
-18 mooncake-agent-daemon · 19 tool-action · 20 metrics · 21 modernization-cutover ·
-29 wait-primitives · 30 transactions · 33 execution-context-split ·
-34 typed-variable-context · 35 plan-diff ·
-43 fleet-transport-and-sync · 44 ssh-bootstrap-transport · 46 fleet-status-and-logs ·
+17 package-batch-and-template · 18 mooncake-agent-daemon · 19 tool-action ·
+20 metrics · 21 modernization-cutover ·
+23 framework-primitives · 29 wait-primitives · 30 transactions ·
+33 execution-context-split · 34 typed-variable-context · 35 plan-diff ·
+37 step-output-capture · 38 read-json-yaml ·
+39 mooncake-init · 40 config-discovery-and-dry-run · 41 mooncake-doctor ·
+42 onboarding-and-recommend · 43 fleet-transport-and-sync ·
+44 ssh-bootstrap-transport · 45 fleet-discovery · 46 fleet-status-and-logs ·
 47 fleet-bootstrap-ux · 48 per-host-overlays-and-tags · 49 agentd-on-windows ·
 50 extended-filter-keys · 51 local-apply-overlay-parity ·
+52 fleet-exec · 53 fleet-watch · 54 fleet-ps ·
+56 windows-fleet-bootstrap · 57 windows-firewall-and-scheduled-task-actions ·
 59 typed-observability · 60 observe-system-resources · 61 observe-logs ·
 62 observe-gpu · 63 observe-streaming (deferral) · 64 fleet-observe
 

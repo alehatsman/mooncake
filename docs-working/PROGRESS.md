@@ -1,9 +1,55 @@
 # Mooncake — Streams Progress & Ideal-State Report
 
 Generated from `VISION.md`, `ROADMAP.md`, and the freshest `docs-working/` state
-(master @ `2ee98e7`, 2026-05-15, revision 14).
+(master @ `401ab95`, 2026-05-15, revision 15).
 
-> **What changed since revision 13**: two more Stream-1 specs landed.
+> **What changed since revision 14**: a wide quality-and-coverage round
+> rather than a single new feature. Headlines:
+>
+> 1. **Personal-fleet original 14-PR plan is now 14/14 ✅.** PR 13
+>    interactive `fleet init` shipped (`a43db9c`/`f3d64c9`); rev-14
+>    inconsistencies between "14/14 (epic moved to done)" and "Phase C
+>    2/3 with PR13 ⏳" are reconciled to **14/14, Phase C complete**.
+> 2. **Four shipped fleet specs moved from `specs/personal-fleet/` to
+>    `specs/done/`**: spec-45 fleet-discovery, spec-52 fleet-exec
+>    (`c597854`/`7e855b0`), spec-53 fleet-watch (`ad34ac0`/`e569ad3`),
+>    spec-54 fleet-ps (`528530b`/`df3d4dd`). The only remaining drafted
+>    personal-fleet items are spec-55 (fleet-doctor fan-out, single-host
+>    ladder already shipped) and spec-58 (fleet-drift).
+> 3. **Massive manual-test fix campaign — ~40 issues closed in the round
+>    37 of `docs(working)` commits.** Critical: `file.download` sha256
+>    verified before rename (MT-14); `for_each` iterates slice elements,
+>    not `reflect.Value` repr (MT-8); shell timeout kills the process
+>    group (#16); plan-dir walker skips non-regular files (#15);
+>    `failed_when` stops fabricating exit code 1 on clean exit 0 (#21).
+>    GitHub issues closed: **#13, #14, #15, #16, #18, #19, #20**. Plus
+>    ~30 MT-xx fixes (creates:/unless: honored on every action, retry
+>    backoff strategies, strict YAML decode, presets-list/runs-list
+>    `--format json`, JSON-RPC notification suppression, …). The
+>    findings live under `analysis/findings-2026-05-15/` and the manual
+>    tester's `verification-2026-05-15.md` tracks fix status per
+>    finding.
+> 4. **Action-surface ABI rollout is functionally complete on the
+>    priority set**: spec-26 phase 5 (git.* ABI hooks, `c3d67ab`/`e4b6d3d`),
+>    spec-27 phase 4 (os identity, `4cd6037`), spec-28 phase 6 (os
+>    scheduling, `3a7b49d`/`eb93572`). All five action families
+>    (file, text, pkg, os.service, os identity, os scheduling, git)
+>    now declare `Permissions`/`Diff`/`Cost`/`Reverse`. The remaining
+>    work is per-spec docs, not method declarations.
+> 5. **Spec-26 reverse-capture v1 shipped** (`419b127`/`a5da5c0`) —
+>    `git.checkout` and `git.config` replace `Reverse()` refusal stubs
+>    with real apply-time state capture (typed `*ReverseInfo` on
+>    `Result.ReverseData` → inverse Step). This unblocks the same
+>    pattern for 13 other handlers that still refuse (os.* family,
+>    pkg.repo, pkg.hold, os.service).
+>
+> Strategic position is unchanged from rev 14: the kernel is **fully
+> wired**, the four-method ABI is **declared on every priority handler
+> and consumed through MCP**, the rollback demo is **runnable code**,
+> and the personal-fleet flagship is **closed**. The headline gap
+> remains *users* (lighthouse adoption), not engineering.
+
+> **What changed since revision 13** *(carried from rev 14)*: two more Stream-1 specs landed.
 > **Spec-37 (Step Output Capture)** shipped (`901e013`/`2ee98e7`) — a
 > `CaptureInPlan` capability on `ActionMetadata` lets plan-mode bind
 > `as:` results into `Scope.Results` for opted-in actions (mutation
@@ -115,7 +161,7 @@ this stream's flagship is closed.
 |---|---|---|
 | **A** (one peer end-to-end) | 1–5 | ✅ all shipped |
 | **B** (real fleet) | 6 multiplexer ✅, 7 status ✅, 8 logs/facts ✅, 9 native SSH driver ✅, 10 installer templates + 8-step bootstrap ✅, 11 bootstrap/pair ✅ | ✅ complete |
-| **C** (polish) | **12 mDNS ✅** (advertise + browse), **13 `fleet init` ✅** (`f3d64c9` — interactive flow), 14 overlays/tags ✅ | ✅ complete |
+| **C** (polish) | 12 mDNS ✅ (advertise + browse), **13 `fleet init` ✅** (`a43db9c`/`f3d64c9` — interactive flow), 14 overlays/tags ✅ | ✅ **complete** |
 | **Post-plan QoL** | `fleet exec` (spec-52, `7e855b0`), `fleet ps` (spec-54, `df3d4dd`), `fleet watch` (spec-53, `e569ad3`), `fleet upgrade`, `fleet doctor` ladder, `fleet apply <machine>`, mDNS slice | ✅ shipped on top |
 
 **Post-PR-14 follow-up specs** (not in original 14-PR plan, drafted from real-world use):
@@ -129,7 +175,10 @@ this stream's flagship is closed.
 | — | `mooncake fleet apply <machine>` — ordered multi-peer apply via `machines/<name>/fleet.yml` | ✅ shipped (`35f21a9`/`beb495e`). Closes `requests/request-apply-machine-multi-peer.md`. Phases run sequentially with fail-fast; manifests live in the dotfiles repo |
 | — | `mooncake fleet upgrade` — push new agentd binary fleet-wide | ✅ shipped Linux (`534044b`/`96d3bfb`), **Windows** (`fac72cc`/`7f5ac24`), and cross-OS guard (`72c6a2d`/`9c423c2`). Self-replace via MoveFile + scheduled task on Windows; no re-bootstrap needed on either OS |
 | — | `mooncake fleet doctor` — per-peer probe ladder + SSH fallback | ✅ shipped as a real diagnostic loop (`81be15b` ladder + `16e54d2` last-seen + `00c2c48` error classification + `57cc10e` SSH fallback diag + `35c9897` ladder wiring). "Peer unreachable" now has structured answers, including a fallback channel for misconfigured agentds |
-| 52–55 | Tier-1 fleet QoL — `exec` / `watch` / `ps` / `doctor`-fleetwide | 📝 drafted (`e71b57e`). Brainstormed in `clustermanagement/qol-features.md` |
+| 52 | `mooncake fleet exec` — ad-hoc shell across N peers | ✅ shipped (`c597854`/`7e855b0`). Moved to `specs/done/` |
+| 53 | `mooncake fleet watch` — live SSE multiplexed across peers | ✅ shipped (`ad34ac0`/`e569ad3`). Moved to `specs/done/` |
+| 54 | `mooncake fleet ps` — list in-flight runs across peers | ✅ shipped (`528530b`/`df3d4dd`). Moved to `specs/done/` |
+| 55 | `mooncake fleet doctor` — fan-out health check across peers | 📝 drafted. Single-host doctor ladder shipped (`81be15b` + `16e54d2` + `00c2c48` + `57cc10e` + `35c9897`); fleet-wide fan-out wrapper pending |
 | 56 | Windows fleet bootstrap | 📝 drafted (`56203fd`) |
 | **58** | **Fleet drift** — periodic `InspectPlan` loop + `/v1/drift` + `mooncake fleet drift` + per-machine `drift:` policy block | **📝 drafted (`d963c25`)**. Highest-leverage candidate from GitHub issue #11; see [`clustermanagement/issue-11-analysis.md`](clustermanagement/issue-11-analysis.md) for the full 20-item map |
 
@@ -146,10 +195,11 @@ Enterprise sub-stream (C1–C5 hub epics): **zero specs**, deferred. Per
 **Verdict**: the stream is **done for v1 + has a forward backlog**.
 v1 is closed: mDNS discovery, `apply <machine>`, fleet upgrade
 (Linux + Windows), and a real `fleet doctor` ladder all shipped.
-Phase C still has the interactive `fleet init` UX left, pure polish.
-The drafted-spec backlog is now seven items (52, 53, 54, 55, 56, 58
-+ the issue-11 brainstorm); **spec-58 fleet-drift** is the
-strategically heaviest of the seven and would turn Mooncake from
+Phase C closed: interactive `fleet init` shipped (`a43db9c`/`f3d64c9`).
+The drafted-spec backlog narrows to **three items** (55 fleet-doctor
+fan-out, 56 Windows fleet bootstrap, 58 fleet-drift) — specs 52, 53,
+54 shipped end-to-end and moved to `specs/done/`. **spec-58 fleet-drift**
+is the strategically heaviest of the three and would turn Mooncake from
 "config management tool" into "fleet operating system" — issue #11
 explicitly ranks drift detection as the highest-value operational
 feature.
@@ -256,13 +306,15 @@ overlays + tag selectors** ✅, **local-apply overlay parity** (spec-51
 — `mooncake apply` now auto-loads `vars/by-host/<hostname>.yml` like
 `fleet apply` does) ✅, Windows agentd ✅.
 
-**Gap**: Interactive `fleet init` flow ⏳ (PR13 — the only Phase C
-polish item left). That's it. Everything else from the v1 success
-criteria is in master.
+**Gap**: nothing from the original 14-PR plan. The v1 success
+criteria are all in master. Outstanding personal-fleet items are the
+post-v1 drafted backlog (55 fleet-doctor fan-out, 56 Windows fleet
+bootstrap, 58 fleet-drift) and `fleet apply <machine>` polish.
 
-**Distance to ideal**: ~98% to the v1 "Friday-evening demo" success
-criteria from the epic. **Phase A and Phase B complete**; **Phase C
-2/3** (mDNS now ✅). `fleet apply` + `fleet status` + `fleet logs` +
+**Distance to ideal**: ~99% to the v1 "Friday-evening demo" success
+criteria from the epic. **Phases A + B + C all complete**; the
+interactive `fleet init` (PR13) shipped on 2026-05-15. `fleet apply`
++ `fleet status` + `fleet logs` +
 `fleet discover` (with mDNS) + per-host overlays + native SSH + full
 bootstrap + local-apply overlay parity + extended filter keys +
 ordered-phase `fleet apply <machine>` + `fleet upgrade` all work
@@ -346,10 +398,11 @@ foundation.
 ## 3. The honest strategic picture
 
 Mooncake has built the **kernel** (Stream 1: production-quality), the
-**fleet runtime** (Stream 3: **13/14**, Phase B complete, Phase C 2/3
-with mDNS landed, plus follow-up specs and three operational features —
-apply `<machine>` + fleet upgrade (Linux+Windows) + fleet doctor probe
-ladder — beyond the original plan), the **DX funnel** (Stream 4:
+**fleet runtime** (Stream 3: **14/14, Phase C complete**, plus three
+operational features beyond the original plan — apply `<machine>` +
+fleet upgrade (Linux + Windows) + fleet doctor probe ladder — and
+three shipped Tier-1 QoL specs (52 exec, 53 watch, 54 ps)), the
+**DX funnel** (Stream 4:
 shipped), and the **agent safety layer** (Stream 2: spec-22 phases
 3-7 all done, MCP wires `Diff`/`Cost`/`Permissions`; spec-23 **all
 three sections shipped**; spec-30 PRs A + B in master — the rollback
@@ -385,8 +438,8 @@ backlog since rev12: **spec-56** (Windows fleet bootstrap),
 brainstorm as the highest-leverage cluster-management gap.
 
 `next-priorities-2026-05.md` recommends **finish-then-pivot**. Track B
-(personal-fleet close-out) is *done* — Phase C 2/3 with only the
-interactive `fleet init` ⏳ left, and that's pure UX polish. Track A
+(personal-fleet close-out) is *done* — Phase C complete; the
+interactive `fleet init` shipped on 2026-05-15. Track A
 (agent-safety) shipped its headline demo via spec-30 PR B **and** the
 MCP wiring via spec-22 phase 7; the spec-22 backlog is down to docs
 (phase 8). The policy/quota/signing layers remain un-specced. The
