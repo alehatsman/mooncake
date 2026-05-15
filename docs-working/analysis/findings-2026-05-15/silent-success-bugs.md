@@ -577,6 +577,44 @@ times to get success; if all retries fail, *then* apply
 
 ---
 
+## #62 — `retry: backoff: linear|exponential` is silently ignored; delay stays fixed — MEDIUM
+
+**Repro**:
+```yaml
+- shell: exit 1
+  retry: { attempts: 3, delay: 100ms, backoff: exponential }
+```
+
+Debug output (3 retries):
+```
+  Waiting 100ms before retry...
+  Retry attempt 1/3
+  Waiting 100ms before retry...
+  Retry attempt 2/3
+  Waiting 100ms before retry...
+  Retry attempt 3/3
+```
+
+`backoff: linear` produces the same output. Total elapsed is identical
+(~1.5s for both) — well below what linear (100+200+300=600ms wait) or
+exponential (100+200+400=700ms wait) would produce.
+
+Also: `backoff: nonsense` is silently accepted (per #44 unknown-field
+acceptance), no warning or error.
+
+**Why MEDIUM**: external API integrations rely on backoff to avoid
+hammering a stuck dependency. With fixed delay only, mooncake's
+retry creates the exact thundering-herd problem backoff is supposed
+to prevent.
+
+**Fix**:
+1. Honor `backoff: linear` → delay × attempt_n
+2. Honor `backoff: exponential` → delay × 2^attempt_n
+3. Validate `backoff:` against an enum at parse time (closes the #44 hole here)
+4. Document defaults: `backoff: fixed` (status quo) explicitly named
+
+---
+
 ## #49 — `retry: { attempts: N }` runs N+1 attempts, not N — LOW (semantic clarity)
 
 **Repro** (from #48 above):
