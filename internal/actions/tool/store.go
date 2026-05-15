@@ -50,6 +50,15 @@ func installDirIsPopulated(dir string) (bool, error) {
 // absolute bin path joining installDir + bin when populated. The empty
 // installDir case (e.g. caller hasn't computed it yet) also reports
 // "not installed".
+//
+// MT-60: when bin is unset, instead of returning the install dir
+// (which is not executable), scan the dir for executable files at the
+// top level. If exactly one is present, return it — this is the
+// common github-release bare-binary case where authors forget to
+// declare `bin:` and `asset:` is the single binary. If the install
+// dir is ambiguous (0 or 2+ executables), fall back to returning the
+// install dir so the existing "you need bin:" failure mode is
+// preserved instead of guessing wrong.
 func locateInInstallDir(bin, installDir string) (string, error) {
 	if installDir == "" {
 		return "", nil
@@ -62,7 +71,43 @@ func locateInInstallDir(bin, installDir string) (string, error) {
 		return "", nil
 	}
 	if bin == "" {
+		if auto, ok, err := singleExecutableIn(installDir); err == nil && ok {
+			return auto, nil
+		}
 		return installDir, nil
 	}
 	return filepath.Join(installDir, bin), nil
+}
+
+// singleExecutableIn returns the absolute path of the single
+// executable file at the top of dir, ok=true, when there's exactly
+// one. Otherwise ok=false (zero or two-plus candidates). Symlinks and
+// subdirectories are ignored; user/group/other execute bits are
+// honored.
+func singleExecutableIn(dir string) (string, bool, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", false, err
+	}
+	var matches []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, infoErr := e.Info()
+		if infoErr != nil {
+			continue
+		}
+		if info.Mode()&0o111 == 0 {
+			continue
+		}
+		matches = append(matches, filepath.Join(dir, e.Name()))
+		if len(matches) > 1 {
+			return "", false, nil // ambiguous; fall back to dir
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0], true, nil
+	}
+	return "", false, nil
 }
