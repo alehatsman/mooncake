@@ -53,6 +53,42 @@ round 26, **or my original observation conflated** JSON-Unicode-escape
 
 ---
 
+## #79 — `read.json` floats integer values; `read.yaml` preserves them — LOW (consistency)
+
+**Repro**:
+```yaml
+# /work/data.json: {"port": 8080}
+- read.json: { path: /work/data.json }
+  as: jc
+- log: { msg: "json port = {{ jc.value.port }}" }
+
+# /work/data.yaml: port: 8080
+- read.yaml: { path: /work/data.yaml }
+  as: yc
+- log: { msg: "yaml port = {{ yc.value.port }}" }
+```
+
+Output:
+```
+json port = 8080.000000   ← JSON numbers come back as float
+yaml port = 8080          ← YAML preserves integer
+```
+
+JSON's spec uses a single Number type and Go's `encoding/json`
+decodes all numbers as float64. YAML preserves int vs. float
+distinction. So the same logical value "8080" round-trips differently
+depending on which read.* you use.
+
+**Why LOW**: arithmetic still works; cosmetic difference. But
+`{{ cfg.value.port }}` in templates ends up with `.0` suffix for
+JSON-sourced configs, which is ugly in config files and command
+strings (`--port 8080.000000` would fail).
+
+**Fix**: in read.json, detect whether a JSON number has a fractional
+part and emit as int when not.
+
+---
+
 ## #17 — Live metrics not available in apply-time templates (despite docs) — MEDIUM
 
 **Repro**:
