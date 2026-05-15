@@ -638,7 +638,22 @@ times to get success; if all retries fail, *then* apply
 
 ---
 
-## #70 — Direct `{{ map_var }}` stringify leaks Go reflect.Value; need `cfg.value.X` to access JSON content — MEDIUM (DX + display)
+## #70 — ✅ FIXED (round 44, commit `295ba2a`)
+
+Bare `{{ map }}` now JSON-marshals:
+```
+$ mooncake apply -c <read.json + log {{ cfg.value }}>
+raw value = {"a":1,"b":2}      ← clean JSON
+                               ← previously: <map[string]interface {} Value>
+```
+
+Both top-level and nested map/slice variables render as JSON when
+stringified directly. Drilling still works via `.value.X.Y`. Don't
+regress.
+
+### Original report (now resolved)
+
+## #70 (original) — Direct `{{ map_var }}` stringify leaks Go reflect.Value; need `cfg.value.X` to access JSON content — MEDIUM (DX + display)
 
 **Original report was wrong** — after auditing across action types,
 the bug is narrower than feared.

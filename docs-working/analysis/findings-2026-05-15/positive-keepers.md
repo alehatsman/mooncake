@@ -708,6 +708,27 @@ N round trips for "did any of these errors happen?" probes.
 
 ---
 
+## ★ `text.line` — full lineinfile semantics with `operation:` discriminator
+
+```
+# /work/conf.txt:  # config / foo=1 / bar=2 / baz=3
+
+$ mooncake step "text.line: { path: /work/conf.txt, regexp: '^foo=', line: 'foo=99', state: present }"
+{"changed": true, "operation": "replace", ...}   # foo=99 replaces foo=1
+
+$ mooncake step "text.line: { path: /work/conf.txt, regexp: '^qux=', line: 'qux=4', state: present }"
+{"changed": true, "operation": "append", ...}    # qux=4 appended (no match)
+
+$ mooncake step "text.line: { path: /work/conf.txt, regexp: '^baz=', state: absent }"
+{"changed": true, "operation": "delete", ...}    # baz=3 removed
+```
+
+Three operations distinguished cleanly via `operation: replace|append|delete`.
+Same convention as os.* / pkg.* / on_change. The right shape for an
+agent to ask "what just happened?" without parsing log strings.
+
+---
+
 ## ★ `text.line` — properly idempotent
 
 ```yaml
