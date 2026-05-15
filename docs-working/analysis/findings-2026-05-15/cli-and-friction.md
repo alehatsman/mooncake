@@ -325,6 +325,43 @@ config file is empty: /work/empty.yml — expected a list of steps
 
 ---
 
+## #78 — `peers.toml` TOML parse error is unhelpful for the wrong-but-plausible form — LOW (DX)
+
+**Repro** — natural mistake when writing `~/.config/mooncake/peers.toml`:
+```toml
+[peers.local]                    # dotted-key form (wrong)
+addr = "127.0.0.1:7878"
+token = "..."
+```
+
+```
+$ mooncake fleet status
+parse /root/.config/mooncake/peers.toml: toml: cannot store a table in a slice
+```
+
+The error is technically accurate but doesn't tell the user the right
+form. The correct shape is:
+```toml
+[[peers]]                        # array-of-tables (correct)
+name = "local"
+addr = "127.0.0.1:7878"
+token = "..."
+```
+
+**Fix**: catch this specific TOML error and emit:
+```
+peers.toml: expected `[[peers]]` array-of-tables. Did you mean:
+  [[peers]]
+  name = "local"
+  ...
+(See `mooncake fleet --help` for the schema.)
+```
+
+(`mooncake fleet init` interactive flow might already do this right;
+this matters for users editing peers.toml by hand.)
+
+---
+
 ## #77 — Validator error "Step must have exactly one action ()" with EMPTY action list — LOW (regression of #27 vocabulary)
 
 **Repro**:

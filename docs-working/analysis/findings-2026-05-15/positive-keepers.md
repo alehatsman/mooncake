@@ -408,6 +408,57 @@ This is the substrate for `mooncake fleet` to talk to peers. Solid.
 
 ---
 
+## ★ `mooncake fleet` end-to-end: status, exec, observe all work
+
+With one local agentd peer configured in `~/.config/mooncake/peers.toml`:
+
+```toml
+[[peers]]
+name = "local"
+addr = "127.0.0.1:7878"
+token = "<agentd token>"
+```
+
+**`fleet status`** — peer health table:
+```
+HOST   ADDR            ACCESSIBLE  RUNNING  OS             MOONCAKE  QUEUE  LAST RUN
+local  127.0.0.1:7878  yes         no       linux (amd64)  dev       0      —
+✔ 1/1 accessible
+```
+
+**`fleet exec "uname -s"`** — remote exec with streamed events:
+```
+fleet exec: 1 peer(s), command = "uname -s"
+[local] submitted run 01KRPJ7WDW9Q9VE3FEXR76SP41
+[local] ▶ run started
+[local] plan loaded 0 steps
+[local]   ▸ fleet-exec
+[local]       Linux                    ← stdout from remote
+[local]     ✔ fleet-exec
+[local] ✔ run complete success: 1/1 changed, 0 failed, 0 skipped (1102ms)
+fleet exec: 1/1 ok
+```
+
+**`fleet observe cpu`** — cross-peer typed observation (spec-64):
+```
+PEER   STATUS   CORES  USAGE%  LOAD_1M  NOTE
+local  success  32     4.35    3
+```
+
+Three things that make this *real*:
+- ULID run IDs (sortable, globally unique)
+- `[peer] ...` line prefixes for multiplexed output across peers
+- Per-peer status column on observe — `success/failure` per peer not the whole batch
+- Stdout actually surfaces in remote exec output ([local] Linux)
+
+This is the fleet kernel actually working — keep.
+
+(Aside: the TOML format is `[[peers]]` array-of-tables, not
+`[peers.NAME]` dotted-key. The first attempt with dotted form errored
+with `toml: cannot store a table in a slice` — see #78 below.)
+
+---
+
 ## ★ `mooncake fleet` actionable error messages
 
 Without peers configured:
