@@ -243,6 +243,19 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 		}
 		guards = append(guards, g)
 	}
+	// MT-15: `creates:` / `unless:` are friendly step-level aliases of
+	// `unless_exists:` / `unless_command:`. Treated independently so
+	// both forms can appear on the same step (rare, but harmless).
+	if step.Creates != nil || step.Unless != nil {
+		g := guard{}
+		if step.Creates != nil {
+			g.creates = *step.Creates
+		}
+		if step.Unless != nil {
+			g.unless = *step.Unless
+		}
+		guards = append(guards, g)
+	}
 	if step.Shell != nil && (step.Shell.Creates != "" || step.Shell.Unless != "") {
 		guards = append(guards, guard{creates: step.Shell.Creates, unless: step.Shell.Unless})
 	}
@@ -534,8 +547,16 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		return err
 	}
 
-	// Check idempotency conditions (creates, unless) - ONLY for shell/command steps
-	if !shouldSkip && (step.Shell != nil || step.Cmd != nil) {
+	// Check idempotency conditions (creates, unless) for every action.
+	// MT-15 (HIGH correctness): prior to this generalization the check
+	// fired only for step.Shell / step.Cmd, so file.write / text.* / pkg
+	// / file.copy / … silently re-ran on every apply even when the
+	// operator wrote `unless_exists:` (or the friendly aliases
+	// `creates:` / `unless:` introduced alongside this fix). The guards
+	// are step-level metadata — they describe "should this step run at
+	// all?" and predate the action dispatch. Gate-by-action-type was a
+	// pre-spec-21 artifact.
+	if !shouldSkip {
 		idempotencySkip, idempotencyReason, err := checkIdempotencyConditions(step, ec)
 		if err != nil {
 			return err
