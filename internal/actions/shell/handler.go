@@ -211,9 +211,21 @@ func (h *Handler) finishResult(ctx actions.Context, step *config.Step, result *e
 		return result, err
 	}
 	if result.Failed {
-		return result, fmt.Errorf("command failed with exit code %d", result.Rc)
+		return result, formatStepFailure(step, result)
 	}
 	return result, nil
+}
+
+// formatStepFailure returns the user-facing error for a failed step,
+// distinguishing real subprocess failures from failures caused by a
+// failed_when expression on an otherwise-clean run (issue #21). The
+// pre-fix message lied — fabricated "exit code 1" on a clean exit-0
+// command — sending operators chasing a non-existent shell failure.
+func formatStepFailure(step *config.Step, result *executor.Result) error {
+	if result.Rc == 0 && step.FailedWhen != "" {
+		return fmt.Errorf("step marked failed by failed_when expression %q (underlying command exited 0)", step.FailedWhen)
+	}
+	return fmt.Errorf("command failed with exit code %d", result.Rc)
 }
 
 // executeShellCommand executes the actual shell command and applies
@@ -239,7 +251,7 @@ func (h *Handler) executeShellCommand(ctx actions.Context, step *config.Step, re
 			return rr, oerr
 		}
 		if rr.Failed {
-			return rr, fmt.Errorf("command failed with exit code %d", rr.Rc)
+			return rr, formatStepFailure(step, rr)
 		}
 	}
 	return r, nil
@@ -460,16 +472,18 @@ func (h *Handler) evaluateResultOverrides(ctx actions.Context, step *config.Step
 		result.Changed = boolResult
 	}
 
-	// Evaluate failed_when
+	// Evaluate failed_when. Issue #21: do NOT fabricate Rc=1 to
+	// "signal" failure — that lied to the operator ("command failed
+	// with exit code 1") when the underlying command exited 0. Leave
+	// result.Rc reflecting the actual underlying exit code; the
+	// downstream error-message path detects Rc==0 && Failed==true and
+	// emits a failed-by-failed_when message instead of an exit-code lie.
 	if step.FailedWhen != "" {
 		boolResult, err := h.evaluateBoolExpression(ctx, step.FailedWhen, "failed_when", evalContext)
 		if err != nil {
 			return err
 		}
 		result.Failed = boolResult
-		if result.Failed && result.Rc == 0 {
-			result.Rc = 1
-		}
 	}
 
 	return nil
