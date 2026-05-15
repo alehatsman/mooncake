@@ -258,3 +258,154 @@ func TestRenderXML_AndNormalise_Roundtrip(t *testing.T) {
 		}
 	}
 }
+
+// --- Issue #14: scheduled-task drift unstable across round-trip ----------
+//
+// Task Scheduler stamps registration metadata (Author, Date) and
+// injects defaulted Settings (AllowHardTerminate, IdleSettings, …)
+// on register. Naive XML compare against our rendered desired XML
+// reports false drift every time. NormaliseTaskXML must strip the
+// injected elements before the equality check so plan-after-apply
+// is stable.
+
+func TestNormaliseTaskXML_StripsRegistrationStamps(t *testing.T) {
+	// Live XML as Task Scheduler emits it: stamped Author + Date.
+	live := `<?xml version="1.0"?>
+<Task>
+  <RegistrationInfo>
+    <Author>DESKTOP-X1\aleh</Author>
+    <Date>2026-05-15T17:48:21.1234567</Date>
+    <Description>Test task</Description>
+  </RegistrationInfo>
+</Task>`
+	// Desired XML we rendered: no Author / Date.
+	desired := `<?xml version="1.0"?>
+<Task>
+  <RegistrationInfo>
+    <Description>Test task</Description>
+  </RegistrationInfo>
+</Task>`
+	if NormaliseTaskXML(live) != NormaliseTaskXML(desired) {
+		t.Errorf("Author/Date strip failed:\nLIVE:\n%s\nDESIRED:\n%s",
+			NormaliseTaskXML(live), NormaliseTaskXML(desired))
+	}
+}
+
+func TestNormaliseTaskXML_StripsInjectedSettings(t *testing.T) {
+	// Live: Task Scheduler filled in the Settings defaults we didn't ship.
+	live := `<Task>
+<Settings>
+<AllowHardTerminate>true</AllowHardTerminate>
+<DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries>
+<IdleSettings>
+<StopOnIdleEnd>true</StopOnIdleEnd>
+<RestartOnIdle>false</RestartOnIdle>
+</IdleSettings>
+<MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+<Enabled>true</Enabled>
+</Settings>
+</Task>`
+	// Desired: only Enabled, the one we explicitly emit.
+	desired := `<Task>
+<Settings>
+<Enabled>true</Enabled>
+</Settings>
+</Task>`
+	if NormaliseTaskXML(live) != NormaliseTaskXML(desired) {
+		t.Errorf("Settings strip failed:\nLIVE-norm:\n%s\n---\nDESIRED-norm:\n%s",
+			NormaliseTaskXML(live), NormaliseTaskXML(desired))
+	}
+}
+
+func TestNormaliseTaskXML_HandlesMultilineInjectedSubtree(t *testing.T) {
+	live := `<Task>
+<Settings>
+<IdleSettings>
+<Duration>PT10M</Duration>
+<WaitTimeout>PT1H</WaitTimeout>
+<StopOnIdleEnd>true</StopOnIdleEnd>
+<RestartOnIdle>false</RestartOnIdle>
+</IdleSettings>
+<Enabled>true</Enabled>
+</Settings>
+</Task>`
+	desired := `<Task>
+<Settings>
+<Enabled>true</Enabled>
+</Settings>
+</Task>`
+	gotLive := NormaliseTaskXML(live)
+	if strings.Contains(gotLive, "IdleSettings") {
+		t.Errorf("multi-line IdleSettings subtree not fully stripped:\n%s", gotLive)
+	}
+	if NormaliseTaskXML(live) != NormaliseTaskXML(desired) {
+		t.Errorf("multi-line strip mismatch:\nLIVE-norm:\n%s\n---\nDESIRED-norm:\n%s",
+			NormaliseTaskXML(live), NormaliseTaskXML(desired))
+	}
+}
+
+func TestNormaliseTaskXML_HandlesSelfClosingElement(t *testing.T) {
+	live := `<Task>
+<Settings>
+<Hidden />
+<Enabled>true</Enabled>
+</Settings>
+</Task>`
+	desired := `<Task>
+<Settings>
+<Enabled>true</Enabled>
+</Settings>
+</Task>`
+	if NormaliseTaskXML(live) != NormaliseTaskXML(desired) {
+		t.Errorf("self-closing element not stripped:\nLIVE-norm:\n%s",
+			NormaliseTaskXML(live))
+	}
+}
+
+func TestNormaliseTaskXML_PreservesNonInjectedElements(t *testing.T) {
+	// Negative test: elements NOT in the strip list must survive. URI
+	// is the task identity (user-set); LogonType / Description /
+	// Command etc. are load-bearing.
+	xml := `<Task>
+<RegistrationInfo>
+<URI>\Mooncake-Test</URI>
+<Description>my task</Description>
+</RegistrationInfo>
+<Triggers>
+<BootTrigger>
+<Enabled>true</Enabled>
+</BootTrigger>
+</Triggers>
+<Principals>
+<Principal id="Author">
+<LogonType>S4U</LogonType>
+</Principal>
+</Principals>
+</Task>`
+	got := NormaliseTaskXML(xml)
+	for _, want := range []string{
+		`<URI>\Mooncake-Test</URI>`,
+		`<Description>my task</Description>`,
+		`<BootTrigger>`,
+		`<LogonType>S4U</LogonType>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("non-injected element %q stripped from output:\n%s", want, got)
+		}
+	}
+}
+
+func TestNormaliseTaskXML_LookalikePrefixNotConfused(t *testing.T) {
+	// "AuthorEx" must NOT match the "Author" strip prefix. The strip
+	// helper requires a word-boundary char after the open tag name.
+	xml := `<Task>
+<RegistrationInfo>
+<AuthorEx>not real but tests word-boundary</AuthorEx>
+</RegistrationInfo>
+</Task>`
+	got := NormaliseTaskXML(xml)
+	if !strings.Contains(got, "AuthorEx") {
+		t.Errorf("lookalike element wrongly stripped:\n%s", got)
+	}
+}

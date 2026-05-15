@@ -524,18 +524,81 @@ func xmlEscape(s string) string {
 	return b.String()
 }
 
+// taskSchedulerInjectedElements lists element local-names that the
+// Task Scheduler service ALWAYS rewrites on register, regardless of
+// whether we sent them. Comparing the live XML against the rendered
+// desired XML would always report drift on these (issue #14):
+//
+//   - Author/Date/URI inside <RegistrationInfo> are stamped from the
+//     registering user + the registration timestamp.
+//   - Defaulted Settings the service fills in when we omit them
+//     (AllowHardTerminate, ExecutionTimeLimit, IdleSettings,
+//     NetworkSettings, RestartOnFailure, RunOnlyIfIdle, …).
+//   - <Principal id="Author"> attribute canonicalisation that we
+//     handle separately by leaving Principals untouched.
+//
+// Strip these from BOTH sides of the compare before the string
+// equality check. If the operator declared a value explicitly for
+// one of these in their YAML, our renderer still emits it; both
+// sides drop it during normalisation, which means a user-set
+// value also gets ignored for drift purposes — acceptable because:
+//
+//  1. The service has already applied the explicit value (apply
+//     succeeded), so semantic drift is what we'd be looking for, and
+//  2. Re-applying a wrong value is harmless and idempotent.
+//
+// When more trigger types or settings get added to spec-57's
+// renderer this list will grow. Track via the explicit Set of
+// strip targets so additions are obvious.
+var taskSchedulerInjectedElements = []string{
+	"Author",
+	"Date",
+	// URI intentionally NOT stripped — it's the task identity our
+	// renderer emits deliberately. Task Scheduler may rewrite the
+	// path form (e.g. `\Mooncake` → `\Mooncake\`); a separate
+	// canonicalisation step would be needed for that, beyond
+	// strip-and-compare.
+	"AllowHardTerminate",
+	"AllowStartOnDemand",
+	"DisallowStartIfOnBatteries",
+	"ExecutionTimeLimit",
+	"Hidden",
+	"IdleSettings",
+	"MultipleInstancesPolicy",
+	"NetworkSettings",
+	"Priority",
+	"RestartOnFailure",
+	"RunOnlyIfIdle",
+	"RunOnlyIfNetworkAvailable",
+	"StartWhenAvailable",
+	"StopIfGoingOnBatteries",
+	"UseUnifiedSchedulingEngine",
+	"WakeToRun",
+}
+
 // NormaliseTaskXML produces a canonical form of a Task Scheduler XML
 // document for drift comparison. The XML the cmdlet writes back may:
 //   - Reorder settings elements
 //   - Inject defaults we didn't specify
 //   - Switch between LF and CRLF line endings
+//   - Stamp RegistrationInfo with the registering user + timestamp
 //
 // We solve that by: (a) splitting on element boundaries, (b) dropping
-// whitespace-only lines, (c) trimming each line, (d) sorting elements
-// within <Settings> alphabetically so order-of-elements drift doesn't
-// register as a real diff. <Triggers>/<Actions>/<Principals> stay
-// position-sensitive — order matters there.
+// whitespace-only lines, (c) trimming each line, (d) stripping any
+// element listed in taskSchedulerInjectedElements (handles both the
+// inline `<X>v</X>` form and multi-line `<X>...</X>` subtrees), and
+// (e) sorting elements within <Settings> alphabetically so
+// order-of-elements drift doesn't register as a real diff.
+// <Triggers>/<Actions>/<Principals> stay position-sensitive —
+// order matters there.
+//
+// Issue #14: prior to the strip step, post-apply plan always
+// reported "would update task X" because the live XML carried
+// registration metadata + defaulted Settings that our renderer
+// never emitted. The strip is the deferred canonicalisation
+// step the spec-57 draft (§"Open questions" #2) promised.
 func NormaliseTaskXML(xml string) string {
+	xml = stripInjectedElements(xml, taskSchedulerInjectedElements)
 	xml = strings.ReplaceAll(xml, "\r\n", "\n")
 	lines := strings.Split(xml, "\n")
 	out := make([]string, 0, len(lines))
@@ -566,6 +629,101 @@ func NormaliseTaskXML(xml string) string {
 		out = append(out, trim)
 	}
 	return strings.Join(out, "\n")
+}
+
+// stripInjectedElements removes occurrences of every element listed
+// in names from xml. Handles three element shapes the Task Scheduler
+// emits:
+//
+//   - `<Name>value</Name>` (single line, scalar leaf)
+//   - `<Name attr="…">value</Name>` (single line, scalar with attributes)
+//   - `<Name>...</Name>` spanning multiple lines (compound subtree)
+//   - `<Name attr="…" />` self-closing variant
+//
+// Implementation: per name, scan repeatedly for `<Name` and consume
+// up to the matching `</Name>` (or end of self-closing tag). Strips
+// leading whitespace + the trailing newline of the stripped span so
+// the result doesn't carry a blank line where the element was.
+func stripInjectedElements(xml string, names []string) string {
+	for _, name := range names {
+		xml = stripElement(xml, name)
+	}
+	return xml
+}
+
+// stripElement removes every <name...>...</name> (or self-closing
+// <name ... />) span from xml. Conservative — bails out cleanly on
+// any markup it doesn't recognise rather than chewing past it.
+func stripElement(xml, name string) string {
+	openTag := "<" + name
+	closeTag := "</" + name + ">"
+	var b strings.Builder
+	b.Grow(len(xml))
+	rest := xml
+	for {
+		i := strings.Index(rest, openTag)
+		if i < 0 {
+			b.WriteString(rest)
+			break
+		}
+		// Make sure the open tag matches at a word boundary (so
+		// "<AuthorEx>" doesn't get treated as "<Author"-prefixed).
+		// The next byte after openTag must be one of '>', ' ', '/'
+		// (attribute separator or close), or '\t'.
+		after := i + len(openTag)
+		if after >= len(rest) {
+			b.WriteString(rest)
+			break
+		}
+		c := rest[after]
+		if c != '>' && c != ' ' && c != '/' && c != '\t' && c != '\n' && c != '\r' {
+			// Not a real open tag — emit through and advance past it.
+			b.WriteString(rest[:after])
+			rest = rest[after:]
+			continue
+		}
+
+		// Emit everything before the open tag, minus any trailing
+		// whitespace on the same line (so we don't leave indentation).
+		prefix := rest[:i]
+		if j := strings.LastIndexByte(prefix, '\n'); j >= 0 {
+			b.WriteString(prefix[:j+1])
+		} else {
+			b.WriteString(prefix)
+		}
+
+		// Find the end of this element. Self-closing first.
+		tail := rest[after:]
+		closeIdx := strings.Index(tail, ">")
+		if closeIdx < 0 {
+			// Malformed — emit the rest verbatim and bail.
+			b.WriteString(rest[i:])
+			return b.String()
+		}
+		// Self-closing variant: `<Name ... />`.
+		if closeIdx > 0 && tail[closeIdx-1] == '/' {
+			rest = tail[closeIdx+1:]
+			rest = strings.TrimLeft(rest, " \t")
+			if strings.HasPrefix(rest, "\n") {
+				rest = rest[1:]
+			}
+			continue
+		}
+		// Paired: skip past `<Name ...>` then find `</Name>`.
+		afterOpen := tail[closeIdx+1:]
+		k := strings.Index(afterOpen, closeTag)
+		if k < 0 {
+			// Open without matching close — bail and emit verbatim.
+			b.WriteString(rest[i:])
+			return b.String()
+		}
+		rest = afterOpen[k+len(closeTag):]
+		rest = strings.TrimLeft(rest, " \t")
+		if strings.HasPrefix(rest, "\n") {
+			rest = rest[1:]
+		}
+	}
+	return b.String()
 }
 
 // ----- bool-ptr helpers (Go's stdlib lacks a *bool default helper) ----------
