@@ -45,11 +45,12 @@ type SynthOptions struct {
 	ProcessPattern string
 
 	// observe.http
-	URL            string
-	Method         string
-	ExpectStatus   int
-	CaptureHeaders []string
-	SkipTLSVerify  bool
+	URL             string
+	Method          string
+	ExpectStatus    int
+	CaptureHeaders  []string
+	SkipTLSVerify   bool
+	FollowRedirects *int // nil = default 10; explicit 0 = stop on first 3xx (issue #18)
 
 	// observe.service
 	ServiceName    string
@@ -95,12 +96,13 @@ func Synthesize(opts SynthOptions) ([]byte, error) {
 			return nil, fmt.Errorf("observe.http: url is required")
 		}
 		step.ObserveHTTP = &config.ObserveHTTP{
-			URL:            opts.URL,
-			Method:         opts.Method,
-			Timeout:        opts.Timeout,
-			ExpectStatus:   opts.ExpectStatus,
-			CaptureHeaders: opts.CaptureHeaders,
-			SkipTLSVerify:  opts.SkipTLSVerify,
+			URL:             opts.URL,
+			Method:          opts.Method,
+			Timeout:         opts.Timeout,
+			ExpectStatus:    opts.ExpectStatus,
+			CaptureHeaders:  opts.CaptureHeaders,
+			SkipTLSVerify:   opts.SkipTLSVerify,
+			FollowRedirects: opts.FollowRedirects,
 		}
 	case "service":
 		if opts.ServiceName == "" {
