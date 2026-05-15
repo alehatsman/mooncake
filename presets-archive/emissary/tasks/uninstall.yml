@@ -1,8 +1,0 @@
-- name: Uninstall emissary
-  pkg:
-    name: emissary
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "emissary uninstalled"

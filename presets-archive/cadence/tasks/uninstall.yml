@@ -1,8 +1,0 @@
-- name: Uninstall cadence
-  pkg:
-    name: cadence
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "cadence uninstalled"

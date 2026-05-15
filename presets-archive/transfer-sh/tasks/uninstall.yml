@@ -1,8 +1,0 @@
-- name: Uninstall transfer-sh
-  pkg:
-    name: transfer-sh
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "transfer-sh uninstalled"

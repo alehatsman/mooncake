@@ -1,8 +1,0 @@
-- name: Uninstall tide
-  pkg:
-    name: tide
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "tide uninstalled"

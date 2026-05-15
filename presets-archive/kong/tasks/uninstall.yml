@@ -1,8 +1,0 @@
-- name: Uninstall kong
-  pkg:
-    name: kong
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "kong uninstalled"

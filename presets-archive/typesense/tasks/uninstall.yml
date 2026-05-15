@@ -1,8 +1,0 @@
-- name: Uninstall typesense
-  pkg:
-    name: typesense
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "typesense uninstalled"

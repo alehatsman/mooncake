@@ -1,8 +1,0 @@
-- name: Uninstall beam
-  pkg:
-    name: beam
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "beam uninstalled"

@@ -1,8 +1,0 @@
-- name: Uninstall krakend
-  pkg:
-    name: krakend
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "krakend uninstalled"

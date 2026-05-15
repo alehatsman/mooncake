@@ -1,8 +1,0 @@
-- name: Uninstall zookeeper
-  pkg:
-    name: zookeeper
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "zookeeper uninstalled"

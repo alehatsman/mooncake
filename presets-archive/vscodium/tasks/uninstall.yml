@@ -1,8 +1,0 @@
-- name: Uninstall vscodium
-  pkg:
-    name: vscodium
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "vscodium uninstalled"

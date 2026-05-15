@@ -1,8 +1,0 @@
-- name: Uninstall contour
-  pkg:
-    name: contour
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "contour uninstalled"

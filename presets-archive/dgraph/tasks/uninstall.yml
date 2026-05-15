@@ -1,8 +1,0 @@
-- name: Uninstall dgraph
-  pkg:
-    name: dgraph
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "dgraph uninstalled"

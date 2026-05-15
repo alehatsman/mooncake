@@ -1,8 +1,0 @@
-- name: Uninstall airbyte
-  pkg:
-    name: airbyte
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "airbyte uninstalled"

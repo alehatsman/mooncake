@@ -1,8 +1,0 @@
-- name: Uninstall apisix
-  pkg:
-    name: apisix
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "apisix uninstalled"

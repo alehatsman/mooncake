@@ -1,8 +1,0 @@
-- name: Uninstall dragonfly
-  pkg:
-    name: dragonfly
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "dragonfly uninstalled"

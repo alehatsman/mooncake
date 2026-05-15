@@ -1,8 +1,0 @@
-- name: Uninstall elastic-apm
-  pkg:
-    name: elastic-apm
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "elastic-apm uninstalled"

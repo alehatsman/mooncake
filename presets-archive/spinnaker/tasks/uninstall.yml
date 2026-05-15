@@ -1,8 +1,0 @@
-- name: Uninstall spinnaker
-  pkg:
-    name: spinnaker
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "spinnaker uninstalled"

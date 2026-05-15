@@ -1,8 +1,0 @@
-- name: Uninstall valkey
-  pkg:
-    name: valkey
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "valkey uninstalled"

@@ -1,7 +1,0 @@
-name: gopass
-description: Team password manager with Git synchronization and GPG encryption
-version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
-steps:
-  - {name: Install, import: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, import: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

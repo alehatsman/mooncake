@@ -1,8 +1,0 @@
-- name: Uninstall systat
-  pkg:
-    name: systat
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "systat uninstalled"

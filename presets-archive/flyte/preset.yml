@@ -1,7 +1,0 @@
-name: flyte
-description: Install Flyte CLI - workflow orchestration platform for data and ML pipelines
-version: 1.0.0
-parameters: {state: {type: string, required: false, default: present, enum: [present, absent]}}
-steps:
-  - {name: Install, import: tasks/install.yml, when: 'parameters.state == "present"'}
-  - {name: Uninstall, import: tasks/uninstall.yml, when: 'parameters.state == "absent"'}

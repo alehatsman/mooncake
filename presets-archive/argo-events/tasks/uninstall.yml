@@ -1,8 +1,0 @@
-- name: Uninstall argo-events
-  pkg:
-    name: argo-events
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "argo-events uninstalled"

@@ -1,8 +1,0 @@
-- name: Uninstall fivetran
-  pkg:
-    name: fivetran
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "fivetran uninstalled"

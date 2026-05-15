@@ -1,8 +1,0 @@
-- name: Uninstall tempo
-  pkg:
-    name: tempo
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "tempo uninstalled"

@@ -1,8 +1,0 @@
-- name: Uninstall janusgraph
-  pkg:
-    name: janusgraph
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "janusgraph uninstalled"

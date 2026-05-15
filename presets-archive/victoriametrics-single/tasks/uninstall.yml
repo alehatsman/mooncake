@@ -1,8 +1,0 @@
-- name: Uninstall victoriametrics-single
-  pkg:
-    name: victoriametrics-single
-    state: absent
-  failed_when: false
-
-- name: Display confirmation
-  log: "victoriametrics-single uninstalled"
