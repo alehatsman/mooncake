@@ -442,3 +442,93 @@ breaks it.
 **Fix**: before extracting, walk the archive's entries and check
 whether each target file exists with matching content (or matching
 mode + size as a cheap proxy). Skip if all entries already match.
+
+---
+
+## #47 — `text.*` actions fail-loud on no-match instead of treating as idempotent — MEDIUM
+
+**Repro**:
+
+```
+$ echo "before" > /tmp/tr.txt
+$ mooncake step "text.replace: { path: /tmp/tr.txt, pattern: \"neverthere\", replace: \"x\" }"
+{"error": "no matches found for pattern: neverthere"}
+RECAP failed=1
+```
+
+Same shape for `text.delete_range` (anchor not found), `text.insert`
+(anchor not found).
+
+**Why MEDIUM**: this defeats idempotency at the action level. A
+common second-run scenario for a config-management playbook:
+- Run 1: pattern matches, change applied
+- Run 2: pattern no longer matches (because run 1 changed it), action fails
+
+The workaround `failed_when: false` exists but interacts badly with
+retry (#48) and with `assert`-class actions (#28).
+
+**Fix options**:
+- (a) Add a `must_match: false` flag (opt-in) for "no match = idempotent success".
+- (b) Change default: no-match = success, opt-in `must_match: true` for strict.
+
+(b) matches the idempotency promise better but is a behavior change.
+
+---
+
+## #48 — `retry:` doesn't trigger when `failed_when: false` is set — MEDIUM
+
+**Repro**:
+
+```yaml
+- shell: exit 1
+  retry: { attempts: 3, delay: 200ms }
+  failed_when: false
+```
+
+Debug output:
+```
+▶ retry-fail-3-times
+  Executing: exit 1          ← only 1 attempt
+~ retry-fail-3-times         ← reported "changed" (failed_when masked failure)
+elapsed=92ms                 ← no 600ms retry delay
+```
+
+Without `failed_when: false`:
+```
+  Executing: exit 1
+  Waiting 200ms before retry...
+  Retry attempt 1/3
+  Waiting 200ms before retry...
+  Retry attempt 2/3
+  Waiting 200ms before retry...
+  Retry attempt 3/3
+✗ retry-actually-fails  (command failed after 4 attempts)
+elapsed=606ms
+```
+
+**Why MEDIUM**: `retry:` and `failed_when:` are both step-level
+keys. Users reasonably read `retry: 3, failed_when: false` as
+"try 3 times, but don't fail the run no matter what". The actual
+order is `failed_when` first → if "not failed", no retry. So
+retry never runs.
+
+**Fix**: evaluate order should be **retry → failed_when**. Try N
+times to get success; if all retries fail, *then* apply
+`failed_when` to mask the final result.
+
+---
+
+## #49 — `retry: { attempts: N }` runs N+1 attempts, not N — LOW (semantic clarity)
+
+**Repro** (from #48 above):
+
+```
+attempts: 3 → "Retry attempt 1/3", "2/3", "3/3" → "command failed after 4 attempts"
+```
+
+`attempts:` means "number of *retries* after the initial try", giving
+a total of N+1 executions. Common interpretation but documentation
+should say so explicitly. Ansible's `until: ... retries:` uses the
+same semantics; ours doesn't say.
+
+**Fix**: clarify docs, or rename to `max_retries:` / `extra_attempts:`.

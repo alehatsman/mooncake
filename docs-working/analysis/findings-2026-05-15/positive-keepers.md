@@ -273,6 +273,103 @@ This is what `as_user: root` should be doing under the hood (see
 
 ---
 
+## ★ `mooncake agentd` HTTP daemon — production quality
+
+```
+$ mooncake agentd --bind 127.0.0.1:7878 --no-mdns
+{"time":"...","level":"INFO","msg":"agentd listening","socket":"/tmp/.../agentd.sock","bind":"127.0.0.1:7878","state_dir":"/root/.local/state/mooncake/agentd","token_file":"/root/.config/mooncake/agentd.token",...}
+
+$ TOK=$(cat /root/.config/mooncake/agentd.token)
+$ curl -H "Authorization: Bearer $TOK" http://127.0.0.1:7878/v1/health
+{"status": "ok"}
+$ curl -H "Authorization: Bearer $TOK" http://127.0.0.1:7878/v1/facts | head
+{"apk_available": false, "apt_available": true, ...}
+```
+
+What's great:
+- Bearer-token auth from auto-generated token file
+- Structured JSON request logs with stable `request_id` per request:
+  `{time, level: "INFO", msg: "http", request_id, method, path, status, bytes, duration_ms}`
+- mDNS advertisement, configurable (--no-mdns)
+- TCP bind, Unix socket, both, or socket-only
+- `--system` mode for proper /run/mooncake / /var/lib/mooncake paths
+- Endpoints: `/v1/health`, `/v1/facts`, `/v1/metrics` (and presumably the run/plan endpoints)
+
+This is the substrate for `mooncake fleet` to talk to peers. Solid.
+
+---
+
+## ★ `mooncake fleet` actionable error messages
+
+Without peers configured:
+```
+$ mooncake fleet status
+fleet status: no peers configured. Edit /root/.config/mooncake/peers.toml or run `mooncake fleet bootstrap` / `mooncake fleet pair`.
+
+$ mooncake fleet discover
+no peers configured in peers.toml; no usable hosts in ~/.ssh/config
+hint: `mooncake fleet bootstrap <user@host>` to add the first peer
+```
+
+Every "empty" state has an actionable next step. Matches the
+`mooncake doctor` quality bar.
+
+---
+
+## ★ `observe.*` family — typed observation with consistent schema
+
+9 actions: `observe.{cpu,disk,gpu,http,logs,memory,port,process,service}`.
+
+Consistent result shape:
+```json
+{
+  "as_of": "<timestamp>",
+  "found": true,
+  "value": { ...action-specific structured data... },
+  "failed": false,
+  "status": "ok"
+}
+```
+
+`observe.port`:  `{host, local_addr, open: bool, port, protocol}`
+`observe.process`: `{args, pid, pids, running}`
+`observe.http`: `{latency_ms, method, reachable, status_code, url}`
+`observe.cpu`: `{cores, idle_pct, load_15m, load_1m, load_5m, usage_pct}`
+`observe.disk`: `{free_bytes, inodes_total, inodes_used, path, total_bytes, used_bytes}`
+
+This is the typed-observation primitive spec-59 promised. Live, fast,
+schema-stable. The agent-loop read-side that the rest of the action
+surface needs.
+
+---
+
+## ★ `text.line` — properly idempotent
+
+```yaml
+- text.line: { path: /tmp/file, line: "baz=3", state: present }
+```
+
+Run 2: `changed: false` — line already present, no duplicate
+appended. Gold standard for "ensure line exists" semantics; other
+text.* actions should mirror this idempotency story (see #47).
+
+---
+
+## ★ `text.delete_range` validation error format — best in the CLI
+
+```
+{
+  "error": "validation failed for text.delete_range action: start_anchor is required\n\nThe 'text.delete_range' action: Delete text between start and end anchor patterns in files\n\nRequired parameters:\n  - end_anchor: string\n  - path: string\n  - start_anchor: string ← MISSING\n\nOptional parameters:\n  - backup: boolean\n  - inclusive: boolean\n  - regex: boolean\n"
+}
+```
+
+Lists required/optional params with types and `← MISSING` annotation
+on the offending one. **Port this template to every action's
+validation error path.** Currently only some actions hit this quality
+bar.
+
+---
+
 ## Don't regress
 
 Anything in this file is a feature that works today. Every refactor
