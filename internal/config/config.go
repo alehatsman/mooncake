@@ -1043,7 +1043,7 @@ type RepoTree struct {
 	MaxDepth   *int     `yaml:"max_depth" json:"max_depth,omitempty"`           // Maximum directory depth (null = unlimited)
 	ExcludeDirs []string `yaml:"exclude_dirs" json:"exclude_dirs,omitempty"`    // Directories to exclude (e.g., ["node_modules", ".git"])
 	OutputFile string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
-	IncludeFiles bool    `yaml:"include_files" json:"include_files,omitempty"`  // Include files in tree (default: true)
+	IncludeFiles *bool   `yaml:"include_files" json:"include_files,omitempty"`  // Include files in tree (default: true; explicit false opts out)
 }
 
 // RepoApplyPatchset represents a multi-file patch application operation.
