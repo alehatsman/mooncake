@@ -65,7 +65,9 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 31 tier2-plugin-model
 
 **Bugs**
-None open.
+
+- [Cross-device EXDEV in `fleet upgrade` linux replace](analysis/bug-fleet-upgrade-exdev-rename.md) — `os.Rename` from `/var/lib/.../upgrade/` to `/usr/local/bin/` fails on WSL / multi-fs hosts. Fall back to copy+remove on EXDEV.
+- [`windows.firewall_rule` corrupts non-ASCII via ConvertTo-Json](analysis/bug-windows-firewall-utf8-encoding.md) — PowerShell's default OEM codepage maps non-ASCII bytes to `0x1a` on stdout, breaking the action's drift-detection query. Force UTF-8 output in `realPSRun`.
 
 ## Shipped specs (specs/done/)
 
