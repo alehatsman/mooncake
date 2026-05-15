@@ -3,30 +3,83 @@ package pkg_hold
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
-// Reverse implements actions.Reverser for pkg.hold (spec-22 phase 5 /
-// spec-24 P6).
+// PkgHoldReverseInfo is the per-step apply-time snapshot pkg.hold
+// stashes on Result.ReverseData. Captures the manager and the
+// direction the apply went (Held vs Unheld) plus the exact list of
+// package names that were actually flipped. The flipped set
+// excludes packages already in the desired pre-apply state — a
+// state=held step targeting 10 names but finding 6 already held
+// only stores the 4 it actually flipped, so reverse unholds
+// exactly those 4.
 //
-// The inverse is trivial in shape — toggle held↔unheld on the same
-// names — but a safe Reverse still wants apply-time capture of which
-// packages were actually flipped (a state=held step that finds N of
-// M already-held only flips M-N; reverse should unhold exactly those
-// M-N, not all M). That capture requires Run() to thread a typed
-// Result the way the legacy package handler's PkgReverseInfo does.
-// Tracked as a spec-24 P6 follow-up. Until then the refusal keeps
-// the convention consistent with pkg.repo / git.config.
-func (Handler) Reverse(_ actions.Context, step *config.Step, _ actions.Result) (*config.Step, error) {
+// Mutually-exclusive direction: PkgHold.State pins one direction
+// per step, so we never have a mixed payload here. Reverse just
+// flips AppliedState.
+type PkgHoldReverseInfo struct {
+	// Manager is the package manager the apply ran against. v1 is
+	// always "apt"; preserved so a future multi-manager rollout
+	// reverses against the same manager rather than re-detecting.
+	Manager string
+
+	// AppliedState is the step's State at apply time: "held" or
+	// "unheld". Determines the inverse direction.
+	AppliedState string
+
+	// Mutated is the list of package names that the apply
+	// actually flipped. nil/empty means the step was a no-op and
+	// Reverse will return (nil, nil) per the contract.
+	Mutated []string
+}
+
+// Reverse implements actions.Reverser for pkg.hold (spec-24 P6 /
+// reverse-capture v2).
+//
+// Returns a pkg.hold step with the inverse state on the captured
+// Mutated names. Edge cases:
+//   - ReverseData nil → apply was a noop (everything already at
+//     desired state), return (nil, nil).
+//   - Empty Mutated list → noop, same.
+//   - Step has no PkgHold payload or result is wrong type →
+//     defensive error.
+func (Handler) Reverse(_ actions.Context, step *config.Step, result actions.Result) (*config.Step, error) {
 	if step == nil || step.PkgHold == nil {
 		return nil, errors.New("pkg.hold Reverse: step has no PkgHold payload")
 	}
-	return nil, errors.New( //nolint:staticcheck
-		"pkg.hold Reverse: not yet implemented. Apply-time capture of " +
-			"actually-flipped package names is needed to avoid over- or " +
-			"under-toggling on rollback. Tracked in spec-24 P6 follow-up.")
+
+	r, ok := result.(*executor.Result)
+	if !ok || r == nil {
+		return nil, fmt.Errorf("pkg.hold Reverse: expected *executor.Result, got %T", result)
+	}
+	if r.ReverseData == nil {
+		return nil, nil
+	}
+	info, ok := r.ReverseData.(*PkgHoldReverseInfo)
+	if !ok {
+		return nil, fmt.Errorf("pkg.hold Reverse: ReverseData is %T, want *PkgHoldReverseInfo", r.ReverseData)
+	}
+	if len(info.Mutated) == 0 {
+		return nil, nil
+	}
+
+	inverse := stateHeld
+	if info.AppliedState == stateHeld {
+		inverse = stateUnheld
+	}
+
+	return &config.Step{
+		PkgHold: &config.PkgHold{
+			Names:   append([]string(nil), info.Mutated...),
+			State:   inverse,
+			Manager: info.Manager,
+		},
+	}, nil
 }
 
 var _ actions.Reverser = (*Handler)(nil)

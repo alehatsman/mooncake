@@ -8,6 +8,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -102,10 +103,83 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_Refuses(t *testing.T) {
+func TestReverse_HeldFlipsToUnheld(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{PkgHold: &config.PkgHold{Name: "git"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &PkgHoldReverseInfo{
+		Manager:      "apt",
+		AppliedState: "held",
+		Mutated:      []string{"git", "vim"},
+	}
+	rev, err := h.Reverse(nil, &config.Step{PkgHold: &config.PkgHold{Names: []string{"git", "vim"}, State: "held"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.PkgHold == nil {
+		t.Fatal("Reverse must return a pkg.hold step")
+	}
+	if rev.PkgHold.State != "unheld" {
+		t.Errorf("rev.State = %s, want unheld", rev.PkgHold.State)
+	}
+	if len(rev.PkgHold.Names) != 2 || rev.PkgHold.Names[0] != "git" || rev.PkgHold.Names[1] != "vim" {
+		t.Errorf("rev.Names = %v, want [git vim]", rev.PkgHold.Names)
+	}
+	if rev.PkgHold.Manager != "apt" {
+		t.Errorf("rev.Manager = %s, want apt", rev.PkgHold.Manager)
+	}
+}
+
+func TestReverse_UnheldFlipsToHeld(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &PkgHoldReverseInfo{
+		Manager:      "apt",
+		AppliedState: "unheld",
+		Mutated:      []string{"openssh-server"},
+	}
+	rev, _ := h.Reverse(nil, &config.Step{PkgHold: &config.PkgHold{Name: "openssh-server", State: "unheld"}}, r)
+	if rev == nil || rev.PkgHold.State != "held" {
+		t.Errorf("rev.State = %v, want held", rev)
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	// No ReverseData → apply was a noop (everything already in
+	// desired state). Reverse returns (nil, nil).
+	step, err := h.Reverse(nil, &config.Step{PkgHold: &config.PkgHold{Name: "git"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil step; got %+v", step)
+	}
+}
+
+func TestReverse_EmptyMutatedIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &PkgHoldReverseInfo{Manager: "apt", AppliedState: "held"}
+	step, _ := h.Reverse(nil, &config.Step{PkgHold: &config.PkgHold{Name: "git"}}, r)
+	if step != nil {
+		t.Errorf("Reverse on empty Mutated must return nil; got %+v", step)
+	}
+}
+
+func TestReverse_NilStep(t *testing.T) {
+	h := Handler{}
+	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong type"
+	_, err := h.Reverse(nil, &config.Step{PkgHold: &config.PkgHold{Name: "git"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

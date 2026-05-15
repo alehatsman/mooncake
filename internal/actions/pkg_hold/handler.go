@@ -163,6 +163,21 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-mutation state for Reverse() BEFORE shelling out.
+	// toHold + toUnhold are mutually exclusive (the step's State
+	// pins direction), so one of them is empty and Mutated is just
+	// the flipped set. AppliedState records which direction the
+	// apply went so Reverse can return the inverse.
+	mutated := toHold
+	if len(toUnhold) > 0 {
+		mutated = toUnhold
+	}
+	result.ReverseData = &PkgHoldReverseInfo{
+		Manager:      manager,
+		AppliedState: state,
+		Mutated:      append([]string(nil), mutated...),
+	}
+
 	if len(toHold) > 0 {
 		if err := aptMarkHold(toHold); err != nil {
 			return result, fmt.Errorf("pkg.hold: apt-mark hold: %w", err)
