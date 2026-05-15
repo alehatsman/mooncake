@@ -174,3 +174,75 @@ steps:
 		t.Errorf("err should signal validation failure; got: %v", err)
 	}
 }
+
+// --- Issue #23: continue_on_error: true on a try compound -----------------
+//
+// `continue_on_error` is a universal Step field. Before the fix, it was
+// silently dropped on `try:` compound steps — the inner failure ran
+// through catch/finally as expected, then halted the outer run instead
+// of tolerating per the operator's directive.
+
+func TestTry_ContinueOnError_LetsRunProceed(t *testing.T) {
+	dir := t.TempDir()
+	catchMark := filepath.Join(dir, "catch-ran")
+	afterMark := filepath.Join(dir, "after-ran")
+	badPath := "/dev/null/x"
+
+	yaml := `version: "1.0"
+steps:
+  - name: deploy
+    continue_on_error: true
+    try:
+      - file.write: { path: ` + badPath + `, content: bad }
+    catch:
+      - file.write: { path: ` + catchMark + `, content: catch }
+
+  - name: after
+    file.write: { path: ` + afterMark + `, content: after }
+`
+	err := runConfig(t, yaml)
+	if err != nil {
+		t.Fatalf("expected apply to succeed with continue_on_error on the compound; got %v", err)
+	}
+	// Catch ran (handled the failure).
+	if _, err := os.Stat(catchMark); err != nil {
+		t.Errorf("expected catch to run; %s missing: %v", catchMark, err)
+	}
+	// The next top-level step ran.
+	if _, err := os.Stat(afterMark); err != nil {
+		t.Errorf("expected after-try step to run when continue_on_error was set on the compound; %s missing: %v", afterMark, err)
+	}
+}
+
+func TestTry_NoContinueOnError_HaltsAsBefore(t *testing.T) {
+	// Negative: without continue_on_error, the existing TestTry_FailurePath
+	// behavior is preserved. Confirms the swallow is opt-in.
+	dir := t.TempDir()
+	catchMark := filepath.Join(dir, "catch-ran")
+	afterMark := filepath.Join(dir, "after-ran")
+	badPath := "/dev/null/x"
+
+	yaml := `version: "1.0"
+steps:
+  - name: deploy
+    try:
+      - file.write: { path: ` + badPath + `, content: bad }
+    catch:
+      - file.write: { path: ` + catchMark + `, content: catch }
+
+  - name: after
+    file.write: { path: ` + afterMark + `, content: after }
+`
+	err := runConfig(t, yaml)
+	if err == nil {
+		t.Fatal("expected error to propagate without continue_on_error")
+	}
+	// Catch still fires (the inner failure-handling path is untouched).
+	if _, err := os.Stat(catchMark); err != nil {
+		t.Errorf("expected catch to run regardless; %s missing: %v", catchMark, err)
+	}
+	// The after step must NOT have run.
+	if _, err := os.Stat(afterMark); err == nil {
+		t.Errorf("after-try step must NOT run without continue_on_error; %s exists", afterMark)
+	}
+}
