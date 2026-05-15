@@ -1,15 +1,25 @@
 # Spec 24: `pkg.*` Surface — install / remove / repo
 
-**Status:** Phases 1–6 complete + pkg.hold reverse-capture shipped.
-P1–P5 shipped earlier (pkg.install + pkg.repo + pkg.hold + pkg.upgrade
-+ pkg.list). **Phase 6 (spec-22 ABI hooks) shipped**: Permissions /
-Diff / Cost / Reverse declared on all four sibling handlers.
-**Reverse-capture v2 shipped for `pkg.hold`**: Run captures
-`{Manager, AppliedState, Mutated[]}` into `PkgHoldReverseInfo` on
-`Result.ReverseData`; Reverse flips state on the captured-mutation
-set. `pkg.repo` Reverse still refuses pending apply-time
-sources.list.d capture (own follow-up); pkg.upgrade is irreversible
-by design; pkg.list deliberately opts out of Reverser (read-only).
+**Status:** Phases 1–6 complete + pkg.hold + pkg.repo reverse-
+capture shipped. P1–P5 shipped earlier (pkg.install + pkg.repo +
+pkg.hold + pkg.upgrade + pkg.list). **Phase 6 (spec-22 ABI hooks)
+shipped**: Permissions / Diff / Cost / Reverse declared on all four
+sibling handlers.
+
+Reverse-capture progression:
+
+- **pkg.hold** (v2): captures `{Manager, AppliedState, Mutated[]}`
+  in `PkgHoldReverseInfo` on `Result.ReverseData`; Reverse flips
+  state on the captured-mutation set.
+- **pkg.repo** (v4): captures `{Name, SourcesPath, KeyringPath,
+  PriorExisted, PriorContent}`; Reverse emits a cross-action
+  `file.write` step that restores the prior sources file
+  byte-faithfully (state=absent if no prior, state=file with prior
+  content otherwise). Documented scope: keyring file is NOT
+  reverted (operator must clean it up separately via file.write
+  absent against the captured KeyringPath — a benign orphaned
+  keyring file is left as-is). `pkg.upgrade` is irreversible by
+  design; `pkg.list` deliberately opts out of Reverser (read-only).
 Phase 7 (docs) remains.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** M (1–2 weeks)

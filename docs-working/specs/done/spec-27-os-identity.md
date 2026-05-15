@@ -1,19 +1,26 @@
 # Spec 27: `os.*` Identity — user, group, ssh_key
 
-**Status:** Phases 1–4 complete + os.user/os.group reverse-capture
-shipped. P1–P3 shipped earlier (os.user, os.group, os.ssh_key core).
-**Phase 4 (spec-22 ABI hooks) shipped**: Permissions / Diff / Cost /
-Reverse declared on all three handlers using the testutil helpers
-from spec-24 P6. **Reverse-capture v3 shipped for `os.user` +
-`os.group`**: Run captures the getent snapshot (uid, gid, shell,
-home, comment, supplementary groups for os.user; gid for os.group)
-into typed `*ReverseInfo` on `Result.ReverseData`; Reverse builds an
-inverse step that either removes (state=absent) or restores
-(state=present with captured fields). Best-effort caveats for
-os.user documented inline: password hash is lost on userdel, home
-dir contents are gone if remove_home=true. `os.ssh_key` Reverse
-still refuses pending its own authorized_keys-content capture
-(own follow-up). Phase 5 (docs + examples) remains.
+**Status:** Phases 1–4 complete + reverse-capture shipped on all
+three handlers. P1–P3 shipped earlier (os.user, os.group, os.ssh_key
+core). **Phase 4 (spec-22 ABI hooks) shipped**: Permissions / Diff /
+Cost / Reverse declared on all three handlers using the testutil
+helpers from spec-24 P6.
+
+Reverse-capture progression:
+
+- **os.user** + **os.group** (v3): getent passwd / getent group
+  snapshot stashed on Result.ReverseData; Reverse builds an inverse
+  step that either removes (state=absent) or restores (state=present
+  with captured fields). Best-effort caveats for os.user inlined:
+  password hash lost on userdel; home dir contents gone if
+  remove_home=true.
+- **os.ssh_key** (v4): authorized_keys file content captured pre-
+  apply (path + user + prior bytes); Reverse emits a cross-action
+  `file.write` step (state=absent if no prior file, state=file with
+  prior content + mode 0600 + owner=user otherwise).
+
+All three of spec-27's handlers now have real (capture-backed) Reverse.
+Phase 5 (docs + examples) remains.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** M (1 week)
 **Value:** High. "Set up a server" is the canonical Mooncake use case

@@ -151,6 +151,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE applyPlan.
+	// computePlan already read the fstab + mount table; re-read
+	// here is cheap and keeps the capture isolated from the plan
+	// struct internals.
+	result.ReverseData = captureReverseInfo(rendered.dest, plan.touchesFstab, plan.doMount, plan.doUmount)
+
 	if err := applyPlan(plan, rendered); err != nil {
 		return result, err
 	}
@@ -271,7 +277,7 @@ type mountPlan struct {
 func computePlan(r renderedMount) (mountPlan, error) {
 	plan := mountPlan{dest: r.dest, backup: r.backup}
 
-	fstabContent, _, err := readFstab()
+	fstabContent, err := readFstab()
 	if err != nil {
 		return plan, err
 	}
@@ -478,17 +484,20 @@ func applyPlan(plan mountPlan, r renderedMount) error {
 	return nil
 }
 
-// readFstab returns the file content, whether it existed, and any
-// stat error other than ENOENT.
-func readFstab() (string, bool, error) {
+// readFstab returns the file content and any stat error other than
+// ENOENT (which is treated as "empty fstab"). The original signature
+// also returned a "did exist" bool but no caller used it — fstab
+// missing on Linux is so rare we treat both cases (missing / empty)
+// the same way at the consumer level.
+func readFstab() (string, error) {
 	data, err := os.ReadFile(mountPaths.fstab)
 	if errors.Is(err, fs.ErrNotExist) {
-		return "", false, nil
+		return "", nil
 	}
 	if err != nil {
-		return "", false, fmt.Errorf("read %s: %w", mountPaths.fstab, err)
+		return "", fmt.Errorf("read %s: %w", mountPaths.fstab, err)
 	}
-	return string(data), true, nil
+	return string(data), nil
 }
 
 // readMounts parses /proc/mounts (or the stubbed equivalent). On

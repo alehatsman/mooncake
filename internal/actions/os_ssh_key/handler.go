@@ -168,6 +168,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE writeAuthorizedKeys.
+	// existing + fileExists are the snapshot; rebuilding the byte-
+	// faithful content from the line slice mirrors what readAuthorizedKeys
+	// stripped.
+	result.ReverseData = &OsSSHKeyReverseInfo{
+		Path:         path,
+		User:         username,
+		PriorExisted: fileExists,
+		PriorContent: priorContentBytes(existing, fileExists),
+	}
+
 	uid, gid, ownerLookupErr := lookupOwnership(username)
 	if err := writeAuthorizedKeys(path, plan.lines, uid, gid, !fileExists); err != nil {
 		return result, fmt.Errorf("os.ssh_key: write: %w", err)

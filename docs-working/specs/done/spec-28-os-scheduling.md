@@ -19,11 +19,19 @@ shipped for two handlers so far:
   Returns a defensive error when the apply mutated runtime but no
   prior runtime value was readable.
 
-Reverse on the other three (os.systemd, os.mount, os.firewall)
-still refuses pending each handler's apply-time capture (own
-follow-up). Phase 7 (docs + non-ufw firewall drivers + macOS
-launchd if added later) is the only outstanding work; non-ufw
-drivers remain deferred per the spec's original scope.
+- **os.mount** (v4): captures `{Dest, PriorEntry, PriorMounted,
+  TouchedFstab, TouchedMount}` (where `PriorEntry` snapshots the
+  fstab line — Src, FSType, Options, Dump, Pass). Reverse builds an
+  os.mount inverse step picking state=mounted / fstab_only / absent
+  based on the captured (entry, mounted) tuple. Refuses the rare
+  case "manually mounted with no fstab entry" since os.mount can't
+  express it.
+
+Reverse on the other two (os.systemd, os.firewall) still refuses
+pending each handler's apply-time capture (own follow-up). Phase 7
+(docs + non-ufw firewall drivers + macOS launchd if added later) is
+the only outstanding work; non-ufw drivers remain deferred per the
+spec's original scope.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** L (2 weeks)
 **Value:** Medium-high. Closes the "remaining OS config" gap. Less
