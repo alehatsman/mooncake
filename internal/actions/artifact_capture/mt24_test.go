@@ -2,6 +2,8 @@ package artifact_capture
 
 import (
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/events"
 )
 
 // TestMT24_UserVarsOnly_StripsFacts is a regression test for manual-test
@@ -40,6 +42,62 @@ func TestMT24_UserVarsOnly_NilOnEmpty(t *testing.T) {
 	}
 	if got := userVarsOnly(map[string]interface{}{}); got != nil {
 		t.Errorf("userVarsOnly(empty) = %v, want nil", got)
+	}
+}
+
+// MT-24: the headline reproducer was "Captured 0 file changes" after
+// inner steps did mutate the filesystem. Root cause: ChannelPublisher
+// dispatches OnEvent on a per-subscriber goroutine, so events emitted
+// while inner steps run could still be queued when artifact_capture
+// reads tracker.GetFileChanges(). The handler now calls
+// EventPublisher.Flush() before reading. This test pins that
+// contract: publish + Flush + read sees every event.
+func TestMT24_TrackerCapturesEventsAfterFlush(t *testing.T) {
+	pub := events.NewPublisher()
+	defer pub.Close()
+
+	tracker := newFileChangeTracker()
+	pub.Subscribe(tracker)
+
+	// Simulate what file.write emits on a creation: EventFileCreated
+	// with FileOperationData.
+	for _, p := range []string{"/tmp/a.txt", "/tmp/b.txt", "/tmp/c.txt"} {
+		pub.Publish(events.Event{
+			Type: events.EventFileCreated,
+			Data: events.FileOperationData{Path: p, SizeBytes: 4},
+		})
+	}
+	// A single update + a template-render to cover the other two
+	// branches in OnEvent.
+	pub.Publish(events.Event{
+		Type: events.EventFileUpdated,
+		Data: events.FileOperationData{Path: "/tmp/a.txt", SizeBytes: 8},
+	})
+	pub.Publish(events.Event{
+		Type: events.EventTemplateRender,
+		Data: events.TemplateRenderData{DestPath: "/tmp/rendered.txt", SizeBytes: 16},
+	})
+
+	// Without Flush, the tracker (running on a per-subscriber goroutine)
+	// may not yet have seen these events — exactly the original bug.
+	pub.Flush()
+
+	got := tracker.GetFileChanges()
+	if len(got) != 5 {
+		t.Fatalf("tracker recorded %d changes after Flush, want 5", len(got))
+	}
+
+	// Sanity-check the operation strings so the JSON consumer can
+	// distinguish created/updated/template.
+	wantOps := map[string]int{"created": 3, "updated": 1, "template": 1}
+	gotOps := map[string]int{}
+	for _, c := range got {
+		gotOps[c.Operation]++
+	}
+	for op, want := range wantOps {
+		if gotOps[op] != want {
+			t.Errorf("op %q count = %d, want %d", op, gotOps[op], want)
+		}
 	}
 }
 
