@@ -351,6 +351,21 @@ export interface LogAction {
 }
 
 /**
+ * Single-shot read of CPU utilization + load averages
+ * @category system
+ */
+export interface ObserveCpuAction {
+}
+
+/**
+ * Single-shot read of filesystem space / inode usage for a path
+ * @category system
+ */
+export interface ObserveDiskAction {
+  path?: string;
+}
+
+/**
  * Single-shot HTTP GET; returns typed status, latency, headers, body sample
  * @category network
  */
@@ -361,6 +376,13 @@ export interface ObserveHttpAction {
   skip_tls_verify?: boolean;
   timeout?: string;
   url: string;
+}
+
+/**
+ * Single-shot read of memory + swap state (total/used/free/available)
+ * @category system
+ */
+export interface ObserveMemoryAction {
 }
 
 /**
@@ -1253,10 +1275,22 @@ export interface Step {
    */
   log?: LogAction;
   /**
+   * Single-shot read of CPU utilization + load averages
+   */
+  "observe.cpu"?: ObserveCpuAction;
+  /**
+   * Single-shot read of filesystem space / inode usage for a path
+   */
+  "observe.disk"?: ObserveDiskAction;
+  /**
    * Single-shot HTTP GET; returns typed status, latency, headers, body
    * sample
    */
   "observe.http"?: ObserveHttpAction;
+  /**
+   * Single-shot read of memory + swap state (total/used/free/available)
+   */
+  "observe.memory"?: ObserveMemoryAction;
   /**
    * Single-shot read of TCP/UDP port state (open? listener? pid?)
    */
