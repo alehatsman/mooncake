@@ -2,6 +2,7 @@
 
 **Date:** 2026-05-15
 **Source:** [`2026-05-15-arch-report.md`](./2026-05-15-arch-report.md)
+**Anchor:** [`../vision/kernel.md`](../vision/kernel.md)
 **Status:** Ready for execution. All bug-fix work paused; this is the
 next phase.
 
@@ -14,23 +15,48 @@ parallel-safe. Phases are gated on the prior phase landing.
 
 ## 0. Premise
 
-The arch report identified four structural pressure points:
+**What this plan actually does: expose the kernel.**
 
-1. `cmd/` carries application services (largest package, gocyclo
-   concentration).
-2. `internal/executor` accreting eight runtime concerns into one
-   package.
-3. `internal/config/config.go` monotonic growth (closed-action-set
-   cost — *watch only*).
-4. Handler proliferation tail (*watch only*).
+The kernel — typed mutation with Diff / Reverse / Cost / Permissions
+on every node — already exists, scattered across
+`internal/{plan, executor, actions, effects, runlog, events, facts}`.
+See [`vision/kernel.md`](../vision/kernel.md) for the canonical
+positioning.
+
+What's missing is the **exported entry-point surface**. Today, every
+frontend (CLI, MCP server, agent loop, agentd, fleet) re-implements
+parts of the kernel's orchestration because there's no `Kernel.Apply()`
+to call. `fleetApplyAction` in `cmd/fleet.go` is the kernel's "apply
+to many peers" entry point trapped inside a CLI handler. The MCP
+server does it differently. The agent loop does it differently again.
+
+The arch report identified four structural pressure points; this
+plan reads them through the kernel lens:
+
+| Pressure point | Kernel lens |
+|---|---|
+| 1. `cmd/` carries application services | Kernel entry points trapped in CLI handlers |
+| 2. `internal/executor` accreting eight runtime concerns | Kernel sub-systems unexported, all glued to the dispatcher |
+| 3. `internal/config/config.go` monotonic growth (*watch only*) | The closed action set — paying the cost is what makes the kernel typed end-to-end |
+| 4. Handler proliferation tail (*watch only*) | The kernel grows by adding handlers; the soft cap (1500 LOC) keeps it tractable |
 
 Pressure points 3 and 4 are explicitly **don't-act**. This plan
-addresses 1 and 2.
+addresses 1 and 2 — by name, they're the **frontend duplication
+problem** and the **unexported kernel sub-system problem**.
 
-The execution principle: **prove the pattern with the smallest, lowest-
-risk extraction first** (Phase 0 + 1), then propagate (Phase 2). Each
-move is a pure relocation with no behavior change — the work is
-mechanical and reviewable in a single sitting.
+**Decision on ChangeGraph (locked):** ChangeGraph is a **derived
+view, not a new package**. The plan stays `[]Step` with implicit
+edges (`TriggeredBy`, `Try/Catch/Finally`, `Transaction`,
+`Reverse()`); future consumers (`explain`, `plan --format graph`,
+`rewind`) materialize per-consumer views from those existing fields.
+This plan does **not** introduce an `internal/changegraph` package.
+See [§8 Anti-scope](#8-anti-scope--what-this-plan-does-not-do).
+
+The execution principle: **prove the pattern with the smallest,
+lowest-risk extraction first** (Phase 0 + 1), then propagate
+(Phase 2). Each move is a pure relocation — every test that passes
+before passes after — but the *exported names* now describe the
+kernel rather than the CLI handler the code happened to grow up in.
 
 ---
 
@@ -67,12 +93,16 @@ worktree workflow before the bigger cmd extractions.
 **Source:** arch report §3.2, recommendation 2.
 
 **Motivation:** Compound-step state machines (transaction LIFO
-rollback, try/catch/finally branch routing) are *distinct* from leaf-
-step dispatch. They sit in `internal/executor/` for historical reasons,
-not because they share state with `ExecuteStep`. Promoting them out
-shrinks executor toward its actual responsibility (dispatch + step
-lifecycle + result capture) and sets the precedent for further
-executor splits.
+rollback, try/catch/finally branch routing) are kernel primitives —
+they describe **graph-shape concepts** that any future ChangeGraph
+view will surface (grouping subgraph for `transaction`, branch edges
+for `try/catch`). Today they sit inside `internal/executor/` for
+historical reasons, glued to `ExecuteStep`. Exposing them as
+`internal/control` is the first kernel sub-system promotion:
+frontends that want to reason about compound steps (drift
+auto-remediation, the future `apply_approved` MCP two-phase apply,
+`explain` walking from a failed transaction back to its body) call
+into `internal/control` directly, not into the executor's internals.
 
 **Files touched:**
 - Move `internal/executor/transaction.go` → `internal/control/transaction.go`
@@ -146,12 +176,15 @@ package) and was a "leaked" executor responsibility.
 
 **Source:** arch report §3.2 table.
 
-**Motivation:** `!secret` typed-ref resolution is a *pre-execute walk*
-over the step tree. It's used today by the executor; it's exactly the
-kind of thing the MCP server (`internal/mcp`) and the agent loop
-(`internal/agent`) would want to call before submitting a plan,
-without dragging in 3,270 LOC of executor. Promoting it to its own
-package unlocks that reuse.
+**Motivation:** `!secret` typed-ref resolution is the kernel's
+**pre-execute walk** — a pure traversal over the typed plan that
+resolves typed refs against the configured providers. Frontends
+that want to pre-process a plan before submission (MCP `check_plan`,
+agent loop's "validate before propose," future `apply_approved`
+hash-then-sign flow) need this walk callable without dragging in
+3,270 LOC of executor. Promoting it to `internal/secrets/resolver`
+exposes it as a kernel service: input typed plan + provider set →
+output typed plan with refs resolved.
 
 **Files touched:**
 - Move `internal/executor/secret_resolve.go` → `internal/secrets/resolver/resolve.go`
@@ -222,19 +255,63 @@ each time.
 
 ## 3. Phase 1 — Prove the cmd-extraction pattern
 
-### R1.1 — Extract `internal/apply.Runner` out of `cmd.run`
+### R1.1 — Extract `internal/apply.Runner` out of `cmd.run` (the kernel's `Apply()` entry point)
 
 **Source:** arch report §3.1, recommendation 4.
 
 **Motivation:** `cmd.run` (`cmd/mooncake.go:236`, gocyclo **33**) is
-the local-apply dispatcher. Today it does: config resolution, vars
-layering, tag filtering, plan building, plan-or-execute selection,
-artifacts writing, run audit. None of that is "CLI parse → call →
-render." The MCP server (`internal/mcp`) wants this path; today it
-can't have it.
+the kernel's `Apply()` entry point **trapped inside a CLI handler**.
+It does: config resolution, vars layering, tag filtering, plan
+building, plan-or-execute selection, artifacts writing, run audit.
+None of that is "CLI parse → call → render." The MCP server
+(`internal/mcp`) needs this entry point; today it can't have it and
+re-implements parts. Exposing `internal/apply` is the first
+materialization of the kernel API surface from
+[`vision/kernel.md`](../vision/kernel.md): a single function any
+frontend calls to compile → inspect → apply → audit a typed plan.
 
 **Goal:** turn `cmd.run` into a thin shim that builds a
-`*apply.Config` from CLI flags and calls `apply.NewRunner(cfg).Run()`.
+`*apply.Config` from CLI flags and calls
+`apply.NewRunner(cfg).Run()`. The runner returns a typed
+`*KernelResult` (see API contract below) that carries the kernel
+shape forward — plan + per-step results + audit substrate + a
+`Reverse()` method — so the *next* frontend to call this (explain,
+rewind, MCP `apply_approved`) doesn't have to re-derive any of it.
+
+**API contract (locked decision, Option 2 from kernel discussion):**
+
+```go
+package apply
+
+type Runner struct{ /* …configured from Config… */ }
+
+func NewRunner(cfg *Config) *Runner { ... }
+
+// Run executes the typed plan against the local system and returns
+// a KernelResult carrying everything a downstream frontend needs.
+func (r *Runner) Run(ctx context.Context) (*KernelResult, error)
+
+// KernelResult is the kernel's typed "what just happened" shape.
+// Designed to be the input to other kernel entry points (Reverse,
+// Explain) and to MCP/SDK consumers without further re-derivation.
+type KernelResult struct {
+    Plan    *plan.Plan          // the typed plan that was executed
+    Steps   []executor.StepResult // per-step outcome (changed/failed/skipped/diff/cost/etc)
+    Events  []events.Event      // audit substrate — the run's event tail
+    Summary RunSummary          // ok/changed/skipped/failed counts + duration
+}
+
+// Reverse builds the inverse plan from this run's ReverseData.
+// Returns the empty plan if nothing was reversible.
+func (r *KernelResult) Reverse() (*plan.Plan, error)
+```
+
+The `Reverse()` method is the load-bearing add. Today, building a
+reverse plan from a completed run is **not exposed as a kernel
+operation** — `transaction:` blocks do it in-process; nothing else
+can. Adding it here unlocks (a) cross-run rewind, (b) MCP rollback
+tools, (c) the agent loop's "undo your last action" affordance —
+all from one function.
 
 **Files touched:**
 
@@ -242,13 +319,16 @@ New:
 - `internal/apply/runner.go` — `Runner` struct + `Run()` method
 - `internal/apply/config.go` — `Config` struct (the fields that
   `cmd.run` accepts as CLI flags)
+- `internal/apply/result.go` — `KernelResult` + `Reverse()` + `RunSummary`
 - `internal/apply/runner_test.go` — at least one apply-path
-  integration test that exercises the new entry point
-- `internal/apply/doc.go`
+  integration test that exercises the new entry point AND asserts
+  `KernelResult.Reverse()` produces an executable inverse plan when
+  the run included reversible steps
+- `internal/apply/doc.go` — package doc that cites kernel.md
 
 Modified:
 - `cmd/mooncake.go` — `run` collapses to ~50 LOC of flag parse +
-  `Runner.Run()` call + recap rendering
+  `Runner.Run()` call + recap rendering against `KernelResult`
 - `cmd/cmd_test.go` — relevant tests retargeted to the new API where
   cheaper
 
@@ -257,19 +337,23 @@ Modified:
 2. `cmd.run` gocyclo is ≤ 10 (currently 33). Measured via
    `gocyclo cmd/mooncake.go`.
 3. `cmd/mooncake.go` LOC drops by ≥ 300.
-4. `internal/apply/runner.go` exists with `func (r *Runner) Run(ctx context.Context) error`.
-5. `internal/mcp` package can import `internal/apply` and call
+4. `internal/apply/runner.go` exists with the API contract above.
+5. `KernelResult.Reverse()` is covered by a test that:
+   - runs a plan with at least one reversible step (e.g. `file.write`)
+   - calls `Reverse()` on the result
+   - asserts the returned plan would restore pre-state if executed
+6. `internal/mcp` package can import `internal/apply` and call
    `Runner.Run` — verified by a single test in `internal/mcp` that
    constructs a `Runner` (doesn't have to actually execute; just
    prove the import works without circular deps).
-6. End-to-end manual: `mooncake apply -c examples/...` produces
+7. End-to-end manual: `mooncake apply -c examples/...` produces
    identical output (recap, exit code, audit events) before and after.
 
 **Blast radius:** medium. Touches the largest file in `cmd/` and the
 most-used CLI path. But no behavior change — every test that passed
 before passes after.
 
-**Risk:** medium. Three sub-risks:
+**Risk:** medium. Four sub-risks:
 - (a) Hidden side effects in `cmd.run` (logging setup, env-var
   reading) get missed during extraction. *Mitigation:* run the full
   cmd_test.go suite locally before/after; diff stdout/stderr from a
@@ -283,11 +367,23 @@ before passes after.
   pulls in `internal/secrets/resolver` (from R0.3), check the
   resolved import graph doesn't cycle. *Mitigation:* run `go list -e`
   with cycle detection as part of CI.
+- (d) **`KernelResult.Reverse()` semantics drift.** The method
+  has to handle: reversible-step subset (some handlers refuse
+  Reverse), transaction-boundary preservation (don't reverse across
+  transaction edges in the wrong order), already-reversed steps
+  (don't double-reverse). *Mitigation:* the implementation is **lift
+  the existing transaction-rollback walker** from
+  `internal/executor/transaction.go` (or `internal/control/` post
+  R0.1) into a generic "build inverse plan from N step results"
+  helper. Same algorithm, different input shape. Don't invent new
+  Reverse semantics here.
 
 **Dependencies:**
-- R0.1 (control package) — soft; if executor's compound-step concerns
-  have moved out, `apply.Runner` calls a smaller executor surface.
-- R0.3 (secrets resolver) — soft; similar.
+- R0.1 (control package) — soft; if `transaction` has moved to
+  `internal/control`, `Reverse()` calls into it. If R0.1 slipped,
+  the lift happens against the in-executor code instead.
+- R0.3 (secrets resolver) — soft; `apply.Runner` calls it as a
+  pre-execute pass.
 
 If R0.1 / R0.3 land first, R1.1 is cleaner. If they slip, R1.1 still
 works but imports the unmoved files.
@@ -296,17 +392,56 @@ works but imports the unmoved files.
 
 ## 4. Phase 2 — Cmd extraction at scale
 
-### R2.1 — Extract `internal/fleet.Orchestrator` out of `cmd/fleet.go`
+### R2.1 — Extract `internal/fleet.Orchestrator` out of `cmd/fleet.go` (the kernel's `FleetApply()` entry point)
 
 **Source:** arch report §3.1 table; recommendation 1.
 
 **Motivation:** `fleetApplyAction` (`cmd/fleet.go:336`) at gocyclo
-**49** is the deepest business-logic function in the project.
+**49** is the deepest business-logic function in the project — the
+kernel's `FleetApply()` entry point trapped inside a CLI handler.
 Reading it: peer filtering, plan-snapshot upload, ordered phase
 rollout, per-peer SSE fan-in, recap aggregation, exit-code
 computation — six responsibilities. The pattern from R1.1 applies
 here exactly: each responsibility becomes a method on a
-`fleet.Orchestrator` struct.
+`fleet.Orchestrator` struct, and the entry point returns a typed
+`*FleetKernelResult` that carries the kernel shape forward — a list
+of per-peer `KernelResult`s — so the *next* frontend (`fleet why`,
+fleet drift remediation, `fleet apply_approved`) doesn't have to
+re-derive any of it.
+
+**API contract (parallel to R1.1, same locked decision):**
+
+```go
+package fleet
+
+type Orchestrator struct{ /* …configured from Config… */ }
+
+func NewOrchestrator(cfg *Config) *Orchestrator { ... }
+
+// Run dispatches the typed plan across the configured peer set and
+// returns a FleetKernelResult — the fleet-scope analog of
+// apply.KernelResult.
+func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error)
+
+// FleetKernelResult is the kernel's typed "what just happened across
+// the fleet" shape. Designed to be the input to fleet-scope frontends
+// (fleet why, fleet drift, MCP fleet tools) without re-derivation.
+type FleetKernelResult struct {
+    Plan    *plan.Plan                       // the plan that was dispatched
+    Peers   map[PeerID]*apply.KernelResult   // per-peer outcome
+    Summary FleetSummary                      // aggregate counts + per-peer status
+}
+
+// Reverse builds an inverse FleetPlan from this run's reversible
+// subset across all peers. Per-peer reverse plans are independently
+// constructed via apply.KernelResult.Reverse().
+func (r *FleetKernelResult) Reverse() (*FleetPlan, error)
+```
+
+The shape composes: a fleet result is a map of per-peer apply
+results plus a fleet-scope summary. No new primitives — just lifting
+R1.1's contract one level up. `FleetKernelResult.Reverse()` builds
+the inverse by calling `peer.Reverse()` on each peer's result.
 
 **Files touched:**
 
@@ -315,15 +450,17 @@ New:
   - `(o *Orchestrator) FilterPeers(ctx) ([]Peer, error)`
   - `(o *Orchestrator) UploadPlan(ctx, peer) error`
   - `(o *Orchestrator) ApplyToPhase(ctx, phase []Peer) ([]PeerResult, error)`
-  - `(o *Orchestrator) Run(ctx) (RunSummary, error)` — top-level
+  - `(o *Orchestrator) Run(ctx) (*FleetKernelResult, error)` — top-level
     entry point
+- `internal/fleet/result.go` — `FleetKernelResult` + `Reverse()` +
+  `FleetSummary` + `FleetPlan`
 - `internal/fleet/orchestrator_test.go`
 - (Optional) split into `internal/fleet/{filter,upload,phase,recap}.go`
   if each method is large enough to warrant its own file
 
 Modified:
 - `cmd/fleet.go` — `fleetApplyAction` collapses to flag parse +
-  `Orchestrator.Run()` + render
+  `Orchestrator.Run()` + render against `FleetKernelResult`
 - Probably also touches `cmd/fleet_filter_test.go`, retargeted to
   test the new package
 
@@ -332,12 +469,15 @@ Modified:
 2. `fleetApplyAction` gocyclo is ≤ 10 (currently 49). Measured via
    `gocyclo cmd/fleet.go`.
 3. `cmd/fleet.go` LOC drops by ≥ 500.
-4. `internal/fleet/orchestrator.go` exists with the documented
-   methods.
-5. The MCP server can call `fleet.NewOrchestrator(cfg).Run(ctx)`
+4. `internal/fleet/orchestrator.go` exists with the API contract above.
+5. `FleetKernelResult.Reverse()` is covered by a test that:
+   - runs a plan against ≥2 peers with reversible steps on each
+   - calls `Reverse()` on the result
+   - asserts the returned FleetPlan would restore pre-state per peer
+6. The MCP server can call `fleet.NewOrchestrator(cfg).Run(ctx)`
    without going through `cmd` — verified by a smoke test in
    `internal/mcp` that constructs an Orchestrator (does not execute).
-6. Manual verification: `mooncake fleet apply -p tag=linux examples/...`
+7. Manual verification: `mooncake fleet apply -p tag=linux examples/...`
    produces identical per-peer output, identical RECAP, identical
    exit code before/after.
 
@@ -478,6 +618,14 @@ struct types and method bodies that were inlined before).
 
 These came up while drafting and were intentionally excluded:
 
+- **Creating an `internal/changegraph` package.** ChangeGraph is a
+  **derived view**, not a new data structure. The implicit edges in
+  today's `[]Step` (`TriggeredBy`, `Try/Catch/Finally`, `Transaction`,
+  `Reverse()`) are sufficient. Each future consumer (`explain`,
+  `plan --format graph`, `rewind`) materializes its own view from
+  those fields. Building the typed graph type before three concrete
+  uses is the "abstraction first" smell — the kernel framing (see
+  [`vision/kernel.md`](../vision/kernel.md)) explicitly bounds this.
 - **Splitting `internal/config/config.go`.** The arch report
   explicitly recommends *watch, don't act*. The 1,866 LOC is the
   cost of the closed-action-set bet. Touching it has cascading
@@ -485,9 +633,10 @@ These came up while drafting and were intentionally excluded:
 - **Refactoring large handlers** (`file`, `tool`, `service`,
   `package`, `os_mount`). Soft cap policy from R0.4 covers the
   question; act when next touched, not preemptively.
-- **Adding interfaces / abstraction layers.** Every R-item in this
-  plan is a *relocation* or a *struct introduction at a clear seam*.
-  No new interfaces, no new dependency injection, no plugin contracts.
+- **Adding new interfaces beyond `KernelResult` + `FleetKernelResult`.**
+  Those two are typed return shapes at clear kernel seams (R1.1, R2.1),
+  not new abstraction layers. No new dependency injection. No plugin
+  contracts. No `Kernel` interface that everything implements.
 - **Touching `cmd/presets.go`.** It's the second-largest cmd file at
   1,516 LOC, but the report identifies `cmd/fleet.go` (gocyclo 49)
   and `cmd/mooncake.go` (`run` gocyclo 33) as the higher-leverage
@@ -504,23 +653,51 @@ These came up while drafting and were intentionally excluded:
 
 After all of Phase 0 + 1 + 2 + 3 land:
 
+**Structural metrics:**
+
 - `cmd/` total LOC drops by ≥ 800 (from ~10,547 to ≤ 9,750)
 - `cmd/fleet.go` shrinks by ≥ 500 LOC; `fleetApplyAction` gocyclo ≤ 10
 - `cmd/mooncake.go` shrinks by ≥ 300 LOC; `cmd.run` gocyclo ≤ 10
 - `internal/executor` non-test LOC drops by ≥ 500 (control +
   secrets resolver moved out)
-- New packages exist: `internal/control`, `internal/secrets/resolver`,
-  `internal/plan/filter`, `internal/apply`, `internal/fleet/orchestrator.go`
 - No new circular imports
 - `scripts/arch-snapshot.sh` shows:
   - `internal/executor` non-test source LOC under 2,200
   - `cmd` instability still 1.00 (still no internal imports of cmd)
   - No new package at instability 0.40–0.60 with LOC > 1,500
     (the "mid-band god package" smell to avoid)
+
+**Kernel-surface checkpoint** — the plan's real deliverable beyond
+the LOC counts:
+
+- `internal/apply.Runner.Run` exists and returns `*apply.KernelResult`
+  with the locked contract from R1.1.
+- `apply.KernelResult.Reverse()` produces an executable inverse
+  plan, covered by a test.
+- `internal/fleet.Orchestrator.Run` exists and returns
+  `*fleet.FleetKernelResult` composed from per-peer
+  `apply.KernelResult`s.
+- `internal/mcp` imports `internal/apply` and `internal/fleet` directly
+  for at least one tool path that previously had to shell out to the
+  CLI. (Optional for plan completion but strongly preferred as the
+  end-of-plan proof.)
+- New packages exist: `internal/control`, `internal/secrets/resolver`,
+  `internal/plan/filter`, `internal/apply`, `internal/fleet/orchestrator.go`
+- `internal/changegraph` does **not** exist (locked Path A decision).
+
+**Behavior preservation:**
+
 - `mooncake apply` and `mooncake fleet apply` behavior unchanged —
   the entire plan is a refactor, not a feature change.
 
-If any of those criteria don't hold after Phase 2 lands, **stop and
+If the structural metrics hold but the kernel-surface checkpoint
+doesn't (e.g. R1.1 ships with a flat `error` return instead of
+`*KernelResult`), the plan **regresses** even though the LOC counts
+moved. The point of the plan is the kernel surface; the LOC counts
+are an artifact.
+
+If any criteria don't hold after Phase 2 lands, **stop and
 re-review** before starting Phase 3. The plan assumes the moves are
-all pure relocations; if observable behavior changed, the assumption
-is wrong and the next phase will compound the drift.
+all pure relocations + the two typed return shapes; if observable
+behavior changed or the return shapes drifted, the assumption is
+wrong and the next phase will compound the drift.
