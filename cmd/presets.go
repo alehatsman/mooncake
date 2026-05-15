@@ -19,8 +19,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/presets"
+	"github.com/alehatsman/mooncake/internal/presets/registry"
 	"github.com/alehatsman/mooncake/internal/recommend"
-	"github.com/alehatsman/mooncake/internal/registry"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
