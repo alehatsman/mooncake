@@ -7,7 +7,13 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/mooncake agentd --system --bind 0.0.0.0:{{PORT}}
-Restart=on-failure
+# Restart=always (not on-failure) so a clean exit — e.g. a self-upgrade
+# that exec()s into a new binary, a stop racing with controller traffic,
+# or SIGTERM during a deploy window — still gets the daemon back. The
+# extra restarts cost very little (RestartSec=5 + StartLimitInterval
+# defaults keep boot loops bounded) and the user expects "agentd is
+# always there" as the invariant from the controller side.
+Restart=always
 RestartSec=5
 # Run as root for v1. spec-44 §324 leaves the dedicated-user question
 # open; revisit when a real "least-privilege agentd user" story exists.
@@ -15,8 +21,12 @@ User=root
 Group=root
 # Hardening: minimal defaults appropriate for a daemon that needs broad
 # filesystem access (it runs typed mutations on behalf of fleet plans).
+# ProtectSystem=true (not =full) — `full` mounts /etc read-only too,
+# which breaks agentd's first-run `mkdir /etc/mooncake` for the token
+# directory. `true` keeps /usr, /boot, /efi read-only so a runaway
+# plan can't overwrite the daemon binary, while leaving /etc writable.
 NoNewPrivileges=true
-ProtectSystem=full
+ProtectSystem=true
 ProtectHome=false
 
 [Install]
