@@ -35,12 +35,10 @@ type StdinProvider struct {
 	mu    sync.Mutex
 	cache map[string]string
 
-	// in / out / errOut / fd are injectable for tests. nil → real
-	// terminal. promptFn likewise — production uses term.ReadPassword
-	// on fd; tests inject a stub.
-	in       io.Reader
+	// out / fd are injectable for tests. nil → real terminal.
+	// promptFn likewise — production uses term.ReadPassword on fd;
+	// tests inject a stub.
 	out      io.Writer
-	errOut   io.Writer
 	fd       int
 	promptFn func(fd int) ([]byte, error)
 }
@@ -85,8 +83,8 @@ func (p *StdinProvider) Resolve(key string) (string, error) {
 	// directly, so this check only fires in real-world runs.
 	if p.promptFn == nil && !term.IsTerminal(fd) {
 		return "", errors.New(
-			"stdin provider: stdin is not a TTY — cannot prompt for secret. " +
-				"Use file: or env: providers in non-interactive runs.")
+			"stdin provider: stdin is not a TTY — cannot prompt for secret; " +
+				"use file: or env: providers in non-interactive runs")
 	}
 
 	_, _ = fmt.Fprintf(out, "Enter secret for stdin:%s: ", key)

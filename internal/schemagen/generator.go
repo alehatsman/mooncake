@@ -250,14 +250,11 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 		def.Properties[meta.Name] = actionProp
 	}
 
-	// Add "import" to action names for oneOf generation
-	// (import is a special string field, not a registered action)
-	actionNames = append(actionNames, "import")
-
-	// Add "transaction" (spec-30) as a oneOf branch: a step with
-	// transaction: set is a compound node, not a leaf action. Treated
-	// like "import" — special-cased rather than registered as an action.
-	actionNames = append(actionNames, "transaction")
+	// Add "import" and "transaction" to action names for oneOf generation.
+	// "import" is a special string field (not a registered action).
+	// "transaction" (spec-30) is a compound node, not a leaf action.
+	// Both are special-cased rather than registered as actions.
+	actionNames = append(actionNames, "import", "transaction")
 
 	// Sort action names for deterministic schema generation
 	sort.Strings(actionNames)

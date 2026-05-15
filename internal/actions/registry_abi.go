@@ -86,7 +86,7 @@ type defaultDiffer struct {
 	h Handler
 }
 
-func (d defaultDiffer) Diff(ctx Context, step *config.Step) (Diff, error) {
+func (d defaultDiffer) Diff(_ Context, _ *config.Step) (Diff, error) {
 	// We deliberately do NOT call Run in plan mode here, even though
 	// the spec suggests "derive Diff from Run(ModePlan) Result." That
 	// would mean every JSON plan request runs every handler in plan

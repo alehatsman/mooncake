@@ -205,7 +205,7 @@ func detectIsRoot(ctx context.Context, sess *transport.Session) (bool, error) {
 // The version probe is run *without* sudo — `mooncake --version` doesn't
 // need it, and avoiding sudo here keeps the error path cleaner if the
 // user can't sudo (we'll discover that at step 4 with a clear message).
-func existingInstall(ctx context.Context, sess *transport.Session, sudoer *sudoer, inst Installer) (version string, active bool, err error) {
+func existingInstall(ctx context.Context, sess *transport.Session, _ *sudoer, inst Installer) (version string, active bool, err error) {
 	// Check binary presence + version via PATH lookup. /usr/local/bin should
 	// be on PATH for an interactive shell; if it isn't, the `command -v`
 	// probe will miss the binary even when it exists. Probe the canonical

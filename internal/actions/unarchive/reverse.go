@@ -28,7 +28,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, _ actions.Result
 	if step == nil || step.FileUnarchive == nil {
 		return nil, errors.New("file.unarchive Reverse: step has no FileUnarchive payload")
 	}
-	return nil, errors.New(
+	return nil, errors.New( //nolint:staticcheck
 		"file.unarchive Reverse: cannot reverse extraction in a single step — " +
 			"undoing requires deleting N extracted paths, which needs multi-step " +
 			"reverse support (return []*config.Step) or a new variadic delete " +

@@ -135,7 +135,7 @@ func writeAskpass(password string) (string, func(), error) {
 	escaped := strings.ReplaceAll(password, "'", `'\''`)
 	body := "#!/bin/sh\nprintf '%s' '" + escaped + "'\n"
 	if _, err := f.WriteString(body); err != nil {
-		f.Close()
+		f.Close() //nolint:errcheck
 		_ = os.Remove(f.Name())
 		return "", nil, fmt.Errorf("write askpass: %w", err)
 	}
@@ -143,6 +143,7 @@ func writeAskpass(password string) (string, func(), error) {
 		_ = os.Remove(f.Name())
 		return "", nil, err
 	}
+	// #nosec G302 -- askpass helper must be executable (0700 = user-only)
 	if err := os.Chmod(f.Name(), 0o700); err != nil {
 		_ = os.Remove(f.Name())
 		return "", nil, fmt.Errorf("chmod askpass: %w", err)
@@ -162,7 +163,7 @@ func writeSSHKey(content string) (string, func(), error) {
 		content += "\n"
 	}
 	if _, err := f.WriteString(content); err != nil {
-		f.Close()
+		f.Close() //nolint:errcheck
 		_ = os.Remove(f.Name())
 		return "", nil, fmt.Errorf("write ssh_key: %w", err)
 	}

@@ -120,10 +120,10 @@ func runApplyPhase(applyCtx context.Context, w io.Writer, useColor bool, in appl
 
 	var out applyPhaseOutcome
 	for i, r := range results {
-		switch {
-		case r.Status == "success":
+		switch r.Status {
+		case "success":
 			out.OK++
-		case r.Status == "failed" || r.Status == "interrupted":
+		case "failed", "interrupted":
 			out.RunFailed++
 			out.FailedNames = append(out.FailedNames, in.Peers[i].Name)
 		default:

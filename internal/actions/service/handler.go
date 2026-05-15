@@ -63,7 +63,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // doesn't exist). RequiredBinaries left empty because the handler
 // detects the backend; demanding a specific binary on PATH would
 // break cross-platform support.
-func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+func (h *Handler) Permissions(_ *config.Step) actions.PermissionSet {
 	return actions.PermissionSet{Sudo: true}
 }
 

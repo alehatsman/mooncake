@@ -218,9 +218,19 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 		}
 		e.Reason = fmt.Sprintf("symlink target differs (%s -> %s)", existing, target)
 	case err == nil:
-		e.Reason = "path exists and is not a symlink"
-		e.Err = fmt.Errorf("%s exists and is not a symlink", path)
-		return e
+		if opts.Force {
+			kind := describePathKind(info)
+			e.Reason = fmt.Sprintf("would replace %s with symlink -> %s", kind, target)
+			if p.modeFn() == actions.ModePlan {
+				e.WouldChange = true
+				return e
+			}
+			// apply mode: fall through to the remove-then-create block below
+		} else {
+			e.Reason = "path exists and is not a symlink"
+			e.Err = fmt.Errorf("%s exists and is not a symlink (use force: true to replace)", path)
+			return e
+		}
 	case os.IsNotExist(err):
 		e.Reason = "would create symlink -> " + target
 	default:
@@ -559,6 +569,25 @@ func (p *defaultPerformer) runSudo(command string) error {
 }
 
 func formatMode(m os.FileMode) string { return fmt.Sprintf("%04o", m.Perm()) }
+
+// describePathKind returns a human-readable noun for the file type of info.
+func describePathKind(info os.FileInfo) string {
+	m := info.Mode()
+	switch {
+	case m.IsDir():
+		return "directory"
+	case m&os.ModeSymlink != 0:
+		return "symlink"
+	case m&os.ModeDevice != 0:
+		return "device"
+	case m&os.ModeNamedPipe != 0:
+		return "pipe"
+	case m&os.ModeSocket != 0:
+		return "socket"
+	default:
+		return "file"
+	}
+}
 
 // shellQuote single-quotes a string for safe shell interpolation.
 func shellQuote(s string) string {

@@ -55,13 +55,18 @@ func (e Effect) Changed() bool {
 
 // PerformerOpts carries optional flags that apply to most Performer calls.
 //
-// Today the only supported option is Become — when set, the underlying
-// primitive runs via sudo (with the password supplied to the Performer
-// implementation). Handlers read Step.Become and pass it through; they
-// should not shell out to sudo themselves.
+// Become: when set, the underlying primitive runs via sudo (with the
+// password supplied to the Performer implementation). Handlers read
+// Step.Become and pass it through; they should not shell out to sudo
+// themselves.
+//
+// Force: when set, Symlink and Hardlink replace an existing path that
+// is not already of the correct link type (e.g. a directory). Without
+// Force, those primitives return an error in that case.
 type PerformerOpts struct {
 	Become     bool
 	BecomeUser string
+	Force      bool
 }
 
 // Performer executes filesystem and command primitives in either

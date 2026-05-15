@@ -247,6 +247,13 @@ var SystemPathPrefixes = []string{
 	"/srv/",
 }
 
+// userOwnedVarPrefixes are /var/ sub-paths that are user-owned on
+// macOS (per-user sandbox caches and temp dirs). These must be checked
+// before SystemPathPrefixes to avoid false Sudo=true on macOS.
+var userOwnedVarPrefixes = []string{
+	"/var/folders/", // macOS per-user temp/cache space (mode 700, owned by user)
+}
+
 // PathNeedsSudo reports whether p falls under any directory in
 // SystemPathPrefixes. Conservative: returns false for empty paths,
 // relative paths, templated paths (containing "{{"), and anything
@@ -263,6 +270,11 @@ var SystemPathPrefixes = []string{
 func PathNeedsSudo(p string) bool {
 	if p == "" {
 		return false
+	}
+	for _, prefix := range userOwnedVarPrefixes {
+		if len(p) >= len(prefix) && p[:len(prefix)] == prefix {
+			return false
+		}
 	}
 	for _, prefix := range SystemPathPrefixes {
 		if len(p) >= len(prefix) && p[:len(prefix)] == prefix {
