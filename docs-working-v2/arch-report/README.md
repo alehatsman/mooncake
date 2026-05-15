@@ -13,6 +13,7 @@ authority.
 
 | Date | File | Headline |
 |---|---|---|
+| 2026-05-16 | [`2026-05-16-arch-report.md`](./2026-05-16-arch-report.md) | Wave 1 + R1.1a landed: 5 new packages materialize the kernel boundary `vision/kernel.md` described. `internal/control` lands at instability 0.00, validating the kernel-sub-system claim. R1.1b + R2.1a in flight; R2.1b gated. ~70% of refactor plan complete by R-item count. |
 | 2026-05-15 | [`2026-05-15-arch-report.md`](./2026-05-15-arch-report.md) | Kernel healthy; pressure at edges (`cmd/`, `executor` accretion, `config.go` monotonic growth, handler tail). 4 mechanical extractions recommended. |
 
 ## Plans derived from reports
