@@ -147,6 +147,21 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE applyPlan
+	// touches anything. plan already reads runtime + persist;
+	// stash those values verbatim so Reverse can rebuild the prior
+	// world.
+	result.ReverseData = &OsSysctlReverseInfo{
+		Name:               rendered.name,
+		AppliedState:       rendered.state,
+		PriorRuntimeValue:  plan.currentVal,
+		HadPriorRuntime:    plan.currentVal != "",
+		PriorPersistValue:  plan.priorLine,
+		HadPriorPersist:    plan.hadLine,
+		TouchedPersistFile: plan.touchesFile,
+		TouchedRuntime:     plan.apply,
+	}
+
 	if err := applyPlan(plan, rendered); err != nil {
 		return result, err
 	}
@@ -261,6 +276,12 @@ type sysctlPlan struct {
 	touchesFile bool
 	apply       bool // runtime sysctl apply needed?
 	currentVal  string
+
+	// priorLine + hadLine capture the persist-file state pre-apply
+	// so Reverse can reconstruct it. Populated by computePlan
+	// regardless of whether the apply runs.
+	priorLine string
+	hadLine   bool
 }
 
 func computePlan(r renderedSysctl) (sysctlPlan, error) {
@@ -271,6 +292,11 @@ func computePlan(r renderedSysctl) (sysctlPlan, error) {
 		return plan, err
 	}
 	currentLine, hasLine := findLine(currentLines, r.name)
+
+	// Snapshot persist-file state for Reverse(). currentVal (runtime)
+	// is set below in the present branch where sysctlGet runs.
+	plan.priorLine = currentLine
+	plan.hadLine = hasLine
 
 	switch r.state {
 	case stateAbsent:

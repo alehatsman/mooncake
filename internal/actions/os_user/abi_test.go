@@ -6,6 +6,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -106,15 +107,109 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_RefusesPendingCapture(t *testing.T) {
+func TestReverse_CreatedUserBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsUser: &config.OsUser{Name: "deploy"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsUserReverseInfo{
+		Name:         "deploy",
+		AppliedState: "present",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsUser: &config.OsUser{Name: "deploy"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsUser == nil {
+		t.Fatal("Reverse must return an os.user step")
+	}
+	if rev.OsUser.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.OsUser.State)
+	}
+	if rev.OsUser.Name != "deploy" {
+		t.Errorf("Name = %s, want deploy", rev.OsUser.Name)
+	}
+}
+
+func TestReverse_ModifiedUserRestoresFields(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsUserReverseInfo{
+		Name:         "deploy",
+		AppliedState: "present",
+		PriorExisted: true,
+		Prior: OsUserSnapshotState{
+			UID:     1001,
+			GID:     1001,
+			Shell:   "/bin/bash",
+			Home:    "/home/deploy",
+			Comment: "Deploy User",
+			Groups:  []string{"docker", "sudo"},
+		},
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsUser: &config.OsUser{Name: "deploy"}}, r)
+	if rev == nil || rev.OsUser == nil {
+		t.Fatal("Reverse must return a step")
+	}
+	if rev.OsUser.State != "present" {
+		t.Errorf("State = %s, want present", rev.OsUser.State)
+	}
+	if rev.OsUser.UID == nil || *rev.OsUser.UID != 1001 {
+		t.Errorf("UID = %v, want 1001", rev.OsUser.UID)
+	}
+	if rev.OsUser.Shell != "/bin/bash" {
+		t.Errorf("Shell = %s, want /bin/bash", rev.OsUser.Shell)
+	}
+	if len(rev.OsUser.Groups) != 2 {
+		t.Errorf("Groups = %v, want 2 entries", rev.OsUser.Groups)
+	}
+	if rev.OsUser.AppendGroups == nil || *rev.OsUser.AppendGroups != false {
+		t.Errorf("AppendGroups must be set to false for exact-restore semantics; got %v", rev.OsUser.AppendGroups)
+	}
+}
+
+func TestReverse_DeletedUserGetsRecreated(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsUserReverseInfo{
+		Name:         "deploy",
+		AppliedState: "absent",
+		PriorExisted: true,
+		Prior:        OsUserSnapshotState{UID: 1001, GID: 1001, Shell: "/bin/zsh"},
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsUser: &config.OsUser{Name: "deploy", State: "absent"}}, r)
+	if rev == nil || rev.OsUser == nil {
+		t.Fatal("Reverse must return a step")
+	}
+	if rev.OsUser.State != "present" {
+		t.Errorf("State = %s, want present (recreate)", rev.OsUser.State)
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, err := h.Reverse(nil, &config.Step{OsUser: &config.OsUser{Name: "deploy"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil step; got %+v", step)
+	}
 }
 
 func TestReverse_NilStep(t *testing.T) {
 	h := Handler{}
 	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{OsUser: &config.OsUser{Name: "deploy"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

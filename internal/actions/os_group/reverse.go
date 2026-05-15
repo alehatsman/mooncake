@@ -2,31 +2,90 @@ package os_group //nolint:revive // package name follows action convention
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
-// Reverse implements actions.Reverser for os.group (spec-22 phase 5 /
-// spec-27 P4).
+// OsGroupReverseInfo is the per-step apply-time snapshot os.group
+// stashes on Result.ReverseData. Captures the group's pre-apply
+// existence + gid. Members aren't restored: per the spec, group
+// renumbering is refused (changing gid silently breaks file
+// ownership) and member changes are out of scope for os.group
+// itself (os.user owns the supplementary-groups membership).
+type OsGroupReverseInfo struct {
+	// Name is the group name (identity for idempotency).
+	Name string
+
+	// AppliedState is the step's State at apply time:
+	// "present" or "absent".
+	AppliedState string
+
+	// PriorExisted reports whether the group existed pre-apply.
+	PriorExisted bool
+
+	// PriorGID is the numeric gid pre-apply. Zero when
+	// PriorExisted is false.
+	PriorGID int
+}
+
+// Reverse implements actions.Reverser for os.group (spec-27 P4 /
+// reverse-capture v3).
 //
-// The inverse shape is trivial — flip state present↔absent on the
-// same name. A safe reverse still wants apply-time capture of
-// whether the group already existed pre-apply (a state=present
-// step that finds the group already there should not be reversed
-// to delete-the-group: that group might predate our operation).
-// Apply-time getent snapshot tracked in the spec-27 P4 follow-up;
-// until then this refuses with a clear pointer.
-func (Handler) Reverse(_ actions.Context, step *config.Step, _ actions.Result) (*config.Step, error) {
+// Strategy:
+//   - PriorExisted=false → reverse is state=absent (apply created
+//     the group; rollback removes it).
+//   - PriorExisted=true  → reverse is state=present with the
+//     captured GID. When AppliedState was "present" this is a
+//     same-shape noop on a converged system (the group already
+//     exists with the captured gid); when AppliedState was
+//     "absent" this recreates the group with its prior gid so
+//     file ownership rejoins.
+//
+// Edge cases:
+//   - ReverseData nil → apply was a noop, return (nil, nil).
+//   - Step / result missing / wrong type → defensive error.
+func (Handler) Reverse(_ actions.Context, step *config.Step, result actions.Result) (*config.Step, error) {
 	if step == nil || step.OsGroup == nil {
 		return nil, errors.New("os.group Reverse: step has no OsGroup payload")
 	}
-	return nil, errors.New( //nolint:staticcheck
-		"os.group Reverse: not yet implemented. Apply-time pre-state " +
-			"capture (whether the group existed pre-apply, prior gid, " +
-			"members) requires Run() to thread a typed Result — tracked " +
-			"in spec-27 P4 follow-up. Until then, transactions containing " +
-			"os.group are not reversible at runtime.")
+
+	r, ok := result.(*executor.Result)
+	if !ok || r == nil {
+		return nil, fmt.Errorf("os.group Reverse: expected *executor.Result, got %T", result)
+	}
+	if r.ReverseData == nil {
+		return nil, nil
+	}
+	info, ok := r.ReverseData.(*OsGroupReverseInfo)
+	if !ok {
+		return nil, fmt.Errorf("os.group Reverse: ReverseData is %T, want *OsGroupReverseInfo", r.ReverseData)
+	}
+	if info.Name == "" {
+		return nil, errors.New("os.group Reverse: incomplete ReverseData (no Name)")
+	}
+
+	if !info.PriorExisted {
+		return &config.Step{
+			Name: "reverse: remove group " + info.Name,
+			OsGroup: &config.OsGroup{
+				Name:  info.Name,
+				State: "absent",
+			},
+		}, nil
+	}
+
+	gid := info.PriorGID
+	return &config.Step{
+		Name: "reverse: restore group " + info.Name,
+		OsGroup: &config.OsGroup{
+			Name:  info.Name,
+			State: "present",
+			GID:   &gid,
+		},
+	}, nil
 }
 
 var _ actions.Reverser = (*Handler)(nil)

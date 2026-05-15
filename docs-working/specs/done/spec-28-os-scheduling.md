@@ -1,15 +1,25 @@
 # Spec 28: `os.*` System Config — cron, systemd, firewall, mount, sysctl
 
-**Status:** Phases 1–6 complete + os.cron reverse-capture shipped.
-P1–P5 shipped earlier (os.systemd, os.cron, os.sysctl, os.firewall
-ufw driver, os.mount). **Phase 6 (spec-22 ABI hooks) shipped**:
-Permissions / Diff / Cost / Reverse declared on all five handlers
-using the testutil helpers. **Reverse-capture v2 shipped for
-`os.cron`**: Run captures `{Path, PriorExisted, PriorContent}` via
-the existing readFile call in computePlan; Reverse returns a
-cross-action `file.write` step (state=absent if the file didn't
-exist pre-apply, state=file with prior content otherwise). Reverse
-on the other four (os.sysctl, os.systemd, os.mount, os.firewall)
+**Status:** Phases 1–6 complete + os.cron + os.sysctl reverse-
+capture shipped. P1–P5 shipped earlier (os.systemd, os.cron,
+os.sysctl, os.firewall ufw driver, os.mount). **Phase 6 (spec-22
+ABI hooks) shipped**: Permissions / Diff / Cost / Reverse declared
+on all five handlers using the testutil helpers. Reverse-capture
+shipped for two handlers so far:
+
+- **os.cron** (v2): captures `{Path, PriorExisted, PriorContent}`
+  via the existing readFile call in computePlan; Reverse returns a
+  cross-action `file.write` step (state=absent if the file didn't
+  exist pre-apply, state=file with prior content otherwise).
+- **os.sysctl** (v3): captures `{Name, AppliedState, PriorRuntimeValue,
+  HadPriorRuntime, PriorPersistValue, HadPriorPersist, TouchedPersistFile,
+  TouchedRuntime}`; Reverse builds an os.sysctl inverse step that
+  either re-asserts the prior persist line + reload, or removes the
+  added line (Persist=false), or restores the runtime-only mutation.
+  Returns a defensive error when the apply mutated runtime but no
+  prior runtime value was readable.
+
+Reverse on the other three (os.systemd, os.mount, os.firewall)
 still refuses pending each handler's apply-time capture (own
 follow-up). Phase 7 (docs + non-ufw firewall drivers + macOS
 launchd if added later) is the only outstanding work; non-ufw

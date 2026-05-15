@@ -116,6 +116,18 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE applyPlan.
+	priorExisted := current != nil && current.exists
+	info := &OsGroupReverseInfo{
+		Name:         desired.name,
+		AppliedState: desired.state,
+		PriorExisted: priorExisted,
+	}
+	if priorExisted {
+		info.PriorGID = current.gid
+	}
+	result.ReverseData = info
+
 	if err := applyPlan(plan); err != nil {
 		return result, err
 	}
