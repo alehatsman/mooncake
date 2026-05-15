@@ -105,6 +105,42 @@ text drops.)
 
 ---
 
+## ★ `mooncake plan` advanced flags — `--diff`, `--show-origins`, `--no-inspect`
+
+`--diff` shows a unified diff of what the file would become:
+```
+↑ write                content differs (6 -> 7 bytes)
+  --- /tmp/plan-target.txt
+  +++ /tmp/plan-target.txt (proposed)
+  @@ -1,1 +1,1 @@
+  -after
+  +before
+```
+
+`--show-origins` adds `file:line:col` under each step:
+```
+↑ write     content differs (6 -> 7 bytes)
+    /work/cfg.yml:2:3
+```
+
+`--no-inspect` skips the per-step state check (faster, but plan can't
+predict change vs. ok):
+```
+? write
+PLAN SUMMARY  would-change=0  ok=0  skipped=0  not-checkable=1
+```
+
+`--format yaml` (and `--format json`) produces a round-trippable plan
+with `when/unless_exists/creates/unless` metadata serialized.
+
+This is genuinely impressive for an agent / fleet workflow:
+- `plan --diff` for human review
+- `plan --show-origins` for IDE click-through
+- `plan -o plan.json` to capture for later replay
+- `plan --no-inspect` for fast static expansion when state is trusted
+
+---
+
 ## ★ Saved plans + `--from-plan` — strong safety property
 
 ```
