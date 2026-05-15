@@ -1397,6 +1397,22 @@
         "package.managed"
       ]
     },
+    "read.json": {
+      "type": "object",
+      "description": "Read a JSON file and optionally extract a value by path",
+      "additionalProperties": false,
+      "x-category": "data",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
+    "read.yaml": {
+      "type": "object",
+      "description": "Read a YAML file and optionally extract a value by path",
+      "additionalProperties": false,
+      "x-category": "data",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
     "repo.patch": {
       "type": "object",
       "description": "Apply multiple patches to multiple files atomically",
@@ -1799,6 +1815,14 @@
           "description": "Upgrade named packages or all installed packages (apt only in v1)",
           "$ref": "#/definitions/pkg.upgrade"
         },
+        "read.json": {
+          "description": "Read a JSON file and optionally extract a value by path",
+          "$ref": "#/definitions/read.json"
+        },
+        "read.yaml": {
+          "description": "Read a YAML file and optionally extract a value by path",
+          "$ref": "#/definitions/read.yaml"
+        },
         "repo.patch": {
           "description": "Apply multiple patches to multiple files atomically",
           "$ref": "#/definitions/repo.patch"
@@ -2119,6 +2143,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -2384,6 +2418,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -2657,6 +2701,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -2922,6 +2976,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -3195,6 +3259,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -3460,6 +3534,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -3733,6 +3817,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -3998,6 +4092,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -4271,6 +4375,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -4536,6 +4650,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -4809,6 +4933,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -5074,6 +5208,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -5347,6 +5491,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -5612,6 +5766,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -5885,6 +6049,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -6150,6 +6324,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -6423,6 +6607,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -6688,6 +6882,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -6961,6 +7165,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -7226,6 +7440,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -7499,6 +7723,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -7764,6 +7998,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -8037,6 +8281,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -8302,6 +8556,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -8575,6 +8839,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -8840,6 +9114,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -9113,6 +9397,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -9378,6 +9672,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -9651,6 +9955,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -9916,6 +10230,564 @@
               {
                 "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "read.json"
+          ],
+          "properties": {
+            "read.json": {
+              "$ref": "#/definitions/read.json"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "read.yaml"
+          ],
+          "properties": {
+            "read.yaml": {
+              "$ref": "#/definitions/read.yaml"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
                 ]
               },
               {
@@ -10194,6 +11066,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.search"
                 ]
               },
@@ -10463,6 +11345,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -10728,6 +11620,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -11008,6 +11910,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -11273,6 +12185,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -11546,6 +12468,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -11811,6 +12743,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -12084,6 +13026,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -12349,6 +13301,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -12622,6 +13584,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -12887,6 +13859,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -13160,6 +14142,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -13429,6 +14421,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -13692,6 +14694,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -14239,6 +15251,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -14504,6 +15526,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -14777,6 +15809,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -15042,6 +16084,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {
@@ -15315,6 +16367,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -15584,6 +16646,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -15849,6 +16921,16 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
                 ]
               },
               {

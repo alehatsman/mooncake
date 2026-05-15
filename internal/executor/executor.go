@@ -136,9 +136,7 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) { //nolint:unused
 	result.Failed = true
 	result.Rc = 1
-	if step.As != "" {
-		ec.Scope.Results[step.As] = result.ToRegisteredResult()
-	}
+	captureResult(ec, step, result.ToRegisteredResult())
 }
 
 // AddGlobalVariables populates scope.Facts and scope.Metrics from the system.
@@ -470,12 +468,10 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 
 	if step.ContinueOnError {
 		ec.Svc.Logger.Infof("  [WARNING] Ignoring error (ignore_errors: true): %v", stepErr)
-		if step.As != "" {
-			failedResult := NewResult()
-			failedResult.Failed = true
-			failedResult.Rc = 1
-			ec.Scope.Results[step.As] = failedResult.ToRegisteredResult()
-		}
+		failedResult := NewResult()
+		failedResult.Failed = true
+		failedResult.Rc = 1
+		captureResult(ec, step, failedResult.ToRegisteredResult())
 		return nil
 	}
 	ec.Svc.Logger.Errorf("%v", stepErr)
@@ -1018,8 +1014,9 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 		EventPublisher: publisher,
 	}
 	scope := &VariableScope{
-		User:    variables,
-		Results: make(map[string]RegisteredResult),
+		User:          variables,
+		Results:       make(map[string]RegisteredResult),
+		ResultOrigins: make(map[string]resultOrigin),
 	}
 	executionContext := ExecutionContext{
 		Svc:          svc,
@@ -1182,12 +1179,17 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			*ec.Svc.Stats.Changed++
 		}
 		*ec.Svc.Stats.Executed++
+		// spec-37: in plan mode the bind happens only when the handler
+		// declares CaptureInPlan; captureResult enforces that internally.
+		if ec.CurrentResult != nil {
+			captureResult(ec, step, ec.CurrentResult.ToRegisteredResult())
+		}
 		return nil
 	}
 
 	// ModeApply: register result if requested.
-	if step.As != "" && ec.CurrentResult != nil {
-		ec.Scope.Results[step.As] = ec.CurrentResult.ToRegisteredResult()
+	if ec.CurrentResult != nil {
+		captureResult(ec, step, ec.CurrentResult.ToRegisteredResult())
 	}
 	return nil
 }

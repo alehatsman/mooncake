@@ -915,6 +915,17 @@ type FilePatchApply struct {
 	DryRun     bool   `yaml:"dry_run" json:"dry_run,omitempty"`           // Test patch without applying
 }
 
+// ReadFile is the shared shape for `read.json` and `read.yaml` (spec-38).
+// Read-only by contract: parses the file, optionally extracts a value by
+// pathquery path, optionally applies redaction patterns to string leaves
+// in the parsed value before publishing it.
+type ReadFile struct {
+	Path     string   `yaml:"path"      json:"path"                  plan:"path"` // required
+	Query    string   `yaml:"query"     json:"query,omitempty"`                   // pathquery syntax (dotted + integer indices)
+	MaxBytes *int64   `yaml:"max_bytes" json:"max_bytes,omitempty"`               // default 4 MiB when nil
+	Redact   []string `yaml:"redact"    json:"redact,omitempty"`                  // regex patterns applied to string leaves
+}
+
 // RepoSearch represents a codebase search operation.
 // Searches files for patterns and outputs results in JSON format.
 type RepoSearch struct {
@@ -1089,6 +1100,8 @@ type Step struct {
 	Cmd              *CommandAction          `yaml:"cmd"               json:"cmd,omitempty"               action:"cmd"`
 	RepoSearch       *RepoSearch             `yaml:"repo.search"       json:"repo.search,omitempty"       action:"repo.search"`
 	RepoTree         *RepoTree               `yaml:"repo.tree"         json:"repo.tree,omitempty"         action:"repo.tree"`
+	ReadJSON         *ReadFile               `yaml:"read.json"         json:"read.json,omitempty"         action:"read.json"`
+	ReadYAML         *ReadFile               `yaml:"read.yaml"         json:"read.yaml,omitempty"         action:"read.yaml"`
 	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch"        json:"repo.patch,omitempty"        action:"repo.patch"`
 	GitClone         *GitClone               `yaml:"git.clone"         json:"git.clone,omitempty"         action:"git.clone"`
 	GitCheckout      *GitCheckout            `yaml:"git.checkout"      json:"git.checkout,omitempty"      action:"git.checkout"`
@@ -1493,6 +1506,8 @@ func (s *Step) Clone() *Step {
 		Cmd:              s.Cmd,
 		RepoSearch:       s.RepoSearch,
 		RepoTree:         s.RepoTree,
+		ReadJSON:         s.ReadJSON,
+		ReadYAML:         s.ReadYAML,
 		RepoPatch:        s.RepoPatch,
 		GitClone:         s.GitClone,
 		GitCheckout:      s.GitCheckout,

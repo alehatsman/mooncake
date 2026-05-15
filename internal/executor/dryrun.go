@@ -51,7 +51,7 @@ func (d *DryRunLogger) LogVariableSet(count int) {
 // LogRegister logs a dry-run message for registering results.
 func (d *DryRunLogger) LogRegister(step config.Step) {
 	if step.As != "" {
-		d.logger.Debugf("  [DRY-RUN] Would register result as: %s", step.As)
+		d.logger.Debugf("  [DRY-RUN] Would capture result as: %s", step.As)
 	}
 }
 

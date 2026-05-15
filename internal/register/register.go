@@ -41,6 +41,8 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_repo"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_upgrade"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"
+	_ "github.com/alehatsman/mooncake/internal/actions/read_json"
+	_ "github.com/alehatsman/mooncake/internal/actions/read_yaml"
 	_ "github.com/alehatsman/mooncake/internal/actions/print"
 	_ "github.com/alehatsman/mooncake/internal/actions/repo_apply_patchset"
 	_ "github.com/alehatsman/mooncake/internal/actions/repo_search"

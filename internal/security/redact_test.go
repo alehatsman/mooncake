@@ -185,3 +185,88 @@ func BenchmarkRedactor_Redact(b *testing.B) {
 		_ = redactor.Redact(input)
 	}
 }
+
+// --- spec-38 additions: AddPattern + RedactValue ---
+
+func TestRedactor_AddPattern_RejectsBadRegex(t *testing.T) {
+	r := NewRedactor()
+	if err := r.AddPattern("[unclosed"); err == nil {
+		t.Fatal("expected error for invalid regex")
+	}
+}
+
+func TestRedactor_AddPattern_IgnoresEmpty(t *testing.T) {
+	r := NewRedactor()
+	if err := r.AddPattern(""); err != nil {
+		t.Fatalf("empty pattern should be no-op, got %v", err)
+	}
+	if len(r.patterns) != 0 {
+		t.Errorf("expected zero patterns, got %d", len(r.patterns))
+	}
+}
+
+func TestRedactor_Redact_AppliesPatternMatch(t *testing.T) {
+	r := NewRedactor()
+	if err := r.AddPattern(`ghp_[A-Za-z0-9]{20,}`); err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	got := r.Redact("token=ghp_aaaaaaaaaaaaaaaaaaaaaaaa rest")
+	if !strings.Contains(got, "[REDACTED]") || strings.Contains(got, "ghp_aaaa") {
+		t.Errorf("pattern not applied: %q", got)
+	}
+}
+
+func TestRedactor_RedactValue_WalkesMapSliceScalar(t *testing.T) {
+	r := NewRedactor()
+	if err := r.AddPattern(`ghp_[A-Za-z0-9]{8,}`); err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	in := map[string]any{
+		"token":  "ghp_abcdefgh",
+		"port":   8080, // non-string, must pass through untouched
+		"nested": map[string]any{"key": "ghp_ZZZZZZZZ", "n": 1},
+		"list":   []any{"ghp_LLLLLLLL", 42, true, nil},
+	}
+	out := r.RedactValue(in).(map[string]any)
+	if out["token"] != "[REDACTED]" {
+		t.Errorf("scalar string not redacted: %v", out["token"])
+	}
+	if out["port"] != 8080 {
+		t.Errorf("non-string leaf must be preserved: %v", out["port"])
+	}
+	nested := out["nested"].(map[string]any)
+	if nested["key"] != "[REDACTED]" {
+		t.Errorf("nested map string not redacted: %v", nested["key"])
+	}
+	if nested["n"] != 1 {
+		t.Errorf("nested non-string must be preserved: %v", nested["n"])
+	}
+	list := out["list"].([]any)
+	if list[0] != "[REDACTED]" {
+		t.Errorf("list string not redacted: %v", list[0])
+	}
+	if list[1] != 42 || list[2] != true || list[3] != nil {
+		t.Errorf("list non-string leaves must be preserved: %v", list[1:])
+	}
+}
+
+func TestRedactor_RedactValue_LeavesKeysAlone(t *testing.T) {
+	r := NewRedactor()
+	_ = r.AddPattern(`secret`)
+	in := map[string]any{"secret": "ok"}
+	out := r.RedactValue(in).(map[string]any)
+	if _, ok := out["secret"]; !ok {
+		t.Errorf("key %q must not be rewritten; got %v", "secret", out)
+	}
+}
+
+func TestRedactor_RedactValue_NoWorkShortCircuits(t *testing.T) {
+	r := NewRedactor() // no sensitives, no patterns
+	in := map[string]any{"a": "ghp_xxxxxxx"}
+	out := r.RedactValue(in)
+	// Same pointer (or at least no copy of the map): identity is fine to check.
+	gotMap, ok := out.(map[string]any)
+	if !ok || gotMap["a"] != "ghp_xxxxxxx" {
+		t.Errorf("expected pass-through, got %v", out)
+	}
+}

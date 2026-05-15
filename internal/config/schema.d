@@ -595,6 +595,20 @@ export interface PkgUpgradeAction {
 }
 
 /**
+ * Read a JSON file and optionally extract a value by path
+ * @category data
+ */
+export interface ReadJsonAction {
+}
+
+/**
+ * Read a YAML file and optionally extract a value by path
+ * @category data
+ */
+export interface ReadYamlAction {
+}
+
+/**
  * Apply multiple patches to multiple files atomically
  * @category file
  */
@@ -1114,6 +1128,14 @@ export interface Step {
    * Upgrade named packages or all installed packages (apt only in v1)
    */
   "pkg.upgrade"?: PkgUpgradeAction;
+  /**
+   * Read a JSON file and optionally extract a value by path
+   */
+  "read.json"?: ReadJsonAction;
+  /**
+   * Read a YAML file and optionally extract a value by path
+   */
+  "read.yaml"?: ReadYamlAction;
   /**
    * Apply multiple patches to multiple files atomically
    */
