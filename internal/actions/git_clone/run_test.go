@@ -286,6 +286,84 @@ func TestRun_Apply_Shallow_ImplicitForceOnUpdate(t *testing.T) {
 	}
 }
 
+// TestRun_Apply_RefDrift_NoUpdate_Errors guards issue #26. When the
+// existing dest is at a different ref than the plan declares and
+// update:false, the action used to silently return ✓. Post-fix it
+// must surface the divergence as an error rather than masking it.
+func TestRun_Apply_RefDrift_NoUpdate_Errors(t *testing.T) {
+	upstream, firstTag, secondTag := makeUpstream(t)
+	dest := filepath.Join(t.TempDir(), "clone")
+
+	// Seed clone at firstTag (v1.0.0).
+	seed := &config.Step{GitClone: &config.GitClone{
+		Repo: upstream, Dest: dest, Ref: firstTag,
+	}}
+	if _, err := (&Handler{}).Run(newCtx(t, false), seed); err != nil {
+		t.Fatalf("seed clone: %v", err)
+	}
+
+	// Plan declares secondTag but update:false. Pre-fix this returned
+	// nil error with Changed=false (silent green ✓). Post-fix it
+	// errors with a clear drift message.
+	drift := &config.Step{GitClone: &config.GitClone{
+		Repo: upstream, Dest: dest, Ref: secondTag, // Update defaults to false
+	}}
+	_, err := (&Handler{}).Run(newCtx(t, false), drift)
+	if err == nil {
+		t.Fatal("expected error when ref differs and update:false; got nil (silent success regression)")
+	}
+	msg := err.Error()
+	for _, want := range []string{"update:false", secondTag, "convergence"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error should mention %q; got %q", want, msg)
+		}
+	}
+}
+
+// TestRun_Apply_NoRefPin_NoUpdate_StillNoOp confirms the drift check
+// only fires when a ref is pinned. Without ref: the operator hasn't
+// declared anything specific, so update:false remains a true no-op.
+func TestRun_Apply_NoRefPin_NoUpdate_StillNoOp(t *testing.T) {
+	upstream, _, _ := makeUpstream(t)
+	dest := filepath.Join(t.TempDir(), "clone")
+
+	step := &config.Step{GitClone: &config.GitClone{Repo: upstream, Dest: dest}}
+	if _, err := (&Handler{}).Run(newCtx(t, false), step); err != nil {
+		t.Fatalf("seed clone: %v", err)
+	}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("re-run without ref pin: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.Changed {
+		t.Error("no-ref + update:false on existing repo should be a no-op")
+	}
+}
+
+// TestRun_Apply_RefMatches_NoUpdate_StillNoOp confirms idempotent
+// behavior survives the new drift check: when dest is already at the
+// requested ref, update:false remains a clean no-op.
+func TestRun_Apply_RefMatches_NoUpdate_StillNoOp(t *testing.T) {
+	upstream, firstTag, _ := makeUpstream(t)
+	dest := filepath.Join(t.TempDir(), "clone")
+
+	step := &config.Step{GitClone: &config.GitClone{
+		Repo: upstream, Dest: dest, Ref: firstTag,
+	}}
+	if _, err := (&Handler{}).Run(newCtx(t, false), step); err != nil {
+		t.Fatalf("seed clone: %v", err)
+	}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("re-run at same ref: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.Changed {
+		t.Error("re-run at same ref + update:false should be a no-op")
+	}
+}
+
 func TestRun_Plan_RepoUpdate_NoUpdate(t *testing.T) {
 	upstream, _, _ := makeUpstream(t)
 	dest := filepath.Join(t.TempDir(), "clone")

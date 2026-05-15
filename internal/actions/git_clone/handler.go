@@ -195,7 +195,27 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 		}
 		result.SetChanged(true)
 	case !g.Update:
-		// dest is already a git repo, update disabled — no-op.
+		// dest is already a git repo, update disabled. Without a ref pin
+		// this is a true no-op. With a ref pin, verify the dest is
+		// actually at that ref — silently reporting ✓ when the repo is
+		// at a different ref than the plan declared masks divergence
+		// (issue #26).
+		if ref != "" {
+			refSHA, resolveErr := captureGit(dest, env, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+			refSHA = strings.TrimSpace(refSHA)
+			if resolveErr != nil || refSHA == "" || refSHA != state.headSHA {
+				result.SetFailed(true)
+				current := shortSHA(state.headSHA)
+				wanted := ref
+				if refSHA != "" {
+					wanted = fmt.Sprintf("%s (%s)", ref, shortSHA(refSHA))
+				}
+				return result, fmt.Errorf(
+					"git.clone: dest %s is at %s but plan declares ref %q; update:false prevents convergence (set update: true to fetch and checkout)",
+					dest, current, wanted,
+				)
+			}
+		}
 		result.SetChanged(false)
 	default:
 		changed, err := runUpdate(g, ref, dest, state.headSHA, env)
