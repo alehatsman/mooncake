@@ -6,6 +6,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -87,10 +88,77 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_Refuses(t *testing.T) {
+func TestReverse_CreatedFileBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsCron: &config.OsCron{Name: "x"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsCronReverseInfo{
+		Path:         "/etc/cron.d/backup",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsCron: &config.OsCron{Name: "backup"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.FileWrite == nil {
+		t.Fatal("Reverse must return a file.write step")
+	}
+	if rev.FileWrite.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.FileWrite.State)
+	}
+	if rev.FileWrite.Path != "/etc/cron.d/backup" {
+		t.Errorf("Path = %s, want /etc/cron.d/backup", rev.FileWrite.Path)
+	}
+}
+
+func TestReverse_ExistingFileContentRestored(t *testing.T) {
+	h := Handler{}
+	prior := "# managed by mooncake\n0 3 * * * root /old/backup.sh\n"
+	r := executor.NewResult()
+	r.ReverseData = &OsCronReverseInfo{
+		Path:         "/etc/cron.d/backup",
+		PriorExisted: true,
+		PriorContent: prior,
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsCron: &config.OsCron{Name: "backup"}}, r)
+	if rev == nil || rev.FileWrite == nil {
+		t.Fatal("Reverse must return a file.write step")
+	}
+	if rev.FileWrite.State != "file" {
+		t.Errorf("State = %s, want file", rev.FileWrite.State)
+	}
+	if rev.FileWrite.Content != prior {
+		t.Errorf("Content mismatch; want %q, got %q", prior, rev.FileWrite.Content)
+	}
+	if !rev.FileWrite.Force {
+		t.Error("Force must be true on reverse (overwrite whatever apply left)")
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, err := h.Reverse(nil, &config.Step{OsCron: &config.OsCron{Name: "x"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil step; got %+v", step)
+	}
+}
+
+func TestReverse_NilStep(t *testing.T) {
+	h := Handler{}
+	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong type"
+	_, err := h.Reverse(nil, &config.Step{OsCron: &config.OsCron{Name: "x"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

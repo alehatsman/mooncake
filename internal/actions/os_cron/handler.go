@@ -147,6 +147,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply state for Reverse() BEFORE the mutation.
+	// computePlan already read the file once; we reuse that read.
+	result.ReverseData = &OsCronReverseInfo{
+		Path:         plan.path,
+		PriorExisted: plan.priorExisted,
+		PriorContent: plan.priorContent,
+	}
+
 	if err := applyPlan(plan); err != nil {
 		return result, err
 	}
@@ -253,13 +261,18 @@ func normalizeState(s string) string {
 }
 
 // cronPlan describes the write/delete needed to converge on the
-// desired state.
+// desired state. priorExisted / priorContent capture the pre-apply
+// file state so Reverse can restore it; these are populated by
+// computePlan regardless of whether the apply ends up running.
 type cronPlan struct {
 	changed     bool
 	operation   string // create|update|delete|noop
 	reason      string
 	path        string
 	wantContent string // empty for delete
+
+	priorExisted bool
+	priorContent string
 }
 
 func computePlan(r renderedCron) (cronPlan, error) {
@@ -267,9 +280,13 @@ func computePlan(r renderedCron) (cronPlan, error) {
 	plan := cronPlan{path: path}
 
 	if r.state == stateAbsent {
-		exists, err := pathExists(path)
+		current, exists, err := readFile(path)
 		if err != nil {
 			return plan, err
+		}
+		plan.priorExisted = exists
+		if exists {
+			plan.priorContent = current
 		}
 		if !exists {
 			plan.operation = "noop"
@@ -288,6 +305,10 @@ func computePlan(r renderedCron) (cronPlan, error) {
 	current, exists, err := readFile(path)
 	if err != nil {
 		return plan, err
+	}
+	plan.priorExisted = exists
+	if exists {
+		plan.priorContent = current
 	}
 	switch {
 	case !exists:
@@ -347,19 +368,6 @@ func applyPlan(plan cronPlan) error {
 		return fmt.Errorf("os.cron: write %s: %w", plan.path, err)
 	}
 	return nil
-}
-
-// pathExists reports whether path exists. fs.ErrNotExist yields
-// (false, nil); other errors are surfaced.
-func pathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
-	}
-	return false, fmt.Errorf("stat %s: %w", path, err)
 }
 
 func readFile(path string) (string, bool, error) {

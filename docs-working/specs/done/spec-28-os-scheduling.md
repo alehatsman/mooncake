@@ -1,14 +1,19 @@
 # Spec 28: `os.*` System Config — cron, systemd, firewall, mount, sysctl
 
-**Status:** Phases 1–6 complete. P1–P5 shipped earlier (os.systemd,
-os.cron, os.sysctl, os.firewall ufw driver, os.mount). **Phase 6
-(spec-22 ABI hooks) shipped**: Permissions / Diff / Cost / Reverse
-declared on all five handlers using the testutil helpers. Reverse
-refuses on all five pending the apply-time pre-state capture
-refactor (tracked as a follow-up — same blocker as spec-26 / 27).
-Phase 7 (docs + non-ufw firewall drivers + macOS launchd if added
-later) is the only outstanding work; firewall non-ufw drivers
-remain deferred per the spec's original scope.
+**Status:** Phases 1–6 complete + os.cron reverse-capture shipped.
+P1–P5 shipped earlier (os.systemd, os.cron, os.sysctl, os.firewall
+ufw driver, os.mount). **Phase 6 (spec-22 ABI hooks) shipped**:
+Permissions / Diff / Cost / Reverse declared on all five handlers
+using the testutil helpers. **Reverse-capture v2 shipped for
+`os.cron`**: Run captures `{Path, PriorExisted, PriorContent}` via
+the existing readFile call in computePlan; Reverse returns a
+cross-action `file.write` step (state=absent if the file didn't
+exist pre-apply, state=file with prior content otherwise). Reverse
+on the other four (os.sysctl, os.systemd, os.mount, os.firewall)
+still refuses pending each handler's apply-time capture (own
+follow-up). Phase 7 (docs + non-ufw firewall drivers + macOS
+launchd if added later) is the only outstanding work; non-ufw
+drivers remain deferred per the spec's original scope.
 **Epic:** E9 Modern Action Surface — bucket E9.3
 **Effort:** L (2 weeks)
 **Value:** Medium-high. Closes the "remaining OS config" gap. Less
