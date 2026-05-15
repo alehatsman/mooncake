@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
@@ -392,6 +394,19 @@ func run(c *cli.Context) error {
 
 	// Create a minimal logger for internal use (errors, etc.)
 	internalLog := logger.NewLogger(level)
+
+	// issue-87: install a SIGINT/SIGTERM handler so Ctrl-C actually
+	// terminates the run. Pre-fix the shell child died (process-group
+	// signal delivery) but mooncake's own process stayed alive — the
+	// executor caught the canceled-step error and proceeded as if the
+	// step had merely failed, then sat in the next step waiting on its
+	// shell etc. We exit on the first signal (after stopping the
+	// handler so a follow-up Ctrl-C during shutdown can still
+	// hard-kill). Graceful "interrupted at step N" run-log entries
+	// require plumbing context through executor.Start and are left
+	// for a follow-up.
+	stopSig := installApplySignalHandler()
+	defer stopSig()
 
 	// Execute with event publisher
 	return executor.Start(executor.StartConfig{
@@ -1404,4 +1419,38 @@ func reorderArgs(args []string, app *cli.App) []string {
 	out = append(out, flags...)
 	out = append(out, positionals...)
 	return out
+}
+
+// installApplySignalHandler installs a SIGINT/SIGTERM handler that
+// terminates the apply with the standard exit code (130 for SIGINT,
+// 143 for SIGTERM). Shell / cmd children get the signal via the
+// process group and die on their own — the handler ensures mooncake's
+// own process doesn't stay alive after they go (the issue-87 bug).
+//
+// The returned stop func unregisters the handler — caller defers it
+// so signals after a clean apply don't keep the goroutine spinning.
+// issue-87.
+func installApplySignalHandler() (stop func()) {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	done := make(chan struct{})
+	go func() {
+		select {
+		case sig := <-sigCh:
+			fmt.Fprintf(os.Stderr, "\n⚠ received %s, aborting apply\n", sig)
+			// Stop listening so a follow-up signal during shutdown
+			// can hit the default handler and hard-kill if we hang.
+			signal.Stop(sigCh)
+			code := 130 // SIGINT
+			if sig == syscall.SIGTERM {
+				code = 143
+			}
+			os.Exit(code)
+		case <-done:
+		}
+	}()
+	return func() {
+		signal.Stop(sigCh)
+		close(done)
+	}
 }
