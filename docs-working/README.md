@@ -68,6 +68,7 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 
 - [Cross-device EXDEV in `fleet upgrade` linux replace](analysis/bug-fleet-upgrade-exdev-rename.md) — `os.Rename` from `/var/lib/.../upgrade/` to `/usr/local/bin/` fails on WSL / multi-fs hosts. Fall back to copy+remove on EXDEV.
 - [`windows.firewall_rule` corrupts non-ASCII via ConvertTo-Json](analysis/bug-windows-firewall-utf8-encoding.md) — PowerShell's default OEM codepage maps non-ASCII bytes to `0x1a` on stdout, breaking the action's drift-detection query. Force UTF-8 output in `realPSRun`.
+- [`windows.scheduled_task` drift detection unstable](analysis/bug-scheduled-task-drift-unstable.md) — Task Scheduler injects schema-defaulted elements on register that `NormaliseTaskXML` doesn't strip; plan always reports "would update" even after a clean apply. Cosmetic but breaks the "plan after apply is empty" invariant.
 
 ## Shipped specs (specs/done/)
 
