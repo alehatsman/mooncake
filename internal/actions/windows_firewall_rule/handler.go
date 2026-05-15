@@ -414,7 +414,13 @@ func stringSliceEqualUnsorted(a, b []string) bool {
 // realPSRun invokes powershell.exe with -EncodedCommand. EncodedCommand
 // is UTF-16LE-base64 PowerShell script; using it side-steps every
 // quoting / escaping hazard at the cmd.exe boundary.
+//
+// Issue #13: prepend winutil.UTF8OutputPrelude so cmdlets like
+// `ConvertTo-Json` emit non-ASCII bytes verbatim instead of getting
+// re-encoded to the OEM codepage (which corrupts to 0x1A on round-
+// trip and breaks the controller-side JSON decode).
 func realPSRun(script string) (string, error) {
+	script = winutil.WithUTF8Output(script)
 	utf16le := utf16.Encode([]rune(script))
 	buf := bytes.Buffer{}
 	for _, r := range utf16le {
