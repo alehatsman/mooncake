@@ -20,13 +20,24 @@ func TestInferHint(t *testing.T) {
 			name:     "curl command not found",
 			stderr:   "curl: command not found",
 			wantText: "curl is not installed",
-			wantStep: "package:\n  name: curl\n  state: present",
+			wantStep: "pkg:\n  name: curl\n  state: present",
 		},
 		{
 			name:     "generic command not found",
 			stderr:   "command not found: jq",
 			wantText: "jq is not installed",
-			wantStep: "package:\n  name: jq\n  state: present",
+			wantStep: "pkg:\n  name: jq\n  state: present",
+		},
+		{
+			// Regression for manual-test #13 (2026-05-15): the bash/sh prefix
+			// form of the "command not found" error was extracting the next
+			// line's first token (typically "bash:") instead of the actual
+			// missing command, producing a suggested_step with a trailing
+			// colon and the wrong package name.
+			name:     "bash prefix form with multiple lines",
+			stderr:   "bash: line 1: lt: command not found\nbash: line 2: foo: command not found",
+			wantText: "lt is not installed",
+			wantStep: "pkg:\n  name: lt\n  state: present",
 		},
 		{
 			name:     "permission denied",

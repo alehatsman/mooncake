@@ -14,9 +14,14 @@ type Hint struct {
 }
 
 var (
-	reCommandNotFound = regexp.MustCompile(`(?i)command not found[:\s]+(\S+)`)
-	reCurlNotFound    = regexp.MustCompile(`(?i)curl: command not found`)
-	reNoSuchFile      = regexp.MustCompile(`(?i)no such file or directory[:\s]+'?([^'\n]+)'?`)
+	// Capture the command name from bash/sh's "<shell>: <cmd>: command not found"
+	// form before falling back to the postfix "command not found: <cmd>" form.
+	// Both shapes terminate the captured name with a colon or whitespace so
+	// the suggestion doesn't emit a trailing punctuation character.
+	reCommandNotFoundPrefix = regexp.MustCompile(`(?i)[^:\s\n]*sh:[^:\n]*?:\s*([^:\s\n]+):\s*command not found`)
+	reCommandNotFound       = regexp.MustCompile(`(?i)command not found[:\s]+([^:\s\n]+)`)
+	reCurlNotFound          = regexp.MustCompile(`(?i)curl: command not found`)
+	reNoSuchFile            = regexp.MustCompile(`(?i)no such file or directory[:\s]+'?([^'\n]+)'?`)
 )
 
 type hintRule struct {
@@ -31,7 +36,25 @@ var rules = []hintRule{
 		hint: func(_ string) Hint {
 			return Hint{
 				Text:          "curl is not installed",
-				SuggestedStep: "package:\n  name: curl\n  state: present",
+				SuggestedStep: "pkg:\n  name: curl\n  state: present",
+			}
+		},
+	},
+	// "<shell>: <cmd>: command not found" — the bash/sh prefix form. Matched
+	// before the postfix rule so we extract the right field when both shapes
+	// could in theory bracket the literal.
+	{
+		match: func(s string) (bool, string) {
+			m := reCommandNotFoundPrefix.FindStringSubmatch(s)
+			if m == nil {
+				return false, ""
+			}
+			return true, m[1]
+		},
+		hint: func(name string) Hint {
+			return Hint{
+				Text:          fmt.Sprintf("%s is not installed", name),
+				SuggestedStep: fmt.Sprintf("pkg:\n  name: %s\n  state: present", name),
 			}
 		},
 	},
@@ -47,7 +70,7 @@ var rules = []hintRule{
 		hint: func(name string) Hint {
 			return Hint{
 				Text:          fmt.Sprintf("%s is not installed", name),
-				SuggestedStep: fmt.Sprintf("package:\n  name: %s\n  state: present", name),
+				SuggestedStep: fmt.Sprintf("pkg:\n  name: %s\n  state: present", name),
 			}
 		},
 	},
