@@ -976,6 +976,159 @@ of-both-worlds outcome.
 
 ---
 
+## 11. Re-run of `scripts/arch-snapshot.sh` — quantified updates
+
+> **Update**: regenerated `docs-working/ARCH_SNAPSHOT.md` after the
+> spec-59/60/62 observers, spec-52/53/54/45-PR13 fleet commands,
+> spec-38 read.*, D3/D4 query, and Windows actions all landed.
+> Concrete LOC and instability deltas below.
+
+### 11.1 LOC growth since the original §1–§2 audit
+
+| Package | Then (§2) | Now | Δ LOC | Δ Affer. | Verdict |
+|---|---:|---:|---:|---:|---|
+| `cmd` | 7139 | **10121** | **+2982 (+42%)** | n/a (still 0) | **Smell 1 significantly worse** |
+| `internal/fleet` | 2264 | **3273** | +1009 (+45%) | 2 → 4 | growth; sub-packages absorb some |
+| `internal/config` | 2971 | **3206** | +235 | 59 → **74** | Smell 3: blast radius keeps widening |
+| `internal/executor` | 2650 | **2953** | +303 | 53 → **66** | Smell 2: more concerns + more importers |
+| `internal/mcp` | 545 | **880** | +335 (+61%) | 7 → **9 eff, 0.82 inst.** | **new mid-range smell** (see §11.4) |
+| `internal/effects` | 903 | **932** | +29 | unchanged | **unchanged in 6 review revisions** |
+| `internal/register` | 64 | 76 | +12 | eff 49 → **61** | 12 new handlers registered, math checks out |
+| `internal/config/config.go` (single file) | 1491 | **1726** | +235 | n/a | Smell 3 evidence file |
+| `internal/executor/executor.go` (single file) | 1148 | **1209** | +61 | n/a | Smell 2 evidence file |
+
+The pattern is consistent: **every smell named in §2 has grown**, none
+of them shrunk. The package-LOC concentration is intensifying, not
+diffusing. (To be fair, the *number* of contributors / spec landings
+has also grown — concentration growth is a necessary side effect of
+sustained shipping. It only becomes a problem when refactor effort
+doesn't catch up. Right now it isn't catching up.)
+
+### 11.2 New cmd-side godfiles — the §9.3 regression is now a pattern
+
+The original review named three cmd-side files >500 LOC (`presets.go`,
+`mooncake.go`, `fleet.go`). The new snapshot adds three more:
+
+| New cmd godfile | LOC |
+|---|---:|
+| `cmd/fleet_doctor.go` | 557 |
+| `cmd/fleet_observe.go` | 511 |
+| `cmd/fleet.go` (existing) | 897 |
+| `cmd/fleet_exec.go` (sub-500 but worth tracking) | 354 |
+| `cmd/fleet_watch.go` (sub-500 but worth tracking) | 429 |
+| `cmd/fleet_upgrade.go` (existing) | (cc 24 on `fleetUpgradeAction`) |
+
+But the picture is more nuanced than "cmd is winning." Three new fleet
+sub-packages also appeared:
+
+| New fleet sub-package | LOC |
+|---|---:|
+| `internal/fleet/exec` | 521 |
+| `internal/fleet/observe` | 423 |
+| `internal/fleet/init` | (exists; size not shown above 500 cutoff) |
+
+**The emerging shape is "split, with cmd carrying half the weight"**
+— each fleet command has both a sub-package *and* a cmd-side file in
+the 350–600 LOC range. This is structurally healthier than pure-cmd
+accumulation (the §7.1/§8.4 pattern is at least partially holding),
+but the cmd-side half is bigger than thin Cobra glue should be.
+
+`cmd/fleet_observe.go` at 511 LOC paired with `internal/fleet/observe/`
+at 423 LOC is the canonical example: roughly equal split, both above
+the threshold where a single function can hold all the logic. Worth
+auditing what got stranded in `cmd/` that belongs in the sub-package.
+
+### 11.3 Six smells revisited against current data
+
+| Smell | Then-evidence | Now-evidence | Trend |
+|---|---|---|---|
+| 1. `cmd/` god-package | 7139 LOC, `fleetApplyAction` cc=49 | **10121 LOC**, +5 new cmd godfiles, `fleetApplyAction` still cc=49 | **worse** |
+| 2. `internal/executor` accretion | 2650 LOC, `ExecuteStep` cc=36 | 2953 LOC, `ExecuteStep` cc=**38**, afferent 66 | **worse** |
+| 3. `config/config.go` 1491 LOC | 59 importers | **1726 LOC, 74 importers** | **worse** |
+| 4. Oversized handlers | 1979/1496/1466/1216 in top 4 | same top 4, no shrinkage | **stable bad** |
+| 5. `internal/effects` ambiguous | 903 LOC, 2 importers, 0.50 inst. | **932 LOC, 2 importers, 0.50 inst., new bypasses by observers** | **worse by neglect** |
+| 6. Validator/registry fan-out drift (§10.2) | n/a (new) | round-5 #27: ~half action surface drifted | **named, not addressed** |
+
+### 11.4 New observation — `internal/mcp` is starting to look like a mid-range smell
+
+`internal/mcp` jumped from 545 to **880 LOC** (+61%), efferent
+dependencies went from 7 to 9, instability 0.78 → 0.82. The package
+imports `events`, `executor`, `facts`, `logger`, `metrics`, `plan`,
+`snapshot`, and now more — and `internal/mcp/tools.go` is a 522 LOC
+single file (newly cracked the godfile list). This is consistent with
+what should happen as the MCP surface grows (more tool exposures =
+more code), but the *shape* matters: every new spec-22-style ABI
+extension and every new observe handler eventually needs MCP wiring,
+and right now that wiring happens in one growing file.
+
+Not at smell-level yet, but worth tracking. The file-level structure
+(`tools.go` doing per-tool dispatch) is the same pattern that turned
+`cmd/fleet.go` into the current 897-LOC problem. Consider splitting
+`tools.go` per tool family (`tools_run.go`, `tools_check.go`,
+`tools_observe.go`, etc.) before it crosses 800 LOC.
+
+### 11.5 Two healthy new packages worth naming
+
+The snapshot adds two new foundation-shaped packages that look clean:
+
+- **`internal/pathquery`** (202 LOC, **instability 0.00**, 3 importers)
+  — extracted from spec-38 read.json/yaml, now shared between the
+  `read_*` actions, the `query` CLI, and the `query_file` MCP tool.
+  Validates the §7.2 narrative: the deliberate 20-LOC duplication
+  D4's commit message defended did eventually graduate into a shared
+  leaf package once the third consumer arrived. **Good pattern; worth
+  citing as the canonical example of "don't abstract until 3 callers."**
+- **`internal/winutil`** (1011 LOC, **instability 0.00**, 3 importers)
+  — Windows-specific helpers (the new `scheduledtask.go` 586-LOC file
+  lives here). Big but appropriate; OS-specific complexity belongs in
+  a leaf, not spread across handlers.
+
+### 11.6 Refactor list — sixth revision (now with urgency multipliers)
+
+Same items as §10.3, but the quantified deltas re-rank them. Urgency
+multiplier = how much worse the underlying smell got this cycle.
+
+| # | Item | Urgency Δ | Notes |
+|---|---|:---:|---|
+| 1 | Single-source-of-truth codegen (Smell 6) | unchanged | Still closes 3+ HIGH findings at once |
+| 2 | **Resolve `internal/effects`** | **+** | 6th revision, package +29 LOC, 0 new consumers, 2 new bypasses. The neglect itself is now the problem |
+| 3 | **Catch `fleet apply` up to sub-package pattern + audit cmd-side fleet files** | **++** | New: §11.2 found `cmd/fleet_observe.go` 511, `cmd/fleet_doctor.go` 557, `cmd/fleet_watch.go` 429 all sitting at threshold |
+| 4 | **Split `cmd/`** (new framing — was item 3 in §5 as "extract `fleetApplyAction`") | **++** | cmd grew 42%. The original recommendation was scoped to `fleetApplyAction`; the new data suggests a wider cmd-extraction pass |
+| 5 | Widen `internal/metrics` data shape | unchanged | Gated on next consumer (likely spec-58) |
+| 6 | Handler-conformance test harness | unchanged | Closes silent-success class |
+| 7 | Split `internal/config/config.go` | **+** | 1726 LOC, 74 importers (was 1491/59) |
+| 8 | Decompose `actions/{service,package,os_systemd}` by driver | unchanged | None of the three shrunk |
+| 9 | Promote `executor/transaction.go` + `trycatch.go` to `internal/control/` | **+** | executor +303 LOC, afferent now 66 |
+| 10 | **Audit `internal/mcp/tools.go` before it crosses 800 LOC** (new) | new | §11.4; preventive, not yet smell-level |
+
+### 11.7 Net assessment (sixth revision)
+
+The story is consistent across all six revisions: **shipping
+velocity is high, refactor velocity is zero**. Every smell named in
+§2 has grown by between 1% and 61% in the weeks since the original
+audit; none of the refactor recommendations have been actioned;
+two new smells (validator drift §10.2, MCP growth §11.4) have
+surfaced. The single bright spot is `internal/pathquery` — the only
+example in this review of a deferred abstraction graduating cleanly
+into a shared leaf at exactly the right moment (third consumer).
+
+The one architectural decision the project keeps deferring is
+`internal/effects`. It's been #1 or #2 on every refactor list across
+§§5/6/7/8/9/10/11, the new code keeps bypassing it, and the LOC has
+grown by 29 (cosmetic) while the consumer base stayed at 2. That's
+the textbook profile of a package that should be folded into its
+sole structural consumer (`executor`) and have its 932 LOC merged
+back. Until that happens — or until path A is committed to with a
+migration — every new read/write-shaped abstraction inherits the
+question of whether to use it, and the answer keeps being "no."
+
+This is no longer a §6.3.3 hypothetical. **Six revisions of "needs
+deciding" is itself the decision.** The project has, by inaction,
+chosen not to use `internal/effects` as a shared plan/execute parity
+layer. The next concrete refactor task should be the fold-in.
+
+---
+
 ## Cross-references
 
 - [`../ARCH_SNAPSHOT.md`](../ARCH_SNAPSHOT.md) — package LOC, instability,
