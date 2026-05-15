@@ -6,6 +6,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -96,10 +97,124 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_Refuses(t *testing.T) {
+func TestReverse_AddedAndMountedBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsMountReverseInfo{
+		Dest:         "/mnt/data",
+		PriorEntry:   nil,
+		PriorMounted: false,
+		TouchedFstab: true,
+		TouchedMount: true,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsMount == nil {
+		t.Fatal("Reverse must return an os.mount step")
+	}
+	if rev.OsMount.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.OsMount.State)
+	}
+}
+
+func TestReverse_PriorEntryAndMountedRestoresMount(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsMountReverseInfo{
+		Dest: "/mnt/data",
+		PriorEntry: &OsMountSnapshotEntry{
+			Src:     "/dev/sdb1",
+			Dest:    "/mnt/data",
+			FSType:  "ext4",
+			Options: []string{"defaults", "noatime"},
+		},
+		PriorMounted: true,
+		TouchedFstab: true,
+		TouchedMount: true,
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if rev == nil || rev.OsMount == nil {
+		t.Fatal("Reverse must return a step")
+	}
+	if rev.OsMount.State != "mounted" {
+		t.Errorf("State = %s, want mounted", rev.OsMount.State)
+	}
+	if rev.OsMount.Src != "/dev/sdb1" {
+		t.Errorf("Src = %s, want /dev/sdb1", rev.OsMount.Src)
+	}
+	if len(rev.OsMount.Options) != 2 {
+		t.Errorf("Options = %v, want [defaults noatime]", rev.OsMount.Options)
+	}
+}
+
+func TestReverse_PriorEntryUnmountedRestoresFstabOnly(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsMountReverseInfo{
+		Dest: "/mnt/data",
+		PriorEntry: &OsMountSnapshotEntry{
+			Src:    "UUID=abc",
+			Dest:   "/mnt/data",
+			FSType: "ext4",
+		},
+		PriorMounted: false,
+		TouchedFstab: true,
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if rev == nil || rev.OsMount.State != "fstab_only" {
+		t.Errorf("State = %v, want fstab_only", rev)
+	}
+}
+
+func TestReverse_NoEntryButMountedRefuses(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsMountReverseInfo{
+		Dest:         "/mnt/data",
+		PriorMounted: true,
+		TouchedMount: true,
+		// PriorEntry: nil — manually mounted without fstab.
+	}
+	_, err := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when prior state was 'mounted without fstab entry'")
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, _ := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil; got %+v", step)
+	}
+}
+
+func TestReverse_NeitherTouchedIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsMountReverseInfo{Dest: "/mnt/data"}
+	step, _ := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if step != nil {
+		t.Errorf("Reverse with neither touched must return nil; got %+v", step)
+	}
+}
+
+func TestReverse_NilStep(t *testing.T) {
+	h := Handler{}
+	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{OsMount: &config.OsMount{Dest: "/mnt/data"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

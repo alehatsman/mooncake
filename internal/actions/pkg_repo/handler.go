@@ -202,6 +202,19 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Capture pre-apply sources file state for Reverse(). The
+	// computeAptPlan path already calls readFile on the sources
+	// path when state=present, but state=absent only calls
+	// pathExists; re-read here so both branches capture content.
+	priorContent, priorExisted, _ := readFile(plan.sourcesPath)
+	result.ReverseData = &PkgRepoReverseInfo{
+		Name:         r.Name,
+		SourcesPath:  plan.sourcesPath,
+		KeyringPath:  plan.keyringPath,
+		PriorExisted: priorExisted,
+		PriorContent: priorContent,
+	}
+
 	if err := applyApt(plan, rendered); err != nil {
 		return result, err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -136,15 +137,94 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_RefusesPendingCapture(t *testing.T) {
+func TestReverse_CreatedFileBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{OsSSHKey: &config.OsSSHKey{User: "deploy", Key: "x"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &OsSSHKeyReverseInfo{
+		Path:         "/home/deploy/.ssh/authorized_keys",
+		User:         "deploy",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsSSHKey: &config.OsSSHKey{User: "deploy", Key: "x"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.FileWrite == nil {
+		t.Fatal("Reverse must return a file.write step")
+	}
+	if rev.FileWrite.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.FileWrite.State)
+	}
+}
+
+func TestReverse_ExistingFileContentRestored(t *testing.T) {
+	h := Handler{}
+	prior := "ssh-ed25519 AAAAOLDKEY existing@host\n"
+	r := executor.NewResult()
+	r.ReverseData = &OsSSHKeyReverseInfo{
+		Path:         "/home/deploy/.ssh/authorized_keys",
+		User:         "deploy",
+		PriorExisted: true,
+		PriorContent: prior,
+	}
+	rev, _ := h.Reverse(nil, &config.Step{OsSSHKey: &config.OsSSHKey{User: "deploy", Key: "new"}}, r)
+	if rev == nil || rev.FileWrite == nil {
+		t.Fatal("Reverse must return a file.write step")
+	}
+	if rev.FileWrite.State != "file" {
+		t.Errorf("State = %s, want file", rev.FileWrite.State)
+	}
+	if rev.FileWrite.Content != prior {
+		t.Errorf("Content mismatch; want %q, got %q", prior, rev.FileWrite.Content)
+	}
+	if rev.FileWrite.Mode != "0600" {
+		t.Errorf("Mode = %s, want 0600", rev.FileWrite.Mode)
+	}
+	if rev.FileWrite.Owner != "deploy" {
+		t.Errorf("Owner = %s, want deploy", rev.FileWrite.Owner)
+	}
+	if !rev.FileWrite.Force {
+		t.Error("Force must be true on reverse")
+	}
+}
+
+func TestReverse_ContentRoundTripsViaPriorContentBytes(t *testing.T) {
+	// readAuthorizedKeys strips trailing '\n'; priorContentBytes
+	// must re-add it.
+	got := priorContentBytes([]string{"a", "b"}, true)
+	if got != "a\nb\n" {
+		t.Errorf("priorContentBytes = %q, want %q", got, "a\nb\n")
+	}
+	if priorContentBytes(nil, false) != "" {
+		t.Error("empty bytes expected when file didn't exist")
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, err := h.Reverse(nil, &config.Step{OsSSHKey: &config.OsSSHKey{User: "deploy", Key: "x"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil step; got %+v", step)
+	}
 }
 
 func TestReverse_NilStep(t *testing.T) {
 	h := Handler{}
 	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{OsSSHKey: &config.OsSSHKey{User: "deploy", Key: "x"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {

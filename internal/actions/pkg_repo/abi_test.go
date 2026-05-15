@@ -7,6 +7,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
@@ -125,15 +126,77 @@ func TestCost_RegisteredAsCoster(t *testing.T) {
 	var _ actions.Coster = (*Handler)(nil)
 }
 
-func TestReverse_RefusesPendingCapture(t *testing.T) {
+func TestReverse_CreatedSourcesBecomesAbsent(t *testing.T) {
 	h := Handler{}
-	step, err := h.Reverse(nil, &config.Step{PkgRepo: &config.PkgRepo{Name: "x"}}, nil)
-	testutil.AssertReverseRefuses(t, step, err, "not yet implemented")
+	r := executor.NewResult()
+	r.ReverseData = &PkgRepoReverseInfo{
+		Name:         "nodesource",
+		SourcesPath:  "/etc/apt/sources.list.d/nodesource.sources",
+		KeyringPath:  "/etc/apt/keyrings/nodesource.gpg",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{PkgRepo: &config.PkgRepo{Name: "nodesource"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.FileWrite == nil {
+		t.Fatal("Reverse must return a file.write step")
+	}
+	if rev.FileWrite.State != "absent" {
+		t.Errorf("State = %s, want absent", rev.FileWrite.State)
+	}
+	if rev.FileWrite.Path != "/etc/apt/sources.list.d/nodesource.sources" {
+		t.Errorf("Path = %s, want sources path", rev.FileWrite.Path)
+	}
+}
+
+func TestReverse_PriorContentRestored(t *testing.T) {
+	h := Handler{}
+	prior := "Types: deb\nURIs: https://old.example.com\nSuites: stable\nComponents: main\n"
+	r := executor.NewResult()
+	r.ReverseData = &PkgRepoReverseInfo{
+		Name:         "nodesource",
+		SourcesPath:  "/etc/apt/sources.list.d/nodesource.sources",
+		PriorExisted: true,
+		PriorContent: prior,
+	}
+	rev, _ := h.Reverse(nil, &config.Step{PkgRepo: &config.PkgRepo{Name: "nodesource"}}, r)
+	if rev == nil || rev.FileWrite == nil {
+		t.Fatal("Reverse must return a file.write step")
+	}
+	if rev.FileWrite.Content != prior {
+		t.Errorf("Content mismatch; want %q, got %q", prior, rev.FileWrite.Content)
+	}
+	if !rev.FileWrite.Force {
+		t.Error("Force must be true on reverse")
+	}
+}
+
+func TestReverse_NoReverseDataIsNoop(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	step, err := h.Reverse(nil, &config.Step{PkgRepo: &config.PkgRepo{Name: "x"}}, r)
+	if err != nil {
+		t.Fatalf("Reverse on no-capture must not error; got: %v", err)
+	}
+	if step != nil {
+		t.Errorf("Reverse on no-capture must return nil; got %+v", step)
+	}
 }
 
 func TestReverse_NilStep(t *testing.T) {
 	h := Handler{}
 	testutil.AssertNilStepErrors(t, "Reverse", func() error { _, err := h.Reverse(nil, nil, nil); return err })
+}
+
+func TestReverse_WrongReverseDataType(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = "wrong"
+	_, err := h.Reverse(nil, &config.Step{PkgRepo: &config.PkgRepo{Name: "x"}}, r)
+	if err == nil {
+		t.Fatal("Reverse must error when ReverseData has wrong type")
+	}
 }
 
 func TestReverse_RegisteredAsReverser(t *testing.T) {
