@@ -56,6 +56,10 @@ func TestValidate(t *testing.T) {
 		{"missing dest", &config.Step{GitClone: &config.GitClone{Repo: "https://x"}}, true},
 		{"negative depth", &config.Step{GitClone: &config.GitClone{Repo: "https://x", Dest: "/tmp/x", Depth: -1}}, true},
 		{"ok", &config.Step{GitClone: &config.GitClone{Repo: "https://x", Dest: "/tmp/x"}}, false},
+		// MT-33: url: alias for repo:
+		{"url alias", &config.Step{GitClone: &config.GitClone{URL: "https://x", Dest: "/tmp/x"}}, false},
+		// MT-33: both set — repo wins, validate still passes
+		{"both set", &config.Step{GitClone: &config.GitClone{Repo: "https://r", URL: "https://u", Dest: "/tmp/x"}}, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -64,6 +68,23 @@ func TestValidate(t *testing.T) {
 				t.Errorf("err=%v wantErr=%v", err, c.wantErr)
 			}
 		})
+	}
+}
+
+// MT-33: when only url: is set (Repo empty), Validate resolves the
+// alias so the rest of the handler reads g.Repo. This pins the
+// mutation contract — without it, downstream callers that re-read
+// step.GitClone.Repo would still see an empty value.
+func TestValidate_URLAliasMutatesRepo(t *testing.T) {
+	step := &config.Step{GitClone: &config.GitClone{
+		URL:  "https://example.com/x.git",
+		Dest: "/tmp/x",
+	}}
+	if err := (&Handler{}).Validate(step); err != nil {
+		t.Fatalf("Validate with url: alone should pass; got %v", err)
+	}
+	if step.GitClone.Repo != "https://example.com/x.git" {
+		t.Errorf("Validate should have resolved url: into repo:; got Repo=%q", step.GitClone.Repo)
 	}
 }
 

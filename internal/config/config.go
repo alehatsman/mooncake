@@ -354,6 +354,11 @@ type GitClone struct {
 	Update            bool            `yaml:"update" json:"update,omitempty"`                         // If dest exists: fetch + checkout ref (default false → noop)
 	Force             bool            `yaml:"force" json:"force,omitempty"`                           // Discard local changes when updating (git reset --hard)
 	Credentials       *GitCredentials `yaml:"credentials" json:"credentials,omitempty"`               // Auth for the remote; values are redacted in logs
+	// URL is an alias for Repo (MT-33). Authors familiar with `git clone <url>`
+	// or with file.download's url: field naturally reach for url:. Handler
+	// precedence: Repo wins when both are set so the canonical name stays
+	// authoritative.
+	URL string `yaml:"url,omitempty" json:"url,omitempty"`
 }
 
 // GitCredentials carries optional authentication for git network

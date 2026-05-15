@@ -67,6 +67,11 @@ func (h *Handler) Validate(step *config.Step) error {
 	if g == nil {
 		return fmt.Errorf("git.clone requires configuration")
 	}
+	// MT-33: accept `url:` as an alias for `repo:`. Resolve before
+	// validating so the rest of the handler reads g.Repo only.
+	if strings.TrimSpace(g.Repo) == "" && strings.TrimSpace(g.URL) != "" {
+		g.Repo = g.URL
+	}
 	if strings.TrimSpace(g.Repo) == "" {
 		return fmt.Errorf("git.clone: repo is required")
 	}
