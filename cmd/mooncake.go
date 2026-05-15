@@ -1181,18 +1181,20 @@ func createApp() *cli.App {
 						Action: runsApplyCommand,
 					},
 					{
-						Name:  "follow",
-						Usage: "Stream events for an existing run, rendered like `apply`",
+						Name:      "follow",
+						Usage:     "Stream events for an existing run, rendered like `apply`",
+						ArgsUsage: "<run_id>",
 						Flags: []cli.Flag{
 							&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket"},
 						},
 						Action: runsFollowCommand,
 					},
 					{
-						Name:   "get",
-						Usage:  "Print the JSON record for one run",
-						Flags:  []cli.Flag{&cli.BoolFlag{Name: "system"}},
-						Action: runsGetCommand,
+						Name:      "get",
+						Usage:     "Print the JSON record for one run",
+						ArgsUsage: "<run_id>",
+						Flags:     []cli.Flag{&cli.BoolFlag{Name: "system"}},
+						Action:    runsGetCommand,
 					},
 					{
 						Name:  "list",
