@@ -58,19 +58,23 @@ framework; the spec-38 readers are its first real consumer.
 
 ---
 
-### P4 — Spec-24 P6 + Spec-25 P5: ABI hooks for `pkg.*` and `text.*`
+### ~~P4 — Spec-24 P6 + Spec-25 P5~~ ✅ shipped
 
-**Why fourth**: these were blocked on spec-22 phase 3 (Permissions). That
-shipped. The final ABI-hook phase for the two most-used action families is
-now unblocked. Together they close the "Stream-1 specs' final phases" line
-from the success criteria.
+**Spec-24 P6 shipped** on this worktree
+(`worktree-spec-24-pkg-abi`). `Permissions()` / `Diff()` / `Cost()` /
+`Reverse()` declared on all four pkg.* sibling handlers (pkg_repo,
+pkg_hold, pkg_list, pkg_upgrade). Reverse on pkg_repo / pkg_hold
+returns refusal pending the apply-time pre-state capture refactor;
+pkg.upgrade is irreversible by design; pkg.list deliberately opts
+out of Reverser (read-only). Bonus: new
+`internal/actions/testutil/abi.go` consolidates the shared
+"AssertReverseRefuses" + "AssertNilStepErrors" patterns to cut ~8
+lines per future handler test file.
 
-- Spec-24 P6: wire `Permissions()` / `Diff()` / `Reverse()` / `Cost()` into
-  all `pkg.*` handlers using the existing spec-22 patterns.
-- Spec-25 P5: same for `text.*` handlers.
-
-Effort: S each (~1 day per family). Pure pattern-application; handler
-interface is already defined.
+**Spec-25 P5** — text handlers (text.line + 4 text.patch) already
+got their ABI hooks in spec-22 phases 3–6 across slices A–E (see
+PROGRESS.md). Considered complete; the spec just needs a status
+bump.
 
 ---
 
@@ -171,7 +175,7 @@ Phases:
 | **P1** | Spec-22 phase 8: docs (phase 7 ✅ `92b58d8`) | S | Stream 2 |
 | ~~P2~~ | ~~Spec-23 §2: try/catch/finally~~ ✅ `f598238`/`7b4d62a` | M | Stream 2 |
 | ~~P3~~ | ~~Spec-37 + 38: output capture + read.json/yaml~~ ✅ `901e013`/`8549c33`/`2ee98e7` | XS + S | Stream 1 |
-| **P4** | Spec-24 P6 + 25 P5: pkg/text ABI hooks | S each | Stream 1 |
+| ~~P4~~ | ~~Spec-24 P6: pkg.* ABI hooks~~ ✅ shipped — `worktree-spec-24-pkg-abi` (+ shared testutil) | S | Stream 1 |
 | ~~P5~~ | ~~Spec-26 ABI hooks (git)~~ ✅ shipped — `worktree-spec-26-git-abi` | S | Stream 1 |
 | **P5b** | Spec-27: os identity ABI hooks (user/group/ssh_key) | S | Stream 1 |
 | **P6** | Spec-45 PR13: `fleet init` interactive | S | Stream 3 |

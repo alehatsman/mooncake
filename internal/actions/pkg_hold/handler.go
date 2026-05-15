@@ -61,6 +61,18 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// pkg.hold always declares Sudo=true: apt-mark hold/unhold writes
+// dpkg state. No Network. RequiredBinaries=[apt-mark] (v1 only
+// supports apt; Validate rejects other managers).
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"apt-mark"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	p := step.PkgHold
 	if p == nil {

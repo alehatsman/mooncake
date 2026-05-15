@@ -70,7 +70,7 @@ The typed mutation vocabulary. Ships everywhere.
 
 | Spec | Topic | State |
 |---|---|---|
-| 24 | `pkg.*` (install/remove/repo/hold/upgrade/list) | P1–P5 shipped, P6 (ABI hooks) waits on spec-22 phase 3 |
+| 24 | `pkg.*` (install/remove/repo/hold/upgrade/list) | P1–P6 shipped (P6: ABI hooks across pkg_repo / pkg_hold / pkg_list / pkg_upgrade). P7 (docs) pending |
 | 25 | `text.line` · `text.patch.{ini,json,yaml}` | P1–P4 shipped, P5 (ABI hooks) waits on spec-22 |
 | 26 | `git.clone` (+creds/submodules) · `git.checkout` · `git.config` | P1–P5 shipped (P5: spec-22 ABI hooks across all three handlers + new `ResourceGit` kind). P6 (docs) pending |
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped |

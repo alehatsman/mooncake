@@ -29,7 +29,7 @@ ABI lands.
 | 32 | Collapse step action dispatch | not started |
 | 22 | Extended handler ABI (`Diff` / `Reverse` / `Cost` / `Permissions`) | not started — **blocks the final phase of every action spec below** |
 | 17 | Batched packages + templated `names` | not started |
-| 24 | `pkg.install` / `pkg.remove` / `pkg.repo` / `pkg.hold` / `pkg.upgrade` / `pkg.list` | P1–P5 shipped; P6 (ABI hooks) blocked on 22; P7 (docs) pending |
+| 24 | `pkg.install` / `pkg.remove` / `pkg.repo` / `pkg.hold` / `pkg.upgrade` / `pkg.list` | P1–P6 shipped (P6: spec-22 ABI hooks); P7 (docs) pending |
 | 25 | `text.line` · `text.patch.{ini,json,yaml}` | P1–P4 shipped; P5 (ABI hooks) blocked on 22; P6 (docs) pending |
 | 26 | `git.clone` (incl. credentials + submodules) · `git.checkout` · `git.config` | P1–P5 shipped (P5: spec-22 ABI hooks); P6 (docs) pending |
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P3 shipped; P4 (ABI hooks) blocked on 22; P5 (docs) pending |

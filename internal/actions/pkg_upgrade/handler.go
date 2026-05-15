@@ -61,6 +61,22 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// pkg.upgrade is the highest-blast-radius package action: declares
+// Sudo and Network always. Subset-upgrade (Names != nil) and
+// full-upgrade (Names empty) share the same permission surface —
+// both shell to apt-get under sudo and pull from configured repos.
+// RequiredBinaries=[apt-get]; v1 supports apt only (Validate
+// rejects others).
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:             true,
+		Network:          true,
+		RequiredBinaries: []string{"apt-get"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	p := step.PkgUpgrade
 	if p == nil {

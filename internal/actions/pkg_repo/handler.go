@@ -75,6 +75,40 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 var nameRE = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// pkg.repo always declares Sudo=true: every driver writes under a
+// system root (/etc/apt/sources.list.d, /etc/yum.repos.d, the
+// Homebrew taps dir). Network is true when state=present and a
+// GPG key URL is configured — that's the only path that reaches
+// out. RequiredBinaries depends on the apt driver flow.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"apt-get"},
+	}
+	if step == nil || step.PkgRepo == nil {
+		return ps
+	}
+	r := step.PkgRepo
+	state := r.State
+	if state == "" {
+		state = statePresent
+	}
+	if state == statePresent && r.Apt != nil && r.Apt.GPGKeyURL != "" {
+		ps.Network = true
+	}
+	// FilesystemWrite lists the canonical apt paths; dnf/brew are
+	// reserved drivers and we don't pretend to know their layouts
+	// yet. Conservative: include both sources + keyring dirs so the
+	// policy layer sees the full surface.
+	ps.FilesystemWrite = []string{
+		apt.sourcesDir + "/" + r.Name + ".sources",
+		apt.keyringsDir + "/" + r.Name + ".gpg",
+	}
+	return ps
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	r := step.PkgRepo
 	if r == nil {
