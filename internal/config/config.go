@@ -393,10 +393,25 @@ type GitCheckout struct {
 // GitConfig manages git config keys at local/global/system scope.
 // Idempotent: only set/unset keys whose current value differs from the desired state.
 type GitConfig struct {
-	Scope string            `yaml:"scope" json:"scope"`                  // local | global | system (required)
-	Repo  string            `yaml:"repo" json:"repo,omitempty" plan:"path"` // Working tree path (required iff scope=local)
-	Set   map[string]string `yaml:"set" json:"set,omitempty"`            // Key → desired value
-	Unset []string          `yaml:"unset" json:"unset,omitempty"`        // Keys to remove
+	Scope string            `yaml:"scope" json:"scope"`                               // local | global | system (required)
+	Repo  string            `yaml:"repo" json:"repo,omitempty" plan:"path"`           // Working tree path (required iff scope=local; `dest:` accepted as alias)
+	Dest  string            `yaml:"dest,omitempty" json:"dest,omitempty" plan:"path"` // Alias for `repo:` — matches git.clone/git.checkout's path-naming
+	Set   map[string]string `yaml:"set" json:"set,omitempty"`                         // Key → desired value
+	Unset []string          `yaml:"unset" json:"unset,omitempty"`                     // Keys to remove
+}
+
+// WorkingTree returns the configured local repo path, reading from
+// either `repo:` (canonical) or `dest:` (alias). Errors when both
+// are set to different values. Callers should use this rather than
+// reading Repo directly so the alias propagates outside Validate.
+func (g *GitConfig) WorkingTree() (string, error) {
+	if g.Repo != "" && g.Dest != "" && g.Repo != g.Dest {
+		return "", fmt.Errorf("git.config: both `repo:` and `dest:` set with different values (use one)")
+	}
+	if g.Repo != "" {
+		return g.Repo, nil
+	}
+	return g.Dest, nil
 }
 
 // Package represents a package management operation (install/remove/update packages).

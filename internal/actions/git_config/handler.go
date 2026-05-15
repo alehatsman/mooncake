@@ -91,8 +91,16 @@ func (h *Handler) Validate(step *config.Step) error {
 	default:
 		return fmt.Errorf("git.config: invalid scope %q (must be local|global|system)", scope)
 	}
-	if scope == scopeLocal && strings.TrimSpace(g.Repo) == "" {
-		return fmt.Errorf("git.config: repo is required when scope=local")
+	if scope == scopeLocal {
+		repo, err := g.WorkingTree()
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(repo) == "" {
+			return fmt.Errorf("git.config: repo (or dest:) is required when scope=local")
+		}
+	} else if _, err := g.WorkingTree(); err != nil {
+		return err
 	}
 	if len(g.Set) == 0 && len(g.Unset) == 0 {
 		return fmt.Errorf("git.config: at least one of set or unset must be provided")
@@ -117,7 +125,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	repo := ""
 	if scope == scopeLocal {
-		expanded, err := expandRepo(ctx, g.Repo)
+		repoSrc, err := g.WorkingTree()
+		if err != nil {
+			return nil, err
+		}
+		expanded, err := expandRepo(ctx, repoSrc)
 		if err != nil {
 			return nil, fmt.Errorf("git.config: expand repo: %w", err)
 		}
