@@ -55,8 +55,15 @@ func TestGenerate(t *testing.T) {
 		t.Errorf("Expected step type 'object', got %s", stepDef.Type)
 	}
 
-	// Verify universal fields exist in step
-	universalFields := []string{"name", "when", "as", "tags", "as_user"}
+	// Verify universal fields exist in step. MT-77: `creates` and
+	// `unless` are MT-15 step-level aliases of `unless_exists` /
+	// `unless_command`; the schema generator must list them so
+	// `validate` doesn't reject them and bottom out at the
+	// empty-vocab oneOf error path.
+	universalFields := []string{
+		"name", "when", "as", "tags", "as_user",
+		"creates", "unless", "unless_exists", "unless_command",
+	}
 	for _, field := range universalFields {
 		if _, ok := stepDef.Properties[field]; !ok {
 			t.Errorf("Universal field %s not found in step definition", field)

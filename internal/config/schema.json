@@ -2085,6 +2085,10 @@
           "type": "boolean",
           "description": "Continue execution even if this step fails (universal)"
         },
+        "creates": {
+          "type": "string",
+          "description": "Skip step if this file path exists (universal alias of unless_exists)"
+        },
         "cwd": {
           "type": "string",
           "description": "Working directory for the step"
@@ -2391,6 +2395,10 @@
         "txn_role": {
           "type": "string",
           "description": "(plan metadata) Role of this step inside its parent transaction: 'body' or 'rollback'"
+        },
+        "unless": {
+          "type": "string",
+          "description": "Skip step if this command succeeds (universal alias of unless_command)"
         },
         "unless_command": {
           "type": "string",

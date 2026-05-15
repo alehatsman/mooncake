@@ -121,6 +121,24 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
     state: present
   for_each_file: /tmp/files`,
 		},
+		// MT-77: step-level `creates:` and `unless:` (MT-15 aliases of
+		// unless_exists / unless_command) must validate cleanly. The
+		// schema previously omitted them so the oneOf union failed
+		// with an empty action vocabulary ("Step must have exactly
+		// one action ()").
+		{
+			name: "step with step-level creates: alias",
+			yamlConfig: `- file.write:
+    path: /tmp/guarded.txt
+    content: "v1\n"
+    state: present
+  creates: /tmp/guarded.txt`,
+		},
+		{
+			name: "step with step-level unless: alias",
+			yamlConfig: `- shell: touch /tmp/marker
+  unless: test -f /tmp/marker`,
+		},
 	}
 
 	for _, tt := range tests {

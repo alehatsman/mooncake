@@ -115,6 +115,21 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "Skip step if this command succeeds (exit code 0). Useful for idempotency (universal)",
 		},
+		// MT-15 added these as friendly step-level aliases of
+		// unless_exists / unless_command on the Step struct, but the
+		// schema generator never grew the corresponding properties — so
+		// `creates:` and `unless:` at step level were silently rejected
+		// by validate, and the validator's oneOf failure mode bottomed
+		// out at the empty-vocab error path ("Step must have exactly
+		// one action ()") because no action variant matched. MT-77.
+		"creates": {
+			Type:        "string",
+			Description: "Skip step if this file path exists (universal alias of unless_exists)",
+		},
+		"unless": {
+			Type:        "string",
+			Description: "Skip step if this command succeeds (universal alias of unless_command)",
+		},
 		"as_user": {
 			Type:        "string",
 			Description: "Run as this user (empty = current user, 'root' = sudo to root, '<name>' = sudo to user). Works with: shell, cmd, file.write, file.template",
