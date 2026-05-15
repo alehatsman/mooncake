@@ -23,6 +23,13 @@ func TestInstaller_UnitPath(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("windows-with-staging", func(t *testing.T) {
+		got := Installer{OS: "windows", StagingPath: `C:\Tmp\foo.xml`}.UnitPath()
+		if got != `C:\Tmp\foo.xml` {
+			t.Errorf("got %q", got)
+		}
+	})
 }
 
 func TestInstaller_UnitName(t *testing.T) {
@@ -31,6 +38,97 @@ func TestInstaller_UnitName(t *testing.T) {
 	}
 	if got := (Installer{OS: "darwin"}.UnitName()); got != "com.mooncake.agentd" {
 		t.Errorf("darwin UnitName = %q", got)
+	}
+	if got := (Installer{OS: "windows"}.UnitName()); got != "Mooncake-Agentd-Autostart" {
+		t.Errorf("windows UnitName = %q", got)
+	}
+}
+
+func TestInstaller_Render_Windows(t *testing.T) {
+	body, err := Installer{
+		OS:         "windows",
+		Port:       7879,
+		BinaryPath: `C:\Users\aleh\AppData\Local\Mooncake\bin\mooncake.exe`,
+		TokenPath:  `C:\Users\aleh\AppData\Local\Mooncake\agentd.token`,
+		UserID:     `DESKTOP-X\aleh`,
+	}.Render()
+	if err != nil {
+		t.Fatalf("Render windows: %v", err)
+	}
+	for _, want := range []string{
+		`<Task version="1.4"`,
+		`<URI>\Mooncake-Agentd-Autostart</URI>`,
+		`<BootTrigger>`,
+		`<UserId>DESKTOP-X\aleh</UserId>`,
+		`<LogonType>S4U</LogonType>`,
+		`<Command>C:\Users\aleh\AppData\Local\Mooncake\bin\mooncake.exe</Command>`,
+		`agentd --bind 0.0.0.0:7879`,
+		`agentd.token`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("windows render missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestInstaller_Render_WindowsRequiresExtraFields(t *testing.T) {
+	cases := []struct {
+		name string
+		i    Installer
+	}{
+		{"no binary", Installer{OS: "windows", Port: 7879, TokenPath: "t", UserID: "u"}},
+		{"no token", Installer{OS: "windows", Port: 7879, BinaryPath: "b", UserID: "u"}},
+		{"no user", Installer{OS: "windows", Port: 7879, BinaryPath: "b", TokenPath: "t"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if _, err := c.i.Render(); err == nil {
+				t.Fatalf("expected error")
+			}
+		})
+	}
+}
+
+func TestInstaller_EnableStartCmd_Windows(t *testing.T) {
+	got := Installer{
+		OS:          "windows",
+		StagingPath: `C:\Tmp\agentd-task.xml`,
+	}.EnableStartCmd()
+	for _, want := range []string{
+		`Register-ScheduledTask`,
+		`-TaskName 'Mooncake-Agentd-Autostart'`,
+		`-Xml (Get-Content -Raw 'C:\Tmp\agentd-task.xml')`,
+		`Start-ScheduledTask -TaskName 'Mooncake-Agentd-Autostart'`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("windows enable cmd missing %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestInstaller_StopDisableCmd_Windows(t *testing.T) {
+	got := Installer{OS: "windows"}.StopDisableCmd()
+	for _, want := range []string{
+		`Stop-ScheduledTask -TaskName 'Mooncake-Agentd-Autostart'`,
+		`Unregister-ScheduledTask -TaskName 'Mooncake-Agentd-Autostart'`,
+		`-ErrorAction SilentlyContinue`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("windows stop cmd missing %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestInstaller_IsActiveCmd_Windows(t *testing.T) {
+	got := Installer{OS: "windows", Port: 7879}.IsActiveCmd()
+	if !strings.Contains(got, "Get-NetTCPConnection") {
+		t.Errorf("windows IsActiveCmd missing Get-NetTCPConnection: %q", got)
+	}
+	if !strings.Contains(got, "7879") {
+		t.Errorf("windows IsActiveCmd missing port: %q", got)
+	}
+	if !strings.Contains(got, "'active'") || !strings.Contains(got, "'inactive'") {
+		t.Errorf("windows IsActiveCmd missing active/inactive branches: %q", got)
 	}
 }
 

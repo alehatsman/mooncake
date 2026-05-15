@@ -114,6 +114,16 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	}
 	report("detected %s %s", osName, arch)
 
+	// Windows takes a distinct path: no sudo, paths under %LOCALAPPDATA%,
+	// scheduled task instead of systemd unit, firewall handled inline.
+	// The shape diverges enough from Linux/macOS that sharing the helper
+	// functions would add more branching than clarity. spec-56 has the
+	// rationale; the Windows flow is encapsulated in bootstrapWindows
+	// below so future spec changes touch one self-contained block.
+	if osName == "windows" {
+		return bootstrapWindows(ctx, sess, opts, arch, report)
+	}
+
 	// Probe root state once; informs the sudo wrapper for the next 4 steps.
 	isRoot, err := detectIsRoot(ctx, sess)
 	if err != nil {
