@@ -1982,6 +1982,14 @@
         "when": {
           "type": "string",
           "description": "Conditional expression for step execution (universal)"
+        },
+        "windows.firewall_rule": {
+          "description": "Manage Windows Firewall inbound/outbound rules",
+          "$ref": "#/definitions/windows.firewall_rule"
+        },
+        "windows.scheduled_task": {
+          "description": "Manage Windows Task Scheduler entries",
+          "$ref": "#/definitions/windows.scheduled_task"
         }
       },
       "oneOf": [
@@ -2259,6 +2267,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -2539,6 +2557,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -2817,6 +2845,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -3097,6 +3135,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -3375,6 +3423,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -3655,6 +3713,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -3933,6 +4001,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -4213,6 +4291,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -4491,6 +4579,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -4771,6 +4869,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -5049,6 +5157,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -5329,6 +5447,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -5607,6 +5735,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -5887,6 +6025,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -6165,6 +6313,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -6445,6 +6603,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -6723,6 +6891,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -7003,6 +7181,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -7281,6 +7469,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -7561,6 +7759,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -7839,6 +8047,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -8119,6 +8337,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -8397,6 +8625,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -8677,6 +8915,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -8955,6 +9203,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -9235,6 +9493,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -9513,6 +9781,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -9793,6 +10071,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -10072,6 +10360,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -10314,6 +10612,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -10345,6 +10648,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -10588,6 +10901,11 @@
               },
               {
                 "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
                   "use"
                 ]
               },
@@ -10619,6 +10937,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -10899,6 +11227,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -11177,6 +11515,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -11457,6 +11805,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -11735,6 +12093,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -12022,6 +12390,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -12300,6 +12678,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -12580,6 +12968,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -12858,6 +13256,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -13138,6 +13546,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -13416,6 +13834,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -13696,6 +14124,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -13974,6 +14412,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -14254,6 +14702,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -14533,6 +14991,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -14810,6 +15278,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -14975,6 +15453,16 @@
               },
               {
                 "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
                   "repo.patch"
                 ]
               },
@@ -15076,6 +15564,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -15363,6 +15861,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -15641,6 +16149,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -15921,6 +16439,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -16199,6 +16727,16 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
                 ]
               }
             ]
@@ -16479,6 +17017,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -16758,6 +17306,16 @@
                 "required": [
                   "wait.port"
                 ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
               }
             ]
           }
@@ -17036,6 +17594,594 @@
               {
                 "required": [
                   "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "windows.firewall_rule"
+          ],
+          "properties": {
+            "windows.firewall_rule": {
+              "$ref": "#/definitions/windows.firewall_rule"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "windows.scheduled_task"
+          ],
+          "properties": {
+            "windows.scheduled_task": {
+              "$ref": "#/definitions/windows.scheduled_task"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
                 ]
               }
             ]
@@ -17544,6 +18690,30 @@
       "additionalProperties": false,
       "x-category": "network",
       "x-supports-dry-run": true
+    },
+    "windows.firewall_rule": {
+      "type": "object",
+      "description": "Manage Windows Firewall inbound/outbound rules",
+      "additionalProperties": false,
+      "x-platforms": [
+        "windows"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
+    "windows.scheduled_task": {
+      "type": "object",
+      "description": "Manage Windows Task Scheduler entries",
+      "additionalProperties": false,
+      "x-platforms": [
+        "windows"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
     }
   }
 }

@@ -29,6 +29,7 @@ func fleetCommand() *cli.Command {
 			"~/.config/mooncake/peers.toml.",
 		Subcommands: []*cli.Command{
 			fleetApplyCommand(),
+			fleetExecCommand(),
 			fleetStatusCommand(),
 			fleetDoctorCommand(),
 			fleetLogsCommand(),
