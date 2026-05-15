@@ -70,6 +70,7 @@ under spec-22 / spec-30 / spec-58; the genuinely-new bets are `observe.*`,
 - [#13](https://github.com/alehatsman/mooncake/issues/13) `windows.firewall_rule` corrupts non-ASCII via ConvertTo-Json ([analysis](analysis/bug-windows-firewall-utf8-encoding.md)) — PowerShell's default OEM codepage maps non-ASCII bytes to `0x1a` on stdout, breaking the action's drift-detection query. Force UTF-8 output in `realPSRun`.
 - [#14](https://github.com/alehatsman/mooncake/issues/14) `windows.scheduled_task` drift detection unstable ([analysis](analysis/bug-scheduled-task-drift-unstable.md)) — Task Scheduler injects schema-defaulted elements on register that `NormaliseTaskXML` doesn't strip; plan always reports "would update" even after a clean apply.
 - [#15](https://github.com/alehatsman/mooncake/issues/15) `fleet apply` fails on non-regular files in plan-dir ([analysis](analysis/bug-fleet-apply-plan-dir-walk.md)) — Plan-dir sync refuses to walk past a socket / FIFO; `fleet apply /tmp/x.yml` chokes on `/tmp/.X11-unix/X0`. Skip non-regular files in the walker.
+- [#16](https://github.com/alehatsman/mooncake/issues/16) `fleet exec --timeout` escaped by shell-compound commands ([analysis](analysis/bug-fleet-exec-timeout-process-group.md)) — `--timeout 2s 'sleep 30'` kills correctly; `--timeout 2s 'sleep 30; echo done'` runs the full 30s. Kernel SIGKILLs just the shell, not the process group. Fix: `Setpgid` + kill -pid.
 
 ## Shipped specs (specs/done/)
 
