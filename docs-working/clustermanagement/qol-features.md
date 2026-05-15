@@ -23,16 +23,16 @@ Adds `--peer-filter`, `--env`, `--cwd`, `--timeout`, `--become`,
 Exit-code aggregation: 0 if all peers succeeded, 1 if any peer's
 shell returned non-zero, 2 if any peer was unreachable.
 
-### 2. `fleet watch` — live SSE event stream across peers
+### ~~2. `fleet watch` — live SSE event stream across peers~~ ✅ shipped (spec-53)
 
-"Show me whatever the fleet is doing right now," without needing to
-have started an apply yourself.
-
-- Subscribes to every peer's SSE stream simultaneously, renders
-  events through the same multiplexer `fleet apply` uses.
-- Useful when there's drift, a scheduled job firing, or another
-  operator/agent driving the fleet concurrently.
-- Estimated ~150 LOC.
+Lands in the predicted shape: one goroutine per peer polling
+`/v1/runs?status=running`, attaching via the per-run SSE, returning
+to POLLING when the stream closes. New runs that start later appear
+without restart. ±25% jitter on poll interval + exponential backoff
+on errors (500ms → 8s) keep an unreachable peer from saturating the
+log. `--json` emits one record per event (`{kind, peer, seq, type,
+timestamp, data}`) plus control records for attach / disconnect /
+error. Silent when nothing is running.
 
 ### ~~3. `fleet ps` — list in-flight runs across peers~~ ✅ shipped (spec-54)
 
