@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -155,6 +156,11 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	result.Changed = true
+
+	// Capture pre-state for Reverse() (spec-22 phase 5 slice F).
+	// Must run BEFORE the download below — once the file has been
+	// fetched, the prior dest content (if any) is gone.
+	result.ReverseData = filehandler.CaptureReverseInfo(renderedDest, "")
 
 	// Create backup if requested and dest exists
 	if downloadAction.Backup && destExists {

@@ -1,6 +1,6 @@
 # Spec 22: Extended Handler ABI — Diff / Reverse / Cost / Permissions
 
-**Status:** 🟡 In progress. Phases 1-4 shipped end-to-end. All 11 priority handlers declare `Permissions()` and `Diff()`; the executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Phase 5 (Reverse) is on slices A+B+C+D+E — `file.write`, `file.copy`, `file.template`, and all eight `text.*` handlers (`text.line`, `text.replace`, `text.insert`, `text.delete_range`, `text.patch`, `text.patch.ini/json/yaml`) implement `Reverser`. The text.* family reuses a single `ReverseInPlaceFileMutation` helper — 12-line per-handler `Reverse` methods, no per-handler edge-case logic. All cycles bounded by a 4 MiB content-snapshot cap; oversized payloads refuse explicitly. Slice F (categoricals — pkg / os.service / file.download / file.unarchive) still drafted. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
+**Status:** 🟢 Phase 5 complete (slices A–F). All 11 priority handlers declare `Permissions()`, `Diff()`, and `Reverser`. The executor preflights Sudo + RequiredBinaries; `mooncake plan --format json` exposes the structural Diff as a per-step `diff:` field carrying Resource + Operation + typed Before/After snapshots. Typed snapshot payloads: `FileSnapshot` (file family + text.* + file.unarchive), `PkgSnapshot`, `ServiceSnapshot`. Reverser coverage: `file.write`, `file.copy`, `file.template`, all eight `text.*` handlers, `file.download`, and `pkg` all build genuine inverse Steps via shared helpers (`ReverseInPlaceFileMutation` for filesystem-touching handlers, custom `PkgReverseInfo` for the package manager case with the "was already installed" question handled). `file.unarchive` and `os.service` implement the `Reverser` interface as explicit refusals — they need multi-step reverse support (unarchive) or a handler-shape refactor (service) tracked as slice-F follow-ups. `--diff structural` CLI flag for text mode + per-handler `Lines` (unified-diff breakdown) are minor follow-ups. Phases 6-8 (Cost, MCP wiring, docs) still draft.
 **Epic:** E9 Modern Action Surface — bucket E9.1
 **Effort:** M (1–2 weeks)
 **Value:** Foundational. Unblocks `transaction:` groups (spec 30), the
@@ -365,11 +365,14 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
    - ⏳ `--diff structural` CLI flag for text-mode stdout rendering.
      The JSON path already exposes Diff fully; this flag is the
      "human inspecting plan output" surface and is a small follow-up.
-5. **Phase 5** 🟡 — implement `Reverse()` on the same handlers.
+5. **Phase 5** ✅ — `Reverse()` on all 11 priority handlers.
    Sliced because reverse correctness is per-state-shape, not
-   per-handler. Slice A landed for `file.write` (create-only) so
-   the spec-30 transaction layer has something to integrate against
-   while later slices fill in the rest.
+   per-handler. Slices A–F shipped end-to-end:
+   `file.write`, `file.copy`, `file.template`, the eight `text.*`
+   handlers, `file.download`, and `pkg` all build genuine inverse
+   Steps; `file.unarchive` and `os.service` implement the
+   `Reverser` interface as explicit refusals pointing at the
+   follow-up work needed.
    - ✅ Slice A — `file.write` create-only reverse. `Run` captures
      pre-state via `FileReverseInfo{Existed, Kind, Mode}` into
      `executor.Result.ReverseData` (apply-mode only; plan-mode
@@ -426,14 +429,41 @@ For non-filesystem actions (pkg, service): Reverse is computed from the
      mode, placed after the plan-mode short-circuit so we don't
      pay the syscall in plan mode. One cycle test per handler
      locks the apply→reverse→verify contract.
-   - ⏳ Slice F — categorical handlers (`pkg`, `os.service`,
-     `file.download`, `file.unarchive`). Each needs a custom
-     ReverseData payload (pre-install package version, pre-state
-     `enabled`/`active`, the downloaded path to delete, the
-     extracted file list). `Reverse` for pkg specifically must
-     decide whether "was already installed pre-apply" means "leave
-     it alone on reverse" — that's the design question called out
-     in the streams.md note.
+   - ✅ Slice F — categorical handlers.
+     - `file.download` → reuses `ReverseInPlaceFileMutation` (same
+       shape as file.copy/template — dest is the only mutation).
+       Two cycle tests against an httptest server.
+     - `pkg` → custom `PkgReverseInfo{AppliedState, Manager,
+       Mutated}` populated inside `installPackages`/`removePackages`
+       directly from the `toInstall`/`toRemove` lists those
+       functions already build. Resolves the "was already
+       installed?" question by construction: Mutated only contains
+       packages the apply *actually* changed; packages already in
+       the desired state are skipped on both sides. Reverse builds
+       a pkg{state=absent|present, names=Mutated, manager=<pinned>}
+       step. Manager is pinned from the capture so a transaction
+       running across heterogeneous fleets doesn't auto-detect a
+       different manager mid-rollback. `state=latest` and
+       `Upgrade=true` refuse explicitly — both would require a
+       per-package pre-apply version snapshot we don't take.
+     - `file.unarchive` → explicit refusal. The natural inverse is
+       "delete N extracted paths" but the single-Step Reverser
+       contract can't express that. Tracked as a follow-up:
+       either multi-step reverse (`Reverse` returns
+       `[]*config.Step`) or a new variadic delete action.
+     - `os.service` → explicit refusal. The right inverse exists
+       on paper (capture pre-apply active/enabled, return an
+       os.service step that restores those values) but Run's
+       apply branch delegates to a legacy `HandleService(step,
+       ec) error` that doesn't thread a `Result` through —
+       bolting `ReverseData` onto that shape needs a refactor
+       larger than slice F. Tracked as a follow-up.
+
+     Both refusal handlers still declare the `Reverser` interface
+     (compile-time assert + minimal test) so the cost estimator's
+     `Reversible` bit and `plan --check-reversible` tooling can
+     distinguish "handler refuses today" from "handler has no
+     reverse intent at all" cleanly.
 6. **Phase 6** — implement `Cost()` on the same handlers. Surface in
    recap + JSON.
 7. **Phase 7** — MCP server exposes Diff/Cost/Permissions in plan tool

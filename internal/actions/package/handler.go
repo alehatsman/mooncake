@@ -416,6 +416,21 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 		toInstall = append(toInstall, pkg)
 	}
 
+	// Capture pre-mutation state for Reverse() (spec-22 phase 5 slice F).
+	// toInstall is the exact list the apply will install — and exactly
+	// what reverse should remove. existingPkgs stays untouched on both
+	// sides. AppliedState distinguishes the install path from latest-upgrade
+	// so Reverse can refuse the latter explicitly.
+	captured := statePresent
+	if upgrade {
+		captured = stateLatest
+	}
+	result.ReverseData = &PkgReverseInfo{
+		AppliedState: captured,
+		Manager:      manager,
+		Mutated:      append([]string(nil), toInstall...),
+	}
+
 	if len(toInstall) == 0 {
 		ec.EmitEvent(events.EventPackageManaged, events.PackageManagedData{
 			Manager:        manager,
@@ -492,6 +507,16 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 		}
 
 		toRemove = append(toRemove, pkg)
+	}
+
+	// Capture pre-mutation state for Reverse() (spec-22 phase 5 slice F).
+	// toRemove is the exact list the apply will uninstall — and exactly
+	// what reverse should re-install. Packages that weren't installed at
+	// apply time are left out of Mutated and skipped on reverse too.
+	result.ReverseData = &PkgReverseInfo{
+		AppliedState: stateAbsent,
+		Manager:      manager,
+		Mutated:      append([]string(nil), toRemove...),
 	}
 
 	if len(toRemove) == 0 {
