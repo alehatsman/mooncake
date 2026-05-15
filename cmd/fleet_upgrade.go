@@ -168,6 +168,12 @@ func fleetUpgradeAction(c *cli.Context) error {
 
 		switch {
 		case errors.Is(err, errUpgradeSkipped):
+			// Some skip paths in upgradeOnePeer already print before
+			// returning (e.g. "OS not in supported set"); the cross-OS
+			// guard returns errUpgradeSkipped without printing. Always
+			// print here so every skipped peer shows up in the stream
+			// instead of only the tail summary.
+			fmt.Fprintf(w, "[%s] skipped: %s\n", p.Name, strings.TrimPrefix(err.Error(), "skipped: "))
 			results = append(results, result{p.Name, "skipped", err.Error()})
 		case err != nil:
 			results = append(results, result{p.Name, "failed", err.Error()})
