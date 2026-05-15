@@ -226,11 +226,19 @@ type StepOutputData struct {
 type FileOperationData struct {
 	Path           string `json:"path"`
 	Mode           string `json:"mode,omitempty"`
-	SizeBytes      int64  `json:"size_bytes,omitempty"`
+	SizeBytes      int64  `json:"size_bytes,omitempty"`  // After-write size (synonym for SizeAfter)
+	SizeBefore     int64  `json:"size_before,omitempty"` // Pre-write size; 0 for new files
 	Changed        bool   `json:"changed"`
 	DryRun         bool   `json:"dry_run"`
-	ChecksumBefore string `json:"checksum_before,omitempty"` // SHA256 before modification
+	ChecksumBefore string `json:"checksum_before,omitempty"` // SHA256 before modification (empty for new files)
 	ChecksumAfter  string `json:"checksum_after,omitempty"`  // SHA256 after modification
+	// ContentBefore carries the pre-write bytes for downstream consumers
+	// (e.g. artifact.capture with capture_content:true) that want before/
+	// after diffs without re-reading the file off disk. Not serialised into
+	// the JSON event stream — too bulky and only useful in-process.
+	ContentBefore []byte `json:"-"`
+	// ContentAfter mirrors ContentBefore for symmetry. Same JSON-omit reasoning.
+	ContentAfter []byte `json:"-"`
 }
 
 // FileRemovedData contains data for file/directory removal events
