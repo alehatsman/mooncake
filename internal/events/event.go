@@ -365,4 +365,12 @@ type StepCheckedData struct {
 	// a `*actions.Diff`, the inspectionCollector type-asserts back.
 	// Empty (nil) for handlers that haven't opted into Differ.
 	Diff any `json:"diff,omitempty"`
+
+	// Cost is the spec-22 phase 6 informational cost estimate when
+	// the dispatching handler implements actions.Coster. Same any-
+	// typing rationale as Diff above (events doesn't import actions);
+	// the executor stashes a `*actions.CostEstimate`, the
+	// inspectionCollector type-asserts back. Nil when the handler
+	// doesn't implement Coster.
+	Cost any `json:"cost,omitempty"`
 }

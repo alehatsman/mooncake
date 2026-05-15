@@ -60,6 +60,9 @@ func (c *inspectionCollector) OnEvent(e events.Event) {
 		// typed *actions.Diff here. The cast fails silently for
 		// non-Differ handlers — d.Diff is nil and so is diff.
 		diff, _ := d.Diff.(*actions.Diff)
+		// Cost: same any-typing rationale as Diff above. Nil for
+		// non-Coster handlers.
+		cost, _ := d.Cost.(*actions.CostEstimate)
 		c.byStepID[d.StepID] = plan.StepInspection{
 			StepID:      d.StepID,
 			ActionType:  d.Action,
@@ -68,6 +71,7 @@ func (c *inspectionCollector) OnEvent(e events.Event) {
 			Reason:      d.Reason,
 			Detail:      d.Detail,
 			Diff:        diff,
+			Cost:        cost,
 		}
 	case events.EventStepSkipped:
 		d, ok := e.Data.(events.StepSkippedData)

@@ -249,3 +249,87 @@ func TestInspectPlan_NilDiffForNonDifferHandlers(t *testing.T) {
 		t.Errorf("Diff = %+v, want nil for non-Differ handler", got[0].Diff)
 	}
 }
+
+// TestInspectPlan_PopulatesCostForCosterHandlers is the spec-22
+// phase-6 wiring contract: when a step's handler natively
+// implements actions.Coster, the resulting StepInspection.Cost is
+// populated. This is what `mooncake plan --format json` exposes
+// as the per-step `cost:` field.
+//
+// Same shape as TestInspectPlan_PopulatesDiffForDifferHandlers —
+// inspect a file.write step, assert Cost.Risk == 4 (routine
+// config write) and Reversible == true. Mirrors the Diff path
+// so a wiring regression in either direction surfaces.
+func TestInspectPlan_PopulatesCostForCosterHandlers(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "new.txt")
+	p := &plan.Plan{
+		Version:     "1.0",
+		GeneratedAt: time.Now(),
+		RootFile:    "<test>",
+		Steps: []config.Step{{
+			ID:   "step-0001",
+			Name: "write a new file",
+			FileWrite: &config.File{
+				Path:    missing,
+				State:   "file",
+				Content: "hello\n",
+				Mode:    "0644",
+			},
+		}},
+		InitialVars: map[string]interface{}{},
+	}
+
+	got, err := InspectPlan(p, "", silentLogger{})
+	if err != nil {
+		t.Fatalf("InspectPlan: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 inspection, got %d", len(got))
+	}
+	ins := got[0]
+	if ins.Cost == nil {
+		t.Fatalf("Cost is nil; file.write must produce a CostEstimate (spec-22 phase 6)")
+	}
+	if !ins.Cost.Reversible {
+		t.Error("Cost.Reversible = false; file.write is reversible")
+	}
+	if ins.Cost.Risk != 4 {
+		t.Errorf("Cost.Risk = %d, want 4 (routine config write)", ins.Cost.Risk)
+	}
+	if ins.Cost.Resources != 1 {
+		t.Errorf("Cost.Resources = %d, want 1", ins.Cost.Resources)
+	}
+	if ins.Cost.Bytes != int64(len("hello\n")) {
+		t.Errorf("Cost.Bytes = %d, want %d (declared Content length)", ins.Cost.Bytes, len("hello\n"))
+	}
+}
+
+// TestInspectPlan_NilCostForNonCosterHandlers mirrors the Diff
+// complement: handlers that don't implement Coster must leave
+// inspection.Cost nil. Without this, dispatchRunner falling back
+// to ResolveCoster would emit a default {Risk:5, Resources:-1,
+// Bytes:-1} on every non-Coster step — noisy and inaccurate.
+func TestInspectPlan_NilCostForNonCosterHandlers(t *testing.T) {
+	p := &plan.Plan{
+		Version:     "1.0",
+		GeneratedAt: time.Now(),
+		RootFile:    "<test>",
+		Steps: []config.Step{{
+			ID:   "step-0001",
+			Name: "log a message",
+			Log:  &config.PrintAction{Msg: "hello"},
+		}},
+		InitialVars: map[string]interface{}{},
+	}
+	got, err := InspectPlan(p, "", silentLogger{})
+	if err != nil {
+		t.Fatalf("InspectPlan: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 inspection, got %d", len(got))
+	}
+	if got[0].Cost != nil {
+		t.Errorf("Cost = %+v, want nil for non-Coster handler", got[0].Cost)
+	}
+}

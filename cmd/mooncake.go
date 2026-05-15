@@ -693,7 +693,7 @@ func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 		insByID[ins.StepID] = ins
 	}
 
-	var wouldChange, ok, skipped, notCheckable int
+	var wouldChange, ok, skipped, notCheckable, maxRisk int
 	for _, step := range p.Steps {
 		ins := insByID[step.ID]
 		sym := planSymbol(ins, step.Skipped)
@@ -710,6 +710,16 @@ func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 			line = fmt.Sprintf("%-50s  %s", line, "skipped (tags)")
 		}
 		fmt.Println(line)
+
+		// Spec-22 phase 6: show a one-line cost summary under any
+		// step that would change. Suppressed for ok/skipped to keep
+		// "nothing changed" plans uncluttered.
+		if sym == "↑" && ins.Cost != nil {
+			fmt.Printf("    cost: %s\n", formatCostSummary(ins.Cost))
+			if ins.Cost.Risk > maxRisk {
+				maxRisk = ins.Cost.Risk
+			}
+		}
 
 		if showDiff && sym == "↑" {
 			if udiff := extractUnifiedDiff(ins.Detail); udiff != "" {
@@ -740,9 +750,57 @@ func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 	}
 
 	fmt.Println()
-	fmt.Printf("PLAN SUMMARY  would-change=%d  ok=%d  skipped=%d  not-checkable=%d\n",
+	summary := fmt.Sprintf("PLAN SUMMARY  would-change=%d  ok=%d  skipped=%d  not-checkable=%d",
 		wouldChange, ok, skipped, notCheckable)
+	if maxRisk > 0 {
+		summary += fmt.Sprintf("  max-risk=%d (%s)", maxRisk, riskBand(maxRisk))
+	}
+	fmt.Println(summary)
 	return nil
+}
+
+// formatCostSummary renders an actions.CostEstimate as a single
+// human-readable line for plan output. Fields that are -1 (unknown
+// — handler couldn't predict statically) are omitted rather than
+// shown as "-1" to keep the line scannable. Spec-22 phase 6.
+func formatCostSummary(c *actions.CostEstimate) string {
+	parts := []string{fmt.Sprintf("risk %d (%s)", c.Risk, riskBand(c.Risk))}
+	if c.Reversible {
+		parts = append(parts, "reversible")
+	} else {
+		parts = append(parts, "irreversible")
+	}
+	if c.Resources >= 0 {
+		unit := "resource"
+		if c.Resources != 1 {
+			unit = "resources"
+		}
+		parts = append(parts, fmt.Sprintf("%d %s", c.Resources, unit))
+	}
+	if c.Bytes >= 0 {
+		parts = append(parts, fmt.Sprintf("%d bytes", c.Bytes))
+	}
+	return strings.Join(parts, " • ")
+}
+
+// riskBand maps a numeric risk score (1..10) to the band label
+// the spec-22 phase 6 contract documents:
+//   1–3   safe (read-only, idempotent writes to scratch)
+//   4–6   routine (config writes, package installs)
+//   7–9   high impact (service restarts, kernel params)
+//   10    destructive (deletes, drops, rm -rf)
+func riskBand(r int) string {
+	switch {
+	case r >= 10:
+		return "destructive"
+	case r >= 7:
+		return "high"
+	case r >= 4:
+		return "routine"
+	case r >= 1:
+		return "safe"
+	}
+	return "unknown"
 }
 
 // extractUnifiedDiff pulls the unified diff string out of a StepInspection.Detail

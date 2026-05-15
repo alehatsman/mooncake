@@ -1094,6 +1094,19 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 				diffPayload = &d
 			}
 		}
+		// Spec-22 phase 6: when the handler natively implements Coster,
+		// surface its CostEstimate through the same StepChecked event
+		// path. Same direct type-assert as Diff above — skipping
+		// ResolveCoster intentionally so non-Coster handlers don't
+		// emit a misleading default (Resources=-1, Bytes=-1, Risk=5)
+		// every time. Coster errors are swallowed for the same
+		// best-effort reasons as Diff.
+		var costPayload any
+		if coster, ok := runner.(actions.Coster); ok {
+			if c, err := coster.Cost(ec, &step); err == nil {
+				costPayload = &c
+			}
+		}
 		ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
 			StepID:      ec.CurrentStepID,
 			Name:        name,
@@ -1103,6 +1116,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			Reason:      reason,
 			Detail:      detail,
 			Diff:        diffPayload,
+			Cost:        costPayload,
 			Level:       ec.Level,
 		})
 		if wouldChange {
