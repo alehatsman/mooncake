@@ -54,6 +54,15 @@ func NewPongo2Renderer() (Renderer, error) {
 
 	// Register custom filters once globally
 	once.Do(func() {
+		// pongo2 inherits Django's default of HTML-escaping output. That
+		// makes sense for web templates and is dangerous nonsense for a
+		// CLI/agent tool: a user logging "{{ x | default:'<unset>' }}"
+		// would see "&lt;unset&gt;" in both the terminal and the
+		// `print.message` event payload, and `log:` is the canonical
+		// "show me a value" surface. Turn it off globally — mooncake
+		// renders nothing to HTML.
+		pongo2.SetAutoescape(false)
+
 		if err := pongo2.RegisterFilter("expanduser", r.expandUserFilter); err != nil {
 			// Store error for later return
 			filterRegisterError = fmt.Errorf("failed to register expanduser filter: %w", err)
