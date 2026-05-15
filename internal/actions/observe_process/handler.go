@@ -24,6 +24,13 @@ import (
 
 const actionName = "observe.process"
 
+// errNoMatch signals "no process matched the selector" — i.e. the
+// resource genuinely doesn't exist, not a lookup failure. MT-61: the
+// shared ObserveResult.Error contract reserves Error for actual probe
+// failures (DNS, permission, transport); a missing process should
+// leave Error empty and surface only via Found=false.
+var errNoMatch = errors.New("no matching process")
+
 // ProcessObservation is the typed Value payload for observe.process.
 // Pid is set to the first matching pid; Pids carries every match.
 type ProcessObservation struct {
@@ -93,7 +100,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		Value: obs,
 		AsOf:  time.Now(),
 	}
-	if err != nil && !obs.Running {
+	// MT-61: only surface Error for real probe failures (ps fork
+	// failure, /proc unreadable, etc.). errNoMatch means "no process
+	// matched the selector" — that's the normal Found=false answer,
+	// not a failure to observe.
+	if err != nil && !obs.Running && !errors.Is(err, errNoMatch) {
 		env.Error = err.Error()
 	}
 	publish(result, env)
@@ -156,7 +167,7 @@ func findProcessLinux(o *config.ObserveProcess) (ProcessObservation, error) {
 		}
 	}
 	if !obs.Running {
-		return obs, errors.New("no matching process")
+		return obs, errNoMatch
 	}
 	return obs, nil
 }
@@ -218,7 +229,7 @@ func findProcessPs(o *config.ObserveProcess) (ProcessObservation, error) {
 		}
 	}
 	if !obs.Running {
-		return obs, errors.New("no matching process")
+		return obs, errNoMatch
 	}
 	return obs, nil
 }
