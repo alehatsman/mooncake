@@ -71,11 +71,12 @@ func TestRun_DeletionWouldHappen(t *testing.T) {
 	}
 }
 
-// TestRun_NoRange: range absent → error in both modes (consistent
-// failure between plan and execute).
-func TestRun_NoRange(t *testing.T) {
+// TestRun_NoRangeIsIdempotent: range anchors absent → no error, no
+// change. MT-47 flipped fail-loud to idempotent success.
+func TestRun_NoRangeIsIdempotent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.txt")
-	if err := os.WriteFile(path, []byte("no anchors here\n"), 0o644); err != nil {
+	original := []byte("no anchors here\n")
+	if err := os.WriteFile(path, original, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	step := &config.Step{
@@ -87,11 +88,15 @@ func TestRun_NoRange(t *testing.T) {
 	}
 	h := &Handler{}
 
-	if _, err := h.Run(newCtx(t, true), step); err == nil {
-		t.Error("plan: expected error when range absent")
+	if _, err := h.Run(newCtx(t, true), step); err != nil {
+		t.Errorf("plan: expected no error when range absent; got %v", err)
 	}
-	if _, err := h.Run(newCtx(t, false), step); err == nil {
-		t.Error("execute: expected error when range absent")
+	if _, err := h.Run(newCtx(t, false), step); err != nil {
+		t.Errorf("execute: expected no error when range absent; got %v", err)
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != string(original) {
+		t.Errorf("file mutated despite missing anchors: %q", got)
 	}
 }
 

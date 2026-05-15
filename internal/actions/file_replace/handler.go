@@ -165,11 +165,12 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return result, err
 	}
 
-	// Check if changes were made
+	// Check if changes were made. No-match is idempotent success — a
+	// playbook that ran once and replaced X→Y should re-run cleanly
+	// when X is no longer present (MT-47). Pre-MT-47 behavior required
+	// `allow_no_match: true` to opt in; the field now has no effect.
 	if originalContent := string(originalContent); originalContent == newContent {
-		if !fr.AllowNoMatch && replacementCount == 0 {
-			return result, fmt.Errorf("no matches found for pattern: %s", renderedPattern)
-		}
+		_ = replacementCount // see MT-47 — used to gate the no-match error
 		result.Changed = false
 		ctx.GetLogger().Debugf("  No changes needed (pattern not found or already replaced)")
 		return result, nil
@@ -409,11 +410,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	// No-change short-circuit shared by both modes.
+	// No-change short-circuit shared by both modes. No-match is
+	// idempotent success — see MT-47.
 	if string(originalContent) == newContent {
-		if !fr.AllowNoMatch && replacementCount == 0 {
-			return result, fmt.Errorf("no matches found for pattern: %s", renderedPattern)
-		}
+		_ = replacementCount
 		result.Reason = "pattern not present or already replaced"
 		return result, nil
 	}

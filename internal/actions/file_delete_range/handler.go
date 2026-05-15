@@ -332,12 +332,16 @@ func (h *Handler) performDeletion(content, startAnchor, endAnchor string, useReg
 		}
 	}
 
-	if !startFound {
-		return "", 0, fmt.Errorf("start anchor not found: %s", startAnchor)
-	}
-
-	if !endFound {
-		return "", 0, fmt.Errorf("end anchor not found: %s", endAnchor)
+	// MT-47: missing anchors are idempotent success — a playbook that
+	// deleted a range once won't find the anchors on re-run (the
+	// content was removed). Return the *original* content unchanged
+	// when either anchor is missing; the caller's content-equality
+	// check turns this into the "no changes needed" branch. Note:
+	// the partial `result` slice cannot be reused when start was
+	// found but end wasn't — that path skipped lines that should be
+	// preserved.
+	if !startFound || !endFound {
+		return content, 0, nil
 	}
 
 	newContent = strings.Join(result, "\n")

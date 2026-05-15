@@ -68,12 +68,14 @@ func TestRun_InsertWouldHappen(t *testing.T) {
 	}
 }
 
-// TestRun_AnchorMissing: anchor not present → error in both modes
-// (the underlying performInsertion treats missing anchors as a hard
-// failure; consistent behavior between plan and execute).
-func TestRun_AnchorMissing(t *testing.T) {
+// TestRun_AnchorMissingIsIdempotent: anchor not present → no error,
+// no change. MT-47 flipped the semantics from fail-loud to
+// idempotent-success so a second run of a playbook that already
+// inserted (and so altered/removed the anchor) succeeds cleanly.
+func TestRun_AnchorMissingIsIdempotent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.txt")
-	if err := os.WriteFile(path, []byte("only one line\n"), 0o644); err != nil {
+	original := []byte("only one line\n")
+	if err := os.WriteFile(path, original, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	step := &config.Step{
@@ -86,11 +88,15 @@ func TestRun_AnchorMissing(t *testing.T) {
 	}
 	h := &Handler{}
 
-	if _, err := h.Run(newCtx(t, true), step); err == nil {
-		t.Error("plan: expected error when anchor missing")
+	if _, err := h.Run(newCtx(t, true), step); err != nil {
+		t.Errorf("plan: expected no error on missing anchor; got %v", err)
 	}
-	if _, err := h.Run(newCtx(t, false), step); err == nil {
-		t.Error("execute: expected error when anchor missing")
+	if _, err := h.Run(newCtx(t, false), step); err != nil {
+		t.Errorf("execute: expected no error on missing anchor; got %v", err)
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != string(original) {
+		t.Errorf("file mutated despite missing anchor: %q", got)
 	}
 }
 

@@ -116,26 +116,33 @@ func TestRun_WouldReplace(t *testing.T) {
 	}
 }
 
-// TestRun_NoMatchNotAllowed: pattern absent and AllowNoMatch=false →
-// error in both modes (consistent failure).
-func TestRun_NoMatchNotAllowed(t *testing.T) {
+// TestRun_NoMatchIsIdempotentSuccess: pattern absent and the action
+// is read-only. MT-47 flipped the semantics — no-match is no longer
+// a failure; it's the idempotent success path (the second run of a
+// playbook that already replaced the pattern). Both plan and execute
+// must return without error, with Changed=false.
+func TestRun_NoMatchIsIdempotentSuccess(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.txt")
-	_ = os.WriteFile(path, []byte("hello\n"), 0o644)
+	original := []byte("hello\n")
+	_ = os.WriteFile(path, original, 0o644)
 	step := &config.Step{
 		TextReplace: &config.FileReplace{
-			Path:         path,
-			Pattern:      "missing",
-			Replace:      "X",
-			AllowNoMatch: false,
+			Path:    path,
+			Pattern: "missing",
+			Replace: "X",
 		},
 	}
 	h := &Handler{}
 
-	if _, err := h.Run(newCtx(t, true), step); err == nil {
-		t.Error("plan: expected error when no match and AllowNoMatch=false")
+	if _, err := h.Run(newCtx(t, true), step); err != nil {
+		t.Errorf("plan: expected no error on no-match; got %v", err)
 	}
-	if _, err := h.Run(newCtx(t, false), step); err == nil {
-		t.Error("execute: expected error when no match and AllowNoMatch=false")
+	if _, err := h.Run(newCtx(t, false), step); err != nil {
+		t.Errorf("execute: expected no error on no-match; got %v", err)
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != string(original) {
+		t.Errorf("content mutated despite no match: %q", got)
 	}
 }
 

@@ -401,9 +401,19 @@ func TestHandler_Execute_AnchorNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
-	if err == nil {
-		t.Error("expected error when anchor not found")
+	// MT-47: anchor not found is idempotent success — no error, no
+	// change. (Original behavior was fail-loud; that broke re-runs of
+	// playbooks whose first run altered or removed the anchor.)
+	res, err := handler.Execute(ctx, step)
+	if err != nil {
+		t.Errorf("expected no error on missing anchor (MT-47); got %v", err)
+	}
+	if r, ok := res.(*executor.Result); ok && r.Changed {
+		t.Error("Changed should be false when anchor not found")
+	}
+	got, _ := os.ReadFile(testFile)
+	if string(got) != originalContent {
+		t.Errorf("file mutated despite missing anchor: %q", got)
 	}
 }
 
