@@ -190,6 +190,17 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		patch,
 		contextLines,
 	)
+	totalHunks := len(patch.Hunks)
+
+	// Always publish the hunks counters so callers can branch on them
+	// even on the no-change paths (MT-80). Lifted out of the
+	// post-write block so the early-return cases populate it too.
+	result.SetData(map[string]interface{}{
+		"path":          renderedPath,
+		"applied_hunks": appliedHunks,
+		"failed_hunks":  failedHunks,
+		"total_hunks":   totalHunks,
+	})
 
 	// Check strict mode
 	if fpa.Strict && failedHunks > 0 {
@@ -199,6 +210,18 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	// Check if changes were made
 	if string(originalContent) == newContent {
 		result.Changed = false
+		// MT-80: distinguish "patch already applied" from "patch
+		// couldn't apply any hunk". Pre-fix both returned identical
+		// {changed:false, failed:false} with no signal — LLM agents
+		// driving repo.patch/text.patch saw "success" and moved on
+		// while the target file was unchanged.
+		if totalHunks > 0 && appliedHunks == 0 && failedHunks > 0 {
+			ctx.GetLogger().Infof(
+				"  No hunks applied to %s (%d/%d failed — target may have drifted; check failed_hunks in result)",
+				renderedPath, failedHunks, totalHunks,
+			)
+			return result, fmt.Errorf("text.patch: no hunks matched %s (%d/%d failed; target file may have drifted)", renderedPath, failedHunks, totalHunks)
+		}
 		ctx.GetLogger().Debugf("  No changes needed (patch already applied)")
 		return result, nil
 	}
@@ -232,14 +255,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 			},
 		})
 	}
-
-	// Set result data
-	result.SetData(map[string]interface{}{
-		"path":          renderedPath,
-		"applied_hunks": appliedHunks,
-		"failed_hunks":  failedHunks,
-		"total_hunks":   len(patch.Hunks),
-	})
 
 	return result, nil
 }
@@ -386,6 +401,19 @@ func (h *Handler) applyPatch(content string, patch *Patch, minContextLines int) 
 		// Try to apply hunk
 		applied, newLines, err := h.applyHunk(lines, lineIdx, hunk, minContextLines)
 		if err != nil || !applied {
+			// MT-80: distinguish "already applied" (idempotent) from
+			// "drifted" (broken). If the file already contains the
+			// post-patch shape at this offset, treat the hunk as
+			// applied — that lets us report a clean idempotent run
+			// while still flagging genuine drift as a failure.
+			if h.hunkAlreadyApplied(lines, lineIdx, hunk) {
+				appliedHunks++
+				for i := 0; i < hunk.NewCount && lineIdx < len(lines); i++ {
+					result = append(result, lines[lineIdx])
+					lineIdx++
+				}
+				continue
+			}
 			failedHunks++
 			// In non-strict mode, copy original lines
 			for i := 0; i < hunk.OldCount && lineIdx < len(lines); i++ {
@@ -409,6 +437,32 @@ func (h *Handler) applyPatch(content string, patch *Patch, minContextLines int) 
 
 	newContent = strings.Join(result, "\n")
 	return newContent, appliedHunks, failedHunks
+}
+
+// hunkAlreadyApplied checks whether the post-patch shape of a hunk
+// already lives at lines[startIdx:]. Used by applyPatch to keep
+// idempotent re-runs clean while letting MT-80's drift-detection
+// branch fire when the file genuinely doesn't match either form.
+func (h *Handler) hunkAlreadyApplied(lines []string, startIdx int, hunk *Hunk) bool {
+	expected := make([]string, 0, len(hunk.Lines))
+	for _, patchLine := range hunk.Lines {
+		if len(patchLine) == 0 {
+			continue
+		}
+		switch patchLine[0] {
+		case ' ', '+':
+			expected = append(expected, patchLine[1:])
+		}
+	}
+	if startIdx+len(expected) > len(lines) {
+		return false
+	}
+	for i, want := range expected {
+		if lines[startIdx+i] != want {
+			return false
+		}
+	}
+	return true
 }
 
 // applyHunk attempts to apply a single hunk

@@ -408,6 +408,82 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	if execResult.Changed {
 		t.Error("expected result.Changed to be false for already-patched file")
 	}
+
+	// MT-80: idempotent re-runs should still publish hunk counters so
+	// callers can distinguish "no-op because already applied" from
+	// "no-op because file drifted".
+	if execResult.Data == nil {
+		t.Fatal("expected Data populated for already-applied patch")
+	}
+	if got, want := execResult.Data["applied_hunks"], 1; got != want {
+		t.Errorf("applied_hunks = %v, want %v (already-applied hunks should count as applied)", got, want)
+	}
+	if got, want := execResult.Data["failed_hunks"], 0; got != want {
+		t.Errorf("failed_hunks = %v, want %v", got, want)
+	}
+	if got, want := execResult.Data["total_hunks"], 1; got != want {
+		t.Errorf("total_hunks = %v, want %v", got, want)
+	}
+}
+
+// MT-80 regression: a unified diff whose source markers don't match
+// the file at all (and whose post-image doesn't match either) must
+// surface as an error, not a silent {changed:false} success. Pre-fix,
+// `text.patch` returned (changed:false, err:nil) — LLM agents driving
+// the action treated it as a normal idempotent run.
+func TestHandler_Execute_BrokenPatchReportsError(t *testing.T) {
+	handler := &Handler{}
+	ctx := createTestContext(t)
+
+	testFile := filepath.Join(ctx.CurrentDir, "test.txt")
+	originalContent := "completely\nunrelated\ncontent\n"
+	if err := os.WriteFile(testFile, []byte(originalContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	patch := `@@ -1,3 +1,3 @@
+ line1
+-old content
++new content
+ line3`
+
+	step := &config.Step{
+		TextPatch: &config.FilePatchApply{
+			Path:  testFile,
+			Patch: patch,
+		},
+	}
+
+	result, err := handler.Execute(ctx, step)
+	if err == nil {
+		t.Fatal("expected error when no hunks could be applied and file doesn't already contain post-patch content")
+	}
+
+	execResult := result.(*executor.Result)
+	if execResult.Changed {
+		t.Error("expected result.Changed = false on broken patch")
+	}
+	if execResult.Data == nil {
+		t.Fatal("expected Data populated even on broken patch")
+	}
+	if got, want := execResult.Data["applied_hunks"], 0; got != want {
+		t.Errorf("applied_hunks = %v, want %v", got, want)
+	}
+	if got, want := execResult.Data["failed_hunks"], 1; got != want {
+		t.Errorf("failed_hunks = %v, want %v", got, want)
+	}
+	if got, want := execResult.Data["total_hunks"], 1; got != want {
+		t.Errorf("total_hunks = %v, want %v", got, want)
+	}
+
+	// File should be untouched
+	got, readErr := os.ReadFile(testFile)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(got) != originalContent {
+		t.Errorf("file modified despite no hunks applying:\nwant: %q\ngot:  %q", originalContent, string(got))
+	}
 }
 
 func TestHandler_Execute_AdditionPatch(t *testing.T) {
