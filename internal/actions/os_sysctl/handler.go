@@ -73,6 +73,21 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // net/ipv4/conf/all/arp_announce, though the dotted form is canonical).
 var nameRE = regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.sysctl always needs Sudo: writes /etc/sysctl.d/99-mooncake.conf
+// when Persist is true (default), and invokes `sysctl -w` to apply
+// at runtime when Reload is true (default). RequiredBinaries=[sysctl]
+// (the binary is invoked for the runtime apply; the file-write path
+// uses plain os.* calls).
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"sysctl"},
+		FilesystemWrite:  []string{"/etc/sysctl.d/99-mooncake.conf"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	s := step.OsSysctl
 	if s == nil {

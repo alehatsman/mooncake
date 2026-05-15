@@ -74,6 +74,22 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.mount writes /etc/fstab and shells to mount/umount for the
+// runtime apply. Always Sudo, RequiredBinaries=[mount, umount].
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"mount", "umount"},
+		FilesystemWrite:  []string{"/etc/fstab"},
+	}
+	if step != nil && step.OsMount != nil && step.OsMount.Dest != "" {
+		ps.FilesystemWrite = append(ps.FilesystemWrite, step.OsMount.Dest)
+	}
+	return ps
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	m := step.OsMount
 	if m == nil {

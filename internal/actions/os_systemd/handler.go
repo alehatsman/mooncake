@@ -92,6 +92,31 @@ var validUnitSuffixes = map[string]bool{
 	".mount":   true,
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.systemd writes unit files to /etc/systemd/system (default) or
+// step.Path, and shells to systemctl for daemon-reload / enable /
+// start. Always Sudo, RequiredBinaries=[systemctl]. The unit
+// content writes are scoped to the unit path; FilesystemWrite
+// surfaces it for the policy layer.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"systemctl"},
+	}
+	if step == nil || step.OsSystemd == nil {
+		return ps
+	}
+	dir := step.OsSystemd.Path
+	if dir == "" {
+		dir = "/etc/systemd/system"
+	}
+	if step.OsSystemd.Name != "" {
+		ps.FilesystemWrite = []string{dir + "/" + step.OsSystemd.Name}
+	}
+	return ps
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	s := step.OsSystemd
 	if s == nil {

@@ -68,6 +68,22 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.firewall always Sudo: the action shells to `ufw` which writes
+// to /etc/ufw/* and (re)loads netfilter rules. RequiredBinaries=[ufw]
+// (v1 supports ufw only; non-ufw drivers are deferred per spec-28).
+//
+// No Network at apply time even though the action affects network
+// reachability — Network in PermissionSet means "this step makes
+// outbound network calls", which firewall config doesn't.
+func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	return actions.PermissionSet{
+		Sudo:             true,
+		RequiredBinaries: []string{"ufw"},
+	}
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	f := step.OsFirewall
 	if f == nil {

@@ -74,7 +74,7 @@ The typed mutation vocabulary. Ships everywhere.
 | 25 | `text.line` · `text.patch.{ini,json,yaml}` | P1–P4 shipped, P5 (ABI hooks) waits on spec-22 |
 | 26 | `git.clone` (+creds/submodules) · `git.checkout` · `git.config` | P1–P5 shipped (P5: spec-22 ABI hooks across all three handlers + new `ResourceGit` kind). P6 (docs) pending |
 | 27 | `os.user` · `os.group` · `os.ssh_key` | P1–P4 shipped (P4: spec-22 ABI hooks across all three). P5 (docs) pending |
-| 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P5 shipped (ufw only) |
+| 28 | `os.cron` · `os.sysctl` · `os.systemd` · `os.mount` · `os.firewall` | P1–P6 shipped (ufw driver only for firewall; P6: spec-22 ABI hooks across all five handlers) |
 | 17 | Batched packages + templated `names` | shipped |
 | 37 | Step output capture (collision + plan-mode) | ✅ shipped (`901e013`/`2ee98e7`). `CaptureInPlan` capability + `for_each`-aware collision warning + new plan-mode capture path; framework-only, zero new YAML surface |
 | 38 | `read.json` / `read.yaml` | ✅ shipped (`8549c33`/`2ee98e7`). Tier-1 read-only actions; `CaptureInPlan: true`; `query:` (pathquery), `max_bytes:`, `redact:`; read.yaml rejects multi-document files |

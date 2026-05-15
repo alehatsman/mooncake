@@ -67,6 +67,22 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // `run-parts` for files in /etc/cron.d.
 var nameRE = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
+// Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// os.cron writes /etc/cron.d/<name>. Always Sudo, no Network, no
+// required binaries (the action writes a plain file; cron itself
+// picks it up via the standard /etc/cron.d watcher).
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
+	ps := actions.PermissionSet{Sudo: true}
+	if step == nil || step.OsCron == nil {
+		return ps
+	}
+	if step.OsCron.Name != "" {
+		ps.FilesystemWrite = []string{"/etc/cron.d/" + step.OsCron.Name}
+	}
+	return ps
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	c := step.OsCron
 	if c == nil {
