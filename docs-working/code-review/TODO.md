@@ -10,12 +10,10 @@ something else landing first.
 
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
-| F002 | CLAUDE.md soft-cap list stale | doc | XS | — | open |
 | F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
 | F004 | service: 6× repeated sudo/exec block (in-package) | smell | S | — | open |
 | F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
-| F008 | tool.renderToolTemplates: 9× manual field render | readability | XS | — | open |
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
@@ -28,13 +26,13 @@ something else landing first.
 | ID | Title | Severity | Status | Location |
 |---|---|---|---|---|
 | F001 | observe_disk Bsize cross-platform cast | risk | **done** | [findings/F001](./findings/F001-observe-disk-bsize-cast.md) |
-| F002 | CLAUDE.md soft-cap list stale | doc | open | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
+| F002 | CLAUDE.md soft-cap list stale | doc | **done** | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
 | F003 | service: legacy Execute/DryRun | smell | open | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
 | F004 | service: sudo/exec duplication in-package | smell | open | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
 | F005 | sudo -S shell-out helper cross-package | smell | open | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
 | F006 | tool handler legacy Execute/DryRun | smell | open | [findings/F006](./findings/F006-tool-handler-execute-dryrun-legacy.md) |
 | F007 | tool: http no timeout / context | risk | **done** | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
-| F008 | tool.renderToolTemplates manual repetition | readability | open | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
+| F008 | tool.renderToolTemplates manual repetition | readability | **done** | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
 | F009 | explain.DisplayFacts section split | smell | open | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
 | F010 | explain TestDisplayFacts_NilFacts is dead | smell | **done** | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
 | F011 | cross-cutting: 24 handlers w/ legacy paths | smell | open | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |

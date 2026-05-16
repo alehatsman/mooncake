@@ -5,7 +5,8 @@ severity: doc
 package: (repo root)
 file: CLAUDE.md
 lines: 70–86
-status: open
+status: done
+resolved_by: b237604
 ---
 
 ## What

@@ -246,33 +246,30 @@ func renderToolTemplates(t *config.Tool, ctx actions.Context) (*config.Tool, err
 	}
 
 	cp := *t
-	var err error
-	if cp.Name, err = render(t.Name); err != nil {
-		return nil, fmt.Errorf("name: %w", err)
+	// Field table — order matches `config.Tool` declaration so the
+	// error sequence stays predictable and a new templatable field is
+	// one row to add instead of a paste of the if/wrap/assign block.
+	fields := []struct {
+		name string
+		src  string
+		dst  *string
+	}{
+		{"name", t.Name, &cp.Name},
+		{"version", t.Version, &cp.Version},
+		{"url", t.URL, &cp.URL},
+		{"repo", t.Repo, &cp.Repo},
+		{"asset", t.Asset, &cp.Asset},
+		{"tag", t.Tag, &cp.Tag},
+		{"checksum", t.Checksum, &cp.Checksum},
+		{"bin", t.Bin, &cp.Bin},
+		{"mise_tool", t.MiseTool, &cp.MiseTool},
 	}
-	if cp.Version, err = render(t.Version); err != nil {
-		return nil, fmt.Errorf("version: %w", err)
-	}
-	if cp.URL, err = render(t.URL); err != nil {
-		return nil, fmt.Errorf("url: %w", err)
-	}
-	if cp.Repo, err = render(t.Repo); err != nil {
-		return nil, fmt.Errorf("repo: %w", err)
-	}
-	if cp.Asset, err = render(t.Asset); err != nil {
-		return nil, fmt.Errorf("asset: %w", err)
-	}
-	if cp.Tag, err = render(t.Tag); err != nil {
-		return nil, fmt.Errorf("tag: %w", err)
-	}
-	if cp.Checksum, err = render(t.Checksum); err != nil {
-		return nil, fmt.Errorf("checksum: %w", err)
-	}
-	if cp.Bin, err = render(t.Bin); err != nil {
-		return nil, fmt.Errorf("bin: %w", err)
-	}
-	if cp.MiseTool, err = render(t.MiseTool); err != nil {
-		return nil, fmt.Errorf("mise_tool: %w", err)
+	for _, f := range fields {
+		rendered, err := render(f.src)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", f.name, err)
+		}
+		*f.dst = rendered
 	}
 	return &cp, nil
 }
