@@ -17,6 +17,7 @@ progress: |
   file_delete_range, file_insert, file_patch_apply, file_replace,
   package, preset, repo_apply_patchset, repo_search, repo_tree,
   service (F003), template, tool (F006), unarchive.
+verified: 2026-05-16 — batch 1 (936751f) confirmed: zero Execute/DryRun methods in shell/command/print/vars/include_vars handler.go; tests green; 16/21 handlers remain to migrate per finding progress note
 ---
 
 ## What

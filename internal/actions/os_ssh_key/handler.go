@@ -179,12 +179,24 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		PriorContent: priorContentBytes(existing, fileExists),
 	}
 
+	// F035: fail fast on user.Lookup error BEFORE writing. Pre-fix the
+	// lookup error was captured into ownerLookupErr but the write happened
+	// anyway with uid=-1/gid=-1, leaving authorized_keys owned by the
+	// caller and silently breaking sshd's strict-mode ownership check.
+	// Common triggers: LDAP/NSS timeout in CI bootstrapping, username
+	// typo, race against a not-yet-created user. Surface remediation in
+	// the error so operators see the actual problem instead of a
+	// step-ok-but-ssh-broken outcome.
 	uid, gid, ownerLookupErr := lookupOwnership(username)
+	if ownerLookupErr != nil {
+		return result, fmt.Errorf(
+			"os.ssh_key: cannot determine uid/gid for user %s: %w "+
+				"(create the user first, or set `path:` to a location whose ownership you manage)",
+			username, ownerLookupErr,
+		)
+	}
 	if err := writeAuthorizedKeys(path, plan.lines, uid, gid, !fileExists); err != nil {
 		return result, fmt.Errorf("os.ssh_key: write: %w", err)
-	}
-	if ownerLookupErr != nil {
-		ctx.GetLogger().Debugf("os.ssh_key: ownership lookup skipped: %v", ownerLookupErr)
 	}
 
 	result.Changed = true
@@ -391,11 +403,11 @@ func computePlan(in plannerInput) planResult {
 	// Index existing lines by parsed-key identity. Preserve non-key
 	// lines (comments / blanks) by carrying their original text.
 	type entry struct {
-		raw        string
-		parsed     parsedKey
-		isKey      bool
-		identity   string
-		removed    bool // marked during planning
+		raw      string
+		parsed   parsedKey
+		isKey    bool
+		identity string
+		removed  bool // marked during planning
 	}
 	entries := make([]entry, 0, len(in.existing)+len(in.desired))
 	idIndex := map[string]int{}
@@ -498,20 +510,43 @@ func sameRender(a, b parsedKey) bool {
 	return a.render() == b.render()
 }
 
+// chownFn is the chown primitive; indirected so unit tests can stub
+// an EPERM return without needing a non-root subprocess. Production
+// path is os.Chown.
+var chownFn = os.Chown
+
 // writeAuthorizedKeys writes the lines to path atomically (temp + rename).
-// Ensures the parent .ssh dir exists with mode 0700 and the file
-// with mode 0600. Sets ownership when uid >= 0 and the process has
-// privilege to chown; failures are non-fatal (logged at debug level by
-// the caller).
+// Ensures the parent .ssh dir is at mode 0700 (tightened even if it
+// pre-existed at a wider mode — sshd refuses 0755 .ssh dirs) and the
+// file at mode 0600. Sets ownership when uid >= 0; chown on the file
+// itself is load-bearing (sshd rejects authorized_keys not owned by
+// the user) so failures surface as errors. Parent-dir chown stays
+// best-effort because non-root callers managing keys via an explicit
+// `path:` should still be able to write.
+//
+// F035: pre-fix this function swallowed every chown error silently to
+// "not fail unit tests on user-owned dirs." That covered the test
+// case but left a real production failure path — a non-root operator
+// installing keys for another user would land the file with operator
+// ownership, sshd would reject it, and the step still reported
+// success. Now the file-itself chown returns its error; tests that
+// don't run as root must use a `path:` whose target uid matches their
+// own (existing tests already do via currentUsername).
 func writeAuthorizedKeys(path string, lines []string, uid, gid int, createParentMode bool) error {
 	parent := filepath.Dir(path)
 	if err := os.MkdirAll(parent, sshDirMode); err != nil {
 		return fmt.Errorf("mkdir %s: %w", parent, err)
 	}
-	if createParentMode {
-		// Tighten in case MkdirAll inherited a wider mode.
-		_ = os.Chmod(parent, sshDirMode)
+	// F035: tighten parent perms unconditionally — MkdirAll is a no-op
+	// for mode on an existing directory, so pre-existing 0755 .ssh
+	// stays at 0755 without this. sshd rejects authorized_keys under
+	// a too-permissive parent. EPERM is acceptable (test escape:
+	// non-root caller can't chmod a dir they don't own); other errors
+	// surface.
+	if err := os.Chmod(parent, sshDirMode); err != nil && !errors.Is(err, fs.ErrPermission) {
+		return fmt.Errorf("chmod %s: %w", parent, err)
 	}
+	_ = createParentMode // kept for ABI compat; the chmod above subsumes it.
 
 	content := strings.Join(lines, "\n")
 	if content != "" {
@@ -530,10 +565,19 @@ func writeAuthorizedKeys(path string, lines []string, uid, gid int, createParent
 		return fmt.Errorf("chmod %s: %w", path, err)
 	}
 	if uid >= 0 && gid >= 0 {
-		// Best-effort chown; ignore EPERM so unit tests on user-owned
-		// dirs don't fail.
-		_ = os.Chown(path, uid, gid)
-		_ = os.Chown(parent, uid, gid)
+		if err := chownFn(path, uid, gid); err != nil {
+			if errors.Is(err, fs.ErrPermission) {
+				return fmt.Errorf(
+					"chown %s to uid=%d gid=%d: %w "+
+						"(run with sudo / become: true to install keys for another user)",
+					path, uid, gid, err,
+				)
+			}
+			return fmt.Errorf("chown %s: %w", path, err)
+		}
+		// Parent-dir chown is best-effort: non-fatal on EPERM so a
+		// non-root operator managing their own keys can still write.
+		_ = chownFn(parent, uid, gid)
 	}
 	return nil
 }
