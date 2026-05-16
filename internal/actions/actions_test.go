@@ -143,6 +143,9 @@ func (p testNoopPerformer) Mkdir(string, os.FileMode, PerformerOpts) Effect {
 func (p testNoopPerformer) WriteFile(string, []byte, os.FileMode, PerformerOpts) Effect {
 	return Effect{}
 }
+func (p testNoopPerformer) CopyFile(string, string, os.FileMode, PerformerOpts) Effect {
+	return Effect{}
+}
 func (p testNoopPerformer) Symlink(string, string, PerformerOpts) Effect    { return Effect{} }
 func (p testNoopPerformer) Hardlink(string, string, PerformerOpts) Effect   { return Effect{} }
 func (p testNoopPerformer) Touch(string, os.FileMode, PerformerOpts) Effect { return Effect{} }
