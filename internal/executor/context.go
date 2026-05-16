@@ -2,6 +2,7 @@
 package executor
 
 import (
+	"context"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -78,6 +79,15 @@ type RunServices struct {
 	// (internal/apply.Runner for R1.1b). nil for the legacy
 	// executor.Start callers that only care about the error return.
 	Capture *RunCapture
+
+	// Ctx carries cancellation/deadline state for the run. The step
+	// loop in ExecuteSteps checks Ctx.Err() before dispatching each
+	// step and aborts cleanly if the context is cancelled (F016
+	// stage-1(a) — handler-level cancellation is the stage-3 audit).
+	// May be nil in test contexts that construct RunServices directly;
+	// callers that want cancellation set this to a context that the
+	// embedding shell (daemon Shutdown / CLI signal handler) cancels.
+	Ctx context.Context
 }
 
 // LoopContext holds the current loop iteration state for a step executing

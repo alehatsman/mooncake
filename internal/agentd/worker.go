@@ -18,6 +18,11 @@ import (
 // also chdirs to the run's base_dir so apply.Runner's os.Getwd()-based path
 // resolution matches what the submitter intended — this is only safe under
 // the single-worker invariant.
+//
+// runCtx is shared across every executeRun call; Shutdown() cancels it so
+// in-flight applies abandon at the next step boundary (F016 stage-1(a)).
+// Handlers that don't observe ctx (long shell sleeps, etc.) still block
+// until the in-flight step completes — that's the stage-3 audit.
 type Worker struct {
 	store *Store
 	log   *slog.Logger
@@ -29,18 +34,28 @@ type Worker struct {
 
 	done chan struct{}
 
+	// runCtx / runCancel are F016 (stage-1(a)). runCtx is passed to
+	// apply.Runner.Run on every executeRun call. Shutdown calls
+	// runCancel before waiting on done, so the in-flight apply
+	// observes a cancelled context at the next step-loop iteration.
+	runCtx    context.Context
+	runCancel context.CancelFunc
+
 	mu          sync.Mutex
 	queueDepth  int
 	runsRunning int
 }
 
 func NewWorker(store *Store, log *slog.Logger) *Worker {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Worker{
-		store:  store,
-		log:    log,
-		submit: make(chan string, 1024),
-		hubs:   make(map[string]*Hub),
-		done:   make(chan struct{}),
+		store:     store,
+		log:       log,
+		submit:    make(chan string, 1024),
+		hubs:      make(map[string]*Hub),
+		done:      make(chan struct{}),
+		runCtx:    ctx,
+		runCancel: cancel,
 	}
 }
 
@@ -91,9 +106,12 @@ func (w *Worker) Run() {
 }
 
 // Shutdown closes the submit channel and waits for the in-flight run, if any,
-// to finish. Per the v1 plan there is no cancellation: in-flight runs run to
-// completion.
+// to finish. F016 stage-1(a): runCtx is cancelled first so the in-flight
+// apply observes a cancelled context at the next step boundary and aborts
+// cleanly. Handlers that already started a step finish that step
+// (handler-level ctx is the stage-3 audit).
 func (w *Worker) Shutdown() {
+	w.runCancel()
 	close(w.submit)
 	<-w.done
 }
@@ -182,7 +200,7 @@ func (w *Worker) executeRun(runID string) {
 		Names:            run.Names,
 		OutputFormat:     "quiet",
 		ExtraSubscribers: []events.Subscriber{sink},
-	}).Run(context.Background())
+	}).Run(w.runCtx)
 
 	// R2.1c: persist result.json so the controller can fetch it via
 	// GET /v1/runs/{id}/result. Best-effort: failure is logged but

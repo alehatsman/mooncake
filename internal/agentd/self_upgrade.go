@@ -1,9 +1,11 @@
 package agentd
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +17,12 @@ import (
 	"sync"
 	"time"
 )
+
+// sanityCheckBinaryTimeout bounds the `<staged> --version` probe.
+// mooncake --version exits in tens of milliseconds on every supported
+// platform; 5 s is generous and lets the upgrade handler return
+// binary_unhealthy promptly when the staged binary deadlocks (F027).
+const sanityCheckBinaryTimeout = 5 * time.Second
 
 // Self-upgrade endpoints. The controller pushes a new agentd binary that
 // matches the daemon's GOOS/GOARCH via PUT, then asks for a replace via
@@ -253,14 +261,24 @@ func (s *Server) selfReplaceHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-// sanityCheckBinary runs `<staged> --version` with a short timeout.
-// Returns nil iff the process exits 0. The output is intentionally
-// discarded — we only care that the binary can start; matching the
-// expected version is the controller's job (via post-restart probe).
+// sanityCheckBinary runs `<staged> --version` under
+// sanityCheckBinaryTimeout. Returns nil iff the process exits 0 and the
+// output mentions "mooncake". The output is otherwise discarded — we
+// only care that the binary can start; matching the expected version
+// is the controller's job (via post-restart probe). The timeout is
+// load-bearing: without it a staged binary that deadlocks during init
+// would hang the upgrade handler indefinitely and block every
+// subsequent /v1/self/* request via upgradeMu (F027).
 func sanityCheckBinary(path string) error {
-	cmd := exec.Command(path, "--version")
+	ctx, cancel := context.WithTimeout(context.Background(), sanityCheckBinaryTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, path, "--version")
 	cmd.Stdin = nil
 	out, err := cmd.CombinedOutput()
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("staged binary timed out on --version after %s", sanityCheckBinaryTimeout)
+	}
 	if err != nil {
 		return fmt.Errorf("%w (output: %s)", err, strings.TrimSpace(string(out)))
 	}
@@ -288,7 +306,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close() //nolint:errcheck
+	defer in.Close()                                                        //nolint:errcheck
 	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755) // #nosec G302 -- binary must be executable
 	if err != nil {
 		return err
@@ -309,4 +327,3 @@ func stagedSuffix() string {
 	}
 	return ""
 }
-

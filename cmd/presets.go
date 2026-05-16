@@ -587,6 +587,7 @@ func fetchPresetFromRegistry(name string) error {
 
 // collectParameters prompts the user for preset parameters interactively.
 // Returns a map of parameter values ready for validation.
+//
 //nolint:gocyclo // Complex user interaction logic is unavoidable
 func collectParameters(preset *config.PresetDefinition) (map[string]interface{}, error) {
 	if len(preset.Parameters) == 0 {
@@ -865,7 +866,7 @@ func executePresetInstall(c *cli.Context, name string) error {
 	internalLog := logger.NewLogger(level)
 
 	// Execute preset
-	if err := executor.Start(executor.StartConfig{
+	if err := executor.Start(c.Context, executor.StartConfig{
 		ConfigFilePath:   tmpFile.Name(),
 		SudoPass:         c.String("sudo-pass"),
 		SudoPassFile:     c.String("sudo-pass-file"),
@@ -1067,7 +1068,7 @@ func uninstallPresetAction(c *cli.Context) error {
 	internalLog := logger.NewLogger(level)
 
 	// Execute preset with state: absent
-	if err := executor.Start(executor.StartConfig{
+	if err := executor.Start(c.Context, executor.StartConfig{
 		ConfigFilePath:   tmpFile.Name(),
 		SudoPass:         c.String("sudo-pass"),
 		SudoPassFile:     c.String("sudo-pass-file"),

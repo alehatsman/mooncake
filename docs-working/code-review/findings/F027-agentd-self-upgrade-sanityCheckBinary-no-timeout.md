@@ -5,7 +5,8 @@ severity: risk
 package: internal/agentd
 file: internal/agentd/self_upgrade.go
 lines: 256-271
-status: open
+status: done
+resolved: 2026-05-16 — added `sanityCheckBinaryTimeout = 5 * time.Second` constant; converted `sanityCheckBinary` to `exec.CommandContext` under that deadline with an explicit `errors.Is(ctx.Err(), context.DeadlineExceeded)` branch that returns `"staged binary timed out on --version after 5s"`. Doc-comment also updated — the original copy claimed "with a short timeout" while the implementation had none (doc-drift). Regression test `TestSanityCheckBinary_HangingBinaryTimesOut` covers the contract: a fake binary that `exec sleep 30`s must return a timeout error within ~5 s, not 30 s. Out-of-scope note: a staged binary that *forks* a subprocess holding stdout/stderr still hangs `CombinedOutput()` because SIGKILL only goes to the direct child; a process-group kill would address that but is a separate platform-specific change. The single-process deadlock scenario the finding describes is fully covered.
 ---
 
 ## What
