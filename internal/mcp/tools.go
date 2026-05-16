@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -229,73 +230,6 @@ type stepResult struct {
 	Cost        *actions.CostEstimate  `json:"cost,omitempty"`
 }
 
-// runCollector subscribes to run events and collects step results.
-type runCollector struct {
-	steps         []stepResult
-	inspByStepID  map[string]plan.StepInspection
-	stats         struct {
-		Changed    int
-		Ok         int
-		Skipped    int
-		Failed     int
-		DurationMs int64
-	}
-}
-
-func (c *runCollector) OnEvent(ev events.Event) {
-	switch ev.Type {
-	case events.EventStepCompleted:
-		d, ok := ev.Data.(events.StepCompletedData)
-		if !ok {
-			return
-		}
-		sr := stepResult{
-			Name:       d.Name,
-			Changed:    d.Changed,
-			DurationMs: d.DurationMs,
-		}
-		if insp, hasInsp := c.inspByStepID[d.StepID]; hasInsp {
-			sr.Diff = insp.Diff
-			sr.Cost = insp.Cost
-		}
-		c.steps = append(c.steps, sr)
-
-	case events.EventStepSkipped:
-		d, ok := ev.Data.(events.StepSkippedData)
-		if !ok {
-			return
-		}
-		c.steps = append(c.steps, stepResult{Name: d.Name, Skipped: true})
-
-	case events.EventStepFailed:
-		d, ok := ev.Data.(events.StepFailedData)
-		if !ok {
-			return
-		}
-		c.steps = append(c.steps, stepResult{
-			Name:       d.Name,
-			Failed:     true,
-			DurationMs: d.DurationMs,
-			Error:      d.ErrorMessage,
-		})
-
-	case events.EventRunCompleted:
-		d, ok := ev.Data.(events.RunCompletedData)
-		if !ok {
-			return
-		}
-		c.stats.Changed = d.ChangedSteps
-		c.stats.Ok = d.SuccessSteps - d.ChangedSteps
-		if c.stats.Ok < 0 {
-			c.stats.Ok = 0
-		}
-		c.stats.Skipped = d.SkippedSteps
-		c.stats.Failed = d.FailedSteps
-		c.stats.DurationMs = d.DurationMs
-	}
-}
-
-func (c *runCollector) Close() {}
 
 // aggregatePermissions walks the plan steps and merges each handler's declared
 // PermissionSet into a single plan-level summary. Returns nil when no step
@@ -407,9 +341,11 @@ func buildInspectionIndex(inspections []plan.StepInspection) map[string]plan.Ste
 	return idx
 }
 
-func runConfig(configPath string) (string, error) {
-	// Build the plan once so we can (a) run InspectPlan for Diff/Cost/Permissions
-	// and (b) feed the same *plan.Plan to ExecutePlan without re-parsing.
+func runConfig(ctx context.Context, configPath string) (string, error) {
+	// Pre-inspect: collect predicted Diff + Cost per step (ModePlan).
+	// Runs before the apply so run_plan can return per-step diffs alongside
+	// apply-time outcomes. Step IDs are deterministic (step-0001, etc.) so
+	// the inspection index matches the Runner's compiled plan.
 	planner, err := plan.NewPlanner()
 	if err != nil {
 		return "", err
@@ -418,44 +354,59 @@ func runConfig(configPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	inspections, _ := executor.InspectPlan(planData, "", logger.NewTestLogger()) // non-fatal
+	inspIdx := buildInspectionIndex(inspections)
 
-	// Pre-inspect: collect predicted Diff + Cost per step (ModePlan).
-	// The Diff is a prediction, not a post-apply observation.
-	inspLog := logger.NewTestLogger()
-	inspections, err := executor.InspectPlan(planData, "", inspLog)
-	if err != nil {
-		// Non-fatal: proceed with apply even if inspection fails.
-		inspections = nil
+	// Run via apply.Runner — wires publisher, event capture, and result
+	// assembly internally. OutputFormat "quiet" suppresses console output
+	// (MCP callers consume the returned JSON, not stdout).
+	kr, runErr := apply.NewRunner(&apply.Config{
+		ConfigPath:   configPath,
+		OutputFormat: "quiet",
+	}).Run(ctx)
+
+	// Extract per-step duration from the event audit trail; executor.Result
+	// does not carry DurationMs directly.
+	durationByID := make(map[string]int64, len(kr.Steps))
+	for _, ev := range kr.Events {
+		if d, ok := ev.Data.(events.StepCompletedData); ok {
+			durationByID[d.StepID] = d.DurationMs
+		}
 	}
 
-	publisher := events.NewPublisher()
-	defer publisher.Close()
-
-	col := &runCollector{
-		inspByStepID: buildInspectionIndex(inspections),
+	// Map KernelResult.Steps to the MCP stepResult shape.
+	steps := make([]stepResult, 0, len(kr.Steps))
+	for _, sr := range kr.Steps {
+		res := stepResult{
+			Name:       sr.Step.Name,
+			Action:     sr.Step.DetermineActionType(),
+			DurationMs: durationByID[sr.Step.ID],
+		}
+		if sr.Result != nil {
+			res.Changed = sr.Result.Changed
+			res.Failed = sr.Result.Failed
+			res.Skipped = sr.Result.Skipped
+			if sr.Result.Failed && sr.Result.Reason != "" {
+				res.Error = sr.Result.Reason
+			}
+		}
+		if insp, ok := inspIdx[sr.Step.ID]; ok {
+			res.Diff = insp.Diff
+			res.Cost = insp.Cost
+			res.WouldChange = insp.WouldChange
+		}
+		steps = append(steps, res)
 	}
-	publisher.Subscribe(col)
-
-	internalLog := logger.NewTestLogger()
-	runErr := executor.ExecutePlan(planData, "", actions.ModeApply, internalLog, publisher)
-
-	// MT-54: the ChannelPublisher dispatches OnEvent on a per-subscriber
-	// goroutine, so the step.* and run.completed events emitted during
-	// ExecutePlan may still be queued when this function reads col.stats.*
-	// and col.steps. Without Flush, MCP run_plan returned all-zero
-	// counters and a truncated steps list — even though the plan ran
-	// and the side effects landed on disk. Same shape as MT-24.
-	publisher.Flush()
 
 	result := map[string]interface{}{
-		"changed":     col.stats.Changed,
-		"ok":          col.stats.Ok,
-		"skipped":     col.stats.Skipped,
-		"failed":      col.stats.Failed,
-		"duration_ms": col.stats.DurationMs,
-		"steps":       col.steps,
+		"changed":     kr.Summary.Changed,
+		"ok":          kr.Summary.Ok,
+		"skipped":     kr.Summary.Skipped,
+		"failed":      kr.Summary.Failed,
+		"duration_ms": kr.Summary.DurationMs,
+		"steps":       steps,
 	}
-	if reqs := aggregatePermissions(planData); reqs != nil {
+	if reqs := aggregatePermissions(kr.Plan); reqs != nil {
 		result["requires"] = reqs
 	}
 	if costSum := aggregateCost(inspections); costSum != nil {
@@ -474,14 +425,14 @@ func runConfig(configPath string) (string, error) {
 	return strings.TrimRight(buf.String(), "\n"), nil
 }
 
-func HandleRunPlan(_ context.Context, args json.RawMessage) (string, error) {
+func HandleRunPlan(ctx context.Context, args json.RawMessage) (string, error) {
 	var params struct {
 		Config string `json:"config"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil || params.Config == "" {
 		return "", fmt.Errorf("config parameter required")
 	}
-	return runConfig(params.Config)
+	return runConfig(ctx, params.Config)
 }
 
 // HandleCheckPlan builds the plan and inspects it without applying.

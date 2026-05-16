@@ -22,7 +22,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
-// mockExecutionContext creates a minimal ExecutionContext for testing
+// mockExecutionContext creates a minimal ExecutionContext for apply-mode testing.
 func mockExecutionContext() *executor.ExecutionContext {
 	ctx := testutil.NewMockContext()
 	tmpl, err := template.NewPongo2Renderer()
@@ -42,6 +42,13 @@ func mockExecutionContext() *executor.ExecutionContext {
 		CurrentStepID: ctx.StepID,
 		CurrentDir: "/tmp",
 	}
+}
+
+// mockPlanContext creates a minimal ExecutionContext for plan-mode (dry-run) testing.
+func mockPlanContext() *executor.ExecutionContext {
+	ec := mockExecutionContext()
+	ec.Svc.Mode = actions.ModePlan
+	return ec
 }
 
 func TestHandler_Metadata(t *testing.T) {
@@ -205,7 +212,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_BasicCopy(t *testing.T) {
+func TestHandler_Run_BasicCopy(t *testing.T) {
 	h := &Handler{}
 
 	// Create temp directory and source file
@@ -227,7 +234,7 @@ func TestHandler_Execute_BasicCopy(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -290,7 +297,7 @@ func TestHandler_Execute_BasicCopy(t *testing.T) {
 // MT-51: when FollowSymlinks: false and src is a symlink, dest must
 // be a symlink with the same target — not a regular file containing
 // the target's bytes.
-func TestHandler_Execute_FollowSymlinksFalse_PreservesLink(t *testing.T) {
+func TestHandler_Run_FollowSymlinksFalse_PreservesLink(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 
@@ -312,7 +319,7 @@ func TestHandler_Execute_FollowSymlinksFalse_PreservesLink(t *testing.T) {
 			FollowSymlinks: &followFalse,
 		},
 	}
-	res, err := h.Execute(mockExecutionContext(), step)
+	res, err := h.Run(mockExecutionContext(), step)
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
@@ -338,7 +345,7 @@ func TestHandler_Execute_FollowSymlinksFalse_PreservesLink(t *testing.T) {
 // MT-51: by default (FollowSymlinks unset / true), the existing
 // behavior is preserved — dest is a regular file with the link
 // target's bytes.
-func TestHandler_Execute_FollowSymlinksDefault_DereferencesLink(t *testing.T) {
+func TestHandler_Run_FollowSymlinksDefault_DereferencesLink(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 
@@ -353,7 +360,7 @@ func TestHandler_Execute_FollowSymlinksDefault_DereferencesLink(t *testing.T) {
 	dest := filepath.Join(tmpDir, "dest")
 
 	step := &config.Step{FileCopy: &config.Copy{Src: link, Dest: dest}}
-	if _, err := h.Execute(mockExecutionContext(), step); err != nil {
+	if _, err := h.Run(mockExecutionContext(), step); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 	destInfo, err := os.Lstat(dest)
@@ -374,7 +381,7 @@ func TestHandler_Execute_FollowSymlinksDefault_DereferencesLink(t *testing.T) {
 
 // MT-51: running the preserve-symlink path twice in a row reports
 // Changed=false on the second run (idempotency).
-func TestHandler_Execute_FollowSymlinksFalse_Idempotent(t *testing.T) {
+func TestHandler_Run_FollowSymlinksFalse_Idempotent(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 
@@ -397,10 +404,10 @@ func TestHandler_Execute_FollowSymlinksFalse_Idempotent(t *testing.T) {
 		},
 	}
 
-	if _, err := h.Execute(mockExecutionContext(), step); err != nil {
+	if _, err := h.Run(mockExecutionContext(), step); err != nil {
 		t.Fatalf("first Execute: %v", err)
 	}
-	res2, err := h.Execute(mockExecutionContext(), step)
+	res2, err := h.Run(mockExecutionContext(), step)
 	if err != nil {
 		t.Fatalf("second Execute: %v", err)
 	}
@@ -409,7 +416,7 @@ func TestHandler_Execute_FollowSymlinksFalse_Idempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SourceNotFound(t *testing.T) {
+func TestHandler_Run_SourceNotFound(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -424,7 +431,7 @@ func TestHandler_Execute_SourceNotFound(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error when source not found")
 	}
@@ -439,7 +446,7 @@ func TestHandler_Execute_SourceNotFound(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
+func TestHandler_Run_SourceIsDirectory(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -459,7 +466,7 @@ func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error when source is directory")
 	}
@@ -474,7 +481,7 @@ func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithChecksum(t *testing.T) {
+func TestHandler_Run_WithChecksum(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -501,7 +508,7 @@ func TestHandler_Execute_WithChecksum(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -517,7 +524,7 @@ func TestHandler_Execute_WithChecksum(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
+func TestHandler_Run_ChecksumMismatch(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -540,7 +547,7 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error on checksum mismatch")
 	}
@@ -555,7 +562,7 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_IdempotencyByTime(t *testing.T) {
+func TestHandler_Run_IdempotencyByTime(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -590,7 +597,7 @@ func TestHandler_Execute_IdempotencyByTime(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -601,7 +608,7 @@ func TestHandler_Execute_IdempotencyByTime(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ForceCopy(t *testing.T) {
+func TestHandler_Run_ForceCopy(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -630,7 +637,7 @@ func TestHandler_Execute_ForceCopy(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -651,7 +658,7 @@ func TestHandler_Execute_ForceCopy(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithMode(t *testing.T) {
+func TestHandler_Run_WithMode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS")
 	}
@@ -676,7 +683,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -694,7 +701,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithBackup(t *testing.T) {
+func TestHandler_Run_WithBackup(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -724,7 +731,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -764,7 +771,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SHA256Checksum(t *testing.T) {
+func TestHandler_Run_SHA256Checksum(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -791,7 +798,7 @@ func TestHandler_Execute_SHA256Checksum(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -802,7 +809,7 @@ func TestHandler_Execute_SHA256Checksum(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TemplateRendering(t *testing.T) {
+func TestHandler_Run_TemplateRendering(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -827,7 +834,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -843,7 +850,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NoPublisher(t *testing.T) {
+func TestHandler_Run_NoPublisher(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -866,7 +873,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
 	}
@@ -882,7 +889,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NotExecutionContext(t *testing.T) {
+func TestHandler_Run_NotExecutionContext(t *testing.T) {
 	h := &Handler{}
 
 	ctx := testutil.NewMockContext()
@@ -893,7 +900,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when context is not ExecutionContext")
 	}
@@ -903,7 +910,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RenderErrorSrc(t *testing.T) {
+func TestHandler_Run_RenderErrorSrc(t *testing.T) {
 	h := &Handler{}
 
 	ec := mockExecutionContext()
@@ -914,7 +921,7 @@ func TestHandler_Execute_RenderErrorSrc(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid template")
 	}
@@ -924,7 +931,7 @@ func TestHandler_Execute_RenderErrorSrc(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RenderErrorDest(t *testing.T) {
+func TestHandler_Run_RenderErrorDest(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -942,7 +949,7 @@ func TestHandler_Execute_RenderErrorDest(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid template")
 	}
@@ -952,17 +959,18 @@ func TestHandler_Execute_RenderErrorDest(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+func TestHandler_PlanMode(t *testing.T) {
 	h := &Handler{}
 
 	tests := []struct {
-		name    string
-		step    *config.Step
-		setup   func(*executor.ExecutionContext, string)
-		wantErr bool
+		name        string
+		step        *config.Step
+		setup       func(*executor.ExecutionContext, string)
+		wantErr     bool
+		wantChange  bool
 	}{
 		{
-			name: "basic dry-run",
+			name: "new file — would change",
 			step: &config.Step{
 				FileCopy: &config.Copy{
 					Src:  "source.txt",
@@ -970,28 +978,28 @@ func TestHandler_DryRun(t *testing.T) {
 				},
 			},
 			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				srcPath := filepath.Join(tmpDir, "source.txt")
-				os.WriteFile(srcPath, []byte("content"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "source.txt"), []byte("content"), 0644)
 			},
-			wantErr: false,
+			wantErr:    false,
+			wantChange: true,
 		},
 		{
-			name: "dry-run with checksum",
+			name: "valid checksum — no error in plan mode",
 			step: &config.Step{
 				FileCopy: &config.Copy{
 					Src:      "source.txt",
 					Dest:     "dest.txt",
-					Checksum: "md5:abc123",
+					Checksum: "9a0364b9e99bb480dd25e1f0284c8555", // md5("content")
 				},
 			},
 			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				srcPath := filepath.Join(tmpDir, "source.txt")
-				os.WriteFile(srcPath, []byte("content"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "source.txt"), []byte("content"), 0644)
 			},
-			wantErr: false,
+			wantErr:    false,
+			wantChange: true,
 		},
 		{
-			name: "dry-run with existing file",
+			name: "different content — would change",
 			step: &config.Step{
 				FileCopy: &config.Copy{
 					Src:  "source.txt",
@@ -999,15 +1007,14 @@ func TestHandler_DryRun(t *testing.T) {
 				},
 			},
 			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				srcPath := filepath.Join(tmpDir, "source.txt")
-				destPath := filepath.Join(tmpDir, "existing.txt")
-				os.WriteFile(srcPath, []byte("new"), 0644)
-				os.WriteFile(destPath, []byte("old"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "source.txt"), []byte("new"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "existing.txt"), []byte("old"), 0644)
 			},
-			wantErr: false,
+			wantErr:    false,
+			wantChange: true,
 		},
 		{
-			name: "dry-run with mode",
+			name: "with mode — would change",
 			step: &config.Step{
 				FileCopy: &config.Copy{
 					Src:  "source.txt",
@@ -1016,13 +1023,13 @@ func TestHandler_DryRun(t *testing.T) {
 				},
 			},
 			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				srcPath := filepath.Join(tmpDir, "source.txt")
-				os.WriteFile(srcPath, []byte("content"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "source.txt"), []byte("content"), 0644)
 			},
-			wantErr: false,
+			wantErr:    false,
+			wantChange: true,
 		},
 		{
-			name: "dry-run with backup",
+			name: "with backup flag — would change (backup skipped in plan mode)",
 			step: &config.Step{
 				FileCopy: &config.Copy{
 					Src:    "source.txt",
@@ -1031,31 +1038,14 @@ func TestHandler_DryRun(t *testing.T) {
 				},
 			},
 			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				srcPath := filepath.Join(tmpDir, "source.txt")
-				destPath := filepath.Join(tmpDir, "backup.txt")
-				os.WriteFile(srcPath, []byte("new"), 0644)
-				os.WriteFile(destPath, []byte("old"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "source.txt"), []byte("new"), 0644)
+				os.WriteFile(filepath.Join(tmpDir, "backup.txt"), []byte("old"), 0644)
 			},
-			wantErr: false,
+			wantErr:    false,
+			wantChange: true,
 		},
 		{
-			name: "dry-run with owner and group",
-			step: &config.Step{
-				FileCopy: &config.Copy{
-					Src:   "source.txt",
-					Dest:  "dest.txt",
-					Owner: "root",
-					Group: "root",
-				},
-			},
-			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				srcPath := filepath.Join(tmpDir, "source.txt")
-				os.WriteFile(srcPath, []byte("content"), 0644)
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run source not found",
+			name: "source not found — error",
 			step: &config.Step{
 				FileCopy: &config.Copy{
 					Src:  "nonexistent.txt",
@@ -1069,7 +1059,7 @@ func TestHandler_DryRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			ec := mockExecutionContext()
+			ec := mockPlanContext()
 			ec.CurrentDir = tmpDir
 
 			if tt.setup != nil {
@@ -1084,43 +1074,21 @@ func TestHandler_DryRun(t *testing.T) {
 				tt.step.FileCopy.Dest = filepath.Join(tmpDir, tt.step.FileCopy.Dest)
 			}
 
-			err := h.DryRun(ec, tt.step)
+			result, err := h.Run(ec, tt.step)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Run(plan) error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-
-			// Check that something was logged (if no error expected)
-			if !tt.wantErr {
-				log := ec.Svc.Logger.(*testutil.MockLogger)
-				if len(log.Logs) == 0 {
-					t.Error("DryRun() should log something")
+			if !tt.wantErr && tt.wantChange {
+				res := result.(*executor.Result)
+				if !res.WouldChange {
+					t.Errorf("Run(plan) WouldChange = false; want true")
 				}
 			}
 		})
 	}
 }
 
-func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
-	h := &Handler{}
-
-	ctx := testutil.NewMockContext()
-	step := &config.Step{
-		FileCopy: &config.Copy{
-			Src:  "/tmp/source.txt",
-			Dest: "/tmp/dest.txt",
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
-	}
-
-	if !strings.Contains(err.Error(), "ExecutionContext") {
-		t.Errorf("Error should mention ExecutionContext, got: %v", err)
-	}
-}
 
 func TestHandler_parseFileMode(t *testing.T) {
 	h := &Handler{}
@@ -1268,7 +1236,7 @@ func TestHandler_parseGroupID(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_OwnershipWithoutBecome(t *testing.T) {
+func TestHandler_Run_OwnershipWithoutBecome(t *testing.T) {
 	// Skip on non-Linux or if not running as root
 	if runtime.GOOS != "linux" {
 		t.Skip("Ownership test only runs on Linux")
@@ -1305,7 +1273,7 @@ func TestHandler_Execute_OwnershipWithoutBecome(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error when setting ownership without become")
 	}
@@ -1316,7 +1284,7 @@ func TestHandler_Execute_OwnershipWithoutBecome(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_DestinationChecksum(t *testing.T) {
+func TestHandler_Run_DestinationChecksum(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1343,7 +1311,7 @@ func TestHandler_Execute_DestinationChecksum(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1364,7 +1332,7 @@ func TestHandler_Execute_DestinationChecksum(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_DestinationChecksumMismatch(t *testing.T) {
+func TestHandler_Run_DestinationChecksumMismatch(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1389,7 +1357,7 @@ func TestHandler_Execute_DestinationChecksumMismatch(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error when source checksum doesn't match")
 	}
@@ -1437,7 +1405,7 @@ func TestHandler_SetOwnership_Success(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Logf("Execute with ownership error (may be expected): %v", err)
 	}
@@ -1477,11 +1445,11 @@ func TestHandler_ChownWithBecome(t *testing.T) {
 	}
 
 	// Will fail without actual sudo, but tests the code path
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	t.Logf("chownWithBecome error (expected): %v", err)
 }
 
-func TestHandler_Execute_LargeFile(t *testing.T) {
+func TestHandler_Run_LargeFile(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 	srcPath := filepath.Join(tmpDir, "large-source.txt")
@@ -1506,7 +1474,7 @@ func TestHandler_Execute_LargeFile(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1535,7 +1503,7 @@ func TestHandler_Execute_LargeFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_BackupWithTimestamp(t *testing.T) {
+func TestHandler_Run_BackupWithTimestamp(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 	oldContent := "old version 1 content"
@@ -1564,7 +1532,7 @@ func TestHandler_Execute_BackupWithTimestamp(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1585,7 +1553,7 @@ func TestHandler_Execute_BackupWithTimestamp(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_MultipleBackups(t *testing.T) {
+func TestHandler_Run_MultipleBackups(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 	srcPath := filepath.Join(tmpDir, "source-multi.txt")
@@ -1615,7 +1583,7 @@ func TestHandler_Execute_MultipleBackups(t *testing.T) {
 			},
 		}
 
-		_, err = h.Execute(ec, step)
+		_, err = h.Run(ec, step)
 		if err != nil {
 			t.Fatalf("Execute() error = %v", err)
 		}
@@ -1662,30 +1630,21 @@ func TestHandler_ParseGroupID_RootGroup(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CopyWithDifferentTimestamps(t *testing.T) {
+func TestHandler_Run_CopyWithDifferentContent(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 	srcPath := filepath.Join(tmpDir, "source-ts.txt")
 	destPath := filepath.Join(tmpDir, "dest-ts.txt")
-	testContent := "same content"
 
-	// Create source file
-	err := os.WriteFile(srcPath, []byte(testContent), 0644)
+	// Create source with new content; dest with stale content — Run uses
+	// content-based idempotency (Effects.WriteFile), not timestamps.
+	err := os.WriteFile(srcPath, []byte("new content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
-
-	// Create dest file with same content but older timestamp
-	err = os.WriteFile(destPath, []byte(testContent), 0644)
+	err = os.WriteFile(destPath, []byte("old content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create dest file: %v", err)
-	}
-
-	// Set older modification time on dest
-	oldTime := time.Now().Add(-2 * time.Hour)
-	err = os.Chtimes(destPath, oldTime, oldTime)
-	if err != nil {
-		t.Fatalf("Failed to set old time: %v", err)
 	}
 
 	ec := mockExecutionContext()
@@ -1696,18 +1655,18 @@ func TestHandler_Execute_CopyWithDifferentTimestamps(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
 	if !execResult.Changed {
-		t.Error("Result.Changed should be true when timestamps differ")
+		t.Error("Result.Changed should be true when content differs")
 	}
 }
 
-func TestHandler_Execute_WithOwnershipAndMode(t *testing.T) {
+func TestHandler_Run_WithOwnershipAndMode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping ownership test on Windows")
 	}
@@ -1739,7 +1698,7 @@ func TestHandler_Execute_WithOwnershipAndMode(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Logf("Execute with ownership and mode error (may be expected): %v", err)
 	}

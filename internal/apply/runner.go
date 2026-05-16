@@ -87,6 +87,14 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	publisher := events.NewPublisher()
 	defer publisher.Close()
 
+	// Inject caller-supplied subscribers first so they see every event
+	// the kernel emits (including plan.loaded which fires before most
+	// standard subscribers are wired). agentd uses this for its SSE hub
+	// and events.jsonl sink without bypassing the kernel boundary.
+	for _, sub := range r.cfg.ExtraSubscribers {
+		publisher.Subscribe(sub)
+	}
+
 	// R1.1b: install an event-tail capture subscriber so the
 	// *KernelResult's Events field carries the run's audit substrate.
 	// Plan + per-step records flow through executor.RunCapture (see
@@ -161,6 +169,7 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 		InsecureSudoPass: r.cfg.InsecureSudoPass,
 		Tags:             r.cfg.Tags,
 		SkipTags:         r.cfg.SkipTags,
+		Names:            r.cfg.Names,
 
 		// Artifact configuration.
 		ArtifactsDir:      r.cfg.ArtifactsDir,
@@ -176,6 +185,16 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// forwarding goroutines; Flush waits on the per-subscriber
 	// inboxes that drive captureSubscriber.OnEvent.
 	publisher.Flush()
+
+	// ExtraSubscribers may buffer events in their own goroutines
+	// (e.g. RunEventSink's writeLoop). Flush() guarantees all OnEvent
+	// calls are complete, so it is safe to Close them here — their
+	// internal queues drain and flush to backing stores before this
+	// function returns. publisher.Close() (deferred) closes channels
+	// but does NOT call subscriber.Close().
+	for _, sub := range r.cfg.ExtraSubscribers {
+		sub.Close()
+	}
 
 	return assembleResult(capture, tail, execErr), execErr
 }

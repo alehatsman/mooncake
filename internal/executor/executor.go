@@ -522,6 +522,83 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 	return stepErr
 }
 
+// dispatchPlanMode handles ModePlan dispatch for named non-import steps.
+// Returns (true, err) when the step is fully handled; the caller should return err.
+// Returns (false, nil) when the registered handler does not implement Runner — the
+// caller falls through to the legacy DryRun path.
+func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (bool, error) {
+	actionType := step.DetermineActionType()
+	handler, ok := actions.Get(actionType)
+	if ok {
+		runner, isRunner := handler.(actions.Runner)
+		if !isRunner {
+			return false, nil
+		}
+		*ec.Svc.Stats.Global++
+		ec.CurrentStepID = generateStepID(step, ec)
+		return true, dispatchRunner(step, ec, runner)
+	}
+	// Unknown action: emit a synthetic not-checkable event so the plan
+	// formatter can still render the step rather than silently dropping it.
+	*ec.Svc.Stats.Global++
+	stepID := generateStepID(step, ec)
+	ec.CurrentStepID = stepID
+	ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
+		StepID:    stepID,
+		Name:      stepName,
+		Action:    actionType,
+		Checkable: false,
+		Reason:    "unknown action",
+		Level:     ec.Level,
+	})
+	*ec.Svc.Stats.Executed++
+	return true, nil
+}
+
+// postExecuteSuccess runs bookkeeping for a step that completed without error:
+// stat counters, step.completed event, on_change tracking, txn snapshot, and
+// RunCapture feed. Clears ec.CurrentResult before returning.
+func postExecuteSuccess(step config.Step, ec *ExecutionContext, stepID, stepName string, depth int, stepDuration time.Duration) {
+	if ec.Svc.Stats.Executed != nil {
+		*ec.Svc.Stats.Executed++
+	}
+
+	changed := false
+	var resultData map[string]interface{}
+	if ec.CurrentResult != nil {
+		changed = ec.CurrentResult.Changed
+		resultData = ec.CurrentResult.ToMap()
+	}
+	if changed && ec.Svc.Stats.Changed != nil {
+		*ec.Svc.Stats.Changed++
+	}
+
+	ec.EmitEvent(events.EventStepCompleted, events.StepCompletedData{
+		StepID:      stepID,
+		Name:        stepName,
+		Level:       ec.Level,
+		DurationMs:  stepDuration.Milliseconds(),
+		Changed:     changed,
+		Result:      resultData,
+		Depth:       depth,
+		DryRun:      ec.Mode() == actions.ModePlan,
+		TriggeredBy: step.TriggeredBy,
+		TryParent:   step.TryParent,
+		TryRole:     step.TryRole,
+	})
+
+	if step.ID != "" {
+		if ec.ChangedByStepID == nil {
+			ec.ChangedByStepID = make(map[string]bool)
+		}
+		ec.ChangedByStepID[step.ID] = changed
+	}
+
+	ec.recordTxnBodyCompletion(step, ec.CurrentResult)
+	ec.Svc.Capture.appendStep(step, ec.CurrentResult)
+	ec.CurrentResult = nil
+}
+
 // ExecuteStep executes a single configuration step within the given execution context.
 //
 //nolint:gocyclo // Step dispatcher; complexity is the action-count fan-out.
@@ -597,45 +674,13 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		return nil
 	}
 
-	// Plan-mode bypass: when the step would run in ModePlan (check or
-	// dry-run) AND the handler implements Spec 16's Runner, skip the
-	// started/completed lifecycle events and emit only EventStepChecked.
-	// Spec 16 unifies --check and --dry-run under one non-mutating mode;
-	// both should render via the check formatter for Runner handlers.
-	//
-	// Legacy --check (non-Runner handlers) keeps its existing bypass
-	// flow below.
-	if hasStepName && step.Import == nil {
-		actionType := step.DetermineActionType()
-		if handler, ok := actions.Get(actionType); ok {
-			if runner, isRunner := handler.(actions.Runner); isRunner && ec.Mode() == actions.ModePlan {
-				*ec.Svc.Stats.Global++
-				ec.CurrentStepID = generateStepID(step, ec)
-				return dispatchRunner(step, ec, runner)
-			}
-		}
-	}
-
-	// Unknown-action fallback for check mode: emit a synthetic
-	// not-checkable event. Known actions go through the plan-mode
-	// bypass above (which handles every registered handler via the
-	// Runner interface).
+	// Plan-mode bypass for named non-import steps: Runner handlers emit
+	// EventStepChecked (Spec 16); unknown actions get a synthetic
+	// not-checkable event. Legacy (non-Runner) handlers fall through to
+	// the normal started/completed lifecycle below.
 	if ec.Mode() == actions.ModePlan && hasStepName && step.Import == nil {
-		actionType := step.DetermineActionType()
-		if _, ok := actions.Get(actionType); !ok {
-			*ec.Svc.Stats.Global++
-			stepID := generateStepID(step, ec)
-			ec.CurrentStepID = stepID
-			ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
-				StepID:    stepID,
-				Name:      stepName,
-				Action:    actionType,
-				Checkable: false,
-				Reason:    "unknown action",
-				Level:     ec.Level,
-			})
-			*ec.Svc.Stats.Executed++
-			return nil
+		if handled, err := dispatchPlanMode(step, ec, stepName); handled || err != nil {
+			return err
 		}
 	}
 
@@ -700,61 +745,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		}
 	}
 
-	// Update executed statistics
-	if ec.Svc.Stats.Executed != nil {
-		*ec.Svc.Stats.Executed++
-	}
-
-	// Get result data if handler provided it
-	changed := false
-	var resultData map[string]interface{}
-	if ec.CurrentResult != nil {
-		changed = ec.CurrentResult.Changed
-		resultData = ec.CurrentResult.ToMap()
-	}
-	if changed && ec.Svc.Stats.Changed != nil {
-		*ec.Svc.Stats.Changed++
-	}
-
-	// Emit step.completed event
-	ec.EmitEvent(events.EventStepCompleted, events.StepCompletedData{
-		StepID:      stepID,
-		Name:        stepName,
-		Level:       ec.Level,
-		DurationMs:  stepDuration.Milliseconds(),
-		Changed:     changed,
-		Result:      resultData,
-		Depth:       depth,
-		DryRun:      ec.Mode() == actions.ModePlan,
-		TriggeredBy: step.TriggeredBy,
-		TryParent:   step.TryParent,
-		TryRole:     step.TryRole,
-	})
-
-	// Record the changed bit by step ID so any sibling that carries this
-	// step's ID in TriggeredBy can look up the outcome (spec-23 on_change).
-	if step.ID != "" {
-		if ec.ChangedByStepID == nil {
-			ec.ChangedByStepID = make(map[string]bool)
-		}
-		ec.ChangedByStepID[step.ID] = changed
-	}
-
-	// spec-30 transaction bookkeeping. A body child that just finished
-	// successfully gets its (step, result) snapshotted so the future
-	// Reverse() of any later-failed sibling can call back into it.
-	// Implementation in transaction.go.
-	ec.recordTxnBodyCompletion(step, ec.CurrentResult)
-
-	// R1.1b: feed the optional RunCapture so internal/apply.Runner can
-	// build a typed *KernelResult. No-op when Capture is nil (every
-	// caller except apply.Runner today). Done before nil-ing
-	// CurrentResult below; the helper deep-copies what it needs.
-	ec.Svc.Capture.appendStep(step, ec.CurrentResult)
-
-	// Clear current result for next step
-	ec.CurrentResult = nil
-
+	postExecuteSuccess(step, ec, stepID, stepName, depth, stepDuration)
 	return nil
 }
 

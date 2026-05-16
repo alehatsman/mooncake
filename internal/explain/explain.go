@@ -8,6 +8,47 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 )
 
+// relevantCPUFlagPrefixes are the CPU flag prefixes shown to users.
+// AVX/SSE matter for ML workloads; FMA/AES matter for crypto.
+var relevantCPUFlagPrefixes = []string{"avx", "sse", "fma", "aes"}
+
+// filterRelevantCPUFlags returns the subset of flags that match
+// relevantCPUFlagPrefixes (case-insensitive prefix/contains match).
+func filterRelevantCPUFlags(flags []string) []string {
+	var out []string
+	for _, flag := range flags {
+		lower := strings.ToLower(flag)
+		for _, prefix := range relevantCPUFlagPrefixes {
+			if strings.HasPrefix(lower, prefix) || strings.Contains(lower, prefix) {
+				out = append(out, flag)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// storageTableWidths computes the device/mount/type column widths for
+// the storage table, including minimum header widths and padding.
+func storageTableWidths(disks []facts.Disk) (deviceW, mountW, typeW int) {
+	deviceW, mountW, typeW = len("Device"), len("Mount"), len("Type")
+	for _, d := range disks {
+		if len(d.Device) > deviceW {
+			deviceW = len(d.Device)
+		}
+		if len(d.MountPoint) > mountW {
+			mountW = len(d.MountPoint)
+		}
+		if len(d.Filesystem) > typeW {
+			typeW = len(d.Filesystem)
+		}
+	}
+	deviceW += 2
+	mountW += 2
+	typeW += 2
+	return
+}
+
 // DisplayFacts prints system information in a readable format
 //
 //nolint:gocyclo // Display function with many simple conditionals for optional fields
@@ -33,19 +74,8 @@ func DisplayFacts(f *facts.Facts) {
 		fmt.Printf("  Model:    %s\n", f.CPUModel)
 	}
 	if len(f.CPUFlags) > 0 {
-		// Show only relevant flags (AVX, SSE, etc.)
-		importantFlags := []string{}
-		for _, flag := range f.CPUFlags {
-			lowerFlag := strings.ToLower(flag)
-			if strings.HasPrefix(lowerFlag, "avx") ||
-				strings.HasPrefix(lowerFlag, "sse") ||
-				strings.Contains(lowerFlag, "fma") ||
-				strings.Contains(lowerFlag, "aes") {
-				importantFlags = append(importantFlags, flag)
-			}
-		}
-		if len(importantFlags) > 0 {
-			fmt.Printf("  Flags:    %s\n", strings.Join(importantFlags, " "))
+		if relevant := filterRelevantCPUFlags(f.CPUFlags); len(relevant) > 0 {
+			fmt.Printf("  Flags:    %s\n", strings.Join(relevant, " "))
 		}
 	}
 	fmt.Println()
@@ -124,45 +154,14 @@ func DisplayFacts(f *facts.Facts) {
 	// Storage
 	if len(f.Disks) > 0 {
 		fmt.Println("Storage:")
-
-		// Calculate column widths based on actual content
-		deviceWidth := len("Device")
-		mountWidth := len("Mount")
-		typeWidth := len("Type")
-
-		for _, disk := range f.Disks {
-			if len(disk.Device) > deviceWidth {
-				deviceWidth = len(disk.Device)
-			}
-			if len(disk.MountPoint) > mountWidth {
-				mountWidth = len(disk.MountPoint)
-			}
-			if len(disk.Filesystem) > typeWidth {
-				typeWidth = len(disk.Filesystem)
-			}
-		}
-
-		// Add padding
-		deviceWidth += 2
-		mountWidth += 2
-		typeWidth += 2
-
-		// Print header
+		deviceW, mountW, typeW := storageTableWidths(f.Disks)
 		fmt.Printf("  %-*s %-*s %-*s %12s %12s %12s\n",
-			deviceWidth, "Device",
-			mountWidth, "Mount",
-			typeWidth, "Type",
+			deviceW, "Device", mountW, "Mount", typeW, "Type",
 			"Size", "Used", "Avail")
-
-		totalWidth := deviceWidth + mountWidth + typeWidth + 40
-		fmt.Println("  " + strings.Repeat("─", totalWidth))
-
-		// Print data rows
+		fmt.Println("  " + strings.Repeat("─", deviceW+mountW+typeW+40))
 		for _, disk := range f.Disks {
 			fmt.Printf("  %-*s %-*s %-*s %10d GB %10d GB %10d GB\n",
-				deviceWidth, disk.Device,
-				mountWidth, disk.MountPoint,
-				typeWidth, disk.Filesystem,
+				deviceW, disk.Device, mountW, disk.MountPoint, typeW, disk.Filesystem,
 				disk.SizeGB, disk.UsedGB, disk.AvailGB)
 		}
 		fmt.Println()
