@@ -67,3 +67,4 @@ artifacts/
 # MCP configuration and Playwright session files
 .mcp.json
 .playwright-mcp/
+docs-working/ARCH_SNAPSHOT.md

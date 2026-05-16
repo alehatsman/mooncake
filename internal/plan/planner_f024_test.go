@@ -21,10 +21,14 @@ package plan
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func TestPlanner_RendersOsSystemdServiceSection(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("os.systemd is Linux-only")
+	}
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
@@ -79,6 +83,9 @@ steps:
 // anything else is left as-is so a future test for typed entries
 // can be added without churning this one.
 func TestPlanner_OsSystemdNonStringValuesPreserved(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("os.systemd is Linux-only")
+	}
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yml")
 
