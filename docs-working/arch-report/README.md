@@ -13,14 +13,15 @@ authority.
 
 | Date | File | Headline |
 |---|---|---|
-| 2026-05-16 | [`2026-05-16-arch-report.md`](./2026-05-16-arch-report.md) | Wave 1 + R1.1a landed: 5 new packages materialize the kernel boundary `vision/kernel.md` described. `internal/control` lands at instability 0.00, validating the kernel-sub-system claim. R1.1b + R2.1a in flight; R2.1b gated. ~70% of refactor plan complete by R-item count. |
+| 2026-05-16 (evening) | [`2026-05-16-refactor-plan-complete.md`](./2026-05-16-refactor-plan-complete.md) | **Refactor plan 100% complete.** 9/9 R-items in master. `fleetApplyAction` dropped off gocyclo > 15 (was 49). `internal/fleet` imports `internal/apply` — first non-cmd consumer of the kernel surface. Kernel-surface checkpoint met. Next: MCP → internal/apply, spec-66 typed plan diffs, R0.1-followup. |
+| 2026-05-16 (morning) | [`2026-05-16-arch-report.md`](./2026-05-16-arch-report.md) | Wave 1 + R1.1a landed: 5 new packages materialize the kernel boundary `vision/kernel.md` described. `internal/control` lands at instability 0.00, validating the kernel-sub-system claim. R1.1b + R2.1a in flight; R2.1b gated. ~70% of refactor plan complete by R-item count. |
 | 2026-05-15 | [`2026-05-15-arch-report.md`](./2026-05-15-arch-report.md) | Kernel healthy; pressure at edges (`cmd/`, `executor` accretion, `config.go` monotonic growth, handler tail). 4 mechanical extractions recommended. |
 
 ## Plans derived from reports
 
 | Date | File | Status |
 |---|---|---|
-| 2026-05-15 | [`2026-05-15-refactoring-plan.md`](./2026-05-15-refactoring-plan.md) | Ready for execution. 7 R-items across 4 phases; ~3,500 LOC of mechanical relocations. |
+| 2026-05-15 | [`2026-05-15-refactoring-plan.md`](./2026-05-15-refactoring-plan.md) | **Complete.** 9 R-items shipped across 4 waves. See `2026-05-16-refactor-plan-complete.md` for the final accounting. |
 
 ## When to write a new one
 
