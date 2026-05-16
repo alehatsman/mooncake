@@ -6,8 +6,64 @@ package: internal/agentd
 file: internal/agentd/worker.go
 lines: 166-173, 96-99
 status: done
-resolved_by: worktree-fix-f016
+resolved_by: worktree-fix-f016 (7c79da7)
 shipped: stage-1(a) — ctx threaded worker→apply.Runner→executor.Start; step loop checks ctx between steps; Shutdown cancels runCtx. Stage-3 handler-level audit (shell exec.CommandContext, wait.* honors ctx, etc.) remains a follow-up. Per-run Deadline (stage 2) deferred.
+verified: 2026-05-16 on master @ 7c79da7 (pre-fix verification preserved below)
+---
+
+## Pre-fix verification (2026-05-16, master @ 01f5cac)
+
+The agentd-worker case was unchanged from the original finding
+at the moment the fix landed:
+
+- `internal/agentd/worker.go:185` called
+  `apply.NewRunner(...).Run(context.Background())`.
+- `internal/agentd/worker.go:96-99` `Shutdown()` was
+  `close(w.submit); <-w.done` — no cancellation propagation.
+- `internal/agentd/server.go:259-260` acknowledged the problem
+  in a comment: *"Drain in-flight runs. v1 has no
+  cancellation, so this may block until the current plan
+  finishes."* The 30s `shutdownCtx` it built at line 260 was
+  passed to the HTTP servers' `Shutdown` but NOT to
+  `worker.Shutdown()`, so a hung run defeated the daemon-level
+  timeout entirely.
+
+### The ctx-propagation chain had FOUR breakages, not one (pre-fix)
+
+Post-F020 the CLI plumbed ctx into `apply.Runner.Run(ctx)`. But
+the Go ctx was dropped at four further layers:
+
+```
+✓ cmd: runWithSignalCtx (signal → cancel ctx)
+✓ cmd: applyCommand → apply.NewRunner(cfg).Run(ctx)
+✗ agentd: worker.executeRun → apply.NewRunner(cfg).Run(context.Background())   ← F016 stage-1
+✗ apply: Runner.Run(ctx) → executor.Start(startConfig, log, publisher)         ← executor.Start had no ctx parameter
+✗ executor: runner.Run(ec, &step)                                              ← actions.Context interface carried no Go context
+✗ shell: setupCommandContext → cmdCtx := context.Background()                  ← handler discarded any parent and started fresh
+```
+
+So F016 stage 1 (worker → Runner) was only the *first* step.
+Stage 1(a) per the resolved_by line covers worker→Runner →
+executor.Start signature change, plus between-step ctx checks
+inside executor. Handler-level audit (stage 3) and per-run
+Deadline (stage 2) are tracked as follow-ups.
+
+### Pre-fix failure mode
+
+With F020 fixed but F016 still open, the agentd shutdown path
+was:
+
+1. SIGTERM → `cmd/agentd.go:124` cancels outer ctx
+2. `Server.Serve(ctx)` unblocks → `Server.shutdown()`
+3. HTTP servers `Shutdown(shutdownCtx)` — 30s budget, drains cleanly
+4. `worker.Shutdown()` — blocks on `<-w.done`
+5. In-flight `apply.Runner.Run(context.Background())` keeps running
+6. If the run took > 30 s of post-SIGTERM time (or hung
+   forever on a stuck wait.http), daemon stayed alive
+   indefinitely. Operator escalated to SIGKILL — `events.jsonl`
+   not flushed, `result.json` not written, hub not closed, F015
+   defers all skipped (same end-state as pre-F020).
+
 ---
 
 ## What

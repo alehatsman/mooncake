@@ -6,7 +6,36 @@ package: internal/apply
 file: internal/apply/config.go
 lines: 69-75
 status: done
-resolved_by: worktree-fix-f021
+resolved_by: worktree-fix-f021 (63380f7)
+verified: 2026-05-16 — doc rewritten; runner-owned close lifecycle now documented explicitly
+---
+
+## Pre-fix verification (2026-05-16, master @ 49930fd)
+
+Both contradicting comments were still in place at the moment
+the fix landed:
+
+- `internal/apply/config.go:73-74` claimed "Subscribers are
+  closed by the publisher when it closes; callers must not
+  close them independently."
+- `internal/apply/runner.go:189-197` explicitly walked
+  ExtraSubscribers and called `sub.Close()` after Flush.
+
+Adjacent idempotency check (kept for the eventual doc fix to
+land its "Close must be idempotent" requirement against an
+already-safe baseline):
+
+- `internal/agentd/jsonl_sink.go:100-109` — `RunEventSink.Close`
+  guards on `s.closing`; second caller observes `s.closing ==
+  true`, waits for `<-s.writerDone`, returns without re-running
+  the body.
+- `internal/agentd/sse_hub.go` — `Hub.Close` guards on
+  `h.closed`; second caller takes the early return.
+
+So safety today is coincidental, not contractual — the doc fix
+should declare idempotency as a requirement for any new
+ExtraSubscriber, not lean on the existing implementations.
+
 ---
 
 ## What

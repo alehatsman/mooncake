@@ -14,6 +14,7 @@ files:
   - internal/actions/file_delete_range/handler.go:139, 393
   - internal/actions/file_replace/handler.go:140, 389
 status: open
+verified: 2026-05-16 — confirmed real: repo_apply_patchset/handler.go:397 and text_patch_ini/handler.go:110 both call ValidateNoPathTraversal then log-and-continue (debug-level). Path-traversal validation is dead-code theater. 11 call sites, 9 packages affected
 ---
 
 ## What

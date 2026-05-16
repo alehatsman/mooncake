@@ -7,6 +7,7 @@ file: internal/agentd/middleware.go
 lines: 97-110
 status: done
 resolved_by: worktree-fix-f029
+verified: 2026-05-16 — tests green, fix shape confirmed by code inspection on worktree-tester
 ---
 
 ## What

@@ -6,7 +6,8 @@ package: cmd
 file: cmd/fleet.go
 lines: 220-253
 status: done
-resolved_by: worktree-fix-f031
+resolved_by: worktree-fix-f031 (e2df37a)
+verified: 2026-05-16 — pre-fix verified cmd/fleet.go:233-243 `file:` skipped perms check; line 244-249 `literal:` accepted without --insecure flag. Fix shipped 2859b41
 ---
 
 ## What

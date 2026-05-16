@@ -7,7 +7,30 @@ file: internal/mcp/tools.go
 lines: 357, 457
 status: done
 resolved: 2026-05-16 — added `logger.NewDiscardLogger()` (no-op `Logger` implementation, lives in `internal/logger/discard_logger.go`) and swapped both `NewTestLogger()` call sites in `internal/mcp/tools.go` to use it. The `runConfig` site also gained the "InspectPlan errors are non-fatal" rationale comment the finding suggested. `grep -rn 'NewTestLogger' internal/` now yields only `_test.go` files + the constructor itself.
+verified: 2026-05-16 on master @ 49930fd
 ---
+
+## Verification (2026-05-16, master @ 49930fd)
+
+- `grep -rn 'NewTestLogger' internal/ | grep -v _test.go` returns only
+  the constructor itself + a doc-comment reference inside
+  `discard_logger.go` — no production callers.
+- `DiscardLogger` implements all 12 methods of the `Logger`
+  interface (`internal/logger/logger.go:65-78`) — verified by file
+  contents; build is green so the interface compliance also holds
+  at compile time.
+- `go test ./internal/logger/... ./internal/mcp/...` passes; the
+  MCP plan-handling tests
+  (`TestHandleCheckPlan_ReturnsCostSummaryAndRequires`,
+  `TestHandleRunPlan_AggregatesAllStepsAndCounters`,
+  `TestHandleCheckPlan_InspectionsContainDiff`) exercise both
+  swap sites end-to-end.
+- Minor gap (not a follow-up finding): there is no dedicated
+  unit test for `DiscardLogger`. Coverage is implicit via the
+  MCP tests. A future change to the `Logger` interface (added
+  method) is caught at compile time but a behavior test would
+  still be cheap insurance. Tracked as a low-priority TODO,
+  not a finding.
 
 ## What
 

@@ -6,8 +6,78 @@ package: internal/apply
 file: internal/apply/runner.go
 lines: 154-155, 336-359
 status: done
-resolved_by: worktree-fix-f020
+resolved_by: worktree-fix-f020 (01f5cac)
 follow_up: F016 (executor.Start does not observe ctx; signal still routes through os.Exit until ctx threads through executor → handler → exec.CommandContext)
+verified: 2026-05-16 on master @ 01f5cac
+---
+
+## Post-fix verification (2026-05-16, master @ 01f5cac)
+
+- `grep -c 'installSignalHandler' internal/apply/runner.go internal/apply/from_plan.go cmd/mooncake.go` returns 0 for all three — the symbol is gone from the kernel and was not just relocated to a sibling kernel file.
+- `cmd/mooncake.go:342-384` defines `runWithSignalCtx`; both `applyCommand` (line 320) and `runFromPlan` (line 331) go through it.
+- `internal/apply/runner.go:60-62, 151-152` document the new contract: kernel does not call `os.Exit`; embedded callers cancel ctx via their own shutdown path.
+- `go test ./internal/apply/... ./internal/agentd/... ./cmd/...` — green.
+- End-to-end CLI smoke tests confirm signal UX is preserved:
+  ```
+  $ mooncake apply -c /tmp/f020-sigint.yml &     # sleep 5 step
+  $ kill -INT $!                                  # exit 130
+  $ kill -TERM $!                                 # exit 143
+  ```
+  Both print the friendly `⚠ received {sig}, aborting apply` stderr message from `runWithSignalCtx`.
+- agentd race-on-exit confirmed gone in principle: agentd's `signal.NotifyContext` (`cmd/agentd.go:124`) is the only `signal.Notify` left on the daemon side, no competing kernel-side handler races it. Full graceful-shutdown story still depends on F016 plumbing ctx through executor → exec.CommandContext.
+
+## Pre-fix verification (2026-05-16, master @ 49930fd)
+
+Code shape at the moment the fix landed (preserved here for the
+race-on-exit detail, which the headline fix description doesn't
+fully cover):
+
+- `internal/apply/runner.go:154` — `stopSig := installSignalHandler()`
+- `internal/apply/runner.go:336-359` — handler body, including
+  `os.Exit(code)` at line 351
+- No `Config.InstallSignalHandler bool` opt-out — installation
+  was unconditional for every `apply.Runner.Run` caller.
+
+Three concrete callers of `apply.NewRunner(...).Run(ctx)` then:
+
+| Site | File | Embedded? | Pre-fix behavior on SIGTERM |
+|---|---|---|---|
+| CLI | `cmd/mooncake.go:317` | no | desired (130/143 exit codes) |
+| MCP | `internal/mcp/tools.go:365` | yes | broken (os.Exit) |
+| agentd | `internal/agentd/worker.go:178` | yes | broken (os.Exit, race below) |
+
+### Race-on-exit in agentd (the worst case before the fix)
+
+`cmd/agentd.go:124` already did the *correct* CLI-side pattern:
+
+```go
+ctx, stop := signal.NotifyContext(c.Context, syscall.SIGINT, syscall.SIGTERM)
+defer stop()
+return srv.Serve(ctx)
+```
+
+But the in-flight `apply.Runner.Run` (worker.executeRun →
+worker.go:178) **also subscribed** via its own `signal.Notify`.
+Both subscribers got SIGTERM. The apply.Runner goroutine won
+the race almost every time because its handler was two function
+calls deep (`signal.Stop` → `os.Exit`) while the daemon's
+graceful path was several layers deep (cancel ctx → unblock
+Serve → close listeners → Shutdown → close submit → wait on
+done).
+
+Net pre-fix result: daemon process exited with code 143 mid-run.
+`worker.Shutdown()` never ran. `RunEventSink.Close()` never
+ran — `events.jsonl` was not flushed, `result.json` was not
+written, and the F015 unified-defer cleanup (hub.Close +
+delete) was skipped. `os.Exit` skipped *every* deferred function,
+so F015's defer pattern couldn't save this case.
+
+The F020 fix moves signal handling to the CLI shell where the
+embedding shell decides. Embedders (agentd, MCP) now inherit
+ctx-cancellation cleanly — once F016 also lands (executor must
+honor ctx during long-running steps), the daemon's graceful
+shutdown story is complete end-to-end.
+
 ---
 
 ## What

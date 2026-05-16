@@ -18,6 +18,8 @@ something else landing first.
 | F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
 | F033 | Cross-cutting: 11 sites of pathutil.ValidateNoPathTraversal log+continue — repo_apply_patchset has real escape; others are theater | bug | M | — | open |
 | F035 | os.ssh_key: silently writes authorized_keys with wrong ownership on lookup failure or chown EPERM — breaks sshd auth | bug | S | — | open |
+| F037 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
+| F038 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
 
 ## Findings index
 
@@ -58,6 +60,8 @@ something else landing first.
 | F033 | path-traversal validation silently ignored (11 sites) | bug | open | [findings/F033](./findings/F033-path-traversal-validation-silently-ignored.md) |
 | F034 | pkg.repo gpg_key_fingerprint silently not verified | bug | **done** | [findings/F034](./findings/F034-pkg-repo-gpg-fingerprint-never-verified.md) |
 | F035 | os.ssh_key silent chown failure | bug | open | [findings/F035](./findings/F035-os-ssh-key-silent-chown-failure.md) |
+| F037 | vars action bypasses secrets resolver | bug | open | [findings/F037](./findings/F037-vars-action-bypasses-secrets-resolver.md) |
+| F038 | shell line-overflow structured stream silent | bug | open | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
 
 ## Queue (next iterations, priority order)
 

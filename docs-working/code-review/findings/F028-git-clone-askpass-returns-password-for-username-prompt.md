@@ -7,6 +7,7 @@ file: internal/actions/git_clone/credentials.go
 lines: 78-85, 128-153
 status: done
 resolved_by: worktree-fix-f028
+verified: 2026-05-16 — tests green, fix shape confirmed by code inspection on worktree-tester
 ---
 
 ## What
