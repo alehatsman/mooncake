@@ -30,6 +30,7 @@ something else landing first.
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F022 | mcp/tools.go uses logger.NewTestLogger() in production runConfig + HandleCheckPlan | smell | XS | — | open |
+| F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
 
 ## Findings index
 
@@ -57,6 +58,7 @@ something else landing first.
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
 | F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 | F022 | mcp uses NewTestLogger in production | smell | open | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
+| F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -77,7 +79,11 @@ something else landing first.
 11. ~~`internal/apply/runner.go`~~ — done → F020 (signal-handler
     hostile to embedded callers), F021 (Config.ExtraSubscribers
     doc-drift).
-12. **`internal/actions/package`** — 1,216 LOC, within-20% warning.
+12. ~~`internal/actions/package`~~ — partial → F023
+    (template-render swallow). 901 LOC handler.go; runCmd
+    is another F005 hit (no IsBecomeSupported/SudoPass guards).
+    Per-package isPackageInstalled is a perf footgun on big
+    lists; track separately if it becomes a UX complaint.
 13. **`internal/actions/copy` after the migration** — verify no
     dead-weight remains after arch-wins.
 14. **`internal/actions/file` after the migration** — same.
@@ -111,6 +117,10 @@ something else landing first.
 | 2026-05-16 | `internal/apply/runner.go` + `config.go` | F020, F021 |
 | 2026-05-16 | `internal/mcp/tools.go` | F022 |
 | 2026-05-16 | `internal/plan/filter/tags.go` | none (clean) |
+| 2026-05-16 | `internal/actions/package` (901 LOC) | F023 |
+| 2026-05-16 | `internal/agentd/files_handler.go` | none (clean — sec-conscious) |
+| 2026-05-16 | `internal/agentd/runs_handler.go` | none (clean — sees the F018 pattern done right) |
+| 2026-05-16 | `internal/fleet/controller.go` / `orchestrator.go` | none (clean — orchestrator uses ctx, unlike apply.Runner per F020) |
 
 ## Cross-cutting themes / patterns to track
 
