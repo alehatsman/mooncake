@@ -98,6 +98,16 @@ func (s *Store) Root() string { return s.root }
 // well-formed ULID — call validateID first if id came from a user.
 func (s *Store) RunDir(id string) string { return filepath.Join(s.root, id) }
 
+// ResultPath returns the path to a run's result.json — the daemon's
+// apply.KernelResult serialised after the run reaches a terminal state.
+// Consumed by controller-side fleet.Apply via GET /v1/runs/{id}/result
+// (R2.1c) and by any future SDK / MCP caller that wants the typed
+// kernel-surface tail. Always returns the same path even before the
+// file exists; missing-file is the caller's "result not ready" signal.
+func (s *Store) ResultPath(id string) string {
+	return filepath.Join(s.root, id, "result.json")
+}
+
 // EventsPath returns the path to a run's events.jsonl.
 func (s *Store) EventsPath(id string) string {
 	return filepath.Join(s.root, id, "events.jsonl")

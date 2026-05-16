@@ -33,12 +33,20 @@ type ApplyPhaseInput struct {
 // ApplyPhaseOutcome rolls up one phase's per-peer results into the four
 // numbers the caller needs to decide fail-fast and exit code. Mirrors the
 // switch inside fleetApplyAction's aggregate block.
+//
+// PerPeer carries the typed per-peer ApplyResults (R2.1c) for callers
+// that want to compose fleet.FleetKernelResult.Peers without re-running
+// Apply. Ordered to match ApplyPhaseInput.Peers; len(PerPeer) ==
+// len(input.Peers) post-RunApplyPhase. Nil entries indicate a peer that
+// errored before Apply could return (shouldn't happen — Apply always
+// returns a value).
 type ApplyPhaseOutcome struct {
 	OK          int
 	RunFailed   int
 	Unreachable int
 	FailedNames []string
 	FirstErr    error
+	PerPeer     []ApplyResult
 }
 
 // Terminal reports whether this phase ended in a state that should stop
@@ -113,7 +121,7 @@ func RunApplyPhase(applyCtx context.Context, w io.Writer, useColor bool, in Appl
 	close(events)
 	<-drained
 
-	var out ApplyPhaseOutcome
+	out := ApplyPhaseOutcome{PerPeer: results}
 	for i, r := range results {
 		switch r.Status {
 		case "success":

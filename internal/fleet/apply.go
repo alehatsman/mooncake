@@ -8,6 +8,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
 
@@ -68,6 +69,14 @@ type ApplyResult struct {
 	Sync     SyncStats
 	Status   string // run terminal status; empty if Apply errored before submit
 	Events   int    // number of events streamed
+
+	// KernelResult is the daemon's typed apply.KernelResult, fetched
+	// after the run reaches a terminal state via GET /v1/runs/{id}/result.
+	// nil when the daemon predates R2.1c, the run didn't reach terminal
+	// state, or the fetch failed (logged as a KindError banner, not
+	// fatal). Frontends that need the typed kernel tail (fleet.FleetKernelResult.Reverse)
+	// check non-nil before relying.
+	KernelResult *apply.KernelResult
 }
 
 // Apply runs the full sync → submit → stream cycle against one peer.
@@ -198,6 +207,25 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 			// daemon-side run may still be alive; we just can't see it.
 			if err == nil && result.Status == "" {
 				emit(PeerEvent{Kind: KindDisconnect})
+			}
+
+			// R2.1c: fetch the daemon's typed apply.KernelResult so
+			// fleet.FleetKernelResult composes per-peer. Best-effort: a
+			// daemon that predates this endpoint returns 404 (we surface
+			// nothing), a not-ready result is silently skipped, other
+			// errors emit a banner but don't fail the apply.
+			if err == nil && runID != "" && (result.Status == "success" || result.Status == "failed" || result.Status == "interrupted") {
+				kr, kerr := opts.Peer.GetRunResult(context.WithoutCancel(ctx), runID)
+				switch {
+				case kerr == nil:
+					result.KernelResult = kr
+				case errors.Is(kerr, transport.ErrRunResultNotReady):
+					// terminal status reported by Stream but result.json
+					// not written yet — race window between daemon's
+					// Update(StatusSuccess) and writeResult; harmless.
+				default:
+					emit(PeerEvent{Kind: KindError, Message: fmt.Sprintf("fetch run result: %s", oneLine(kerr.Error()))})
+				}
 			}
 			return result, err
 		}

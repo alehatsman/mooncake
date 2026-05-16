@@ -318,6 +318,7 @@ func (s *Server) routes() *http.ServeMux {
 	mux.HandleFunc("POST /v1/runs", s.submitRunHandler)
 	mux.HandleFunc("GET /v1/runs", s.listRunsHandler)
 	mux.HandleFunc("GET /v1/runs/{id}", s.getRunHandler)
+	mux.HandleFunc("GET /v1/runs/{id}/result", s.runResultHandler)
 	mux.HandleFunc("GET /v1/runs/{id}/events", s.runEventsHandler)
 	mux.HandleFunc("PUT /v1/files", s.putFileHandler)
 	mux.HandleFunc("HEAD /v1/files", s.headFileHandler)

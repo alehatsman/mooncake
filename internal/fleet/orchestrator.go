@@ -288,20 +288,23 @@ func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, use
 		BannerHeading: fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)),
 	})
 
-	// Assemble the typed fleet-scope kernel shape. Per-peer
-	// KernelResult is nil today (wire gap; see result.go); RunID and
-	// Status come straight from the per-peer ApplyResult slice once
-	// RunApplyPhase surfaces them — currently only OK / FailedNames
-	// counters are exposed, so we mark FailedNames as "failed" and
-	// the rest implicitly OK. Once RunApplyPhase returns the slice,
-	// populate RunID + Sync + EventsCount per peer.
+	// R2.1c: RunApplyPhase surfaces the per-peer ApplyResult slice via
+	// out.PerPeer. Each carries the daemon's typed apply.KernelResult
+	// fetched via GET /v1/runs/{id}/result, plus RunID / Status / Sync /
+	// Events. Map them into PeerResult so fleet.FleetKernelResult.Reverse()
+	// composes against typed Steps from each peer.
 	peers := make(map[PeerID]*PeerResult, len(agentdPeers))
-	for _, p := range agentdPeers {
-		peers[p.Name] = &PeerResult{}
-	}
-	for _, name := range out.FailedNames {
-		if pr, ok := peers[name]; ok {
-			pr.Status = "failed"
+	for i, p := range agentdPeers {
+		var r ApplyResult
+		if i < len(out.PerPeer) {
+			r = out.PerPeer[i]
+		}
+		peers[p.Name] = &PeerResult{
+			RunID:        r.RunID,
+			Status:       r.Status,
+			EventsCount:  r.Events,
+			Sync:         r.Sync,
+			KernelResult: r.KernelResult,
 		}
 	}
 	result := &FleetKernelResult{

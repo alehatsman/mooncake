@@ -157,6 +157,47 @@ func (s *Server) getRunHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, run)
 }
 
+// runResultHandler serves the daemon's serialised apply.KernelResult
+// for a terminal run. Frontend: controller-side fleet.Apply (R2.1c)
+// fetches this after the SSE stream ends, so a fleet apply can
+// compose a typed fleet.FleetKernelResult with per-peer KernelResults.
+//
+// Responses:
+//   - 404 run_not_found: no such run id.
+//   - 404 result_not_ready: the run hasn't reached a terminal state
+//     yet (worker hasn't written result.json). Callers should poll
+//     /v1/runs/{id} until terminal, then re-GET this endpoint.
+//   - 200: opaque JSON body, the daemon's apply.KernelResult shape.
+//
+// Wire shape: matches internal/apply.KernelResult exactly, modulo
+// fields tagged json:"-" (Result.ReverseData and Result.Detail).
+// Frontends unmarshal into *apply.KernelResult directly.
+func (s *Server) runResultHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	// Verify run exists; lets us distinguish "no run" from "not ready".
+	if _, err := s.store.Get(id); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			writeError(w, http.StatusNotFound, "run_not_found", id)
+			return
+		}
+		writeError(w, http.StatusBadRequest, "invalid_run_id", err.Error())
+		return
+	}
+	path := s.store.ResultPath(id)
+	data, err := os.ReadFile(path) //nolint:gosec // path constructed from store-owned id
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			writeError(w, http.StatusNotFound, "result_not_ready", id)
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "result_read", err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
 // runEventsHandler streams a run's events via SSE. Replays the persisted
 // JSONL log, then tails the in-memory Hub for live runs.
 //

@@ -1,11 +1,13 @@
 package agentd
 
 import (
+	"encoding/json"
 	"log/slog"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
@@ -151,6 +153,15 @@ func (w *Worker) executeRun(runID string) {
 	// alongside CLI runs.
 	publisher.Subscribe(logger.NewRunLogSubscriber(run.PlanPath))
 
+	// R2.1c: subscribe a result-capture sink so we can persist
+	// result.json after the run terminates. The sink only records the
+	// run.completed summary; the typed Plan + Steps tail comes from
+	// the *executor.RunCapture passed to Start.
+	summarySink := newDaemonSummarySink()
+	publisher.Subscribe(summarySink)
+
+	capture := &executor.RunCapture{}
+
 	prevDir, _ := os.Getwd()
 	if run.BaseDir != "" {
 		if err := os.Chdir(run.BaseDir); err != nil {
@@ -169,6 +180,7 @@ func (w *Worker) executeRun(runID string) {
 		VarsFilePaths:  run.VarsFiles,
 		Tags:           run.Tags,
 		Names:          run.Names,
+		Capture:        capture,
 	}, internalLog, publisher)
 
 	// CRITICAL ORDER: drain publisher → close publisher → close sink → write
@@ -177,6 +189,15 @@ func (w *Worker) executeRun(runID string) {
 	publisher.Flush()
 	publisher.Close()
 	sink.Close()
+
+	// R2.1c: persist the daemon's apply.KernelResult to result.json so a
+	// controller-side fleet.Apply can fetch it via GET /v1/runs/{id}/result
+	// and compose fleet.FleetKernelResult. Best-effort: a write failure
+	// is logged but doesn't fail the run (events.jsonl + record.json are
+	// the authoritative tail).
+	if writeErr := w.writeResult(runID, capture, summarySink, execErr); writeErr != nil {
+		w.log.Warn("worker: write result.json", "run_id", runID, "err", writeErr)
+	}
 
 	finishedAt := time.Now().UTC()
 	if execErr != nil {
@@ -192,6 +213,56 @@ func (w *Worker) executeRun(runID string) {
 	}
 }
 
+// writeResult assembles a *apply.KernelResult from the run's RunCapture
+// and the summary-sink's captured run.completed data, then writes it to
+// the run directory as result.json. Mirrors apply.Runner's
+// assembleResult shape so the controller-side reader can unmarshal into
+// the same type.
+//
+// Notes on the wire shape: Result.ReverseData and Result.Detail are
+// json:"-" by design, so they don't cross the wire today — the
+// controller-side fleet.Reverse therefore composes an empty FleetPlan
+// for actions whose Reverser depends on ReverseData. Surfacing those
+// fields is a separate spec (R2.1c phase 2 — per-handler ReverseInfo
+// registry with type discriminator).
+func (w *Worker) writeResult(runID string, capture *executor.RunCapture, summary *daemonSummarySink, execErr error) error {
+	result := &apply.KernelResult{Plan: capture.Plan()}
+	for _, rec := range capture.Steps() {
+		result.Steps = append(result.Steps, apply.StepResult{
+			Step:   rec.Step,
+			Result: rec.Result,
+		})
+	}
+	rd := summary.summary()
+	result.Summary = apply.RunSummary{
+		TotalSteps:   rd.TotalSteps,
+		Ok:           rd.SuccessSteps,
+		Changed:      rd.ChangedSteps,
+		Skipped:      rd.SkippedSteps,
+		Failed:       rd.FailedSteps,
+		Reverted:     rd.RevertedSteps,
+		DurationMs:   rd.DurationMs,
+		Success:      rd.Success,
+		ErrorMessage: rd.ErrorMessage,
+		CheckMode:    rd.CheckMode,
+	}
+	// If the run never reached run.completed (catastrophic setup error),
+	// reflect the actual error so consumers see something useful.
+	if result.Summary.TotalSteps == 0 && execErr != nil {
+		result.Summary.Success = false
+		if result.Summary.ErrorMessage == "" {
+			result.Summary.ErrorMessage = execErr.Error()
+		}
+	}
+
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := w.store.ResultPath(runID)
+	return os.WriteFile(path, data, 0o600)
+}
+
 func (w *Worker) markFailed(run *Run, errMsg string, finishedAt time.Time) {
 	if _, err := w.store.Update(run.ID, func(r *Run) error {
 		r.Status = StatusFailed
@@ -201,4 +272,41 @@ func (w *Worker) markFailed(run *Run, errMsg string, finishedAt time.Time) {
 	}); err != nil {
 		w.log.Error("worker: mark failed", "run_id", run.ID, "err", err)
 	}
+}
+
+// daemonSummarySink is the per-run events.Subscriber that records the
+// run.completed event's RunCompletedData so writeResult can populate
+// apply.RunSummary without round-tripping through events.jsonl. Stays
+// inside agentd/ rather than reusing apply.captureSubscriber because
+// (a) the daemon doesn't need the full event tail in result.json —
+// /v1/runs/{id}/events serves that separately, and (b) keeping it
+// here avoids exporting apply's internals.
+type daemonSummarySink struct {
+	mu   sync.Mutex
+	data events.RunCompletedData
+}
+
+func newDaemonSummarySink() *daemonSummarySink { return &daemonSummarySink{} }
+
+// OnEvent satisfies events.Subscriber. Only run.completed matters.
+func (s *daemonSummarySink) OnEvent(e events.Event) {
+	if e.Type != events.EventRunCompleted {
+		return
+	}
+	d, ok := e.Data.(events.RunCompletedData)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	s.data = d
+	s.mu.Unlock()
+}
+
+// Close satisfies events.Subscriber.
+func (s *daemonSummarySink) Close() {}
+
+func (s *daemonSummarySink) summary() events.RunCompletedData {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data
 }
