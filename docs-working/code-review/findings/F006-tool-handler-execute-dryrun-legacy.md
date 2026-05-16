@@ -5,7 +5,34 @@ severity: smell
 package: internal/actions/tool
 file: internal/actions/tool/handler.go
 lines: 64-187, 190-206, 351-385
-status: open
+status: fixed
+---
+
+## ✅ Fixed
+
+`Handler.Execute` and `Handler.DryRun` deleted; the install pipeline
+moved into a new unexported `Handler.applyTool` that `Handler.Run`
+calls for `ModeApply`. Plan mode keeps its existing branch in
+Run (cleaner than DryRun's silent-no-op-on-Get-failure shape).
+
+3 test call sites in `handler_mise_test.go` migrated from
+`h.Execute(...)` / `(&Handler{}).Execute(...)` to `.Run(...)`. The
+test fixture (`newToolCtx`) already sets `Mode: actions.ModeApply`,
+so behavior is bit-identical to pre-fix. `install_test.go` and
+`install_binary_test.go` had no Execute references despite the
+finding's reference list — the migration was 3 lines, not the
+~10 the finding implied.
+
+`go test -race ./internal/actions/tool/...` green; lint clean.
+The two TestApply_RoundTrip / TestIntegration_RoundTrip failures
+in the broader sweep are the pre-existing TCP-integration flakes
+(pass on rerun).
+
+### Pre-fix payoff
+
+`internal/actions/tool/handler.go`: -17 LOC (deleted DryRun);
+Execute → applyTool rename keeps that block's size the same.
+
 ---
 
 ## What
