@@ -19,7 +19,6 @@ something else landing first.
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
-| F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
 | F031 | cmd/fleet.readToken: `literal:` accepts token w/o --insecure flag; `file:` doesn't check perms | smell | S | — | open |
 | F032 | template/download legacy Execute path builds sudo shell commands without quoting — shell injection on dest path | risk | S | — | open |
@@ -48,7 +47,7 @@ something else landing first.
 | F018 | shell scanner 64KB line cap | bug | **done** | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
 | F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | **done** | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
-| F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
+| F021 | apply.Config.ExtraSubscribers doc-drift | doc | **done** | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 | F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
 | F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |

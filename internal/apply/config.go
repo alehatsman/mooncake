@@ -70,7 +70,18 @@ type Config struct {
 	// publisher before the run starts. Useful for callers (e.g. agentd)
 	// that need daemon-specific sinks (SSE hub, events.jsonl writer) that
 	// are outside the kernel's standard subscriber set.
-	// Subscribers are closed by the publisher when it closes; callers
-	// must not close them independently.
+	//
+	// Lifecycle (F021): Runner subscribes them eagerly, calls
+	// publisher.Flush() after the executor returns (which drains all
+	// OnEvent calls in flight), then calls subscriber.Close() on each
+	// in declaration order. publisher.Close() (deferred separately)
+	// only closes the publisher's internal forwarding channels — it
+	// does NOT cascade Close onto subscribers. Callers must not call
+	// Close themselves: the runner owns the lifecycle, and a double-
+	// Close on a non-idempotent subscriber is the caller's bug.
+	//
+	// Subscribers should make Close idempotent anyway — a future code
+	// path that wants to attach to an existing publisher and clean up
+	// on its own will run into this otherwise.
 	ExtraSubscribers []events.Subscriber
 }
