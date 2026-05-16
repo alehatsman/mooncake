@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
 )
@@ -47,8 +48,8 @@ func (githubReleaseBackend) Validate(t *config.Tool) error {
 	return nil
 }
 
-func (githubReleaseBackend) Plan(_ context.Context, spec Spec, facts FactSnapshot) (Plan, error) {
-	url := resolveGithubAssetURL(spec.Repo, spec.Tag, spec.Asset, spec.Version, facts)
+func (githubReleaseBackend) Plan(ctx context.Context, spec Spec, facts FactSnapshot) (Plan, error) {
+	url := resolveGithubAssetURL(ctx, spec.Repo, spec.Tag, spec.Asset, spec.Version, facts)
 	return Plan{
 		URL:               url,
 		Checksum:          spec.InlineChecksum,
@@ -91,7 +92,7 @@ func githubAssetURL(repo, tag, asset, version string, facts FactSnapshot) string
 // per-project tag scheme. This is the only network touch in Plan; it's
 // cheap (HEAD) and avoids the alternative of always failing with a 404
 // that doesn't tell the user how to recover.
-func resolveGithubAssetURL(repo, tag, asset, version string, facts FactSnapshot) string {
+func resolveGithubAssetURL(ctx context.Context, repo, tag, asset, version string, facts FactSnapshot) string {
 	if tag != "" {
 		return githubAssetURL(repo, tag, asset, version, facts)
 	}
@@ -114,7 +115,7 @@ func resolveGithubAssetURL(repo, tag, asset, version string, facts FactSnapshot)
 			// layers of network noise.
 			return url
 		}
-		if urlReachable(url) {
+		if urlReachable(ctx, url) {
 			return url
 		}
 	}
@@ -131,8 +132,16 @@ func resolveGithubAssetURL(repo, tag, asset, version string, facts FactSnapshot)
 // hermetic stub instead of making real GitHub HEAD requests during
 // Plan() — github-release backend is the only place we probe a URL
 // outside the install pipeline.
-var urlReachable = func(url string) bool {
-	req, err := http.NewRequest(http.MethodHead, url, nil)
+//
+// F007: probe now carries a context (so a Plan-mode cancellation
+// flows through) and is bounded by a 5-second probe deadline. HEAD
+// against GitHub should be sub-second; a slow probe is a stronger
+// signal that this candidate is the wrong one and the next one
+// (or the unconditional final fallback) should be tried.
+var urlReachable = func(ctx context.Context, url string) bool {
+	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(probeCtx, http.MethodHead, url, nil)
 	if err != nil {
 		return false
 	}

@@ -28,7 +28,7 @@ type Outcome struct {
 // as the source of truth (lockfile checksum enforcement) and a new entry
 // is recorded after a successful install. The handler is responsible
 // for calling lock.Save afterwards.
-func InstallURL(_ context.Context, spec Spec, plan Plan, facts FactSnapshot, lock *lockfile.Lock) (Outcome, error) {
+func InstallURL(ctx context.Context, spec Spec, plan Plan, facts FactSnapshot, lock *lockfile.Lock) (Outcome, error) {
 	installDir, err := InstallDir(spec.Name, spec.Version)
 	if err != nil {
 		return Outcome{}, err
@@ -70,7 +70,7 @@ func InstallURL(_ context.Context, spec Spec, plan Plan, facts FactSnapshot, loc
 	if mkErr := os.MkdirAll(root, 0o755); mkErr != nil {
 		return Outcome{}, fmt.Errorf("create store root: %w", mkErr)
 	}
-	tmpFile, err := fetchToTempFile(plan.URL, root)
+	tmpFile, err := fetchToTempFile(ctx, plan.URL, root)
 	if err != nil {
 		return Outcome{}, err
 	}

@@ -10,7 +10,7 @@ import (
 // duration of one test and returns a restore function for defer.
 // Tests use this to stay hermetic — no real GitHub HEAD requests
 // during Plan().
-func stubURLReachable(t *testing.T, probe func(string) bool) func() {
+func stubURLReachable(t *testing.T, probe func(context.Context, string) bool) func() {
 	t.Helper()
 	original := urlReachable
 	urlReachable = probe
@@ -29,7 +29,7 @@ func contains(s, sub string) bool { return strings.Contains(s, sub) }
 func TestMT39_TagFallback_RepoNamePrefix(t *testing.T) {
 	// Simulate: only the jq-style tag is reachable (jqlang/jq actually
 	// ships releases under "jq-1.7.1", not "v1.7.1").
-	restore := stubURLReachable(t, func(url string) bool {
+	restore := stubURLReachable(t, func(_ context.Context, url string) bool {
 		return strings.Contains(url, "/jq-1.7.1/")
 	})
 	defer restore()
@@ -57,7 +57,7 @@ func TestMT39_TagFallback_RepoNamePrefix(t *testing.T) {
 
 func TestMT39_TagFallback_BareVersion(t *testing.T) {
 	// Some projects (kubectl, gh in some lines) tag with bare version.
-	restore := stubURLReachable(t, func(url string) bool {
+	restore := stubURLReachable(t, func(_ context.Context, url string) bool {
 		return strings.Contains(url, "/1.30.0/")
 	})
 	defer restore()
@@ -87,7 +87,7 @@ func TestMT39_TagFallback_LastCandidateReturnedOnUniversalFailure(t *testing.T) 
 	// fall through to the last candidate and let the install pipeline
 	// surface the real download error — better than two layers of
 	// "not reachable" noise.
-	restore := stubURLReachable(t, func(url string) bool { return false })
+	restore := stubURLReachable(t, func(_ context.Context, url string) bool { return false })
 	defer restore()
 
 	b, err := Get(BackendGitHubRelease)
@@ -116,7 +116,7 @@ func TestMT39_ExplicitTag_SkipsProbing(t *testing.T) {
 	// When tag: is set the resolver trusts the user and doesn't probe.
 	// Stub returns false for everything to detect any accidental probe.
 	called := false
-	restore := stubURLReachable(t, func(url string) bool {
+	restore := stubURLReachable(t, func(_ context.Context, url string) bool {
 		called = true
 		return false
 	})

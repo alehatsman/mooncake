@@ -93,7 +93,17 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	spec := specFromConfig(renderedTool)
 	facts := factsFromVars(ctx.GetVariables())
 
-	plan, err := backend.Plan(context.Background(), spec, facts)
+	// F007: bound the install with a 30-minute outer ceiling.
+	// actions.Context doesn't expose a Go context.Context today, so we
+	// can't plumb the executor's parent ctx through; the 30m cap is the
+	// pragmatic alternative. Large tool archives (LLVM, CUDA SDK) can
+	// take a while; everything else is far under this. The Plan-mode
+	// HEAD probe inside the backend bounds itself at 5s internally so a
+	// stuck endpoint can't dominate Plan.
+	toolCtx, cancelToolCtx := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancelToolCtx()
+
+	plan, err := backend.Plan(toolCtx, spec, facts)
 	if err != nil {
 		return result, fmt.Errorf("backend plan: %w", err)
 	}
@@ -115,7 +125,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	var outcome Outcome
 	if plan.UseSharedPipeline {
-		outcome, err = InstallURL(context.Background(), spec, plan, facts, lock)
+		outcome, err = InstallURL(toolCtx, spec, plan, facts, lock)
 		if err != nil {
 			return result, err
 		}
@@ -123,8 +133,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		// Backend owns the install (mise, future delegating backends).
 		// Pre-check via Locate; if found, skip. Otherwise Install, then
 		// Locate again to discover the real install dir.
-		bgCtx := context.Background()
-		preBin, preErr := backend.Locate(bgCtx, spec, "")
+		preBin, preErr := backend.Locate(toolCtx, spec, "")
 		if preErr == nil && preBin != "" {
 			outcome = Outcome{
 				Changed:    false,
@@ -132,10 +141,10 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 				Reason:     fmt.Sprintf("%s %s already installed via %s at %s", spec.Name, spec.Version, spec.Backend, preBin),
 			}
 		} else {
-			if err := backend.Install(bgCtx, spec, plan, ""); err != nil {
+			if err := backend.Install(toolCtx, spec, plan, ""); err != nil {
 				return result, err
 			}
-			postBin, postErr := backend.Locate(bgCtx, spec, "")
+			postBin, postErr := backend.Locate(toolCtx, spec, "")
 			switch {
 			case postErr != nil:
 				return result, fmt.Errorf("locate %s after install (backend %s): %w", spec.Name, spec.Backend, postErr)
