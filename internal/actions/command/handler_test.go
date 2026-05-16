@@ -214,7 +214,7 @@ func TestHandler_Execute_BasicCommand(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -263,7 +263,7 @@ func TestHandler_Execute_WithEnvironment(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -298,7 +298,7 @@ func TestHandler_Execute_WithEnvironmentTemplate(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -330,7 +330,7 @@ func TestHandler_Execute_WithWorkingDirectory(t *testing.T) {
 		Cwd: tmpDir,
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -369,7 +369,7 @@ func TestHandler_Execute_WithWorkingDirectoryTemplate(t *testing.T) {
 		Cwd: "{{ work_dir }}",
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -405,7 +405,7 @@ func TestHandler_Execute_WithTimeout(t *testing.T) {
 	}
 
 	start := time.Now()
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -429,7 +429,7 @@ func TestHandler_Execute_WithTimeout_Success(t *testing.T) {
 		Timeout: "5s",
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
@@ -451,7 +451,7 @@ func TestHandler_Execute_WithInvalidTimeout(t *testing.T) {
 		Timeout: "invalid",
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should return error for invalid timeout")
 	}
@@ -476,7 +476,7 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 		Retry: &config.RetryPolicy{Attempts: 2},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 
 	if err == nil {
 		t.Error("Execute() should fail after retries")
@@ -502,7 +502,7 @@ func TestHandler_Execute_WithRetryDelay(t *testing.T) {
 	}
 
 	start := time.Now()
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -567,7 +567,7 @@ func TestHandler_Execute_WithChangedWhen(t *testing.T) {
 				ChangedWhen: tt.changedWhen,
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if err != nil {
 				t.Fatalf("Execute() error = %v", err)
 			}
@@ -638,7 +638,7 @@ func TestHandler_Execute_WithFailedWhen(t *testing.T) {
 				FailedWhen: tt.failedWhen,
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -666,7 +666,7 @@ func TestHandler_Execute_FailedCommand_WithFailedWhen(t *testing.T) {
 		FailedWhen: "rc > 10", // Only fail if return code > 10
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	// Should not error because failed_when condition is not met
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil (failed_when overrides failure)", err)
@@ -698,7 +698,7 @@ func TestHandler_Execute_WithStdin(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -730,7 +730,7 @@ func TestHandler_Execute_WithStdinTemplate(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -741,120 +741,6 @@ func TestHandler_Execute_WithStdinTemplate(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name    string
-		step    *config.Step
-		wantErr bool
-	}{
-		{
-			name: "simple command",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: echoArgv("hello"),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "command with template",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: echoArgv("{{ message }}"),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "command with become",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: []string{"systemctl", "start", "nginx"},
-				},
-				AsUser: "root",
-			},
-			wantErr: false,
-		},
-		{
-			name: "command with working directory",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: []string{"ls"},
-				},
-				Cwd: "/tmp",
-			},
-			wantErr: false,
-		},
-		{
-			name: "command with environment",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: []string{"env"},
-				},
-				Env: map[string]string{
-					"TEST": "value",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "command with timeout",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: []string{"sleep", "10"},
-				},
-				Timeout: "5s",
-			},
-			wantErr: false,
-		},
-		{
-			name: "command with retries",
-			step: &config.Step{
-				Cmd: &config.CommandAction{
-					Argv: []string{"curl", "https://example.com"},
-				},
-				Retry: &config.RetryPolicy{Attempts: 3},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := newMockExecutionContext()
-
-			err := h.DryRun(ctx, tt.step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			// Check that something was logged
-			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-			if len(mockLog.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-
-	step := &config.Step{
-		Cmd: &config.CommandAction{
-			Argv: echoArgv("{{ missing_var }}"),
-		},
-	}
-
-	// Should not error on template failures in dry-run
-	err := h.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() should not error on template failures, got: %v", err)
-	}
-}
 
 func TestHandler_Execute_InvalidArgvTemplate(t *testing.T) {
 	h := &Handler{}
@@ -866,7 +752,7 @@ func TestHandler_Execute_InvalidArgvTemplate(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid template syntax")
 	}
@@ -885,7 +771,7 @@ func TestHandler_Execute_InvalidEnvTemplate(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid env template")
 	}
@@ -902,7 +788,7 @@ func TestHandler_Execute_InvalidCwdTemplate(t *testing.T) {
 		Cwd: "{{ invalid.syntax",
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid cwd template")
 	}
@@ -919,7 +805,7 @@ func TestHandler_Execute_InvalidStdinTemplate(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid stdin template")
 	}
@@ -936,7 +822,7 @@ func TestHandler_Execute_InvalidChangedWhenExpression(t *testing.T) {
 		ChangedWhen: "invalid expression syntax",
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid changed_when expression")
 	}
@@ -953,7 +839,7 @@ func TestHandler_Execute_InvalidFailedWhenExpression(t *testing.T) {
 		FailedWhen: "invalid expression syntax",
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid failed_when expression")
 	}
@@ -970,7 +856,7 @@ func TestHandler_Execute_NonBoolChangedWhenResult(t *testing.T) {
 		ChangedWhen: "42", // Evaluates to int, not bool
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when changed_when doesn't return bool")
 	}
@@ -987,7 +873,7 @@ func TestHandler_Execute_NonBoolFailedWhenResult(t *testing.T) {
 		FailedWhen: "'string'", // Evaluates to string, not bool
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when failed_when doesn't return bool")
 	}
@@ -1004,7 +890,7 @@ func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when context is not ExecutionContext")
 	}
@@ -1033,7 +919,7 @@ func TestHandler_Execute_StderrCapture(t *testing.T) {
 		FailedWhen: "false", // Don't fail on any output
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1054,7 +940,7 @@ func TestHandler_Execute_MultipleArgv(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1096,7 +982,7 @@ func TestHandler_Execute_ResultRc(t *testing.T) {
 				FailedWhen: "false", // Don't fail
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if err != nil {
 				t.Fatalf("Execute() error = %v", err)
 			}

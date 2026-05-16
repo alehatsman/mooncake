@@ -19,7 +19,7 @@ func TestFailedWhen_CleanExit_DoesNotFabricateRc(t *testing.T) {
 		Shell:      &config.ShellAction{Cmd: "echo body"},
 		FailedWhen: "true",
 	}
-	res, err := h.Execute(ctx, step)
+	res, err := h.Run(ctx, step)
 	if err == nil {
 		t.Fatal("expected an error when failed_when=true")
 	}
@@ -46,7 +46,7 @@ func TestFailedWhen_RealNonzero_KeepsExitCode(t *testing.T) {
 		Shell:      &config.ShellAction{Cmd: "exit 2"},
 		FailedWhen: "true",
 	}
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Fatal("expected an error")
 	}

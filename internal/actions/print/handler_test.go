@@ -2,6 +2,7 @@ package print
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ type mockContext struct {
 	publisher *mockPublisher
 	log       logger.Logger
 	stepID    string
+	mode      actions.Mode // zero-value = ModeApply (Mode is int-typed)
 }
 
 func (m *mockContext) GetVariables() map[string]interface{} {
@@ -67,7 +69,7 @@ func (m *mockContext) IsDryRun() bool {
 	return false
 }
 
-func (m *mockContext) Mode() actions.Mode { return actions.ModeApply }
+func (m *mockContext) Mode() actions.Mode { return m.mode }
 
 func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
 
@@ -342,7 +344,7 @@ func TestHandler_Execute(t *testing.T) {
 				log:       log,
 			}
 
-			result, err := h.Execute(ctx, tt.step)
+			result, err := h.Run(ctx, tt.step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -416,7 +418,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
 	}
@@ -431,69 +433,62 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+// TestHandler_PlanMode replaces the legacy TestHandler_DryRun (F011).
+// Plan-mode Run renders the message and returns a Result with a
+// "would print: …" Reason; the legacy DryRun just logged. The
+// behavior was equivalent; the new assertion is on Result.Reason
+// rather than logger output.
+func TestHandler_PlanMode(t *testing.T) {
 	h := &Handler{}
 
 	tests := []struct {
 		name      string
 		step      *config.Step
 		variables map[string]interface{}
-		wantErr   bool
 	}{
 		{
 			name: "simple message",
 			step: &config.Step{
-				Log: &config.PrintAction{
-					Msg: "Hello, World!",
-				},
+				Log: &config.PrintAction{Msg: "Hello, World!"},
 			},
 			variables: map[string]interface{}{},
-			wantErr:   false,
 		},
 		{
 			name: "message with template variable",
 			step: &config.Step{
-				Log: &config.PrintAction{
-					Msg: "Hello, {{ name }}!",
-				},
+				Log: &config.PrintAction{Msg: "Hello, {{ name }}!"},
 			},
-			variables: map[string]interface{}{
-				"name": "Alice",
-			},
-			wantErr: false,
+			variables: map[string]interface{}{"name": "Alice"},
 		},
 		{
 			name: "message with missing variable - should not error",
 			step: &config.Step{
-				Log: &config.PrintAction{
-					Msg: "Hello, {{ missing_var }}!",
-				},
+				Log: &config.PrintAction{Msg: "Hello, {{ missing_var }}!"},
 			},
 			variables: map[string]interface{}{},
-			wantErr:   false, // DryRun should not error on template failures
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpl := mustNewRenderer()
-			log := &mockLogger{logs: []string{}}
-
 			ctx := &mockContext{
 				variables: tt.variables,
 				tmpl:      tmpl,
 				publisher: nil,
-				log:       log,
+				log:       &mockLogger{logs: []string{}},
+				mode:      actions.ModePlan,
 			}
-
-			err := h.DryRun(ctx, tt.step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
+			result, err := h.Run(ctx, tt.step)
+			if err != nil {
+				t.Errorf("Run() in plan mode error = %v, want nil", err)
 			}
-
-			// Check that something was logged
-			if len(log.logs) == 0 {
-				t.Error("DryRun() should log something")
+			r, ok := result.(*executor.Result)
+			if !ok {
+				t.Fatalf("Run() returned %T, want *executor.Result", result)
+			}
+			if !strings.HasPrefix(r.Reason, "would print") {
+				t.Errorf("Reason = %q, want it to start with 'would print'", r.Reason)
 			}
 		})
 	}

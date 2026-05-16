@@ -57,26 +57,6 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the command action with retry logic if configured.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	cmdAction := step.Cmd
-
-	// Render all argv elements with templates
-	renderedArgv := make([]string, len(cmdAction.Argv))
-	for i, arg := range cmdAction.Argv {
-		rendered, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
-		if err != nil {
-			return nil, fmt.Errorf("failed to render argv[%d]: %w", i, err)
-		}
-		renderedArgv[i] = rendered
-	}
-
-	ctx.GetLogger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
-
-	// Execute with retry logic
-	return h.executeWithRetry(ctx, step, renderedArgv)
-}
-
 // executeWithRetry executes the command with retry logic if
 // configured. MT-48: the retry decision is based on the underlying
 // exit code, NOT the post-failed_when verdict — otherwise
@@ -328,59 +308,23 @@ func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string,
 	return boolResult, nil
 }
 
-// DryRun logs what would be executed without actually running the command.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	cmdAction := step.Cmd
-
-	// Render argv for dry-run display
-	renderedArgv := make([]string, len(cmdAction.Argv))
-	for i, arg := range cmdAction.Argv {
-		rendered, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
-		if err != nil {
-			// Use original if rendering fails in dry-run
-			rendered = arg
-		}
-		renderedArgv[i] = rendered
-	}
-
-	prefix := "  "
-	if step.ShouldBecome() {
-		ctx.GetLogger().Infof("%s[DRY-RUN] Would execute (with sudo): %s", prefix, strings.Join(renderedArgv, " "))
-	} else {
-		ctx.GetLogger().Infof("%s[DRY-RUN] Would execute: %s", prefix, strings.Join(renderedArgv, " "))
-	}
-
-	if step.Cwd != "" {
-		ctx.GetLogger().Infof("%s           Working directory: %s", prefix, step.Cwd)
-	}
-
-	if len(step.Env) > 0 {
-		ctx.GetLogger().Infof("%s           Environment variables: %d vars", prefix, len(step.Env))
-	}
-
-	if step.Timeout != "" {
-		ctx.GetLogger().Infof("%s           Timeout: %s", prefix, step.Timeout)
-	}
-
-	if step.RetryAttempts() > 0 {
-		ctx.GetLogger().Infof("%s           Retries: %d", prefix, step.RetryAttempts())
-	}
-
-	return nil
-}
-
 // Run is the Spec 16 entry point. Like shell, command actions can't be
 // predicted for idempotency. Plan mode surfaces the rendered argv so
 // users see what would run. WouldChange is set because command steps
-// are assumed to mutate state.
+// are assumed to mutate state. Apply mode renders the argv and runs
+// the command via executeWithRetry.
+//
+// F011: legacy Execute / DryRun pair folded into Run.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	cmdAction := step.Cmd
+
 	if ctx.Mode() == actions.ModePlan {
 		r := executor.NewResult()
 		r.Checkable = true
 		r.WouldChange = true
 
-		rendered := make([]string, len(step.Cmd.Argv))
-		for i, arg := range step.Cmd.Argv {
+		rendered := make([]string, len(cmdAction.Argv))
+		for i, arg := range cmdAction.Argv {
 			out, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
 			if err != nil {
 				out = arg
@@ -398,5 +342,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		return r, nil
 	}
-	return h.Execute(ctx, step)
+
+	// Apply mode: render argv (strict — render failures bail) and
+	// dispatch to the retry-aware runner.
+	renderedArgv := make([]string, len(cmdAction.Argv))
+	for i, arg := range cmdAction.Argv {
+		rendered, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
+		if err != nil {
+			return nil, fmt.Errorf("failed to render argv[%d]: %w", i, err)
+		}
+		renderedArgv[i] = rendered
+	}
+	ctx.GetLogger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
+	return h.executeWithRetry(ctx, step, renderedArgv)
 }

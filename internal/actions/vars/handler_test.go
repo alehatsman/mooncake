@@ -191,7 +191,7 @@ func TestHandler_Execute(t *testing.T) {
 			ctx := testutil.NewMockContext()
 			ctx.Variables = tt.existingVars
 
-			result, err := h.Execute(ctx, tt.step)
+			result, err := h.Run(ctx, tt.step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -261,7 +261,7 @@ func TestHandler_Execute_NilVars(t *testing.T) {
 		Vars: nil,
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when vars is nil")
 	}
@@ -278,7 +278,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
 	}
@@ -298,88 +298,33 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+// TestHandler_PlanMode replaces TestHandler_DryRun (F011). The handler's
+// own doc-comment notes that the planner pre-evaluates vars and strips
+// them from the plan, so Run rarely sees a vars step in plan mode at
+// all. When it does, the plan-mode branch returns a no-op Result —
+// the legacy DryRun's side effect of merging vars during plan mode
+// belonged to the planner, not the handler. The remaining assertion
+// is the nil-vars error path, which Run handles ahead of the mode
+// branch.
+func TestHandler_PlanMode(t *testing.T) {
 	h := &Handler{}
 
-	tests := []struct {
-		name         string
-		step         *config.Step
-		existingVars map[string]interface{}
-		wantVars     map[string]interface{}
-		wantErr      bool
+	cases := []struct {
+		name    string
+		vars    *map[string]interface{}
+		wantErr bool
 	}{
-		{
-			name: "dry-run sets variables",
-			step: &config.Step{
-				Vars: &map[string]interface{}{
-					"foo": "bar",
-				},
-			},
-			existingVars: map[string]interface{}{},
-			wantVars: map[string]interface{}{
-				"foo": "bar",
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with multiple variables",
-			step: &config.Step{
-				Vars: &map[string]interface{}{
-					"var1": "value1",
-					"var2": 123,
-				},
-			},
-			existingVars: map[string]interface{}{},
-			wantVars: map[string]interface{}{
-				"var1": "value1",
-				"var2": 123,
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run nil vars",
-			step: &config.Step{
-				Vars: nil,
-			},
-			existingVars: map[string]interface{}{},
-			wantVars:     map[string]interface{}{},
-			wantErr:      true,
-		},
+		{"non-nil vars", &map[string]interface{}{"foo": "bar"}, false},
+		{"nil vars", nil, true},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := testutil.NewMockContext()
-			ctx.Variables = tt.existingVars
 			ctx.CurrentMode = actions.ModePlan
-
-			err := h.DryRun(ctx, tt.step)
+			_, err := h.Run(ctx, &config.Step{Vars: tt.vars})
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				return
-			}
-
-			// In dry-run mode, variables should still be set
-			for key, want := range tt.wantVars {
-				got, exists := ctx.Variables[key]
-				if !exists {
-					t.Errorf("Variable %q not set in dry-run", key)
-					continue
-				}
-
-				if !compareValues(got, want) {
-					t.Errorf("Variable %q = %v, want %v", key, got, want)
-				}
-			}
-
-			// Check that something was logged
-			log := ctx.Log.(*testutil.MockLogger)
-			if len(log.Logs) == 0 {
-				t.Error("DryRun() should log something")
+				t.Errorf("Run(plan) err = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

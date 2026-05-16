@@ -247,7 +247,7 @@ func TestHandler_Execute(t *testing.T) {
 				VarsLoad: stringPtr(tmpFile.Name()),
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -391,7 +391,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 				VarsLoad: stringPtr(tt.filePath),
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -454,7 +454,7 @@ func TestHandler_Execute_FileNotFound(t *testing.T) {
 		VarsLoad: stringPtr("/nonexistent/vars.yml"),
 	}
 
-	_, err = h.Execute(ctx, step)
+	_, err = h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when file doesn't exist")
 	}
@@ -496,7 +496,7 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 		VarsLoad: stringPtr(tmpFile.Name()),
 	}
 
-	_, err = h.Execute(ctx, step)
+	_, err = h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error with invalid YAML")
 	}
@@ -535,7 +535,7 @@ func TestHandler_Execute_NilIncludeVars(t *testing.T) {
 		}
 	}()
 
-	h.Execute(ctx, step)
+	h.Run(ctx, step)
 }
 
 func TestHandler_Execute_NoPublisher(t *testing.T) {
@@ -576,7 +576,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		VarsLoad: stringPtr(tmpFile.Name()),
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
 	}
@@ -606,245 +606,12 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 		VarsLoad: stringPtr("/tmp/vars.yml"),
 	}
 
-	_, err := h.Execute(mockCtx, step)
+	_, err := h.Run(mockCtx, step)
 	if err == nil {
 		t.Error("Execute() should error when context is not an ExecutionContext")
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name         string
-		fileVars     map[string]interface{}
-		existingVars map[string]interface{}
-		createFile   bool
-		wantVars     map[string]interface{}
-		wantErr      bool
-	}{
-		{
-			name: "dry-run loads variables if file exists",
-			fileVars: map[string]interface{}{
-				"foo": "bar",
-			},
-			existingVars: map[string]interface{}{},
-			createFile:   true,
-			wantVars: map[string]interface{}{
-				"foo": "bar",
-			},
-			wantErr: false,
-		},
-		{
-			name:         "dry-run with multiple variables",
-			fileVars:     map[string]interface{}{"var1": "value1", "var2": 123},
-			existingVars: map[string]interface{}{},
-			createFile:   true,
-			wantVars:     map[string]interface{}{"var1": "value1", "var2": 123},
-			wantErr:      false,
-		},
-		{
-			name:         "dry-run file not readable",
-			fileVars:     map[string]interface{}{},
-			existingVars: map[string]interface{}{},
-			createFile:   false, // Don't create file
-			wantVars:     map[string]interface{}{},
-			wantErr:      false, // Should not error, just log
-		},
-		{
-			name: "dry-run with existing variables",
-			fileVars: map[string]interface{}{
-				"new_var": "new_value",
-			},
-			existingVars: map[string]interface{}{
-				"existing_var": "existing_value",
-			},
-			createFile: true,
-			wantVars: map[string]interface{}{
-				"existing_var": "existing_value",
-				"new_var":      "new_value",
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var tmpFilePath string
-
-			if tt.createFile {
-				// Create temporary YAML file
-				tmpFile, err := os.CreateTemp("", "vars-*.yml")
-				if err != nil {
-					t.Fatalf("Failed to create temp file: %v", err)
-				}
-				defer os.Remove(tmpFile.Name())
-
-				yamlData, _ := yaml.Marshal(tt.fileVars)
-				tmpFile.Write(yamlData)
-				tmpFile.Close()
-				tmpFilePath = tmpFile.Name()
-			} else {
-				tmpFilePath = "/nonexistent/vars.yml"
-			}
-
-			// Create ExecutionContext
-			renderer, err := template.NewPongo2Renderer()
-			if err != nil {
-				panic("Failed to create renderer: " + err.Error())
-			}
-			pathExpander := pathutil.NewPathExpander(renderer)
-			mockCtx := testutil.NewMockContext()
-			mockCtx.Variables = tt.existingVars
-			mockCtx.CurrentMode = actions.ModePlan
-
-			scope := executor.NewVariableScope()
-			for k, v := range tt.existingVars {
-				scope.User[k] = v
-			}
-			ctx := &executor.ExecutionContext{
-				Svc: &executor.RunServices{
-					Template: mockCtx.Tmpl,
-					EventPublisher: mockCtx.Publisher,
-					Logger: mockCtx.Log,
-					PathUtil: pathExpander,
-					Mode: actions.ModePlan,
-				},
-				Scope: scope,
-				CurrentDir: "/tmp",
-			}
-
-			step := &config.Step{
-				VarsLoad: stringPtr(tmpFilePath),
-			}
-
-			err = h.DryRun(ctx, step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				return
-			}
-
-			// In dry-run mode, variables should still be loaded if file exists
-			for key, want := range tt.wantVars {
-				got, exists := ctx.GetVariables()[key]
-				if !exists {
-					t.Errorf("Variable %q not loaded in dry-run", key)
-					continue
-				}
-
-				if !compareValues(got, want) {
-					t.Errorf("Variable %q = %v, want %v", key, got, want)
-				}
-			}
-
-			// Check that something was logged
-			log := mockCtx.Log.(*testutil.MockLogger)
-			if len(log.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_NilIncludeVars(t *testing.T) {
-	h := &Handler{}
-
-	renderer, err := template.NewPongo2Renderer()
-	if err != nil {
-		panic("Failed to create renderer: " + err.Error())
-	}
-	pathExpander := pathutil.NewPathExpander(renderer)
-	mockCtx := testutil.NewMockContext()
-	mockCtx.CurrentMode = actions.ModePlan
-
-	ctx := &executor.ExecutionContext{
-		Svc: &executor.RunServices{
-			Template: mockCtx.Tmpl,
-			EventPublisher: mockCtx.Publisher,
-			Logger: mockCtx.Log,
-			PathUtil: pathExpander,
-			Mode: actions.ModePlan,
-		},
-		Scope: executor.NewVariableScope(),
-		CurrentDir: "/tmp",
-	}
-
-	step := &config.Step{
-		VarsLoad: nil,
-	}
-
-	// Note: This will panic because handler doesn't check for nil before dereferencing
-	// Validate() should be called first by the executor
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("DryRun() should panic when include_vars is nil (implementation doesn't check)")
-		}
-	}()
-
-	h.DryRun(ctx, step)
-}
-
-func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
-	h := &Handler{}
-
-	// Use MockContext directly (not ExecutionContext)
-	mockCtx := testutil.NewMockContext()
-	mockCtx.CurrentMode = actions.ModePlan
-
-	step := &config.Step{
-		VarsLoad: stringPtr("/tmp/vars.yml"),
-	}
-
-	err := h.DryRun(mockCtx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not an ExecutionContext")
-	}
-}
-
-func TestHandler_DryRun_PathExpansionFailure(t *testing.T) {
-	h := &Handler{}
-
-	renderer, err := template.NewPongo2Renderer()
-	if err != nil {
-		panic("Failed to create renderer: " + err.Error())
-	}
-	pathExpander := pathutil.NewPathExpander(renderer)
-	mockCtx := testutil.NewMockContext()
-	mockCtx.CurrentMode = actions.ModePlan
-
-	ctx := &executor.ExecutionContext{
-		Svc: &executor.RunServices{
-			Template: mockCtx.Tmpl,
-			EventPublisher: mockCtx.Publisher,
-			Logger: mockCtx.Log,
-			PathUtil: pathExpander,
-			Mode: actions.ModePlan,
-		},
-		Scope: executor.NewVariableScope(),
-		CurrentDir: "/tmp",
-	}
-
-	// Use a path with undefined variable (will fail expansion)
-	step := &config.Step{
-		VarsLoad: stringPtr("{{ undefined_var }}/vars.yml"),
-	}
-
-	// Should not error, just use original path
-	err = h.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() should not error on path expansion failure, got: %v", err)
-	}
-
-	// Check that something was logged
-	log := mockCtx.Log.(*testutil.MockLogger)
-	if len(log.Logs) == 0 {
-		t.Error("DryRun() should log something even on expansion failure")
-	}
-}
 
 // Helper functions
 

@@ -14,7 +14,7 @@ something else landing first.
 | F004 | service: 6× repeated sudo/exec block (in-package) | smell | S | — | open |
 | F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
-| F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
+| F011 | Cross-cutting: 16 handlers still have Execute/DryRun (5 done in batch 1: shell/command/print/vars/include_vars) | smell | XL | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
 | F033 | Cross-cutting: 11 sites of pathutil.ValidateNoPathTraversal log+continue — repo_apply_patchset has real escape; others are theater | bug | M | — | open |
 | F034 | pkg.repo: gpg_key_fingerprint required at validate-time but NEVER verified against the fetched GPG key — silent integrity bypass | bug | S | — | open |
@@ -33,7 +33,7 @@ something else landing first.
 | F008 | tool.renderToolTemplates manual repetition | readability | **done** | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
 | F009 | explain.DisplayFacts section split | smell | **done** | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
 | F010 | explain TestDisplayFacts_NilFacts is dead | smell | **done** | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
-| F011 | cross-cutting: 24 handlers w/ legacy paths | smell | open | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
+| F011 | cross-cutting: 16/21 handlers still have legacy paths (5 done in batch 1) | smell | **partial** | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | **done** | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
 | F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
