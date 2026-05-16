@@ -5,7 +5,8 @@ severity: smell
 package: cmd
 file: cmd/fleet.go
 lines: 220-253
-status: open
+status: done
+resolved_by: worktree-fix-f031
 ---
 
 ## What
