@@ -10,7 +10,39 @@ files:
   - internal/actions/template/handler.go:346
   - internal/effects/default.go (defaultPerformer.runSudo)
   - internal/executor/sudo_integration_test.go (test only)
-status: partial
+status: done
+---
+
+## ✅ Final mile (2026-05-17): all 6 service inline sites migrated
+
+`service/handler.go` was the last partial: `becomeAwareCommand`
+(F004's service-local helper) and 5 sibling inline `exec.Command("sudo",
+"-S", ...)` sites (writeFileWithSudo ×2, isLaunchdServiceLoaded,
+launchdKickstart, launchdKill) all now route through
+`security.BecomeRunner`.
+
+A small `wrapBecomeErrorAsSetup` helper translates the runner's
+`ErrBecomeUnsupported` / `ErrBecomeNoSudoPass` sentinels into the
+`*executor.SetupError{Component, Issue}` shape this package has always
+returned, so callers (and the `TestHandleService_BecomeWithoutPassword`
+integration test) see no API change.
+
+One real behavior fix surfaced during the migration:
+`isLaunchdServiceLoaded` previously checked `SudoPass != ""` but NOT
+`IsBecomeSupported()` — so a Linux operator running with `become: true`
+against a launchd service would have hit the OS-level "sudo: command not
+found" instead of the clean `SetupError{Component: "become"}` every other
+site in the file returned. Routing through `becomeAwareCommand` makes the
+guard uniform.
+
+Tests: `TestWrapBecomeErrorAsSetup` (3 sub-tests) locks the
+sentinel-to-`SetupError` translation; existing tests still pass without
+changes.
+
+Net: zero `exec.Command("sudo", ...)` literals remain in `internal/actions`
+or `internal/effects`. The grep verification (`grep -rn 'exec.Command("sudo"'
+internal/`) only hits test fixtures.
+
 ---
 
 ## ✅ Partial fix — canonical helper landed; 4 of 6 packages migrated

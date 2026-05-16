@@ -10,7 +10,7 @@ something else landing first.
 
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
-| F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
+| F005 | Cross-package sudo helper — BecomeRunner landed; all 6 service inline sites migrated 2026-05-17, zero `exec.Command("sudo", ...)` literals remain in actions/effects | smell | M | — | done |
 | F011 | Cross-cutting: Execute/DryRun migration complete — all 21 handlers now Run-only | smell | XL | — | done |
 | F041 | artifact_capture.readFileContent unbounded read | smell | S | — | done |
 
@@ -22,7 +22,7 @@ something else landing first.
 | F002 | CLAUDE.md soft-cap list stale | doc | **done** | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
 | F003 | service: legacy Execute/DryRun | smell | **done** | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
 | F004 | service: sudo/exec duplication in-package | smell | **done** | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
-| F005 | sudo -S shell-out helper cross-package | smell | **partial** | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
+| F005 | sudo -S shell-out helper cross-package | smell | **done** | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
 | F006 | tool handler legacy Execute/DryRun | smell | **done** | [findings/F006](./findings/F006-tool-handler-execute-dryrun-legacy.md) |
 | F007 | tool: http no timeout / context | risk | **done** | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
 | F008 | tool.renderToolTemplates manual repetition | readability | **done** | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |

@@ -3,7 +3,7 @@
 package service
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -400,40 +400,41 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 	return true, nil
 }
 
-// systemdDaemonReload executes systemctl daemon-reload.
 // becomeAwareCommand builds *exec.Cmd for `program args...`, front-ending
 // it with `sudo -S` when step.ShouldBecome() is true. Returns SetupError
 // early when become is requested but the host doesn't support it (Windows)
-// or no sudo password was supplied. F004 centralizes the 6 hand-rolled
-// copies of this pattern in handler.go — collapses each call site to a
-// couple of lines and closes the asymmetry where two sites
-// (getSystemdServiceState, isSystemdServiceEnabled) silently skipped the
-// IsBecomeSupported guard.
-//
-// strings (systemctl, launchctl); args are validated service names.
-// Documented #nosec at each former call site is now satisfied here.
-//
-//nolint:gosec // G204: program names come from this package's literal
+// or no sudo password was supplied. F004 centralized the 6 hand-rolled
+// copies of this pattern in handler.go; F005 final-mile collapsed
+// becomeAwareCommand itself + the 5 remaining inline launchd/file-sudo
+// constructions onto security.BecomeRunner so the validate-then-construct
+// policy lives in exactly one place across the project.
 func becomeAwareCommand(step config.Step, ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
-	if !step.ShouldBecome() {
-		return exec.Command(program, args...), nil
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	cmd, err := runner.Command(step.ShouldBecome(), program, args...)
+	if err != nil {
+		return nil, wrapBecomeErrorAsSetup(err)
 	}
-	if !security.IsBecomeSupported() {
-		return nil, &executor.SetupError{
+	return cmd, nil
+}
+
+// wrapBecomeErrorAsSetup translates the two security.BecomeRunner
+// sentinel errors into the executor.SetupError shape this package has
+// always returned, so callers (and tests asserting on
+// SetupError.Component) don't see an API change.
+func wrapBecomeErrorAsSetup(err error) error {
+	switch {
+	case errors.Is(err, security.ErrBecomeUnsupported):
+		return &executor.SetupError{
 			Component: "become",
 			Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
 		}
-	}
-	if ec.Svc.SudoPass == "" {
-		return nil, &executor.SetupError{
+	case errors.Is(err, security.ErrBecomeNoSudoPass):
+		return &executor.SetupError{
 			Component: "sudo",
 			Issue:     "no password provided. Use --sudo-pass flag",
 		}
 	}
-	sudoArgs := append([]string{"-S", program}, args...)
-	cmd := exec.Command("sudo", sudoArgs...)
-	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	return cmd, nil
+	return err
 }
 
 // runBecomeAware is becomeAwareCommand + CombinedOutput + the standard
@@ -576,20 +577,13 @@ func writeFileWithPrivileges(path string, content []byte, mode string, step conf
 }
 
 // writeFileWithSudo writes a file using sudo (for privileged paths).
+//
+// F005 final-mile: the previous IsBecomeSupported + SudoPass pre-flight
+// checks moved into security.BecomeRunner.Command so every become-aware
+// site validates uniformly. The first runner.Command call below catches
+// both conditions before any privileged action runs.
 func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *executor.ExecutionContext) error {
-	if !security.IsBecomeSupported() {
-		return &executor.SetupError{
-			Component: "become",
-			Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-		}
-	}
-
-	if ec.Svc.SudoPass == "" {
-		return &executor.SetupError{
-			Component: "sudo",
-			Issue:     "no password provided. Use --sudo-pass flag",
-		}
-	}
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
 
 	// Write to temporary file first
 	tmpFile, err := os.CreateTemp("", "mooncake-unit-*")
@@ -608,10 +602,10 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 	}
 
 	// Use sudo to copy temp file to target location
-	// #nosec G204 - This is a provisioning tool that needs to copy files with elevated privileges
-	cmd := exec.Command("sudo", "-S", "cp", tmpPath, path)
-	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-
+	cmd, err := runner.Command(true, "cp", tmpPath, path)
+	if err != nil {
+		return wrapBecomeErrorAsSetup(err)
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		exitCode := 1
 		if cmd.ProcessState != nil {
@@ -624,10 +618,10 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 	}
 
 	// Set file permissions with sudo
-	// #nosec G204 - This is a provisioning tool that needs to set file permissions with elevated privileges
-	cmd = exec.Command("sudo", "-S", "chmod", fmt.Sprintf("%o", mode), path)
-	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-
+	cmd, err = runner.Command(true, "chmod", fmt.Sprintf("%o", mode), path)
+	if err != nil {
+		return wrapBecomeErrorAsSetup(err)
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		exitCode := 1
 		if cmd.ProcessState != nil {
@@ -799,20 +793,16 @@ func manageLaunchdPlist(serviceName string, unit *config.ServiceUnit, isSystem b
 	return true, nil
 }
 
-// isLaunchdServiceLoaded checks if a launchd service is loaded
+// isLaunchdServiceLoaded checks if a launchd service is loaded.
+//
+// F005 final-mile: the previous inline sudo construction skipped the
+// IsBecomeSupported guard the rest of this file applied — Linux + become
+// would have hit an OS-level "sudo: not found" instead of a clean
+// SetupError. Routing through becomeAwareCommand fixes the asymmetry.
 func isLaunchdServiceLoaded(serviceID string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if ec.Svc.SudoPass == "" {
-			return false, &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		cmd = exec.Command("sudo", "-S", "launchctl", "print", serviceID)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		cmd = exec.Command("launchctl", "print", serviceID)
+	cmd, err := becomeAwareCommand(step, ec, "launchctl", "print", serviceID)
+	if err != nil {
+		return false, err
 	}
 
 	output, err := cmd.CombinedOutput()
@@ -978,28 +968,9 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 
 	ec.Svc.Logger.Debugf("  Running launchctl %s", strings.Join(args, " "))
 
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return &executor.SetupError{
-				Component: "become",
-				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-			}
-		}
-		if ec.Svc.SudoPass == "" {
-			return &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		sudoArgs := make([]string, 0, 2+len(args))
-		sudoArgs = append(sudoArgs, "-S", "launchctl")
-		sudoArgs = append(sudoArgs, args...)
-		// #nosec G204 - This is a provisioning tool that manages launchd services with validated commands
-		cmd = exec.Command("sudo", sudoArgs...)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		cmd = exec.Command("launchctl", args...)
+	cmd, err := becomeAwareCommand(step, ec, "launchctl", args...)
+	if err != nil {
+		return err
 	}
 
 	output, err := cmd.CombinedOutput()
@@ -1021,24 +992,9 @@ func launchdKickstart(serviceID string, kill bool, step config.Step, ec *executo
 func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionContext) error {
 	ec.Svc.Logger.Debugf("  Running launchctl kill SIGTERM %s", serviceID)
 
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return &executor.SetupError{
-				Component: "become",
-				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-			}
-		}
-		if ec.Svc.SudoPass == "" {
-			return &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		cmd = exec.Command("sudo", "-S", "launchctl", "kill", "SIGTERM", serviceID)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		cmd = exec.Command("launchctl", "kill", "SIGTERM", serviceID)
+	cmd, err := becomeAwareCommand(step, ec, "launchctl", "kill", "SIGTERM", serviceID)
+	if err != nil {
+		return err
 	}
 
 	output, err := cmd.CombinedOutput()

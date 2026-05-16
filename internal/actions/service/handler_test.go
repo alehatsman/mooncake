@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -935,4 +937,51 @@ func TestLaunchdKill(t *testing.T) {
 	err := launchdKill("gui/501/com.test.service", step, ctx)
 	// Error expected
 	t.Logf("launchdKill error (expected): %v", err)
+}
+
+// TestWrapBecomeErrorAsSetup locks the F005-final-mile error translation
+// shape: security.ErrBecomeUnsupported / security.ErrBecomeNoSudoPass
+// must become *executor.SetupError with the historical Component values
+// the test suite (and downstream tools) already match on. Any other
+// error passes through unchanged.
+func TestWrapBecomeErrorAsSetup(t *testing.T) {
+	t.Run("ErrBecomeUnsupported -> SetupError component=become", func(t *testing.T) {
+		got := wrapBecomeErrorAsSetup(fmt.Errorf("wrapped: %w", security.ErrBecomeUnsupported))
+		var setupErr *executor.SetupError
+		if !errors.As(got, &setupErr) {
+			t.Fatalf("want *executor.SetupError, got %T (%v)", got, got)
+		}
+		if setupErr.Component != "become" {
+			t.Errorf("Component = %q, want %q", setupErr.Component, "become")
+		}
+		if !strings.Contains(setupErr.Issue, "not supported") {
+			t.Errorf("Issue = %q, want it to mention 'not supported'", setupErr.Issue)
+		}
+	})
+
+	t.Run("ErrBecomeNoSudoPass -> SetupError component=sudo", func(t *testing.T) {
+		got := wrapBecomeErrorAsSetup(security.ErrBecomeNoSudoPass)
+		var setupErr *executor.SetupError
+		if !errors.As(got, &setupErr) {
+			t.Fatalf("want *executor.SetupError, got %T (%v)", got, got)
+		}
+		if setupErr.Component != "sudo" {
+			t.Errorf("Component = %q, want %q", setupErr.Component, "sudo")
+		}
+		if !strings.Contains(setupErr.Issue, "no password provided") {
+			t.Errorf("Issue = %q, want it to mention 'no password provided'", setupErr.Issue)
+		}
+	})
+
+	t.Run("unrelated error passes through", func(t *testing.T) {
+		orig := errors.New("disk full")
+		got := wrapBecomeErrorAsSetup(orig)
+		if !errors.Is(got, orig) {
+			t.Errorf("want passthrough of original error, got %v", got)
+		}
+		var setupErr *executor.SetupError
+		if errors.As(got, &setupErr) {
+			t.Errorf("unrelated error must not be wrapped as SetupError, got %v", setupErr)
+		}
+	})
 }
