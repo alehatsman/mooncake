@@ -22,7 +22,7 @@ something else landing first.
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
-| F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
+| F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
 | F028 | git_clone askpass returns password for the username prompt too — auth fails for bare HTTPS URLs | bug | S | — | open |
 | F029 | agentd.bearerAuthMiddleware leaks Authorization-header length via timing side-channel | risk | XS | — | open |
 | F030 | security.FilePasswordProvider rejects 0400 / stricter-than-0600 modes — exact-equality check | smell | XS | — | open |
@@ -56,7 +56,7 @@ something else landing first.
 | F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 | F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
-| F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
+| F026 | file/copy unbounded os.ReadFile in handler | risk | **partial** | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
 | F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
 | F028 | git_clone askpass returns password for username prompt | bug | open | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 | F029 | agentd bearer-auth length side-channel | risk | open | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |

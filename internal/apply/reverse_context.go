@@ -66,6 +66,9 @@ func (reverseNoopPerformer) Mkdir(string, os.FileMode, actions.PerformerOpts) ac
 func (reverseNoopPerformer) WriteFile(string, []byte, os.FileMode, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
 }
+func (reverseNoopPerformer) CopyFile(string, string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
 func (reverseNoopPerformer) Symlink(string, string, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
 }

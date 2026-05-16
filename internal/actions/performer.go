@@ -9,6 +9,7 @@ type Action string
 const (
 	ActionMkdir     Action = "mkdir"
 	ActionWriteFile Action = "write_file"
+	ActionCopyFile  Action = "copy_file"
 	ActionSymlink   Action = "symlink"
 	ActionHardlink  Action = "hardlink"
 	ActionTouch     Action = "touch"
@@ -88,7 +89,26 @@ type Performer interface {
 	// WriteFile writes content to path with the given mode, creating
 	// parent directories as needed. Idempotent: if existing content
 	// already matches, AlreadyOk is set.
+	//
+	// content is held in memory by the implementation; use CopyFile
+	// instead when the source is already a file on disk.
 	WriteFile(path string, content []byte, mode os.FileMode, opts PerformerOpts) Effect
+
+	// CopyFile streams the file at src to dest with the given mode,
+	// creating parent directories as needed. Memory usage is bounded
+	// regardless of file size — the source is never loaded into a
+	// single []byte (unlike WriteFile + os.ReadFile, which has been
+	// the historical shape used by the copy action).
+	//
+	// Idempotent: if dest already exists with the same size, content
+	// (verified by streaming sha256 of both files), and mode, AlreadyOk
+	// is set without performing a copy. This keeps Plan-mode honest
+	// for large files without loading them into memory.
+	//
+	// The src file must exist and be a regular file. dest is created
+	// or truncated. Symlinks at src are followed; symlinks at dest are
+	// replaced.
+	CopyFile(src, dest string, mode os.FileMode, opts PerformerOpts) Effect
 
 	// Symlink creates a symbolic link at path pointing to target. If a
 	// link already exists with the correct target, AlreadyOk is set.
