@@ -74,13 +74,24 @@ func (r *Registry) Get(actionType string) (Handler, bool) {
 
 // List returns metadata for all registered handlers.
 // Useful for introspection and documentation generation.
+//
+// proposal-05: the four spec-22 ABI capability bools
+// (ImplementsDiff/Cost/Reverse/Permissions) are populated here from
+// the handler's live interface satisfaction — handler authors do not
+// declare them by hand, so the columns can't drift from reality as
+// new methods are added.
 func (r *Registry) List() []ActionMetadata {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	result := make([]ActionMetadata, 0, len(r.handlers))
 	for _, handler := range r.handlers {
-		result = append(result, handler.Metadata())
+		meta := handler.Metadata()
+		meta.ImplementsDiff = IsDiffer(handler)
+		meta.ImplementsCost = IsCoster(handler)
+		meta.ImplementsReverse = IsReverser(handler)
+		meta.ImplementsPermissions = IsPermitter(handler)
+		result = append(result, meta)
 	}
 	return result
 }
