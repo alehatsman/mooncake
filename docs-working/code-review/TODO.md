@@ -26,6 +26,8 @@ something else landing first.
 | F015 | agentd.Worker: chdir-error path leaks the hub | bug | XS | — | open |
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
 | F017 | executor: continue_on_error emits step.failed AND step.completed | bug | XS | — | open |
+| F018 | shell: bufio.Scanner default 64 KB line cap → silent truncation | bug | S | — | open |
+| F019 | secrets.Resolve doesn't recurse into step.Vars (*map[string]interface{}) | bug | S | — | open |
 
 ## Findings index
 
@@ -48,6 +50,8 @@ something else landing first.
 | F015 | agentd.Worker chdir-error hub leak | bug | open | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
 | F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
 | F017 | executor continue_on_error double emit | bug | open | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
+| F018 | shell scanner 64KB line cap | bug | open | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
+| F019 | secrets.Resolve misses step.Vars | bug | open | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -73,8 +77,9 @@ something else landing first.
 14. **`internal/actions/file` after the migration** — same.
 15. **`cmd/`** — 10,022 LOC of CLI wiring. Spot-check the largest
     files.
-16. **`internal/secrets/resolver`** — new, small, easy.
-17. **`internal/control`** — new, smallest, foundation-tier.
+16. ~~`internal/secrets/resolver`~~ — done → F019 (silent miss).
+17. ~~`internal/control`~~ — reviewed, no findings (clean
+    foundation-tier package).
 18. **`internal/plan/filter`** — new.
 19. **`internal/presets/registry`** — renamed but otherwise old.
 20. **Per-action handlers not above** — git_*, os_*, text_*, wait_*,
@@ -95,6 +100,8 @@ something else landing first.
 | 2026-05-16 | `internal/fleet/apply.go` (partial) | F014 |
 | 2026-05-16 | `internal/agentd/worker.go` | F015, F016 |
 | 2026-05-16 | `internal/executor/executor.go` (partial) | F017 |
+| 2026-05-16 | `internal/actions/shell/handler.go` | F018 |
+| 2026-05-16 | `internal/secrets/resolver/resolve.go` | F019 |
 
 ## Cross-cutting themes / patterns to track
 
@@ -121,6 +128,17 @@ Updated as the review uncovers patterns.
   F016). The pattern "every exit path of executeRun must run the
   same cleanup" isn't enforced — F015 found one missed close.
   Defer-based cleanup is the fix in both cases.
+- **Unbounded buffer / scanner sizes** (F018). `bufio.Scanner`
+  with default 64 KB max, `bytes.Buffer` with no cap. Pattern
+  recurs in any subprocess-output capture path; audit:
+  - `internal/actions/shell/handler.go` (F018)
+  - `internal/actions/assert/handler.go` (HTTP body)
+  - `internal/actions/observe_logs/handler.go`
+  - `internal/actions/wait_command/handler.go`
+- **Reflection-walker coverage gaps** (F019). Walker handles a
+  closed set of kinds; future kinds (interface{}, time.Time,
+  custom types) silently pass through. A "verification walk" at
+  the end of Resolve() would catch missed markers as a hard error.
 - **`sudo -S` shell-out reimplemented in 6 packages** (F005).
   Inconsistent guard handling means become-on-unsupported-host
   produces 3 different error shapes today.
