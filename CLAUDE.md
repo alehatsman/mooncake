@@ -54,9 +54,10 @@ or into sibling action types.
 Reason: every universal field on `Step` is a concept every step type
 must ignore or honor. The closed action set is the kernel's moat
 (see `docs-working/vision/kernel.md`); the cost of that is a
-monotonically-growing `config.go`. Today's count is ≈25. Past 40,
-the field has become a tag everyone has to ignore, and the question
-"why does *every* step need this?" stops having a good answer.
+monotonically-growing `config.go`. Today's count is 36 (run
+`make budget-status`). Past 40, the field has become a tag everyone
+has to ignore, and the question "why does *every* step need this?"
+stops having a good answer.
 
 ### 3. `gocyclo` > 35 in any non-test function → refactor on next touch
 
@@ -68,13 +69,20 @@ function.
 
 ### Today's known violations (tracked, not blocking)
 
+Run `make budget-status` for the current source-of-truth list. As of
+2026-05-16:
+
 - `internal/actions/file` — 2,044 LOC
 - `internal/actions/tool` — 1,676 LOC
-- `internal/actions/service` — 1,466 LOC (just under)
-- `copy.Execute` — gocyclo 41
-- `os_systemd.computePlan` — gocyclo 34 (just under)
-- `fleetApplyAction` — gocyclo 49 (will be fixed by R2.1a in the
-  refactor plan)
+- `internal/actions/service` — 1,607 LOC
+- `internal/actions/package` — 1,216 LOC (within 20% of cap)
+- `explain.DisplayFacts` — gocyclo 53
+- `copy.(*Handler).Execute` — gocyclo 41
+- `executor.ExecuteStep` — gocyclo 37
+- `internal/config.Step` — 36 universal fields (within 20% of cap)
+
+`fleetApplyAction` and `os_systemd.computePlan` were on this list
+previously; both now under the cap (R2.1a refactor + drift).
 
 These are documented, not hidden. New violations should be
 explicitly defended in the PR description that lands them.

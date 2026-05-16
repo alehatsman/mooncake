@@ -11,6 +11,22 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 )
 
+// gitCleanEnv returns os.Environ() with all GIT_* variables stripped.
+// Without this, callers invoked from inside a git hook (pre-commit,
+// pre-push) leak GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE, and git ignores
+// cmd.Dir in favor of those — pointing the subprocess at the host repo
+// instead of the directory the snapshot is supposed to describe.
+func gitCleanEnv() []string {
+	env := os.Environ()
+	out := make([]string, 0, len(env))
+	for _, e := range env {
+		if !strings.HasPrefix(e, "GIT_") {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 type Snapshot struct {
 	Branch       string   `json:"branch"`
 	Head         string   `json:"head"`
@@ -54,6 +70,7 @@ func Collect(repoRoot string) (*Snapshot, error) {
 func gitBranch(repoRoot string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	cmd.Dir = repoRoot
+	cmd.Env = gitCleanEnv()
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -64,6 +81,7 @@ func gitBranch(repoRoot string) (string, error) {
 func gitHead(repoRoot string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repoRoot
+	cmd.Env = gitCleanEnv()
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -74,6 +92,7 @@ func gitHead(repoRoot string) (string, error) {
 func gitClean(repoRoot string) (bool, error) {
 	cmd := exec.Command("git", "status", "--porcelain")
 	cmd.Dir = repoRoot
+	cmd.Env = gitCleanEnv()
 	out, err := cmd.Output()
 	if err != nil {
 		return false, err
