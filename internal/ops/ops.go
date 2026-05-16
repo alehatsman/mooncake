@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/jsonllog"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -83,18 +84,7 @@ func Append(e Entry) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("cannot create ops log directory: %w", err)
-	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- derived from os.UserHomeDir
-	if err != nil {
-		return fmt.Errorf("cannot open ops log: %w", err)
-	}
-	encErr := json.NewEncoder(f).Encode(e)
-	if closeErr := f.Close(); closeErr != nil && encErr == nil {
-		return closeErr
-	}
-	return encErr
+	return jsonllog.Append(path, e)
 }
 
 // Read returns the op with the given id. ErrNotFound on absence.

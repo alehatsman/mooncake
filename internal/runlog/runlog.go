@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/alehatsman/mooncake/internal/jsonllog"
 )
 
 // ErrNoHistory is returned by Last/Recent/At when the log file is absent
@@ -74,18 +76,7 @@ func Append(e Entry) error {
 	if err != nil {
 		return err
 	}
-	if err = os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("cannot create run log directory: %w", err)
-	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- path derived from os.UserHomeDir
-	if err != nil {
-		return fmt.Errorf("cannot open run log: %w", err)
-	}
-	encErr := json.NewEncoder(f).Encode(e)
-	if closeErr := f.Close(); closeErr != nil && encErr == nil {
-		return closeErr
-	}
-	return encErr
+	return jsonllog.Append(path, e)
 }
 
 // Last returns the most recent entry in the log.
