@@ -390,12 +390,32 @@ func (h *Handler) applyPatchset(ctx actions.Context, baseDir string, filePatches
 
 	// Apply patches to all files
 	for _, filePatch := range filePatches {
-		// Resolve file path
-		targetPath := filepath.Join(baseDir, filePatch.Path)
-
-		// Validate path safety
-		if pathErr := pathutil.ValidateNoPathTraversal(targetPath); pathErr != nil {
-			ctx.GetLogger().Debugf("  Path validation warning for %s: %v", targetPath, pathErr)
+		// Resolve file path inside baseDir. F033: pre-fix this was
+		// filepath.Join + ValidateNoPathTraversal-with-debug-log, which
+		// silently let a patchset like `--- a/../../etc/passwd` resolve
+		// to a path outside baseDir and proceed to overwrite that file.
+		// SafeJoin uses filepath.Rel to confirm the result stays under
+		// baseDir and errors out otherwise — refusing the escape at the
+		// per-file boundary, with the rest of the patchset still applied
+		// in non-strict mode and a full rollback in strict mode.
+		targetPath, joinErr := pathutil.SafeJoin(baseDir, filePatch.Path)
+		if joinErr != nil {
+			patchResult := &PatchResult{
+				File:       filePatch.Path,
+				Success:    false,
+				Changed:    false,
+				TotalHunks: len(filePatch.Hunks),
+				Error:      fmt.Sprintf("path escapes patchset base directory: %v", joinErr),
+			}
+			results = append(results, patchResult)
+			if raps.Strict {
+				h.rollbackChanges(backups)
+				return results, false, fmt.Errorf(
+					"patch %s escapes patchset base directory in strict mode: %w",
+					filePatch.Path, joinErr,
+				)
+			}
+			continue
 		}
 
 		// Read original file

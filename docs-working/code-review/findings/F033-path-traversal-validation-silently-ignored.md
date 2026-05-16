@@ -13,9 +13,73 @@ files:
   - internal/actions/file_patch_apply/handler.go:139, 563
   - internal/actions/file_delete_range/handler.go:139, 393
   - internal/actions/file_replace/handler.go:140, 389
-status: open
+status: fixed
 verified: 2026-05-16 — confirmed real: repo_apply_patchset/handler.go:397 and text_patch_ini/handler.go:110 both call ValidateNoPathTraversal then log-and-continue (debug-level). Path-traversal validation is dead-code theater. 11 call sites, 9 packages affected
 ---
+
+## ✅ Fixed
+
+### Part A — repo_apply_patchset uses pathutil.SafeJoin
+
+The real escape at `repo_apply_patchset/handler.go:394-399` now uses
+`pathutil.SafeJoin(baseDir, filePatch.Path)` which checks the joined
+path with `filepath.Rel` and refuses anything outside baseDir.
+
+- Lenient mode (default): the traversing file's `PatchResult` has
+  `Success=false, Error="path escapes patchset base directory: ..."`
+  and the loop continues with other files.
+- Strict mode: the whole apply rolls back and returns a top-level
+  error.
+
+### Part B — 11 dead-code traversal checks deleted
+
+Sites where `ExpandPath` already produces an absolute path
+(`ValidateNoPathTraversal` would always fire its "absolute path not
+allowed" branch into a debug log, and the handler proceeded
+anyway). Deletes the validator call + the debug log; leaves a
+single-line `// F033: dead-code traversal check removed` comment
+pointing back to this finding.
+
+Sites cleaned up:
+- `text_line/handler.go:116` (handler kept the verbose explanatory
+  comment as the canonical reference)
+- `text_patch_ini/handler.go:110`
+- `text_patch_json/handler.go:121`
+- `text_patch_yaml/handler.go:112`
+- `file_insert/handler.go:149, 431`
+- `file_replace/handler.go:140, 389`
+- `file_patch_apply/handler.go:139, 563`
+- `file_delete_range/handler.go:139, 393`
+
+Unused `pathutil` imports in those files were cleaned up by the
+formatter. The two correct `pathutil.ValidateNoPathTraversal` uses
+in `unarchive/handler.go` + `unarchive/idempotent.go` (where the
+validator IS the right tool for the joined-path-stays-in-base
+contract) stay untouched.
+
+### Regression tests
+
+`internal/actions/repo_apply_patchset/f033_test.go`:
+
+- `TestF033_TraversingPathRefused_LenientMode` — patchset with
+  `--- a/<rel-with-..>` against ctx.CurrentDir; the outside file
+  must stay unchanged. Pre-fix: `got: "PWNED\n\n"` (verified by
+  stashing handler.go and re-running).
+- `TestF033_TraversingPathRefused_StrictMode` — same shape; strict
+  mode also returns a top-level error naming "escapes patchset
+  base directory".
+
+The "real escape" repro from the finding's exploit example now
+fails loudly instead of overwriting the escape target.
+
+### Out of scope (not bundled)
+
+- A `ValidateNotSystemPath` (refuse `/proc`, `/sys`, `/dev`)
+  defense-in-depth check — mentioned as a follow-up in the
+  finding. New behavior, separate concern.
+- Audit of other `Debugf` validation-warning patterns —
+  cross-cutting smell tracked in the finding's adjacent section,
+  no real bug shape uncovered.
 
 ## What
 

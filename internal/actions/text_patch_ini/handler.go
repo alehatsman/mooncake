@@ -22,7 +22,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/pathutil"
 )
 
 const (
@@ -107,9 +106,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, fmt.Errorf("text.patch.ini: expand path: %w", err)
 	}
-	if pathErr := pathutil.ValidateNoPathTraversal(path); pathErr != nil {
-		ctx.GetLogger().Debugf("text.patch.ini: path validation warning: %v", pathErr)
-	}
+	// F033: dead-code traversal check removed (ExpandPath always
+	// returns absolute; check would always fire its "absolute path not
+	// allowed" branch into a debug log; handler proceeded anyway).
 
 	original, fileExists, mode, err := readOriginal(path)
 	if err != nil {
