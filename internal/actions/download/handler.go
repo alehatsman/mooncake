@@ -15,7 +15,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"time"
@@ -494,17 +493,22 @@ func actualChecksum(path, declared string) string {
 }
 
 func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
-	// #nosec G204 - This is a provisioning tool designed to execute commands
-	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
-	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-
+	// F005 follow-up: route through security.BecomeRunner so the
+	// `IsBecomeSupported` and `SudoPass != ""` validation matches the
+	// project-wide policy. Pre-fix this site checked neither — empty
+	// SudoPass let sudo hang on its TTY prompt; Windows callers
+	// (unusual but possible via tests) hit the OS-level "exec sudo:
+	// no such file" instead of a typed error.
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	cmd, err := runner.Command(true, "sh", "-c", command)
+	if err != nil {
+		return err
+	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("sudo command failed: %w (stderr: %s)", err, stderr.String())
 	}
-
 	return nil
 }
 

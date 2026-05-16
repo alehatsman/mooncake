@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/utils"
 )
 
@@ -354,17 +354,18 @@ func (h *Handler) executeSudoFileOperation(tmpPath, destPath string, mode os.Fil
 }
 
 func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
-	// #nosec G204 - This is a provisioning tool designed to execute commands
-	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
-	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-
+	// F005 follow-up: route through security.BecomeRunner — see the
+	// matching helper in download/handler.go for the why.
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	cmd, err := runner.Command(true, "sh", "-c", command)
+	if err != nil {
+		return err
+	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("sudo command failed: %w (stderr: %s)", err, stderr.String())
 	}
-
 	return nil
 }
 

@@ -11,7 +11,7 @@ something else landing first.
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
 | F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
-| F005 | Cross-package sudo helper — BecomeRunner landed; effects+package migrated; service/download/template inline sites remain | smell | M | — | partial |
+| F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
 | F011 | Cross-cutting: 14 handlers still have Execute/DryRun (7 done: shell/command/print/vars/include_vars/preset/tool) | smell | XL | — | open |
 
 ## Findings index
