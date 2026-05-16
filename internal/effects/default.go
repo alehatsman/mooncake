@@ -750,10 +750,21 @@ func describePathKind(info os.FileInfo) string {
 	}
 }
 
-// shellQuote single-quotes a string for safe shell interpolation.
-func shellQuote(s string) string {
+// ShellQuote single-quotes a string for safe POSIX-shell interpolation.
+// Embedded single quotes are escaped via the standard `'\”` idiom.
+// Exported so handlers reaching for `sudo sh -c <cmd>` can construct
+// safe commands without re-implementing the quoting (F032).
+//
+// Go's `%q` verb is NOT a substitute — it escapes for Go-string syntax,
+// not POSIX-shell syntax, and leaves $(...) / backtick substitution
+// active inside double quotes.
+func ShellQuote(s string) string {
 	return "'" + replaceAll(s, "'", `'\''`) + "'"
 }
+
+// shellQuote is the unexported alias retained for in-package callers.
+// New code should prefer ShellQuote at the call site.
+func shellQuote(s string) string { return ShellQuote(s) }
 
 func replaceAll(s, old, replacement string) string {
 	out := make([]byte, 0, len(s))
