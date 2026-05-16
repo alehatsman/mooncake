@@ -26,16 +26,16 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: mockCtx.GetEvaluator(),
-			Logger: mockCtx.Log,
+			Template:       tmpl,
+			Evaluator:      mockCtx.GetEvaluator(),
+			Logger:         mockCtx.Log,
 			EventPublisher: mockCtx.Publisher,
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Mode: actions.ModeApply,
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Mode:           actions.ModeApply,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: mockCtx.StepID,
-		CurrentDir: tmpDir,
+		CurrentDir:    tmpDir,
 	}
 }
 
@@ -178,7 +178,7 @@ func TestHandler_Execute_LiteralReplacement(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -222,7 +222,7 @@ func TestHandler_Execute_RegexReplacement(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -267,7 +267,7 @@ func TestHandler_Execute_CountLimit(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -312,7 +312,7 @@ func TestHandler_Execute_CaseInsensitive(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -354,7 +354,7 @@ func TestHandler_Execute_NoMatch(t *testing.T) {
 	}
 
 	// MT-47: no-match is idempotent success.
-	res, err := handler.Execute(ctx, step)
+	res, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Errorf("expected no error on no-match (MT-47); got %v", err)
 	}
@@ -383,7 +383,7 @@ func TestHandler_Execute_NoMatchAllowed(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -414,7 +414,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -454,7 +454,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	// MT-47: no-match is idempotent success — Execute returns no error,
 	// Changed=false, content unchanged. AllowNoMatch is kept on the
 	// struct for backward compatibility but is no longer consulted.
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() unexpected error: %v", err)
 	}
@@ -473,31 +473,6 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
-	handler := &Handler{}
-	ctx := createTestContext(t)
-	ctx.Svc.Mode = actions.ModePlan
-
-	step := &config.Step{
-		TextReplace: &config.FileReplace{
-			Path:    "/tmp/test.txt",
-			Pattern: "old",
-			Replace: "new",
-			Count:   ptrInt(5),
-			Backup:  true,
-			Flags: &config.ReplaceFlags{
-				Regex:           true,
-				Multiline:       true,
-				CaseInsensitive: true,
-			},
-		},
-	}
-
-	err := handler.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v", err)
-	}
-}
 
 // Helper function to create int pointer
 func ptrInt(v int) *int {

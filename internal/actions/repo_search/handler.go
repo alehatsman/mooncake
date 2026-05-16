@@ -101,8 +101,10 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the repo_search action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// runImpl is the apply-mode body of repo_search; called by Run after
+// the plan-mode classification. F011: previously the public Execute
+// method, now unexported and the only call site is Run itself.
+func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	rs := step.RepoSearch
 
 	// We need ExecutionContext for PathUtil
@@ -186,57 +188,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	ctx.GetLogger().Infof("  Found %d matches in %d files", output.TotalMatches, output.TotalFiles)
 
 	return result, nil
-}
-
-// DryRun logs what would happen without making changes.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	rs := step.RepoSearch
-
-	// We need ExecutionContext for PathUtil
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Render path
-	searchPath := rs.Path
-	if searchPath == "" {
-		searchPath = "."
-	}
-
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(searchPath, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render path: %v", err)
-		renderedPath = searchPath
-	}
-
-	// Render pattern (best effort)
-	renderedPattern, err := ctx.GetTemplate().Render(rs.Pattern, ctx.GetVariables())
-	if err != nil {
-		ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render pattern: %v", err)
-		renderedPattern = rs.Pattern
-	}
-
-	ctx.GetLogger().Infof("  [DRY-RUN] Would search for pattern '%s' in %s", renderedPattern, renderedPath)
-
-	if rs.Glob != "" {
-		ctx.GetLogger().Infof("            Glob filter: %s", rs.Glob)
-	}
-
-	if rs.OutputFile != "" {
-		outputPath, _ := ec.Svc.PathUtil.ExpandPath(rs.OutputFile, ec.CurrentDir, ctx.GetVariables())
-		ctx.GetLogger().Infof("            Output file: %s", outputPath)
-	}
-
-	if rs.MaxResults != nil {
-		ctx.GetLogger().Infof("            Max results: %d", *rs.MaxResults)
-	}
-
-	if len(rs.IgnoreDirs) > 0 {
-		ctx.GetLogger().Infof("            Ignore dirs: %v", rs.IgnoreDirs)
-	}
-
-	return nil
 }
 
 // performSearch executes the actual search operation
@@ -411,10 +362,11 @@ func (h *Handler) matchesGlobPattern(filename, globPattern string) bool {
 }
 
 // Run is the Spec 16 entry point. repo_search reads repository state
-// without mutating, so plan mode delegates to Execute and surfaces
-// Checkable=true.
+// without mutating, so plan mode runs the same search and stamps
+// Checkable=true + a "read-only" Reason. F011: legacy Execute/DryRun
+// folded into Run; the apply-mode body is now runImpl.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	res, err := h.Execute(ctx, step)
+	res, err := h.runImpl(ctx, step)
 	if err != nil {
 		return res, err
 	}
