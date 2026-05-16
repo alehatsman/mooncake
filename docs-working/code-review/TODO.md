@@ -22,7 +22,6 @@ something else landing first.
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
-| F028 | git_clone askpass returns password for the username prompt too — auth fails for bare HTTPS URLs | bug | S | — | open |
 | F029 | agentd.bearerAuthMiddleware leaks Authorization-header length via timing side-channel | risk | XS | — | open |
 | F030 | security.FilePasswordProvider rejects 0400 / stricter-than-0600 modes — exact-equality check | smell | XS | — | open |
 
@@ -57,7 +56,7 @@ something else landing first.
 | F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
 | F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
 | F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
-| F028 | git_clone askpass returns password for username prompt | bug | open | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
+| F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 | F029 | agentd bearer-auth length side-channel | risk | open | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
 | F030 | security.FilePasswordProvider mode exact-equality | smell | open | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
 

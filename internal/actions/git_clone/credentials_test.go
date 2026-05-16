@@ -2,6 +2,8 @@ package git_clone
 
 import (
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -228,6 +230,105 @@ func TestCredentials_SSHOptionsAppended(t *testing.T) {
 	}
 	if !strings.Contains(sshCmd, "StrictHostKeyChecking=no") {
 		t.Errorf("ssh_options not appended; got %q", sshCmd)
+	}
+}
+
+// askpassPathFromEnv extracts the GIT_ASKPASS value or fails the test.
+func askpassPathFromEnv(t *testing.T, env []string) string {
+	t.Helper()
+	for _, e := range env {
+		if strings.HasPrefix(e, "GIT_ASKPASS=") {
+			return strings.TrimPrefix(e, "GIT_ASKPASS=")
+		}
+	}
+	t.Fatalf("GIT_ASKPASS missing from env: %v", env)
+	return ""
+}
+
+// runAskpass invokes the askpass script with the supplied prompt as
+// argv[1] (matching what git does). Returns the script's stdout.
+func runAskpass(t *testing.T, path, prompt string) string {
+	t.Helper()
+	out, err := exec.Command(path, prompt).Output()
+	if err != nil {
+		t.Fatalf("exec askpass: %v", err)
+	}
+	return string(out)
+}
+
+// TestCredentials_AskpassReturnsUsernameForUsernamePrompt is the F028
+// reproducer. git's askpass protocol invokes the script with the
+// prompt text as argv[1]; the script must return the username when
+// the prompt starts with "Username". Pre-fix the script returned the
+// password for every prompt — git then attempted password auth with
+// (password, password) and the remote rejected.
+func TestCredentials_AskpassReturnsUsernameForUsernamePrompt(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("askpass is a /bin/sh script; not portable to Windows")
+	}
+	ctx, _ := newCtxWithRedactor(t)
+	env, cleanup, err := credentialEnv(ctx, &config.GitCredentials{
+		Username: "oauth2",
+		Password: "ghp_token_xyz",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	path := askpassPathFromEnv(t, env)
+	got := runAskpass(t, path, "Username for 'https://github.com/owner/repo': ")
+	if got != "oauth2" {
+		t.Errorf("askpass returned %q for Username prompt; want %q", got, "oauth2")
+	}
+}
+
+// TestCredentials_AskpassReturnsPasswordForPasswordPrompt mirrors the
+// happy path: prompts starting with anything other than "Username"
+// (in practice "Password for ...") must return the password.
+func TestCredentials_AskpassReturnsPasswordForPasswordPrompt(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("askpass is a /bin/sh script; not portable to Windows")
+	}
+	ctx, _ := newCtxWithRedactor(t)
+	env, cleanup, err := credentialEnv(ctx, &config.GitCredentials{
+		Username: "oauth2",
+		Password: "ghp_token_xyz",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	path := askpassPathFromEnv(t, env)
+	got := runAskpass(t, path, "Password for 'oauth2@https://github.com/owner/repo': ")
+	if got != "ghp_token_xyz" {
+		t.Errorf("askpass returned %q for Password prompt; want %q", got, "ghp_token_xyz")
+	}
+}
+
+// TestCredentials_AskpassUsernameWithEmbeddedQuote verifies single-quote
+// escaping in the username path (F028 + the existing password-quote
+// invariant). A username containing a `'` must round-trip through the
+// shell-quoted script body intact.
+func TestCredentials_AskpassUsernameWithEmbeddedQuote(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("askpass is a /bin/sh script; not portable to Windows")
+	}
+	ctx, _ := newCtxWithRedactor(t)
+	env, cleanup, err := credentialEnv(ctx, &config.GitCredentials{
+		Username: "user's-name",
+		Password: "pw",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	path := askpassPathFromEnv(t, env)
+	got := runAskpass(t, path, "Username for 'https://x': ")
+	if got != "user's-name" {
+		t.Errorf("askpass returned %q for Username prompt; want %q", got, "user's-name")
 	}
 }
 

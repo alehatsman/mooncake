@@ -5,7 +5,8 @@ severity: bug
 package: internal/actions/git_clone
 file: internal/actions/git_clone/credentials.go
 lines: 78-85, 128-153
-status: open
+status: done
+resolved_by: worktree-fix-f028
 ---
 
 ## What
