@@ -8,6 +8,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/filetree"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 // MT-26: BuildPlan used to wrap readRunConfig's already-prefixed error
@@ -1193,5 +1194,39 @@ steps:
 	}
 	if contains(src1, "file2.txt") && contains(src2, "file2.txt") {
 		t.Error("Both steps point to file2.txt - expected different files")
+	}
+}
+
+// TestExpandVars_ResolvesSecretMarker is the F037 regression. Pre-fix
+// the planner intercepted the vars action at plan time and rendered
+// each value verbatim — the secret sentinel had no `{{...}}` so it
+// passed straight through into ctx.Variables, leaking the marker
+// downstream (every subsequent template render saw the literal
+// `__MOONCAKE_SECRET_v1_DO_NOT_EDIT__:env:FOO` string).
+//
+// Fix: expandVars now invokes resolver.Resolve before the render loop,
+// so step.Vars markers are substituted with their resolved values
+// (and registered with the planner's redactor) before merging.
+func TestExpandVars_ResolvesSecretMarker(t *testing.T) {
+	t.Setenv("F037_TEST_TOKEN", "leaked-value")
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+	vars := map[string]interface{}{
+		"INNER_TOKEN": security.SentinelPrefix + "env:F037_TEST_TOKEN",
+		"PLAIN":       "no marker here",
+	}
+	step := config.Step{Vars: &vars}
+	ctx := &ExpansionContext{Variables: map[string]interface{}{}}
+
+	if err := planner.expandVars(step, ctx); err != nil {
+		t.Fatalf("expandVars: %v", err)
+	}
+	if got, _ := ctx.Variables["INNER_TOKEN"].(string); got != "leaked-value" {
+		t.Errorf("INNER_TOKEN = %q, want %q (sentinel still in place?)", got, "leaked-value")
+	}
+	if got, _ := ctx.Variables["PLAIN"].(string); got != "no marker here" {
+		t.Errorf("PLAIN = %q, want %q (non-secret values must survive)", got, "no marker here")
 	}
 }

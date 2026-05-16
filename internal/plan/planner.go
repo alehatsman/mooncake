@@ -15,6 +15,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/secrets/resolver"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/alehatsman/mooncake/internal/utils"
 )
@@ -76,6 +78,13 @@ type Planner struct {
 	// the plan (root file + all transitively included files). Used for
 	// the Spec 16 stale-plan integrity check.
 	inputFiles []string
+	// redactor receives every secret value resolved during plan
+	// expansion (F037). Lives on the planner because the standalone
+	// vars action is evaluated at plan time and never reaches the
+	// executor's resolve site — without this, a top-level
+	// `vars: { TOKEN: !secret env:FOO }` flows the sentinel marker
+	// through to subsequent template renders.
+	redactor *security.Redactor
 }
 
 // IncludeFrame tracks a frame in the include stack for cycle detection and origin tracking
@@ -127,6 +136,7 @@ func NewPlanner() (*Planner, error) {
 		fileTree:    filetree.NewWalker(pathExpander),
 		seenFiles:   make(map[string]bool),
 		locationMap: make(map[int]*IncludeFrame),
+		redactor:    security.NewRedactor(),
 	}, nil
 }
 
@@ -596,10 +606,28 @@ func (p *Planner) expandWithFileTree(step config.Step, ctx *ExpansionContext, pl
 	return nil
 }
 
-// expandVars merges variables into the context
+// expandVars merges variables into the context.
+//
+// F037: resolve `!secret` markers in step.Vars BEFORE templating and
+// merging. Pre-fix the marker sentinel passed verbatim through Render
+// (no `{{...}}` to interpolate) and ended up in ctx.Variables as a
+// literal `__MOONCAKE_SECRET_v1_DO_NOT_EDIT__:env:FOO` string, which
+// subsequent steps then templated into shell commands / file content
+// — leaking the marker (and missing the redactor denylist registration
+// that resolver.Resolve performs as a side-effect). The standalone
+// vars action never reaches executor.dispatchRunner, so this was the
+// only call site missing the apply-time resolve.
 func (p *Planner) expandVars(step config.Step, ctx *ExpansionContext) error {
 	if step.Vars == nil {
 		return fmt.Errorf("vars step has nil Vars field")
+	}
+
+	// Resolve secret markers into concrete values (and register them
+	// with the planner's redactor) before rendering. Mutates step in
+	// place — safe because expandVars is called once per planning pass
+	// and the planner owns the step copy.
+	if err := resolver.Resolve(&step, p.redactor); err != nil {
+		return fmt.Errorf("resolve vars secrets: %w", err)
 	}
 
 	// Merge vars into context
