@@ -1,11 +1,61 @@
 ---
 id: F015
-title: agentd.Worker.executeRun chdir-error path leaks the hub — SSE subscribers hang forever
-severity: bug
+title: agentd.Worker.executeRun cleanup is asymmetric — store.Update / panic paths leak the hub
+severity: smell
 package: internal/agentd
 file: internal/agentd/worker.go
-lines: 149-160
-status: open
+lines: 118-120, 135-160
+status: fixed
+---
+
+## ✅ Fixed
+
+`hub.Close()` is now hoisted into a unified defer that runs on every
+exit path of `executeRun` (store.Update failure, sink creation failure,
+chdir failure, normal success, normal apply failure, panic). The
+explicit `hub.Close()` on the sink-creation-error path is removed —
+the deferred Close subsumes it (Hub.Close is idempotent so the
+sink-cascade Close on chdir/apply-runner paths stays harmless).
+
+The defer orders `hub.Close()` BEFORE `delete(w.hubs, runID)` so a
+subscriber that called `GetHub()` concurrently with the delete sees a
+closed hub and lands on `Subscribe()`'s "already closed" branch (which
+closes the subscriber's channel immediately), rather than a
+stale-but-open one.
+
+### Severity correction
+
+The original finding called this a bug and claimed the chdir-error
+path leaked the hub. After verification that claim is incorrect:
+`RunEventSink.Close()` (`jsonl_sink.go:122`) already calls
+`s.hub.Close()`, so the chdir-error path's `sink.Close()` cascades
+into `hub.Close()`. Same for the normal-path apply.Runner exit, which
+calls `sub.Close()` on every `ExtraSubscribers` entry
+(`apply/runner.go:195`). The leak the finding described didn't exist.
+
+Two paths *did* leak pre-fix, both of which the defer now covers:
+
+1. **`store.Update` failure at line 118-120** — returns before the
+   hub lookup, so neither `sink.Close()` nor an explicit
+   `hub.Close()` runs. Subscribers attached between Submit and
+   pickup keep open channels until the daemon exits.
+2. **Panic during executeRun** — no defer recovers; the panic
+   propagates up the goroutine, and the hub stays open.
+
+Both are rare in practice (store.Update needs a disk/permissions
+failure; panics shouldn't happen) but the unified-defer pattern
+removes the asymmetry without adding cost.
+
+### Regression test
+
+`internal/agentd/worker_chdir_test.go::TestWorkerChdirFailureClosesHub`
+covers the chdir-error path's hub-close contract. Passes both with
+and without the unified-defer refactor (today's `sink.Close →
+hub.Close` cascade keeps it green), but it's a contract guard against
+a future change that unwires the cascade — at that point this fix's
+defer becomes the only thing keeping subscribers from leaking on the
+chdir path.
+
 ---
 
 ## What

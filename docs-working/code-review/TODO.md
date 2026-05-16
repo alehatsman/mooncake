@@ -23,7 +23,6 @@ something else landing first.
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
 | F013 | config.Step "74 pointers" comment is stale (actual 64) | doc | XS | — | open |
 | F014 | fleet.Apply WithoutCancel + GetRun has no timeout — Ctrl-C hangs | risk | XS | — | open |
-| F015 | agentd.Worker: chdir-error path leaks the hub | bug | XS | — | open |
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
 | F018 | shell: bufio.Scanner default 64 KB line cap → silent truncation | bug | S | — | open |
 | F019 | secrets.Resolve doesn't recurse into step.Vars (*map[string]interface{}) | bug | S | — | open |
@@ -49,7 +48,7 @@ something else landing first.
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | open | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | open | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
 | F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | open | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
-| F015 | agentd.Worker chdir-error hub leak | bug | open | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
+| F015 | agentd.Worker hub-close cleanup asymmetry | smell | **done** | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
 | F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
 | F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
 | F018 | shell scanner 64KB line cap | bug | open | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
