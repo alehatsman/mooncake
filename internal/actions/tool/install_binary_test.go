@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/actions/tool/archive"
 )
 
 // TestMT40_InstallBareBinary is a regression test for manual-test #40
@@ -67,8 +69,8 @@ func TestMT40_BareBinaryName_Precedence(t *testing.T) {
 	}
 }
 
-// TestMT40_DetectFormat_UnknownForBareBinary confirms the format-detector
-// returns formatUnknown for typical bare-binary filenames — which is the
+// TestMT40_DetectFormat_UnknownForBareBinary confirms archive.IsArchive
+// returns false for typical bare-binary filenames — which is the
 // signal InstallURL uses to route to installBareBinary.
 func TestMT40_DetectFormat_UnknownForBareBinary(t *testing.T) {
 	cases := []string{
@@ -80,8 +82,8 @@ func TestMT40_DetectFormat_UnknownForBareBinary(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c, func(t *testing.T) {
-			if got := detectFormat(c); got != formatUnknown {
-				t.Errorf("detectFormat(%q) = %d, want formatUnknown", c, got)
+			if archive.IsArchive(c) {
+				t.Errorf("archive.IsArchive(%q) = true, want false", c)
 			}
 		})
 	}
