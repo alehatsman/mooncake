@@ -103,6 +103,75 @@ scan: lint ## Run security scans (gosec via golangci-lint + govulncheck)
 	@govulncheck ./...
 
 # ==============================================================================
+# Agent DX — focused, sub-second feedback
+# ==============================================================================
+#
+# Package-scoped targets accept PKG=relative/path (no ./ prefix).
+# Example: `make check-pkg PKG=internal/apply` runs build+test+lint against
+# just that package — much faster than `make ci` for tight edit loops.
+
+.PHONY: build-pkg
+build-pkg: ## Build a single package — usage: make build-pkg PKG=internal/apply
+	@test -n "$(PKG)" || { echo "usage: make build-pkg PKG=internal/foo" >&2; exit 2; }
+	@go build ./$(PKG)/...
+
+.PHONY: test-pkg
+test-pkg: ## Test a single package with -race — usage: make test-pkg PKG=internal/apply
+	@test -n "$(PKG)" || { echo "usage: make test-pkg PKG=internal/foo" >&2; exit 2; }
+	@go test -race -count=1 ./$(PKG)/...
+
+.PHONY: test-fn
+test-fn: ## Run a single test function — usage: make test-fn FN=TestName PKG=internal/apply
+	@test -n "$(FN)" || { echo "usage: make test-fn FN=TestName PKG=internal/foo" >&2; exit 2; }
+	@test -n "$(PKG)" || { echo "usage: make test-fn FN=TestName PKG=internal/foo" >&2; exit 2; }
+	@go test -race -count=1 -run '$(FN)' -v ./$(PKG)/...
+
+.PHONY: lint-pkg
+lint-pkg: ## Lint a single package — usage: make lint-pkg PKG=internal/apply
+	@test -n "$(PKG)" || { echo "usage: make lint-pkg PKG=internal/foo" >&2; exit 2; }
+	@golangci-lint run ./$(PKG)/...
+
+.PHONY: check-pkg
+check-pkg: build-pkg test-pkg lint-pkg ## Build + test + lint a single package — usage: make check-pkg PKG=internal/apply
+	@echo "✓ check-pkg $(PKG)"
+
+# ------------------------------------------------------------------------------
+# gopls-backed structural lookups — collapse grep+Read cycles
+# ------------------------------------------------------------------------------
+#
+# Typical flow: `make sym Q='Runner'` → pick a hit's file:line:col →
+# `make refs LOC=that:loc:here`. `make doc` works on plain names.
+
+.PHONY: sym
+sym: ## Fuzzy workspace symbol search — usage: make sym Q='Runner'
+	@test -n "$(Q)" || { echo "usage: make sym Q='SymbolName'" >&2; exit 2; }
+	@gopls workspace_symbol "$(Q)"
+
+.PHONY: doc
+doc: ## Print docs for a symbol — usage: make doc SYM=fmt.Sprintf
+	@test -n "$(SYM)" || { echo "usage: make doc SYM=pkg.Symbol" >&2; exit 2; }
+	@go doc "$(SYM)"
+
+.PHONY: refs
+refs: ## Find references — usage: make refs LOC=internal/apply/runner.go:12:6
+	@test -n "$(LOC)" || { echo "usage: make refs LOC=file:line:col (find via 'make sym')" >&2; exit 2; }
+	@gopls references "$(LOC)"
+
+.PHONY: callers
+callers: ## Show call hierarchy — usage: make callers LOC=internal/apply/runner.go:12:6
+	@test -n "$(LOC)" || { echo "usage: make callers LOC=file:line:col" >&2; exit 2; }
+	@gopls call_hierarchy "$(LOC)"
+
+.PHONY: impl
+impl: ## Find interface implementations — usage: make impl LOC=internal/actions/interfaces.go:15:6
+	@test -n "$(LOC)" || { echo "usage: make impl LOC=file:line:col" >&2; exit 2; }
+	@gopls implementation "$(LOC)"
+
+.PHONY: agent-help
+agent-help: ## Agent-focused shortcut reference (see also: AGENT.md)
+	@cat AGENT.md 2>/dev/null || echo "AGENT.md not found"
+
+# ==============================================================================
 # CI Target (matches GitHub Actions)
 # ==============================================================================
 
@@ -221,6 +290,10 @@ schema-check: build ## Check if generated schema is up to date
 .PHONY: arch-snapshot
 arch-snapshot: ## Generate docs-working/ARCH_SNAPSHOT.md (package graph + metrics for LLM review)
 	@bash ./scripts/arch-snapshot.sh
+
+.PHONY: budget-status
+budget-status: ## Show current state of the three CLAUDE.md soft caps (handler LOC, gocyclo, Step fields)
+	@bash ./scripts/budget-status.sh
 
 .PHONY: arch-tools
 arch-tools: ## Install optional analyzers used by arch-snapshot (gocyclo, goda)
