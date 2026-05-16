@@ -18,6 +18,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alehatsman/mooncake/internal/apply"
 )
 
 // defaultRequestTimeout caps non-SSE round trips. SSE is unbounded by
@@ -271,6 +273,74 @@ func (c *Client) GetRun(ctx context.Context, runID string) (*RunRecord, error) {
 		return nil, c.wrap("GET /v1/runs/"+runID+": decode", err)
 	}
 	return &rec, nil
+}
+
+// GetRunResult fetches the daemon's apply.KernelResult for a terminal
+// run from /v1/runs/{id}/result. Used by fleet.Apply (R2.1c) to surface
+// per-peer KernelResults up to fleet.FleetKernelResult so the
+// fleet-scope Reverse() composition has typed Steps to walk.
+//
+// Returns ErrRunResultNotReady when the daemon responds 404
+// result_not_ready (run hasn't reached terminal state). Returns the
+// standard wrapped httpErr for other 4xx/5xx.
+//
+// Wire shape: matches internal/apply.KernelResult exactly, modulo
+// fields tagged json:"-" (Result.ReverseData and Result.Detail).
+// Frontends that need to compose Reverse() can do so for handlers that
+// derive their inverse from Step alone (no ReverseData dependency);
+// handlers needing ReverseData currently fall through with the
+// no-op-reverse semantics from apply.KernelResult.Reverse. Round-tripping
+// ReverseData is R2.1c phase 2.
+func (c *Client) GetRunResult(ctx context.Context, runID string) (*apply.KernelResult, error) {
+	if runID == "" {
+		return nil, errors.New("GetRunResult: runID is empty")
+	}
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/runs/"+runID+"/result", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("GET /v1/runs/"+runID+"/result", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := readMediumBody(resp)
+	if err != nil {
+		return nil, c.wrap("GET /v1/runs/"+runID+"/result: read body", err)
+	}
+	if resp.StatusCode == http.StatusNotFound && bodyMentions(body, "result_not_ready") {
+		return nil, ErrRunResultNotReady
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.httpErr("GET /v1/runs/"+runID+"/result", resp.StatusCode, body)
+	}
+	var result apply.KernelResult
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, c.wrap("GET /v1/runs/"+runID+"/result: decode", err)
+	}
+	return &result, nil
+}
+
+// ErrRunResultNotReady is the sentinel returned by GetRunResult when
+// the run hasn't reached a terminal state yet (result.json isn't on
+// disk). Callers should poll /v1/runs/{id} until terminal, then retry.
+var ErrRunResultNotReady = errors.New("fleet/transport: run result not ready (run not terminal)")
+
+// readMediumBody is GetRunResult's body reader. Result JSON can run
+// into hundreds of KB for plans with many steps; readSmallBody's
+// existing cap is too tight.
+func readMediumBody(resp *http.Response) ([]byte, error) {
+	return io.ReadAll(io.LimitReader(resp.Body, 16<<20)) // 16 MiB cap
+}
+
+// bodyMentions reports whether a JSON error response body contains the
+// given error-code substring. Used to distinguish the daemon's two 404
+// shapes (run_not_found vs result_not_ready) without redesigning the
+// error envelope.
+func bodyMentions(body []byte, needle string) bool {
+	return bytes.Contains(body, []byte(needle))
 }
 
 // ListRunsOpts is the extended filter shape for /v1/runs (spec-54).
