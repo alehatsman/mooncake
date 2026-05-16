@@ -120,10 +120,10 @@ isn't just "exposed in theory."
 | KernelResult.Reverse() covered by test | ✓ R1.1b |
 | internal/fleet.Orchestrator.Run returns *FleetKernelResult | ✓ R2.1b |
 | FleetKernelResult composed from per-peer KernelResults | ✓ R2.1b |
-| internal/mcp imports internal/apply directly | ✗ Not yet — the next visible win |
+| internal/mcp imports internal/apply directly | ✓ Done — MCP now calls `apply.NewRunner` instead of `executor.ExecutePlan` |
 | mooncake apply behavior unchanged | ✓ All tests pass |
 
-**Reading:** 9/13 ✓, 3/13 partial (◐), 1/13 ✗. The partials are honest
+**Reading:** 10/13 ✓, 3/13 partial (◐), 0/13 ✗. The partials are honest
 artifacts of the documented partial (R0.1) and the CLI-coupled
 pre-validation that stayed in cmd. The kernel-surface checkpoint —
 the **real** deliverable — is fully met.
@@ -155,22 +155,18 @@ the **real** deliverable — is fully met.
 
 In order of leverage, all unblocked by the refactor:
 
-1. **MCP → `internal/apply` import.** The single remaining
-   checkpoint criterion. Refactor MCP's `run_plan` tool to call
-   `apply.NewRunner` directly instead of shelling out to the CLI.
-   Validates the kernel claim externally.
-2. **Spec-66 typed plan diffs.** I drafted the spec — `plan --diff`
+1. **Spec-66 typed plan diffs.** I drafted the spec — `plan --diff`
    renders typed diff for every action category, not just file
    content. Builds on `apply.KernelResult` and the existing handler
    `Differ` payloads that are computed but discarded.
-3. **R0.1-followup (Reverser interface).** Close the documented
+2. **R0.1-followup (Reverser interface).** Close the documented
    partial by moving `runReverse` from `internal/executor` to
    `internal/control` via a `Reverser` interface. Frees executor
    from the action-registry dependency at that seam.
-4. **`explain.DisplayFacts` refactor.** Now the deepest gocyclo
+3. **`explain.DisplayFacts` refactor.** Now the deepest gocyclo
    hotspot (53). Outside the original plan but a natural next
    target given the soft-cap policy.
-5. **`copy.Execute` refactor.** gocyclo 41, above the soft cap
+4. **`copy.Execute` refactor.** gocyclo 41, above the soft cap
    (R0.4: refactor on next touch).
 
 ---
@@ -189,7 +185,7 @@ dropped off the "gocyclo > 15" list entirely; cmd/fleet.go lost
 −232 LOC; cmd/mooncake.go lost −156. Some structural metrics fall
 short of the plan's stretch targets (the executor *grew* slightly
 because R1.1b's `RunCapture` substrate lives inside it), but every
-honest artifact of those gaps is documented. The next visible win
-will be when `internal/mcp` becomes the first non-cmd consumer
-calling `apply.NewRunner.Run` directly — the only remaining
-checkpoint criterion from §9 of the plan.
+honest artifact of those gaps is documented. All 13 checkpoint
+criteria are now met or partial — `internal/mcp` is the first
+non-cmd consumer calling `apply.NewRunner` directly, closing the
+last ✗ criterion from §9 of the plan.

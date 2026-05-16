@@ -11,10 +11,11 @@ R2.1c (daemon KernelResult wire), agent-dx tooling, side-findings
 
 ## 0. Summary
 
-The one open checkpoint criterion from the plan-complete doc —
-`internal/mcp imports internal/apply directly` — is **still open**.
-Everything else that moved this week was either completing the wire
-protocol or tooling/hygiene.
+The last open checkpoint criterion from the plan-complete doc —
+`internal/mcp imports internal/apply directly` — is now **closed**
+(MCP calls `apply.NewRunner` directly; all plan §9 criteria are
+met or partial). Everything else that moved this week was either
+completing the wire protocol or tooling/hygiene.
 
 **What closed:**
 - R2.1c: `apply.KernelResult` now round-trips over the agentd wire
@@ -26,11 +27,10 @@ protocol or tooling/hygiene.
   `fleet/discovery` mDNS disable; CLAUDE.md soft-cap numbers corrected.
 
 **What's still open (forward-looking, same as plan-complete §4):**
-1. MCP → `internal/apply` direct import (the one remaining ✗ criterion)
-2. Spec-66 typed plan diffs
-3. R0.1-followup (Reverser interface)
-4. `explain.DisplayFacts` gocyclo 53
-5. `copy.Execute` gocyclo 41
+1. Spec-66 typed plan diffs
+2. R0.1-followup (Reverser interface)
+3. `explain.DisplayFacts` gocyclo 53
+4. `copy.Execute` gocyclo 41
 
 ---
 
@@ -151,13 +151,9 @@ the apply kernel shape is how the typed wire gets its type.
 
 ## 5. Next
 
-Same priority order as plan-complete §4:
+Same priority order as plan-complete §4 (MCP criterion now closed):
 
-1. **MCP → `internal/apply` import.** The last ✗ criterion.
-   `internal/mcp` still goes through `executor.Start`; it should call
-   `apply.NewRunner(cfg).Run(ctx)` directly and surface
-   `*apply.KernelResult` in the MCP response.
-2. **Spec-66 typed plan diffs.** Build on `KernelResult` + handler
+1. **Spec-66 typed plan diffs.** Build on `KernelResult` + handler
    `Differ` payloads (computed, currently discarded in check_plan).
-3. **R2.1c phase 2** (ReverseData registry). Purely additive; unblocked
+2. **R2.1c phase 2** (ReverseData registry). Purely additive; unblocked
    once someone needs per-peer `Reverse()` to work through the wire.
