@@ -5,7 +5,8 @@ severity: doc
 package: internal/apply
 file: internal/apply/config.go
 lines: 69-75
-status: open
+status: done
+resolved_by: worktree-fix-f021
 ---
 
 ## What
