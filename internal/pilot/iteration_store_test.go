@@ -1,4 +1,4 @@
-package agent
+package pilot
 
 import (
 	"os"
@@ -62,10 +62,10 @@ func TestWriteIterationLog(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	log := &IterationLog{
-		Iteration: 1,
-		Goal:      "test goal",
-		PlanHash:  "abc123",
-		Status:    "success",
+		Iteration:    1,
+		Goal:         "test goal",
+		PlanHash:     "abc123",
+		Status:       "success",
 		ChangedFiles: []string{"file1.txt", "file2.txt"},
 		DiffStat: DiffStat{
 			Files:      2,
@@ -79,7 +79,7 @@ func TestWriteIterationLog(t *testing.T) {
 		t.Fatalf("WriteIterationLog failed: %v", err)
 	}
 
-	expectedPath := filepath.Join(tmpDir, ".mooncake/iterations/00001.json")
+	expectedPath := filepath.Join(tmpDir, ".mooncake/pilot/iterations/00001.json")
 	if path != expectedPath {
 		t.Errorf("Expected path %s, got %s", expectedPath, path)
 	}

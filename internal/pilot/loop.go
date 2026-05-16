@@ -1,5 +1,5 @@
-// Package agent provides autonomous agent functionality for iterative plan generation and execution.
-package agent
+// Package pilot provides autonomous agent functionality for iterative plan generation and execution.
+package pilot
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/llm"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/pilot/llm"
 	"github.com/alehatsman/mooncake/internal/snapshot"
 )
 

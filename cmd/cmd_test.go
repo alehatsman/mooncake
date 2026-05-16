@@ -229,7 +229,7 @@ func TestCreateApp(t *testing.T) {
 	}
 
 	// Test commands exist
-	expectedCommands := []string{"init", "doctor", "presets", "docs", "schema", "snapshot", "history", "mcp", "step", "tool", "apply", "plan", "facts", "metrics", "actions", "validate", "agent", "agentd", "fleet", "runs", "query"}
+	expectedCommands := []string{"init", "doctor", "presets", "docs", "schema", "snapshot", "history", "mcp", "step", "tool", "apply", "plan", "facts", "metrics", "actions", "validate", "pilot", "agentd", "fleet", "runs", "query"}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}
@@ -460,7 +460,7 @@ func TestUninstallPresetActionNoArgs(t *testing.T) {
 	// We test that the function handles the no-args case gracefully
 
 	app := &cli.App{
-		Name:   "test",
+		Name: "test",
 		Action: func(c *cli.Context) error {
 			// Call with no args - should either show interactive selector or help
 			return uninstallPresetAction(c)
@@ -1972,9 +1972,9 @@ func TestRunCommandPasswordFlags(t *testing.T) {
 
 	// Check for password flags
 	passwordFlags := map[string]bool{
-		"sudo-pass":         false,
-		"sudo-pass-file":    false,
-		"ask-become-pass":   false,
+		"sudo-pass":          false,
+		"sudo-pass-file":     false,
+		"ask-become-pass":    false,
 		"insecure-sudo-pass": false,
 	}
 

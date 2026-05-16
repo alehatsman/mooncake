@@ -1,4 +1,4 @@
-package agent
+package pilot
 
 import (
 	"fmt"
@@ -120,7 +120,7 @@ func TestRunIntegration(t *testing.T) {
 		t.Errorf("Expected status success, got %s", log.Status)
 	}
 
-	logPath := filepath.Join(tmpDir, ".mooncake/iterations/00001.json")
+	logPath := filepath.Join(tmpDir, ".mooncake/pilot/iterations/00001.json")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Errorf("Iteration log was not created")
 	}

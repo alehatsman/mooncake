@@ -1,5 +1,5 @@
-// Package agent provides autonomous agent functionality for iterative plan generation and execution.
-package agent
+// Package pilot provides autonomous agent functionality for iterative plan generation and execution.
+package pilot
 
 import (
 	"crypto/sha256"
@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const iterationDir = ".mooncake/iterations"
+const iterationDir = ".mooncake/pilot/iterations"
 
 func NextIterationNumber(repoRoot string) (int, error) {
 	dir := filepath.Join(repoRoot, iterationDir)
