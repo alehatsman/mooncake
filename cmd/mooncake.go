@@ -18,7 +18,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/effects"
+	"github.com/alehatsman/mooncake/internal/diff"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
@@ -965,11 +965,12 @@ func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 		}
 
 		if showDiff && sym == "↑" {
-			if udiff := extractUnifiedDiff(ins.Detail); udiff != "" {
-				for _, dl := range strings.Split(strings.TrimRight(udiff, "\n"), "\n") {
-					fmt.Printf("  %s\n", dl)
+			if r := diff.Lookup(ins.Detail); r != nil {
+				var buf strings.Builder
+				if err := r.Render(&buf, diff.FormatText); err == nil && buf.Len() > 0 {
+					fmt.Print(buf.String())
+					fmt.Println()
 				}
-				fmt.Println()
 			}
 		}
 
@@ -1045,20 +1046,6 @@ func riskBand(r int) string {
 		return "safe"
 	}
 	return "unknown"
-}
-
-// extractUnifiedDiff pulls the unified diff string out of a StepInspection.Detail
-// value, which may be an effects.ContentDiff (in-memory) or map[string]interface{}
-// (decoded from saved JSON plan).
-func extractUnifiedDiff(detail any) string {
-	switch v := detail.(type) {
-	case effects.ContentDiff:
-		return v.UnifiedDiff
-	case map[string]interface{}:
-		s, _ := v["unified_diff"].(string)
-		return s
-	}
-	return ""
 }
 
 func pilotRunCommand(c *cli.Context) error {
