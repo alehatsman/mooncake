@@ -433,6 +433,20 @@ func applyApt(plan aptPlan, r renderedApt) error {
 		if err != nil {
 			return fmt.Errorf("pkg.repo.apt: fetch gpg key: %w", err)
 		}
+		// F034: verify the fetched key matches the operator-pinned
+		// fingerprint BEFORE writing it to the trusted keyring. Without
+		// this check the fingerprint requirement at Validate time is
+		// security theater — the operator supplies a fingerprint, the
+		// handler fetches whatever bytes the URL serves (over plain
+		// HTTP for some configs), and apt then trusts the unverified
+		// key forever. gpgCheckEnabled was already enforced at Validate;
+		// an empty fingerprint here means the operator opted out via
+		// `gpg_check: false` and we skip on purpose.
+		if r.gpgKeyFingerprint != "" {
+			if vErr := verifyKeyFingerprint(body, r.gpgKeyFingerprint); vErr != nil {
+				return fmt.Errorf("pkg.repo.apt: %w (key url: %s)", vErr, r.gpgKeyURL)
+			}
+		}
 		if err := writeAtomic(plan.keyringPath, body, 0o644); err != nil {
 			return fmt.Errorf("pkg.repo.apt: write keyring: %w", err)
 		}

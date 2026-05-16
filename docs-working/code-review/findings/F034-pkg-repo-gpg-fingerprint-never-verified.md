@@ -5,7 +5,8 @@ severity: bug
 package: internal/actions/pkg_repo
 file: internal/actions/pkg_repo/handler.go
 lines: 151-153, 251, 307-308, 426-437, 482-500
-status: open
+status: done
+resolved: 2026-05-16 — verification now runs between `fetchKey` and `writeAtomic` in `handler.go` Run path. New `internal/actions/pkg_repo/fingerprint.go` ships `verifyKeyFingerprint` (package-level var, defaults to `realVerifyKeyFingerprint`) which parses the fetched key via `golang.org/x/crypto/openpgp` (binary OR ASCII-armored), extracts the primary V4 fingerprint, and compares against the operator-pinned value with `normalizeFingerprint` so transcription variants (spaces, colons, `0x`, casing) all canonicalize. Skipped: gpg shell-out (would force a runtime gpg binary dep); openpgp lib is deprecated but the in-process parse avoids the dependency and keeps tests hermetic. Run-path tests in `run_test.go` stub `verifyKeyFingerprint` to a no-op (the fake key body can't be parsed by the real verifier and the happy-path tests aren't about pinning). Regression tests: `TestApply_FingerprintMismatchRefuses` (keyring NOT written on mismatch + error names the key url), `TestNormalizeFingerprint` (5 transcription variants), `TestRealVerifier_RejectsUnparseable` (real verifier surfaces parse errors). Adjacent F034 §(a) no-size-cap on httpFetchKey, §(b) refuse plain-HTTP key URLs, §(c) context plumbing — left for the F012 / cross-cutting follow-up; in-scope here was the integrity bypass only.
 ---
 
 ## What
