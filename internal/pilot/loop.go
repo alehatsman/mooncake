@@ -107,28 +107,17 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}, err
 		}
 
-		tmpFile, err := os.CreateTemp("", "mooncake-plan-*.yml")
+		log := logger.NewLogger(logger.ErrorLevel)
+		outcome, err := applyPlanIteration(wrappedBytes, opts.RepoRoot, log)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create temp file: %w", err)
+			return nil, err
 		}
-		defer func() {
-			_ = os.Remove(tmpFile.Name())
-		}()
-
-		if _, writeErr := tmpFile.Write(wrappedBytes); writeErr != nil {
-			return nil, fmt.Errorf("failed to write temp file: %w", writeErr)
-		}
-		if closeErr := tmpFile.Close(); closeErr != nil {
-			return nil, fmt.Errorf("failed to close temp file: %w", closeErr)
-		}
-
-		_, diagnostics, err := config.ReadConfigWithValidation(tmpFile.Name())
-		if err != nil || config.HasErrors(diagnostics) {
+		if !outcome.ValidationOK {
 			errMsg := ""
-			if err != nil {
-				errMsg = err.Error()
+			if outcome.ValidationErr != nil {
+				errMsg = outcome.ValidationErr.Error()
 			} else {
-				errMsg = config.FormatDiagnostics(diagnostics)
+				errMsg = config.FormatDiagnostics(outcome.Diagnostics)
 			}
 			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "validation_failed", errMsg)
 			iterations = append(iterations, *log)
@@ -141,17 +130,9 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			continue
 		}
 
-		publisher := events.NewPublisher()
-		log := logger.NewLogger(logger.ErrorLevel)
-
-		execErr := executor.Start(context.Background(), executor.StartConfig{
-			ConfigFilePath: tmpFile.Name(),
-		}, log, publisher)
-
-		publisher.Close()
-
-		changedFiles, _ := CollectChangedFiles(opts.RepoRoot)
-		diffStat, _ := CollectDiffStat(opts.RepoRoot)
+		execErr := outcome.ExecErr
+		changedFiles := outcome.ChangedFiles
+		diffStat := outcome.DiffStat
 
 		planPath, savePlanErr := savePlan(opts.RepoRoot, iterNum, planBytes)
 		if savePlanErr != nil {
@@ -264,4 +245,58 @@ func writeLoopFailureLog(repoRoot string, iterNum int, opts RunOptions, planHash
 	}
 	_, _ = WriteIterationLog(repoRoot, log)
 	return log
+}
+
+// iterationOutcome carries one RunLoop iteration's tempfile-validate-
+// execute result back to the caller. The tempfile itself is owned by
+// applyPlanIteration and is gone by the time this struct returns.
+type iterationOutcome struct {
+	Diagnostics   []config.Diagnostic
+	ValidationErr error
+	ValidationOK  bool
+	ExecErr       error
+	ChangedFiles  []string
+	DiffStat      DiffStat
+}
+
+// applyPlanIteration writes wrappedBytes to a temp file, validates the
+// plan, runs the executor against it, and returns the outcome. The
+// temp file lifecycle (create + defer-Remove) is scoped to this
+// function — F039(a) — so the file is cleaned up immediately when the
+// function returns, instead of accumulating on disk across iterations
+// until RunLoop exits (which is what the pre-fix defer-in-for-loop
+// pattern did). F039(b) — the variable-capture risk in that pattern is
+// also gone by extraction, since tmpFile no longer outlives the defer.
+func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger) (iterationOutcome, error) {
+	var out iterationOutcome
+	tmpFile, err := os.CreateTemp("", "mooncake-plan-*.yml")
+	if err != nil {
+		return out, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	if _, writeErr := tmpFile.Write(wrappedBytes); writeErr != nil {
+		return out, fmt.Errorf("failed to write temp file: %w", writeErr)
+	}
+	if closeErr := tmpFile.Close(); closeErr != nil {
+		return out, fmt.Errorf("failed to close temp file: %w", closeErr)
+	}
+
+	_, diagnostics, vErr := config.ReadConfigWithValidation(tmpFile.Name())
+	out.Diagnostics = diagnostics
+	out.ValidationErr = vErr
+	if vErr != nil || config.HasErrors(diagnostics) {
+		return out, nil
+	}
+	out.ValidationOK = true
+
+	publisher := events.NewPublisher()
+	out.ExecErr = executor.Start(context.Background(), executor.StartConfig{
+		ConfigFilePath: tmpFile.Name(),
+	}, log, publisher)
+	publisher.Close()
+
+	out.ChangedFiles, _ = CollectChangedFiles(repoRoot)
+	out.DiffStat, _ = CollectDiffStat(repoRoot)
+	return out, nil
 }
