@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/alehatsman/mooncake/internal/actions/tool"
+	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/lockfile"
 	"github.com/urfave/cli/v2"
 )
@@ -234,7 +235,7 @@ func locateEntry(ctx context.Context, e lockfile.Entry) (string, error) {
 		return "", nil //nolint:nilerr // see locateEntry contract above
 	}
 	spec := tool.SpecFromLockEntry(e)
-	installDir, err := tool.InstallDir(e.Name, e.Version)
+	installDir, err := store.InstallDir(e.Name, e.Version)
 	if err != nil {
 		return "", err
 	}

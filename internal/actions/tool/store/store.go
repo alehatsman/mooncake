@@ -1,4 +1,17 @@
-package tool
+// Package store owns the on-disk layout for installed tools under
+// $XDG_DATA_HOME/mooncake/tools (or ~/.local/share/mooncake/tools).
+// Lifted out of internal/actions/tool to keep that package under the
+// 1500-LOC handler soft cap (CLAUDE.md §1).
+//
+// Exported surface mirrors the package-private API it used to have:
+//   - Root             (was StoreRoot)
+//   - InstallDir       (unchanged)
+//   - IsPopulated      (was installDirIsPopulated)
+//   - LocateInInstallDir (was locateInInstallDir)
+//
+// singleExecutableIn stays unexported — only LocateInInstallDir
+// invokes it.
+package store
 
 import (
 	"fmt"
@@ -6,11 +19,11 @@ import (
 	"path/filepath"
 )
 
-// StoreRoot returns the mooncake tools install root, honoring
+// Root returns the mooncake tools install root, honoring
 // $XDG_DATA_HOME with the canonical fallback. The path is created
 // lazily by the install pipeline; this function does not touch the
 // filesystem.
-func StoreRoot() (string, error) {
+func Root() (string, error) {
 	if x := os.Getenv("XDG_DATA_HOME"); x != "" {
 		return filepath.Join(x, "mooncake", "tools"), nil
 	}
@@ -22,19 +35,19 @@ func StoreRoot() (string, error) {
 }
 
 // InstallDir returns the install path for a (name, version) tuple,
-// rooted at StoreRoot. URL-based backends own this layout; mise has its
-// own dir and we don't relocate.
+// rooted at Root. URL-based backends own this layout; mise has its own
+// dir and we don't relocate.
 func InstallDir(name, version string) (string, error) {
-	root, err := StoreRoot()
+	root, err := Root()
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(root, name, version), nil
 }
 
-// installDirIsPopulated returns true if dir exists and contains at least
-// one entry. Used for cheap idempotency without re-verifying checksums.
-func installDirIsPopulated(dir string) (bool, error) {
+// IsPopulated returns true if dir exists and contains at least one
+// entry. Used for cheap idempotency without re-verifying checksums.
+func IsPopulated(dir string) (bool, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -45,11 +58,11 @@ func installDirIsPopulated(dir string) (bool, error) {
 	return len(entries) > 0, nil
 }
 
-// locateInInstallDir is the shared Locate body for URL-based backends.
-// Returns ("", nil) if the install dir is empty (not installed), or the
-// absolute bin path joining installDir + bin when populated. The empty
-// installDir case (e.g. caller hasn't computed it yet) also reports
-// "not installed".
+// LocateInInstallDir is the shared Locate body for URL-based backends.
+// Returns ("", nil) if the install dir is empty (not installed), or
+// the absolute bin path joining installDir + bin when populated. The
+// empty installDir case (e.g. caller hasn't computed it yet) also
+// reports "not installed".
 //
 // MT-60: when bin is unset, instead of returning the install dir
 // (which is not executable), scan the dir for executable files at the
@@ -59,11 +72,11 @@ func installDirIsPopulated(dir string) (bool, error) {
 // dir is ambiguous (0 or 2+ executables), fall back to returning the
 // install dir so the existing "you need bin:" failure mode is
 // preserved instead of guessing wrong.
-func locateInInstallDir(bin, installDir string) (string, error) {
+func LocateInInstallDir(bin, installDir string) (string, error) {
 	if installDir == "" {
 		return "", nil
 	}
-	populated, err := installDirIsPopulated(installDir)
+	populated, err := IsPopulated(installDir)
 	if err != nil {
 		return "", err
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
@@ -55,7 +56,7 @@ func (archiveURLBackend) Install(_ context.Context, _ Spec, _ Plan, _ string) er
 }
 
 func (archiveURLBackend) Locate(_ context.Context, spec Spec, installDir string) (string, error) {
-	return locateInInstallDir(spec.Bin, installDir)
+	return store.LocateInInstallDir(spec.Bin, installDir)
 }
 
 // renderURL substitutes {{ version }}, {{ os }}, {{ arch }} (and

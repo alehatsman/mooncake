@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/lockfile"
@@ -358,7 +359,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// Standard layout installDir is passed through to Locate. URL-based
 	// backends use it as their root; mise's Locate ignores it and
 	// consults `mise which` directly.
-	installDir, err := InstallDir(t.Name, t.Version)
+	installDir, err := store.InstallDir(t.Name, t.Version)
 	if err != nil {
 		return result, err
 	}

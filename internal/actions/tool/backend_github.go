@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/httputil"
 )
@@ -66,7 +67,7 @@ func (githubReleaseBackend) Install(_ context.Context, _ Spec, _ Plan, _ string)
 }
 
 func (githubReleaseBackend) Locate(_ context.Context, spec Spec, installDir string) (string, error) {
-	return locateInInstallDir(spec.Bin, installDir)
+	return store.LocateInInstallDir(spec.Bin, installDir)
 }
 
 // githubAssetURL constructs the canonical release download URL.
