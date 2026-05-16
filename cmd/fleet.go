@@ -151,6 +151,10 @@ func fleetPairCommand() *cli.Command {
 				Usage: "Where to read the bearer token from: stdin | file:<path> | literal:<token>",
 				Value: "stdin",
 			},
+			&cli.BoolFlag{
+				Name:  "insecure-token-on-cmdline",
+				Usage: "Opt-in to --token-via literal:<token>. The token is visible in shell history, ps output, and audit logs; prefer stdin or file:.",
+			},
 			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 		},
 		Action: fleetPairAction,
@@ -232,6 +236,21 @@ func readToken(c *cli.Context, src string) (string, error) {
 		return tok, nil
 	case strings.HasPrefix(src, "file:"):
 		path := strings.TrimPrefix(src, "file:")
+		// F031(b): refuse to read a group/world-accessible token file.
+		// Mirrors security.FilePasswordProvider's owner-only invariant
+		// (post-F030, owner-only-via-bitmask rather than exact-0600).
+		// A token in a 0644 file is functionally equivalent to a
+		// world-readable password — same blast radius, same guard.
+		info, statErr := os.Stat(path)
+		if statErr != nil {
+			return "", fmt.Errorf("stat token file %s: %w", path, statErr)
+		}
+		if info.Mode().Perm()&0o077 != 0 {
+			return "", fmt.Errorf(
+				"token file %s is group/world-accessible (mode %04o); chmod 600 or stricter",
+				path, info.Mode().Perm(),
+			)
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return "", fmt.Errorf("read token file %s: %w", path, err)
@@ -242,6 +261,17 @@ func readToken(c *cli.Context, src string) (string, error) {
 		}
 		return tok, nil
 	case strings.HasPrefix(src, "literal:"):
+		// F031(a): require an explicit opt-in flag — mirrors the
+		// --insecure-sudo-pass guard on --sudo-pass. A bearer token on
+		// the command line lands in shell history, ps output, and
+		// audit logs. Refuse silently-insecure usage.
+		if !c.Bool("insecure-token-on-cmdline") {
+			return "", errors.New(
+				"--token-via literal:<token> requires --insecure-token-on-cmdline " +
+					"(WARNING: token will be visible in shell history, ps output, and audit logs). " +
+					"Prefer --token-via stdin or file:<path>.",
+			)
+		}
 		tok := strings.TrimSpace(strings.TrimPrefix(src, "literal:"))
 		if tok == "" {
 			return "", errors.New("literal: token is empty")
