@@ -12,6 +12,7 @@ files:
   - internal/facts/services.go (3 systemctl calls)
   - internal/facts/toolchains.go (2 generic `--version` probes)
 status: open
+verified: 2026-05-16 — confirmed real on master @ d568153a. grep exec.Command across internal/facts/*.go: linux.go=8, darwin.go=12, services.go=3, toolchains.go=3, windows.go=2, facts.go=1 → 29 total, zero CommandContext. cache.go:12 `func Collect() *Facts` — no ctx parameter
 ---
 
 ## What
