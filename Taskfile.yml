@@ -1,0 +1,236 @@
+# go-task entry point for mooncake — https://taskfile.dev
+#
+# This file is the canonical "what commands does an agent or human run
+# to develop / verify / install" surface. The Makefile is kept for
+# back-compat with existing docs and CI scripts but new flows should
+# add tasks here.
+#
+# Quick reference:
+#   task                  # list available tasks
+#   task install-tools    # install every static-analysis tool the project needs
+#   task ci               # full pre-commit gate: build + test + lint + scan + analysis + arch
+#   task build / test / lint / scan
+version: '3'
+
+vars:
+  PKG: ./...
+  BIN: out/mooncake
+
+tasks:
+
+  # ---------------------------------------------------------------------------
+  # Default — `task` with no args prints the task list.
+  # ---------------------------------------------------------------------------
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list-all
+    silent: true
+
+  # ---------------------------------------------------------------------------
+  # Tool installation. Inline `go install` commands — no separate script.
+  # Idempotent: re-running picks up newer versions.
+  # ---------------------------------------------------------------------------
+  install-tools:
+    desc: Install every static-analysis tool the project depends on
+    cmds:
+      - echo "→ Installing golangci-lint..."
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+      - echo "→ Installing govulncheck..."
+      - go install golang.org/x/vuln/cmd/govulncheck@latest
+      - echo "→ Installing gosec..."
+      - go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - echo "→ Installing gocyclo (arch-snapshot complexity)..."
+      - go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+      - echo "→ Installing goda (arch-snapshot dep graph)..."
+      - go install github.com/loov/goda@latest
+      - echo "→ Installing dupl (code-duplication report)..."
+      - go install github.com/mibk/dupl@latest
+      - echo ""
+      - echo "✓ Tools installed. Verify with 'task check-tools'."
+
+  check-tools:
+    desc: Report which static-analysis tools are installed
+    cmds:
+      - |
+        missing=0
+        for tool in golangci-lint govulncheck gosec gocyclo goda dupl; do
+          if command -v "$tool" >/dev/null 2>&1 || [ -x "$(go env GOPATH)/bin/$tool" ]; then
+            printf "  ✓ %s\n" "$tool"
+          else
+            printf "  ✗ %s — MISSING\n" "$tool"
+            missing=$((missing + 1))
+          fi
+        done
+        if [ "$missing" -gt 0 ]; then
+          echo ""
+          echo "$missing tool(s) missing. Run: task install-tools"
+          exit 1
+        fi
+    silent: true
+
+  # ---------------------------------------------------------------------------
+  # Build / test
+  # ---------------------------------------------------------------------------
+  build:
+    desc: Build the mooncake binary
+    cmds:
+      - go build -v -o {{.BIN}} ./cmd
+
+  test:
+    desc: Run go test ./...
+    cmds:
+      - go test {{.PKG}}
+
+  test-race:
+    desc: Run go test -race ./...
+    cmds:
+      - go test -race {{.PKG}}
+
+  # ---------------------------------------------------------------------------
+  # Lint + security + vulnerability scans
+  # ---------------------------------------------------------------------------
+  lint:
+    desc: golangci-lint (includes gosec via .golangci.yml)
+    cmds:
+      - golangci-lint run {{.PKG}}
+
+  vuln:
+    desc: govulncheck
+    cmds:
+      - govulncheck {{.PKG}}
+
+  scan:
+    desc: Security + vulnerability scan (lint + vuln)
+    deps: [lint, vuln]
+
+  # ---------------------------------------------------------------------------
+  # Generated-artifact freshness checks (used by CI; pre-commit runs the
+  # regen step first via task regen so locally-edited generators don't
+  # trip the check).
+  # ---------------------------------------------------------------------------
+  docs-check:
+    desc: Verify generated docs are up to date
+    cmds:
+      - make docs-check
+
+  schema-check:
+    desc: Verify generated JSON schema is up to date
+    cmds:
+      - make schema-check
+
+  regen:
+    desc: Regenerate docs + schema (run before commit so the *-check tasks pass)
+    cmds:
+      - make docs-generate
+      - make schema-generate
+
+  # ---------------------------------------------------------------------------
+  # Architecture / analysis reports
+  # ---------------------------------------------------------------------------
+  arch-snapshot:
+    desc: Regenerate docs-working/ARCH_SNAPSHOT.md (gitignored; local read-only)
+    cmds:
+      - bash ./scripts/arch-snapshot.sh
+
+  budget-status:
+    desc: Show current state of the three CLAUDE.md soft caps
+    cmds:
+      - bash ./scripts/budget-status.sh
+
+  dupl:
+    desc: 'Code-duplication report (production only). Override threshold with T= (default 100)'
+    vars:
+      T: '{{.T | default "100"}}'
+    cmds:
+      - |
+        dupl -threshold {{.T}} -plumbing . 2>&1 | grep -v "_test.go" | python3 -c '
+        import sys
+        pairs = set()
+        for line in sys.stdin:
+            parts = line.strip().split(": duplicate of ")
+            if len(parts) != 2: continue
+            pairs.add(tuple(sorted(parts)))
+        def n(rng):
+            lo, hi = rng.split(":")[-1].split("-"); return int(hi) - int(lo) + 1
+        ranked = sorted(pairs, key=lambda p: -n(p[0]))
+        print(f"{len(ranked)} production clone pair(s) at threshold {{.T}}")
+        for a, b in ranked:
+            print(f"  {n(a):>3}L  {a}  <-->  {b}")
+        '
+    silent: true
+
+  # ---------------------------------------------------------------------------
+  # CI — the one command that runs everything an agent should green
+  # before committing. Steps run in dependency order; first failure stops
+  # the pipeline and exits non-zero. Echoes a per-stage banner so the
+  # output is easy to scan in CI logs and pre-commit transcripts.
+  # ---------------------------------------------------------------------------
+  ci:
+    desc: 'Full pre-commit gate: build + test-race + lint + scan + docs/schema + arch + dupl'
+    cmds:
+      - task: ci:build
+      - task: ci:test
+      - task: ci:lint
+      - task: ci:vuln
+      - task: ci:regen-and-check
+      - task: ci:arch
+      - task: ci:dupl
+      - echo ""
+      - echo "✓ All checks green — safe to commit."
+
+  ci:build:
+    internal: true
+    cmds:
+      - 'echo "[1/7] build"'
+      - go build -o {{.BIN}} ./cmd
+
+  ci:test:
+    internal: true
+    cmds:
+      - 'echo "[2/7] test -race"'
+      - go test -race {{.PKG}}
+
+  ci:lint:
+    internal: true
+    cmds:
+      - 'echo "[3/7] golangci-lint"'
+      - golangci-lint run {{.PKG}}
+
+  ci:vuln:
+    internal: true
+    cmds:
+      - 'echo "[4/7] govulncheck"'
+      - govulncheck {{.PKG}}
+
+  ci:regen-and-check:
+    internal: true
+    cmds:
+      - 'echo "[5/7] regen docs + schema, then verify clean"'
+      - make docs-generate >/dev/null
+      - make schema-generate >/dev/null
+      - make docs-check
+      - make schema-check
+
+  ci:arch:
+    internal: true
+    cmds:
+      - 'echo "[6/7] arch-snapshot (local only — file is gitignored)"'
+      - bash ./scripts/arch-snapshot.sh >/dev/null
+
+  ci:dupl:
+    internal: true
+    cmds:
+      - 'echo "[7/7] dupl (production-code duplication report)"'
+      - |
+        if ! command -v dupl >/dev/null 2>&1 && ! [ -x "$(go env GOPATH)/bin/dupl" ]; then
+          echo "  dupl not installed — run 'task install-tools'. Skipping."
+          exit 0
+        fi
+        out=$(dupl -threshold 100 -plumbing . 2>&1 | grep -v "_test.go" || true)
+        if [ -n "$out" ]; then
+          count=$(echo "$out" | wc -l)
+          echo "  $((count / 2)) clone pair(s) in production code (informational; not blocking)."
+        else
+          echo "  no production duplication at threshold 100."
+        fi
