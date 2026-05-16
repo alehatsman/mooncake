@@ -5,7 +5,39 @@ severity: risk
 package: internal/fleet
 file: internal/fleet/apply.go
 lines: 195, 218
-status: open
+status: fixed
+---
+
+## ✅ Fixed
+
+Both post-stream HTTP fetches now wrap `context.WithoutCancel(ctx)`
+in a 10 s `context.WithTimeout`. The intent stays the same — a
+user's Ctrl-C during the SSE stream must not cancel the recovery
+probe — but the recovery is now bounded: a hung / unreachable /
+stop-paused daemon (e.g. `kill -STOP $pid`) lets Apply return
+cleanly with a "context deadline exceeded" error after 10 s
+instead of blocking forever.
+
+Cancel is called explicitly after each GetRun / GetRunResult to
+release the context promptly; equivalent to `defer cancel()` but
+without the per-iteration defer cost on the loop body's exit path.
+
+### Adjacent observation — not addressed
+
+The finding's note about the `sink` channel buffer (size 64,
+back-pressure on slow consumers) is correct but unrelated to the
+Ctrl-C hang. Tracked separately if it becomes a real symptom.
+
+### No new regression test
+
+The finding's verification recipe (`kill -STOP` a real daemon and
+observe Apply returns within 10 s) is solid but requires
+infrastructure the unit-test suite doesn't have today (an in-process
+fake transport with a settable "GetRun hangs" knob). The existing
+real-TCP integration test (`TestApply_RoundTrip`) and the package
+race-test suite all still pass. A follow-up could add a
+HangingPeer transport stub; not bundled here.
+
 ---
 
 ## What

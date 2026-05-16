@@ -21,7 +21,6 @@ something else landing first.
 | F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
-| F014 | fleet.Apply WithoutCancel + GetRun has no timeout — Ctrl-C hangs | risk | XS | — | open |
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
@@ -44,7 +43,7 @@ something else landing first.
 | F011 | cross-cutting: 24 handlers w/ legacy paths | smell | open | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | open | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
-| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | open | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
+| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
 | F015 | agentd.Worker hub-close cleanup asymmetry | smell | **done** | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
 | F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
 | F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
