@@ -44,7 +44,12 @@ func planMode(b bool) actions.Mode {
 
 // stubFS overrides the package-level apt paths and hooks for the
 // duration of a test. The fake key fetcher returns a fixed byte
-// sequence; the cache-updater records whether it was called.
+// sequence; the cache-updater records whether it was called. F034
+// added `verifyKeyFingerprint` to the hook set — the default stub is
+// a no-op so existing happy-path tests (which use a fake key body
+// that can't be parsed by the real openpgp verifier) keep passing.
+// Tests that want to exercise the verifier (mismatch / parse error)
+// reach for `verifyKeyFingerprint` directly via the package var.
 type stubFS struct {
 	sourcesDir   string
 	keyringsDir  string
@@ -63,8 +68,10 @@ func newStubFS(t *testing.T) *stubFS {
 	originalPaths := apt
 	originalFetch := fetchKey
 	originalUpdate := updateCache
+	originalVerify := verifyKeyFingerprint
 	apt = aptPaths{sourcesDir: s.sourcesDir, keyringsDir: s.keyringsDir}
 	fetchKey = func(string) ([]byte, error) { return s.keyBody, nil }
+	verifyKeyFingerprint = func([]byte, string) error { return nil } // no-op stub
 	updateCache = func() error {
 		s.updateCalled++
 		return nil
@@ -73,6 +80,7 @@ func newStubFS(t *testing.T) *stubFS {
 		apt = originalPaths
 		fetchKey = originalFetch
 		updateCache = originalUpdate
+		verifyKeyFingerprint = originalVerify
 	})
 	return s
 }
@@ -337,5 +345,89 @@ func TestDnfBrew_ReturnClearError(t *testing.T) {
 	_, err = (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil || !strings.Contains(err.Error(), "brew driver is not yet implemented") {
 		t.Errorf("expected brew not-implemented error; got %v", err)
+	}
+}
+
+// TestApply_FingerprintMismatchRefuses — F034. When the operator
+// supplies a `gpg_key_fingerprint` and the fetched key doesn't carry
+// it, Run must refuse and NOT write the keyring. Pre-F034 the handler
+// captured the fingerprint at validate, never compared it, and wrote
+// whatever bytes the URL served — silent trust on an unverified key.
+func TestApply_FingerprintMismatchRefuses(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	s := newStubFS(t)
+	// Override the no-op stub with a strict verifier that always reports
+	// a mismatch — simulates the realVerifyKeyFingerprint path catching
+	// a swapped key.
+	verifyKeyFingerprint = func(body []byte, want string) error {
+		return errFakeMismatch
+	}
+	step := &config.Step{PkgRepo: &config.PkgRepo{
+		Name: "nodesource",
+		Apt: &config.PkgRepoApt{
+			URI:               "https://deb.nodesource.com/node_20.x",
+			Suites:            []string{"nodistro"},
+			Components:        []string{"main"},
+			GPGKeyURL:         "https://attacker.example/key.gpg",
+			GPGKeyFingerprint: "9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280",
+		},
+	}}
+	_, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatal("expected fingerprint-mismatch error; got nil")
+	}
+	if !strings.Contains(err.Error(), "fake mismatch") {
+		t.Errorf("error should propagate verifier message; got %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "key url:") {
+		t.Errorf("error should name the key url; got %q", err.Error())
+	}
+	// Critically: the keyring must NOT exist on disk — the whole point
+	// of the fix is that a wrong key can't poison apt's trust store.
+	keyringPath := filepath.Join(s.keyringsDir, "nodesource.gpg")
+	if _, statErr := os.Stat(keyringPath); statErr == nil {
+		t.Errorf("keyring file was written despite fingerprint mismatch: %s", keyringPath)
+	}
+}
+
+var errFakeMismatch = fakeErr("fake mismatch")
+
+type fakeErr string
+
+func (e fakeErr) Error() string { return string(e) }
+
+// TestNormalizeFingerprint — pin the input forms the function must
+// canonicalize to a single comparable string. Operators paste
+// fingerprints in several shapes; the verifier should accept all of
+// them as equivalent.
+func TestNormalizeFingerprint(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"9DC858229FC7DD38854AE2D88D81803C0EBFCD88", "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"},
+		{"9dc858229fc7dd38854ae2d88d81803c0ebfcd88", "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"},
+		{"9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88", "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"},
+		{"0x9DC858229FC7DD38854AE2D88D81803C0EBFCD88", "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"},
+		{"  9DC8:5822:9FC7:DD38:854A:E2D8:8D81:803C:0EBF:CD88  ", "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"},
+	}
+	for _, c := range cases {
+		if got := normalizeFingerprint(c.in); got != c.want {
+			t.Errorf("normalizeFingerprint(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+// TestRealVerifier_RejectsUnparseable — exercises the real
+// realVerifyKeyFingerprint path (not the no-op stub) to confirm the
+// happy/sad split. Pure unit test of the verifier; no Run() involved.
+func TestRealVerifier_RejectsUnparseable(t *testing.T) {
+	err := realVerifyKeyFingerprint([]byte("not a gpg key"), "9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280")
+	if err == nil {
+		t.Fatal("expected parse failure on non-key bytes; got nil")
+	}
+	if !strings.Contains(err.Error(), "parse fetched gpg key") {
+		t.Errorf("error should name the failure source; got %q", err.Error())
 	}
 }

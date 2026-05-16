@@ -6,6 +6,7 @@ require (
 	github.com/expr-lang/expr v1.17.7
 	github.com/fatih/color v1.18.0
 	github.com/flosch/pongo2/v6 v6.0.0
+	github.com/grandcat/zeroconf v1.0.0
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/pkg/sftp v1.13.10
@@ -20,7 +21,6 @@ require (
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
