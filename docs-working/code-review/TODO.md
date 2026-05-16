@@ -57,6 +57,8 @@ something else landing first.
 | F038 | shell line-overflow structured stream silent | bug | **done** | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
 | F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **done** | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
 | F040 | llm.ClaudeClient timeout/model/body | smell | **done** | [findings/F040](./findings/F040-llm-claude-client-tight-timeout-stale-model-unbounded-body.md) |
+| F041 | artifact_capture readFileContent unbounded | smell | open | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
+| F042 | facts.Collect no ctx / no per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
 
 ## Queue (next iterations, priority order)
 
