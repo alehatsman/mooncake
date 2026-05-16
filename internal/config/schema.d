@@ -1086,6 +1086,7 @@ export interface WaitFileAction {
  * @category network
  */
 export interface WaitHttpAction {
+  body?: string;
   body_contains?: string;
   headers?: Record<string, any>;
   interval?: string;

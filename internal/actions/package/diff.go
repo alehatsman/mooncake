@@ -8,39 +8,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// PkgSnapshot is the typed Before/After payload for actions.Diff when
-// the resource kind is ResourcePackage. Spec-22 says each handler
-// family defines its own snapshot shape; pkg's needs differ from
-// file's because the "resource" isn't a path — it's one or more
-// package-manager-tracked names with a desired state.
-//
-// Fields are descriptive, not measurement-based: we don't query
-// `dpkg`/`rpm`/`brew` from Diff (that would couple plan-time to the
-// package manager being installed, available, and fast enough).
-// Instead, After.PkgSnapshot describes the INTENT — "these names,
-// this state, this manager" — and the consumer learns from
-// Diff.Operation what kind of change is implied.
-//
-// Before is nil for pkg's Diff (we don't measure pre-state), matching
-// spec-22's "nil on the appropriate side" convention extended one
-// step: for actions where measurement is too expensive to plan
-// against, nil signals "unknown current state."
-type PkgSnapshot struct {
-	// Names are the package names this step targets. Set even when
-	// the step uses singular `name:` — we always emit a slice so
-	// consumers don't need two code paths.
-	Names []string `json:"names,omitempty"`
-
-	// State is the desired terminal state: "present" / "absent" /
-	// "latest". Empty maps to "present" by handler convention.
-	State string `json:"state,omitempty"`
-
-	// Manager is the explicit package manager when the step pins one
-	// (apt/dnf/brew/winget/...). Empty when auto-detect is in play.
-	Manager string `json:"manager,omitempty"`
-}
-
-// Diff implements actions.Differ for pkg (spec-22 phase 4d).
+// Diff implements actions.Differ for pkg (spec-22 phase 4d). The
+// typed Before/After payload is actions.PackageDiff (spec-66 wave 2);
+// see internal/actions/diff_payloads.go for the wire shape.
 //
 // Conservative semantics — Before is nil because we don't query the
 // package manager from Diff. After.PkgSnapshot describes the user's
@@ -72,7 +42,7 @@ func (h *Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, erro
 	state := pkgState(pkg.State)
 	op := pkgOperation(state)
 
-	after := &PkgSnapshot{
+	after := &actions.PackageDiff{
 		Names:   names,
 		State:   state,
 		Manager: pkg.Manager,

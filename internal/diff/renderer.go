@@ -49,16 +49,25 @@ func Register(m matchFunc) {
 	registry = append(registry, m)
 }
 
-// Lookup returns a Renderer for the given Detail value, or nil when
-// no registered renderer recognizes it. Callers fall back to their
+// Lookup returns a Renderer for the first candidate any registered
+// matcher recognizes, or nil when none do. Callers fall back to their
 // own placeholder text (e.g. "would update") when Lookup returns nil.
-func Lookup(detail any) Renderer {
-	if detail == nil {
-		return nil
-	}
-	for _, m := range registry {
-		if r := m(detail); r != nil {
-			return r
+//
+// Variadic so the plan-render call site can pass both the legacy
+// StepInspection.Detail (file-side, populated for file.write /
+// file.template) and the typed StepInspection.Diff (spec-22 Differ
+// output, populated for pkg / os.* / git.*) without two-arm if/else.
+// nil candidates are skipped; the first match wins. Single-arg calls
+// from wave 1 keep working unchanged.
+func Lookup(candidates ...any) Renderer {
+	for _, c := range candidates {
+		if c == nil {
+			continue
+		}
+		for _, m := range registry {
+			if r := m(c); r != nil {
+				return r
+			}
 		}
 	}
 	return nil
