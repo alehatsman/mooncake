@@ -28,6 +28,7 @@ something else landing first.
 | F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
 | F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
 | F025 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
+| F026 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
 
 ## Findings index
 
@@ -58,6 +59,7 @@ something else landing first.
 | F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 | F025 | vars action bypasses secrets resolver | bug | open | [findings/F025](./findings/F025-vars-action-bypasses-secrets-resolver.md) |
+| F026 | shell line-overflow structured stream silent | bug | open | [findings/F026](./findings/F026-shell-line-overflow-structured-stream-silent.md) |
 
 ## Queue (next iterations, priority order)
 
