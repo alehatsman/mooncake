@@ -11,6 +11,12 @@ import (
 	"testing"
 )
 
+// mdnsTestOff is used as &mdnsTestOff in Options.MDNS to disable the live
+// mDNS browse in tests. The real browse picks up actual peers on the host
+// LAN and would make TestAggregate_* environment-dependent. mDNS source
+// behavior is covered separately in mdns_test.go.
+var mdnsTestOff = false
+
 // writeFile is a thin helper to keep test setup readable.
 func writeFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
@@ -39,6 +45,7 @@ tags = ["linux"]
 		PeersPath:     peersPath,
 		SSHConfigPath: "-",
 		Probe:         &noProbe,
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("aggregate: %v", err)
@@ -81,6 +88,7 @@ Host vps-1
 		PeersPath:     peersPath,
 		SSHConfigPath: sshPath,
 		Probe:         &noProbe,
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("aggregate: %v", err)
@@ -129,6 +137,7 @@ token = "t"
 		PeersPath:     peersPath,
 		SSHConfigPath: "-",
 		Probe:         &noProbe,
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("aggregate: %v", err)
@@ -144,6 +153,7 @@ func TestAggregate_MissingPeersFileIsOk(t *testing.T) {
 	got, err := Aggregate(context.Background(), Options{
 		PeersPath:     filepath.Join(t.TempDir(), "missing.toml"),
 		SSHConfigPath: "-",
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -188,6 +198,7 @@ token = "probe-token"
 	got, err := Aggregate(context.Background(), Options{
 		PeersPath:     peersPath,
 		SSHConfigPath: "-",
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("aggregate: %v", err)
@@ -220,6 +231,7 @@ token = "tok"
 	got, err := Aggregate(context.Background(), Options{
 		PeersPath:     peersPath,
 		SSHConfigPath: "-",
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("aggregate: %v", err)
@@ -251,6 +263,7 @@ token = "tok"
 		PeersPath:     peersPath,
 		SSHConfigPath: "-",
 		Probe:         &probe,
+		MDNS:          &mdnsTestOff,
 	})
 	if err != nil {
 		t.Fatalf("aggregate: %v", err)

@@ -15,40 +15,31 @@ func TestCollect(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
+	// gitCleanEnv is also used by Collect's helpers (see minimal.go); we
+	// reuse it here for the fixture-setup subprocesses so a pre-commit /
+	// pre-push run of this test doesn't inherit the host repo's GIT_DIR.
+	cleanEnv := gitCleanEnv()
 
-	cmd := exec.Command("git", "init")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to init git repo: %v", err)
+	runGit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		cmd.Env = cleanEnv
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
 	}
 
-	cmd = exec.Command("git", "config", "user.email", "test@example.com")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to config git: %v", err)
-	}
-
-	cmd = exec.Command("git", "config", "user.name", "Test User")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to config git: %v", err)
-	}
+	runGit("init")
+	runGit("config", "user.email", "test@example.com")
+	runGit("config", "user.name", "Test User")
 
 	if err := os.WriteFile(filepath.Join(tmpDir, "test.txt"), []byte("test"), 0644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	cmd = exec.Command("git", "add", ".")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to git add: %v", err)
-	}
-
-	cmd = exec.Command("git", "commit", "-m", "initial")
-	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to git commit: %v", err)
-	}
+	runGit("add", ".")
+	runGit("commit", "-m", "initial")
 
 	if err := os.Mkdir(filepath.Join(tmpDir, "subdir1"), 0755); err != nil {
 		t.Fatalf("Failed to create subdir: %v", err)
