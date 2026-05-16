@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -17,6 +18,14 @@ import (
 )
 
 const defaultMaxIterations = 5
+
+// planGenTimeout bounds a single LLM plan-generation call. The
+// previous shape relied on http.Client.Timeout=60s which silently
+// truncated thinking-model runs (F040). Five minutes is generous —
+// real generations finish in 5-90s — and lets long-context agent
+// runs complete without a fixed-window cutoff. Operators who need a
+// different budget can fork the value if/when --llm-timeout lands.
+const planGenTimeout = 5 * time.Minute
 
 type LoopResult struct {
 	Iterations []IterationLog
@@ -62,7 +71,13 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)
 		}
 
-		rawPlan, err := client.GeneratePlan(context.Background(), systemPrompt, userPrompt, opts.Model)
+		// F040(a): bound a single generation with a generous deadline.
+		// The Claude client no longer carries a 60s overall timeout;
+		// ctx is the budget. Per-iteration cancel keeps a stuck call
+		// from blocking the rest of the agent loop.
+		genCtx, cancelGen := context.WithTimeout(context.Background(), planGenTimeout)
+		rawPlan, err := client.GeneratePlan(genCtx, systemPrompt, userPrompt, opts.Model)
+		cancelGen()
 		if err != nil {
 			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, "", "generation_failed", err.Error())
 			iterations = append(iterations, *log)
