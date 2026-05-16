@@ -51,6 +51,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("OsSysctlReverseInfo", func() any { return &OsSysctlReverseInfo{} })
 }
 
 func (h *Handler) Metadata() actions.ActionMetadata {

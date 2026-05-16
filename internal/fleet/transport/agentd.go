@@ -284,13 +284,15 @@ func (c *Client) GetRun(ctx context.Context, runID string) (*RunRecord, error) {
 // result_not_ready (run hasn't reached terminal state). Returns the
 // standard wrapped httpErr for other 4xx/5xx.
 //
-// Wire shape: matches internal/apply.KernelResult exactly, modulo
-// fields tagged json:"-" (Result.ReverseData and Result.Detail).
-// Frontends that need to compose Reverse() can do so for handlers that
-// derive their inverse from Step alone (no ReverseData dependency);
-// handlers needing ReverseData currently fall through with the
-// no-op-reverse semantics from apply.KernelResult.Reverse. Round-tripping
-// ReverseData is R2.1c phase 2.
+// Wire shape: matches internal/apply.KernelResult exactly. Result.Detail
+// stays json:"-" (plan-time only — meaningless for already-applied
+// steps). Result.ReverseData rides through executor.Result's custom
+// MarshalJSON / UnmarshalJSON as a discriminator-tagged envelope
+// (R2.1c phase 2 landed), so handlers that need pre-apply state for
+// Reverse() see a fully restored *ReverseInfo on the controller side.
+// Mixed-version fleets remain safe: an unknown discriminator decodes
+// to ReverseData=nil and the handler's existing "no ReverseData
+// captured" refusal surfaces — no panic, no silent corruption.
 func (c *Client) GetRunResult(ctx context.Context, runID string) (*apply.KernelResult, error) {
 	if runID == "" {
 		return nil, errors.New("GetRunResult: runID is empty")

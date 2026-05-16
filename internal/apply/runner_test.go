@@ -2,6 +2,7 @@ package apply_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -127,6 +128,69 @@ func TestRunner_Reverse_DeletesCreatedFile(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("inverse plan does not contain a state=absent step for %s; steps=%+v",
+			targetPath, inverse.Steps)
+	}
+}
+
+// TestRunner_Reverse_AfterWireRoundTrip is the load-bearing R2.1c
+// phase 2 integration test: a KernelResult that gets serialized
+// to JSON (the agentd /v1/runs/{id}/result shape), deserialized on
+// the controller, and then Reverse()'d must produce the SAME
+// inverse step as a local Reverse. Pre-phase-2 Result.ReverseData
+// was json:"-" and the post-decode handler refused with
+// "no ReverseData captured"; phase 2 round-trips the typed
+// payload via a discriminator envelope.
+func TestRunner_Reverse_AfterWireRoundTrip(t *testing.T) {
+	tmp := t.TempDir()
+	targetPath := filepath.Join(tmp, "wire-reverse.txt")
+	cfgPath := writeConfig(t, tmp, `
+- name: create wire-reverse
+  file.write:
+    path: `+targetPath+`
+    state: file
+    content: "to be undone after a wire hop\n"
+    mode: "0644"
+`)
+	cfg := &apply.Config{
+		ConfigPath:   cfgPath,
+		OutputFormat: "quiet",
+		LogLevel:     "error",
+	}
+
+	result, err := apply.NewRunner(cfg).Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// Round-trip through JSON — same path the daemon takes via
+	// writeKernelResult + the controller takes via GetRunResult.
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("Marshal KernelResult: %v", err)
+	}
+	var decoded apply.KernelResult
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("Unmarshal KernelResult: %v", err)
+	}
+
+	// Reverse on the DECODED result must produce the same shape as
+	// a local Reverse — proving ReverseData survived the envelope.
+	inverse, err := decoded.Reverse()
+	if err != nil {
+		t.Fatalf("Reverse on decoded result: %v", err)
+	}
+	if inverse == nil || len(inverse.Steps) == 0 {
+		t.Fatalf("Reverse on decoded result yielded empty plan; ReverseData likely lost across the wire. raw=%s", raw)
+	}
+	found := false
+	for _, s := range inverse.Steps {
+		if s.FileWrite != nil && s.FileWrite.Path == targetPath && s.FileWrite.State == "absent" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("inverse plan after wire round-trip missing state=absent step for %s; steps=%+v",
 			targetPath, inverse.Steps)
 	}
 }
