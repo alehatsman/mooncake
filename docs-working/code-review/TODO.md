@@ -16,14 +16,6 @@ something else landing first.
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
 | F011 | Cross-cutting: 16 handlers still have Execute/DryRun (5 done in batch 1: shell/command/print/vars/include_vars) | smell | XL | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
-<<<<<<< HEAD
-| F033 | Cross-cutting: 11 sites of pathutil.ValidateNoPathTraversal log+continue — repo_apply_patchset has real escape; others are theater | bug | M | — | open |
-||||||| parent of 37f47c02 (fix(actions): F033 — real path-traversal escape in repo_apply_patchset + delete 10 dead-code theater sites)
-| F033 | Cross-cutting: 11 sites of pathutil.ValidateNoPathTraversal log+continue — repo_apply_patchset has real escape; others are theater | bug | M | — | open |
-| F037 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
-=======
-| F037 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
->>>>>>> 37f47c02 (fix(actions): F033 — real path-traversal escape in repo_apply_patchset + delete 10 dead-code theater sites)
 | F039 | agent.RunLoop defers tmpfile cleanup inside for-body + plan files written 0644 + silent SavePlan errors | smell | S | — | open |
 
 ## Findings index
