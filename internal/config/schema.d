@@ -318,6 +318,13 @@ export interface GitConfigAction {
 }
 
 /**
+ * Issue an HTTP request; capture the response as a registered fact
+ * @category network
+ */
+export interface HttpRequestAction {
+}
+
+/**
  * Import steps from another file
  */
 export interface ImportAction {
@@ -1315,6 +1322,10 @@ export interface Step {
    * Idempotently manage git config keys at local, global, or system scope
    */
   "git.config"?: GitConfigAction;
+  /**
+   * Issue an HTTP request; capture the response as a registered fact
+   */
+  "http.request"?: HttpRequestAction;
   /**
    * Display messages and structured data to the user
    */

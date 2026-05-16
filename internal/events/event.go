@@ -42,17 +42,18 @@ const (
 
 // Event types for file operations
 const (
-	EventFileCreated         EventType = "file.created"
-	EventFileUpdated         EventType = "file.updated"
-	EventFileRemoved         EventType = "file.removed"
-	EventFileCopied          EventType = "file.copied"
-	EventFileDownloaded      EventType = "file.downloaded"
-	EventDirCreated          EventType = "directory.created"
-	EventDirRemoved          EventType = "directory.removed"
-	EventLinkCreated         EventType = "link.created"
-	EventPermissionsChanged  EventType = "permissions.changed"
-	EventTemplateRender      EventType = "template.rendered"
-	EventArchiveExtracted    EventType = "archive.extracted"
+	EventFileCreated        EventType = "file.created"
+	EventFileUpdated        EventType = "file.updated"
+	EventFileRemoved        EventType = "file.removed"
+	EventFileCopied         EventType = "file.copied"
+	EventFileDownloaded     EventType = "file.downloaded"
+	EventHTTPRequested      EventType = "http.requested"
+	EventDirCreated         EventType = "directory.created"
+	EventDirRemoved         EventType = "directory.removed"
+	EventLinkCreated        EventType = "link.created"
+	EventPermissionsChanged EventType = "permissions.changed"
+	EventTemplateRender     EventType = "template.rendered"
+	EventArchiveExtracted   EventType = "archive.extracted"
 )
 
 // Event types for variables
@@ -123,11 +124,11 @@ type PlanLoadedData struct {
 
 // RunCompletedData contains data for run.completed events
 type RunCompletedData struct {
-	TotalSteps    int    `json:"total_steps"`
-	SuccessSteps  int    `json:"success_steps"`
-	FailedSteps   int    `json:"failed_steps"`
-	SkippedSteps  int    `json:"skipped_steps"`
-	ChangedSteps  int    `json:"changed_steps"`
+	TotalSteps   int `json:"total_steps"`
+	SuccessSteps int `json:"success_steps"`
+	FailedSteps  int `json:"failed_steps"`
+	SkippedSteps int `json:"skipped_steps"`
+	ChangedSteps int `json:"changed_steps"`
 	// RevertedSteps counts steps whose Changed=true result was undone
 	// by a transaction's LIFO Reverse() pass. Already subtracted from
 	// ChangedSteps so callers don't double-count (MT-45).
@@ -287,6 +288,22 @@ type FileDownloadedData struct {
 	DryRun    bool   `json:"dry_run"`
 }
 
+// HTTPRequestedData carries event payload for http.requested. proposal-16
+// keeps this deliberately minimal: scheme/host/path (no query string),
+// method, status, duration. The request and response bodies live in the
+// registered fact, not in the audit event — bodies may contain secrets,
+// PII, or large payloads that don't belong in the event stream. Auth
+// headers and other sensitive headers are already redacted before the
+// event is emitted.
+type HTTPRequestedData struct {
+	Method     string `json:"method"`
+	URL        string `json:"url"`         // scheme://host/path (no query)
+	StatusCode int    `json:"status_code"` // 0 if request never received a response
+	DurationMs int64  `json:"duration_ms"`
+	Attempts   int    `json:"attempts"`
+	DryRun     bool   `json:"dry_run"`
+}
+
 // TemplateRenderData contains data for template.rendered events
 type TemplateRenderData struct {
 	TemplatePath string `json:"template_path"`
@@ -336,19 +353,19 @@ type ServiceManagementData struct {
 
 // AssertionData contains data for assert.passed and assert.failed events
 type AssertionData struct {
-	Type     string `json:"type"`               // Assertion type: "command", "file", or "http"
-	Expected string `json:"expected"`           // What was expected
-	Actual   string `json:"actual"`             // What was found
-	Failed   bool   `json:"failed"`             // Whether the assertion failed
-	StepID   string `json:"step_id,omitempty"`  // Step ID (added by event bus)
+	Type     string `json:"type"`              // Assertion type: "command", "file", or "http"
+	Expected string `json:"expected"`          // What was expected
+	Actual   string `json:"actual"`            // What was found
+	Failed   bool   `json:"failed"`            // Whether the assertion failed
+	StepID   string `json:"step_id,omitempty"` // Step ID (added by event bus)
 }
 
 // PresetData contains data for preset events
 type PresetData struct {
-	Name       string                 `json:"name"`                  // Preset name
-	Parameters map[string]interface{} `json:"parameters,omitempty"`  // Parameters passed to preset
-	StepsCount int                    `json:"steps_count"`           // Number of steps in preset
-	Changed    bool                   `json:"changed,omitempty"`     // Whether any step changed (only in completed event)
+	Name       string                 `json:"name"`                 // Preset name
+	Parameters map[string]interface{} `json:"parameters,omitempty"` // Parameters passed to preset
+	StepsCount int                    `json:"steps_count"`          // Number of steps in preset
+	Changed    bool                   `json:"changed,omitempty"`    // Whether any step changed (only in completed event)
 }
 
 // ArtifactCaptureData contains data for artifact_capture events
