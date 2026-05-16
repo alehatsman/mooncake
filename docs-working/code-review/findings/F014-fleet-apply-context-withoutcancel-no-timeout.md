@@ -6,6 +6,7 @@ package: internal/fleet
 file: internal/fleet/apply.go
 lines: 195, 218
 status: fixed
+verified: 2026-05-16 — tests green, fix shape confirmed by code inspection on worktree-tester
 ---
 
 ## ✅ Fixed

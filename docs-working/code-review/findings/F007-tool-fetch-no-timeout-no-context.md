@@ -7,6 +7,7 @@ files:
   - internal/actions/tool/fetch.go (lines 17-44)
   - internal/actions/tool/backend_github.go (lines 134-145)
 status: fixed
+verified: 2026-05-16 — fetch.go uses NewRequestWithContext; handler.go wraps each call in 30-min ctx; backend_github.go probes with 5s timeout; tool tests green
 ---
 
 ## ✅ Fixed
