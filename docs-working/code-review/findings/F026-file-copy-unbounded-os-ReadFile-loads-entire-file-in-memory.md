@@ -7,6 +7,7 @@ files:
   - internal/actions/file/handler.go (lines 224, 298, 416)
   - internal/actions/copy/handler.go (line 192)
 status: partial
+verified: 2026-05-16 — copy/handler.go:230 now uses ctx.Effects().CopyFile (streaming). file/handler.go still has 3 os.ReadFile sites; partial fix accurate
 ---
 
 ## ✅ Partial fix — copy/handler.go now streams

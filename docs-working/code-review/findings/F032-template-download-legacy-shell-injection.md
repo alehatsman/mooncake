@@ -8,6 +8,7 @@ files:
   - internal/actions/download/handler.go (lines 444-461, 482-494)
 status: done
 resolved: 2026-05-16 — Option B (shell-quote at the call sites) applied. Exported `effects.ShellQuote` (kept `shellQuote` as in-package alias so the 13 existing call sites in `default.go` don't need touching). Replaced `fmt.Sprintf("mv %s %s && chmod %s %s", tmpPath, destPath, mode, destPath)` in `template/handler.go::executeSudoFileOperation` and `fmt.Sprintf("mv %q %q", tmpPath, dest)` in `download/handler.go::downloadFile` to single-quote-wrap every interpolated path. Option A (delete the dead Execute/DryRun + helpers) blocked behind the XL F011 work: download/handler_test.go still has ~24 direct `h.Execute()` calls. Regression test `TestF032_ExecuteSudoFileOperation_QuotesDestPath` covers `; touch`, `$(id)`, backticks, and embedded newline payloads, plus `TestF032_ExecuteSudoFileOperation_EmbeddedSingleQuote` for the `'\''` escape idiom.
+verified: 2026-05-16 — template/handler.go:343-353 now shell-quotes via effects.ShellQuote on tmpPath/destPath. download/handler.go also patched
 ---
 
 ## What
