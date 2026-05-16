@@ -122,11 +122,11 @@ func NewPlanner() (*Planner, error) {
 
 	pathExpander := pathutil.NewPathExpander(renderer)
 	return &Planner{
-		template:     renderer,
-		pathUtil:     pathExpander,
-		fileTree:     filetree.NewWalker(pathExpander),
-		seenFiles:    make(map[string]bool),
-		locationMap:  make(map[int]*IncludeFrame),
+		template:    renderer,
+		pathUtil:    pathExpander,
+		fileTree:    filetree.NewWalker(pathExpander),
+		seenFiles:   make(map[string]bool),
+		locationMap: make(map[int]*IncludeFrame),
 	}, nil
 }
 
@@ -783,7 +783,18 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 // RenderPreserving. Fields tagged plan:"path" are additionally resolved to
 // absolute paths using currentDir. Nested pointer-to-struct fields are
 // deep-copied before mutation to avoid touching the original config.
-// Handles: string, *string, *struct (deep copy + recurse), []string, map[string]string.
+// Handles: string, *string, *struct (deep copy + recurse), []string,
+// map[string]string, map[string]interface{} (string-valued entries only).
+//
+// F024: map[string]interface{} entries are unwrapped from the interface
+// and rendered when the underlying value is a string. This covers the
+// os.systemd Unit/Service/Timer/Socket/Install sections, text.patch.json
+// Set/Merge, text.patch.yaml Set/Merge, and use.With — all of which
+// declare templated values via these YAML-mapping shapes. Non-string
+// entries (numbers, bools, nested maps, lists) are passed through
+// unchanged; nested templates inside non-string entries would need a
+// deeper recursive walk and are not common enough to handle inline.
+// Track separately if a user hits that.
 func walkAndRender(rv reflect.Value, render func(string) (string, error), currentDir string) error {
 	rt := rv.Type()
 	for i := 0; i < rv.NumField(); i++ {
@@ -850,14 +861,29 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 			}
 
 		case reflect.Map:
-			if fv.Type().Key().Kind() != reflect.String || fv.Type().Elem().Kind() != reflect.String {
+			if fv.Type().Key().Kind() != reflect.String {
+				continue
+			}
+			elemKind := fv.Type().Elem().Kind()
+			if elemKind != reflect.String && elemKind != reflect.Interface {
 				continue
 			}
 			for _, k := range fv.MapKeys() {
-				if fv.MapIndex(k).String() == "" {
+				v := fv.MapIndex(k)
+				// map[string]interface{}: unwrap to the concrete value so
+				// we can decide whether to render. Non-string concretes
+				// (numbers, bools, nested maps, lists) pass through.
+				if v.Kind() == reflect.Interface {
+					v = v.Elem()
+				}
+				if v.Kind() != reflect.String {
 					continue
 				}
-				rendered, err := render(fv.MapIndex(k).String())
+				s := v.String()
+				if s == "" {
+					continue
+				}
+				rendered, err := render(s)
 				if err != nil {
 					return fmt.Errorf("%s[%s]: %w", sf.Name, k.String(), err)
 				}
@@ -919,7 +945,6 @@ func (p *Planner) formatIncludeChain() string {
 	}
 	return strings.Join(parts, " -> ")
 }
-
 
 // copyContextWithLoopVars creates a new context with loop variables added
 func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config.LoopContext) *ExpansionContext {
@@ -985,4 +1010,3 @@ func convertToSlice(val interface{}, expr string) ([]interface{}, error) {
 		return nil, fmt.Errorf("with_items expression %q is not a list (got %T)", expr, val)
 	}
 }
-

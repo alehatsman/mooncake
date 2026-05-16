@@ -1,5 +1,5 @@
 ---
-id: F025
+id: F029
 title: Standalone vars action leaks `!secret` sentinel — planner pre-evaluates vars at plan time, bypassing resolver.Resolve
 severity: bug
 package: internal/plan

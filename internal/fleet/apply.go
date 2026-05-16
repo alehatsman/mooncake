@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
@@ -191,8 +192,19 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 			// record so we can surface the real status + error. Without
 			// this, Apply silently returns Status="" and the user has no
 			// idea why their plan didn't run.
+			//
+			// F014: WithoutCancel detaches from the user's ctx so a
+			// Ctrl-C during the SSE stream doesn't also kill the
+			// recovery probe — but on its own it has no deadline, so a
+			// hung/unreachable daemon makes Apply block forever and the
+			// user's Ctrl-C does nothing. Cap the recovery at 10s: long
+			// enough that a healthy-but-slow daemon answers, short
+			// enough that a stuck one doesn't dominate the user's wait.
 			if err == nil && result.Status == "" {
-				if rec, rerr := opts.Peer.GetRun(context.WithoutCancel(ctx), runID); rerr == nil {
+				recoveryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+				rec, rerr := opts.Peer.GetRun(recoveryCtx, runID)
+				cancel()
+				if rerr == nil {
 					result.Status = rec.Status
 					if rec.Error != "" {
 						emit(PeerEvent{Kind: KindError, Message: fmt.Sprintf("run %s: %s", rec.Status, oneLine(rec.Error))})
@@ -214,8 +226,13 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 			// daemon that predates this endpoint returns 404 (we surface
 			// nothing), a not-ready result is silently skipped, other
 			// errors emit a banner but don't fail the apply.
+			//
+			// F014: same WithoutCancel-without-timeout shape as the
+			// GetRun fetch above; see note there.
 			if err == nil && runID != "" && (result.Status == "success" || result.Status == "failed" || result.Status == "interrupted") {
-				kr, kerr := opts.Peer.GetRunResult(context.WithoutCancel(ctx), runID)
+				resultCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+				kr, kerr := opts.Peer.GetRunResult(resultCtx, runID)
+				cancel()
 				switch {
 				case kerr == nil:
 					result.KernelResult = kr

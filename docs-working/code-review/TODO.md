@@ -21,14 +21,13 @@ something else landing first.
 | F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
-| F014 | fleet.Apply WithoutCancel + GetRun has no timeout — Ctrl-C hangs | risk | XS | — | open |
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
-| F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
-| F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
-| F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
-| F025 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
-| F026 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
+| F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
+| F027 | agentd.sanityCheckBinary runs staged binary without timeout — hang blocks upgrade handler forever | risk | XS | — | open |
+| F028 | git_clone askpass returns password for the username prompt too — auth fails for bare HTTPS URLs | bug | S | — | open |
+| F029 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
+| F030 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
 
 ## Findings index
 
@@ -47,19 +46,23 @@ something else landing first.
 | F011 | cross-cutting: 24 handlers w/ legacy paths | smell | open | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | open | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
-| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | open | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
+| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
 | F015 | agentd.Worker hub-close cleanup asymmetry | smell | **done** | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
 | F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
 | F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
 | F018 | shell scanner 64KB line cap | bug | **done** | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
 | F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
-| F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
+| F020 | apply.Runner os.Exit hostile to embedded callers | risk | **done** | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
 | F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 | F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
-| F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
-| F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
-| F025 | vars action bypasses secrets resolver | bug | open | [findings/F025](./findings/F025-vars-action-bypasses-secrets-resolver.md) |
-| F026 | shell line-overflow structured stream silent | bug | open | [findings/F026](./findings/F026-shell-line-overflow-structured-stream-silent.md) |
+| F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
+| F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
+| F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
+| F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
+| F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | open | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
+| F028 | git_clone askpass returns password for username prompt | bug | open | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
+| F029 | vars action bypasses secrets resolver | bug | open | [findings/F029](./findings/F029-vars-action-bypasses-secrets-resolver.md) |
+| F030 | shell line-overflow structured stream silent | bug | open | [findings/F030](./findings/F030-shell-line-overflow-structured-stream-silent.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -86,9 +89,11 @@ something else landing first.
     is another F005 hit (no IsBecomeSupported/SudoPass guards).
     Per-package isPackageInstalled is a perf footgun on big
     lists; track separately if it becomes a UX complaint.
-13. **`internal/actions/copy` after the migration** — verify no
-    dead-weight remains after arch-wins.
-14. **`internal/actions/file` after the migration** — same.
+13. ~~`internal/actions/copy` after the migration~~ — done; clean
+    Run-only post-migration (283 LOC). F026 (unbounded ReadFile)
+    is a separate concern.
+14. ~~`internal/actions/file` after the migration~~ — done; clean
+    Run-only post-migration (515 LOC). F026 also applies here.
 15. **`cmd/`** — 10,022 LOC of CLI wiring. Spot-check the largest
     files.
 16. ~~`internal/secrets/resolver`~~ — done → F019 (silent miss).
@@ -124,6 +129,15 @@ something else landing first.
 | 2026-05-16 | `internal/agentd/runs_handler.go` | none (clean — sees the F018 pattern done right) |
 | 2026-05-16 | `internal/fleet/controller.go` / `orchestrator.go` | none (clean — orchestrator uses ctx, unlike apply.Runner per F020) |
 | 2026-05-16 | `internal/plan/planner.go` walkAndRender | F024 |
+| 2026-05-16 | `internal/fleet/multiplex.go` | none (clean) |
+| 2026-05-16 | `internal/fleet/peers.go` | F025 |
+| 2026-05-16 | `internal/snapshot/{minimal,diff}.go` | none (clean) |
+| 2026-05-16 | `internal/actions/{copy,file}` post-migration | F026 (unbounded ReadFile) |
+| 2026-05-16 | `internal/presets/registry/remote.go` | already covered by F012 (http no timeout) |
+| 2026-05-16 | `cmd/presets.go` spot-check | none (clean — preset Type schema matches handler switch) |
+| 2026-05-16 | `internal/agentd/store.go` | none (clean — ULID-validated, atomic writes, daemon-restart reconcile) |
+| 2026-05-16 | `internal/agentd/self_upgrade.go` | F027 (sanityCheckBinary no-timeout) |
+| 2026-05-16 | `internal/actions/git_clone` | F028 (askpass username bug) |
 
 ## Cross-cutting themes / patterns to track
 
