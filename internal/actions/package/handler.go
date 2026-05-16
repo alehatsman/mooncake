@@ -36,6 +36,16 @@ const (
 	pmChoco  = "choco"
 	pmScoop  = "scoop"
 	pmWinget = "winget"
+	// yay and paru are pacman-compatible AUR wrappers on Arch
+	// (proposal-07). They mirror pacman's CLI verbs exactly
+	// (-S/-R/-Q/-Sy/-Syu plus --noconfirm --needed), so each
+	// per-manager switch routes them through the pacman branch
+	// with the binary name swapped. Deliberately NOT in the
+	// auto-detection list: AUR is a parallel ecosystem and Arch
+	// users have strong opinions; require explicit opt-in via
+	// `pkg.install: manager: yay`.
+	pmYay  = "yay"
+	pmParu = "paru"
 )
 
 // State constants
@@ -252,8 +262,8 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, bec
 		cmdArgs = []string{"apt-get", "update"}
 	case pmDnf, pmYum:
 		cmdArgs = []string{manager, "makecache"}
-	case pmPacman:
-		cmdArgs = []string{pmPacman, "-Sy"}
+	case pmPacman, pmYay, pmParu:
+		cmdArgs = []string{manager, "-Sy"}
 	case pmApk:
 		cmdArgs = []string{pmApk, "update"}
 	case pmBrew:
@@ -499,8 +509,8 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 		checkCmd = []string{"dpkg", "-s", pkg}
 	case pmDnf, pmYum:
 		checkCmd = []string{"rpm", "-q", pkg}
-	case pmPacman:
-		checkCmd = []string{pmPacman, "-Q", pkg}
+	case pmPacman, pmYay, pmParu:
+		checkCmd = []string{manager, "-Q", pkg}
 	case pmZypper:
 		checkCmd = []string{"rpm", "-q", pkg}
 	case pmApk:
@@ -574,8 +584,8 @@ func installCommandBase(manager string) []string {
 		return []string{pmDnf, "install", "-y"}
 	case pmYum:
 		return []string{pmYum, "install", "-y"}
-	case pmPacman:
-		return []string{pmPacman, "-S", "--noconfirm", "--needed"}
+	case pmPacman, pmYay, pmParu:
+		return []string{manager, "-S", "--noconfirm", "--needed"}
 	case pmZypper:
 		return []string{pmZypper, "install", "-y"}
 	case pmApk:
@@ -641,8 +651,8 @@ func removeCommandBase(manager string) []string {
 		return []string{pmDnf, "remove", "-y"}
 	case pmYum:
 		return []string{pmYum, "remove", "-y"}
-	case pmPacman:
-		return []string{pmPacman, "-R", "--noconfirm"}
+	case pmPacman, pmYay, pmParu:
+		return []string{manager, "-R", "--noconfirm"}
 	case pmZypper:
 		return []string{pmZypper, "remove", "-y"}
 	case pmApk:
@@ -671,8 +681,8 @@ func (h *Handler) buildUpgradeCommand(manager string, extra []string) []string {
 		cmd = []string{pmDnf, "upgrade", "-y"}
 	case pmYum:
 		cmd = []string{pmYum, "upgrade", "-y"}
-	case pmPacman:
-		cmd = []string{pmPacman, "-Syu", "--noconfirm"}
+	case pmPacman, pmYay, pmParu:
+		cmd = []string{manager, "-Syu", "--noconfirm"}
 	case pmZypper:
 		cmd = []string{pmZypper, "update", "-y"}
 	case pmApk:

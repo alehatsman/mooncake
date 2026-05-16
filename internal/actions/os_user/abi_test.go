@@ -70,9 +70,9 @@ func TestDiff_AfterFoldsPrimaryGroupFirst(t *testing.T) {
 		Group:  "deploy",
 		Groups: []string{"docker", "sudo"},
 	}})
-	after, ok := d.After.(*OsUserSnapshot)
+	after, ok := d.After.(*actions.UserDiff)
 	if !ok {
-		t.Fatalf("After is not *OsUserSnapshot; got %T", d.After)
+		t.Fatalf("After is not *actions.UserDiff; got %T", d.After)
 	}
 	want := []string{"deploy", "docker", "sudo"}
 	if len(after.Groups) != len(want) {

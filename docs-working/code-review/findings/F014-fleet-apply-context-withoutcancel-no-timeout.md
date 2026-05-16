@@ -5,8 +5,9 @@ severity: risk
 package: internal/fleet
 file: internal/fleet/apply.go
 lines: 195, 218
-status: fixed
-verified: 2026-05-16 — tests green, fix shape confirmed by code inspection on worktree-tester
+status: done
+fixed: 2026-05-16 — commit `025fbb4f fix(fleet): F014 — bound the WithoutCancel recovery fetches with 10s timeout`, merged at a4418d32. apply.go:204 + 233 now wrap `context.WithoutCancel(ctx)` in `context.WithTimeout(..., 10*time.Second)` so a stuck terminal-state fetch can't outlive its bound. F014 markers in-code at lines 196 and 230.
+verified: 2026-05-16 — tests green, fix shape confirmed by code inspection on worktree-tester. Re-checked 2026-05-17 @ 099ee336 — `grep -nE 'WithoutCancel|WithTimeout' internal/fleet/apply.go` shows both fetches wrapped at lines 204 + 233.
 ---
 
 ## ✅ Fixed

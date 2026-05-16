@@ -25,16 +25,16 @@ func newMockExecutionContext() *executor.ExecutionContext {
 	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: expression.NewExprEvaluator(),
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Logger: &testutil.MockLogger{Logs: []string{}},
+			Template:       tmpl,
+			Evaluator:      expression.NewExprEvaluator(),
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Logger:         &testutil.MockLogger{Logs: []string{}},
 			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-			Redactor: security.NewRedactor(),
-			SudoPass: "",
-			Stats: executor.NewExecutionStats(),
+			Redactor:       security.NewRedactor(),
+			SudoPass:       "",
+			Stats:          executor.NewExecutionStats(),
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 	}
 }
@@ -212,7 +212,6 @@ func TestHandler_Validate(t *testing.T) {
 		})
 	}
 }
-
 
 func TestHandler_DeterminePackageManager_Explicit(t *testing.T) {
 	h := &Handler{}
@@ -618,6 +617,27 @@ func TestHandler_BuildUpgradeCommand(t *testing.T) {
 			},
 		},
 		{
+			// proposal-07: yay's CLI mirrors pacman -Syu.
+			name:    "yay upgrade",
+			manager: "yay",
+			extra:   nil,
+			check: func(cmd []string) bool {
+				return cmd[0] == "yay" &&
+					cmd[1] == "-Syu" &&
+					cmd[2] == "--noconfirm"
+			},
+		},
+		{
+			name:    "paru upgrade",
+			manager: "paru",
+			extra:   nil,
+			check: func(cmd []string) bool {
+				return cmd[0] == "paru" &&
+					cmd[1] == "-Syu" &&
+					cmd[2] == "--noconfirm"
+			},
+		},
+		{
 			name:    "yum upgrade",
 			manager: "yum",
 			extra:   nil,
@@ -687,9 +707,9 @@ func TestHandler_BuildUpgradeCommand(t *testing.T) {
 				}
 				// Must include silent + accept flags so the call doesn't hang.
 				want := map[string]bool{
-					"--silent":                       true,
-					"--accept-package-agreements":    true,
-					"--accept-source-agreements":     true,
+					"--silent":                    true,
+					"--accept-package-agreements": true,
+					"--accept-source-agreements":  true,
 				}
 				for _, arg := range cmd {
 					delete(want, arg)
@@ -729,10 +749,10 @@ func TestBuildWingetCommand(t *testing.T) {
 					return false
 				}
 				required := map[string]bool{
-					"--exact":                        true,
-					"--silent":                       true,
-					"--accept-package-agreements":    true,
-					"--accept-source-agreements":     true,
+					"--exact":                     true,
+					"--silent":                    true,
+					"--accept-package-agreements": true,
+					"--accept-source-agreements":  true,
 				}
 				for _, arg := range cmd {
 					delete(required, arg)
@@ -903,7 +923,6 @@ func TestHandler_Validate_StateValidation(t *testing.T) {
 	}
 }
 
-
 func TestHandler_Metadata_EventsEmission(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
@@ -1036,7 +1055,6 @@ func TestHandler_DetectWindowsPackageManager(t *testing.T) {
 		t.Logf("Detected Windows package manager: %s", manager)
 	}
 }
-
 
 func TestHandler_Validate_ComplexScenarios(t *testing.T) {
 	h := &Handler{}
@@ -1174,7 +1192,7 @@ func TestHandler_IsPackageInstalled_NotInstalled(t *testing.T) {
 func TestHandler_BuildInstallCommand_AllManagers(t *testing.T) {
 	h := &Handler{}
 
-	managers := []string{"apt", "dnf", "yum", "pacman", "zypper", "apk", "brew", "port", "choco", "scoop"}
+	managers := []string{"apt", "dnf", "yum", "pacman", "yay", "paru", "zypper", "apk", "brew", "port", "choco", "scoop"}
 
 	for _, manager := range managers {
 		t.Run("install_with_"+manager, func(t *testing.T) {
@@ -1198,7 +1216,7 @@ func TestHandler_BuildInstallCommand_AllManagers(t *testing.T) {
 func TestHandler_BuildRemoveCommand_AllManagers(t *testing.T) {
 	h := &Handler{}
 
-	managers := []string{"apt", "dnf", "yum", "pacman", "zypper", "apk", "brew", "port", "choco", "scoop"}
+	managers := []string{"apt", "dnf", "yum", "pacman", "yay", "paru", "zypper", "apk", "brew", "port", "choco", "scoop"}
 
 	for _, manager := range managers {
 		t.Run("remove_with_"+manager, func(t *testing.T) {

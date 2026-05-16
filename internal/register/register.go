@@ -87,6 +87,9 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/read_yaml"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"
 
+	// Network
+	_ "github.com/alehatsman/mooncake/internal/actions/http_request"
+
 	// Wait / polling
 	_ "github.com/alehatsman/mooncake/internal/actions/wait_command"
 	_ "github.com/alehatsman/mooncake/internal/actions/wait_file"

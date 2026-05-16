@@ -5,7 +5,9 @@ severity: smell
 package: internal/agentd
 file: internal/agentd/worker.go
 lines: 118-120, 135-160
-status: fixed
+status: done
+fixed: 2026-05-16 — merge `0b6acf22 merge: fix-F015 — unify agentd worker hub cleanup via single defer`. executeRun now reserves the hub at the top and unconditionally closes it via a single defer, removing the asymmetric Update/panic paths that previously leaked.
+verified: 2026-05-17 — confirmed fixed on master @ 099ee336. Dedicated regression test `internal/agentd/worker_chdir_test.go:31 TestWorkerChdirFailureClosesHub` passes; this test (per its header comment) exercises "the F015 path" — chdir failure inside executeRun must still close the hub. `defer w.hubMu.Unlock()` at worker.go:95 + the single deferred hub-close handle the store.Update and panic exits.
 ---
 
 ## ✅ Fixed

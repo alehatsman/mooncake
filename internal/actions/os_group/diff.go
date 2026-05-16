@@ -7,26 +7,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// OsGroupSnapshot is the typed Before/After payload for actions.Diff
-// when the resource is an os.group. Before stays nil; Diff doesn't
-// shell to getent at plan time.
-type OsGroupSnapshot struct {
-	// Name is the group name (identity).
-	Name string `json:"name,omitempty"`
-
-	// State is the desired state: "present" or "absent". Empty maps
-	// to "present" by handler convention.
-	State string `json:"state,omitempty"`
-
-	// GID, when set, is the requested numeric gid.
-	GID *int `json:"gid,omitempty"`
-
-	// System mirrors the system-group flag.
-	System bool `json:"system,omitempty"`
-}
-
 // Diff implements actions.Differ for os.group (spec-22 phase 4 /
-// spec-27 P4).
+// spec-27 P4). The typed Before/After payload is actions.GroupDiff
+// (spec-66 wave 3); see internal/actions/diff_payloads.go.
 //
 // Operation by state: present→OpCreate, absent→OpDelete. Conservative
 // noop prediction — the runtime check produces accurate
@@ -58,7 +41,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		},
 		Operation: op,
 		Before:    nil,
-		After: &OsGroupSnapshot{
+		After: &actions.GroupDiff{
 			Name:   g.Name,
 			State:  state,
 			GID:    g.GID,

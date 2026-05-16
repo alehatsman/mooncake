@@ -13,8 +13,9 @@ files:
   - internal/actions/file_patch_apply/handler.go:139, 563
   - internal/actions/file_delete_range/handler.go:139, 393
   - internal/actions/file_replace/handler.go:140, 389
-status: fixed
-verified: 2026-05-16 — confirmed real: repo_apply_patchset/handler.go:397 and text_patch_ini/handler.go:110 both call ValidateNoPathTraversal then log-and-continue (debug-level). Path-traversal validation is dead-code theater. 11 call sites, 9 packages affected
+status: done
+fixed: 2026-05-16 — commit `0fd33fb1 fix(actions): F033 — real path-traversal escape in repo_apply_patchset + delete 10 dead-code theater sites`, merged at 069a7282 + 2cd5da2d. Two parts: (a) repo_apply_patchset/handler.go:354 now uses `pathutil.SafeJoin(baseDir, filePatch.Path)` which checks via filepath.Rel under absolute paths and returns an error instead of debug-logging, (b) the 10 dead-code theater sites in text_*, file_insert, file_patch_apply, file_delete_range, file_replace were deleted outright.
+verified: 2026-05-16 — confirmed real: repo_apply_patchset/handler.go:397 and text_patch_ini/handler.go:110 both call ValidateNoPathTraversal then log-and-continue (debug-level). Path-traversal validation is dead-code theater. 11 call sites, 9 packages affected. Re-verified fix 2026-05-17 @ 099ee336: dedicated regression file `internal/actions/repo_apply_patchset/f033_test.go` with `TestF033_TraversingPathRefused_LenientMode` + `TestF033_TraversingPathRefused_StrictMode` both pass; ValidateNoPathTraversal call sites reduced from 11 → 4 (unarchive + text_line + repo_apply_patchset + pathutil itself), and the 4 survivors are legitimate uses (the dead-code theater is gone).
 ---
 
 ## ✅ Fixed

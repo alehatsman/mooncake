@@ -5,7 +5,9 @@ severity: bug
 package: internal/plan
 file: internal/plan/planner.go
 lines: 787-869
-status: fixed
+status: done
+fixed: 2026-05-16 — commit `ee8c6aac fix(plan): F024 — render templates inside map[string]interface{} fields`, merged at 1fbb4696. walkAndRender now unwraps `map[string]interface{}` entries to their concrete value before rendering. F024 marker in-code at planner.go:817; non-string values are explicitly preserved (planner.go:901).
+verified: 2026-05-17 — confirmed fixed on master @ 099ee336. Dedicated regression test file `internal/plan/planner_f024_test.go`; both `TestPlanner_RendersOsSystemdServiceSection` and `TestPlanner_OsSystemdNonStringValuesPreserved` pass — first proves templates inside `os.systemd.service[*].config` now render; second pins down that non-string values (numbers, bools) round-trip untouched.
 ---
 
 ## ✅ Fixed

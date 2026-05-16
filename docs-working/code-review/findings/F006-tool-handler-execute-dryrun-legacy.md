@@ -5,8 +5,9 @@ severity: smell
 package: internal/actions/tool
 file: internal/actions/tool/handler.go
 lines: 64-187, 190-206, 351-385
-status: fixed
-verified: 2026-05-16 — confirmed fix on master @ 649c71f4. grep 'func.*Execute|func.*DryRun' internal/actions/tool/handler.go → 0; LOC 1676→379; tests green
+status: done
+fixed: 2026-05-16 — commit `9369e56e refactor(tool): F006 — delete Execute/DryRun shadow paths; Run is the only entry point`, merged at 649c71f4. Same shape as F011 batch 1: legacy Execute/DryRun bodies folded into Run's apply/plan branches.
+verified: 2026-05-16 — confirmed fix on master @ 649c71f4. grep 'func.*Execute|func.*DryRun' internal/actions/tool/handler.go → 0; LOC 1676→379; tests green. Re-checked 2026-05-17 @ 099ee336 — still 0 matches.
 ---
 
 ## ✅ Fixed

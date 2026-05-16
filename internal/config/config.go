@@ -1241,6 +1241,128 @@ type WaitHTTP struct {
 	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
+// HTTPRequest is the proposal-16 first-class HTTP action. Unlike
+// `file.download` (URL→file+checksum), `observe.http` (single-shot
+// probe), and `wait.http` (poll until ready), HTTPRequest is the
+// general "call an endpoint, capture the response as a fact" primitive
+// — the action `notify` and `llm` will sit on top of.
+//
+// Idempotency contract: POST and PATCH calls are unsafe by default
+// (the server may create or mutate state on each call). The handler's
+// Validate() refuses to ship a POST/PATCH unless the user supplies
+// EXACTLY ONE of:
+//   - IdempotencyKey (sent as an `Idempotency-Key` header — server-side
+//     dedup),
+//   - CreatesWhen (template predicate evaluated against existing facts
+//     — Wave 2 wires this into plan-mode probes; Wave 1 honors it as a
+//     gate inside Run),
+//   - Risk = "high" (explicit operator ack).
+//
+// GET/HEAD/OPTIONS/PUT/DELETE are exempt: GET/HEAD/OPTIONS are
+// read-only by convention; PUT/DELETE are idempotent by HTTP spec.
+//
+// See docs-working/streams/core/proposals/proposal-16-http-request-action.md
+// for full design notes and the deferred Wave-2/3 fields (probe:,
+// reverse:, expect_json_schema:, save_to:).
+type HTTPRequest struct {
+	URL     string            `yaml:"url" json:"url"`                           // Target URL (required, template-rendered)
+	Method  string            `yaml:"method,omitempty" json:"method,omitempty"` // HTTP method (default: "GET")
+	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
+
+	// Auth supplies credentials. Bearer/Basic/Header are mutually
+	// exclusive — set at most one. All values flow through the
+	// secret-redaction filter for logs/diffs/events.
+	Auth *HTTPAuth `yaml:"auth,omitempty" json:"auth,omitempty"`
+
+	// Body forms — set AT MOST ONE. Validate() rejects multiple.
+	//
+	//   Body — raw string (template-rendered). Caller sets Content-Type.
+	//   JSON — structured value. Marshalled to JSON; Content-Type defaults
+	//          to application/json. Templates inside JSON values are NOT
+	//          rendered in Wave 1 (use Body with the | tojson filter for
+	//          templated JSON).
+	//   Form — flat string map. URL-encoded; Content-Type defaults to
+	//          application/x-www-form-urlencoded.
+	//   File — path to a file (template-rendered + expanded). Raw bytes
+	//          sent verbatim; caller sets Content-Type.
+	Body string            `yaml:"body,omitempty" json:"body,omitempty"`
+	JSON interface{}       `yaml:"json,omitempty" json:"json,omitempty"`
+	Form map[string]string `yaml:"form,omitempty" json:"form,omitempty"`
+	File string            `yaml:"file,omitempty" json:"file,omitempty"`
+
+	// Idempotency contract for POST/PATCH — set EXACTLY ONE. Validate()
+	// refuses to ship POST/PATCH that has none of these. GET/HEAD/
+	// OPTIONS/PUT/DELETE ignore these fields.
+	IdempotencyKey string `yaml:"idempotency_key,omitempty" json:"idempotency_key,omitempty"`
+	CreatesWhen    string `yaml:"creates_when,omitempty" json:"creates_when,omitempty"`
+
+	// Risk overrides the per-method default (low for read methods,
+	// medium for PUT/DELETE, high for POST/PATCH). Setting Risk="high"
+	// also serves as the explicit ack that satisfies the idempotency
+	// contract for POST/PATCH without IdempotencyKey/CreatesWhen.
+	// Accepted values: "low", "medium", "high".
+	Risk string `yaml:"risk,omitempty" json:"risk,omitempty"`
+
+	// ExpectStatus lists acceptable HTTP status codes. If unset,
+	// defaults to 2xx (200-299). A response outside this list fails the
+	// step (after retries are exhausted).
+	ExpectStatus []int `yaml:"expect_status,omitempty" json:"expect_status,omitempty"`
+
+	// Retries: 0 = one attempt (no retry). RetryOn lists conditions
+	// that trigger a retry. Accepted: "5xx", "4xx", "429", "timeout",
+	// "connection_error". RetryDelay is a duration string ("1s", "500ms"),
+	// default "1s".
+	Retries    int      `yaml:"retries,omitempty" json:"retries,omitempty"`
+	RetryOn    []string `yaml:"retry_on,omitempty" json:"retry_on,omitempty"`
+	RetryDelay string   `yaml:"retry_delay,omitempty" json:"retry_delay,omitempty"`
+
+	// Timeout bounds the per-request transfer (default "30s"). The
+	// httputil DefaultTransport's dial / TLS / response-headers
+	// timeouts also apply.
+	Timeout string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+
+	// SkipTLSVerify disables certificate verification. Strongly
+	// discouraged outside test fixtures.
+	SkipTLSVerify bool `yaml:"skip_tls_verify,omitempty" json:"skip_tls_verify,omitempty"`
+
+	// RedactBody = true filters request + response bodies out of logs,
+	// diffs, and events. Auth headers are ALWAYS redacted regardless.
+	RedactBody bool `yaml:"redact_body,omitempty" json:"redact_body,omitempty"`
+
+	// FollowRedirects bounds how many redirects the client will follow.
+	// Pointer so the zero value (no follow) is distinguishable from
+	// "unset" (default = 10, matches Go's http.Client default).
+	FollowRedirects *int `yaml:"follow_redirects,omitempty" json:"follow_redirects,omitempty"`
+
+	// MaxResponseBytes caps how much of the response body is captured
+	// in the registered fact. Default 1 MiB. Larger responses are
+	// truncated; the body field is suffixed with "...(truncated)".
+	MaxResponseBytes int64 `yaml:"max_response_bytes,omitempty" json:"max_response_bytes,omitempty"`
+}
+
+// HTTPAuth is the one-of credential block for HTTPRequest. Set at
+// most one of Bearer/Basic/Header.
+type HTTPAuth struct {
+	// Bearer sets "Authorization: Bearer <value>".
+	Bearer string `yaml:"bearer,omitempty" json:"bearer,omitempty"`
+	// Basic sets "Authorization: Basic <base64(user:pass)>".
+	Basic *HTTPBasicAuth `yaml:"basic,omitempty" json:"basic,omitempty"`
+	// Header sets an arbitrary header (e.g. {name: "X-Api-Key", value: "..."}).
+	Header *HTTPAuthHeader `yaml:"header,omitempty" json:"header,omitempty"`
+}
+
+// HTTPBasicAuth is the user/pass pair for HTTPAuth.Basic.
+type HTTPBasicAuth struct {
+	User string `yaml:"user" json:"user"`
+	Pass string `yaml:"pass" json:"pass"`
+}
+
+// HTTPAuthHeader is an arbitrary auth header.
+type HTTPAuthHeader struct {
+	Name  string `yaml:"name" json:"name"`
+	Value string `yaml:"value" json:"value"`
+}
+
 // WaitFile waits for a filesystem path to exist, optionally containing
 // a substring in its contents.
 type WaitFile struct {
@@ -1418,6 +1540,7 @@ type Step struct {
 	WaitHTTP             *WaitHTTP               `yaml:"wait.http,omitempty"         json:"wait.http,omitempty"         action:"wait.http"`
 	WaitFile             *WaitFile               `yaml:"wait.file,omitempty"         json:"wait.file,omitempty"         action:"wait.file"`
 	WaitCommand          *WaitCommand            `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
+	HTTPRequest          *HTTPRequest            `yaml:"http.request,omitempty"      json:"http.request,omitempty"      action:"http.request"`
 	Log                  *PrintAction            `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
 	Use                  *PresetInvocation       `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
 	Import               *string                 `yaml:"import,omitempty"            json:"import,omitempty"            action:"import"`
@@ -1871,6 +1994,7 @@ func (s *Step) Clone() *Step {
 		WaitHTTP:          s.WaitHTTP,
 		WaitFile:          s.WaitFile,
 		WaitCommand:       s.WaitCommand,
+		HTTPRequest:       s.HTTPRequest,
 		Log:               s.Log,
 		Use:               s.Use,
 		Import:            s.Import,

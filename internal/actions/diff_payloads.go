@@ -38,3 +38,53 @@ type PackageDiff struct {
 	// play.
 	Manager string `json:"manager,omitempty"`
 }
+
+// UserDiff is the typed Before/After payload when an actions.Diff
+// describes an os.user mutation. The handler emits intent only
+// (no getent probe at plan time); Before stays nil. Resource.Kind
+// is ResourceOther on the wire today (no dedicated kind); consumers
+// dispatch on Resource.Attributes["kind"] == "os.user".
+type UserDiff struct {
+	// Name is the account name (idempotency identity).
+	Name string `json:"name,omitempty"`
+
+	// State is the desired terminal state: "present" or "absent".
+	// Empty maps to "present" by handler convention.
+	State string `json:"state,omitempty"`
+
+	// UID, when set, is the requested numeric uid.
+	UID *int `json:"uid,omitempty"`
+
+	// Shell is the requested login shell.
+	Shell string `json:"shell,omitempty"`
+
+	// Home is the requested home directory path.
+	Home string `json:"home,omitempty"`
+
+	// Groups is the supplementary group list. The primary group, if
+	// set on the step, is folded in as the first entry so consumers
+	// don't need two code paths to enumerate "all groups this user
+	// will be in."
+	Groups []string `json:"groups,omitempty"`
+
+	// System mirrors the system-account flag.
+	System bool `json:"system,omitempty"`
+}
+
+// GroupDiff is the typed Before/After payload when an actions.Diff
+// describes an os.group mutation. Same intent-only convention as
+// UserDiff. Consumers dispatch on Resource.Attributes["kind"] ==
+// "os.group".
+type GroupDiff struct {
+	// Name is the group name (idempotency identity).
+	Name string `json:"name,omitempty"`
+
+	// State is the desired terminal state: "present" or "absent".
+	State string `json:"state,omitempty"`
+
+	// GID, when set, is the requested numeric gid.
+	GID *int `json:"gid,omitempty"`
+
+	// System mirrors the system-group flag.
+	System bool `json:"system,omitempty"`
+}
