@@ -23,6 +23,9 @@ something else landing first.
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
 | F013 | config.Step "74 pointers" comment is stale (actual 64) | doc | XS | — | open |
 | F014 | fleet.Apply WithoutCancel + GetRun has no timeout — Ctrl-C hangs | risk | XS | — | open |
+| F015 | agentd.Worker: chdir-error path leaks the hub | bug | XS | — | open |
+| F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
+| F017 | executor: continue_on_error emits step.failed AND step.completed | bug | XS | — | open |
 
 ## Findings index
 
@@ -42,6 +45,9 @@ something else landing first.
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | open | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | open | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
 | F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | open | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
+| F015 | agentd.Worker chdir-error hub leak | bug | open | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
+| F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
+| F017 | executor continue_on_error double emit | bug | open | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -49,12 +55,11 @@ something else landing first.
 2. ~~`internal/actions/tool`~~ — done → F006, F007, F008.
 3. ~~`internal/explain` — `DisplayFacts`~~ — done → F009, F010.
 4. ~~`internal/config.Step`~~ — done → F013.
-5. **`internal/agentd/worker`** — has it landed cleanly on
-   `apply.Runner`? Anything still hand-wired?
+5. ~~`internal/agentd/worker`~~ — done → F015, F016.
 6. **`internal/mcp/tools`** — same question after the runCollector
    deletion.
-7. **`internal/executor/executor`** — `ExecuteStep` after the
-   extractions. Anything else heavy?
+7. ~~`internal/executor/executor`~~ — partial → F017
+   (continue_on_error double-emit). Other extractions look clean.
 8. **`internal/fleet`** — biggest non-cmd package (4,245 LOC).
    Partial: F014 (apply.go post-stream recovery). Rest of the
    package (controller, bootstrap, multiplex, peers) still queued.
@@ -88,6 +93,8 @@ something else landing first.
 | 2026-05-16 | cross-cutting audit (Execute/DryRun + HTTP timeouts) | F011, F012 |
 | 2026-05-16 | `internal/config.Step` doc-drift | F013 |
 | 2026-05-16 | `internal/fleet/apply.go` (partial) | F014 |
+| 2026-05-16 | `internal/agentd/worker.go` | F015, F016 |
+| 2026-05-16 | `internal/executor/executor.go` (partial) | F017 |
 
 ## Cross-cutting themes / patterns to track
 
@@ -106,6 +113,14 @@ Updated as the review uncovers patterns.
   CLAUDE.md, F013 in config.go). Pattern: pin the number → it
   drifts within the next sprint. Lean on `make budget-status`
   and `make handler-list` (if it exists; if not, worth adding).
+- **Stale `//nolint:gocyclo` directives** (F017 adjacent obs).
+  Functions that were over the cap and got extracted no longer
+  need the suppression — but it stays in the code. Quick audit:
+  `grep -rn 'nolint:gocyclo' internal/ | xargs -I{} ...`.
+- **Cancellation / cleanup invariants in agentd worker** (F015,
+  F016). The pattern "every exit path of executeRun must run the
+  same cleanup" isn't enforced — F015 found one missed close.
+  Defer-based cleanup is the fix in both cases.
 - **`sudo -S` shell-out reimplemented in 6 packages** (F005).
   Inconsistent guard handling means become-on-unsupported-host
   produces 3 different error shapes today.
