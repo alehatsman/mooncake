@@ -14,6 +14,11 @@ something else landing first.
 | F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
 | F004 | service: 6× repeated sudo/exec block (in-package) | smell | S | — | open |
 | F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
+| F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
+| F007 | tool: http.Get / DefaultClient with no timeout / context | risk | S | — | open |
+| F008 | tool.renderToolTemplates: 9× manual field render | readability | XS | — | open |
+| F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
+| F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
 
 ## Findings index
 
@@ -24,13 +29,17 @@ something else landing first.
 | F003 | service: legacy Execute/DryRun | smell | open | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
 | F004 | service: sudo/exec duplication in-package | smell | open | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
 | F005 | sudo -S shell-out helper cross-package | smell | open | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
+| F006 | tool handler legacy Execute/DryRun | smell | open | [findings/F006](./findings/F006-tool-handler-execute-dryrun-legacy.md) |
+| F007 | tool: http no timeout / context | risk | open | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
+| F008 | tool.renderToolTemplates manual repetition | readability | open | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
+| F009 | explain.DisplayFacts section split | smell | open | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
+| F010 | explain TestDisplayFacts_NilFacts is dead | smell | open | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
 
 ## Queue (next iterations, priority order)
 
 1. ~~`internal/actions/service`~~ — done in this iteration → F003, F004, F005.
-2. **`internal/actions/tool`** — 1,676 LOC, over soft-cap.
-3. **`internal/explain` — `DisplayFacts`** — gocyclo 44, only
-   non-test function over the gocyclo cap.
+2. ~~`internal/actions/tool`~~ — done → F006, F007, F008.
+3. ~~`internal/explain` — `DisplayFacts`~~ — done → F009, F010.
 4. **`internal/config.Step`** — 36/40 field count, growing. Look
    for fields that could be planner-private already.
 5. **`internal/agentd/worker`** — has it landed cleanly on
@@ -66,13 +75,21 @@ something else landing first.
 |---|---|---|
 | 2026-05-16 | baseline (build/test/lint/budget) | F001, F002 |
 | 2026-05-16 | `internal/actions/service` (1,607 LOC) | F003, F004, F005 |
+| 2026-05-16 | `internal/actions/tool` (1,676 LOC) | F006, F007, F008 |
+| 2026-05-16 | `internal/explain.DisplayFacts` (gocyclo 44) | F009, F010 |
 
 ## Cross-cutting themes / patterns to track
 
 Updated as the review uncovers patterns.
 
-- **Spec-16 migration incomplete in `service`** (F003). Pattern
-  matches deleted `copy.Execute` / `file.Execute`.
+- **Spec-16 migration incomplete in `service` and `tool`** (F003,
+  F006). Same shape as the arch-wins `copy` / `file` cleanup —
+  every handler that still has `Execute`/`DryRun` is technical
+  debt of the same kind. Audit remaining: `internal/actions/{copy,
+  file, service, tool, ...}` grep `func \(.*\) Execute\(`.
+- **HTTP calls without timeouts/context** (F007). Audit other
+  packages that use `http.Get` / `http.DefaultClient`: `download`,
+  `wait_http`, `mcp`, `llm`. Same pattern likely recurs.
 - **`sudo -S` shell-out reimplemented in 6 packages** (F005).
   Inconsistent guard handling means become-on-unsupported-host
   produces 3 different error shapes today.
