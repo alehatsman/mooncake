@@ -19,15 +19,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/pathutil"
 )
 
 const (
-	actionName        = "text.line"
-	statePresent      = "present"
-	stateAbsent       = "absent"
-	defaultFileMode   = 0o644
-	atomicTempSuffix  = ".tmp"
+	actionName       = "text.line"
+	statePresent     = "present"
+	stateAbsent      = "absent"
+	defaultFileMode  = 0o644
+	atomicTempSuffix = ".tmp"
 )
 
 // Handler implements text.line.
@@ -113,9 +112,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, fmt.Errorf("text.line: expand path: %w", err)
 	}
-	if pathErr := pathutil.ValidateNoPathTraversal(path); pathErr != nil {
-		ctx.GetLogger().Debugf("text.line: path validation warning: %v", pathErr)
-	}
+	// F033: removed pathutil.ValidateNoPathTraversal — path here is the
+	// result of PathUtil.ExpandPath which always produces an absolute
+	// path for user-config inputs (the common case is "/etc/foo.conf");
+	// the validator's "absolute path not allowed" branch always fires,
+	// the warning is suppressed at default log level, and the handler
+	// proceeds to read/write the path the user asked for. The check was
+	// dead-code theater. If a real "stay-under-base" check is needed in
+	// future, use pathutil.SafeJoin (see F033 part A in
+	// repo_apply_patchset).
 
 	rendered, err := renderFields(ctx, tl)
 	if err != nil {
