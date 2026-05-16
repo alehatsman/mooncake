@@ -3,6 +3,7 @@ package agentd
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"log/slog"
@@ -89,17 +90,24 @@ func accessLogMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 }
 
 // bearerAuthMiddleware rejects requests whose Authorization header does not
-// match `Bearer <token>` exactly. Constant-time compare keeps the response
-// time independent of where the mismatch occurs in the string.
+// match `Bearer <token>` exactly.
+//
+// F029: both sides are SHA-256'd to a fixed-size 32-byte digest before
+// ConstantTimeCompare, so the comparison is truly constant-time regardless
+// of the attacker's input length. subtle.ConstantTimeCompare alone
+// short-circuits on a length mismatch — that leaks token length via
+// response timing. Hashing erases the leak; SHA-256 of "Bearer "+32 chars
+// is in the microsecond range and cheaper than the cost of the surrounding
+// HTTP machinery.
 //
 // Used on the TCP listener only. The unix socket relies on filesystem
 // permissions (0600) for access control.
 func bearerAuthMiddleware(token string) func(http.Handler) http.Handler {
-	expected := []byte("Bearer " + token)
+	expectedHash := sha256.Sum256([]byte("Bearer " + token))
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			got := []byte(r.Header.Get("Authorization"))
-			if subtle.ConstantTimeCompare(got, expected) != 1 {
+			gotHash := sha256.Sum256([]byte(r.Header.Get("Authorization")))
+			if subtle.ConstantTimeCompare(gotHash[:], expectedHash[:]) != 1 {
 				w.Header().Set("WWW-Authenticate", `Bearer realm="mooncake-agentd"`)
 				writeError(w, http.StatusUnauthorized, "unauthorized", "bearer token required")
 				return
