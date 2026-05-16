@@ -70,6 +70,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("PkgRepoReverseInfo", func() any { return &PkgRepoReverseInfo{} })
 }
 
 func (h *Handler) Metadata() actions.ActionMetadata {

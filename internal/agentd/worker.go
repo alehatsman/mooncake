@@ -226,12 +226,14 @@ func (w *Worker) executeRun(runID string) {
 // writeKernelResult writes the apply.KernelResult returned by apply.Runner
 // to the run directory as result.json.
 //
-// Notes on the wire shape: Result.ReverseData and Result.Detail are
-// json:"-" by design, so they don't cross the wire today — the
-// controller-side fleet.Reverse therefore composes an empty FleetPlan
-// for actions whose Reverser depends on ReverseData. Surfacing those
-// fields is a separate spec (R2.1c phase 2 — per-handler ReverseInfo
-// registry with type discriminator).
+// Notes on the wire shape: Result.Detail stays json:"-" (plan-time
+// only). Result.ReverseData rides through executor.Result's custom
+// MarshalJSON / UnmarshalJSON as a discriminator-tagged envelope
+// (R2.1c phase 2) so per-peer Reverse() composes against the
+// pre-state each handler captured. Unknown discriminators on the
+// decode side fall through to ReverseData=nil, preserving the
+// pre-phase-2 refusal path for forward-compat with mixed-version
+// fleets.
 func (w *Worker) writeKernelResult(runID string, kr *apply.KernelResult) error {
 	data, err := json.MarshalIndent(kr, "", "  ")
 	if err != nil {

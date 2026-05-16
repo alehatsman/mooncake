@@ -114,28 +114,29 @@ type FleetPlan struct {
 // ErrPerPeerKernelResultNotWired is the typed sentinel
 // FleetKernelResult.Reverse() returns when no peer carries a
 // populated apply.KernelResult. Callers can check via errors.Is to
-// distinguish "wire gap" from a per-peer Reverse failure.
+// distinguish "wire gap" (a peer's daemon didn't surface its
+// KernelResult — pre-R2.1c version, or a daemon that hasn't
+// reached the terminal state yet) from a per-peer Reverse failure.
 var ErrPerPeerKernelResultNotWired = errors.New(
-	"fleet: per-peer KernelResult.Steps not carried over SSE wire yet; " +
-		"fleet-scope Reverse requires daemon to surface typed Steps + ReverseData " +
-		"(tracked as the wire-protocol follow-on to R2.1b)")
+	"fleet: per-peer KernelResult is nil for every peer; " +
+		"this typically means the daemon hasn't surfaced its " +
+		"apply.KernelResult yet (run not terminal, or pre-R2.1c daemon)")
 
 // Reverse composes a FleetPlan by calling Reverse() on each peer's
 // populated KernelResult and assembling the results.
 //
-// Today (Option B, R2.1b sub-scope): every PeerResult.KernelResult
-// is nil because the controller-side SSE wire doesn't carry typed
-// Steps + ReverseData back from the daemon. When that's true,
-// Reverse() returns ErrPerPeerKernelResultNotWired — a typed sentinel
-// frontends can check via errors.Is.
+// Wire state today (R2.1c phase 1+2 landed): each PeerResult.KernelResult
+// arrives populated from the daemon via GET /v1/runs/{id}/result,
+// carrying typed Steps and discriminator-tagged ReverseData. Per-peer
+// Reverse() composes against the captured pre-state without falling
+// back to the refusal stubs that an empty ReverseData would surface.
 //
-// Once the wire catches up (daemon serialises its apply.KernelResult
-// via GET /v1/runs/{id}/result or a richer run.completed payload),
-// PeerResult.KernelResult will be populated and Reverse() composes
-// per-peer KernelResult.Reverse() into a FleetPlan with one entry
-// per peer. The composition algorithm here is forward-compatible:
-// it walks Peers, calls KernelResult.Reverse() on each populated
-// entry, and surfaces the first per-peer error (no swallowing).
+// ErrPerPeerKernelResultNotWired is now reserved for the "daemon
+// hasn't completed yet" / "pre-R2.1c daemon" cases. Mixed-version
+// fleets degrade gracefully: an unknown ReverseData discriminator
+// decodes to nil and the handler's existing
+// "no ReverseData captured" refusal surfaces per-step, which is
+// the same shape as a true wire-gap.
 //
 // If any per-peer Reverse fails, the partial FleetPlan up to that
 // point is discarded and the error is wrapped with the peer name.

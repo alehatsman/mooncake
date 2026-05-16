@@ -15,6 +15,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
+// R2.1c phase 2: register the brew-driver ReverseData type alongside
+// the apt-driver one in handler.go. Brew taps are a sub-driver of
+// pkg.repo, not a separate handler — but they stash their own typed
+// payload (PkgRepoBrewReverseInfo) on Result.ReverseData, so the
+// discriminator-tagged wire encoding needs both names known to
+// decode correctly.
+func init() {
+	executor.RegisterReverseDataType("PkgRepoBrewReverseInfo", func() any { return &PkgRepoBrewReverseInfo{} })
+}
+
 // brewCmdTimeout caps every brew subprocess so a wedged remote can't
 // hang the whole apply. brew tap fetches a git remote, brew untap is
 // local; 60s covers slow networks without inviting indefinite waits.

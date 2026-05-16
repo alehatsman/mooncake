@@ -46,6 +46,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("OsCronReverseInfo", func() any { return &OsCronReverseInfo{} })
 }
 
 func (h *Handler) Metadata() actions.ActionMetadata {
