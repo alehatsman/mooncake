@@ -7,6 +7,7 @@ file: internal/explain/explain_test.go
 lines: 1066-1078
 status: done
 resolved_by: worktree-fix-f010
+verified: 2026-05-16 — regression test passes (go test green)
 ---
 
 ## What

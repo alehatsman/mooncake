@@ -7,6 +7,7 @@ files:
   - internal/actions/file/handler.go (lines 224, 298, 416)
   - internal/actions/copy/handler.go (line 192)
 status: open
+verified: 2026-05-16 — os.ReadFile unbounded at copy/handler.go:192, file/handler.go:224,298,416. Finding accurate, no fix yet
 ---
 
 ## What

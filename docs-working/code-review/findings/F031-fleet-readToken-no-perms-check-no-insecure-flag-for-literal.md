@@ -6,6 +6,7 @@ package: cmd
 file: cmd/fleet.go
 lines: 220-253
 status: open
+verified: 2026-05-16 — cmd/fleet.go:233-243 `file:` skips perms check; line 244-249 `literal:` accepts without --insecure flag (unlike --sudo-pass which gates on --insecure-sudo-pass). Finding accurate, no fix yet
 ---
 
 ## What
