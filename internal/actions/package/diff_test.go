@@ -15,9 +15,9 @@ import (
 func TestDiff_Pkg_StateToOperation(t *testing.T) {
 	h := &Handler{}
 	tests := []struct {
-		name      string
-		state     string
-		wantOp    actions.Operation
+		name   string
+		state  string
+		wantOp actions.Operation
 	}{
 		{"empty defaults to present → create", "", actions.OpCreate},
 		{"present → create", "present", actions.OpCreate},
@@ -56,7 +56,7 @@ func TestDiff_Pkg_AfterSnapshotPopulated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	after := d.After.(*PkgSnapshot)
+	after := d.After.(*actions.PackageDiff)
 	if len(after.Names) != 1 || after.Names[0] != "vim" {
 		t.Errorf("After.Names = %v, want [vim]", after.Names)
 	}
@@ -83,7 +83,7 @@ func TestDiff_Pkg_MultipleNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	after := d.After.(*PkgSnapshot)
+	after := d.After.(*actions.PackageDiff)
 	if len(after.Names) != 3 {
 		t.Errorf("After.Names len = %d, want 3", len(after.Names))
 	}

@@ -996,7 +996,7 @@ func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 		}
 
 		if showDiff && sym == "↑" {
-			if r := diff.Lookup(ins.Detail); r != nil {
+			if r := diff.Lookup(ins.Detail, ins.Diff); r != nil {
 				var buf strings.Builder
 				if err := r.Render(&buf, diff.FormatText); err == nil && buf.Len() > 0 {
 					fmt.Print(buf.String())

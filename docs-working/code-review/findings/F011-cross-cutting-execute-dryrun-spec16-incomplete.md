@@ -4,7 +4,7 @@ title: Cross-cutting — 24 action handlers still carry Execute + DryRun + Run (
 severity: smell
 package: cross-cutting
 files: internal/actions/{artifact_capture,artifact_validate,assert,command,download,file_insert,file_delete_range,file_patch_apply,file_replace,include_vars,package,preset,print,repo_apply_patchset,repo_search,repo_tree,service,shell,template,tool,unarchive,vars}/handler.go
-status: open
+status: done
 progress: |
   Batch 1 (worktree-fix-f011-batch1, 2026-05-16): 5 small handlers
   migrated — shell, command, print, vars, include_vars. Pattern: Run
@@ -24,10 +24,17 @@ progress: |
   non-existent /tmp path. repo_search + repo_tree's Run delegated to
   Execute via plan-mode result patching — Execute renamed to private
   runImpl, Run calls runImpl + stamps Checkable/Reason on plan mode.
-  10 handlers remain: artifact_capture, artifact_validate, assert,
-  download, file_insert, file_patch_apply, package, repo_apply_patchset,
-  template, unarchive.
-verified: 2026-05-16 — batches 1 (936751f, 5 handlers) + 2 (f05a052e, preset) both confirmed: zero Execute/DryRun methods in shell/command/print/vars/include_vars/preset handler.go; tests green; ~15 handlers remain
+  Batch 4 (close-out, 2026-05-16): the remaining 10 handlers landed
+  across three commits — 4fffeb3e (file_insert + file_patch_apply +
+  package + template, full delete pattern), 8f0a90e2 (artifact_capture
+  + download + repo_apply_patchset + unarchive, Execute→runApply
+  rename + DryRun delete), c9ee5dad (artifact_validate + assert,
+  inline). Follow-up 69aba93a removed the dead helpers left over
+  after deletion and restored NamesExpr in package.Run. Merged to
+  master at bf2fdd77 with commit message "Spec-16 migration complete,
+  all 21 handlers Run-only" (21 not 24 — service + tool migrated in
+  parallel by other agents during the campaign).
+verified: 2026-05-17 — confirmed done on master @ f2bfec0a. `grep -rln '^func \(h \*Handler\) (Execute|DryRun)' internal/actions/` returns zero matches across all 21 handler.go files (artifact_capture, artifact_validate, assert, command, download, file, file_delete_range, file_insert, file_patch_apply, file_replace, include_vars, package, preset, print, repo_apply_patchset, repo_search, repo_tree, service, shell, template, tool, unarchive, vars). Spec-16 unified entry point is the only path. NB: the closeout commit fa6b053c flipped this finding's TODO.md entry but never updated the frontmatter — caught and corrected here.
 ---
 
 ## What

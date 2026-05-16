@@ -44,8 +44,9 @@ type Diff struct {
 
 	// Before is the pre-change state, action-defined shape. nil for
 	// OpCreate (nothing was there). For file.write: a FileSnapshot
-	// (path + size + sha256 + mode + ...). For pkg: a PkgSnapshot
-	// (name + installed-version-before).
+	// (path + size + sha256 + mode + ...). For pkg: typically nil
+	// (the handler reports intent only and does not probe the
+	// package manager at plan time).
 	Before any `json:"before,omitempty"`
 
 	// After is the post-change state. nil for OpDelete. Same typed

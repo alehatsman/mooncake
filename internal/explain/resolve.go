@@ -14,14 +14,7 @@ import (
 // Options tune the resolver. Zero value is the typical agent call.
 type Options struct {
 	// ExamplesLimit caps the number of example excerpts returned for a
-	// kind: action result. Semantics (F044):
-	//   < 0  — caller has no preference; use the default of 3.
-	//   == 0 — caller explicitly asked for no examples.
-	//   > 0  — return up to that many examples.
-	//
-	// The MCP / CLI boundary validates the user-supplied range (must be
-	// 0..10 inclusive). The MCP layer maps "argument absent" to -1 so
-	// this field can carry the absent-vs-zero distinction.
+	// kind: action result. <= 0 means use the default (3).
 	ExamplesLimit int
 
 	// ExamplesRoot is the directory to scan for *.yml example files.
