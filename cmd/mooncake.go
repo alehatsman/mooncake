@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -20,6 +21,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
+	"github.com/alehatsman/mooncake/internal/factsfmt"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pilot"
@@ -408,10 +410,144 @@ func factsCommand(c *cli.Context) error {
 		encoder.SetIndent("", "  ")
 		return encoder.Encode(f)
 	case outputFormatText:
-		explain.DisplayFacts(f)
+		factsfmt.DisplayFacts(f)
 		return nil
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// explainCommand resolves a noun (action verb, run id, resource handle, op id)
+// and renders the typed payload as text / JSON / YAML. See spec-68.
+//
+// Wave 1: only kind:action resolves; run / resource / op fall through to a
+// typed not_found.
+func explainCommand(c *cli.Context) error {
+	if c.NArg() != 1 {
+		return fmt.Errorf("usage: mooncake explain <noun>")
+	}
+	noun := c.Args().First()
+
+	format := c.String("format")
+	switch format {
+	case outputFormatText, outputFormatJSON, outputFormatYAML:
+	default:
+		return fmt.Errorf("invalid format: %s (use 'text', 'json', or 'yaml')", format)
+	}
+
+	result := explain.Resolve(noun, explain.Options{
+		ExamplesLimit: c.Int("examples-limit"),
+	})
+
+	// not_found on action lookups is an agent-recoverable signal, but on the
+	// CLI we want a non-zero exit so shell pipelines / `&&` chains stop.
+	switch format {
+	case outputFormatJSON:
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(result); err != nil {
+			return err
+		}
+	case outputFormatYAML:
+		enc := yaml.NewEncoder(os.Stdout)
+		enc.SetIndent(yamlIndentSpaces)
+		defer func() { _ = enc.Close() }()
+		if err := enc.Encode(result); err != nil {
+			return err
+		}
+	case outputFormatText:
+		renderExplainText(os.Stdout, result)
+	}
+
+	if result.Kind == explain.KindNotFound {
+		return cli.Exit("", 1)
+	}
+	return nil
+}
+
+func renderExplainText(w io.Writer, r explain.Result) {
+	switch r.Kind {
+	case explain.KindAction:
+		renderExplainActionText(w, r.Action)
+	case explain.KindNotFound:
+		renderExplainNotFoundText(w, r.NotFound)
+	default:
+		fmt.Fprintf(w, "kind: %s (no text renderer in wave 1)\n", r.Kind)
+	}
+}
+
+func renderExplainActionText(w io.Writer, p *explain.ActionPayload) {
+	fmt.Fprintf(w, "action: %s\n", p.Name)
+	if p.Metadata.Description != "" {
+		fmt.Fprintf(w, "  description: %s\n", p.Metadata.Description)
+	}
+	if p.Metadata.Category != "" {
+		fmt.Fprintf(w, "  category:    %s\n", p.Metadata.Category)
+	}
+	if p.Metadata.Version != "" {
+		fmt.Fprintf(w, "  version:     %s\n", p.Metadata.Version)
+	}
+	if len(p.Metadata.SupportedPlatforms) > 0 {
+		fmt.Fprintf(w, "  platforms:   %s\n", strings.Join(p.Metadata.SupportedPlatforms, ", "))
+	}
+	fmt.Fprintf(w, "  dry_run:     %t\n", p.Metadata.SupportsDryRun)
+	fmt.Fprintf(w, "  become:      %t\n", p.Metadata.SupportsBecome)
+	fmt.Fprintf(w, "  check:       %t\n", p.Metadata.ImplementsCheck)
+
+	if p.Schema != nil && len(p.Schema.Properties) > 0 {
+		fmt.Fprintln(w, "\nschema:")
+		required := map[string]bool{}
+		for _, r := range p.Schema.Required {
+			required[r] = true
+		}
+		names := make([]string, 0, len(p.Schema.Properties))
+		for n := range p.Schema.Properties {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		for _, n := range names {
+			prop := p.Schema.Properties[n]
+			marker := " "
+			if required[n] {
+				marker = "*"
+			}
+			t := prop.Type
+			if t == "" && len(prop.OneOf) > 0 {
+				t = strings.Join(prop.OneOf, "|")
+			}
+			fmt.Fprintf(w, "  %s %-20s %s", marker, n, t)
+			if prop.Description != "" {
+				fmt.Fprintf(w, "  — %s", prop.Description)
+			}
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintln(w, "  (* required)")
+	}
+
+	fmt.Fprintln(w, "\ndiff:    ", p.DiffShape.Note)
+	fmt.Fprintln(w, "reverse: ", p.ReverseShape.Caveat)
+
+	if len(p.Examples) > 0 {
+		fmt.Fprintln(w, "\nexamples:")
+		for _, ex := range p.Examples {
+			fmt.Fprintf(w, "  %s\n", ex.Path)
+			for _, line := range strings.Split(strings.TrimRight(ex.Excerpt, "\n"), "\n") {
+				fmt.Fprintf(w, "    %s\n", line)
+			}
+		}
+	}
+}
+
+func renderExplainNotFoundText(w io.Writer, p *explain.NotFoundPayload) {
+	fmt.Fprintf(w, "not_found: %q\n", p.Noun)
+	if p.Reason != "" {
+		fmt.Fprintf(w, "  reason: %s\n", p.Reason)
+	}
+	if len(p.Candidates) > 0 {
+		fmt.Fprintln(w, "  did you mean:")
+		for _, cand := range p.Candidates {
+			fmt.Fprintf(w, "    - %s (%s)\n", cand.ID, cand.Kind)
+		}
 	}
 }
 
@@ -1058,6 +1194,25 @@ func createApp() *cli.App {
 					},
 				},
 				Action: factsCommand,
+			},
+			{
+				Name:      "explain",
+				Usage:     "Look up typed information about a mooncake noun (action verb, run, resource, op)",
+				ArgsUsage: "<noun>",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Value:   outputFormatText,
+						Usage:   "Output format: text, json, or yaml",
+					},
+					&cli.IntFlag{
+						Name:  "examples-limit",
+						Value: 3,
+						Usage: "Max example excerpts to include for kind:action results",
+					},
+				},
+				Action: explainCommand,
 			},
 			{
 				Name:  "metrics",
