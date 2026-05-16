@@ -5,7 +5,8 @@ severity: bug
 package: internal/secrets/resolver
 file: internal/secrets/resolver/resolve.go
 lines: 69-115
-status: open
+status: done
+resolved_by: worktree-fix-f019
 ---
 
 ## What
