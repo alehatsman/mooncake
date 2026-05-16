@@ -5,7 +5,7 @@
 // # What it is
 //
 // Mooncake is a typed mutation kernel (see
-// docs-working-v2/vision/kernel.md). Every step in a compiled plan
+// docs-working/vision/kernel.md). Every step in a compiled plan
 // carries typed action fields. The YAML pre-pass in
 // internal/config/secret_tag.go rewrites `!secret env:FOO` tagged
 // scalars into sentinel-marker strings; those markers flow through
@@ -47,5 +47,5 @@
 //     lives in internal/plan and internal/template respectively.
 //
 // See spec-23 §3 (!secret typed refs) and
-// docs-working-v2/vision/kernel.md for the kernel framing.
+// docs-working/vision/kernel.md for the kernel framing.
 package resolver

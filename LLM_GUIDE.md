@@ -342,7 +342,7 @@ self-policing as the project grows. When a PR crosses one of these
 thresholds, the reviewer asks the question; nothing auto-blocks.
 
 Grounded in the 2026-05-15 arch report
-(`docs-working-v2/arch-report/2026-05-15-arch-report.md`).
+(`docs-working/arch-report/2026-05-15-arch-report.md`).
 
 ### 1. Handler LOC > 1,500 → split
 
@@ -356,7 +356,7 @@ or into sibling action types.
 
 Reason: every universal field on `Step` is a concept every step type
 must ignore or honor. The closed action set is the kernel's moat
-(see `docs-working-v2/vision/kernel.md`); the cost of that is a
+(see `docs-working/vision/kernel.md`); the cost of that is a
 monotonically-growing `config.go`. Today's count is ≈25. Past 40,
 the field has become a tag everyone has to ignore, and the question
 "why does *every* step need this?" stops having a good answer.
@@ -382,6 +382,6 @@ function.
 These are documented, not hidden. New violations should be
 explicitly defended in the PR description that lands them.
 
-See `docs-working-v2/arch-report/2026-05-15-refactoring-plan.md` §2
+See `docs-working/arch-report/2026-05-15-refactoring-plan.md` §2
 (R0.4) for the rationale; this is the project's first formal soft-cap
 policy.

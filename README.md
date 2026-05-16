@@ -178,7 +178,7 @@ Quick links:
 - [Actions reference](https://mooncake.alehatsman.com/guide/config/actions/)
 - [Complete reference](https://mooncake.alehatsman.com/guide/config/reference/)
 - [AI / LLM specification](https://mooncake.alehatsman.com/ai-specification/)
-- [Presets](https://mooncake.alehatsman.com/guide/presets/) — parameterized YAML workflows (in-tree library being retired; module-system replacement in design — see `docs-working-v2/vision/sharing_and_modules.md`)
+- [Presets](https://mooncake.alehatsman.com/guide/presets/) — parameterized YAML workflows (in-tree library being retired; module-system replacement in design — see `docs-working/vision/sharing_and_modules.md`)
 
 ### Local examples
 

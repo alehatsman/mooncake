@@ -2,7 +2,7 @@
 // actions.Performer — mode-aware filesystem and command primitives used
 // by action handlers.
 //
-// Spec 16 (docs-working/spec-16-unify-dryrun-execute.md) collapses each
+// Spec 16 (docs-working/specs/done/spec-16-unify-dryrun-execute.md) collapses each
 // handler's parallel Execute / DryRun / Check methods into a single
 // Run(ctx, step) method. Inside Run, handlers call Performer methods
 // instead of os.* directly. The Performer consults the current mode and

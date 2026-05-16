@@ -874,7 +874,7 @@ func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executo
 // All filesystem mutations route through ctx.Effects() so the same
 // defaulting and predicate logic decides both the preview and the real
 // run. This is the structural fix for the drift class of bugs that
-// motivated Spec 16 (see docs-working/spec-16-unify-dryrun-execute.md).
+// motivated Spec 16 (see docs-working/specs/done/spec-16-unify-dryrun-execute.md).
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	file := step.FileWrite
 

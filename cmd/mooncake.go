@@ -295,7 +295,7 @@ func run(c *cli.Context) error {
 	// flag-parse + Config-construct + Runner.Run shim. The kernel's
 	// Apply() entry point is callable directly from MCP / agent loop /
 	// future SDK without going through CLI parsing. See
-	// docs-working-v2/vision/kernel.md for the kernel framing.
+	// docs-working/vision/kernel.md for the kernel framing.
 	cfg := &apply.Config{
 		ConfigPath:        configPath,
 		VarsFiles:         resolvedVars,

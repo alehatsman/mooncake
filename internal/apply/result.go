@@ -1,7 +1,7 @@
 package apply
 
 // result.go materializes the kernel-surface contract from
-// docs-working-v2/vision/kernel.md: a typed *KernelResult carrying
+// docs-working/vision/kernel.md: a typed *KernelResult carrying
 // the plan that ran, per-step outcomes, the audit event tail, and
 // summary counters. KernelResult.Reverse() exposes the
 // transaction-walker pattern (LIFO over completed reversible steps;

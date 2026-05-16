@@ -2,7 +2,7 @@
 // Mooncake's compound steps — transactions (spec-30, LIFO rollback)
 // and try/catch/finally (spec-23 §2, branch routing).
 //
-// In kernel terms (see docs-working-v2/vision/kernel.md), compound
+// In kernel terms (see docs-working/vision/kernel.md), compound
 // steps are graph-shape concepts: transactions are grouping
 // subgraphs, try/catch/finally are branch-edge routings. This
 // package exposes the typed state + pure-logic operations so
@@ -27,5 +27,5 @@
 //     — they're a thin convenience shim over the free functions here.
 //
 // This package is the result of R0.1 in
-// docs-working-v2/arch-report/2026-05-15-refactoring-plan.md.
+// docs-working/arch-report/2026-05-15-refactoring-plan.md.
 package control

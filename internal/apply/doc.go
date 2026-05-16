@@ -1,6 +1,6 @@
 // Package apply implements the kernel's local-apply entry point.
 //
-// This is the Kernel.Apply() function from docs-working-v2/vision/kernel.md:
+// This is the Kernel.Apply() function from docs-working/vision/kernel.md:
 // the typed mutation kernel's local-machine execution path. Frontends
 // (CLI, MCP server, agent loop, future SDK) construct a *Config and
 // call NewRunner(cfg).Run(ctx) to invoke it; orchestration that used
@@ -23,5 +23,5 @@
 //     that; it composes apply.Runner per peer (R2.1a / R2.1b).
 //
 // This package is the result of R1.1a in
-// docs-working-v2/arch-report/2026-05-15-refactoring-plan.md.
+// docs-working/arch-report/2026-05-15-refactoring-plan.md.
 package apply

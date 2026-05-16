@@ -18,7 +18,7 @@ import "github.com/alehatsman/mooncake/internal/config"
 // ResolveReverser / ResolveCoster / ResolvePermitter). The Handler
 // interface itself is unchanged; this file adds new types only.
 //
-// See docs-working/specs/action-surface/spec-22-extended-handler-abi.md
+// See docs-working/specs/done/spec-22-extended-handler-abi.md
 // for design rationale and the per-handler implementation matrix.
 
 // ----- Diff -----------------------------------------------------------------
