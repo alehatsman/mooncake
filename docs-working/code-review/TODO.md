@@ -24,6 +24,7 @@ something else landing first.
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
 | F029 | agentd.bearerAuthMiddleware leaks Authorization-header length via timing side-channel | risk | XS | — | open |
 | F030 | security.FilePasswordProvider rejects 0400 / stricter-than-0600 modes — exact-equality check | smell | XS | — | open |
+| F031 | cmd/fleet.readToken: `literal:` accepts token w/o --insecure flag; `file:` doesn't check perms | smell | S | — | open |
 
 ## Findings index
 
@@ -59,6 +60,7 @@ something else landing first.
 | F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 | F029 | agentd bearer-auth length side-channel | risk | open | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
 | F030 | security.FilePasswordProvider mode exact-equality | smell | open | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
+| F031 | cmd/fleet.readToken no perms/insecure-flag check | smell | open | [findings/F031](./findings/F031-fleet-readToken-no-perms-check-no-insecure-flag-for-literal.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -137,6 +139,9 @@ something else landing first.
 | 2026-05-16 | `internal/agentd/middleware.go` | F029 (bearer-auth length side-channel) |
 | 2026-05-16 | `internal/security/{password,redact}.go` | F030 (file-perms exact-equality) |
 | 2026-05-16 | `internal/runlog`, `internal/fleet/transport`, `internal/lockfile`, `internal/template` | none (all clean) |
+| 2026-05-16 | `internal/scaffold` | none (clean — atomic write, embed.FS, idempotent .gitignore) |
+| 2026-05-16 | `internal/actions/wait_http`, `internal/actions/wait_command` | none (clean — proper ctx + timeouts) |
+| 2026-05-16 | `cmd/fleet.go` (readToken) | F031 |
 
 ## Cross-cutting themes / patterns to track
 
