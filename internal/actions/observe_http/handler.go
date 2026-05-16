@@ -4,6 +4,7 @@
 package observe_http
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -14,13 +15,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 const (
-	actionName       = "observe.http"
-	defaultMethod    = "GET"
-	defaultTimeout   = 3 * time.Second
-	bodySampleBytes  = 2048
+	actionName      = "observe.http"
+	defaultMethod   = "GET"
+	defaultTimeout  = 3 * time.Second
+	bodySampleBytes = 2048
 )
 
 // HTTPObservation is the typed Value payload for observe.http.
@@ -98,10 +100,18 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		timeout, _ = time.ParseDuration(o.Timeout)
 	}
 
-	client := &http.Client{Timeout: timeout}
+	// F012: base transport inherits httputil's bounded dial / TLS /
+	// response-headers timeouts so a stuck remote can't hang the probe
+	// past the per-request Timeout. SkipTLSVerify is a user opt-in
+	// override that builds a fresh Transport (otherwise the
+	// httputil.DefaultTransport's TLSClientConfig would persist across
+	// callers — sharing is the point of httputil).
+	client := &http.Client{Timeout: timeout, Transport: httputil.DefaultTransport}
 	if o.SkipTLSVerify {
 		client.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // user opt-in
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // user opt-in
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
 		}
 	}
 	// Issue #18: opt-out for redirect following. Default (nil) matches
@@ -129,7 +139,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	obs := HTTPObservation{URL: rendered, Method: method}
 	start := time.Now()
-	req, err := http.NewRequest(method, rendered, nil)
+	// F012: ctx-aware request via httputil so the canonical UA flows
+	// and any future caller ctx (e.g. agentd.Worker via F016) can
+	// abort the probe. observe.http has no caller ctx today —
+	// Background is bounded by the client.Timeout above.
+	req, err := httputil.NewRequest(context.Background(), method, rendered, nil)
 	if err != nil {
 		obs.LatencyMs = time.Since(start).Milliseconds()
 		publish(result, actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()})

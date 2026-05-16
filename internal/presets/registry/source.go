@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 // SourceType represents the type of preset source.
@@ -58,9 +61,20 @@ func FetchSource(source string, sourceType SourceType, cacheDir string, sha256ha
 }
 
 // fetchFromURL downloads a preset file from a URL.
+//
+// F012: routes through httputil's bounded-timeout Client. Caller has
+// no ctx today (preset loading runs during planner setup); a future
+// fetchFromURL(ctx, ...) signature would pick up step-level deadlines,
+// but Background here is no worse than pre-F012 behavior and is now
+// bounded by the dial / TLS / response-headers timeouts on
+// httputil.DefaultTransport.
 func fetchFromURL(url string, targetDir string) (string, error) {
 	// Download file
-	resp, err := http.Get(url) // #nosec G107 -- URL is provided by user
+	req, err := httputil.NewRequest(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("build request: %w", err)
+	}
+	resp, err := httputil.Client.Do(req) // #nosec G107 -- URL is provided by user
 	if err != nil {
 		return "", fmt.Errorf("failed to download from URL: %w", err)
 	}

@@ -8,6 +8,7 @@ package pkg_repo
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 const (
@@ -47,7 +49,7 @@ var (
 		sourcesDir:  "/etc/apt/sources.list.d",
 		keyringsDir: "/etc/apt/keyrings",
 	}
-	fetchKey = httpFetchKey
+	fetchKey    = httpFetchKey
 	updateCache = aptGetUpdate
 )
 
@@ -480,8 +482,16 @@ func writeAtomic(path string, content []byte, mode os.FileMode) error {
 }
 
 func httpFetchKey(url string) ([]byte, error) {
+	// F012: route through httputil for bounded dial / TLS /
+	// response-headers timeouts. pkg.repo's caller chain doesn't
+	// thread its step ctx down here yet — Background suffices once
+	// the transport-level timeouts are in place.
+	req, err := httputil.NewRequest(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
 	// #nosec G107 -- URL comes from user-supplied YAML.
-	resp, err := http.Get(url)
+	resp, err := httputil.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}

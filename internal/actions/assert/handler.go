@@ -3,6 +3,7 @@
 package assert
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 const (
@@ -477,8 +479,10 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	ec.Svc.Logger.Debugf("Asserting HTTP %s %s (expected status: %d)", method, url, expectedStatus)
 
-	// Create HTTP client with timeout
-	client := &http.Client{}
+	// F012: base transport inherits httputil's bounded dial / TLS /
+	// response-headers timeouts so a stuck remote can't hang past
+	// client.Timeout's wall-clock cap.
+	client := &http.Client{Transport: httputil.DefaultTransport}
 	if assertHTTP.Timeout != "" {
 		timeout, timeoutErr := time.ParseDuration(assertHTTP.Timeout)
 		if timeoutErr != nil {
@@ -502,8 +506,9 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 		bodyReader = strings.NewReader(body)
 	}
 
-	// Create HTTP request
-	req, reqErr := http.NewRequest(method, url, bodyReader)
+	// F012: ctx-aware request via httputil so canonical UA flows and
+	// future caller-driven cancellation reaches the socket.
+	req, reqErr := httputil.NewRequest(context.Background(), method, url, bodyReader)
 	if reqErr != nil {
 		return "", "", &executor.SetupError{
 			Component: "http request",
