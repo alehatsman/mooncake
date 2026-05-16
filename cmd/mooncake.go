@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/actions"
-	"github.com/alehatsman/mooncake/internal/agent"
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/effects"
@@ -23,6 +22,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/pilot"
 	"github.com/alehatsman/mooncake/internal/plan"
 	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
 	"github.com/urfave/cli/v2"
@@ -796,7 +796,7 @@ func extractUnifiedDiff(detail any) string {
 	return ""
 }
 
-func agentRunCommand(c *cli.Context) error {
+func pilotRunCommand(c *cli.Context) error {
 	goal := c.String("goal")
 	planPath := c.String("plan")
 	useStdin := c.Bool("stdin")
@@ -813,7 +813,7 @@ func agentRunCommand(c *cli.Context) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	opts := agent.RunOptions{
+	opts := pilot.RunOptions{
 		Goal:          goal,
 		PlanPath:      planPath,
 		UseStdin:      useStdin,
@@ -824,20 +824,20 @@ func agentRunCommand(c *cli.Context) error {
 	}
 
 	if provider == "claude" {
-		result, loopErr := agent.RunLoop(opts)
+		result, loopErr := pilot.RunLoop(opts)
 		if loopErr != nil {
-			fmt.Fprintf(os.Stderr, "Agent loop failed: %v\n", loopErr)
+			fmt.Fprintf(os.Stderr, "Pilot loop failed: %v\n", loopErr)
 			if result != nil && result.FinalLog != nil {
-				printAgentSummary(result.FinalLog)
+				printPilotSummary(result.FinalLog)
 			}
 			return loopErr
 		}
 
-		fmt.Printf("Agent completed: %d iterations\n", len(result.Iterations))
+		fmt.Printf("Pilot completed: %d iterations\n", len(result.Iterations))
 		fmt.Printf("Stop reason: %s\n", result.StopReason)
 		if result.FinalLog != nil {
 			fmt.Println()
-			printAgentSummary(result.FinalLog)
+			printPilotSummary(result.FinalLog)
 		}
 		return nil
 	}
@@ -856,16 +856,16 @@ func agentRunCommand(c *cli.Context) error {
 
 	opts.PlanPath = planPath
 
-	log, err := agent.Run(opts)
+	log, err := pilot.Run(opts)
 	if err != nil {
 		return err
 	}
 
-	printAgentSummary(log)
+	printPilotSummary(log)
 	return nil
 }
 
-func printAgentSummary(log *agent.IterationLog) {
+func printPilotSummary(log *pilot.IterationLog) {
 	fmt.Printf("Iteration: %d\n", log.Iteration)
 	fmt.Printf("Status: %s\n", log.Status)
 	fmt.Printf("Files touched: %d\n", log.DiffStat.Files)
@@ -1156,12 +1156,12 @@ func createApp() *cli.App {
 				},
 			},
 			{
-				Name:  "agent",
-				Usage: "Agent operations",
+				Name:  "pilot",
+				Usage: "Pilot operations",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "run",
-						Usage: "Execute agent iteration",
+						Usage: "Execute pilot iteration",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "goal",
@@ -1193,7 +1193,7 @@ func createApp() *cli.App {
 								Usage: "Maximum iterations for loop mode",
 							},
 						},
-						Action: agentRunCommand,
+						Action: pilotRunCommand,
 					},
 				},
 			},

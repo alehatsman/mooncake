@@ -1,8 +1,8 @@
 // Command pilot-evals runs the mooncake pilot evaluation harness.
 //
 // For each (goal, snapshot, assertions) tuple in goals/, the runner
-// builds a system+user prompt via internal/agent.BuildPrompt, calls
-// internal/llm.NewClient().GeneratePlan, then runs the goal's
+// builds a system+user prompt via internal/pilot.BuildPrompt, calls
+// internal/pilot/llm.NewClient().GeneratePlan, then runs the goal's
 // assertions against the returned plan YAML. Reports pass/fail per
 // goal plus a summary.
 //
@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alehatsman/mooncake/internal/agent"
-	"github.com/alehatsman/mooncake/internal/llm"
+	"github.com/alehatsman/mooncake/internal/pilot"
+	"github.com/alehatsman/mooncake/internal/pilot/llm"
 	"github.com/alehatsman/mooncake/testing-next/pilot-evals/assertions"
 	"gopkg.in/yaml.v3"
 )
@@ -118,7 +118,7 @@ func runOne(g goalFile, snapsDir string, client llm.Client, dryRun bool, timeout
 
 	// Build the prompt — exercises the real prompt builder so prompt
 	// regressions surface here.
-	_, _, err = agent.BuildPrompt(agent.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes})
+	_, _, err = pilot.BuildPrompt(pilot.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes})
 	if err != nil {
 		fmt.Printf("    FAIL: build prompt: %v\n", err)
 		return false
@@ -131,7 +131,7 @@ func runOne(g goalFile, snapsDir string, client llm.Client, dryRun bool, timeout
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	sys, usr, _ := agent.BuildPrompt(agent.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes})
+	sys, usr, _ := pilot.BuildPrompt(pilot.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes})
 	t0 := time.Now()
 	planYAML, err := client.GeneratePlan(ctx, sys, usr, g.Model)
 	dt := time.Since(t0)

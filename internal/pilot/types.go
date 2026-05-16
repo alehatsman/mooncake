@@ -1,4 +1,4 @@
-package agent
+package pilot
 
 type Snapshot struct {
 	Branch       string   `json:"branch"`
