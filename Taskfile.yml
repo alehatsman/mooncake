@@ -167,7 +167,7 @@ tasks:
   # output is easy to scan in CI logs and pre-commit transcripts.
   # ---------------------------------------------------------------------------
   ci:
-    desc: 'Full pre-commit gate: build + test-race + lint + scan + docs/schema + arch + dupl'
+    desc: 'Full pre-commit gate: build + test-race + lint + scan + docs/schema + arch + budget + dupl'
     cmds:
       - task: ci:build
       - task: ci:test
@@ -175,6 +175,7 @@ tasks:
       - task: ci:vuln
       - task: ci:regen-and-check
       - task: ci:arch
+      - task: ci:budget
       - task: ci:dupl
       - echo ""
       - echo "✓ All checks green — safe to commit."
@@ -182,55 +183,88 @@ tasks:
   ci:build:
     internal: true
     cmds:
-      - 'echo "[1/7] build"'
+      - 'echo "[1/8] build"'
       - go build -o {{.BIN}} ./cmd
 
   ci:test:
     internal: true
     cmds:
-      - 'echo "[2/7] test -race"'
+      - 'echo "[2/8] test -race"'
       - go test -race {{.PKG}}
 
   ci:lint:
     internal: true
     cmds:
-      - 'echo "[3/7] golangci-lint"'
+      - 'echo "[3/8] golangci-lint"'
       - golangci-lint run {{.PKG}}
 
   ci:vuln:
     internal: true
     cmds:
-      - 'echo "[4/7] govulncheck"'
+      - 'echo "[4/8] govulncheck"'
       - govulncheck {{.PKG}}
 
   ci:regen-and-check:
     internal: true
     cmds:
-      - 'echo "[5/7] regen docs + schema, then verify clean"'
+      - 'echo "[5/8] regen docs + schema, then verify clean"'
       - make docs-generate >/dev/null
       - make schema-generate >/dev/null
       - make docs-check
       - make schema-check
 
+  # Non-blocking analysis stages — each prints its findings so an
+  # agent reading the pre-commit transcript can decide whether to
+  # address them before the commit lands. None of them fails the
+  # gate; they're review-time prompts, not hard rules.
   ci:arch:
     internal: true
     cmds:
-      - 'echo "[6/7] arch-snapshot (local only — file is gitignored)"'
+      - 'echo "[6/8] arch-snapshot (regenerated; file is gitignored)"'
       - bash ./scripts/arch-snapshot.sh >/dev/null
+      - |
+        f=docs-working/ARCH_SNAPSHOT.md
+        if [ ! -f "$f" ]; then echo "  (snapshot file missing — skipping summary)"; exit 0; fi
+        # Top 5 packages by LOC (the Packages section is a markdown table).
+        echo "  Top packages by LOC:"
+        awk '/^\| `/{print "    " $0}' "$f" | head -5
+        # God files + hotspot sections are fenced code blocks of plain
+        # "<n> <path>" lines. Filter by leading-digit lines inside the
+        # section range.
+        god=$(awk '/^## God files/,/^## [^G]/' "$f" | grep -cE '^[[:space:]]*[0-9]+ ' || true)
+        echo "  God files (>500 LOC, non-test): $god"
+        echo "  Top cyclomatic hotspots:"
+        awk '/^## Cyclomatic hotspots/,/^## [^C]/' "$f" | grep -E '^[[:space:]]*[0-9]+ ' | head -3 | sed 's/^/    /'
+
+  ci:budget:
+    internal: true
+    cmds:
+      - 'echo "[7/8] CLAUDE.md soft-cap budget"'
+      - bash ./scripts/budget-status.sh | sed 's/^/  /'
 
   ci:dupl:
     internal: true
     cmds:
-      - 'echo "[7/7] dupl (production-code duplication report)"'
+      - 'echo "[8/8] dupl (production-code duplication report)"'
       - |
         if ! command -v dupl >/dev/null 2>&1 && ! [ -x "$(go env GOPATH)/bin/dupl" ]; then
           echo "  dupl not installed — run 'task install-tools'. Skipping."
           exit 0
         fi
-        out=$(dupl -threshold 100 -plumbing . 2>&1 | grep -v "_test.go" || true)
-        if [ -n "$out" ]; then
-          count=$(echo "$out" | wc -l)
-          echo "  $((count / 2)) clone pair(s) in production code (informational; not blocking)."
-        else
-          echo "  no production duplication at threshold 100."
-        fi
+        dupl -threshold 100 -plumbing . 2>&1 | grep -v "_test.go" | python3 -c '
+        import sys
+        pairs = set()
+        for line in sys.stdin:
+            parts = line.strip().split(": duplicate of ")
+            if len(parts) == 2:
+                pairs.add(tuple(sorted(parts)))
+        def n(rng):
+            lo, hi = rng.split(":")[-1].split("-"); return int(hi) - int(lo) + 1
+        ranked = sorted(pairs, key=lambda p: -n(p[0]))
+        if not ranked:
+            print("  no production duplication at threshold 100.")
+        else:
+            print(f"  {len(ranked)} production clone pair(s) at threshold 100 (informational):")
+            for a, b in ranked:
+                print(f"    {n(a):>3}L  {a}  <-->  {b}")
+        '
