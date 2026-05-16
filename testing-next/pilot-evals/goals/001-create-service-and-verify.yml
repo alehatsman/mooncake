@@ -1,0 +1,15 @@
+goal: |
+  Start the nginx service on the target host and verify it is running.
+  If nginx is not installed yet, install it first. The plan must be
+  safe to re-run.
+
+snapshot: ubuntu-24-04-clean
+provider: anthropic-http
+model: claude-sonnet-4-7
+
+assertions:
+  - schema_valid
+  - contains_step shell
+  - contains_step assert
+  - step_count <= 10
+  - step_count >= 2
