@@ -17,14 +17,13 @@ something else landing first.
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
 | F008 | tool.renderToolTemplates: 9× manual field render | readability | XS | — | open |
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
-| F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
-| F030 | security.FilePasswordProvider rejects 0400 / stricter-than-0600 modes — exact-equality check | smell | XS | — | open |
-| F031 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
-| F032 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
+| F031 | cmd/fleet.readToken: `literal:` accepts token w/o --insecure flag; `file:` doesn't check perms | smell | S | — | open |
+| F033 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
+| F034 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
 
 ## Findings index
 
@@ -39,7 +38,7 @@ something else landing first.
 | F007 | tool: http no timeout / context | risk | **done** | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
 | F008 | tool.renderToolTemplates manual repetition | readability | open | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
 | F009 | explain.DisplayFacts section split | smell | open | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
-| F010 | explain TestDisplayFacts_NilFacts is dead | smell | open | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
+| F010 | explain TestDisplayFacts_NilFacts is dead | smell | **done** | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
 | F011 | cross-cutting: 24 handlers w/ legacy paths | smell | open | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | open | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
@@ -59,9 +58,10 @@ something else landing first.
 | F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
 | F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 | F029 | agentd bearer-auth length side-channel | risk | **done** | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
-| F030 | security.FilePasswordProvider mode exact-equality | smell | open | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
-| F031 | vars action bypasses secrets resolver | bug | open | [findings/F031](./findings/F031-vars-action-bypasses-secrets-resolver.md) |
-| F032 | shell line-overflow structured stream silent | bug | open | [findings/F032](./findings/F032-shell-line-overflow-structured-stream-silent.md) |
+| F030 | security.FilePasswordProvider mode exact-equality | smell | **done** | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
+| F031 | cmd/fleet.readToken no perms/insecure-flag check | smell | open | [findings/F031](./findings/F031-fleet-readToken-no-perms-check-no-insecure-flag-for-literal.md) |
+| F033 | vars action bypasses secrets resolver | bug | open | [findings/F033](./findings/F033-vars-action-bypasses-secrets-resolver.md) |
+| F034 | shell line-overflow structured stream silent | bug | open | [findings/F034](./findings/F034-shell-line-overflow-structured-stream-silent.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -140,6 +140,9 @@ something else landing first.
 | 2026-05-16 | `internal/agentd/middleware.go` | F029 (bearer-auth length side-channel) |
 | 2026-05-16 | `internal/security/{password,redact}.go` | F030 (file-perms exact-equality) |
 | 2026-05-16 | `internal/runlog`, `internal/fleet/transport`, `internal/lockfile`, `internal/template` | none (all clean) |
+| 2026-05-16 | `internal/scaffold` | none (clean — atomic write, embed.FS, idempotent .gitignore) |
+| 2026-05-16 | `internal/actions/wait_http`, `internal/actions/wait_command` | none (clean — proper ctx + timeouts) |
+| 2026-05-16 | `cmd/fleet.go` (readToken) | F031 |
 
 ## Cross-cutting themes / patterns to track
 

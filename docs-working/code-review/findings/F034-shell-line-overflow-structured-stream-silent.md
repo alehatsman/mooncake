@@ -1,5 +1,5 @@
 ---
-id: F032
+id: F034
 title: shell.streamOutput surfaces ErrTooLong only via the human logger — structured event stream stays silent above the 1 MB cap
 severity: bug
 package: internal/actions/shell

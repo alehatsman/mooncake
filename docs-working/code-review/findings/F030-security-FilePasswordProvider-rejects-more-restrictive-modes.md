@@ -5,7 +5,8 @@ severity: smell
 package: internal/security
 file: internal/security/password.go
 lines: 50-81
-status: open
+status: done
+resolved: 2026-05-16 — replaced exact-equality `mode != 0600` with mask check `mode&0o077 != 0`. Owner-only modes 0400/0500/0600/0700 all accepted; any group/world bit refused. Error message now suggests the corrective action ("chmod 600 or stricter") rather than the literal-must-be value, so a user with 0440 gets the same guidance as one with 0644. Regression tests `TestFilePasswordProvider_AcceptsModesStricterThan0600` (4 modes) and `TestFilePasswordProvider_RejectsGroupOrWorldAccess` (5 modes) lock in the new contract. Adjacent obs (no-size-cap, whitespace-trim, Windows ownership) intentionally out of scope per finding note.
 ---
 
 ## What

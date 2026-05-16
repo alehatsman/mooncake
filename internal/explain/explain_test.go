@@ -1063,18 +1063,20 @@ func TestDisplayFacts_CompleteSystem(t *testing.T) {
 	}
 }
 
+// TestDisplayFacts_NilFacts pins the panic-on-nil contract.
+// DisplayFacts is called from exactly one place (the explain/doctor
+// command in cmd/) which always passes a real facts.Facts pointer.
+// Reaching nil is a programmer error — panicking surfaces it instead
+// of silently rendering an empty card. F010: the prior body had a
+// deferred recover but never called anything, so the test passed
+// vacuously without exercising any behavior.
 func TestDisplayFacts_NilFacts(t *testing.T) {
-	// Test behavior with nil Facts pointer
-	// This should not panic but may produce minimal output
 	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("DisplayFacts should not panic with nil pointer, got: %v", r)
+		if r := recover(); r == nil {
+			t.Error("DisplayFacts(nil) should panic — callers must never pass nil")
 		}
 	}()
-
-	// This will panic due to nil pointer dereference, which is expected
-	// The function doesn't handle nil input, so we just verify it panics predictably
-	// In production, callers should never pass nil
+	DisplayFacts(nil)
 }
 
 func TestDisplayFacts_EmptyStrings(t *testing.T) {
