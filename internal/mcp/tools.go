@@ -42,6 +42,12 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleQueryFile)
 		case "explain":
 			srv.RegisterTool(def, HandleExplain)
+		case "list_actions":
+			srv.RegisterTool(def, HandleListActions)
+		case "describe_action":
+			srv.RegisterTool(def, HandleDescribeAction)
+		case "list_presets":
+			srv.RegisterTool(def, HandleListPresets)
 		}
 	}
 }
@@ -137,6 +143,32 @@ func AllTools() []ToolDef {
 					"description": "Cap on example excerpts returned for kind:action. Default 3.",
 				},
 			}, []string{"noun"}),
+		},
+		// agent proposal-01: discovery tools. Each is a thin wrapper
+		// over an existing internal API — list_actions over
+		// actions.List(), describe_action over the same Registry +
+		// schemagen pipeline that backs `mooncake actions show`, and
+		// list_presets over presets.DiscoverAllPresets. Together they
+		// close the "agents can't introspect the action surface
+		// without out-of-band knowledge" gap surfaced in proposal-01.
+		{
+			Name:        "list_actions",
+			Description: "List every action this mooncake build supports — name, category, platforms, and the spec-22 ABI capability matrix (check/diff/cost/reverse/permissions). Optional `category` filter narrows the result to a single category (e.g. `file`, `system`, `network`). Returns JSON. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"category": strProp("Optional filter: only return actions in this category (e.g. 'file', 'system'). Omit for the full inventory."),
+			}, nil),
+		},
+		{
+			Name:        "describe_action",
+			Description: "Show one action's typed contract — required + optional parameters, default values, JSON-Schema constraints, and the same capability matrix `list_actions` returns per row. Same data the CLI's `mooncake actions show <name>` surfaces, exposed to MCP clients so they don't need to shell out. Returns JSON. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"name": strProp("Action verb (e.g. 'file.copy', 'pkg.install'). See `list_actions` for the full set."),
+			}, []string{"name"}),
+		},
+		{
+			Name:        "list_presets",
+			Description: "List every preset discoverable on this host — built-in, registry-cloned, and local. Each entry carries name + description + version + source + path so an agent can decide which to plan with before running it. Returns JSON. Read-only.",
+			InputSchema: objSchema(nil, nil),
 		},
 	}
 }
