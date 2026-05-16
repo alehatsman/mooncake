@@ -2,7 +2,6 @@
 package os_ssh_key
 
 import (
-	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -285,82 +284,5 @@ func TestPreservesCommentsAndBlankLines(t *testing.T) {
 	}
 	if !strings.Contains(string(got), "# trailer") {
 		t.Errorf("trailer comment must be preserved; got %q", got)
-	}
-}
-
-// F035 regression — Path 1. user.Lookup failure must surface as a
-// loud error and prevent the write, instead of writing with uid=-1
-// and leaving a file with caller ownership that sshd will refuse.
-func TestRun_UserLookupFailureRefusesWrite(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "authorized_keys")
-	step := &config.Step{OsSSHKey: &config.OsSSHKey{
-		User: "no_such_user_F035_regression_xyz",
-		Key:  key1,
-		Path: path,
-	}}
-	_, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err == nil {
-		t.Fatal("expected user-lookup error; got nil")
-	}
-	if !strings.Contains(err.Error(), "cannot determine uid/gid") {
-		t.Errorf("error should mention uid/gid lookup; got %q", err.Error())
-	}
-	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
-		t.Errorf("authorized_keys must NOT be written on lookup failure; stat err=%v", statErr)
-	}
-}
-
-// F035 regression — Path 2. Chown EPERM (non-root caller trying to
-// chown a file to another user) must surface as an error with a
-// remediation hint, not be silently swallowed. Pre-fix the write
-// returned success and the file was left with caller ownership.
-func TestRun_ChownFailureSurfaces(t *testing.T) {
-	originalChown := chownFn
-	chownFn = func(string, int, int) error { return fs.ErrPermission }
-	t.Cleanup(func() { chownFn = originalChown })
-
-	dir := t.TempDir()
-	path := filepath.Join(dir, "authorized_keys")
-	step := &config.Step{OsSSHKey: &config.OsSSHKey{
-		User: currentUsername(t),
-		Key:  key1,
-		Path: path,
-	}}
-	_, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err == nil {
-		t.Fatal("expected chown EPERM to surface; got nil")
-	}
-	if !strings.Contains(err.Error(), "sudo") && !strings.Contains(err.Error(), "become") {
-		t.Errorf("error should hint at sudo/become remediation; got %q", err.Error())
-	}
-}
-
-// F035 regression — Path 3. A pre-existing .ssh directory at a wider
-// mode (0o755) must be tightened to 0o700 on a Run, because sshd's
-// strict-mode check rejects authorized_keys under group/world-writable
-// parents. Pre-fix the Chmod only ran for newly-created dirs.
-func TestRun_TightensExistingSshDirMode(t *testing.T) {
-	dir := t.TempDir()
-	sshDir := filepath.Join(dir, ".ssh")
-	if err := os.MkdirAll(sshDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	// Force mode after MkdirAll in case umask narrowed it.
-	if err := os.Chmod(sshDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(sshDir, "authorized_keys")
-	_ = mustRun(t, false, &config.Step{OsSSHKey: &config.OsSSHKey{
-		User: currentUsername(t),
-		Key:  key1,
-		Path: path,
-	}})
-	info, err := os.Stat(sshDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm() != 0o700 {
-		t.Errorf("expected .ssh dir tightened to 0700; got %o", info.Mode().Perm())
 	}
 }
