@@ -2,6 +2,7 @@ package executor
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -59,6 +60,17 @@ type VariableScope struct {
 	// flow this way too — auditors should treat env-driven values the
 	// same way as user vars, not as system facts.
 	Env map[string]string
+
+	// ApplyStartedAt is the wall-clock time the run's scope was
+	// initialized — set once by AddGlobalVariables and held constant
+	// for every step that follows. Exposed to templates as
+	// `apply_started_at` so playbooks can build rolling-backup paths
+	// like `{{ apply_started_at | strftime:"%Y%m%d_%H%M%S" }}` where
+	// every step in one apply shares the same suffix (the
+	// shell:`$(date)` form can mismatch across step boundaries).
+	// Zero value means "scope wasn't initialized by AddGlobalVariables"
+	// — ToMap omits the key in that case so test fixtures stay clean.
+	ApplyStartedAt time.Time
 }
 
 // NewVariableScope returns an empty scope ready for use.
@@ -95,6 +107,9 @@ func (s *VariableScope) ToMap() map[string]interface{} {
 			envMap[k] = v
 		}
 		m["env"] = envMap
+	}
+	if !s.ApplyStartedAt.IsZero() {
+		m["apply_started_at"] = s.ApplyStartedAt
 	}
 	for k, v := range s.User {
 		m[k] = v
