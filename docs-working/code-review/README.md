@@ -111,26 +111,30 @@ Patterns observed across packages, ordered by leverage.
    Functions that were over the cap and got extracted no longer
    need the suppression; the directive stays.
 
-## Summary of findings (22 total)
+## Summary of findings (24 total)
 
 | Severity | Count | IDs |
 |---|---:|---|
-| bug | 5 | F015, F017 ✅, F018, F019, (F010 dead test) |
+| bug | 7 | F015 ✅, F017 ✅, F018, F019 ✅, F023, F024, (F010 dead test treated as smell) |
 | risk | 6 | F001 ✅, F007, F012, F014, F016, F020 |
 | smell | 8 | F003, F004, F005, F006, F009, F010, F011, F022 |
 | readability | 1 | F008 |
 | doc | 3 | F002 ✅, F013, F021 |
 
-✅ = already fixed by fixer agents during this pass (F001, F002, F017).
+✅ = already fixed by fixer agents during this pass (F001, F002,
+F015, F017, F019 — 5 of 24).
 
 The top-priority remaining fixers should look at:
 
-- **F019** (security defense-in-depth): `!secret` silently
-  doesn't resolve in `step.Vars`.
-- **F015** (real bug): worker chdir-error leaks hub →
-  goroutine leak on SSE side.
+- **F024** (real bug, security/correctness): planner's
+  walkAndRender doesn't render templates inside
+  `map[string]interface{}` fields — os.systemd unit sections,
+  text.patch.{json,yaml} Set/Merge, use.With. Same closed-kind-set
+  shape F019 just fixed in the resolver; pattern transferable.
 - **F018** (real bug): shell.streamOutput's bufio.Scanner
   silently truncates lines > 64 KB.
+- **F023** (real bug): package handler silently swallows
+  template-render errors on names → confusing apt errors.
 - **F020** (risk): `apply.Runner` calls `os.Exit`, hostile
   to agentd / MCP — graceful daemon shutdown impossible.
 - **F016** (risk): agentd worker uses `context.Background()`
@@ -143,14 +147,21 @@ F021 (Config.ExtraSubscribers doc), F010 (dead test), F022
 
 ## Status at iteration cutoff (this turn)
 
-- **22 findings produced**, of which **3 fixed** by other agents
-  during the pass (F001 lint, F002 CLAUDE.md, F017 continue_on_error).
-- **12 commits** to `worktree-code-review`, all merged to master.
-- **9 packages covered**: actions/{service, tool, shell,
-  observe_disk}, explain, secrets/resolver, agentd/worker, executor,
-  apply, fleet (partial), mcp, plan/filter, config, control.
-- **Remaining areas in queue** (see [TODO.md](./TODO.md)):
-  agentd (rest), fleet (controller / bootstrap / multiplex / peers),
-  cmd/ spot-check, plan, presets/registry, per-action handlers
-  (git_*, os_*, text_*, wait_*, windows_*), snapshot,
-  test-coverage gaps.
+- **24 findings produced**, of which **5 fixed** by parallel
+  fixer agents during the pass (F001 lint, F002 CLAUDE.md, F015
+  worker hub cleanup, F017 continue_on_error, F019 secret
+  resolver).
+- **~17 commits** to `worktree-code-review`, all merged to master.
+- **Packages covered**: actions/{service, tool, shell,
+  observe_disk, package}, explain, secrets/resolver, agentd/
+  {worker, files_handler, runs_handler}, executor, apply, fleet/
+  {apply, controller, orchestrator, bootstrap (partial)}, mcp,
+  plan, plan/filter, config, control, snapshot, presets/registry
+  (partial), cmd (presets spot-check).
+- **Still untouched** (queued in [TODO.md](./TODO.md)):
+  fleet/{multiplex, peers, machine, bootstrap_windows_target},
+  agentd/{self_upgrade, store, persistence},
+  per-action handlers (git_*, os_* except service/systemd,
+  text_*, wait_*, windows_*),
+  cmd/* (rest of CLI wiring),
+  test-coverage gaps in churned packages.
