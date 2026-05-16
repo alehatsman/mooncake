@@ -96,6 +96,24 @@ func TestBuildStepJSON_PopulatesActionEvenOnNilResult(t *testing.T) {
 	}
 }
 
+// TestBuildStepJSON_FailedSetWhenExecErr is the MT-61 regression:
+// a handler-returned error (the common shape: wait.* timeouts, any
+// handler that errors without first calling SetFailed) used to come
+// out as {"failed": false, "error": "..."} — internally inconsistent
+// and easily misread by agents as success. Apply mode already marked
+// the step failed; step mode now matches.
+func TestBuildStepJSON_FailedSetWhenExecErr(t *testing.T) {
+	r := executor.NewResult()
+	payload := buildStepJSON("wait.http", r, errors.New("wait.http timeout after 1.001s"))
+
+	if payload["failed"] != true {
+		t.Errorf("failed = %v; want true when execErr is set", payload["failed"])
+	}
+	if payload["error"] != "wait.http timeout after 1.001s" {
+		t.Errorf("error = %v", payload["error"])
+	}
+}
+
 func TestBuildStepJSON_OmitsErrorWhenNil(t *testing.T) {
 	r := executor.NewResult()
 	r.Changed = true
