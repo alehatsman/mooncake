@@ -5,7 +5,8 @@ severity: smell
 package: internal/explain
 file: internal/explain/explain_test.go
 lines: 1066-1078
-status: open
+status: done
+resolved_by: worktree-fix-f010
 ---
 
 ## What

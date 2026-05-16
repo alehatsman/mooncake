@@ -1,6 +1,7 @@
 package security
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,6 +80,62 @@ func TestFilePasswordProvider_InvalidPermissions(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("Expected error for invalid permissions, got nil")
+	}
+}
+
+// TestFilePasswordProvider_AcceptsModesStricterThan0600: 0400 is the
+// OpenSSH/sshd convention for private keys; a user who treats the
+// sudo-password file as one and chmods it to 0400 should not get
+// nudged toward the *less* strict 0600 (F030). Mask check accepts
+// any owner-only mode.
+func TestFilePasswordProvider_AcceptsModesStricterThan0600(t *testing.T) {
+	for _, mode := range []os.FileMode{0o400, 0o500, 0o600, 0o700} {
+		mode := mode
+		t.Run(fmt.Sprintf("mode_%04o", mode), func(t *testing.T) {
+			tmpDir := t.TempDir()
+			passwordFile := filepath.Join(tmpDir, "password")
+			if err := os.WriteFile(passwordFile, []byte("secret\n"), mode); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			// WriteFile may apply umask — re-chmod to lock in the desired mode.
+			if err := os.Chmod(passwordFile, mode); err != nil {
+				t.Fatalf("chmod: %v", err)
+			}
+			provider := &FilePasswordProvider{FilePath: passwordFile}
+			got, err := provider.GetPassword()
+			if err != nil {
+				t.Fatalf("GetPassword on %04o: %v", mode, err)
+			}
+			if got != "secret" {
+				t.Errorf("got %q, want %q", got, "secret")
+			}
+		})
+	}
+}
+
+// TestFilePasswordProvider_RejectsGroupOrWorldAccess: any bit set in
+// the group/other nibbles is refused. Locks in the F030 mask semantics.
+func TestFilePasswordProvider_RejectsGroupOrWorldAccess(t *testing.T) {
+	for _, mode := range []os.FileMode{0o640, 0o660, 0o604, 0o644, 0o666} {
+		mode := mode
+		t.Run(fmt.Sprintf("mode_%04o", mode), func(t *testing.T) {
+			tmpDir := t.TempDir()
+			passwordFile := filepath.Join(tmpDir, "password")
+			if err := os.WriteFile(passwordFile, []byte("secret\n"), mode); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			if err := os.Chmod(passwordFile, mode); err != nil {
+				t.Fatalf("chmod: %v", err)
+			}
+			provider := &FilePasswordProvider{FilePath: passwordFile}
+			_, err := provider.GetPassword()
+			if err == nil {
+				t.Fatalf("expected refusal for %04o; got nil", mode)
+			}
+			if !strings.Contains(err.Error(), "group/world") {
+				t.Errorf("error should explain why %04o was refused; got %q", mode, err.Error())
+			}
+		})
 	}
 }
 

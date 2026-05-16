@@ -59,10 +59,16 @@ func (p *FilePasswordProvider) GetPassword() (string, error) {
 		return "", ownerErr
 	}
 
-	// Verify file has 0600 permissions
+	// Refuse any mode with group/other access bits set. Owner bits
+	// are fine: 0400 (SSH-key convention), 0500, 0600, 0700 are all
+	// owner-only and accepted. Exact-equality on 0600 would
+	// counter-intuitively reject stricter modes (F030).
 	mode := info.Mode().Perm()
-	if mode != 0600 {
-		return "", fmt.Errorf("password file must have 0600 permissions, found %04o", mode)
+	if mode&0o077 != 0 {
+		return "", fmt.Errorf(
+			"password file must not be group/world accessible (got %04o; chmod 600 or stricter)",
+			mode,
+		)
 	}
 
 	// Read password from file
