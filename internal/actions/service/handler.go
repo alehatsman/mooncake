@@ -401,42 +401,67 @@ func manageSystemdDropin(serviceName string, dropin *config.ServiceDropin, step 
 }
 
 // systemdDaemonReload executes systemctl daemon-reload.
-func systemdDaemonReload(step config.Step, ec *executor.ExecutionContext) error {
-	ec.Svc.Logger.Debugf("  Running systemctl daemon-reload")
-
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return &executor.SetupError{
-				Component: "become",
-				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-			}
-		}
-		if ec.Svc.SudoPass == "" {
-			return &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		cmd = exec.Command("sudo", "-S", "systemctl", "daemon-reload")
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		cmd = exec.Command("systemctl", "daemon-reload")
+// becomeAwareCommand builds *exec.Cmd for `program args...`, front-ending
+// it with `sudo -S` when step.ShouldBecome() is true. Returns SetupError
+// early when become is requested but the host doesn't support it (Windows)
+// or no sudo password was supplied. F004 centralizes the 6 hand-rolled
+// copies of this pattern in handler.go — collapses each call site to a
+// couple of lines and closes the asymmetry where two sites
+// (getSystemdServiceState, isSystemdServiceEnabled) silently skipped the
+// IsBecomeSupported guard.
+//
+// strings (systemctl, launchctl); args are validated service names.
+// Documented #nosec at each former call site is now satisfied here.
+//
+//nolint:gosec // G204: program names come from this package's literal
+func becomeAwareCommand(step config.Step, ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
+	if !step.ShouldBecome() {
+		return exec.Command(program, args...), nil
 	}
+	if !security.IsBecomeSupported() {
+		return nil, &executor.SetupError{
+			Component: "become",
+			Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
+		}
+	}
+	if ec.Svc.SudoPass == "" {
+		return nil, &executor.SetupError{
+			Component: "sudo",
+			Issue:     "no password provided. Use --sudo-pass flag",
+		}
+	}
+	sudoArgs := append([]string{"-S", program}, args...)
+	cmd := exec.Command("sudo", sudoArgs...)
+	cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
+	return cmd, nil
+}
 
+// runBecomeAware is becomeAwareCommand + CombinedOutput + the standard
+// CommandError wrap. The `what` label fronts the error message
+// ("daemon-reload failed", "systemctl start failed", etc.).
+func runBecomeAware(step config.Step, ec *executor.ExecutionContext, what, program string, args ...string) ([]byte, error) {
+	cmd, err := becomeAwareCommand(step, ec, program, args...)
+	if err != nil {
+		return nil, err
+	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		exitCode := 1
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		return &executor.CommandError{
+		return output, &executor.CommandError{
 			ExitCode: exitCode,
-			Cause:    fmt.Errorf("daemon-reload failed: %w (output: %s)", err, string(output)),
+			Cause:    fmt.Errorf("%s failed: %w (output: %s)", what, err, string(output)),
 		}
 	}
+	return output, nil
+}
 
-	return nil
+func systemdDaemonReload(step config.Step, ec *executor.ExecutionContext) error {
+	ec.Svc.Logger.Debugf("  Running systemctl daemon-reload")
+	_, err := runBecomeAware(step, ec, "daemon-reload", "systemctl", "daemon-reload")
+	return err
 }
 
 // manageSystemdServiceState manages the service state (started/stopped/restarted/reloaded).
@@ -474,62 +499,20 @@ func manageSystemdServiceState(serviceName, desiredState string, step config.Ste
 
 	// Execute systemctl command
 	ec.Svc.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return false, &executor.SetupError{
-				Component: "become",
-				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-			}
-		}
-		if ec.Svc.SudoPass == "" {
-			return false, &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
-		cmd = exec.Command("sudo", "-S", "systemctl", action, serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
-		cmd = exec.Command("systemctl", action, serviceName)
+	if _, err := runBecomeAware(step, ec, "systemctl "+action, "systemctl", action, serviceName); err != nil {
+		return false, err
 	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		exitCode := 1
-		if cmd.ProcessState != nil {
-			exitCode = cmd.ProcessState.ExitCode()
-		}
-		return false, &executor.CommandError{
-			ExitCode: exitCode,
-			Cause:    fmt.Errorf("systemctl %s failed: %w (output: %s)", action, err, string(output)),
-		}
-	}
-
 	return true, nil
 }
 
 // getSystemdServiceState returns the current state of a systemd service.
 func getSystemdServiceState(serviceName string, step config.Step, ec *executor.ExecutionContext) (string, error) {
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if ec.Svc.SudoPass == "" {
-			return "", &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		cmd = exec.Command("sudo", "-S", "systemctl", "is-active", serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		cmd = exec.Command("systemctl", "is-active", serviceName)
+	cmd, err := becomeAwareCommand(step, ec, "systemctl", "is-active", serviceName)
+	if err != nil {
+		return "", err
 	}
-
 	output, _ := cmd.Output() // Ignore error, is-active returns non-zero for inactive services
 	state := strings.TrimSpace(string(output))
-
 	ec.Svc.Logger.Debugf("  Service %s current state: %s", serviceName, state)
 	return state, nil
 }
@@ -556,65 +539,22 @@ func manageSystemdServiceEnabled(serviceName string, shouldBeEnabled bool, step 
 	}
 
 	ec.Svc.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return false, &executor.SetupError{
-				Component: "become",
-				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-			}
-		}
-		if ec.Svc.SudoPass == "" {
-			return false, &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
-		cmd = exec.Command("sudo", "-S", "systemctl", action, serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		// #nosec G204 - This is a provisioning tool that manages systemd services with validated actions
-		cmd = exec.Command("systemctl", action, serviceName)
+	if _, err := runBecomeAware(step, ec, "systemctl "+action, "systemctl", action, serviceName); err != nil {
+		return false, err
 	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		exitCode := 1
-		if cmd.ProcessState != nil {
-			exitCode = cmd.ProcessState.ExitCode()
-		}
-		return false, &executor.CommandError{
-			ExitCode: exitCode,
-			Cause:    fmt.Errorf("systemctl %s failed: %w (output: %s)", action, err, string(output)),
-		}
-	}
-
 	return true, nil
 }
 
 // isSystemdServiceEnabled checks if a systemd service is enabled.
 func isSystemdServiceEnabled(serviceName string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if ec.Svc.SudoPass == "" {
-			return false, &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		cmd = exec.Command("sudo", "-S", "systemctl", "is-enabled", serviceName)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		cmd = exec.Command("systemctl", "is-enabled", serviceName)
+	cmd, err := becomeAwareCommand(step, ec, "systemctl", "is-enabled", serviceName)
+	if err != nil {
+		return false, err
 	}
-
 	output, _ := cmd.Output() // Ignore error, is-enabled returns non-zero for disabled services
 	status := strings.TrimSpace(string(output))
-
 	isEnabled := status == "enabled" || status == "static" || status == "indirect"
 	ec.Svc.Logger.Debugf("  Service %s enabled status: %s (treated as enabled: %v)", serviceName, status, isEnabled)
-
 	return isEnabled, nil
 }
 
@@ -968,35 +908,19 @@ func manageLaunchdServiceEnabled(serviceID, plistPath, domain string, shouldBeEn
 	return false, nil
 }
 
-// executeLaunchctlCommand executes a launchctl command with proper error handling
+// executeLaunchctlCommand executes a launchctl command with proper error handling.
+// Uses becomeAwareCommand for the elevation pattern (F004) — can't use the
+// higher-level runBecomeAware because the error path needs the raw output
+// to check idempotency markers like "Already loaded" before deciding to
+// surface as success vs. CommandError.
 func executeLaunchctlCommand(command, domain, plistPath string, step config.Step, ec *executor.ExecutionContext, idempotencyCheck []string, successMsg, errorMsg string) error {
 	ec.Svc.Logger.Debugf("  Running launchctl %s %s %s", command, domain, plistPath)
-
-	var cmd *exec.Cmd
-	if step.ShouldBecome() {
-		if !security.IsBecomeSupported() {
-			return &executor.SetupError{
-				Component: "become",
-				Issue:     fmt.Sprintf("not supported on %s", runtime.GOOS),
-			}
-		}
-		if ec.Svc.SudoPass == "" {
-			return &executor.SetupError{
-				Component: "sudo",
-				Issue:     "no password provided. Use --sudo-pass flag",
-			}
-		}
-		// #nosec G204 - This is a provisioning tool that manages launchd services with validated commands
-		cmd = exec.Command("sudo", "-S", "launchctl", command, domain, plistPath)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		// #nosec G204 - This is a provisioning tool that manages launchd services with validated commands
-		cmd = exec.Command("launchctl", command, domain, plistPath)
+	cmd, err := becomeAwareCommand(step, ec, "launchctl", command, domain, plistPath)
+	if err != nil {
+		return err
 	}
-
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Check if operation already satisfied (idempotency)
 		outputStr := string(output)
 		for _, check := range idempotencyCheck {
 			if strings.Contains(outputStr, check) {
@@ -1013,7 +937,6 @@ func executeLaunchctlCommand(command, domain, plistPath string, step config.Step
 			Cause:    fmt.Errorf("%s: %w (output: %s)", errorMsg, err, outputStr),
 		}
 	}
-
 	return nil
 }
 
