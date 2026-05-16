@@ -95,6 +95,21 @@ type ActionMetadata struct {
 	// Actions with idempotency checks verify current state before making changes.
 	ImplementsCheck bool
 
+	// ImplementsDiff / ImplementsCost / ImplementsReverse /
+	// ImplementsPermissions report whether the handler natively
+	// implements the spec-22 four-method ABI sub-interfaces. Populated
+	// centrally in Registry.List() from the IsDiffer/IsCoster/
+	// IsReverser/IsPermitter helpers (registry_abi.go) — per-handler
+	// authors do not set these by hand; the registry derives them
+	// from the live interface satisfaction so the columns stay
+	// honest as new methods land. Drives proposal-05 capability
+	// columns in `mooncake actions list` and the x-implements-*
+	// extensions emitted by `mooncake schema generate`.
+	ImplementsDiff        bool
+	ImplementsCost        bool
+	ImplementsReverse     bool
+	ImplementsPermissions bool
+
 	// CaptureInPlan declares that this action's result is safe to bind into
 	// Scope.Results during plan mode. Reserved for side-effect-free /
 	// observation-only actions whose result is informative (e.g. read.json,

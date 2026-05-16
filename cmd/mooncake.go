@@ -706,11 +706,19 @@ func actionsListCommand(c *cli.Context) error {
 }
 
 // displayActionsTable displays actions in a formatted table.
+//
+// proposal-05: DIFF/COST/REVERSE/PERM columns surface the spec-22
+// four-method ABI per handler. Values come from ActionMetadata's
+// Implements* bools, which Registry.List() populates centrally from
+// the live interface satisfaction (so the table can't drift from
+// what each handler actually implements).
 func displayActionsTable(actionsList []actions.ActionMetadata) {
+	const rowFmt = "%-15s %-10s %-25s %-5s %-5s %-5s %-5s %-7s %-5s\n"
 	// Print header
-	fmt.Printf("%-15s %-10s %-25s %-8s %-8s\n",
-		"ACTION", "CATEGORY", "PLATFORMS", "SUDO", "CHECK")
-	fmt.Println(strings.Repeat("-", 80))
+	fmt.Printf(rowFmt,
+		"ACTION", "CATEGORY", "PLATFORMS",
+		"SUDO", "CHECK", "DIFF", "COST", "REVERSE", "PERM")
+	fmt.Println(strings.Repeat("-", 95))
 
 	// Print each action
 	for _, meta := range actionsList {
@@ -723,25 +731,27 @@ func displayActionsTable(actionsList []actions.ActionMetadata) {
 			}
 		}
 
-		// Format sudo requirement
-		sudo := "no"
-		if meta.RequiresSudo {
-			sudo = "yes" //nolint:goconst // Simple display string
-		}
-
-		// Format check implementation
-		check := "no"
-		if meta.ImplementsCheck {
-			check = "yes"
-		}
-
-		fmt.Printf("%-15s %-10s %-25s %-8s %-8s\n",
+		fmt.Printf(rowFmt,
 			meta.Name,
 			meta.Category,
 			platforms,
-			sudo,
-			check)
+			yesNo(meta.RequiresSudo),
+			yesNo(meta.ImplementsCheck),
+			yesNo(meta.ImplementsDiff),
+			yesNo(meta.ImplementsCost),
+			yesNo(meta.ImplementsReverse),
+			yesNo(meta.ImplementsPermissions))
 	}
+}
+
+// yesNo renders a bool as the two-state token the actions-list table
+// has used since the SUDO/CHECK columns shipped. Kept tiny + local
+// because it's a display detail, not a vocabulary worth promoting.
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
 }
 
 // writeFactsJSON is preserved for cmd/cmd_test.go's coverage of the
