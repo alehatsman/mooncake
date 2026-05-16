@@ -5,7 +5,9 @@ severity: bug
 package: internal/actions/package
 file: internal/actions/package/handler.go
 lines: 142-149
-status: open
+status: done
+fixed: 2026-05-16 — commit a855ec13 `fix(package): F023 — return render errors on pkg names instead of silently keeping the literal`. Extracted a `renderPackageNames(ctx, names) ([]string, error)` helper (handler.go:199-209) that returns the first render error wrapped as `render package name %q: %w`. Both the legacy `Execute()` swallow site and the spec-16 `Run()` site were patched. Subsequent commit 4fffeb3e deleted Execute/DryRun entirely (spec-16 close-out), so `Run` is the only path today and calls `renderPackageNames` at line 725 before any branch.
+verified: 2026-05-17 — confirmed fixed on master @ b6b79712. (a) Tests green: `TestRun_RenderErrorOnPackageName_Apply`, `_Plan`, and `TestRun_RenderErrorOnPackageName` all pass (`go test -count=1 -run TestRun_RenderError ./internal/actions/package/...`). The apply + plan tests prove both modes share the renderPackageNames call. (b) Manual repro with `pkg.name: "{{ unclosed-tools"`: caught by config-validation BEFORE the handler runs (`failed to compile step ... Line 1 Col 13 near 'tools' '}}' expected`) — a broader-than-F023 fix in the validator. (c) Two observations worth noting for whoever touches this next: (i) F023's original reproducer text claims "If the variable is unset, the template engine returns an error" — this is wrong about pongo2-in-this-codebase, which renders undefined vars to empty string. The test comments at run_test.go:71-75 already call this out: the realistic trigger is a syntax / filter error, not a missing var. The finding's "Why it's a bug" section overstates the surface. (ii) TestRun_RenderErrorOnPackageName (run_test.go:112-129) has a stale comment claiming Execute is still wired in — Execute was deleted in 4fffeb3e. The test is now a duplicate of `_Apply` and could be removed in passing.
 ---
 
 ## What
