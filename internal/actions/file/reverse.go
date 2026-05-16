@@ -132,10 +132,10 @@ func CaptureReverseInfo(path, state string) *FileReverseInfo {
 // Special return semantics:
 //   - (step, nil)   → apply this step to undo
 //   - (nil, nil)    → no reverse needed (Run captured no mutation;
-//                     used here for cases where Reverse is meaningful
-//                     but the apply-time path was a noop)
+//     used here for cases where Reverse is meaningful
+//     but the apply-time path was a noop)
 //   - (nil, error)  → cannot reverse — needs human intervention or
-//                     more reverse support
+//     more reverse support
 func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.Result) (*config.Step, error) {
 	if step == nil || step.FileWrite == nil {
 		return nil, errors.New("file.write Reverse: step has no FileWrite payload")
@@ -152,13 +152,12 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 	// deleting it. Works uniformly for files, directories, and
 	// the link family — at the syscall level "delete this thing
 	// at this path" is the same operation regardless of what
-	// kind of thing we created. state=touch is debatable: touch
-	// always bumps mtime even on existing files, so we can't tell
-	// "we created it" vs "we just bumped mtime" from Existed
-	// alone — defer to a future slice.
+	// kind of thing we created. state=touch creating-a-new-file is
+	// the same shape (Existed=false unambiguously means we created
+	// the empty file); the existing-touch branch lives below.
 	if !info.Existed {
 		switch info.State {
-		case "", actionTypeFile, "directory", stateLink, stateHardlink:
+		case "", actionTypeFile, "directory", stateLink, stateHardlink, "touch":
 			return DeleteFileStep(path), nil
 		}
 	}
@@ -238,9 +237,25 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 				"existing content — needs multi-step reverse (remove link, " +
 				"restore original); not supported by single-step Reverser yet")
 	case "touch":
-		return nil, errors.New(
-			"file.write Reverse: touch reverse not implemented; " +
-				"future slice will capture pre-mtime for accurate restore")
+		// Existed-path touch only bumps mtime (and optionally re-sets
+		// mode); content is unchanged. Restore by rewriting the
+		// captured bytes with the captured mode — the file ends up
+		// byte-identical and at the original permissions. mtime is
+		// not preserved (the restore write itself bumps it), which is
+		// the same fidelity all RestoreFileStep callers accept: file
+		// state is restored, system-managed metadata is not.
+		if info.Kind != "file" {
+			return nil, fmt.Errorf(
+				"file.write Reverse: cannot reverse touch of a %s "+
+					"(only regular-file pre-state can be restored)", info.Kind)
+		}
+		if info.Content == nil {
+			return nil, fmt.Errorf(
+				"file.write Reverse: pre-touch file too large to snapshot "+
+					"(> %d bytes); transaction layer must refuse to rollback "+
+					"this step rather than partially restore", MaxReverseCaptureBytes)
+		}
+		return RestoreFileStep(path, info), nil
 	default:
 		return nil, fmt.Errorf("file.write Reverse: unknown state %q", info.State)
 	}

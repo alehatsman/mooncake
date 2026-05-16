@@ -436,6 +436,140 @@ func TestHandler_ImplementsReverser(t *testing.T) {
 	}
 }
 
+// TestReverse_TouchCreateCycle — state=touch creating a new file:
+// CaptureReverseInfo sees Existed=false, Reverse returns a state=absent
+// step, and applying it removes the just-touched file.
+func TestReverse_TouchCreateCycle(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "newly-touched.flag")
+	step := &config.Step{
+		FileWrite: &config.File{
+			Path:  path,
+			State: "touch",
+		},
+	}
+	h := &Handler{}
+
+	result := applyStep(t, h, step)
+	if !exists(t, path) {
+		t.Fatal("apply: touch did not create the file")
+	}
+	info := result.ReverseData.(*FileReverseInfo)
+	if info.Existed {
+		t.Errorf("captured info.Existed = true; want false (path was empty pre-apply)")
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if reverseStep == nil {
+		t.Fatal("Reverse returned (nil, nil); want a delete step")
+	}
+	if reverseStep.FileWrite.State != "absent" {
+		t.Errorf("reverse state = %q, want \"absent\"", reverseStep.FileWrite.State)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	if exists(t, path) {
+		t.Error("file still exists after applying touch reverse")
+	}
+}
+
+// TestReverse_TouchExistingCycle — state=touch on a pre-existing file:
+// CaptureReverseInfo sees Existed=true with the original content+mode,
+// Reverse returns a RestoreFileStep that rewrites those bytes at the
+// original mode. Touch on an existing file only bumps mtime in the
+// effects layer, so the test focuses on the rollback shape (step
+// matches RestoreFileStep) and on byte-for-byte content restoration
+// after the reverse runs. mtime fidelity is not promised — the
+// restore is itself a write — same fidelity all RestoreFileStep
+// callers accept.
+func TestReverse_TouchExistingCycle(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on NTFS")
+	}
+	path := filepath.Join(t.TempDir(), "preexisting.flag")
+	const original = "untouched content\n"
+	writeFile(t, path, []byte(original), 0o644)
+
+	step := &config.Step{
+		FileWrite: &config.File{
+			Path:  path,
+			State: "touch",
+		},
+	}
+	h := &Handler{}
+
+	result := applyStep(t, h, step)
+	got, _ := os.ReadFile(path)
+	if string(got) != original {
+		t.Fatalf("apply: touch unexpectedly mutated content: %q", got)
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if reverseStep == nil {
+		t.Fatal("Reverse returned (nil, nil); want a restore step")
+	}
+	if reverseStep.FileWrite.State != actionTypeFile {
+		t.Errorf("reverse step State = %q, want %q", reverseStep.FileWrite.State, actionTypeFile)
+	}
+	if reverseStep.FileWrite.Mode != "0644" {
+		t.Errorf("reverse step Mode = %q, want \"0644\"", reverseStep.FileWrite.Mode)
+	}
+	if reverseStep.FileWrite.Content != original {
+		t.Errorf("reverse step Content = %q, want %q", reverseStep.FileWrite.Content, original)
+	}
+
+	if _, err := h.Run(newRunContext(t, false), reverseStep); err != nil {
+		t.Fatalf("reverse apply: %v", err)
+	}
+	st, _ := os.Stat(path)
+	if mode := st.Mode().Perm(); mode != 0o644 {
+		t.Errorf("after reverse: mode = %v, want 0644", mode)
+	}
+	got, _ = os.ReadFile(path)
+	if string(got) != original {
+		t.Errorf("after reverse: content changed: %q, want %q", got, original)
+	}
+}
+
+// TestReverse_TouchOversizedRefused — touch on an existing file that
+// exceeds MaxReverseCaptureBytes: CaptureReverseInfo leaves Content
+// nil; Reverse must refuse with the size-cap error rather than
+// silently roll back without the bytes.
+func TestReverse_TouchOversizedRefused(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "huge.flag")
+	big := make([]byte, MaxReverseCaptureBytes+1)
+	writeFile(t, path, big, 0o644)
+
+	step := &config.Step{
+		FileWrite: &config.File{
+			Path:  path,
+			State: "touch",
+		},
+	}
+	h := &Handler{}
+
+	result := applyStep(t, h, step)
+	info := result.ReverseData.(*FileReverseInfo)
+	if info.Content != nil {
+		t.Fatalf("expected Content=nil for oversized capture; got %d bytes", len(info.Content))
+	}
+
+	reverseStep, err := h.Reverse(nil, step, result)
+	if err == nil || reverseStep != nil {
+		t.Fatalf("expected refusal for oversized touch; got step=%v err=%v", reverseStep, err)
+	}
+	if !strings.Contains(err.Error(), "too large to snapshot") {
+		t.Errorf("error = %q; want a size-cap refusal", err.Error())
+	}
+}
+
 // --- tiny local helpers (kept here, not in handler test files,
 // because they're only meaningful to reverse_test) ---
 
