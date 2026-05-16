@@ -6,6 +6,7 @@ package: internal/actions/artifact_capture
 file: internal/actions/artifact_capture/handler.go
 lines: 185, 315-327
 status: open
+verified: 2026-05-16 — confirmed real on master @ 649c71f4. handler.go:185 readFileContent(path, maxDiffSize) called per file change; line 317 does os.ReadFile(path) THEN truncates to maxSize. A 10 GB file loads fully into RAM before the truncation. io.LimitReader on a *os.File would be the fix
 ---
 
 ## What

@@ -2,10 +2,11 @@
 id: F040
 title: llm.ClaudeClient — 60s httpClient.Timeout truncates long generations; default model is stale; response body unbounded
 severity: smell
-package: internal/llm
-file: internal/llm/claude_client.go
+package: internal/pilot/llm
+file: internal/pilot/llm/claude_client.go
 lines: 14-19, 36-39, 42-45, 81-84
 status: open
+verified: 2026-05-16 — confirmed real on master @ 649c71f4 after agent→pilot rename. internal/pilot/llm/claude_client.go:16 defaultTimeout=60s, :44 model="claude-sonnet-4-20250514" (stale; current is sonnet-4-6 or opus-4-7), :81 io.ReadAll unbounded body read. Paths refreshed
 ---
 
 ## What

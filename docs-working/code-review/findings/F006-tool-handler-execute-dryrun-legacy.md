@@ -6,6 +6,7 @@ package: internal/actions/tool
 file: internal/actions/tool/handler.go
 lines: 64-187, 190-206, 351-385
 status: fixed
+verified: 2026-05-16 — confirmed fix on master @ 649c71f4. grep 'func.*Execute|func.*DryRun' internal/actions/tool/handler.go → 0; LOC 1676→379; tests green
 ---
 
 ## ✅ Fixed

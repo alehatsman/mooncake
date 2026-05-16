@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -25,15 +26,83 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
-// sha256Hex returns the hex-encoded SHA256 of b, or "" for nil. Used by
-// the file.write event-emit path so downstream consumers (artifact.capture
-// with include_checksums:true) get checksums without re-reading the file.
-func sha256Hex(b []byte) string {
-	if b == nil {
-		return ""
+// snapshotMaxBytes caps the in-memory head sample captured for event
+// payloads. Slightly above artifact_capture's defaultMaxDiffSize (1 MB)
+// so consumers with a custom MaxDiffSize between 1 MB and 8 MB still get
+// the full content. Files larger than this are SHA-hashed in full but
+// only the head sample lands in the event — consumers downstream of
+// artifact_capture already truncate to MaxDiffSize, so the cap here
+// trades unbounded handler RSS for a documented-truncation contract.
+//
+// F026: pre-fix the handler called os.ReadFile on the target path,
+// allocating len(file) bytes per call (up to 3× per Run on a single
+// file.write: pre-snapshot + backup + post-snapshot). A 200 MB target
+// peaked at ~600 MB handler RSS; in a memory-constrained container
+// (256 MB sidecar) the apply OOM-killed silently.
+const snapshotMaxBytes = 8 * 1024 * 1024
+
+// snapshotFile streams `path` once, returning up to snapshotMaxBytes of
+// the head, the file's full size, and the SHA-256 of the full content
+// (not just the head). Returns (nil, 0, "", err) if the file doesn't
+// exist or is unreadable — callers treat that as "no before-state",
+// which is the right semantic for create / missing-file paths.
+//
+// The hash covers the whole file (the bytes are read past the head cap
+// for hashing) so downstream consumers comparing checksums still
+// observe ground truth.
+func snapshotFile(path string) (head []byte, size int64, sum string, err error) {
+	f, err := os.Open(path) // #nosec G304 -- path is the action's own target
+	if err != nil {
+		return nil, 0, "", err
 	}
-	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:])
+	defer f.Close() //nolint:errcheck
+
+	h := sha256.New()
+	headBuf := make([]byte, 0, snapshotMaxBytes)
+	buf := make([]byte, 64*1024)
+	for {
+		n, readErr := f.Read(buf)
+		if n > 0 {
+			size += int64(n)
+			h.Write(buf[:n])
+			if rem := snapshotMaxBytes - len(headBuf); rem > 0 {
+				take := n
+				if take > rem {
+					take = rem
+				}
+				headBuf = append(headBuf, buf[:take]...)
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return nil, 0, "", readErr
+		}
+	}
+	return headBuf, size, hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// copyFileStreaming reads from srcPath and writes to dstPath via
+// io.Copy with a bounded buffer. Used by the backup path so a
+// large target doesn't pin handler RSS to its full size. Returns
+// the write error if any; src-open / dst-create errors get the
+// usual wrapping.
+func copyFileStreaming(srcPath, dstPath string, mode os.FileMode) error {
+	src, err := os.Open(srcPath) // #nosec G304 -- action's own target
+	if err != nil {
+		return err
+	}
+	defer src.Close()                                                          //nolint:errcheck
+	dst, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode) // #nosec G304 -- action's own backup path
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close() //nolint:errcheck
+		return err
+	}
+	return dst.Close()
 }
 
 const (
@@ -217,11 +286,22 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// Issue #27: capture pre-write bytes for downstream consumers
 	// (artifact.capture's size/checksum/content fields). Only meaningful
 	// for the file-write case in Apply mode. If the file doesn't exist,
-	// readErr is non-nil and beforeBytes stays nil — `created` operations
-	// then report a 0/empty before-state, which is the correct semantic.
-	var beforeBytes []byte
+	// snapshotFile returns the not-exist error and beforeHead stays nil
+	// — `created` operations then report a 0/empty before-state, which
+	// is the correct semantic.
+	//
+	// F026: stream-snapshot caps in-memory bytes at snapshotMaxBytes
+	// while still reading the full file for the SHA-256. The previous
+	// os.ReadFile path allocated len(file) bytes regardless of consumer
+	// downstream — a 200 MB target ate 200 MB of RSS per Run before
+	// the consumer even saw it.
+	var (
+		beforeHead []byte
+		beforeSize int64
+		beforeSum  string
+	)
 	if state == actionTypeFile && ctx.Mode() == actions.ModeApply {
-		beforeBytes, _ = os.ReadFile(renderedPath) // #nosec G304 -- path is the same target runState writes to
+		beforeHead, beforeSize, beforeSum, _ = snapshotFile(renderedPath)
 	}
 
 	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
@@ -263,7 +343,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	emitFileEvent(ctx, state, primary, renderedPath, mode, h.formatMode, beforeBytes)
+	emitFileEvent(ctx, state, primary, renderedPath, mode, h.formatMode, beforeHead, beforeSize, beforeSum)
 	return result, nil
 }
 
@@ -294,10 +374,15 @@ func (h *Handler) runState(
 
 		// Backup before overwriting — only in execute mode and only if
 		// the file currently exists.
+		//
+		// F026: stream the existing file to the backup path instead of
+		// buffering its contents in RAM. The previous os.ReadFile +
+		// os.WriteFile pair allocated len(file) bytes; copyFileStreaming
+		// is bounded by a 64 KB internal buffer.
 		if ctx.Mode() == actions.ModeApply && file.Backup {
-			if existing, readErr := os.ReadFile(renderedPath); readErr == nil {
+			if _, statErr := os.Stat(renderedPath); statErr == nil {
 				backupPath := renderedPath + ".bak"
-				if writeErr := os.WriteFile(backupPath, existing, 0o600); writeErr != nil {
+				if writeErr := copyFileStreaming(renderedPath, backupPath, 0o600); writeErr != nil {
 					ctx.GetLogger().Debugf("  Warning: failed to create backup: %v", writeErr)
 				} else {
 					ctx.GetLogger().Debugf("  Created backup: %s", backupPath)
@@ -386,11 +471,14 @@ func (h *Handler) checkHardlinkForce(path, desiredTarget string, force bool) err
 // effect outcome. Only called in ModeApply. Matches the events the
 // legacy Execute path emitted.
 //
-// beforeBytes carries the pre-write file content captured by Run()
-// before runState ran. It powers issue-27's downstream artifact.capture
-// size/checksum/content fields. Empty for non-file states or when the
-// target didn't exist pre-write.
-func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string, beforeBytes []byte) {
+// beforeHead carries up to snapshotMaxBytes of the pre-write file's
+// head bytes (full content for small files, head sample for big ones).
+// beforeSize / beforeSum are the FULL file size and SHA-256, computed
+// streaming so a 10 GB target doesn't allocate 10 GB. The event's
+// ContentBefore/After fields carry the head sample (artifact_capture
+// consumers truncate to MaxDiffSize anyway); SizeBefore/After carry
+// ground truth. F026.
+func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string, beforeHead []byte, beforeSize int64, beforeSum string) {
 	pub := ctx.GetEventPublisher()
 	if pub == nil {
 		return
@@ -408,41 +496,41 @@ func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path s
 			},
 		})
 	case actionTypeFile:
-		// Read the just-written file so the after-fields reflect ground
-		// truth (rather than re-rendering content the caller no longer
-		// has). Skipped silently on read error — the event still carries
-		// the path/mode/changed bits, and downstream consumers degrade
-		// rather than crash.
-		afterBytes, _ := os.ReadFile(path) // #nosec G304 -- path is the same target runState just wrote
-		fileExistedBefore := beforeBytes != nil
+		// F026: stream-snapshot the just-written file so we get a
+		// bounded head sample + full size + full SHA-256 without
+		// allocating len(file) bytes. Same pattern as the pre-write
+		// snapshot above the call to runState.
+		afterHead, afterSize, afterSum, _ := snapshotFile(path)
+		// fileExistedBefore: pre-fix we used beforeBytes != nil, which
+		// is equivalent to beforeSize > 0 OR the file existed but was
+		// empty. snapshotFile returns size==0 and a non-error for an
+		// empty pre-existing file, so check via beforeSum instead —
+		// non-empty hash means we successfully read at least the
+		// header, which only happens when the file existed.
+		fileExistedBefore := beforeSum != ""
 		eventType := events.EventFileCreated
 		if fileExistedBefore {
 			eventType = events.EventFileUpdated
 		} else if eff.Reason != "" && !contains(eff.Reason, "would create") {
 			// Belt-and-suspenders for performers that report an update via
-			// Effect.Reason without our Run() having captured beforeBytes
-			// (e.g. a future planner path bypassing the os.ReadFile probe).
+			// Effect.Reason without our Run() having captured a
+			// pre-write snapshot (e.g. a future planner path bypassing
+			// the snapshotFile probe).
 			eventType = events.EventFileUpdated
-		}
-		var sizeBefore int64
-		var checksumBefore string
-		if fileExistedBefore {
-			sizeBefore = int64(len(beforeBytes))
-			checksumBefore = sha256Hex(beforeBytes)
 		}
 		pub.Publish(events.Event{
 			Type: eventType,
 			Data: events.FileOperationData{
 				Path:           path,
 				Mode:           formatMode(mode),
-				SizeBytes:      int64(len(afterBytes)),
-				SizeBefore:     sizeBefore,
+				SizeBytes:      afterSize,
+				SizeBefore:     beforeSize,
 				Changed:        eff.Performed,
 				DryRun:         false,
-				ChecksumBefore: checksumBefore,
-				ChecksumAfter:  sha256Hex(afterBytes),
-				ContentBefore:  beforeBytes,
-				ContentAfter:   afterBytes,
+				ChecksumBefore: beforeSum,
+				ChecksumAfter:  afterSum,
+				ContentBefore:  beforeHead,
+				ContentAfter:   afterHead,
 			},
 		})
 	case "absent":
