@@ -181,6 +181,9 @@ func (p noopPerformer) Mkdir(path string, _ os.FileMode, _ actions.PerformerOpts
 func (p noopPerformer) WriteFile(path string, _ []byte, _ os.FileMode, _ actions.PerformerOpts) actions.Effect {
 	return actions.Effect{Action: actions.ActionWriteFile, Path: path}
 }
+func (p noopPerformer) CopyFile(_, dest string, _ os.FileMode, _ actions.PerformerOpts) actions.Effect {
+	return actions.Effect{Action: actions.ActionCopyFile, Path: dest}
+}
 func (p noopPerformer) Symlink(_, path string, _ actions.PerformerOpts) actions.Effect {
 	return actions.Effect{Action: actions.ActionSymlink, Path: path}
 }

@@ -13,8 +13,10 @@ package effects
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -177,10 +179,10 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 // ContentDiff is a small structured summary attached to Effect.Detail
 // for WriteFile when content would change.
 type ContentDiff struct {
-	OldSize     int    `json:"old_size"`
-	NewSize     int    `json:"new_size"`
-	OldHash     string `json:"old_hash"`
-	NewHash     string `json:"new_hash"`
+	OldSize int    `json:"old_size"`
+	NewSize int    `json:"new_size"`
+	OldHash string `json:"old_hash"`
+	NewHash string `json:"new_hash"`
 	// UnifiedDiff is the unified diff text. Empty for binary files or new files.
 	UnifiedDiff string `json:"unified_diff,omitempty"`
 }
@@ -198,6 +200,165 @@ func newContentDiff(path string, oldB, newB []byte) ContentDiff {
 func shortHash(b []byte) string {
 	sum := sha256.Sum256(b)
 	return fmt.Sprintf("%x", sum[:6])
+}
+
+// ----------------------------------------------------------------------
+// CopyFile
+// ----------------------------------------------------------------------
+
+// CopyFile streams src to dest. Memory usage is bounded regardless of
+// file size — F026.
+//
+// Plan-mode idempotency check is a two-stage walk:
+//   - First compare Stat sizes (cheap, settles 99% of "obviously
+//     different" cases).
+//   - Only when sizes match, stream-sha256 both sides to confirm
+//     content equality. Streaming hash keeps RAM bounded; the
+//     historical os.ReadFile + bytes.Equal shape would have loaded
+//     both into memory.
+//
+// Apply-mode performs the copy via os.Open + os.CreateTemp +
+// io.Copy + os.Rename — atomic at the rename step, so a crashed
+// daemon won't leave a half-written dest in place.
+func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts actions.PerformerOpts) actions.Effect {
+	e := actions.Effect{Action: actions.ActionCopyFile, Path: dest}
+
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		e.Err = fmt.Errorf("stat source %s: %w", src, err)
+		return e
+	}
+	if !srcInfo.Mode().IsRegular() {
+		e.Err = fmt.Errorf("%s is not a regular file", src)
+		return e
+	}
+
+	destInfo, derr := os.Stat(dest)
+	switch {
+	case derr == nil && destInfo.IsDir():
+		e.Err = fmt.Errorf("%s exists and is a directory", dest)
+		return e
+	case derr == nil:
+		if srcInfo.Size() == destInfo.Size() {
+			srcHash, sherr := streamFileSHA256(src)
+			if sherr == nil {
+				destHash, dherr := streamFileSHA256(dest)
+				if dherr == nil && srcHash == destHash && modeMatches(destInfo.Mode(), mode) {
+					e.AlreadyOk = true
+					e.Reason = "file content and mode already match"
+					return e
+				}
+			}
+		}
+		e.Reason = fmt.Sprintf("content differs (%d -> %d bytes)", destInfo.Size(), srcInfo.Size())
+	case os.IsNotExist(derr):
+		e.Reason = fmt.Sprintf("would create file (%d bytes)", srcInfo.Size())
+	default:
+		e.Err = fmt.Errorf("stat dest %s: %w", dest, derr)
+		return e
+	}
+
+	if p.modeFn() == actions.ModePlan {
+		e.WouldChange = true
+		return e
+	}
+
+	if parent := filepath.Dir(dest); parent != "" {
+		if err := os.MkdirAll(parent, 0o755); err != nil {
+			e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
+			return e
+		}
+	}
+
+	tmpFile, err := streamSrcToTemp(src, filepath.Dir(dest))
+	if err != nil {
+		e.Err = err
+		return e
+	}
+	defer func() { _ = os.Remove(tmpFile) }() // no-op after a successful rename
+
+	// Mode-preservation quirk: WriteFile's apply path
+	// (os.WriteFile in non-become mode) does NOT chmod an existing
+	// file — when path exists, os.WriteFile truncates without changing
+	// mode. CopyFile matches that semantic by chmod-ing to the EXISTING
+	// dest mode (if any) before rename. New dests get the caller-asked
+	// mode. This keeps copy → reverse → restore cycles bit-identical to
+	// the WriteFile-based pre-F026 behavior (file.copy's reverse
+	// constructs a file.write step that relies on this exact quirk to
+	// keep the captured mode through the round trip).
+	finalMode := mode
+	if destInfo != nil && !destInfo.IsDir() {
+		finalMode = destInfo.Mode().Perm()
+	}
+
+	if opts.Become {
+		// Stage the file under a path the unprivileged process can write,
+		// then sudo mv into place + chmod. Matches WriteFile's become path.
+		cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
+			shellQuote(tmpFile), shellQuote(dest), formatMode(finalMode), shellQuote(dest))
+		if err := p.runSudo(cmd); err != nil {
+			e.Err = err
+			return e
+		}
+	} else {
+		// #nosec G302 — mode is caller-controlled; this is a provisioning tool
+		if err := os.Chmod(tmpFile, finalMode); err != nil {
+			e.Err = fmt.Errorf("chmod temp file: %w", err)
+			return e
+		}
+		if err := os.Rename(tmpFile, dest); err != nil {
+			e.Err = fmt.Errorf("rename %s -> %s: %w", tmpFile, dest, err)
+			return e
+		}
+	}
+	e.Performed = true
+	return e
+}
+
+// streamFileSHA256 returns the hex sha256 of the file at path, streamed
+// in chunks so the file's bytes never live in memory all at once.
+func streamFileSHA256(path string) (string, error) {
+	// #nosec G304 — path comes from a Performer caller that has already
+	// validated it; this helper is internal-package.
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// streamSrcToTemp creates a temp file in dir, copies src into it via
+// io.Copy, and returns the temp file's path. The caller is responsible
+// for removing the temp file (or for renaming it onto the final dest,
+// which makes the Remove a no-op).
+func streamSrcToTemp(src, dir string) (string, error) {
+	// #nosec G304 — src path is mooncake-config-controlled
+	srcF, err := os.Open(src)
+	if err != nil {
+		return "", fmt.Errorf("open source %s: %w", src, err)
+	}
+	defer func() { _ = srcF.Close() }()
+
+	tmp, err := os.CreateTemp(dir, "mooncake-copy-*")
+	if err != nil {
+		return "", fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	if _, err := io.Copy(tmp, srcF); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("stream copy: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("close temp file: %w", err)
+	}
+	return tmpPath, nil
 }
 
 // ----------------------------------------------------------------------
@@ -589,10 +750,21 @@ func describePathKind(info os.FileInfo) string {
 	}
 }
 
-// shellQuote single-quotes a string for safe shell interpolation.
-func shellQuote(s string) string {
+// ShellQuote single-quotes a string for safe POSIX-shell interpolation.
+// Embedded single quotes are escaped via the standard `'\”` idiom.
+// Exported so handlers reaching for `sudo sh -c <cmd>` can construct
+// safe commands without re-implementing the quoting (F032).
+//
+// Go's `%q` verb is NOT a substitute — it escapes for Go-string syntax,
+// not POSIX-shell syntax, and leaves $(...) / backtick substitution
+// active inside double quotes.
+func ShellQuote(s string) string {
 	return "'" + replaceAll(s, "'", `'\''`) + "'"
 }
+
+// shellQuote is the unexported alias retained for in-package callers.
+// New code should prefer ShellQuote at the call site.
+func shellQuote(s string) string { return ShellQuote(s) }
 
 func replaceAll(s, old, replacement string) string {
 	out := make([]byte, 0, len(s))

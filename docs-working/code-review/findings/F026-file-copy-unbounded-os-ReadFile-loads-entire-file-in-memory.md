@@ -6,8 +6,78 @@ package: internal/actions
 files:
   - internal/actions/file/handler.go (lines 224, 298, 416)
   - internal/actions/copy/handler.go (line 192)
-status: open
-verified: 2026-05-16 — os.ReadFile unbounded at copy/handler.go:192, file/handler.go:224,298,416. Finding accurate, no fix yet
+status: partial
+---
+
+## ✅ Partial fix — copy/handler.go now streams
+
+The worst offender (copy: read whole src then write whole src to dest)
+is fixed. Three remaining file/handler.go sites are out of scope for
+this iteration — they have downstream-consumer questions
+(artifact-capture / event payloads) worth a separate finding.
+
+### Changes
+
+1. **New `actions.Performer.CopyFile(src, dest, mode, opts) Effect`**
+   primitive. Streams src→dest via `io.Copy` and a temp-file +
+   `os.Rename` to keep the apply atomic. Idempotency check uses
+   streaming sha256 of both files (memory stays bounded even on a
+   500MB-vs-500MB comparison). Plan-mode predicts WouldChange
+   without mutating.
+2. **`copy/handler.go:192` rewritten.** The `os.ReadFile(src) +
+   Effects().WriteFile(dest, content, mode)` sequence is replaced
+   with `Effects().CopyFile(src, dest, mode, ...)`. Memory cost
+   drops from O(src size) × 2 (handler + WriteFile's existing-bytes
+   check) to O(constant buffered chunks).
+3. **Mode-preservation compat note**: pre-fix copy went through
+   `WriteFile` whose non-become path uses `os.WriteFile(path,
+   content, mode)`. `os.WriteFile` only applies the mode argument
+   on file creation; existing files keep their old mode. The new
+   `CopyFile` uses `os.Rename` which DOES replace mode, so to keep
+   the legacy `copy → reverse → restore` round-trip bit-identical
+   (file.copy's reverse builds a `file.write` Step that relies on
+   the same WriteFile quirk to keep captured modes), `CopyFile`
+   chmods the temp file to the existing dest's mode (when dest
+   exists) before the rename. New dests get the caller-requested
+   mode. The reverse-cycle regression test
+   (`TestCopyReverse_OverwriteCycle`) keeps passing as a result.
+
+### Regression tests
+
+`internal/effects/copy_file_test.go`:
+
+- `TestCopyFile_StreamsLargeFileByteIdentical` — 4 MB random
+  payload copies byte-identically. Larger than any reasonable
+  buffered-read cap; small enough to keep the test fast.
+- `TestCopyFile_IdempotentOnIdenticalContentAndMode` — second
+  CopyFile on identical (src, dest, mode) returns AlreadyOk
+  without re-writing.
+- `TestCopyFile_PlanModePredictsChangeWithoutMutating` — Plan
+  mode reports WouldChange and leaves dest untouched.
+
+Existing `copy` and `file` test suites pass under -race; lint clean.
+
+### Out of scope (deferred to follow-up findings)
+
+The three file/handler.go sites (`os.ReadFile` at lines 224, 298,
+416) are NOT touched here. They cover:
+
+- Pre-write snapshot for artifact-capture (line 224)
+- Backup-file read before overwrite (line 298)
+- Post-write snapshot for the event payload (line 416)
+
+Each has a downstream consumer (artifact-capture writers,
+events.StepFile* payloads, backup machinery) that may or may not
+actually need the full bytes — the fix shape is either a streaming
+snapshot helper (size + sha256 + small head sample) or a
+size-guarded ReadFile. Worth its own finding once the consumer
+audit is done.
+
+The 4 noop Performer impls (`testutil/mocks.go`,
+`apply/reverse_context.go`, `actions/print/handler_test.go`,
+`actions/actions_test.go`) gained no-op `CopyFile` methods to
+satisfy the updated interface.
+
 ---
 
 ## What

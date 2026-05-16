@@ -6,8 +6,8 @@ package: internal/actions
 files:
   - internal/actions/template/handler.go (lines 339-357)
   - internal/actions/download/handler.go (lines 444-461, 482-494)
-status: open
-verified: 2026-05-16 — template/handler.go:339 uses %s (no quoting); download/handler.go:450 uses %q which is Go-quoting, not shell-safe (does not escape backticks, $()). Finding accurate
+status: done
+resolved: 2026-05-16 — Option B (shell-quote at the call sites) applied. Exported `effects.ShellQuote` (kept `shellQuote` as in-package alias so the 13 existing call sites in `default.go` don't need touching). Replaced `fmt.Sprintf("mv %s %s && chmod %s %s", tmpPath, destPath, mode, destPath)` in `template/handler.go::executeSudoFileOperation` and `fmt.Sprintf("mv %q %q", tmpPath, dest)` in `download/handler.go::downloadFile` to single-quote-wrap every interpolated path. Option A (delete the dead Execute/DryRun + helpers) blocked behind the XL F011 work: download/handler_test.go still has ~24 direct `h.Execute()` calls. Regression test `TestF032_ExecuteSudoFileOperation_QuotesDestPath` covers `; touch`, `$(id)`, backticks, and embedded newline payloads, plus `TestF032_ExecuteSudoFileOperation_EmbeddedSingleQuote` for the `'\''` escape idiom.
 ---
 
 ## What

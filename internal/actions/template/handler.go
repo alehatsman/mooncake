@@ -16,6 +16,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/utils"
@@ -337,7 +338,18 @@ func (h *Handler) createFileWithBecome(path string, content []byte, mode os.File
 }
 
 func (h *Handler) executeSudoFileOperation(tmpPath, destPath string, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext) error {
-	cmd := fmt.Sprintf("mv %s %s && chmod %s %s", tmpPath, destPath, h.formatMode(mode), destPath)
+	// F032: shell-quote every interpolated path. Without quoting, a
+	// dest like "/tmp/x; touch /etc/owned" became `mv /tmp/... /tmp/x;
+	// touch /etc/owned && chmod 0644 /tmp/x; touch /etc/owned` —
+	// arbitrary code execution under sudo. Modern Run() goes through
+	// ctx.Effects().WriteFile which already quotes; the legacy Execute
+	// path is unreachable in production today but is exported on the
+	// Handler type and trivially callable from tests / future SDKs.
+	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
+		effects.ShellQuote(tmpPath),
+		effects.ShellQuote(destPath),
+		h.formatMode(mode),
+		effects.ShellQuote(destPath))
 	return h.executeSudoCommand(cmd, step, ec)
 }
 

@@ -188,12 +188,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	// #nosec G304 — src path is user-supplied by design
-	content, err := os.ReadFile(src)
-	if err != nil {
-		result.Failed = true
-		return result, fmt.Errorf("failed to read source: %w", err)
-	}
+	// F026: source bytes are no longer read into a single []byte. The
+	// Performer.CopyFile primitive streams src → dest via io.Copy, so a
+	// 10 GB copy on a 256 MB-RAM container no longer OOMs the daemon.
+	// Pre-fix this site did os.ReadFile(src) + Effects.WriteFile(dest,
+	// content), holding the entire source in memory for the duration of
+	// the write (~2× the file size between handler and WriteFile's own
+	// existing-content check).
 
 	// Default to the source file's mode if the user didn't specify one.
 	mode := h.parseFileMode(cp.Mode, srcInfo.Mode()&os.ModePerm)
@@ -219,14 +220,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Force overrides idempotency — always counts as a change.
 	if cp.Force {
-		// Touch the dest to force WriteFile to overwrite even if
-		// content matches. Cheapest: remove and let WriteFile create.
+		// Touch the dest to force CopyFile to overwrite even if
+		// content matches. Cheapest: remove and let CopyFile create.
 		if ctx.Mode() == actions.ModeApply {
 			_ = os.Remove(dest)
 		}
 	}
 
-	eff := ctx.Effects().WriteFile(dest, content, mode, actions.PerformerOpts{Become: step.ShouldBecome()})
+	eff := ctx.Effects().CopyFile(src, dest, mode, actions.PerformerOpts{Become: step.ShouldBecome()})
 	if eff.Err != nil {
 		result.Failed = true
 		return result, eff.Err

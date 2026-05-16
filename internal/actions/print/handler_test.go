@@ -91,6 +91,9 @@ func (printNoopPerformer) Mkdir(string, os.FileMode, actions.PerformerOpts) acti
 func (printNoopPerformer) WriteFile(string, []byte, os.FileMode, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
 }
+func (printNoopPerformer) CopyFile(string, string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
 func (printNoopPerformer) Symlink(string, string, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
 }

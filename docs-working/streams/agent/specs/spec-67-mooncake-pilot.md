@@ -171,6 +171,7 @@ Three orthogonal settings on this loop:
 | **Serialization format** | Free-text YAML vs `tool_use` JSON | Per-provider capability | YAML (universal); `tool_use` opt-in for Anthropic |
 | **Conversation state** | Stateless rebuild vs persistent thread | CLI flag (`--continue` / `--thread`) | Stateless single-shot |
 | **Interaction style** | "Plan a complete sequence" vs "Propose next action" | `--style {plan,step}` flag | `plan` |
+| **Pipeline composition** | Single LLM does both reasoning + YAML emission, vs. a planner-coder split (one model reasons, another translates) | Provider configuration (`type: pipeline`) | Single — v1 doesn't ship pipeline composition; the architecture accommodates it as a v2 add via the `Client` interface |
 
 "One command at a time, executing, logging, asking again" is
 just `--style step --batch-confirm per-step` — same executor,
@@ -260,6 +261,42 @@ Bedrock-converse, etc.) land via the normal spec path one at a
 time. No plugin SDK; no provider marketplace; no
 LiteLLM-style universal adapter.
 
+### 5.4 Composite providers (v2 extension point)
+
+The closed-set rule applies to *protocol shapes* and *concrete
+implementations*, not to *composition*. A `pipeline` provider —
+one that internally invokes a *planner* client and a *coder*
+client in sequence — is a configuration of two existing
+implementations, not a new shape:
+
+```
+goal ─► planner.GeneratePlan() ─► natural-language plan ─►
+        coder.GeneratePlan()   ─► mooncake YAML
+```
+
+This serves two real cases:
+
+- **Specialization.** Reasoning-tuned model for the planner
+  (Claude with extended thinking, o1, etc.) + coding-tuned model
+  for the coder (Qwen-Coder, DeepSeek-Coder). Each runs focused
+  on what it's best at.
+- **Mixed sovereignty.** Planner remote (Claude HTTP), coder
+  local (Qwen-Coder on the operator's GPU via OpenAI-shape
+  endpoint). The reasoning side gets the strongest available
+  model; the high-volume mechanical translation runs on the
+  user's hardware.
+
+The `Client` interface (`GeneratePlan(ctx, system, user, model)
+(string, error)`) accommodates this without modification — a
+`PipelineClient` implementation wraps two underlying clients and
+exposes the same single-call interface to the pilot loop. The
+loop does not know whether one model or two produced the YAML.
+
+v1 does not ship `type: pipeline`. v2 work is
+`S-pilot-planner-coder` (§16). The point of naming it here is to
+ensure v1 doesn't accidentally close the door — keep the `Client`
+interface simple enough that composition fits later.
+
 ## 6. Configuration
 
 ### 6.1 `~/.mooncake/pilot.yml`
@@ -284,6 +321,19 @@ providers:
     timeout: 120s                      # local models can be slow
     supports_tool_use: false           # set true per-endpoint when
                                        # the underlying model honors it
+
+  # v2 composite (see §5.4) — not implemented in v1; config shape
+  # frozen here so v1 doesn't drift from what v2 expects:
+  claude-and-coder:
+    type: pipeline
+    planner:
+      provider: anthropic-http         # reference an entry above
+      model: claude-sonnet-4-7
+      role: planner                    # role-specific prompt template
+    coder:
+      provider: openai-shape           # reference an entry above
+      model: qwen-coder-32b
+      role: coder
 
 defaults:
   style: plan                          # plan | step
@@ -681,6 +731,31 @@ next one whose dependencies are all `done`.
 - **Deps.** `S-pilot-rename`. Independent of the rest; can start
   in parallel.
 
+### S-pilot-planner-coder (v2, gated)
+
+- **Goal.** Implement `type: pipeline` provider that composes
+  two underlying `Client`s — a planner and a coder — into a
+  single `Client.GeneratePlan` call (§5.4). The pilot loop is
+  unaware composition happened.
+- **DoD.**
+  - `PipelineClient` in `internal/pilot/llm/` wraps two `Client`
+    instances; first calls planner, passes its output as
+    additional context to coder.
+  - Two role-specific prompt templates: `role: planner` (asks
+    for a prose plan with reasoning) and `role: coder` (asks
+    for mooncake YAML, given the prose plan).
+  - `mooncake pilot --provider claude-and-coder "<goal>"` runs
+    end-to-end with Claude HTTP as planner + a local OpenAI-shape
+    endpoint as coder.
+  - Eval harness gets a parallel run that scores planner-coder
+    pipelines against single-model baselines on the same goals.
+  - Intermediate planner output saved as a thread record (kind:
+    `planner_output`) for inspectability.
+- **Deps.** v1 shipped (all `S-pilot-*` v1 stories);
+  `S-pilot-eval-harness` (need it to evaluate whether the split
+  pays off). Gated on a real signal that single-LLM mode is
+  hitting quality limits — don't ship speculatively.
+
 ### S-pilot-tool-use-spike (gated)
 
 - **Goal.** Spike Anthropic `tool_use` mode for the
@@ -708,6 +783,16 @@ next one whose dependencies are all `done`.
 - **Long-horizon autonomous runs.** "Pilot runs for an hour
   without operator gate." Probably needs trust signals (drift
   detection, budget caps) we don't have yet. Out of scope.
+- **Planner-coder pipeline composition (§5.4).** Single-LLM v1
+  covers the case where one model does both reasoning and YAML
+  emission. A `pipeline` provider type lets v2 split the work
+  between a reasoning-tuned model (Claude with extended thinking,
+  o1) and a coding-tuned model (Qwen-Coder, DeepSeek-Coder, local
+  on GPU). The `Client` interface accommodates this composition
+  without modification; the work is configuration + UX + a
+  `PipelineClient` implementation, not kernel or interface
+  changes. v2 story: `S-pilot-planner-coder`. Gated on a signal
+  that single-model mode is hitting quality limits.
 
 ## 18. Cross-references
 

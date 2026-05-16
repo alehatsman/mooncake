@@ -22,6 +22,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/security"
@@ -446,8 +447,12 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 		if !security.IsBecomeSupported() {
 			return 0, fmt.Errorf("become not supported on %s", runtime.GOOS)
 		}
-		// Use sudo for final move
-		cmd := fmt.Sprintf("mv %q %q", tmpPath, dest)
+		// F032: `%q` is Go-string quoting, NOT POSIX-shell quoting —
+		// inside double-quotes bash still performs $(…) and backtick
+		// substitution. A dest like `/tmp/$(touch /etc/owned)/foo`
+		// became a code-execution vector under sudo. Use POSIX-safe
+		// single-quote wrapping via effects.ShellQuote.
+		cmd := fmt.Sprintf("mv %s %s", effects.ShellQuote(tmpPath), effects.ShellQuote(dest))
 		if err := h.executeSudoCommand(cmd, step, ec); err != nil {
 			return 0, fmt.Errorf("failed to move file with sudo: %w", err)
 		}
