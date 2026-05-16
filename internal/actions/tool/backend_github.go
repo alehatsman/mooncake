@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 func init() {
@@ -141,11 +142,16 @@ func resolveGithubAssetURL(ctx context.Context, repo, tag, asset, version string
 var urlReachable = func(ctx context.Context, url string) bool {
 	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(probeCtx, http.MethodHead, url, nil)
+	// F012: route through httputil so the transport-level dial / TLS /
+	// response-headers timeouts apply on top of the 5s deadline above
+	// (DefaultClient pre-fix had no transport limits — a slow TLS
+	// handshake against a misbehaving CDN burned the full 5s before
+	// any cancellation took effect).
+	req, err := httputil.NewRequest(probeCtx, http.MethodHead, url, nil)
 	if err != nil {
 		return false
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httputil.Client.Do(req)
 	if err != nil {
 		return false
 	}

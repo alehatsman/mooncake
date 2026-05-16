@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/httputil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -152,7 +154,15 @@ func FetchRemoteIndex(reg RemoteRegistry) (RemoteIndex, error) {
 
 	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/index.yml", reg.Repo, ref)
 
-	resp, err := http.Get(url) // #nosec G107 -- URL is constructed from registry config
+	// F012: bounded-timeout client + canonical UA. No caller ctx here
+	// — preset-registry refresh is a planner-setup operation; passing
+	// Background is no worse than pre-F012 but now bounded by the
+	// dial / TLS / response-headers timeouts on httputil.DefaultTransport.
+	req, err := httputil.NewRequest(context.Background(), http.MethodGet, url, nil) // #nosec G107 -- URL is constructed from registry config
+	if err != nil {
+		return RemoteIndex{}, fmt.Errorf("failed to build request: %w", err)
+	}
+	resp, err := httputil.Client.Do(req)
 	if err != nil {
 		return RemoteIndex{}, fmt.Errorf("failed to fetch index from registry '%s': %w", reg.Name, err)
 	}
@@ -233,14 +243,16 @@ func LoadCachedIndex(regName string) (RemoteIndex, error) {
 func listGitHubContents(repo, ref, path string) ([]githubContentsEntry, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/contents/%s?ref=%s", repo, path, ref)
 
-	req, err := http.NewRequest(http.MethodGet, url, nil) // #nosec G107 -- URL is constructed from registry config
+	// F012: ctx-aware request via httputil so timeouts and UA are
+	// consistent. The bare &http.Client{} pre-fix had no timeout at
+	// any layer — a hung api.github.com call blocked planner setup.
+	req, err := httputil.NewRequest(context.Background(), http.MethodGet, url, nil) // #nosec G107 -- URL is constructed from registry config
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httputil.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list contents at '%s': %w", path, err)
 	}
@@ -267,7 +279,12 @@ func listGitHubContents(repo, ref, path string) ([]githubContentsEntry, error) {
 
 // downloadRawFile downloads a single file from raw.githubusercontent.com and writes it to destPath.
 func downloadRawFile(rawURL, destPath string) error {
-	resp, err := http.Get(rawURL) // #nosec G107 -- URL comes from GitHub API response
+	// F012: routes through httputil for bounded timeouts + UA.
+	req, err := httputil.NewRequest(context.Background(), http.MethodGet, rawURL, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	resp, err := httputil.Client.Do(req) // #nosec G107 -- URL comes from GitHub API response
 	if err != nil {
 		return fmt.Errorf("failed to download file: %w", err)
 	}

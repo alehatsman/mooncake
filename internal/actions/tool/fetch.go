@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 // fetchToTempFile downloads url into a temp file (created via
@@ -19,9 +21,12 @@ import (
 // F007: the request now carries a context so the caller can cancel the
 // download (Ctrl-C, step timeout, parent cancellation) and a User-Agent
 // so GitHub's release CDN doesn't lump us with anonymous traffic.
-// http.DefaultClient is replaced with an explicit client (zero overall
-// timeout — large tool archives like LLVM / CUDA SDK exceed any
-// reasonable wall-clock cap; context drives cancellation instead).
+//
+// F012: route through httputil.Client so the dial / TLS-handshake /
+// response-headers timeouts apply even on long-running archive
+// downloads. No overall Client.Timeout — large tool archives
+// (LLVM / CUDA SDK) exceed any reasonable wall-clock cap; ctx drives
+// total cancellation, transport drives per-phase deadlines.
 func fetchToTempFile(ctx context.Context, url, dir string) (string, error) {
 	// #nosec G304 -- dir is a mooncake-managed temp location
 	tmp, err := os.CreateTemp(dir, "mooncake-tool-*"+archiveSuffix(url))
@@ -32,15 +37,13 @@ func fetchToTempFile(ctx context.Context, url, dir string) (string, error) {
 	defer func() { _ = tmp.Close() }()
 
 	// #nosec G107 -- URL comes from user-declared mooncake config
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := httputil.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		_ = os.Remove(tmpName)
 		return "", fmt.Errorf("build http request: %w", err)
 	}
-	req.Header.Set("User-Agent", "mooncake-tool")
 
-	client := &http.Client{} // no overall timeout; context drives cancel
-	resp, err := client.Do(req)
+	resp, err := httputil.Client.Do(req)
 	if err != nil {
 		_ = os.Remove(tmpName)
 		return "", fmt.Errorf("http GET %s: %w", url, err)

@@ -12,7 +12,8 @@ files:
   - internal/actions/tool/backend_github.go:135,139 (NewRequest, DefaultClient.Do) — see F007
   - internal/actions/pkg_repo/handler.go:484 (http.Get)
   - internal/presets/registry/remote.go:155,236,270 (http.Get, NewRequest, http.Get)
-status: open
+status: done
+resolved_by: worktree-fix-f012
 ---
 
 ## What

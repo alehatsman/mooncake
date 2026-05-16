@@ -10,6 +10,7 @@ package download
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/httputil"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/utils"
 )
@@ -332,8 +334,11 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 }
 
 func (h *Handler) downloadFile(url, dest string, action *config.Download, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext, ctx actions.Context) (int64, error) {
-	// Create HTTP client with optional timeout
-	client := &http.Client{}
+	// F012: base transport inherits httputil's bounded dial / TLS /
+	// response-headers timeouts. The client.Timeout wraps the whole
+	// transfer (kept zero-by-default so large downloads aren't yanked
+	// mid-stream); transport-level limits still bound the setup.
+	client := &http.Client{Transport: httputil.DefaultTransport}
 	if action.Timeout != "" {
 		timeout, err := time.ParseDuration(action.Timeout)
 		if err != nil {
@@ -348,9 +353,13 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 		}
 	}
 
-	// Create HTTP request
+	// F012: ctx-aware request via httputil so canonical UA flows and
+	// future caller ctx (step-level deadline, daemon Shutdown via
+	// F016) reaches the socket. download doesn't currently thread a
+	// real ctx into downloadFile; Background is bounded by the
+	// transport-level timeouts above.
 	// #nosec G107 -- URL comes from user-provided YAML configuration
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := httputil.NewRequest(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
