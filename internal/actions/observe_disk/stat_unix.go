@@ -17,6 +17,7 @@ func statPath(path string) (DiskObservation, error) {
 	if err := syscall.Statfs(path, &st); err != nil {
 		return DiskObservation{Path: path}, fmt.Errorf("statfs %s: %w", path, err)
 	}
+	//nolint:unconvert // st.Bsize is int32 on darwin/*bsd; cast keeps cross-platform multiply legal.
 	bsize := int64(st.Bsize)
 	total := int64(st.Blocks) * bsize
 	free := int64(st.Bfree) * bsize

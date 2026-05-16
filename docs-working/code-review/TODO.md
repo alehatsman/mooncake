@@ -10,14 +10,13 @@ something else landing first.
 
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
-| F001 | observe_disk Bsize cross-platform cast | risk | XS | — | open |
 | F002 | CLAUDE.md soft-cap list stale | doc | XS | — | open |
 
 ## Findings index
 
 | ID | Title | Severity | Status | Location |
 |---|---|---|---|---|
-| F001 | observe_disk Bsize cross-platform cast | risk | open | [findings/F001](./findings/F001-observe-disk-bsize-cast.md) |
+| F001 | observe_disk Bsize cross-platform cast | risk | **done** | [findings/F001](./findings/F001-observe-disk-bsize-cast.md) |
 | F002 | CLAUDE.md soft-cap list stale | doc | open | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
 
 ## Queue (next iterations, priority order)

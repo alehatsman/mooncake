@@ -5,7 +5,8 @@ severity: risk
 package: internal/actions/observe_disk
 file: internal/actions/observe_disk/stat_unix.go
 lines: 20
-status: open
+status: done
+resolved_by: same-commit (Option A applied inline)
 ---
 
 ## What
