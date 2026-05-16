@@ -5,7 +5,9 @@ severity: bug
 package: internal/executor
 file: internal/executor/executor.go
 lines: 477-523, 561-600, 736-749
-status: fixed
+status: done
+fixed: 2026-05-16 — merge `e030071b merge: fix-F017 — executor must emit one terminal event for continue_on_error`. The fix preempts the postExecuteSuccess path when handleStepError has already emitted step.failed; F017 markers in-code at executor.go:751-754 document the invariant ("handleStepError returning nil means continue_on_error swallowed the failure; it already emitted step.failed and decremented Stats.Failed, so the success path must not also emit step.completed").
+verified: 2026-05-17 — confirmed fixed on master @ 099ee336. Dedicated regression test `internal/executor/executor_continue_on_error_test.go:27 TestContinueOnError_EmitsSingleTerminalEvent` passes; its header explicitly calls out the F017 regression contract (single terminal event per step, even when continue_on_error: true swallows the failure).
 ---
 
 ## ✅ Fixed
