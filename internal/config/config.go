@@ -11,18 +11,18 @@
 //
 // A mooncake configuration file is a YAML document containing an array of steps:
 //
-//	- name: Install nginx
-//	  package:
-//	    name: nginx
-//	    state: present
-//	  become: true
-//	  when: os == "linux"
+//   - name: Install nginx
+//     package:
+//     name: nginx
+//     state: present
+//     become: true
+//     when: os == "linux"
 //
-//	- name: Start nginx
-//	  service:
-//	    name: nginx
-//	    state: started
-//	  become: true
+//   - name: Start nginx
+//     service:
+//     name: nginx
+//     state: started
+//     become: true
 //
 // Each step consists of:
 //   - Universal fields: name, when, register, tags, become, env, cwd, timeout, etc.
@@ -166,7 +166,7 @@ type ParsedConfig struct {
 // File represents a file or directory operation in a configuration step.
 type File struct {
 	Path    string `yaml:"path" json:"path" plan:"path"`
-	State   string `yaml:"state" json:"state,omitempty"`      // file|directory|absent|link|hardlink|touch|perms
+	State   string `yaml:"state" json:"state,omitempty"` // file|directory|absent|link|hardlink|touch|perms
 	Content string `yaml:"content" json:"content,omitempty"`
 	Mode    string `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 
@@ -285,14 +285,14 @@ type CommandAction struct {
 
 // Copy represents a file copy operation in a configuration step.
 type Copy struct {
-	Src      string `yaml:"src" json:"src" plan:"path"`                       // Source file path
-	Dest     string `yaml:"dest" json:"dest" plan:"path"`                     // Destination file path
-	Mode     string `yaml:"mode" json:"mode,omitempty"`           // Octal file permissions (e.g., "0644", "0755")
-	Owner    string `yaml:"owner" json:"owner,omitempty"`         // Username or UID
-	Group    string `yaml:"group" json:"group,omitempty"`         // Groupname or GID
-	Backup   bool   `yaml:"backup" json:"backup,omitempty"`       // Create .bak before overwrite
-	Force    bool   `yaml:"force" json:"force,omitempty"`         // Overwrite if exists
-	Checksum string `yaml:"checksum" json:"checksum,omitempty"`   // Expected SHA256 or MD5 checksum
+	Src      string `yaml:"src" json:"src" plan:"path"`         // Source file path
+	Dest     string `yaml:"dest" json:"dest" plan:"path"`       // Destination file path
+	Mode     string `yaml:"mode" json:"mode,omitempty"`         // Octal file permissions (e.g., "0644", "0755")
+	Owner    string `yaml:"owner" json:"owner,omitempty"`       // Username or UID
+	Group    string `yaml:"group" json:"group,omitempty"`       // Groupname or GID
+	Backup   bool   `yaml:"backup" json:"backup,omitempty"`     // Create .bak before overwrite
+	Force    bool   `yaml:"force" json:"force,omitempty"`       // Overwrite if exists
+	Checksum string `yaml:"checksum" json:"checksum,omitempty"` // Expected SHA256 or MD5 checksum
 	// FollowSymlinks controls how symbolic links at the source path are
 	// handled (MT-51). Default (nil or true): the link is dereferenced
 	// and the target's content is copied to dest as a regular file.
@@ -305,10 +305,10 @@ type Copy struct {
 
 // Unarchive represents an archive extraction operation in a configuration step.
 type Unarchive struct {
-	Src             string `yaml:"src" json:"src" plan:"path"`                                     // Source archive path
-	Dest            string `yaml:"dest" json:"dest" plan:"path"`                                   // Destination directory
+	Src             string `yaml:"src" json:"src" plan:"path"`                         // Source archive path
+	Dest            string `yaml:"dest" json:"dest" plan:"path"`                       // Destination directory
 	StripComponents int    `yaml:"strip_components" json:"strip_components,omitempty"` // Number of leading path components to strip
-	Creates         string `yaml:"creates" json:"creates,omitempty" plan:"path"`                   // Skip if this path exists (idempotency marker)
+	Creates         string `yaml:"creates" json:"creates,omitempty" plan:"path"`       // Skip if this path exists (idempotency marker)
 	Mode            string `yaml:"mode" json:"mode,omitempty"`                         // Octal directory permissions (e.g., "0755")
 }
 
@@ -340,15 +340,15 @@ type Tool struct {
 
 // Download represents a file download operation in a configuration step.
 type Download struct {
-	URL      string            `yaml:"url" json:"url"`                         // Remote URL (required)
-	Dest     string            `yaml:"dest" json:"dest" plan:"path"`           // Destination path (required)
-	Checksum string            `yaml:"checksum" json:"checksum,omitempty"`     // Expected SHA256 or MD5 checksum
-	Mode     string            `yaml:"mode" json:"mode,omitempty"`             // Octal file permissions (e.g., "0644")
-	Timeout  string            `yaml:"timeout" json:"timeout,omitempty"`       // Maximum download time (e.g., "30s", "5m")
-	Force    bool              `yaml:"force" json:"force,omitempty"`           // Force re-download if destination exists
-	Backup   bool              `yaml:"backup" json:"backup,omitempty"`         // Create .bak backup before overwriting
-	Headers  map[string]string `yaml:"headers" json:"headers,omitempty"`       // Custom HTTP headers
-	Retries  int               `yaml:"retries" json:"retries,omitempty"`       // Number of retry attempts
+	URL      string            `yaml:"url" json:"url"`                     // Remote URL (required)
+	Dest     string            `yaml:"dest" json:"dest" plan:"path"`       // Destination path (required)
+	Checksum string            `yaml:"checksum" json:"checksum,omitempty"` // Expected SHA256 or MD5 checksum
+	Mode     string            `yaml:"mode" json:"mode,omitempty"`         // Octal file permissions (e.g., "0644")
+	Timeout  string            `yaml:"timeout" json:"timeout,omitempty"`   // Maximum download time (e.g., "30s", "5m")
+	Force    bool              `yaml:"force" json:"force,omitempty"`       // Force re-download if destination exists
+	Backup   bool              `yaml:"backup" json:"backup,omitempty"`     // Create .bak backup before overwriting
+	Headers  map[string]string `yaml:"headers" json:"headers,omitempty"`   // Custom HTTP headers
+	Retries  int               `yaml:"retries" json:"retries,omitempty"`   // Number of retry attempts
 }
 
 // GitClone represents a git clone-or-update operation in a configuration step.
@@ -376,9 +376,9 @@ type GitClone struct {
 // `-----BEGIN`) is written to a tempfile; otherwise the value is
 // treated as a filesystem path to an existing key.
 type GitCredentials struct {
-	Username   string `yaml:"username" json:"username,omitempty"`     // HTTPS username
-	Password   string `yaml:"password" json:"password,omitempty"`     // HTTPS password / personal-access token; redacted
-	SSHKey     string `yaml:"ssh_key" json:"ssh_key,omitempty"`       // SSH private key — path or inline PEM; redacted when inline
+	Username   string `yaml:"username" json:"username,omitempty"`       // HTTPS username
+	Password   string `yaml:"password" json:"password,omitempty"`       // HTTPS password / personal-access token; redacted
+	SSHKey     string `yaml:"ssh_key" json:"ssh_key,omitempty"`         // SSH private key — path or inline PEM; redacted when inline
 	SSHOptions string `yaml:"ssh_options" json:"ssh_options,omitempty"` // Extra ssh options appended to GIT_SSH_COMMAND (e.g. "-o StrictHostKeyChecking=no")
 }
 
@@ -417,14 +417,14 @@ func (g *GitConfig) WorkingTree() (string, error) {
 // Package represents a package management operation (install/remove/update packages).
 // Supports apt, dnf, yum, pacman, zypper, apk (Linux), brew, port (macOS), choco, scoop (Windows).
 type Package struct {
-	Name         string   `yaml:"name" json:"name,omitempty"`                     // Package name (single package)
-	Names        []string `yaml:"-" json:"names,omitempty"`                       // Multiple packages (literal list)
-	NamesExpr    string   `yaml:"-" json:"-"`                                     // Templated names expression (set when YAML `names:` is a scalar)
-	State        string   `yaml:"state" json:"state,omitempty"`                   // present|absent|latest (default: present)
-	Manager      string   `yaml:"manager" json:"manager,omitempty"`               // Package manager to use (auto-detected if empty)
-	UpdateCache  bool     `yaml:"update_cache" json:"update_cache,omitempty"`     // Update package cache before operation
-	Upgrade      bool     `yaml:"upgrade" json:"upgrade,omitempty"`               // Upgrade all packages (ignores name/names)
-	Extra        []string `yaml:"extra" json:"extra,omitempty"`                   // Extra arguments to pass to package manager
+	Name        string   `yaml:"name" json:"name,omitempty"`                 // Package name (single package)
+	Names       []string `yaml:"-" json:"names,omitempty"`                   // Multiple packages (literal list)
+	NamesExpr   string   `yaml:"-" json:"-"`                                 // Templated names expression (set when YAML `names:` is a scalar)
+	State       string   `yaml:"state" json:"state,omitempty"`               // present|absent|latest (default: present)
+	Manager     string   `yaml:"manager" json:"manager,omitempty"`           // Package manager to use (auto-detected if empty)
+	UpdateCache bool     `yaml:"update_cache" json:"update_cache,omitempty"` // Update package cache before operation
+	Upgrade     bool     `yaml:"upgrade" json:"upgrade,omitempty"`           // Upgrade all packages (ignores name/names)
+	Extra       []string `yaml:"extra" json:"extra,omitempty"`               // Extra arguments to pass to package manager
 }
 
 // PkgRepo declares a third-party package repository. The action picks
@@ -432,25 +432,25 @@ type Package struct {
 // v1 implements apt only; dnf/brew blocks are accepted by the schema
 // but raise a clear "not yet implemented" error at run time.
 type PkgRepo struct {
-	Name  string       `yaml:"name" json:"name"`                       // Human-readable label, used as the source-list filename
-	State string       `yaml:"state" json:"state,omitempty"`           // present|absent (default: present)
-	Apt   *PkgRepoApt  `yaml:"apt" json:"apt,omitempty"`               // Apt-specific config
-	Dnf   *PkgRepoDnf  `yaml:"dnf" json:"dnf,omitempty"`               // DNF/YUM-specific config (deferred)
-	Brew  *PkgRepoBrew `yaml:"brew" json:"brew,omitempty"`             // Homebrew-specific config (deferred)
+	Name  string       `yaml:"name" json:"name"`             // Human-readable label, used as the source-list filename
+	State string       `yaml:"state" json:"state,omitempty"` // present|absent (default: present)
+	Apt   *PkgRepoApt  `yaml:"apt" json:"apt,omitempty"`     // Apt-specific config
+	Dnf   *PkgRepoDnf  `yaml:"dnf" json:"dnf,omitempty"`     // DNF/YUM-specific config (deferred)
+	Brew  *PkgRepoBrew `yaml:"brew" json:"brew,omitempty"`   // Homebrew-specific config (deferred)
 }
 
 // PkgRepoApt is the apt driver block for pkg.repo. Written as DEB822
 // to /etc/apt/sources.list.d/<name>.sources with the keyring (if any)
 // at /etc/apt/keyrings/<name>.gpg.
 type PkgRepoApt struct {
-	URI               string   `yaml:"uri" json:"uri"`                                         // Required: repository URI
-	Suites            []string `yaml:"suites" json:"suites,omitempty"`                         // Required: suite names (e.g. [nodistro] or [jammy])
-	Components        []string `yaml:"components" json:"components,omitempty"`                 // Default: [main]
-	Architectures     []string `yaml:"architectures" json:"architectures,omitempty"`           // Default: host arch
-	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`               // URL to .gpg or .asc public key
+	URI               string   `yaml:"uri" json:"uri"`                                           // Required: repository URI
+	Suites            []string `yaml:"suites" json:"suites,omitempty"`                           // Required: suite names (e.g. [nodistro] or [jammy])
+	Components        []string `yaml:"components" json:"components,omitempty"`                   // Default: [main]
+	Architectures     []string `yaml:"architectures" json:"architectures,omitempty"`             // Default: host arch
+	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`                 // URL to .gpg or .asc public key
 	GPGKeyFingerprint string   `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true
-	GPGCheck          *bool    `yaml:"gpg_check" json:"gpg_check,omitempty"`                   // Default: true
-	UpdateCache       *bool    `yaml:"update_cache" json:"update_cache,omitempty"`             // Run apt-get update after change (default: true)
+	GPGCheck          *bool    `yaml:"gpg_check" json:"gpg_check,omitempty"`                     // Default: true
+	UpdateCache       *bool    `yaml:"update_cache" json:"update_cache,omitempty"`               // Run apt-get update after change (default: true)
 }
 
 // PkgRepoDnf is the dnf/yum driver block. Reserved for a future phase.
@@ -470,10 +470,10 @@ type PkgRepoBrew struct {
 // implements apt only (apt-mark hold/unhold); other managers raise a
 // clear "only apt is supported in v1" error.
 type PkgHold struct {
-	Name    string   `yaml:"name" json:"name,omitempty"`         // Single package (mutually exclusive with names)
-	Names   []string `yaml:"names" json:"names,omitempty"`       // Multiple packages (mutually exclusive with name)
-	State   string   `yaml:"state" json:"state,omitempty"`       // held|unheld (default: held)
-	Manager string   `yaml:"manager" json:"manager,omitempty"`   // Package manager (auto-detected if empty; only apt in v1)
+	Name    string   `yaml:"name" json:"name,omitempty"`       // Single package (mutually exclusive with names)
+	Names   []string `yaml:"names" json:"names,omitempty"`     // Multiple packages (mutually exclusive with name)
+	State   string   `yaml:"state" json:"state,omitempty"`     // held|unheld (default: held)
+	Manager string   `yaml:"manager" json:"manager,omitempty"` // Package manager (auto-detected if empty; only apt in v1)
 }
 
 // PkgUpgrade requests an upgrade of named packages, or all packages
@@ -543,27 +543,27 @@ func (p *Package) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // ServiceAction represents a service management operation in a configuration step.
 // Supports systemd (Linux), launchd (macOS), and Windows services.
 type ServiceAction struct {
-	Name         string         `yaml:"name" json:"name"`                                 // Service name (required)
-	State        string         `yaml:"state" json:"state,omitempty"`                     // started|stopped|restarted|reloaded
-	Enabled      *bool          `yaml:"enabled" json:"enabled,omitempty"`                 // Enable service on boot
-	DaemonReload bool           `yaml:"daemon_reload" json:"daemon_reload,omitempty"`     // Run daemon-reload after unit changes (systemd)
-	Unit         *ServiceUnit   `yaml:"unit" json:"unit,omitempty"`                       // Unit file management
-	Dropin       *ServiceDropin `yaml:"dropin" json:"dropin,omitempty"`                   // Drop-in configuration file
+	Name         string         `yaml:"name" json:"name"`                             // Service name (required)
+	State        string         `yaml:"state" json:"state,omitempty"`                 // started|stopped|restarted|reloaded
+	Enabled      *bool          `yaml:"enabled" json:"enabled,omitempty"`             // Enable service on boot
+	DaemonReload bool           `yaml:"daemon_reload" json:"daemon_reload,omitempty"` // Run daemon-reload after unit changes (systemd)
+	Unit         *ServiceUnit   `yaml:"unit" json:"unit,omitempty"`                   // Unit file management
+	Dropin       *ServiceDropin `yaml:"dropin" json:"dropin,omitempty"`               // Drop-in configuration file
 }
 
 // ServiceUnit represents a systemd unit file or launchd plist configuration.
 type ServiceUnit struct {
-	Dest        string `yaml:"dest" json:"dest,omitempty" plan:"path"`             // Unit file path (auto-detected if empty)
-	Content     string `yaml:"content" json:"content,omitempty"`                   // Inline content
+	Dest        string `yaml:"dest" json:"dest,omitempty" plan:"path"`                 // Unit file path (auto-detected if empty)
+	Content     string `yaml:"content" json:"content,omitempty"`                       // Inline content
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty" plan:"path"` // Template file path
-	Mode        string `yaml:"mode" json:"mode,omitempty"`                         // File permissions (default: "0644")
+	Mode        string `yaml:"mode" json:"mode,omitempty"`                             // File permissions (default: "0644")
 }
 
 // ServiceDropin represents a systemd drop-in configuration file.
 // Drop-in files are placed in /etc/systemd/system/<service>.service.d/<name>.conf
 type ServiceDropin struct {
-	Name        string `yaml:"name" json:"name"`                                   // Drop-in file name (e.g., "10-mooncake.conf")
-	Content     string `yaml:"content" json:"content,omitempty"`                   // Inline content
+	Name        string `yaml:"name" json:"name"`                                       // Drop-in file name (e.g., "10-mooncake.conf")
+	Content     string `yaml:"content" json:"content,omitempty"`                       // Inline content
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty" plan:"path"` // Template file path
 }
 
@@ -571,19 +571,19 @@ type ServiceDropin struct {
 // field level: each setting is compared with current state and only
 // drifting fields are modified.
 type OsUser struct {
-	Name         string   `yaml:"name" json:"name"`                                       // Username (required)
-	State        string   `yaml:"state" json:"state,omitempty"`                           // present|absent (default: present)
-	UID          *int     `yaml:"uid" json:"uid,omitempty"`                               // Numeric UID (optional)
-	GID          *int     `yaml:"gid" json:"gid,omitempty"`                               // Primary GID (numeric); takes precedence over group name
-	Group        string   `yaml:"group" json:"group,omitempty"`                           // Primary group by name (alternative to gid)
-	Shell        string   `yaml:"shell" json:"shell,omitempty"`                           // Login shell
-	Home         string   `yaml:"home" json:"home,omitempty" plan:"path"`                 // Home directory
-	CreateHome   *bool    `yaml:"create_home" json:"create_home,omitempty"`               // Create home dir on create (default: true unless system=true)
-	Groups       []string `yaml:"groups" json:"groups,omitempty"`                         // Supplementary groups
-	AppendGroups *bool    `yaml:"append_groups" json:"append_groups,omitempty"`           // Append to existing supplementary groups (default: true). False replaces.
-	Comment      string   `yaml:"comment" json:"comment,omitempty"`                       // GECOS field
-	System       bool     `yaml:"system" json:"system,omitempty"`                         // Create as system user (uid < UID_MIN, no home by default)
-	RemoveHome   bool     `yaml:"remove_home" json:"remove_home,omitempty"`               // When state=absent, also remove home directory
+	Name         string   `yaml:"name" json:"name"`                             // Username (required)
+	State        string   `yaml:"state" json:"state,omitempty"`                 // present|absent (default: present)
+	UID          *int     `yaml:"uid" json:"uid,omitempty"`                     // Numeric UID (optional)
+	GID          *int     `yaml:"gid" json:"gid,omitempty"`                     // Primary GID (numeric); takes precedence over group name
+	Group        string   `yaml:"group" json:"group,omitempty"`                 // Primary group by name (alternative to gid)
+	Shell        string   `yaml:"shell" json:"shell,omitempty"`                 // Login shell
+	Home         string   `yaml:"home" json:"home,omitempty" plan:"path"`       // Home directory
+	CreateHome   *bool    `yaml:"create_home" json:"create_home,omitempty"`     // Create home dir on create (default: true unless system=true)
+	Groups       []string `yaml:"groups" json:"groups,omitempty"`               // Supplementary groups
+	AppendGroups *bool    `yaml:"append_groups" json:"append_groups,omitempty"` // Append to existing supplementary groups (default: true). False replaces.
+	Comment      string   `yaml:"comment" json:"comment,omitempty"`             // GECOS field
+	System       bool     `yaml:"system" json:"system,omitempty"`               // Create as system user (uid < UID_MIN, no home by default)
+	RemoveHome   bool     `yaml:"remove_home" json:"remove_home,omitempty"`     // When state=absent, also remove home directory
 }
 
 // OsGroup represents a declarative Unix group. Idempotency is keyed by
@@ -591,51 +591,51 @@ type OsUser struct {
 // would silently change file ownership on disk) and refuses to remove a
 // group that still has members.
 type OsGroup struct {
-	Name   string `yaml:"name" json:"name"`                     // Group name (required)
-	State  string `yaml:"state" json:"state,omitempty"`         // present|absent (default: present)
-	GID    *int   `yaml:"gid" json:"gid,omitempty"`             // Numeric GID; required for new groups when set, errors on drift
-	System bool   `yaml:"system" json:"system,omitempty"`       // Create as system group (uid < SYS_GID_MAX, typically <1000)
+	Name   string `yaml:"name" json:"name"`               // Group name (required)
+	State  string `yaml:"state" json:"state,omitempty"`   // present|absent (default: present)
+	GID    *int   `yaml:"gid" json:"gid,omitempty"`       // Numeric GID; required for new groups when set, errors on drift
+	System bool   `yaml:"system" json:"system,omitempty"` // Create as system group (uid < SYS_GID_MAX, typically <1000)
 }
 
 // OsSSHKey represents authorized_keys management for a user.
 // Idempotency is per-key by algorithm + base64-encoded public material;
 // the comment is descriptive and doesn't participate in identity.
 type OsSSHKey struct {
-	User      string   `yaml:"user" json:"user"`                                          // Target user (required); home dir is resolved via getent
-	Key       string   `yaml:"key" json:"key,omitempty"`                                  // Single public key (key or keys required)
-	Keys      []string `yaml:"keys" json:"keys,omitempty"`                                // Multiple public keys
-	State     string   `yaml:"state" json:"state,omitempty"`                              // present|absent (default: present)
-	Options   []string `yaml:"options" json:"options,omitempty"`                          // Optional per-line options (e.g. "no-port-forwarding")
-	Path      string   `yaml:"path" json:"path,omitempty" plan:"path"`                    // Override authorized_keys location (default: ~user/.ssh/authorized_keys)
-	Exclusive bool     `yaml:"exclusive" json:"exclusive,omitempty"`                      // When state=present and keys is set: remove any keys not in the supplied list
+	User      string   `yaml:"user" json:"user"`                       // Target user (required); home dir is resolved via getent
+	Key       string   `yaml:"key" json:"key,omitempty"`               // Single public key (key or keys required)
+	Keys      []string `yaml:"keys" json:"keys,omitempty"`             // Multiple public keys
+	State     string   `yaml:"state" json:"state,omitempty"`           // present|absent (default: present)
+	Options   []string `yaml:"options" json:"options,omitempty"`       // Optional per-line options (e.g. "no-port-forwarding")
+	Path      string   `yaml:"path" json:"path,omitempty" plan:"path"` // Override authorized_keys location (default: ~user/.ssh/authorized_keys)
+	Exclusive bool     `yaml:"exclusive" json:"exclusive,omitempty"`   // When state=present and keys is set: remove any keys not in the supplied list
 }
 
 // OsCron declares a cron entry written to /etc/cron.d/<name>. The
 // `name` is the identity for idempotency; one file per action. v1
 // supports the cron.d form only (no per-user crontab via crontab -u).
 type OsCron struct {
-	Name     string            `yaml:"name" json:"name"`                           // Identity; used as filename in /etc/cron.d
-	State    string            `yaml:"state" json:"state,omitempty"`               // present|absent (default: present)
-	User     string            `yaml:"user" json:"user,omitempty"`                 // Account that runs the command (default: root)
-	Minute   string            `yaml:"minute" json:"minute,omitempty"`             // Cron field; default: *
-	Hour     string            `yaml:"hour" json:"hour,omitempty"`                 // Cron field; default: *
-	Day      string            `yaml:"day" json:"day,omitempty"`                   // Cron field; default: *
-	Month    string            `yaml:"month" json:"month,omitempty"`               // Cron field; default: *
-	Weekday  string            `yaml:"weekday" json:"weekday,omitempty"`           // Cron field; default: *
-	Schedule string            `yaml:"schedule" json:"schedule,omitempty"`         // Whole schedule string; mutually exclusive with the individual fields
-	Command  string            `yaml:"command" json:"command,omitempty"`           // Command line to run; required when state=present
-	Env      map[string]string `yaml:"env" json:"env,omitempty"`                   // Environment variables (e.g. MAILTO, PATH)
+	Name     string            `yaml:"name" json:"name"`                   // Identity; used as filename in /etc/cron.d
+	State    string            `yaml:"state" json:"state,omitempty"`       // present|absent (default: present)
+	User     string            `yaml:"user" json:"user,omitempty"`         // Account that runs the command (default: root)
+	Minute   string            `yaml:"minute" json:"minute,omitempty"`     // Cron field; default: *
+	Hour     string            `yaml:"hour" json:"hour,omitempty"`         // Cron field; default: *
+	Day      string            `yaml:"day" json:"day,omitempty"`           // Cron field; default: *
+	Month    string            `yaml:"month" json:"month,omitempty"`       // Cron field; default: *
+	Weekday  string            `yaml:"weekday" json:"weekday,omitempty"`   // Cron field; default: *
+	Schedule string            `yaml:"schedule" json:"schedule,omitempty"` // Whole schedule string; mutually exclusive with the individual fields
+	Command  string            `yaml:"command" json:"command,omitempty"`   // Command line to run; required when state=present
+	Env      map[string]string `yaml:"env" json:"env,omitempty"`           // Environment variables (e.g. MAILTO, PATH)
 }
 
 // OsSysctl manages a single Linux kernel parameter. The persist file
 // is a shared `/etc/sysctl.d/99-mooncake.conf`; each call owns one
 // line keyed by `name`.
 type OsSysctl struct {
-	Name    string      `yaml:"name" json:"name"`                       // Sysctl key, e.g. net.ipv4.ip_forward (required)
-	Value   interface{} `yaml:"value" json:"value,omitempty"`           // Desired value (string or int); required when state=present
-	State   string      `yaml:"state" json:"state,omitempty"`           // present|absent (default: present)
-	Persist *bool       `yaml:"persist" json:"persist,omitempty"`       // Write to /etc/sysctl.d/99-mooncake.conf (default: true)
-	Reload  *bool       `yaml:"reload" json:"reload,omitempty"`         // Apply via `sysctl key=value` when changed (default: true)
+	Name    string      `yaml:"name" json:"name"`                 // Sysctl key, e.g. net.ipv4.ip_forward (required)
+	Value   interface{} `yaml:"value" json:"value,omitempty"`     // Desired value (string or int); required when state=present
+	State   string      `yaml:"state" json:"state,omitempty"`     // present|absent (default: present)
+	Persist *bool       `yaml:"persist" json:"persist,omitempty"` // Write to /etc/sysctl.d/99-mooncake.conf (default: true)
+	Reload  *bool       `yaml:"reload" json:"reload,omitempty"`   // Apply via `sysctl key=value` when changed (default: true)
 }
 
 // OsSystemd manages a systemd unit file plus its lifecycle (daemon-reload
@@ -645,17 +645,17 @@ type OsSysctl struct {
 // per element, matching systemd's handling of repeated directives like
 // ExecStartPre.
 type OsSystemd struct {
-	Name           string                 `yaml:"name" json:"name"`                                       // Unit filename with suffix, e.g. myapp.service
-	State          string                 `yaml:"state" json:"state,omitempty"`                           // present|absent (default: present)
-	Unit           map[string]interface{} `yaml:"unit" json:"unit,omitempty"`                             // [Unit] section
-	Service        map[string]interface{} `yaml:"service" json:"service,omitempty"`                       // [Service] section (for .service)
-	Timer          map[string]interface{} `yaml:"timer" json:"timer,omitempty"`                           // [Timer] section (for .timer)
-	Socket         map[string]interface{} `yaml:"socket" json:"socket,omitempty"`                         // [Socket] section (for .socket)
-	Install        map[string]interface{} `yaml:"install" json:"install,omitempty"`                       // [Install] section
-	Enabled        *bool                  `yaml:"enabled" json:"enabled,omitempty"`                       // ensure enabled state (default: unmanaged)
-	Started        *bool                  `yaml:"started" json:"started,omitempty"`                       // ensure started state (default: unmanaged)
-	ReloadOnChange *bool                  `yaml:"reload_on_change" json:"reload_on_change,omitempty"`     // daemon-reload on unit content drift (default: true)
-	Path           string                 `yaml:"path" json:"path,omitempty"`                             // override unit dir (default: /etc/systemd/system)
+	Name           string                 `yaml:"name" json:"name"`                                   // Unit filename with suffix, e.g. myapp.service
+	State          string                 `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
+	Unit           map[string]interface{} `yaml:"unit" json:"unit,omitempty"`                         // [Unit] section
+	Service        map[string]interface{} `yaml:"service" json:"service,omitempty"`                   // [Service] section (for .service)
+	Timer          map[string]interface{} `yaml:"timer" json:"timer,omitempty"`                       // [Timer] section (for .timer)
+	Socket         map[string]interface{} `yaml:"socket" json:"socket,omitempty"`                     // [Socket] section (for .socket)
+	Install        map[string]interface{} `yaml:"install" json:"install,omitempty"`                   // [Install] section
+	Enabled        *bool                  `yaml:"enabled" json:"enabled,omitempty"`                   // ensure enabled state (default: unmanaged)
+	Started        *bool                  `yaml:"started" json:"started,omitempty"`                   // ensure started state (default: unmanaged)
+	ReloadOnChange *bool                  `yaml:"reload_on_change" json:"reload_on_change,omitempty"` // daemon-reload on unit content drift (default: true)
+	Path           string                 `yaml:"path" json:"path,omitempty"`                         // override unit dir (default: /etc/systemd/system)
 }
 
 // OsFirewall manages host firewall rules. v1 ships a ufw driver only;
@@ -673,11 +673,11 @@ type OsFirewall struct {
 // FirewallRule describes one inbound rule. Port-based rules are the
 // common case; `from` defaults to "any" to mean any source address.
 type FirewallRule struct {
-	Port     int    `yaml:"port" json:"port"`                           // Destination port (required for port-based rules)
-	Protocol string `yaml:"protocol" json:"protocol,omitempty"`         // tcp|udp (default: tcp)
-	Action   string `yaml:"action" json:"action,omitempty"`             // allow|deny|reject (default: allow)
-	From     string `yaml:"from" json:"from,omitempty"`                 // Source CIDR or "any" (default: any)
-	Comment  string `yaml:"comment" json:"comment,omitempty"`           // Human-readable note appended to the rule
+	Port     int    `yaml:"port" json:"port"`                   // Destination port (required for port-based rules)
+	Protocol string `yaml:"protocol" json:"protocol,omitempty"` // tcp|udp (default: tcp)
+	Action   string `yaml:"action" json:"action,omitempty"`     // allow|deny|reject (default: allow)
+	From     string `yaml:"from" json:"from,omitempty"`         // Source CIDR or "any" (default: any)
+	Comment  string `yaml:"comment" json:"comment,omitempty"`   // Human-readable note appended to the rule
 }
 
 // WindowsFirewallRule declares an inbound/outbound Windows Firewall
@@ -686,16 +686,16 @@ type FirewallRule struct {
 // any non-identity field updates the existing rule rather than
 // creating a duplicate.
 type WindowsFirewallRule struct {
-	Name        string   `yaml:"name" json:"name"`                                     // DisplayName (identity, required)
-	State       string   `yaml:"state" json:"state,omitempty"`                         // present|absent (default: present)
-	Description string   `yaml:"description" json:"description,omitempty"`             // Optional free-form metadata
-	Direction   string   `yaml:"direction" json:"direction,omitempty"`                 // inbound|outbound (default: inbound)
-	Protocol    string   `yaml:"protocol" json:"protocol,omitempty"`                   // tcp|udp|icmpv4|icmpv6|any (default: tcp)
-	LocalPort   []string `yaml:"local_port" json:"local_port,omitempty"`               // List of ports / ranges ("7878" / "8000-8010")
-	RemotePort  []string `yaml:"remote_port" json:"remote_port,omitempty"`             // Same shape as local_port; default any
-	Action      string   `yaml:"action" json:"action,omitempty"`                       // allow|block (default: allow)
-	Profile     []string `yaml:"profile" json:"profile,omitempty"`                     // any|domain|private|public; default [domain, private]
-	Enabled     *bool    `yaml:"enabled" json:"enabled,omitempty"`                     // Default true
+	Name        string   `yaml:"name" json:"name"`                         // DisplayName (identity, required)
+	State       string   `yaml:"state" json:"state,omitempty"`             // present|absent (default: present)
+	Description string   `yaml:"description" json:"description,omitempty"` // Optional free-form metadata
+	Direction   string   `yaml:"direction" json:"direction,omitempty"`     // inbound|outbound (default: inbound)
+	Protocol    string   `yaml:"protocol" json:"protocol,omitempty"`       // tcp|udp|icmpv4|icmpv6|any (default: tcp)
+	LocalPort   []string `yaml:"local_port" json:"local_port,omitempty"`   // List of ports / ranges ("7878" / "8000-8010")
+	RemotePort  []string `yaml:"remote_port" json:"remote_port,omitempty"` // Same shape as local_port; default any
+	Action      string   `yaml:"action" json:"action,omitempty"`           // allow|block (default: allow)
+	Profile     []string `yaml:"profile" json:"profile,omitempty"`         // any|domain|private|public; default [domain, private]
+	Enabled     *bool    `yaml:"enabled" json:"enabled,omitempty"`         // Default true
 }
 
 // WindowsScheduledTask declares a Task Scheduler entry. spec-57.
@@ -703,29 +703,29 @@ type WindowsFirewallRule struct {
 // what spec-57 promises (boot, logon, repetition); fields not
 // relevant to the chosen trigger type are ignored.
 type WindowsScheduledTask struct {
-	Name        string                       `yaml:"name" json:"name"`                                 // TaskName (identity, required)
-	State       string                       `yaml:"state" json:"state,omitempty"`                     // present|absent (default: present)
-	Description string                       `yaml:"description" json:"description,omitempty"`         // Optional
-	Trigger     *WindowsScheduledTaskTrigger `yaml:"trigger" json:"trigger,omitempty"`                 // Single-trigger shape (mutually exclusive with triggers)
-	Triggers    []WindowsScheduledTaskTrigger `yaml:"triggers" json:"triggers,omitempty"`              // Multi-trigger shape
-	Actions     []WindowsScheduledTaskAction `yaml:"actions" json:"actions"`                           // Required, at least one
-	Principal   *WindowsScheduledTaskPrincipal `yaml:"principal" json:"principal,omitempty"`           // Optional; defaults to S4U + HighestAvailable
-	Settings    *WindowsScheduledTaskSettings  `yaml:"settings" json:"settings,omitempty"`             // Optional
+	Name        string                         `yaml:"name" json:"name"`                         // TaskName (identity, required)
+	State       string                         `yaml:"state" json:"state,omitempty"`             // present|absent (default: present)
+	Description string                         `yaml:"description" json:"description,omitempty"` // Optional
+	Trigger     *WindowsScheduledTaskTrigger   `yaml:"trigger" json:"trigger,omitempty"`         // Single-trigger shape (mutually exclusive with triggers)
+	Triggers    []WindowsScheduledTaskTrigger  `yaml:"triggers" json:"triggers,omitempty"`       // Multi-trigger shape
+	Actions     []WindowsScheduledTaskAction   `yaml:"actions" json:"actions"`                   // Required, at least one
+	Principal   *WindowsScheduledTaskPrincipal `yaml:"principal" json:"principal,omitempty"`     // Optional; defaults to S4U + HighestAvailable
+	Settings    *WindowsScheduledTaskSettings  `yaml:"settings" json:"settings,omitempty"`       // Optional
 }
 
 // WindowsScheduledTaskTrigger is one entry in the <Triggers> block.
 type WindowsScheduledTaskTrigger struct {
-	Type        string `yaml:"type" json:"type"`                            // boot|logon|repetition
-	UserID      string `yaml:"user_id" json:"user_id,omitempty"`            // For type=logon: limits to a specific user; empty = any user
-	Interval    string `yaml:"interval" json:"interval,omitempty"`          // For type=repetition: Go-style duration ("5m") or ISO8601 ("PT5M")
-	Duration    string `yaml:"duration" json:"duration,omitempty"`          // Optional total window; same format as interval
+	Type          string `yaml:"type" json:"type"`                               // boot|logon|repetition
+	UserID        string `yaml:"user_id" json:"user_id,omitempty"`               // For type=logon: limits to a specific user; empty = any user
+	Interval      string `yaml:"interval" json:"interval,omitempty"`             // For type=repetition: Go-style duration ("5m") or ISO8601 ("PT5M")
+	Duration      string `yaml:"duration" json:"duration,omitempty"`             // Optional total window; same format as interval
 	StartBoundary string `yaml:"start_boundary" json:"start_boundary,omitempty"` // ISO8601 timestamp; defaults to "now" for repetition triggers
 }
 
 // WindowsScheduledTaskAction is one entry in the <Actions> block.
 type WindowsScheduledTaskAction struct {
-	Execute          string `yaml:"execute" json:"execute"`                              // Path to the binary (required)
-	Arguments        string `yaml:"arguments" json:"arguments,omitempty"`                // Command-line arguments
+	Execute          string `yaml:"execute" json:"execute"`                               // Path to the binary (required)
+	Arguments        string `yaml:"arguments" json:"arguments,omitempty"`                 // Command-line arguments
 	WorkingDirectory string `yaml:"working_directory" json:"working_directory,omitempty"` // Optional cwd
 }
 
@@ -742,7 +742,7 @@ type WindowsScheduledTaskSettings struct {
 	AllowStartIfOnBatteries    *bool  `yaml:"allow_start_if_on_batteries" json:"allow_start_if_on_batteries,omitempty"`
 	DontStopIfGoingOnBatteries *bool  `yaml:"dont_stop_if_going_on_batteries" json:"dont_stop_if_going_on_batteries,omitempty"`
 	RunOnlyIfNetworkAvailable  *bool  `yaml:"run_only_if_network_available" json:"run_only_if_network_available,omitempty"`
-	MultipleInstances          string `yaml:"multiple_instances" json:"multiple_instances,omitempty"` // parallel|ignore_new|queue|stop_existing
+	MultipleInstances          string `yaml:"multiple_instances" json:"multiple_instances,omitempty"`     // parallel|ignore_new|queue|stop_existing
 	ExecutionTimeLimit         string `yaml:"execution_time_limit" json:"execution_time_limit,omitempty"` // Go duration or ISO8601; 0 = unbounded
 	RestartCount               int    `yaml:"restart_count" json:"restart_count,omitempty"`
 	RestartInterval            string `yaml:"restart_interval" json:"restart_interval,omitempty"`
@@ -753,25 +753,24 @@ type WindowsScheduledTaskSettings struct {
 // matching live mount state. Identity is the destination mount point
 // (one fstab entry per dest). Linux-only for v1.
 type OsMount struct {
-	Src     string   `yaml:"src" json:"src,omitempty"`                       // Device, UUID=..., LABEL=..., tmpfs, overlay, etc. Required when state != absent
-	Dest    string   `yaml:"dest" json:"dest" plan:"path"`                   // Mount point (identity, required)
-	FSType  string   `yaml:"fstype" json:"fstype,omitempty"`                 // Filesystem type; required when adding/updating fstab entry
-	Options []string `yaml:"options" json:"options,omitempty"`               // Mount options; default: [defaults]
-	State   string   `yaml:"state" json:"state,omitempty"`                   // mounted|unmounted|fstab_only|absent (default: mounted)
-	Dump    *int     `yaml:"dump" json:"dump,omitempty"`                     // fstab dump field; default 0
-	Pass    *int     `yaml:"pass" json:"pass,omitempty"`                     // fstab pass field; default 0
-	Backup  *bool    `yaml:"backup" json:"backup,omitempty"`                 // Snapshot /etc/fstab to /etc/fstab.bak.<ts> before write; default true
+	Src     string   `yaml:"src" json:"src,omitempty"`         // Device, UUID=..., LABEL=..., tmpfs, overlay, etc. Required when state != absent
+	Dest    string   `yaml:"dest" json:"dest" plan:"path"`     // Mount point (identity, required)
+	FSType  string   `yaml:"fstype" json:"fstype,omitempty"`   // Filesystem type; required when adding/updating fstab entry
+	Options []string `yaml:"options" json:"options,omitempty"` // Mount options; default: [defaults]
+	State   string   `yaml:"state" json:"state,omitempty"`     // mounted|unmounted|fstab_only|absent (default: mounted)
+	Dump    *int     `yaml:"dump" json:"dump,omitempty"`       // fstab dump field; default 0
+	Pass    *int     `yaml:"pass" json:"pass,omitempty"`       // fstab pass field; default 0
+	Backup  *bool    `yaml:"backup" json:"backup,omitempty"`   // Snapshot /etc/fstab to /etc/fstab.bak.<ts> before write; default true
 }
-
 
 // ContainerImage represents a container image management operation.
 // Ensures an image reference is present (or absent) in local storage of
 // the selected container runtime (podman/docker).
 type ContainerImage struct {
-	Name      string `yaml:"name" json:"name"`                                   // Image ref (required), e.g. "alpine:3.20" or "ghcr.io/x/y@sha256:..."
-	State     string `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
-	ForcePull bool   `yaml:"force_pull" json:"force_pull,omitempty"`             // When state=present, pull even if image is already local
-	Runtime   string `yaml:"runtime" json:"runtime,omitempty"`                   // podman|docker (auto-detected if empty; podman preferred)
+	Name      string `yaml:"name" json:"name"`                       // Image ref (required), e.g. "alpine:3.20" or "ghcr.io/x/y@sha256:..."
+	State     string `yaml:"state" json:"state,omitempty"`           // present|absent (default: present)
+	ForcePull bool   `yaml:"force_pull" json:"force_pull,omitempty"` // When state=present, pull even if image is already local
+	Runtime   string `yaml:"runtime" json:"runtime,omitempty"`       // podman|docker (auto-detected if empty; podman preferred)
 }
 
 // Container represents a container lifecycle operation.
@@ -779,18 +778,18 @@ type ContainerImage struct {
 // already in the desired state, the action is a no-op. Image and spec
 // drift triggers recreation when state is running/stopped.
 type Container struct {
-	Name    string            `yaml:"name" json:"name"`                                   // Container name (required, idempotency key)
-	Image   string            `yaml:"image" json:"image,omitempty"`                       // Image ref; required for state=running|stopped
-	State   string            `yaml:"state" json:"state,omitempty"`                       // running|stopped|absent (default: running)
-	Command []string          `yaml:"command" json:"command,omitempty"`                   // Override image CMD
-	Env     map[string]string `yaml:"env" json:"env,omitempty"`                           // Environment variables
-	Ports   []string          `yaml:"ports" json:"ports,omitempty"`                       // "host:container[/proto]" entries
-	Volumes []string          `yaml:"volumes" json:"volumes,omitempty"`                   // "host:container[:opts]" entries
-	Network string            `yaml:"network" json:"network,omitempty"`                   // Engine network name
-	Restart string            `yaml:"restart" json:"restart,omitempty"`                   // no|on-failure|always|unless-stopped
-	Recreate bool             `yaml:"recreate" json:"recreate,omitempty"`                 // Force recreate even when spec matches
-	Runtime string            `yaml:"runtime" json:"runtime,omitempty"`                   // podman|docker (auto-detected if empty)
-	Extra   []string          `yaml:"extra" json:"extra,omitempty"`                       // Extra args appended before image
+	Name     string            `yaml:"name" json:"name"`                   // Container name (required, idempotency key)
+	Image    string            `yaml:"image" json:"image,omitempty"`       // Image ref; required for state=running|stopped
+	State    string            `yaml:"state" json:"state,omitempty"`       // running|stopped|absent (default: running)
+	Command  []string          `yaml:"command" json:"command,omitempty"`   // Override image CMD
+	Env      map[string]string `yaml:"env" json:"env,omitempty"`           // Environment variables
+	Ports    []string          `yaml:"ports" json:"ports,omitempty"`       // "host:container[/proto]" entries
+	Volumes  []string          `yaml:"volumes" json:"volumes,omitempty"`   // "host:container[:opts]" entries
+	Network  string            `yaml:"network" json:"network,omitempty"`   // Engine network name
+	Restart  string            `yaml:"restart" json:"restart,omitempty"`   // no|on-failure|always|unless-stopped
+	Recreate bool              `yaml:"recreate" json:"recreate,omitempty"` // Force recreate even when spec matches
+	Runtime  string            `yaml:"runtime" json:"runtime,omitempty"`   // podman|docker (auto-detected if empty)
+	Extra    []string          `yaml:"extra" json:"extra,omitempty"`       // Extra args appended before image
 }
 
 // Assert represents an assertion/verification operation in a configuration step.
@@ -807,39 +806,39 @@ type Assert struct {
 
 // AssertCommand verifies a command exits with the expected code.
 type AssertCommand struct {
-	Cmd      string `yaml:"cmd" json:"cmd"`                           // Command to execute (required)
-	ExitCode int    `yaml:"exit_code" json:"exit_code,omitempty"`     // Expected exit code (default: 0)
+	Cmd      string `yaml:"cmd" json:"cmd"`                       // Command to execute (required)
+	ExitCode int    `yaml:"exit_code" json:"exit_code,omitempty"` // Expected exit code (default: 0)
 }
 
 // AssertFile verifies file existence, content, or properties.
 type AssertFile struct {
-	Path     string  `yaml:"path" json:"path" plan:"path"`             // File path (required)
-	Exists   *bool   `yaml:"exists" json:"exists,omitempty"`           // Verify existence (true) or non-existence (false)
-	Content  *string `yaml:"content" json:"content,omitempty"`         // Expected exact content
-	Contains *string `yaml:"contains" json:"contains,omitempty"`       // Expected substring
-	Mode     *string `yaml:"mode" json:"mode,omitempty"`               // Expected file permissions (e.g., "0644")
-	Owner    *string `yaml:"owner" json:"owner,omitempty"`             // Expected owner (username or UID)
-	Group    *string `yaml:"group" json:"group,omitempty"`             // Expected group (groupname or GID)
+	Path     string  `yaml:"path" json:"path" plan:"path"`       // File path (required)
+	Exists   *bool   `yaml:"exists" json:"exists,omitempty"`     // Verify existence (true) or non-existence (false)
+	Content  *string `yaml:"content" json:"content,omitempty"`   // Expected exact content
+	Contains *string `yaml:"contains" json:"contains,omitempty"` // Expected substring
+	Mode     *string `yaml:"mode" json:"mode,omitempty"`         // Expected file permissions (e.g., "0644")
+	Owner    *string `yaml:"owner" json:"owner,omitempty"`       // Expected owner (username or UID)
+	Group    *string `yaml:"group" json:"group,omitempty"`       // Expected group (groupname or GID)
 }
 
 // AssertHTTP verifies HTTP response status, headers, or body content.
 type AssertHTTP struct {
-	URL        string            `yaml:"url" json:"url"`                               // URL to request (required)
-	Method     string            `yaml:"method" json:"method,omitempty"`               // HTTP method (default: GET)
-	Status     int               `yaml:"status" json:"status,omitempty"`               // Expected status code (default: 200)
-	Headers    map[string]string `yaml:"headers" json:"headers,omitempty"`             // Request headers
-	Body       *string           `yaml:"body" json:"body,omitempty"`                   // Request body
-	Contains   *string           `yaml:"contains" json:"contains,omitempty"`           // Expected response body substring
-	BodyEquals *string           `yaml:"body_equals" json:"body_equals,omitempty"`     // Expected exact response body
-	JSONPath   *string           `yaml:"jsonpath" json:"jsonpath,omitempty"`           // JSONPath expression for response body
+	URL        string            `yaml:"url" json:"url"`                                 // URL to request (required)
+	Method     string            `yaml:"method" json:"method,omitempty"`                 // HTTP method (default: GET)
+	Status     int               `yaml:"status" json:"status,omitempty"`                 // Expected status code (default: 200)
+	Headers    map[string]string `yaml:"headers" json:"headers,omitempty"`               // Request headers
+	Body       *string           `yaml:"body" json:"body,omitempty"`                     // Request body
+	Contains   *string           `yaml:"contains" json:"contains,omitempty"`             // Expected response body substring
+	BodyEquals *string           `yaml:"body_equals" json:"body_equals,omitempty"`       // Expected exact response body
+	JSONPath   *string           `yaml:"jsonpath" json:"jsonpath,omitempty"`             // JSONPath expression for response body
 	JSONValue  interface{}       `yaml:"jsonpath_value" json:"jsonpath_value,omitempty"` // Expected value at JSONPath
-	Timeout    string            `yaml:"timeout" json:"timeout,omitempty"`             // Request timeout (e.g., "30s")
+	Timeout    string            `yaml:"timeout" json:"timeout,omitempty"`               // Request timeout (e.g., "30s")
 }
 
 // AssertFileSHA256 verifies a file's SHA256 checksum matches the expected value.
 type AssertFileSHA256 struct {
 	Path     string `yaml:"path" json:"path" plan:"path"` // File path (required)
-	Checksum string `yaml:"checksum" json:"checksum"` // Expected SHA256 checksum (required)
+	Checksum string `yaml:"checksum" json:"checksum"`     // Expected SHA256 checksum (required)
 }
 
 // AssertGitClean verifies the git working tree is clean (no uncommitted changes).
@@ -849,35 +848,35 @@ type AssertGitClean struct {
 
 // AssertGitDiff verifies the git diff matches the expected unified diff.
 type AssertGitDiff struct {
-	ExpectedDiff string  `yaml:"expected_diff" json:"expected_diff"`     // Expected diff content (required)
-	Cached       bool    `yaml:"cached" json:"cached,omitempty"`         // Check staged changes (default: false, checks working tree)
-	Files        *string `yaml:"files" json:"files,omitempty"`           // Limit diff to specific files/paths (optional)
+	ExpectedDiff string  `yaml:"expected_diff" json:"expected_diff"` // Expected diff content (required)
+	Cached       bool    `yaml:"cached" json:"cached,omitempty"`     // Check staged changes (default: false, checks working tree)
+	Files        *string `yaml:"files" json:"files,omitempty"`       // Limit diff to specific files/paths (optional)
 }
 
 // PresetDefinition represents a reusable preset loaded from a YAML file.
 // Presets are parameterized collections of steps that can be invoked as a single action.
 type PresetDefinition struct {
-	Name        string                     `yaml:"name" json:"name"`                                 // Preset name (required)
-	Description string                     `yaml:"description" json:"description,omitempty"`         // Human-readable description
-	Version     string                     `yaml:"version" json:"version,omitempty"`                 // Semantic version
-	Parameters  map[string]PresetParameter `yaml:"parameters" json:"parameters,omitempty"`           // Parameter definitions
-	Steps       []Step                     `yaml:"steps" json:"steps"`                               // Steps to execute
-	BaseDir     string                     `yaml:"-" json:"-"`                                       // Base directory for relative paths (set by loader)
+	Name        string                     `yaml:"name" json:"name"`                         // Preset name (required)
+	Description string                     `yaml:"description" json:"description,omitempty"` // Human-readable description
+	Version     string                     `yaml:"version" json:"version,omitempty"`         // Semantic version
+	Parameters  map[string]PresetParameter `yaml:"parameters" json:"parameters,omitempty"`   // Parameter definitions
+	Steps       []Step                     `yaml:"steps" json:"steps"`                       // Steps to execute
+	BaseDir     string                     `yaml:"-" json:"-"`                               // Base directory for relative paths (set by loader)
 }
 
 // PresetParameter defines a parameter that can be passed to a preset.
 type PresetParameter struct {
-	Type        string        `yaml:"type" json:"type"`                               // string|bool|array|object
-	Required    bool          `yaml:"required" json:"required,omitempty"`             // Whether parameter is required
-	Default     interface{}   `yaml:"default" json:"default,omitempty"`               // Default value if not provided
-	Enum        []interface{} `yaml:"enum" json:"enum,omitempty"`                     // Valid values (if restricted)
-	Description string        `yaml:"description" json:"description,omitempty"`       // Human-readable description
+	Type        string        `yaml:"type" json:"type"`                         // string|bool|array|object
+	Required    bool          `yaml:"required" json:"required,omitempty"`       // Whether parameter is required
+	Default     interface{}   `yaml:"default" json:"default,omitempty"`         // Default value if not provided
+	Enum        []interface{} `yaml:"enum" json:"enum,omitempty"`               // Valid values (if restricted)
+	Description string        `yaml:"description" json:"description,omitempty"` // Human-readable description
 }
 
 // PresetInvocation represents a user's invocation of a preset in their playbook.
 type PresetInvocation struct {
-	Name string                 `yaml:"name" json:"name"`                       // Preset name (required)
-	With map[string]interface{} `yaml:"with" json:"with,omitempty"`             // Parameter values
+	Name string                 `yaml:"name" json:"name"`           // Preset name (required)
+	With map[string]interface{} `yaml:"with" json:"with,omitempty"` // Parameter values
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling to support string form.
@@ -925,20 +924,20 @@ type PrintAction struct {
 // FileReplace represents an in-place text replacement operation in a file.
 // Supports both literal and regex-based search-and-replace patterns.
 type FileReplace struct {
-	Path         string        `yaml:"path" json:"path" plan:"path"`                     // Target file path (required)
-	Pattern      string        `yaml:"pattern" json:"pattern"`                           // Search pattern (required)
-	Replace      string        `yaml:"replace" json:"replace"`                           // Replacement text (required)
-	Count        *int          `yaml:"count" json:"count,omitempty"`                     // Max replacements (null = all)
-	Flags        *ReplaceFlags `yaml:"flags" json:"flags,omitempty"`                     // Regex flags
-	AllowNoMatch bool          `yaml:"allow_no_match" json:"allow_no_match,omitempty"`   // Don't fail if no matches found
-	Backup       bool          `yaml:"backup" json:"backup,omitempty"`                   // Create .bak before modify
+	Path         string        `yaml:"path" json:"path" plan:"path"`                   // Target file path (required)
+	Pattern      string        `yaml:"pattern" json:"pattern"`                         // Search pattern (required)
+	Replace      string        `yaml:"replace" json:"replace"`                         // Replacement text (required)
+	Count        *int          `yaml:"count" json:"count,omitempty"`                   // Max replacements (null = all)
+	Flags        *ReplaceFlags `yaml:"flags" json:"flags,omitempty"`                   // Regex flags
+	AllowNoMatch bool          `yaml:"allow_no_match" json:"allow_no_match,omitempty"` // Don't fail if no matches found
+	Backup       bool          `yaml:"backup" json:"backup,omitempty"`                 // Create .bak before modify
 }
 
 // ReplaceFlags configures text replacement behavior.
 type ReplaceFlags struct {
-	Regex           bool `yaml:"regex" json:"regex,omitempty"`                         // Enable regex mode (default: true)
-	Multiline       bool `yaml:"multiline" json:"multiline,omitempty"`                 // ^ and $ match line boundaries
-	CaseInsensitive bool `yaml:"case_insensitive" json:"case_insensitive,omitempty"`   // Case-insensitive matching
+	Regex           bool `yaml:"regex" json:"regex,omitempty"`                       // Enable regex mode (default: true)
+	Multiline       bool `yaml:"multiline" json:"multiline,omitempty"`               // ^ and $ match line boundaries
+	CaseInsensitive bool `yaml:"case_insensitive" json:"case_insensitive,omitempty"` // Case-insensitive matching
 }
 
 // FileInsert represents an anchor-based text insertion operation in a file.
@@ -956,12 +955,12 @@ type FileInsert struct {
 // FileDeleteRange represents a range deletion operation between two anchor patterns.
 // Deletes all lines between (and optionally including) start and end anchors.
 type FileDeleteRange struct {
-	Path        string `yaml:"path" json:"path" plan:"path"`           // Target file path (required)
-	StartAnchor string `yaml:"start_anchor" json:"start_anchor"`       // Start anchor pattern (required)
-	EndAnchor   string `yaml:"end_anchor" json:"end_anchor"`           // End anchor pattern (required)
-	Regex       bool   `yaml:"regex" json:"regex,omitempty"`           // Treat anchors as regex (default: false)
-	Inclusive   bool   `yaml:"inclusive" json:"inclusive,omitempty"`   // Include anchor lines in deletion (default: false)
-	Backup      bool   `yaml:"backup" json:"backup,omitempty"`         // Create .bak before modify
+	Path        string `yaml:"path" json:"path" plan:"path"`         // Target file path (required)
+	StartAnchor string `yaml:"start_anchor" json:"start_anchor"`     // Start anchor pattern (required)
+	EndAnchor   string `yaml:"end_anchor" json:"end_anchor"`         // End anchor pattern (required)
+	Regex       bool   `yaml:"regex" json:"regex,omitempty"`         // Treat anchors as regex (default: false)
+	Inclusive   bool   `yaml:"inclusive" json:"inclusive,omitempty"` // Include anchor lines in deletion (default: false)
+	Backup      bool   `yaml:"backup" json:"backup,omitempty"`       // Create .bak before modify
 }
 
 // TextLine represents an "ensure this line is present/absent in this file"
@@ -969,13 +968,13 @@ type FileDeleteRange struct {
 // insert_after / insert_before. Idempotent: a second run produces a
 // byte-identical file.
 type TextLine struct {
-	Path         string `yaml:"path" json:"path" plan:"path"`                       // Target file path (required)
-	Line         string `yaml:"line" json:"line,omitempty"`                         // The line content (required for state=present; optional for state=absent if regexp given)
-	State        string `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
-	Regexp       string `yaml:"regexp" json:"regexp,omitempty"`                     // Anchor regex: matched line is replaced (present) or removed (absent)
-	InsertAfter  string `yaml:"insert_after" json:"insert_after,omitempty"`         // Regex; if regexp doesn't match, insert `line` after this anchor
-	InsertBefore string `yaml:"insert_before" json:"insert_before,omitempty"`       // Regex; if regexp doesn't match, insert `line` before this anchor
-	Backup       bool   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
+	Path         string `yaml:"path" json:"path" plan:"path"`                 // Target file path (required)
+	Line         string `yaml:"line" json:"line,omitempty"`                   // The line content (required for state=present; optional for state=absent if regexp given)
+	State        string `yaml:"state" json:"state,omitempty"`                 // present|absent (default: present)
+	Regexp       string `yaml:"regexp" json:"regexp,omitempty"`               // Anchor regex: matched line is replaced (present) or removed (absent)
+	InsertAfter  string `yaml:"insert_after" json:"insert_after,omitempty"`   // Regex; if regexp doesn't match, insert `line` after this anchor
+	InsertBefore string `yaml:"insert_before" json:"insert_before,omitempty"` // Regex; if regexp doesn't match, insert `line` before this anchor
+	Backup       bool   `yaml:"backup" json:"backup,omitempty"`               // Create .bak before modify
 }
 
 // TextPatchINI represents structural section/key edits to an INI-style
@@ -987,10 +986,10 @@ type TextLine struct {
 // line endings (LF vs CRLF) are preserved across edits, so a second
 // run with the same desired state is byte-identical.
 type TextPatchINI struct {
-	Path   string            `yaml:"path" json:"path" plan:"path"`     // Target file path (required)
-	Set    map[string]string `yaml:"set" json:"set,omitempty"`         // Map of "Section.key" → value (literal; not quoted)
-	Delete []string          `yaml:"delete" json:"delete,omitempty"`   // List of "Section.key" entries to remove
-	Backup bool              `yaml:"backup" json:"backup,omitempty"`   // Create .bak before modify
+	Path   string            `yaml:"path" json:"path" plan:"path"`   // Target file path (required)
+	Set    map[string]string `yaml:"set" json:"set,omitempty"`       // Map of "Section.key" → value (literal; not quoted)
+	Delete []string          `yaml:"delete" json:"delete,omitempty"` // List of "Section.key" entries to remove
+	Backup bool              `yaml:"backup" json:"backup,omitempty"` // Create .bak before modify
 }
 
 // TextPatchJSON represents structural edits to a JSON file via a
@@ -1002,12 +1001,12 @@ type TextPatchINI struct {
 // are preserved so a second run with byte-identical desired state is a
 // true no-op (Changed=false, no write).
 type TextPatchJSON struct {
-	Path          string                 `yaml:"path" json:"path" plan:"path"`                       // Target file path (required)
-	Set           map[string]interface{} `yaml:"set" json:"set,omitempty"`                           // Path → value upserts
-	Delete        []string               `yaml:"delete" json:"delete,omitempty"`                     // Paths to remove
-	Merge         map[string]interface{} `yaml:"merge" json:"merge,omitempty"`                       // Path → value merges (object deep-set; array per strategy)
-	MergeStrategy string                 `yaml:"merge_strategy" json:"merge_strategy,omitempty"`     // append_unique|replace|append (default: append_unique)
-	Backup        bool                   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
+	Path          string                 `yaml:"path" json:"path" plan:"path"`                   // Target file path (required)
+	Set           map[string]interface{} `yaml:"set" json:"set,omitempty"`                       // Path → value upserts
+	Delete        []string               `yaml:"delete" json:"delete,omitempty"`                 // Paths to remove
+	Merge         map[string]interface{} `yaml:"merge" json:"merge,omitempty"`                   // Path → value merges (object deep-set; array per strategy)
+	MergeStrategy string                 `yaml:"merge_strategy" json:"merge_strategy,omitempty"` // append_unique|replace|append (default: append_unique)
+	Backup        bool                   `yaml:"backup" json:"backup,omitempty"`                 // Create .bak before modify
 }
 
 // TextPatchYAML represents structural edits to a YAML file via a small
@@ -1028,17 +1027,16 @@ type TextPatchYAML struct {
 	Backup        bool                   `yaml:"backup" json:"backup,omitempty"`                 // Create .bak before modify
 }
 
-
 // FilePatchApply represents a unified diff patch application operation.
 // Applies a unified diff patch to a file with validation and safety checks.
 type FilePatchApply struct {
-	Path       string `yaml:"path" json:"path" plan:"path"`               // Target file path (required)
-	Patch      string `yaml:"patch" json:"patch,omitempty"`               // Inline patch content (patch or patch_file required)
-	PatchFile  string `yaml:"patch_file" json:"patch_file,omitempty" plan:"path"` // Path to patch file (patch or patch_file required)
-	Backup     bool   `yaml:"backup" json:"backup,omitempty"`             // Create .bak before modify
-	ContextLines *int  `yaml:"context_lines" json:"context_lines,omitempty"` // Required matching context lines (default: 3)
-	Strict     bool   `yaml:"strict" json:"strict,omitempty"`             // Strict mode: fail if any hunk fails (default: true)
-	DryRun     bool   `yaml:"dry_run" json:"dry_run,omitempty"`           // Test patch without applying
+	Path         string `yaml:"path" json:"path" plan:"path"`                       // Target file path (required)
+	Patch        string `yaml:"patch" json:"patch,omitempty"`                       // Inline patch content (patch or patch_file required)
+	PatchFile    string `yaml:"patch_file" json:"patch_file,omitempty" plan:"path"` // Path to patch file (patch or patch_file required)
+	Backup       bool   `yaml:"backup" json:"backup,omitempty"`                     // Create .bak before modify
+	ContextLines *int   `yaml:"context_lines" json:"context_lines,omitempty"`       // Required matching context lines (default: 3)
+	Strict       bool   `yaml:"strict" json:"strict,omitempty"`                     // Strict mode: fail if any hunk fails (default: true)
+	DryRun       bool   `yaml:"dry_run" json:"dry_run,omitempty"`                   // Test patch without applying
 }
 
 // ReadFile is the shared shape for `read.json` and `read.yaml` (spec-38).
@@ -1055,49 +1053,49 @@ type ReadFile struct {
 // RepoSearch represents a codebase search operation.
 // Searches files for patterns and outputs results in JSON format.
 type RepoSearch struct {
-	Pattern    string   `yaml:"pattern" json:"pattern"`                         // Search pattern (required)
-	Regex      bool     `yaml:"regex" json:"regex,omitempty"`                   // Use regex mode (default: true)
-	Glob       string   `yaml:"glob" json:"glob,omitempty"`                     // File glob pattern (e.g., "**/*.{ts,js}")
-	Path       string   `yaml:"path" json:"path,omitempty" plan:"path"`         // Search path (default: current directory)
+	Pattern    string   `yaml:"pattern" json:"pattern"`                               // Search pattern (required)
+	Regex      bool     `yaml:"regex" json:"regex,omitempty"`                         // Use regex mode (default: true)
+	Glob       string   `yaml:"glob" json:"glob,omitempty"`                           // File glob pattern (e.g., "**/*.{ts,js}")
+	Path       string   `yaml:"path" json:"path,omitempty" plan:"path"`               // Search path (default: current directory)
 	OutputFile string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
-	MaxResults *int     `yaml:"max_results" json:"max_results,omitempty"`       // Maximum number of results (null = unlimited)
-	IgnoreDirs []string `yaml:"ignore_dirs" json:"ignore_dirs,omitempty"`       // Directories to ignore (e.g., [".git", "node_modules"])
+	MaxResults *int     `yaml:"max_results" json:"max_results,omitempty"`             // Maximum number of results (null = unlimited)
+	IgnoreDirs []string `yaml:"ignore_dirs" json:"ignore_dirs,omitempty"`             // Directories to ignore (e.g., [".git", "node_modules"])
 }
 
 // RepoTree represents a repository tree generation operation.
 // Generates a JSON representation of the directory structure.
 type RepoTree struct {
-	Path       string   `yaml:"path" json:"path,omitempty" plan:"path"`         // Root path (default: current directory)
-	MaxDepth   *int     `yaml:"max_depth" json:"max_depth,omitempty"`           // Maximum directory depth (null = unlimited)
-	ExcludeDirs []string `yaml:"exclude_dirs" json:"exclude_dirs,omitempty"`    // Directories to exclude (e.g., ["node_modules", ".git"])
-	OutputFile string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
-	IncludeFiles *bool   `yaml:"include_files" json:"include_files,omitempty"`  // Include files in tree (default: true; explicit false opts out)
+	Path         string   `yaml:"path" json:"path,omitempty" plan:"path"`               // Root path (default: current directory)
+	MaxDepth     *int     `yaml:"max_depth" json:"max_depth,omitempty"`                 // Maximum directory depth (null = unlimited)
+	ExcludeDirs  []string `yaml:"exclude_dirs" json:"exclude_dirs,omitempty"`           // Directories to exclude (e.g., ["node_modules", ".git"])
+	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
+	IncludeFiles *bool    `yaml:"include_files" json:"include_files,omitempty"`         // Include files in tree (default: true; explicit false opts out)
 }
 
 // RepoApplyPatchset represents a multi-file patch application operation.
 // Applies multiple patches to multiple files in a single atomic operation.
 type RepoApplyPatchset struct {
-	Patchset     string   `yaml:"patchset" json:"patchset,omitempty"`                 // Inline patchset content (patchset or patchset_file required)
-	PatchsetFile string   `yaml:"patchset_file" json:"patchset_file,omitempty" plan:"path"` // Path to patchset file (patchset or patchset_file required)
-	BaseDir      string   `yaml:"base_dir" json:"base_dir,omitempty" plan:"path"`     // Base directory for relative paths (default: current directory)
-	Backup       bool     `yaml:"backup" json:"backup,omitempty"`                     // Create .bak files before modifications
-	Strict       bool     `yaml:"strict" json:"strict,omitempty"`                     // Strict mode: rollback all if any file fails (default: true)
-	DryRun       bool     `yaml:"dry_run" json:"dry_run,omitempty"`                   // Test patchset without applying
-	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file with results
+	Patchset     string `yaml:"patchset" json:"patchset,omitempty"`                       // Inline patchset content (patchset or patchset_file required)
+	PatchsetFile string `yaml:"patchset_file" json:"patchset_file,omitempty" plan:"path"` // Path to patchset file (patchset or patchset_file required)
+	BaseDir      string `yaml:"base_dir" json:"base_dir,omitempty" plan:"path"`           // Base directory for relative paths (default: current directory)
+	Backup       bool   `yaml:"backup" json:"backup,omitempty"`                           // Create .bak files before modifications
+	Strict       bool   `yaml:"strict" json:"strict,omitempty"`                           // Strict mode: rollback all if any file fails (default: true)
+	DryRun       bool   `yaml:"dry_run" json:"dry_run,omitempty"`                         // Test patchset without applying
+	OutputFile   string `yaml:"output_file" json:"output_file,omitempty" plan:"path"`     // Output JSON file with results
 }
 
 // ArtifactCapture wraps steps and captures all file changes with enhanced metadata.
 // Designed for LLM agent loops to provide structured output for decision-making.
 type ArtifactCapture struct {
-	Name             string   `yaml:"name" json:"name"`                                         // Artifact name (required)
-	OutputDir        string   `yaml:"output_dir" json:"output_dir,omitempty" plan:"path"`       // Output directory (default: "./artifacts")
-	Format           string   `yaml:"format" json:"format,omitempty"`                           // Output format: "json", "markdown", "both" (default: "both")
-	CaptureContent   bool     `yaml:"capture_content" json:"capture_content,omitempty"`         // Include before/after file content (default: false)
-	MaxDiffSize      int      `yaml:"max_diff_size" json:"max_diff_size,omitempty"`             // Max diff size in bytes (default: 1MB)
-	IncludeChecksums bool     `yaml:"include_checksums" json:"include_checksums,omitempty"`     // Include file checksums (default: true)
-	EmbedPlan        *bool    `yaml:"embed_plan" json:"embed_plan,omitempty"`                   // Embed full plan in artifact (default: true if steps <= max_plan_steps)
-	MaxPlanSteps     int      `yaml:"max_plan_steps" json:"max_plan_steps,omitempty"`           // Don't embed if plan exceeds this many steps (default: 20)
-	Steps            []Step   `yaml:"steps" json:"steps"`                                       // Steps to execute and capture (required)
+	Name             string `yaml:"name" json:"name"`                                     // Artifact name (required)
+	OutputDir        string `yaml:"output_dir" json:"output_dir,omitempty" plan:"path"`   // Output directory (default: "./artifacts")
+	Format           string `yaml:"format" json:"format,omitempty"`                       // Output format: "json", "markdown", "both" (default: "both")
+	CaptureContent   bool   `yaml:"capture_content" json:"capture_content,omitempty"`     // Include before/after file content (default: false)
+	MaxDiffSize      int    `yaml:"max_diff_size" json:"max_diff_size,omitempty"`         // Max diff size in bytes (default: 1MB)
+	IncludeChecksums bool   `yaml:"include_checksums" json:"include_checksums,omitempty"` // Include file checksums (default: true)
+	EmbedPlan        *bool  `yaml:"embed_plan" json:"embed_plan,omitempty"`               // Embed full plan in artifact (default: true if steps <= max_plan_steps)
+	MaxPlanSteps     int    `yaml:"max_plan_steps" json:"max_plan_steps,omitempty"`       // Don't embed if plan exceeds this many steps (default: 20)
+	Steps            []Step `yaml:"steps" json:"steps"`                                   // Steps to execute and capture (required)
 }
 
 // ObservePort is the spec-59 single-shot read of TCP/UDP port state.
@@ -1179,9 +1177,9 @@ type ObserveGPU struct {
 // LogObservation.
 type ObserveLogs struct {
 	// Source selectors — exactly one must be set.
-	Path         string `yaml:"path" json:"path,omitempty"`                   // Log file path (tail mode)
-	JournalUnit  string `yaml:"journal_unit" json:"journal_unit,omitempty"`   // systemd unit (Linux)
-	Container    string `yaml:"container" json:"container,omitempty"`         // Docker/Podman container name
+	Path        string `yaml:"path" json:"path,omitempty"`                 // Log file path (tail mode)
+	JournalUnit string `yaml:"journal_unit" json:"journal_unit,omitempty"` // systemd unit (Linux)
+	Container   string `yaml:"container" json:"container,omitempty"`       // Docker/Podman container name
 
 	// Window — relative duration (e.g. "60s", "5m"). Default "60s".
 	Since string `yaml:"since" json:"since,omitempty"`
@@ -1217,13 +1215,28 @@ type WaitPort struct {
 // WaitHTTP waits for an HTTP endpoint to return one of the accepted
 // status codes, optionally with a substring match on the body.
 type WaitHTTP struct {
-	URL          string            `yaml:"url" json:"url"`                                 // Target URL (required)
-	Method       string            `yaml:"method" json:"method,omitempty"`                 // HTTP method (default: "GET")
-	Status       []int             `yaml:"status" json:"status,omitempty"`                 // Accepted status codes (default: [200])
-	BodyContains string            `yaml:"body_contains" json:"body_contains,omitempty"`   // Optional substring required in body
-	Headers      map[string]string `yaml:"headers" json:"headers,omitempty"`               // Optional request headers
-	Timeout      string            `yaml:"timeout" json:"timeout,omitempty"`               // Total timeout duration (default: "60s")
-	PollInterval string            `yaml:"poll_interval" json:"poll_interval,omitempty"`   // Time between requests (default: "1s")
+	URL          string `yaml:"url" json:"url"`                               // Target URL (required)
+	Method       string `yaml:"method" json:"method,omitempty"`               // HTTP method (default: "GET")
+	Status       []int  `yaml:"status" json:"status,omitempty"`               // Accepted status codes (default: [200])
+	BodyContains string `yaml:"body_contains" json:"body_contains,omitempty"` // Optional substring required in body
+	// Body is the optional request payload sent with every poll —
+	// proposal-10's motivating case is "poll POST /v1/embeddings
+	// with a JSON payload because the service has no GET /healthz."
+	// Goes through the template renderer so `{{ var }}` interpolation
+	// works the same way it does for URL / Headers / BodyContains.
+	// Raw-string shape (vs structured) matches what download:/
+	// pkg.repo: do for inline content and keeps the user in charge
+	// of JSON escaping. Caller is responsible for setting an
+	// appropriate Content-Type header — this action is the polling
+	// primitive, not a JSON client.
+	//
+	// Side-effect note: polling a non-GET endpoint hits the handler
+	// every iteration. The embedding case re-runs inference each
+	// poll. The user is expected to know what they're poking.
+	Body         string            `yaml:"body,omitempty" json:"body,omitempty"`
+	Headers      map[string]string `yaml:"headers" json:"headers,omitempty"`             // Optional request headers
+	Timeout      string            `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
+	PollInterval string            `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between requests (default: "1s")
 	// Interval is an alias for PollInterval (MT-42). See WaitPort.
 	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
@@ -1252,13 +1265,13 @@ type WaitCommand struct {
 // ArtifactValidate validates artifacts against constraints (change budgets).
 // Designed for LLM agent loops to enforce guardrails on file modifications.
 type ArtifactValidate struct {
-	ArtifactFile    string   `yaml:"artifact_file" json:"artifact_file" plan:"path"`         // Path to artifact JSON file (required)
-	MaxFiles        *int     `yaml:"max_files" json:"max_files,omitempty"`                   // Maximum number of files changed
-	MaxLinesChanged *int     `yaml:"max_lines_changed" json:"max_lines_changed,omitempty"`   // Maximum total lines changed
-	MaxFileSize     *int     `yaml:"max_file_size" json:"max_file_size,omitempty"`           // Maximum individual file size in bytes
-	RequireTests    bool     `yaml:"require_tests" json:"require_tests,omitempty"`           // Require test file changes if code files changed
-	AllowedPaths    []string `yaml:"allowed_paths" json:"allowed_paths,omitempty"`           // Glob patterns for allowed paths
-	ForbiddenPaths  []string `yaml:"forbidden_paths" json:"forbidden_paths,omitempty"`       // Glob patterns for forbidden paths
+	ArtifactFile    string   `yaml:"artifact_file" json:"artifact_file" plan:"path"`       // Path to artifact JSON file (required)
+	MaxFiles        *int     `yaml:"max_files" json:"max_files,omitempty"`                 // Maximum number of files changed
+	MaxLinesChanged *int     `yaml:"max_lines_changed" json:"max_lines_changed,omitempty"` // Maximum total lines changed
+	MaxFileSize     *int     `yaml:"max_file_size" json:"max_file_size,omitempty"`         // Maximum individual file size in bytes
+	RequireTests    bool     `yaml:"require_tests" json:"require_tests,omitempty"`         // Require test file changes if code files changed
+	AllowedPaths    []string `yaml:"allowed_paths" json:"allowed_paths,omitempty"`         // Glob patterns for allowed paths
+	ForbiddenPaths  []string `yaml:"forbidden_paths" json:"forbidden_paths,omitempty"`     // Glob patterns for forbidden paths
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
@@ -1329,7 +1342,6 @@ type Step struct {
 	Creates *string `yaml:"creates,omitempty" json:"creates,omitempty" plan:"path"` // Alias: skip if path exists
 	Unless  *string `yaml:"unless,omitempty"  json:"unless,omitempty"`              // Alias: skip if command succeeds
 
-
 	// ── USER-INPUT ────────────────────────────────────────────────────────────
 
 	// Actions (exactly one required — enforced at runtime by Validate()).
@@ -1348,69 +1360,69 @@ type Step struct {
 	//   artifact.* — artifact capture / validation
 	// Flat keys (shell, assert, wait, vars, log, use, import) are foundational
 	// or control-flow primitives that do not warrant a namespace.
-	FileWrite        *File                   `yaml:"file.write,omitempty"        json:"file.write,omitempty"        action:"file.write"`
-	FileTemplate     *Template               `yaml:"file.template,omitempty"     json:"file.template,omitempty"     action:"file.template"`
-	FileCopy         *Copy                   `yaml:"file.copy,omitempty"         json:"file.copy,omitempty"         action:"file.copy"`
-	FileDownload     *Download               `yaml:"file.download,omitempty"     json:"file.download,omitempty"     action:"file.download"`
-	FileUnarchive    *Unarchive              `yaml:"file.unarchive,omitempty"    json:"file.unarchive,omitempty"    action:"file.unarchive"`
-	TextLine         *TextLine               `yaml:"text.line,omitempty"         json:"text.line,omitempty"         action:"text.line"`
-	TextReplace      *FileReplace            `yaml:"text.replace,omitempty"      json:"text.replace,omitempty"      action:"text.replace"`
-	TextInsert       *FileInsert             `yaml:"text.insert,omitempty"       json:"text.insert,omitempty"       action:"text.insert"`
-	TextDeleteRange  *FileDeleteRange        `yaml:"text.delete_range,omitempty" json:"text.delete_range,omitempty" action:"text.delete_range"`
-	TextPatch        *FilePatchApply         `yaml:"text.patch,omitempty"        json:"text.patch,omitempty"        action:"text.patch"`
-	TextPatchINI     *TextPatchINI           `yaml:"text.patch.ini,omitempty"    json:"text.patch.ini,omitempty"    action:"text.patch.ini"`
-	TextPatchJSON    *TextPatchJSON          `yaml:"text.patch.json,omitempty"   json:"text.patch.json,omitempty"   action:"text.patch.json"`
-	TextPatchYAML    *TextPatchYAML          `yaml:"text.patch.yaml,omitempty"   json:"text.patch.yaml,omitempty"   action:"text.patch.yaml"`
-	Pkg              *Package                `yaml:"pkg,omitempty"               json:"pkg,omitempty"               action:"pkg"`
-	PkgRepo          *PkgRepo                `yaml:"pkg.repo,omitempty"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
-	PkgHold          *PkgHold                `yaml:"pkg.hold,omitempty"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
-	PkgUpgrade       *PkgUpgrade             `yaml:"pkg.upgrade,omitempty"       json:"pkg.upgrade,omitempty"       action:"pkg.upgrade"`
-	PkgList          *PkgList                `yaml:"pkg.list,omitempty"          json:"pkg.list,omitempty"          action:"pkg.list"`
-	Tool             *Tool                   `yaml:"tool,omitempty"              json:"tool,omitempty"              action:"tool"`
-	OsService        *ServiceAction          `yaml:"os.service,omitempty"        json:"os.service,omitempty"        action:"os.service"`
-	OsUser           *OsUser                 `yaml:"os.user,omitempty"           json:"os.user,omitempty"           action:"os.user"`
-	OsGroup          *OsGroup                `yaml:"os.group,omitempty"          json:"os.group,omitempty"          action:"os.group"`
-	OsSSHKey         *OsSSHKey               `yaml:"os.ssh_key,omitempty"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
-	OsCron           *OsCron                 `yaml:"os.cron,omitempty"           json:"os.cron,omitempty"           action:"os.cron"`
-	OsSysctl         *OsSysctl               `yaml:"os.sysctl,omitempty"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
-	OsSystemd        *OsSystemd              `yaml:"os.systemd,omitempty"        json:"os.systemd,omitempty"        action:"os.systemd"`
-	OsMount          *OsMount                `yaml:"os.mount,omitempty"          json:"os.mount,omitempty"          action:"os.mount"`
-	OsFirewall       *OsFirewall             `yaml:"os.firewall,omitempty"       json:"os.firewall,omitempty"       action:"os.firewall"`
-	WindowsFirewallRule  *WindowsFirewallRule  `yaml:"windows.firewall_rule,omitempty"   json:"windows.firewall_rule,omitempty"   action:"windows.firewall_rule"`
-	WindowsScheduledTask *WindowsScheduledTask `yaml:"windows.scheduled_task,omitempty"  json:"windows.scheduled_task,omitempty"  action:"windows.scheduled_task"`
-	ContainerImage   *ContainerImage         `yaml:"container.image,omitempty"   json:"container.image,omitempty"   action:"container.image"`
-	Container        *Container              `yaml:"container,omitempty"         json:"container,omitempty"         action:"container"`
-	Cmd              *CommandAction          `yaml:"cmd,omitempty"               json:"cmd,omitempty"               action:"cmd"`
-	RepoSearch       *RepoSearch             `yaml:"repo.search,omitempty"       json:"repo.search,omitempty"       action:"repo.search"`
-	RepoTree         *RepoTree               `yaml:"repo.tree,omitempty"         json:"repo.tree,omitempty"         action:"repo.tree"`
-	ReadJSON         *ReadFile               `yaml:"read.json,omitempty"         json:"read.json,omitempty"         action:"read.json"`
-	ReadYAML         *ReadFile               `yaml:"read.yaml,omitempty"         json:"read.yaml,omitempty"         action:"read.yaml"`
-	RepoPatch        *RepoApplyPatchset      `yaml:"repo.patch,omitempty"        json:"repo.patch,omitempty"        action:"repo.patch"`
-	GitClone         *GitClone               `yaml:"git.clone,omitempty"         json:"git.clone,omitempty"         action:"git.clone"`
-	GitCheckout      *GitCheckout            `yaml:"git.checkout,omitempty"      json:"git.checkout,omitempty"      action:"git.checkout"`
-	GitConfig        *GitConfig              `yaml:"git.config,omitempty"        json:"git.config,omitempty"        action:"git.config"`
-	ArtifactCapture  *ArtifactCapture        `yaml:"artifact.capture,omitempty"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
-	ArtifactValidate *ArtifactValidate       `yaml:"artifact.validate,omitempty" json:"artifact.validate,omitempty" action:"artifact.validate"`
-	Shell            *ShellAction            `yaml:"shell,omitempty"             json:"shell,omitempty"             action:"shell"`
-	Assert           *Assert                 `yaml:"assert,omitempty"            json:"assert,omitempty"            action:"assert"`
-	ObservePort      *ObservePort            `yaml:"observe.port,omitempty"      json:"observe.port,omitempty"      action:"observe.port"`
-	ObserveProcess   *ObserveProcess         `yaml:"observe.process,omitempty"   json:"observe.process,omitempty"   action:"observe.process"`
-	ObserveHTTP      *ObserveHTTP            `yaml:"observe.http,omitempty"      json:"observe.http,omitempty"      action:"observe.http"`
-	ObserveService   *ObserveService         `yaml:"observe.service,omitempty"   json:"observe.service,omitempty"   action:"observe.service"`
-	ObserveCPU       *ObserveCPU             `yaml:"observe.cpu,omitempty"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
-	ObserveMemory    *ObserveMemory          `yaml:"observe.memory,omitempty"    json:"observe.memory,omitempty"    action:"observe.memory"`
-	ObserveDisk      *ObserveDisk            `yaml:"observe.disk,omitempty"      json:"observe.disk,omitempty"      action:"observe.disk"`
-	ObserveGPU       *ObserveGPU             `yaml:"observe.gpu,omitempty"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
-	ObserveLogs      *ObserveLogs            `yaml:"observe.logs,omitempty"      json:"observe.logs,omitempty"      action:"observe.logs"`
-	WaitPort         *WaitPort               `yaml:"wait.port,omitempty"         json:"wait.port,omitempty"         action:"wait.port"`
-	WaitHTTP         *WaitHTTP               `yaml:"wait.http,omitempty"         json:"wait.http,omitempty"         action:"wait.http"`
-	WaitFile         *WaitFile               `yaml:"wait.file,omitempty"         json:"wait.file,omitempty"         action:"wait.file"`
-	WaitCommand      *WaitCommand            `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
-	Log              *PrintAction            `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
-	Use              *PresetInvocation       `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
-	Import           *string                 `yaml:"import,omitempty"            json:"import,omitempty"            action:"import"`
-	VarsLoad         *string                 `yaml:"vars.load,omitempty"         json:"vars.load,omitempty"         action:"vars.load"`
-	Vars             *map[string]interface{} `yaml:"vars,omitempty"              json:"vars,omitempty"              action:"vars"`
+	FileWrite            *File                   `yaml:"file.write,omitempty"        json:"file.write,omitempty"        action:"file.write"`
+	FileTemplate         *Template               `yaml:"file.template,omitempty"     json:"file.template,omitempty"     action:"file.template"`
+	FileCopy             *Copy                   `yaml:"file.copy,omitempty"         json:"file.copy,omitempty"         action:"file.copy"`
+	FileDownload         *Download               `yaml:"file.download,omitempty"     json:"file.download,omitempty"     action:"file.download"`
+	FileUnarchive        *Unarchive              `yaml:"file.unarchive,omitempty"    json:"file.unarchive,omitempty"    action:"file.unarchive"`
+	TextLine             *TextLine               `yaml:"text.line,omitempty"         json:"text.line,omitempty"         action:"text.line"`
+	TextReplace          *FileReplace            `yaml:"text.replace,omitempty"      json:"text.replace,omitempty"      action:"text.replace"`
+	TextInsert           *FileInsert             `yaml:"text.insert,omitempty"       json:"text.insert,omitempty"       action:"text.insert"`
+	TextDeleteRange      *FileDeleteRange        `yaml:"text.delete_range,omitempty" json:"text.delete_range,omitempty" action:"text.delete_range"`
+	TextPatch            *FilePatchApply         `yaml:"text.patch,omitempty"        json:"text.patch,omitempty"        action:"text.patch"`
+	TextPatchINI         *TextPatchINI           `yaml:"text.patch.ini,omitempty"    json:"text.patch.ini,omitempty"    action:"text.patch.ini"`
+	TextPatchJSON        *TextPatchJSON          `yaml:"text.patch.json,omitempty"   json:"text.patch.json,omitempty"   action:"text.patch.json"`
+	TextPatchYAML        *TextPatchYAML          `yaml:"text.patch.yaml,omitempty"   json:"text.patch.yaml,omitempty"   action:"text.patch.yaml"`
+	Pkg                  *Package                `yaml:"pkg,omitempty"               json:"pkg,omitempty"               action:"pkg"`
+	PkgRepo              *PkgRepo                `yaml:"pkg.repo,omitempty"          json:"pkg.repo,omitempty"          action:"pkg.repo"`
+	PkgHold              *PkgHold                `yaml:"pkg.hold,omitempty"          json:"pkg.hold,omitempty"          action:"pkg.hold"`
+	PkgUpgrade           *PkgUpgrade             `yaml:"pkg.upgrade,omitempty"       json:"pkg.upgrade,omitempty"       action:"pkg.upgrade"`
+	PkgList              *PkgList                `yaml:"pkg.list,omitempty"          json:"pkg.list,omitempty"          action:"pkg.list"`
+	Tool                 *Tool                   `yaml:"tool,omitempty"              json:"tool,omitempty"              action:"tool"`
+	OsService            *ServiceAction          `yaml:"os.service,omitempty"        json:"os.service,omitempty"        action:"os.service"`
+	OsUser               *OsUser                 `yaml:"os.user,omitempty"           json:"os.user,omitempty"           action:"os.user"`
+	OsGroup              *OsGroup                `yaml:"os.group,omitempty"          json:"os.group,omitempty"          action:"os.group"`
+	OsSSHKey             *OsSSHKey               `yaml:"os.ssh_key,omitempty"        json:"os.ssh_key,omitempty"        action:"os.ssh_key"`
+	OsCron               *OsCron                 `yaml:"os.cron,omitempty"           json:"os.cron,omitempty"           action:"os.cron"`
+	OsSysctl             *OsSysctl               `yaml:"os.sysctl,omitempty"         json:"os.sysctl,omitempty"         action:"os.sysctl"`
+	OsSystemd            *OsSystemd              `yaml:"os.systemd,omitempty"        json:"os.systemd,omitempty"        action:"os.systemd"`
+	OsMount              *OsMount                `yaml:"os.mount,omitempty"          json:"os.mount,omitempty"          action:"os.mount"`
+	OsFirewall           *OsFirewall             `yaml:"os.firewall,omitempty"       json:"os.firewall,omitempty"       action:"os.firewall"`
+	WindowsFirewallRule  *WindowsFirewallRule    `yaml:"windows.firewall_rule,omitempty"   json:"windows.firewall_rule,omitempty"   action:"windows.firewall_rule"`
+	WindowsScheduledTask *WindowsScheduledTask   `yaml:"windows.scheduled_task,omitempty"  json:"windows.scheduled_task,omitempty"  action:"windows.scheduled_task"`
+	ContainerImage       *ContainerImage         `yaml:"container.image,omitempty"   json:"container.image,omitempty"   action:"container.image"`
+	Container            *Container              `yaml:"container,omitempty"         json:"container,omitempty"         action:"container"`
+	Cmd                  *CommandAction          `yaml:"cmd,omitempty"               json:"cmd,omitempty"               action:"cmd"`
+	RepoSearch           *RepoSearch             `yaml:"repo.search,omitempty"       json:"repo.search,omitempty"       action:"repo.search"`
+	RepoTree             *RepoTree               `yaml:"repo.tree,omitempty"         json:"repo.tree,omitempty"         action:"repo.tree"`
+	ReadJSON             *ReadFile               `yaml:"read.json,omitempty"         json:"read.json,omitempty"         action:"read.json"`
+	ReadYAML             *ReadFile               `yaml:"read.yaml,omitempty"         json:"read.yaml,omitempty"         action:"read.yaml"`
+	RepoPatch            *RepoApplyPatchset      `yaml:"repo.patch,omitempty"        json:"repo.patch,omitempty"        action:"repo.patch"`
+	GitClone             *GitClone               `yaml:"git.clone,omitempty"         json:"git.clone,omitempty"         action:"git.clone"`
+	GitCheckout          *GitCheckout            `yaml:"git.checkout,omitempty"      json:"git.checkout,omitempty"      action:"git.checkout"`
+	GitConfig            *GitConfig              `yaml:"git.config,omitempty"        json:"git.config,omitempty"        action:"git.config"`
+	ArtifactCapture      *ArtifactCapture        `yaml:"artifact.capture,omitempty"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
+	ArtifactValidate     *ArtifactValidate       `yaml:"artifact.validate,omitempty" json:"artifact.validate,omitempty" action:"artifact.validate"`
+	Shell                *ShellAction            `yaml:"shell,omitempty"             json:"shell,omitempty"             action:"shell"`
+	Assert               *Assert                 `yaml:"assert,omitempty"            json:"assert,omitempty"            action:"assert"`
+	ObservePort          *ObservePort            `yaml:"observe.port,omitempty"      json:"observe.port,omitempty"      action:"observe.port"`
+	ObserveProcess       *ObserveProcess         `yaml:"observe.process,omitempty"   json:"observe.process,omitempty"   action:"observe.process"`
+	ObserveHTTP          *ObserveHTTP            `yaml:"observe.http,omitempty"      json:"observe.http,omitempty"      action:"observe.http"`
+	ObserveService       *ObserveService         `yaml:"observe.service,omitempty"   json:"observe.service,omitempty"   action:"observe.service"`
+	ObserveCPU           *ObserveCPU             `yaml:"observe.cpu,omitempty"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
+	ObserveMemory        *ObserveMemory          `yaml:"observe.memory,omitempty"    json:"observe.memory,omitempty"    action:"observe.memory"`
+	ObserveDisk          *ObserveDisk            `yaml:"observe.disk,omitempty"      json:"observe.disk,omitempty"      action:"observe.disk"`
+	ObserveGPU           *ObserveGPU             `yaml:"observe.gpu,omitempty"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
+	ObserveLogs          *ObserveLogs            `yaml:"observe.logs,omitempty"      json:"observe.logs,omitempty"      action:"observe.logs"`
+	WaitPort             *WaitPort               `yaml:"wait.port,omitempty"         json:"wait.port,omitempty"         action:"wait.port"`
+	WaitHTTP             *WaitHTTP               `yaml:"wait.http,omitempty"         json:"wait.http,omitempty"         action:"wait.http"`
+	WaitFile             *WaitFile               `yaml:"wait.file,omitempty"         json:"wait.file,omitempty"         action:"wait.file"`
+	WaitCommand          *WaitCommand            `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
+	Log                  *PrintAction            `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
+	Use                  *PresetInvocation       `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
+	Import               *string                 `yaml:"import,omitempty"            json:"import,omitempty"            action:"import"`
+	VarsLoad             *string                 `yaml:"vars.load,omitempty"         json:"vars.load,omitempty"         action:"vars.load"`
+	Vars                 *map[string]interface{} `yaml:"vars,omitempty"              json:"vars,omitempty"              action:"vars"`
 
 	// Privilege escalation (spec-21: collapsed from become/become_user).
 	// Empty = current user; "root" = sudo to root; "<name>" = sudo to <name>.
@@ -1485,12 +1497,12 @@ type Step struct {
 	// ── PLANNER-INTERNAL ─────────────────────────────────────────────────────
 
 	// Plan metadata (populated during plan expansion, omitted in config files)
-	ID             string        `yaml:"id,omitempty" json:"id,omitempty"`
-	ActionType     string        `yaml:"action_type,omitempty" json:"action_type,omitempty"`
-	Origin         *Origin       `yaml:"origin,omitempty" json:"origin,omitempty"`
-	Skipped        bool          `yaml:"skipped,omitempty" json:"skipped,omitempty"`
-	LoopContext    *LoopContext  `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
-	SourceLocation *Position     `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
+	ID             string       `yaml:"id,omitempty" json:"id,omitempty"`
+	ActionType     string       `yaml:"action_type,omitempty" json:"action_type,omitempty"`
+	Origin         *Origin      `yaml:"origin,omitempty" json:"origin,omitempty"`
+	Skipped        bool         `yaml:"skipped,omitempty" json:"skipped,omitempty"`
+	LoopContext    *LoopContext `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
+	SourceLocation *Position    `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
 
 	// TriggeredBy carries the ID of the parent step when this Step was
 	// expanded from an on_change child. Populated during plan expansion;
@@ -1797,85 +1809,85 @@ func (s *Step) Validate() error {
 // Clone creates a shallow copy of the step.
 func (s *Step) Clone() *Step {
 	return &Step{
-		Name:             s.Name,
-		When:             s.When,
-		UnlessExists:     s.UnlessExists,
-		UnlessCommand:    s.UnlessCommand,
-		Creates:          s.Creates,
-		Unless:           s.Unless,
-		FileWrite:        s.FileWrite,
-		FileTemplate:     s.FileTemplate,
-		FileCopy:         s.FileCopy,
-		FileDownload:     s.FileDownload,
-		FileUnarchive:    s.FileUnarchive,
-		TextLine:         s.TextLine,
-		TextReplace:      s.TextReplace,
-		TextInsert:       s.TextInsert,
-		TextDeleteRange:  s.TextDeleteRange,
-		TextPatch:        s.TextPatch,
-		TextPatchINI:     s.TextPatchINI,
-		TextPatchJSON:    s.TextPatchJSON,
-		TextPatchYAML:    s.TextPatchYAML,
-		Pkg:              s.Pkg,
-		PkgRepo:          s.PkgRepo,
-		PkgHold:          s.PkgHold,
-		PkgUpgrade:       s.PkgUpgrade,
-		PkgList:          s.PkgList,
-		Tool:             s.Tool,
-		OsService:        s.OsService,
-		OsUser:           s.OsUser,
-		OsGroup:          s.OsGroup,
-		OsSSHKey:         s.OsSSHKey,
-		OsCron:           s.OsCron,
-		OsSysctl:         s.OsSysctl,
-		OsSystemd:        s.OsSystemd,
-		OsMount:          s.OsMount,
-		OsFirewall:       s.OsFirewall,
-		ContainerImage:   s.ContainerImage,
-		Container:        s.Container,
-		Cmd:              s.Cmd,
-		RepoSearch:       s.RepoSearch,
-		RepoTree:         s.RepoTree,
-		ReadJSON:         s.ReadJSON,
-		ReadYAML:         s.ReadYAML,
-		RepoPatch:        s.RepoPatch,
-		GitClone:         s.GitClone,
-		GitCheckout:      s.GitCheckout,
-		GitConfig:        s.GitConfig,
-		ArtifactCapture:  s.ArtifactCapture,
-		ArtifactValidate: s.ArtifactValidate,
-		Shell:            s.Shell,
-		Assert:           s.Assert,
-		ObservePort:      s.ObservePort,
-		ObserveProcess:   s.ObserveProcess,
-		ObserveHTTP:      s.ObserveHTTP,
-		ObserveService:   s.ObserveService,
-		ObserveCPU:       s.ObserveCPU,
-		ObserveMemory:    s.ObserveMemory,
-		ObserveDisk:      s.ObserveDisk,
-		ObserveGPU:       s.ObserveGPU,
-		ObserveLogs:      s.ObserveLogs,
-		WaitPort:         s.WaitPort,
-		WaitHTTP:         s.WaitHTTP,
-		WaitFile:         s.WaitFile,
-		WaitCommand:      s.WaitCommand,
-		Log:              s.Log,
-		Use:              s.Use,
-		Import:           s.Import,
-		VarsLoad:         s.VarsLoad,
-		Vars:             s.Vars,
-		AsUser:           s.AsUser,
-		Env:              s.Env,
-		Cwd:              s.Cwd,
-		Timeout:          s.Timeout,
-		Retry:            s.Retry,
-		ContinueOnError:  s.ContinueOnError,
-		ChangedWhen:      s.ChangedWhen,
-		FailedWhen:       s.FailedWhen,
-		ForEach:          s.ForEach,
-		ForEachFile:      s.ForEachFile,
-		Tags:             append([]string(nil), s.Tags...),
-		As:               s.As,
+		Name:              s.Name,
+		When:              s.When,
+		UnlessExists:      s.UnlessExists,
+		UnlessCommand:     s.UnlessCommand,
+		Creates:           s.Creates,
+		Unless:            s.Unless,
+		FileWrite:         s.FileWrite,
+		FileTemplate:      s.FileTemplate,
+		FileCopy:          s.FileCopy,
+		FileDownload:      s.FileDownload,
+		FileUnarchive:     s.FileUnarchive,
+		TextLine:          s.TextLine,
+		TextReplace:       s.TextReplace,
+		TextInsert:        s.TextInsert,
+		TextDeleteRange:   s.TextDeleteRange,
+		TextPatch:         s.TextPatch,
+		TextPatchINI:      s.TextPatchINI,
+		TextPatchJSON:     s.TextPatchJSON,
+		TextPatchYAML:     s.TextPatchYAML,
+		Pkg:               s.Pkg,
+		PkgRepo:           s.PkgRepo,
+		PkgHold:           s.PkgHold,
+		PkgUpgrade:        s.PkgUpgrade,
+		PkgList:           s.PkgList,
+		Tool:              s.Tool,
+		OsService:         s.OsService,
+		OsUser:            s.OsUser,
+		OsGroup:           s.OsGroup,
+		OsSSHKey:          s.OsSSHKey,
+		OsCron:            s.OsCron,
+		OsSysctl:          s.OsSysctl,
+		OsSystemd:         s.OsSystemd,
+		OsMount:           s.OsMount,
+		OsFirewall:        s.OsFirewall,
+		ContainerImage:    s.ContainerImage,
+		Container:         s.Container,
+		Cmd:               s.Cmd,
+		RepoSearch:        s.RepoSearch,
+		RepoTree:          s.RepoTree,
+		ReadJSON:          s.ReadJSON,
+		ReadYAML:          s.ReadYAML,
+		RepoPatch:         s.RepoPatch,
+		GitClone:          s.GitClone,
+		GitCheckout:       s.GitCheckout,
+		GitConfig:         s.GitConfig,
+		ArtifactCapture:   s.ArtifactCapture,
+		ArtifactValidate:  s.ArtifactValidate,
+		Shell:             s.Shell,
+		Assert:            s.Assert,
+		ObservePort:       s.ObservePort,
+		ObserveProcess:    s.ObserveProcess,
+		ObserveHTTP:       s.ObserveHTTP,
+		ObserveService:    s.ObserveService,
+		ObserveCPU:        s.ObserveCPU,
+		ObserveMemory:     s.ObserveMemory,
+		ObserveDisk:       s.ObserveDisk,
+		ObserveGPU:        s.ObserveGPU,
+		ObserveLogs:       s.ObserveLogs,
+		WaitPort:          s.WaitPort,
+		WaitHTTP:          s.WaitHTTP,
+		WaitFile:          s.WaitFile,
+		WaitCommand:       s.WaitCommand,
+		Log:               s.Log,
+		Use:               s.Use,
+		Import:            s.Import,
+		VarsLoad:          s.VarsLoad,
+		Vars:              s.Vars,
+		AsUser:            s.AsUser,
+		Env:               s.Env,
+		Cwd:               s.Cwd,
+		Timeout:           s.Timeout,
+		Retry:             s.Retry,
+		ContinueOnError:   s.ContinueOnError,
+		ChangedWhen:       s.ChangedWhen,
+		FailedWhen:        s.FailedWhen,
+		ForEach:           s.ForEach,
+		ForEachFile:       s.ForEachFile,
+		Tags:              append([]string(nil), s.Tags...),
+		As:                s.As,
 		OnChange:          append([]Step(nil), s.OnChange...),
 		Transaction:       append([]Step(nil), s.Transaction...),
 		OnRollback:        append([]Step(nil), s.OnRollback...),
@@ -1887,11 +1899,11 @@ func (s *Step) Clone() *Step {
 		Finally:           append([]Step(nil), s.Finally...),
 		TryParent:         s.TryParent,
 		TryRole:           s.TryRole,
-		ID:               s.ID,
-		ActionType:       s.ActionType,
-		Origin:           s.Origin,
-		Skipped:          s.Skipped,
-		LoopContext:      s.LoopContext,
-		TriggeredBy:      s.TriggeredBy,
+		ID:                s.ID,
+		ActionType:        s.ActionType,
+		Origin:            s.Origin,
+		Skipped:           s.Skipped,
+		LoopContext:       s.LoopContext,
+		TriggeredBy:       s.TriggeredBy,
 	}
 }
