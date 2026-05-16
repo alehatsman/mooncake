@@ -3,7 +3,7 @@
 Proposals for the kernel — action handlers, planner, executor, the
 four-method ABI, template renderer.
 
-Two source streams feed this folder:
+Three source streams feed this folder:
 
 1. **Audit-distilled (01–06)** — from the 2026-05-15 manual-tester
    pass (~50 actions tested, result-shape inconsistencies catalogued
@@ -14,6 +14,12 @@ Two source streams feed this folder:
    migrating real dotfiles from `shell:` blocks to typed actions on
    2026-05-16. Pattern: **a real shell workaround exists; the typed
    action equivalent is one missing field away**.
+3. **Agent-runtime expansion (11–15)** — from a 2026-05-17
+   brainstorm on which new actions unlock pilot agents, self-healing
+   systems, and LAN-fleet composition. Pattern: **the kernel's
+   diff/perms/risk wrap is the moat; new actions push complexity
+   into their own `args:` block, not onto `Step`** (see CLAUDE.md
+   soft cap §2 — 36/40 universal fields used today).
 
 These are brainstormed proposals, not specs.
 
@@ -29,6 +35,11 @@ These are brainstormed proposals, not specs.
 | [08](./proposal-08-pkg-brew-taps-and-tolerant-rc.md) | `pkg.repo: manager: brew` for taps; tolerate idempotent non-zero rc | S | Medium | `brew tap` exits 1 on re-tap; cask vs. formula is shell-only today |
 | [09](./proposal-09-template-now-filter.md) | Working `now` / `apply_started_at` for timestamped strings | XS | Medium | Pongo2's `{% now %}` silently no-ops; blocks rolling backup patterns |
 | [10](./proposal-10-wait-http-post-body.md) | `wait_http`: POST + headers + body | S | Medium | GET-only blocks polling services with no health endpoint (e.g. vLLM embeddings) |
+| [11](./proposal-11-action-assert-heal.md) | `assert` action + on-fail `heal:` handler | M | High | Self-healing as a primitive; the maintain-loop kernel verb |
+| [12](./proposal-12-action-kv-state.md) | `kv` action — typed persistent state in plan/diff | S | High | Agents need memory between runs; today they smuggle it through files |
+| [13](./proposal-13-action-process.md) | `process` action — supervised long-running processes | S | Medium-High | Fills the gap between `shell:` (fire-and-forget) and `service:` (OS-installed) |
+| [14](./proposal-14-action-watch.md) | `watch` action — reactive triggers for the maintain loop | M | Medium-High | Event-driven heals + agent reflexes; cron replacement |
+| [15](./proposal-15-action-plan-recurse.md) | `plan` action — recursive sub-plan execution | M | Medium-High | Composition primitive; unlocks shared heals, conditional flows, per-branch perms |
 
 ## Recommended order
 
@@ -57,6 +68,29 @@ that builds on the disciplined surface.
   broader question of what `pkg.repo`'s driver framework looks like
   on non-APT/yum managers. Worth sequencing after a pkg-driver
   audit.
+
+### Agent-runtime expansion (compose; do 11 first)
+
+These five proposals cross-reference each other heavily. 11 is the
+keystone; the rest layer on top.
+
+1. **11 `assert` + `heal:`** — the maintain-loop primitive. Touches
+   the executor (new counter, new evaluator). Do first.
+2. **12 `kv` action** — adds the state surface 11, 14, 15 all want
+   for counters, debounce windows, sub-plan handoff.
+3. **15 `plan` recurse** — makes `heal:` / `on_event:` / shared
+   sub-flows composable. Cheaper to add once than to retrofit.
+4. **13 `process`** — independent of the others; ship when a real
+   user need surfaces (pilot agent with local model is the obvious
+   one).
+5. **14 `watch`** — biggest scope (event-source abstraction); the
+   payoff is event-driven maintain mode. Ship last in the batch.
+
+Agent stream's proposal-07 (`mcp_tool` action) is the sibling to
+this batch and should sequence with it — `mcp_tool` lives in the
+agent stream because the MCP integration story is owned there, but
+the action itself is a new kernel handler and follows the same
+field-budget discipline.
 
 ## Cross-cutting themes
 
@@ -128,3 +162,18 @@ User-filed receipts (2026-05-16 dotfiles migration):
   components) — `cp ~/.zshrc ~/.dotfiles-backup/.zshrc.$(date +...)`
 - **Proposal 10**: `components/mcsearch/server.yml` — 60s polling
   loop for `POST /v1/embeddings`
+
+Agent-runtime brainstorm receipts (2026-05-17):
+- **Proposal 11**: cron + retry + alert glue users hand-build to
+  keep a service alive; `agentd` plan that wants to maintain
+  invariants without an external scheduler.
+- **Proposal 12**: agent loops that write to files just to remember
+  "last build SHA"; loss of audit trail when state lives outside
+  facts.
+- **Proposal 13**: pilot-agent plans that need `ollama serve` for
+  the next 5 minutes — too heavy for `service:`, too dangling for
+  `shell:`.
+- **Proposal 14**: cron-driven `mooncake apply` loops every minute
+  to find one drifted thing; event-driven is the latency fix.
+- **Proposal 15**: the pattern "this heal should also be these
+  three steps" today copy-pastes the steps; composition is the fix.

@@ -1,14 +1,17 @@
 # agent Proposals
 
-Six proposals for the agent stream — MCP server, agent loop, the
+Seven proposals for the agent stream — MCP server, agent loop, the
 safety story for LLM-driven mooncake. Brainstormed after the
-2026-05-15 manual audit's MCP rounds (#22, #25, #54).
+2026-05-15 manual audit's MCP rounds (#22, #25, #54) plus the
+2026-05-17 brainstorm on mooncake-as-agent-runtime (proposal 07).
 
 The agent stream's wedge is "Docker for AI agents". These
 proposals make that pitch concrete: agents can discover what
 mooncake does (01), watch runs incrementally (02), cancel mid-run
 (03), audit changes before applying (04), reason about past runs
-(05), and operate under enforced permissions (06).
+(05), operate under enforced permissions (06), and — the inversion
+— call MCP tools *as* mooncake actions, inheriting the kernel's
+diff/perms/risk wrap (07).
 
 | # | Proposal | Effort | Value | Why |
 |---|---|---|---|---|
@@ -18,6 +21,7 @@ mooncake does (01), watch runs incrementally (02), cancel mid-run
 | [04](./proposal-04-diff-plan-tool.md) | `diff_plan` typed pre-execution diff | S | High | `check_plan` returns structure; agents want typed deltas |
 | [05](./proposal-05-mcp-history-and-replay.md) | `list_runs` / `get_run` / `replay_run` | S | High | Loop state across reconnects; reconstruct context |
 | [06](./proposal-06-permissions-as-contract.md) | Declared allow_permissions; reject plan if exceeded | M | Highest | The safety pitch made enforceable |
+| [07](./proposal-07-action-mcp-tool.md) | `mcp_tool` action — call MCP tools through the kernel | M | Highest | Every MCP server inherits diff/perms/risk/replay; the inversion of 01-06 |
 
 ## Recommended order
 
@@ -28,6 +32,9 @@ mooncake does (01), watch runs incrementally (02), cancel mid-run
 5. **02 streaming events** — S, pairs with 03
 6. **06 permissions as contract** — M, the headline safety
    feature; build on the rest of the surface
+7. **07 `mcp_tool` action** — M, sequence after 06 so the
+   permission contract covers it; biggest force multiplier on
+   the agent-stream surface once it lands
 
 ## Cross-cutting themes
 
@@ -65,6 +72,7 @@ Several proposals here mirror proposals in other streams:
 | 04 diff_plan | Core proposal-04 (typed plan diff) |
 | 05 list_runs | DX's existing `mooncake history` |
 | 06 allow_permissions | (no current mirror; future fleet `--allow-permissions`) |
+| 07 `mcp_tool` action | Core proposals 11–15 (the "expand the action set toward agent runtimes" batch) |
 
 The data and primitives are shared; each stream's surface wraps
 the same kernel functionality.
