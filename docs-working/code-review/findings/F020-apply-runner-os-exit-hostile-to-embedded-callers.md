@@ -8,7 +8,23 @@ lines: 154-155, 336-359
 status: done
 resolved_by: worktree-fix-f020 (01f5cac)
 follow_up: F016 (executor.Start does not observe ctx; signal still routes through os.Exit until ctx threads through executor → handler → exec.CommandContext)
+verified: 2026-05-16 on master @ 01f5cac
 ---
+
+## Post-fix verification (2026-05-16, master @ 01f5cac)
+
+- `grep -c 'installSignalHandler' internal/apply/runner.go internal/apply/from_plan.go cmd/mooncake.go` returns 0 for all three — the symbol is gone from the kernel and was not just relocated to a sibling kernel file.
+- `cmd/mooncake.go:342-384` defines `runWithSignalCtx`; both `applyCommand` (line 320) and `runFromPlan` (line 331) go through it.
+- `internal/apply/runner.go:60-62, 151-152` document the new contract: kernel does not call `os.Exit`; embedded callers cancel ctx via their own shutdown path.
+- `go test ./internal/apply/... ./internal/agentd/... ./cmd/...` — green.
+- End-to-end CLI smoke tests confirm signal UX is preserved:
+  ```
+  $ mooncake apply -c /tmp/f020-sigint.yml &     # sleep 5 step
+  $ kill -INT $!                                  # exit 130
+  $ kill -TERM $!                                 # exit 143
+  ```
+  Both print the friendly `⚠ received {sig}, aborting apply` stderr message from `runWithSignalCtx`.
+- agentd race-on-exit confirmed gone in principle: agentd's `signal.NotifyContext` (`cmd/agentd.go:124`) is the only `signal.Notify` left on the daemon side, no competing kernel-side handler races it. Full graceful-shutdown story still depends on F016 plumbing ctx through executor → exec.CommandContext.
 
 ## Pre-fix verification (2026-05-16, master @ 49930fd)
 
