@@ -26,6 +26,8 @@ something else landing first.
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
 | F027 | agentd.sanityCheckBinary runs staged binary without timeout — hang blocks upgrade handler forever | risk | XS | — | open |
 | F028 | git_clone askpass returns password for the username prompt too — auth fails for bare HTTPS URLs | bug | S | — | open |
+| F029 | agentd.bearerAuthMiddleware leaks Authorization-header length via timing side-channel | risk | XS | — | open |
+| F030 | security.FilePasswordProvider rejects 0400 / stricter-than-0600 modes — exact-equality check | smell | XS | — | open |
 
 ## Findings index
 
@@ -59,6 +61,8 @@ something else landing first.
 | F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
 | F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | open | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
 | F028 | git_clone askpass returns password for username prompt | bug | open | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
+| F029 | agentd bearer-auth length side-channel | risk | open | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
+| F030 | security.FilePasswordProvider mode exact-equality | smell | open | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -134,6 +138,9 @@ something else landing first.
 | 2026-05-16 | `internal/agentd/store.go` | none (clean — ULID-validated, atomic writes, daemon-restart reconcile) |
 | 2026-05-16 | `internal/agentd/self_upgrade.go` | F027 (sanityCheckBinary no-timeout) |
 | 2026-05-16 | `internal/actions/git_clone` | F028 (askpass username bug) |
+| 2026-05-16 | `internal/agentd/middleware.go` | F029 (bearer-auth length side-channel) |
+| 2026-05-16 | `internal/security/{password,redact}.go` | F030 (file-perms exact-equality) |
+| 2026-05-16 | `internal/runlog`, `internal/fleet/transport`, `internal/lockfile`, `internal/template` | none (all clean) |
 
 ## Cross-cutting themes / patterns to track
 
