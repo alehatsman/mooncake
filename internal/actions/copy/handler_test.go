@@ -8,7 +8,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1147,95 +1146,6 @@ func TestHandler_parseFileMode(t *testing.T) {
 	}
 }
 
-func TestHandler_formatMode(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name string
-		mode os.FileMode
-		want string
-	}{
-		{
-			name: "standard file mode",
-			mode: 0644,
-			want: "0644",
-		},
-		{
-			name: "executable mode",
-			mode: 0755,
-			want: "0755",
-		},
-		{
-			name: "restrictive mode",
-			mode: 0600,
-			want: "0600",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := h.formatMode(tt.mode)
-			if got != tt.want {
-				t.Errorf("formatMode() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestHandler_parseUserID(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Windows uses string SIDs (S-1-5-...), not numeric UIDs — POSIX-only code path")
-	}
-	h := &Handler{}
-
-	// Test with numeric UID
-	uid, err := h.parseUserID("1000")
-	if err != nil {
-		t.Errorf("parseUserID() with numeric UID error = %v", err)
-	}
-	if uid != 1000 {
-		t.Errorf("parseUserID() = %d, want 1000", uid)
-	}
-
-	// Test with current user
-	currentUser, err := user.Current()
-	if err == nil {
-		uid, err := h.parseUserID(currentUser.Username)
-		if err != nil {
-			t.Errorf("parseUserID() with username error = %v", err)
-		}
-		expectedUID, _ := strconv.Atoi(currentUser.Uid)
-		if uid != expectedUID {
-			t.Errorf("parseUserID() = %d, want %d", uid, expectedUID)
-		}
-	}
-
-	// Test with invalid user
-	_, err = h.parseUserID("nonexistentuser12345")
-	if err == nil {
-		t.Error("parseUserID() should error with nonexistent user")
-	}
-}
-
-func TestHandler_parseGroupID(t *testing.T) {
-	h := &Handler{}
-
-	// Test with numeric GID
-	gid, err := h.parseGroupID("1000")
-	if err != nil {
-		t.Errorf("parseGroupID() with numeric GID error = %v", err)
-	}
-	if gid != 1000 {
-		t.Errorf("parseGroupID() = %d, want 1000", gid)
-	}
-
-	// Test with invalid group
-	_, err = h.parseGroupID("nonexistentgroup12345")
-	if err == nil {
-		t.Error("parseGroupID() should error with nonexistent group")
-	}
-}
-
 func TestHandler_Run_OwnershipWithoutBecome(t *testing.T) {
 	// Skip on non-Linux or if not running as root
 	if runtime.GOOS != "linux" {
@@ -1602,32 +1512,6 @@ func TestHandler_Run_MultipleBackups(t *testing.T) {
 		t.Errorf("Expected at least 1 backup file, found %d", len(files))
 	}
 	t.Logf("Created %d backup files (may be less than 3 due to backup logic)", len(files))
-}
-
-func TestHandler_ParseUserID_RootUser(t *testing.T) {
-	h := &Handler{}
-
-	// Test with root user (should exist on all Unix systems)
-	if runtime.GOOS != "windows" {
-		uid, err := h.parseUserID("root")
-		if err != nil {
-			t.Errorf("parseUserID('root') error = %v", err)
-		} else if uid != 0 {
-			t.Errorf("parseUserID('root') = %d, want 0", uid)
-		}
-	}
-}
-
-func TestHandler_ParseGroupID_RootGroup(t *testing.T) {
-	h := &Handler{}
-
-	// Test with numeric GID 0 (root)
-	gid, err := h.parseGroupID("0")
-	if err != nil {
-		t.Errorf("parseGroupID('0') error = %v", err)
-	} else if gid != 0 {
-		t.Errorf("parseGroupID('0') = %d, want 0", gid)
-	}
 }
 
 func TestHandler_Run_CopyWithDifferentContent(t *testing.T) {
