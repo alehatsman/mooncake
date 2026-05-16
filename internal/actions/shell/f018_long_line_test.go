@@ -15,6 +15,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
@@ -92,4 +93,66 @@ func TestShellHandler_LineOverCapLogsTruncation(t *testing.T) {
 		t.Errorf("expected logger to receive an Errorf about stdout truncation; got logs:\n%s",
 			strings.Join(logs, "\n"))
 	}
+}
+
+// TestShellHandler_LineOverCapStructuredSurface: F038 regression.
+// The F018 fix surfaced overflow via the human logger only —
+// programmatic consumers (--output-format json, agentd→SSE, MCP
+// tool results) saw the step complete with empty stdout, no signal.
+// F038 routes the marker through (a) the captured buffer that
+// becomes result.Stdout/result.Stderr and (b) a synthetic step.stderr
+// event so live subscribers see it without waiting for step.completed.
+func TestShellHandler_LineOverCapStructuredSurface(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("awk not available on Windows")
+	}
+
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+
+	step := &config.Step{
+		Shell: &config.ShellAction{
+			Cmd: `awk 'BEGIN { for (i=0; i<2000000; i++) printf("x") ; printf("\n") }'`,
+		},
+		As: "out",
+	}
+
+	result, err := h.Run(ctx, step)
+	if err != nil {
+		t.Fatalf("Run() error: %v", err)
+	}
+	r, ok := result.(*executor.Result)
+	if !ok {
+		t.Fatalf("result type %T, want *executor.Result", result)
+	}
+
+	// The captured stream that overflowed (stdout in this case) must
+	// carry the marker so consumers reading the typed result see it.
+	if !strings.Contains(r.Stdout, "mooncake: stdout stream truncated") {
+		t.Errorf("result.Stdout should contain the F038 truncation marker; got %d bytes, last 200=%q",
+			len(r.Stdout), tailString(r.Stdout, 200))
+	}
+
+	// The synthetic step.stderr event must reach subscribers — pin
+	// it via the mock publisher's event list.
+	pub := ctx.Svc.EventPublisher.(*testutil.MockPublisher)
+	var sawSyntheticStderr bool
+	for _, ev := range pub.Events {
+		if d, ok := ev.Data.(events.StepOutputData); ok && d.Stream == "stderr" &&
+			strings.Contains(d.Line, "mooncake: stdout stream truncated") {
+			sawSyntheticStderr = true
+			break
+		}
+	}
+	if !sawSyntheticStderr {
+		t.Error("expected a synthetic step.stderr event carrying the truncation marker; got none")
+	}
+}
+
+// tailString returns the last n bytes of s for diagnostic prints.
+func tailString(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[len(s)-n:]
 }

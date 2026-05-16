@@ -415,6 +415,40 @@ func (h *Handler) streamOutput(pipe io.Reader, buf *bytes.Buffer, ctx actions.Co
 		if log := ctx.GetLogger(); log != nil {
 			log.Errorf("  shell %s stream stopped early (output truncated): %v", stream, err)
 		}
+		// F038: also surface the truncation through the programmatic
+		// channels. F018 wired the human logger only; consumers
+		// reading result.Stdout / result.Stderr or subscribing to
+		// step.* events would see the step complete with empty/short
+		// output and no signal that data was dropped. Two writes:
+		//
+		//   1. Append a clearly-prefixed marker line to the captured
+		//      buffer so result.Stdout / result.Stderr carries the
+		//      truncation message. The "mooncake: " prefix makes it
+		//      distinguishable from real subprocess output.
+		//   2. Publish a synthetic step.stderr event so live SSE
+		//      subscribers receive the message without waiting for
+		//      step.completed.
+		//
+		// result.Failed stays false: truncation is not a step failure
+		// (the subprocess may still exit 0). Consumers that want to
+		// fail on truncation can grep for the marker in stderr.
+		msg := fmt.Sprintf("mooncake: %s stream truncated (line exceeded %d-byte limit): %v", stream, shellStreamMaxLineBytes, err)
+		if capture {
+			buf.WriteString(msg)
+			buf.WriteString("\n")
+		}
+		if publisher != nil {
+			publisher.Publish(events.Event{
+				Type:      events.EventStepStderr,
+				Timestamp: time.Now(),
+				Data: events.StepOutputData{
+					StepID:     stepID,
+					Stream:     "stderr",
+					Line:       msg,
+					LineNumber: lineNum + 1,
+				},
+			})
+		}
 		// CRITICAL: keep draining the pipe even after Scanner gave up,
 		// otherwise the child process blocks on its write end when the
 		// kernel pipe buffer fills (PIPE_BUF is small) and command.Wait()

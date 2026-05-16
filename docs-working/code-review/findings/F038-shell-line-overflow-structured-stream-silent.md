@@ -5,7 +5,8 @@ severity: bug
 package: internal/actions/shell
 file: internal/actions/shell/handler.go
 lines: 454-465
-status: open
+status: done
+resolved_by: worktree-fix-f038
 verified: 2026-05-16 on master @ 49930fd (post-F018 merge)
 ---
 
