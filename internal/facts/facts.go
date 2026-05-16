@@ -3,7 +3,6 @@ package facts
 import (
 	"net"
 	"os"
-	"os/exec"
 	"os/user"
 	"runtime"
 	"strings"
@@ -254,7 +253,7 @@ func (f *Facts) ToMap() map[string]interface{} {
 
 		// Ollama
 		"ollama_version":  f.OllamaVersion,
-		"ollama_models":   f.OllamaModels,  // Array for template iteration
+		"ollama_models":   f.OllamaModels, // Array for template iteration
 		"ollama_endpoint": f.OllamaEndpoint,
 
 		// Uptime
@@ -346,7 +345,7 @@ func detectPythonVersion() string {
 	// Try python3 first
 	for _, cmd := range []string{"python3", "python"} {
 		// #nosec G204 -- cmd is from a trusted list of Python executable names used for version detection
-		out, err := exec.Command(cmd, "--version").CombinedOutput()
+		out, err := probeCombined(cmd, "--version")
 		if err == nil {
 			// Parse "Python 3.11.5" -> "3.11.5"
 			version := strings.TrimSpace(string(out))

@@ -145,7 +145,7 @@ func extractMajorVersion(version string) string {
 func detectLinuxDisks() []Disk {
 	var disks []Disk
 
-	out, err := exec.Command("df", "-BG", "--output=source,target,fstype,size,used,avail,pcent").Output()
+	out, err := probeOutput("df", "-BG", "--output=source,target,fstype,size,used,avail,pcent")
 	if err != nil {
 		return disks
 	}
@@ -192,7 +192,7 @@ func detectLinuxGPUs() []GPU {
 	// Try NVIDIA first
 	if nvidiaSmi, err := exec.LookPath("nvidia-smi"); err == nil {
 		// #nosec G204 -- nvidia-smi path is validated via exec.LookPath and used for system GPU detection
-		out, err := exec.Command(nvidiaSmi, "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader").Output()
+		out, err := probeOutput(nvidiaSmi, "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader")
 		if err == nil {
 			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 			for _, line := range lines {
@@ -213,7 +213,7 @@ func detectLinuxGPUs() []GPU {
 	// Try AMD
 	if rocmSmi, err := exec.LookPath("rocm-smi"); err == nil {
 		// #nosec G204 -- rocm-smi path is validated via exec.LookPath and used for system GPU detection
-		out, err := exec.Command(rocmSmi, "--showproductname").Output()
+		out, err := probeOutput(rocmSmi, "--showproductname")
 		if err == nil {
 			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 			for _, line := range lines {
@@ -235,7 +235,7 @@ func detectLinuxGPUs() []GPU {
 	if len(gpus) == 0 {
 		if lspci, err := exec.LookPath("lspci"); err == nil {
 			// #nosec G204 -- lspci path is validated via exec.LookPath and used for system hardware detection
-			out, err := exec.Command(lspci).Output()
+			out, err := probeOutput(lspci)
 			if err == nil {
 				lines := strings.Split(string(out), "\n")
 				for _, line := range lines {
@@ -305,7 +305,7 @@ func detectLinuxKernel() string {
 	}
 
 	// Fallback to uname -r
-	out, err := exec.Command("uname", "-r").Output()
+	out, err := probeOutput("uname", "-r")
 	if err == nil {
 		return strings.TrimSpace(string(out))
 	}
@@ -417,7 +417,7 @@ func detectLinuxDefaultRoute() string {
 	// Try ip route first
 	if ip, err := exec.LookPath("ip"); err == nil {
 		// #nosec G204 -- ip path is validated via exec.LookPath
-		out, err := exec.Command(ip, "route", "show", "default").Output()
+		out, err := probeOutput(ip, "route", "show", "default")
 		if err == nil {
 			// Format: "default via 192.168.1.1 dev eth0 ..."
 			line := strings.TrimSpace(string(out))
@@ -495,14 +495,14 @@ func detectCUDAVersion() string {
 	}
 
 	// #nosec G204 -- nvidia-smi path is validated via exec.LookPath
-	out, err := exec.Command(nvidiaSmi, "--query-gpu=driver_version", "--format=csv,noheader").Output()
+	out, err := probeOutput(nvidiaSmi, "--query-gpu=driver_version", "--format=csv,noheader")
 	if err != nil {
 		return ""
 	}
 
 	// Try to get CUDA version from nvidia-smi
 	// #nosec G204 -- nvidia-smi path is validated via exec.LookPath
-	cudaOut, err := exec.Command(nvidiaSmi).Output()
+	cudaOut, err := probeOutput(nvidiaSmi)
 	if err == nil {
 		lines := strings.Split(string(cudaOut), "\n")
 		for _, line := range lines {

@@ -18,7 +18,7 @@ func detectLinuxServices() (failed, stopped []string) {
 	}
 
 	// Failed services
-	out, err := exec.Command("systemctl", "list-units", "--state=failed", "--no-legend", "--no-pager").Output()
+	out, err := probeOutput("systemctl", "list-units", "--state=failed", "--no-legend", "--no-pager")
 	if err == nil {
 		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 			line = strings.TrimSpace(line)
@@ -36,12 +36,12 @@ func detectLinuxServices() (failed, stopped []string) {
 	// Key stopped services
 	for _, svc := range keyLinuxServices {
 		// #nosec G204 -- svc is from a trusted static list of known service names
-		out, err := exec.Command("systemctl", "is-active", "--quiet", svc).Output()
+		out, err := probeOutput("systemctl", "is-active", "--quiet", svc)
 		_ = out
 		if err != nil {
 			// Non-zero exit = not active; check if it exists at all
 			// #nosec G204 -- svc is from a trusted static list of known service names
-			out2, err2 := exec.Command("systemctl", "status", svc).Output()
+			out2, err2 := probeOutput("systemctl", "status", svc)
 			_ = err2
 			if strings.Contains(string(out2), "inactive") || strings.Contains(string(out2), "dead") {
 				stopped = append(stopped, svc)
