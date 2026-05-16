@@ -32,7 +32,7 @@ func detectToolchainVersion(cmd, flag, prefix string) string {
 	}
 
 	// #nosec G204 -- path validated via exec.LookPath
-	out, err := exec.Command(path, flag).CombinedOutput()
+	out, err := probeCombined(path, flag)
 	if err != nil {
 		return ""
 	}
@@ -58,7 +58,7 @@ func detectOllamaVersion() string {
 	}
 
 	// #nosec G204 -- path validated via exec.LookPath
-	out, err := exec.Command(path, "--version").CombinedOutput()
+	out, err := probeCombined(path, "--version")
 	if err != nil {
 		return ""
 	}
@@ -98,7 +98,7 @@ func detectOllamaModels() []OllamaModel {
 	}
 
 	// #nosec G204 -- path validated via exec.LookPath
-	out, err := exec.Command(path, "list").CombinedOutput()
+	out, err := probeCombined(path, "list")
 	if err != nil {
 		return nil
 	}

@@ -11,9 +11,8 @@ something else landing first.
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
 | F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
-| F005 | Cross-package sudo helper — BecomeRunner landed; effects+package migrated; service/download/template inline sites remain | smell | M | — | partial |
-| F011 | Cross-cutting: 14 handlers still have Execute/DryRun (7 done: shell/command/print/vars/include_vars/preset/tool) | smell | XL | — | open |
-| F039 | agent.RunLoop defers tmpfile cleanup inside for-body + plan files written 0644 + silent SavePlan errors | smell | S | — | open |
+| F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
+| F011 | Cross-cutting: 10 handlers still have Execute/DryRun (11 done: shell/command/print/vars/include_vars/preset/tool/service/repo_search/repo_tree/file_delete_range/file_replace) | smell | XL | — | open |
 
 ## Findings index
 
@@ -56,7 +55,8 @@ something else landing first.
 | F035 | os.ssh_key silent chown failure | bug | **done** | [findings/F035](./findings/F035-os-ssh-key-silent-chown-failure.md) |
 | F037 | vars action bypasses secrets resolver | bug | **done** | [findings/F037](./findings/F037-vars-action-bypasses-secrets-resolver.md) |
 | F038 | shell line-overflow structured stream silent | bug | **done** | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
-| F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **partial** | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
+| F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **done** | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
+| F040 | llm.ClaudeClient timeout/model/body | smell | **done** | [findings/F040](./findings/F040-llm-claude-client-tight-timeout-stale-model-unbounded-body.md) |
 
 ## Queue (next iterations, priority order)
 

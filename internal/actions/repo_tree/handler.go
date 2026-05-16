@@ -84,8 +84,9 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the repo_tree action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// runImpl is the apply-mode body of repo_tree; called by Run. F011:
+// previously the public Execute method, now unexported.
+func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	rt := step.RepoTree
 
 	// We need ExecutionContext for PathUtil
@@ -197,52 +198,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	return result, nil
 }
 
-// DryRun logs what would happen without making changes.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	rt := step.RepoTree
-
-	// We need ExecutionContext for PathUtil
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Render path
-	rootPath := rt.Path
-	if rootPath == "" {
-		rootPath = "."
-	}
-
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render path: %v", err)
-		renderedPath = rootPath
-	}
-
-	ctx.GetLogger().Infof("  [DRY-RUN] Would generate tree for %s", renderedPath)
-
-	if rt.MaxDepth != nil {
-		ctx.GetLogger().Infof("            Max depth: %d", *rt.MaxDepth)
-	} else {
-		ctx.GetLogger().Infof("            Max depth: unlimited")
-	}
-
-	if rt.OutputFile != "" {
-		outputPath, _ := ec.Svc.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.GetVariables())
-		ctx.GetLogger().Infof("            Output file: %s", outputPath)
-	}
-
-	if len(rt.ExcludeDirs) > 0 {
-		ctx.GetLogger().Infof("            Exclude dirs: %v", rt.ExcludeDirs)
-	}
-
-	if rt.IncludeFiles != nil && !*rt.IncludeFiles {
-		ctx.GetLogger().Infof("            Include files: false (directories only)")
-	}
-
-	return nil
-}
-
 // buildTree recursively builds the tree structure
 func (h *Handler) buildTree(
 	absPath, relPath string,
@@ -342,7 +297,7 @@ func (h *Handler) buildTree(
 // without mutating, so plan mode delegates to Execute and surfaces
 // Checkable=true.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	res, err := h.Execute(ctx, step)
+	res, err := h.runImpl(ctx, step)
 	if err != nil {
 		return res, err
 	}

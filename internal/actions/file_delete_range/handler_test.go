@@ -26,16 +26,16 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: mockCtx.GetEvaluator(),
-			Logger: mockCtx.Log,
+			Template:       tmpl,
+			Evaluator:      mockCtx.GetEvaluator(),
+			Logger:         mockCtx.Log,
 			EventPublisher: mockCtx.Publisher,
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Mode: actions.ModeApply,
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Mode:           actions.ModeApply,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: mockCtx.StepID,
-		CurrentDir: tmpDir,
+		CurrentDir:    tmpDir,
 	}
 }
 
@@ -172,7 +172,7 @@ func TestHandler_Execute_ExclusiveDelete(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -214,7 +214,7 @@ func TestHandler_Execute_InclusiveDelete(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -257,7 +257,7 @@ func TestHandler_Execute_RegexAnchors(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -299,7 +299,7 @@ func TestHandler_Execute_StartAnchorNotFound(t *testing.T) {
 	}
 
 	// MT-47: missing start anchor is idempotent success.
-	res, err := handler.Execute(ctx, step)
+	res, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Errorf("expected no error on missing start anchor (MT-47); got %v", err)
 	}
@@ -335,7 +335,7 @@ func TestHandler_Execute_EndAnchorNotFound(t *testing.T) {
 	// returns the original content unchanged (NOT a truncated tail) so
 	// re-runs of a playbook whose first run already deleted the range
 	// don't silently chop off the rest of the file.
-	res, err := handler.Execute(ctx, step)
+	res, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Errorf("expected no error on missing end anchor (MT-47); got %v", err)
 	}
@@ -369,7 +369,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -407,7 +407,7 @@ func TestHandler_Execute_EmptyRange(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -429,24 +429,3 @@ func TestHandler_Execute_EmptyRange(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
-	handler := &Handler{}
-	ctx := createTestContext(t)
-	ctx.Svc.Mode = actions.ModePlan
-
-	step := &config.Step{
-		TextDeleteRange: &config.FileDeleteRange{
-			Path:        "/tmp/test.txt",
-			StartAnchor: "BEGIN",
-			EndAnchor:   "END",
-			Regex:       true,
-			Inclusive:   true,
-			Backup:      true,
-		},
-	}
-
-	err := handler.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v", err)
-	}
-}

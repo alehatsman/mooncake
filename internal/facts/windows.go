@@ -29,8 +29,7 @@ func detectWindowsDisks() []Disk {
 
 	// Use wmic to get disk info
 	// Format: Caption,FileSystem,FreeSpace,Size
-	cmd := exec.Command("wmic", "logicaldisk", "get", "caption,filesystem,freespace,size", "/format:csv")
-	output, err := cmd.Output()
+	output, err := probeOutput("wmic", "logicaldisk", "get", "caption,filesystem,freespace,size", "/format:csv")
 	if err != nil {
 		return disks
 	}
@@ -100,8 +99,7 @@ func detectWindowsGPUs() []GPU {
 
 	// Use wmic to get GPU info
 	// Format: Name,DriverVersion,AdapterRAM
-	cmd := exec.Command("wmic", "path", "win32_VideoController", "get", "name,driverversion,adapterram", "/format:csv")
-	output, err := cmd.Output()
+	output, err := probeOutput("wmic", "path", "win32_VideoController", "get", "name,driverversion,adapterram", "/format:csv")
 	if err != nil {
 		return gpus
 	}

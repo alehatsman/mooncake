@@ -8,6 +8,7 @@ lines: 325-329, 599-620
 status: done
 resolved_by: e604b295
 verified: 2026-05-16 on master @ f2c6a28 (post-F019 merge)
+post-fix verified 2026-05-16 on master @ 0c7009cc — repro /tmp/f019-repro.yml now emits TOKEN=hunter2-secret-value (resolved value reaches subprocess; pre-fix it leaked the __MOONCAKE_SECRET_v1_ sentinel). Redaction-to-apply-output linkage remains the documented F037 follow-up
 ---
 
 ## What

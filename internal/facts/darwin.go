@@ -31,7 +31,7 @@ func collectDarwinFacts(f *Facts) {
 
 // detectMacOSVersion gets macOS version from sw_vers
 func detectMacOSVersion() string {
-	out, err := exec.Command("sw_vers", "-productVersion").Output()
+	out, err := probeOutput("sw_vers", "-productVersion")
 	if err != nil {
 		return ""
 	}
@@ -51,7 +51,7 @@ func detectMacOSPackageManager() string {
 
 // detectMacOSMemory gets total memory using sysctl
 func detectMacOSMemory() int64 {
-	out, err := exec.Command("sysctl", "-n", "hw.memsize").Output()
+	out, err := probeOutput("sysctl", "-n", "hw.memsize")
 	if err != nil {
 		return 0
 	}
@@ -68,7 +68,7 @@ func detectMacOSMemory() int64 {
 func detectMacOSDisks() []Disk {
 	var disks []Disk
 
-	out, err := exec.Command("df", "-g").Output()
+	out, err := probeOutput("df", "-g")
 	if err != nil {
 		return disks
 	}
@@ -130,7 +130,7 @@ func detectMacOSDisks() []Disk {
 func detectMacOSGPUs() []GPU {
 	var gpus []GPU
 
-	out, err := exec.Command("system_profiler", "SPDisplaysDataType").Output()
+	out, err := probeOutput("system_profiler", "SPDisplaysDataType")
 	if err != nil {
 		return gpus
 	}
@@ -192,7 +192,7 @@ func detectMacOSGPUs() []GPU {
 
 // detectDarwinKernel gets kernel version
 func detectDarwinKernel() string {
-	out, err := exec.Command("uname", "-r").Output()
+	out, err := probeOutput("uname", "-r")
 	if err != nil {
 		return ""
 	}
@@ -201,7 +201,7 @@ func detectDarwinKernel() string {
 
 // detectDarwinCPUModel gets CPU model from sysctl
 func detectDarwinCPUModel() string {
-	out, err := exec.Command("sysctl", "-n", "machdep.cpu.brand_string").Output()
+	out, err := probeOutput("sysctl", "-n", "machdep.cpu.brand_string")
 	if err != nil {
 		return ""
 	}
@@ -211,7 +211,7 @@ func detectDarwinCPUModel() string {
 // detectDarwinCPUFlags gets CPU features/flags
 func detectDarwinCPUFlags() []string {
 	// Try to get CPU features
-	out, err := exec.Command("sysctl", "-n", "machdep.cpu.features").Output()
+	out, err := probeOutput("sysctl", "-n", "machdep.cpu.features")
 	if err != nil {
 		// On Apple Silicon, features might not be available
 		return nil
@@ -229,7 +229,7 @@ func detectDarwinCPUFlags() []string {
 
 // detectDarwinMemoryFree gets available memory using vm_stat
 func detectDarwinMemoryFree() int64 {
-	out, err := exec.Command("vm_stat").Output()
+	out, err := probeOutput("vm_stat")
 	if err != nil {
 		return 0
 	}
@@ -275,7 +275,7 @@ func detectDarwinMemoryFree() int64 {
 
 // detectDarwinSwap gets swap usage using sysctl
 func detectDarwinSwap() (swapTotal, swapFree int64) {
-	out, err := exec.Command("sysctl", "vm.swapusage").Output()
+	out, err := probeOutput("sysctl", "vm.swapusage")
 	if err != nil {
 		return 0, 0
 	}
@@ -305,7 +305,7 @@ func detectDarwinSwap() (swapTotal, swapFree int64) {
 
 // detectDarwinDefaultRoute gets default gateway
 func detectDarwinDefaultRoute() string {
-	out, err := exec.Command("route", "-n", "get", "default").Output()
+	out, err := probeOutput("route", "-n", "get", "default")
 	if err != nil {
 		return ""
 	}
@@ -329,7 +329,7 @@ func detectDarwinDefaultRoute() string {
 func detectDarwinDNS() []string {
 	var servers []string
 
-	out, err := exec.Command("scutil", "--dns").Output()
+	out, err := probeOutput("scutil", "--dns")
 	if err != nil {
 		return servers
 	}
@@ -362,7 +362,7 @@ func detectDarwinDNS() []string {
 
 // detectDarwinUptime returns seconds since boot using sysctl kern.boottime.
 func detectDarwinUptime() int64 {
-	out, err := exec.Command("sysctl", "-n", "kern.boottime").Output()
+	out, err := probeOutput("sysctl", "-n", "kern.boottime")
 	if err != nil {
 		return 0
 	}
