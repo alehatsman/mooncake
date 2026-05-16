@@ -13,6 +13,7 @@ something else landing first.
 | F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
 | F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
 | F011 | Cross-cutting: 10 handlers still have Execute/DryRun (11 done: shell/command/print/vars/include_vars/preset/tool/service/repo_search/repo_tree/file_delete_range/file_replace) | smell | XL | — | open |
+| F041 | artifact_capture.readFileContent unbounded read | smell | S | — | open |
 | F043 | cmd/fleet init prompts for bearer token via plain readline — token echoed to terminal / scrollback / tmux | bug | XS | — | open |
 
 ## Findings index
