@@ -5,7 +5,8 @@ severity: smell
 package: internal/mcp
 file: internal/mcp/tools.go
 lines: 357, 457
-status: open
+status: done
+resolved: 2026-05-16 — added `logger.NewDiscardLogger()` (no-op `Logger` implementation, lives in `internal/logger/discard_logger.go`) and swapped both `NewTestLogger()` call sites in `internal/mcp/tools.go` to use it. The `runConfig` site also gained the "InspectPlan errors are non-fatal" rationale comment the finding suggested. `grep -rn 'NewTestLogger' internal/` now yields only `_test.go` files + the constructor itself.
 ---
 
 ## What

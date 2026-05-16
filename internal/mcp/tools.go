@@ -218,18 +218,17 @@ func HandleFactQuery(_ context.Context, args json.RawMessage) (string, error) {
 
 // stepResult is a single step entry in run_plan / check_plan output.
 type stepResult struct {
-	Name        string                 `json:"name"`
-	Action      string                 `json:"action,omitempty"`
-	Changed     bool                   `json:"changed,omitempty"`
-	WouldChange bool                   `json:"would_change,omitempty"`
-	Skipped     bool                   `json:"skipped,omitempty"`
-	Failed      bool                   `json:"failed,omitempty"`
-	DurationMs  int64                  `json:"duration_ms,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	Diff        *actions.Diff          `json:"diff,omitempty"`
-	Cost        *actions.CostEstimate  `json:"cost,omitempty"`
+	Name        string                `json:"name"`
+	Action      string                `json:"action,omitempty"`
+	Changed     bool                  `json:"changed,omitempty"`
+	WouldChange bool                  `json:"would_change,omitempty"`
+	Skipped     bool                  `json:"skipped,omitempty"`
+	Failed      bool                  `json:"failed,omitempty"`
+	DurationMs  int64                 `json:"duration_ms,omitempty"`
+	Error       string                `json:"error,omitempty"`
+	Diff        *actions.Diff         `json:"diff,omitempty"`
+	Cost        *actions.CostEstimate `json:"cost,omitempty"`
 }
-
 
 // aggregatePermissions walks the plan steps and merges each handler's declared
 // PermissionSet into a single plan-level summary. Returns nil when no step
@@ -354,7 +353,10 @@ func runConfig(ctx context.Context, configPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	inspections, _ := executor.InspectPlan(planData, "", logger.NewTestLogger()) // non-fatal
+	// InspectPlan logs are noise to the MCP caller; errors are non-fatal
+	// because the predicted diff/cost is a UX nicety — if it fails we'd
+	// rather the apply proceed than block on the prediction.
+	inspections, _ := executor.InspectPlan(planData, "", logger.NewDiscardLogger())
 	inspIdx := buildInspectionIndex(inspections)
 
 	// Run via apply.Runner — wires publisher, event capture, and result
@@ -454,7 +456,7 @@ func HandleCheckPlan(_ context.Context, args json.RawMessage) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	inspections, err := executor.InspectPlan(planData, "", logger.NewTestLogger())
+	inspections, err := executor.InspectPlan(planData, "", logger.NewDiscardLogger())
 	if err != nil {
 		return "", err
 	}
