@@ -5,19 +5,21 @@ run:
   tests: false
 
 linters:
+  # Pragmatic stance: enable bug-catching linters, disable style-pedantry
+  # ones. The dropped linters (gocritic / unparam / dupl / prealloc) flag
+  # legitimate design choices (interface contracts that always return nil
+  # err, parallel-by-design sibling commands, intentional monolithic
+  # functions) as problems. The soft-cap discipline in CLAUDE.md covers
+  # complexity ratchet without needing cyclop noise on every PR.
   enable:
     - gosec
-    - gocritic
     - errcheck
     - staticcheck
     - govet
     - ineffassign
     - unused
     - misspell
-    - unparam
     - unconvert
-    - dupl
-    - prealloc
     - bodyclose
     - revive
     - cyclop
@@ -26,7 +28,11 @@ linters:
     - exhaustive
     - wrapcheck
     - goconst
-    - gocyclo  # superseded by cyclop (single cyclomatic source); arch-snapshot uses gocyclo standalone for the soft-cap ratchet
+    - gocyclo     # superseded by cyclop (single cyclomatic source); arch-snapshot uses gocyclo standalone for the soft-cap ratchet
+    - gocritic    # mostly style; the project's review process handles ifElseChain / typeSwitchVar etc.
+    - unparam     # flags interface contracts that always return nil err as "problems"; not actionable
+    - dupl        # over-eager on parallel-by-design siblings (fleet exec/observe share output rendering on purpose)
+    - prealloc    # micro-optimisation noise; profile-driven not lint-driven
 
   settings:
     gosec:
@@ -99,10 +105,16 @@ linters:
         - name: superfluous-else
         - name: unused-parameter
         - name: unreachable-code
-        - name: redefines-builtin-id
+        # redefines-builtin-id removed: `max`/`min`/`clear` were added to
+        # Go 1.21 builtins, but local variables of those names are fine
+        # and legal — the warning produces noise on otherwise clean code.
 
     staticcheck:
-      checks: ["all", "-QF1012"]  # QF1012 (use fmt.Fprintf) is style-only
+      # Keep SA* (the real-bug checks); drop QF/ST/S style suggestions.
+      # ST1020 (comment prefix), ST1005 (error-string format), S1008
+      # (boolean ternary), S1017 (TrimPrefix), QF1007 (merge conditional),
+      # QF1012 (use Fprintf) are all style preferences, not bugs.
+      checks: ["all", "-QF*", "-ST1005", "-ST1020", "-S1008", "-S1017", "-S1034"]
 
   exclusions:
     rules:
@@ -154,7 +166,10 @@ linters:
         linters: [errcheck]
         text: "Error return value of `fmt\\.F"
 
-      - path: internal/(doctor/render_text|fleet/apply|fleet/bootstrap|fleet/multiplex|logger/first_run_subscriber|scaffold/scaffold)\.go
+      # fmt.Fprintf/Fprintln to operator-facing writers in internal/fleet/
+      # and a few other display helpers — best-effort writes to terminal
+      # output; ignoring the error is idiomatic Go CLI code.
+      - path: internal/(doctor/render_text|fleet/.+|logger/first_run_subscriber|scaffold/scaffold)\.go
         linters: [errcheck]
         text: "Error return value of `fmt\\.F"
 
@@ -182,6 +197,18 @@ linters:
         linters: [cyclop]
 
       - path: internal/actions/os_systemd/handler\.go
+        linters: [cyclop]
+
+      # copy.Execute and executor.ExecuteStep are intentionally
+      # monolithic dispatch functions. Tracked in the soft-cap budget;
+      # refactor on next touch per CLAUDE.md.
+      - path: internal/actions/copy/handler\.go
+        linters: [cyclop]
+
+      - path: internal/executor/executor\.go
+        linters: [cyclop]
+
+      - path: internal/explain/explain\.go
         linters: [cyclop]
 
 issues:

@@ -7,11 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/signal"
-	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -71,7 +67,7 @@ func fleetBootstrapCommand() *cli.Command {
 			&cli.StringFlag{Name: "binary", Usage: "Path to mooncake binary to upload (default: this process)"},
 			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.BoolFlag{
-				Name:  "upgrade",
+				Name: "upgrade",
 				Usage: "Replace an already-installed mooncake of a different version. " +
 					"Without this, version mismatch on the target errors out.",
 			},
@@ -279,7 +275,7 @@ func fleetApplyCommand() *cli.Command {
 				Value: 100 << 20,
 			},
 			&cli.StringFlag{
-				Name:  "plan-dir",
+				Name: "plan-dir",
 				Usage: "Root directory to sync to each peer (default: directory of the plan file). " +
 					"Use this when the plan imports siblings via `../` — point at the repo root.",
 			},
@@ -331,87 +327,12 @@ func fleetApplyAction(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return cli.Exit("fleet apply: exactly one plan-file-or-machine argument required", 2)
 	}
-	planArg := c.Args().First()
 
-	// Resolve plan-dir first: explicit flag, else PWD if the arg matches
-	// the machine convention, else the directory of the plan file.
-	planDir := c.String("plan-dir")
-	if planDir != "" {
-		var err error
-		planDir, err = filepath.Abs(planDir)
-		if err != nil {
-			return fmt.Errorf("resolve plan-dir: %w", err)
-		}
-	}
-
-	// Machine convention: bare name (no slash, no .yml) → look for a
-	// machine layout under <plan-dir>/machines/<name>/. Two layouts are
-	// recognised, checked in this order:
-	//
-	//  1. fleet.yml — multi-phase apply (spec for `mooncake apply <name>`
-	//     against a Windows+WSL box that needs ordered host-then-guest
-	//     phases). Dispatches to runMachineApply later.
-	//  2. index.yml — single-phase apply (the original spec-48 machine
-	//     convention; one peer named <name>, one entry plan).
-	//
-	// Each machine owns a directory so it can carry its own vars.yml /
-	// fixtures alongside the entry plan.
-	machine := ""
-	var machineManifest *fleet.MachineManifest
-	if !strings.ContainsAny(planArg, "/\\") && !strings.HasSuffix(planArg, ".yml") {
-		root := planDir
-		if root == "" {
-			pwd, _ := os.Getwd()
-			root = pwd
-		}
-		// First try the multi-phase manifest. A missing file falls
-		// through to the index.yml single-phase check.
-		manifestPath, found, lookupErr := fleet.LookupMachineManifest(root, planArg)
-		if lookupErr != nil {
-			return cli.Exit("fleet apply: "+lookupErr.Error(), 2)
-		}
-		if found {
-			m, err := fleet.LoadMachineManifest(manifestPath)
-			if err != nil {
-				return cli.Exit("fleet apply: "+err.Error(), 2)
-			}
-			machine = planArg
-			machineManifest = m
-			if planDir == "" {
-				planDir = root
-			}
-			// Set planArg to the manifest so error messages and the
-			// planAbs derivation below have a sensible string. The
-			// multi-phase path doesn't use planAbs directly; it uses
-			// each phase's own Plan field.
-			planArg = manifestPath
-		} else {
-			entry := filepath.Join(root, "machines", planArg, "index.yml")
-			if st, err := os.Stat(entry); err == nil && !st.IsDir() {
-				machine = planArg
-				planArg = entry
-				if planDir == "" {
-					planDir = root
-				}
-			}
-		}
-	}
-
-	planAbs, err := filepath.Abs(planArg)
-	if err != nil {
-		return fmt.Errorf("resolve plan path: %w", err)
-	}
-	if planDir == "" {
-		planDir = filepath.Dir(planAbs)
-	}
-
-	controllerID, err := fleet.EnsureControllerID()
-	if err != nil {
-		return fmt.Errorf("controller id: %w", err)
-	}
-
+	// Load peers.toml. cmd owns the file path resolution; the orchestrator
+	// consumes the resolved peer list.
 	peersPath := c.String("peers-file")
 	if peersPath == "" {
+		var err error
 		peersPath, err = fleet.DefaultPeersPath()
 		if err != nil {
 			return err
@@ -422,19 +343,23 @@ func fleetApplyAction(c *cli.Context) error {
 		return err
 	}
 	if len(cfgPeers.Peers) == 0 {
-		return cli.Exit("fleet apply: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
+		return cli.Exit(fleet.NoPeersConfiguredError(peersPath), 1)
 	}
 
-	// Fleet DX proposal-01: single unified --peer flag. The machine
-	// convention defaults --peer to the machine name when no --peer
-	// values were given explicitly.
+	// Fleet DX proposal-01: single unified --peer flag. When the machine
+	// convention is invoked as `fleet apply <name>` with no --peer values,
+	// the machine name becomes the default selector. We peek at planArg
+	// here (the orchestrator re-detects the machine convention from the
+	// same input, so the two views agree).
+	planArg := c.Args().First()
 	peerFlag := c.StringSlice("peer")
-	if len(peerFlag) == 0 && machine != "" {
-		peerFlag = []string{machine}
+	if len(peerFlag) == 0 && isBareMachineArg(planArg) {
+		peerFlag = []string{planArg}
 	}
 
-	// Spec-50 §Phase B: `os=` predicates require a /v1/version probe.
-	// Build the cache only when --peer references os=.
+	// Spec-50 §Phase B: `os=` predicates require a /v1/version probe; build
+	// the cache only when --peer references os=. cmd-side because the
+	// resolver type and the transport-probe live next to filterTerm here.
 	var osFor peerOSResolver
 	if peerFlagsReferenceOSKey(peerFlag) {
 		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
@@ -444,154 +369,58 @@ func fleetApplyAction(c *cli.Context) error {
 	if err != nil {
 		return cli.Exit("fleet apply: "+err.Error(), 2)
 	}
-	selected, unknown := sel.Matched, sel.UnknownNames
-	if len(selected) == 0 {
-		msg := "fleet apply: --peer selected 0 of " +
-			strconv.Itoa(len(cfgPeers.Peers)) + " peer(s); nothing to do"
-		if len(unknown) > 0 {
-			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
-		}
-		return cli.Exit(msg, 1)
+	if len(sel.Matched) == 0 {
+		return cli.Exit(fleet.NoPeersSelectedError(len(cfgPeers.Peers), sel.UnknownNames), 1)
 	}
 
-	// peerFilterGroups is forwarded to the machine-manifest apply path
-	// (runMachineApply) so it can re-AND those filters against each
-	// manifest phase's peer set.
+	// peerFilter adapts cmd-internal filterTerm/peerOSResolver into the
+	// typeless predicate fleet.RunMachineApply consumes via the orchestrator.
 	peerFilterGroups, _ := parsePeerFlags(peerFlag)
-
-	// Resolve vars files relative to plan-dir, absolute on the controller.
-	// When the machine convention is active, prepend conventional vars
-	// files (shared/variables.yml + machines/<machine>/vars.yml) when
-	// they exist on disk. The shared file goes first so per-machine
-	// overrides win on key collision (later-wins).
-	varsRel := c.StringSlice("vars-file")
-	if machine != "" {
-		conv := []string{
-			filepath.Join("shared", "variables.yml"),
-			filepath.Join("machines", machine, "vars.yml"),
+	var peerFilter func(fleet.Peer) bool
+	if len(peerFilterGroups) > 0 {
+		peerFilter = func(p fleet.Peer) bool {
+			return peerMatchesFilters(p, peerFilterGroups, nil)
 		}
-		// Prepend so explicit --vars-file overrides (later wins on key collision).
-		merged := make([]string, 0, len(conv)+len(varsRel))
-		for _, p := range conv {
-			abs := filepath.Join(planDir, p)
-			if _, err := os.Stat(abs); err == nil {
-				merged = append(merged, p)
-			}
-		}
-		merged = append(merged, varsRel...)
-		varsRel = merged
-	}
-	var varsAbs []string
-	for _, v := range varsRel {
-		if !filepath.IsAbs(v) {
-			v = filepath.Join(planDir, v)
-		}
-		varsAbs = append(varsAbs, filepath.Clean(v))
 	}
 
-	maxSync := c.Int64("max-sync-size")
-	tags, stepNames, err := extractStepFilter(c.StringSlice("step-filter"))
+	stepTags, stepNames, err := extractStepFilter(c.StringSlice("step-filter"))
 	if err != nil {
 		return cli.Exit("fleet apply: "+err.Error(), 2)
 	}
 
-	w := c.App.Writer
-	useColor := fleet.ShouldColor(w, c.Bool("no-color"))
-	parallel := c.Int("parallel")
-
-	// SIGINT: first → cancel & banner; second → hard exit. Owned at the
-	// outer fleetApplyAction level so a single ^C cancels every in-flight
-	// phase at once in machine mode.
-	applyCtx, cancel := context.WithCancel(c.Context)
-	defer cancel()
-	sigCh := make(chan os.Signal, 2)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(sigCh)
-	go func() {
-		select {
-		case <-sigCh:
-			fmt.Fprintln(w, "⚠ ^C closes the log stream only — remote runs continue.")
-			fmt.Fprintln(w, "  See `mooncake fleet logs <host>` to reattach.")
-			cancel()
-			select {
-			case <-sigCh:
-				os.Exit(130)
-			case <-applyCtx.Done():
-			}
-		case <-applyCtx.Done():
-		}
-	}()
-
-	// Multi-phase machine mode: dispatch to the manifest-driven orchestrator.
-	// cfgPeers.Peers (not `selected`) is passed in so the manifest can
-	// resolve any peer in peers.toml — `--peers`-driven preselection doesn't
-	// make sense when the manifest is the authoritative peer list.
-	//
-	// peerFilter is the cmd-side predicate adapter: internal/fleet's
-	// RunMachineApply takes a typeless `func(Peer) bool` so it doesn't have
-	// to know about cmd's filterTerm / peerOSResolver shapes. nil =
-	// accept-all (no --peer filter active).
-	if machineManifest != nil {
-		var peerFilter func(fleet.Peer) bool
-		if len(peerFilterGroups) > 0 {
-			peerFilter = func(p fleet.Peer) bool {
-				return peerMatchesFilters(p, peerFilterGroups, nil)
-			}
-		}
-		res := fleet.RunMachineApply(
-			applyCtx, w, useColor,
-			machineManifest, machine, cfgPeers.Peers,
-			planDir, varsAbs, tags, stepNames,
-			maxSync, parallel, controllerID,
-			peerFilter,
-		)
-		if res.ExitCode != 0 {
-			return cli.Exit(res.Message, res.ExitCode)
-		}
-		return nil
+	cfg := &fleet.ApplyConfig{
+		PlanArg:         planArg,
+		PlanDirHint:     c.String("plan-dir"),
+		PeersPath:       peersPath,
+		SelectedPeers:   sel.Matched,
+		UnknownPeers:    sel.UnknownNames,
+		AllPeers:        cfgPeers.Peers,
+		PeerFilter:      peerFilter,
+		VarsFilesRel:    c.StringSlice("vars-file"),
+		StepFilterTags:  stepTags,
+		StepFilterNames: stepNames,
+		MaxSyncBytes:    c.Int64("max-sync-size"),
+		Parallel:        c.Int("parallel"),
+		NoColor:         c.Bool("no-color"),
+		Writer:          c.App.Writer,
 	}
 
-	// Single-phase path: filter out non-agentd transports, run the shared
-	// fleet.RunApplyPhase helper that drives Apply across the selected peer
-	// set.
-	agentdPeers := make([]fleet.Peer, 0, len(selected))
-	var skippedPeers []fleet.Peer
-	for _, p := range selected {
-		if p.Transport != fleet.TransportAgentd {
-			skippedPeers = append(skippedPeers, p)
-			continue
-		}
-		agentdPeers = append(agentdPeers, p)
+	res := fleet.NewOrchestrator(cfg).Run(c.Context)
+	if res.Err != nil {
+		return res.Err
 	}
-	if len(agentdPeers) == 0 {
-		return cli.Exit("fleet apply: no agentd-transport peers selected", 1)
-	}
-
-	out := fleet.RunApplyPhase(applyCtx, w, useColor, fleet.ApplyPhaseInput{
-		PlanAbs:       planAbs,
-		PlanDir:       planDir,
-		Peers:         agentdPeers,
-		UnknownPeers:  unknown,
-		SkippedPeers:  skippedPeers,
-		VarsAbs:       varsAbs,
-		Tags:          tags,
-		StepNames:     stepNames,
-		MaxSyncBytes:  maxSync,
-		Parallel:      parallel,
-		ControllerID:  controllerID,
-		BannerHeading: fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)),
-	})
-
-	switch {
-	case out.Unreachable > 0:
-		return cli.Exit("fleet apply: unreachable peer(s): "+strings.Join(out.FailedNames, ", "), 2)
-	case out.RunFailed > 0:
-		return cli.Exit("fleet apply: failed on peer(s): "+strings.Join(out.FailedNames, ", "), 1)
-	}
-	if out.FirstErr != nil {
-		return errors.Join(out.FirstErr)
+	if res.ExitCode != 0 {
+		return cli.Exit(res.Message, res.ExitCode)
 	}
 	return nil
+}
+
+// isBareMachineArg reports whether planArg could be a bare machine name
+// (the machine-convention shape: no slash, no .yml suffix). cmd uses this
+// to decide whether to default --peer to the machine name; the orchestrator
+// re-detects the convention from the same input.
+func isBareMachineArg(planArg string) bool {
+	return !strings.ContainsAny(planArg, "/\\") && !strings.HasSuffix(planArg, ".yml")
 }
 
 // filterTerm is a single `key=value` predicate inside a --peer or
@@ -707,6 +536,12 @@ func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm, osFor peerOSResolve
 // peerFilterGroupsUseKey reports whether any term in groups uses key. Lets
 // the caller skip the os-probe pass entirely when no `os=` predicate is
 // present.
+//
+// Non-test code now drives the same decision off the raw --peer values
+// via peerFlagsReferenceOSKey (avoids the parse step). This helper stays
+// because fleet_filter_test.go pins the post-parse predicate semantics.
+//
+//nolint:unused // exercised by cmd/fleet_filter_test.go; lint runs with tests:false.
 func peerFilterGroupsUseKey(groups [][]filterTerm, key string) bool {
 	for _, g := range groups {
 		for _, t := range g {

@@ -17,7 +17,7 @@ func statPath(path string) (DiskObservation, error) {
 	if err := syscall.Statfs(path, &st); err != nil {
 		return DiskObservation{Path: path}, fmt.Errorf("statfs %s: %w", path, err)
 	}
-	bsize := int64(st.Bsize)
+	bsize := st.Bsize
 	total := int64(st.Blocks) * bsize
 	free := int64(st.Bfree) * bsize
 	avail := int64(st.Bavail) * bsize
