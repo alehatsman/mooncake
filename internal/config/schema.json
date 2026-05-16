@@ -1738,7 +1738,7 @@
     },
     "pkg.repo": {
       "type": "object",
-      "description": "Manage a third-party package repository (apt; dnf/brew deferred)",
+      "description": "Manage a third-party package repository (apt + brew taps; dnf deferred)",
       "properties": {
         "apt": {
           "type": "object",
@@ -1828,7 +1828,8 @@
       ],
       "additionalProperties": false,
       "x-platforms": [
-        "linux"
+        "linux",
+        "darwin"
       ],
       "x-requires-sudo": true,
       "x-implements-check": true,
@@ -1839,7 +1840,7 @@
       "x-category": "system",
       "x-supports-dry-run": true,
       "x-supports-become": true,
-      "x-version": "1.0.0",
+      "x-version": "1.1.0",
       "x-emits-events": [
         "file.updated"
       ]
@@ -2394,7 +2395,7 @@
           "$ref": "#/definitions/pkg.list"
         },
         "pkg.repo": {
-          "description": "Manage a third-party package repository (apt; dnf/brew deferred)",
+          "description": "Manage a third-party package repository (apt + brew taps; dnf deferred)",
           "$ref": "#/definitions/pkg.repo"
         },
         "pkg.upgrade": {
