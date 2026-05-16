@@ -22,6 +22,8 @@
 // No third-party services.
 package explain
 
+import "time"
+
 // Kind is the discriminator on Result.
 type Kind string
 
@@ -41,10 +43,12 @@ const (
 // "kind" field and inline the populated payload — see render.go and
 // the spec-68 outputSchema for the wire shape.
 type Result struct {
-	Kind     Kind             `json:"kind"               yaml:"kind"`
-	Action   *ActionPayload   `json:"action,omitempty"   yaml:"action,omitempty"`
-	NotFound *NotFoundPayload `json:"not_found,omitempty" yaml:"not_found,omitempty"`
-	// Run / Resource / Op land in wave 2.
+	Kind     Kind             `json:"kind"                 yaml:"kind"`
+	Action   *ActionPayload   `json:"action,omitempty"     yaml:"action,omitempty"`
+	Run      *RunPayload      `json:"run,omitempty"        yaml:"run,omitempty"`
+	Resource *ResourcePayload `json:"resource,omitempty"   yaml:"resource,omitempty"`
+	Op       *OpPayload       `json:"op,omitempty"         yaml:"op,omitempty"`
+	NotFound *NotFoundPayload `json:"not_found,omitempty"  yaml:"not_found,omitempty"`
 }
 
 // ActionPayload is the kind:action wire shape.
@@ -147,4 +151,86 @@ type NotFoundPayload struct {
 type NotFoundMatch struct {
 	Kind Kind   `json:"kind" yaml:"kind"`
 	ID   string `json:"id"   yaml:"id"`
+}
+
+// RunPayload is the kind:run wire shape — what the operator wants
+// from "what did this run actually do?"
+//
+// Mirrors spec-68 §"The noun set" §2. Per-step typed Diff is omitted
+// in wave 2 because executor.Result carries plan-time Detail only,
+// not apply-time Diff; the Steps array carries enough metadata
+// (action verb + resource handle + result + reversibility) to drive
+// agent follow-ups without it.
+type RunPayload struct {
+	RunID      string     `json:"run_id"                 yaml:"run_id"`
+	OpID       string     `json:"op_id,omitempty"        yaml:"op_id,omitempty"`
+	TS         time.Time  `json:"ts"                     yaml:"ts"`
+	Config     string     `json:"config,omitempty"       yaml:"config,omitempty"`
+	DurationMs int64      `json:"duration_ms,omitempty"  yaml:"duration_ms,omitempty"`
+	Totals     RunTotals  `json:"totals"                 yaml:"totals"`
+	Steps      []RunStep  `json:"steps,omitempty"        yaml:"steps,omitempty"`
+	Caveats    RunCaveats `json:"caveats"                yaml:"caveats"`
+}
+
+// RunTotals mirrors the runlog totals row.
+type RunTotals struct {
+	Changed int `json:"changed" yaml:"changed"`
+	Ok      int `json:"ok"      yaml:"ok"`
+	Skipped int `json:"skipped" yaml:"skipped"`
+	Failed  int `json:"failed"  yaml:"failed"`
+}
+
+// RunStep is a single row in RunPayload.Steps. Sourced from
+// runlog.StepEntry — see internal/runlog for the writer side.
+type RunStep struct {
+	Index      int    `json:"index"                yaml:"index"`
+	Action     string `json:"action"               yaml:"action"`
+	Resource   string `json:"resource,omitempty"   yaml:"resource,omitempty"`
+	Result     string `json:"result"               yaml:"result"`
+	DurationMs int64  `json:"duration_ms,omitempty" yaml:"duration_ms,omitempty"`
+	Reversible bool   `json:"reversible,omitempty" yaml:"reversible,omitempty"`
+}
+
+// RunCaveats surfaces the run-level metadata an operator wants
+// up-front: how many steps are irreversible (no Reverser), whether
+// the run failed, etc.
+type RunCaveats struct {
+	IrreversibleStepCount int `json:"irreversible_step_count" yaml:"irreversible_step_count"`
+}
+
+// ResourcePayload is the kind:resource wire shape — newest-first
+// history of every step that touched a given resource handle.
+//
+// Mirrors spec-68 §"The noun set" §3.
+type ResourcePayload struct {
+	Resource string          `json:"resource"            yaml:"resource"`
+	History  []ResourceEvent `json:"history,omitempty"   yaml:"history,omitempty"`
+}
+
+// ResourceEvent is one row in a resource's history.
+type ResourceEvent struct {
+	RunID      string    `json:"run_id"                yaml:"run_id"`
+	OpID       string    `json:"op_id,omitempty"       yaml:"op_id,omitempty"`
+	TS         time.Time `json:"ts"                    yaml:"ts"`
+	Action     string    `json:"action"                yaml:"action"`
+	Result     string    `json:"result"                yaml:"result"`
+	Reversible bool      `json:"reversible,omitempty"  yaml:"reversible,omitempty"`
+}
+
+// OpPayload is the kind:op wire shape — "what command was this and
+// what did it produce?"
+//
+// Mirrors spec-68 §"The noun set" §4. Parent chains for replay-of-
+// replay are exposed via the Parent field; consumers recurse on
+// Parent to walk the chain.
+type OpPayload struct {
+	OpID     string    `json:"op_id"               yaml:"op_id"`
+	TS       time.Time `json:"ts"                  yaml:"ts"`
+	Command  string    `json:"command"             yaml:"command"`
+	Args     []string  `json:"args,omitempty"      yaml:"args,omitempty"`
+	Actor    string    `json:"actor,omitempty"     yaml:"actor,omitempty"`
+	Parent   string    `json:"parent,omitempty"    yaml:"parent,omitempty"`
+	Config   string    `json:"config,omitempty"    yaml:"config,omitempty"`
+	Runs     []string  `json:"runs,omitempty"      yaml:"runs,omitempty"`
+	PlanOnly bool      `json:"plan_only,omitempty" yaml:"plan_only,omitempty"`
 }

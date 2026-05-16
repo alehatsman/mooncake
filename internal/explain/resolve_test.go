@@ -79,27 +79,10 @@ func TestResolve_UnrecognisedNounShape(t *testing.T) {
 	}
 }
 
-func TestResolve_RunOpResourceAreWave2NotFound(t *testing.T) {
-	cases := []struct {
-		noun string
-		kind Kind
-	}{
-		{"r/01HV5K", KindRun},
-		{"op/01HV5K", KindOp},
-		{"file:/etc/hosts", KindResource},
-	}
-	for _, tc := range cases {
-		t.Run(tc.noun, func(t *testing.T) {
-			r := Resolve(tc.noun, Options{})
-			if r.Kind != KindNotFound {
-				t.Fatalf("kind = %q, want %q", r.Kind, KindNotFound)
-			}
-			if !strings.Contains(r.NotFound.Reason, "wave 2") {
-				t.Errorf("reason = %q, want mention of wave 2", r.NotFound.Reason)
-			}
-		})
-	}
-}
+// Wave-2 has shipped — Run/Op/Resource resolvers are real. The
+// behavioural coverage moved to resolve_w2_test.go; this test slot is
+// kept as a reminder so a future contributor doesn't recreate the
+// wave-1 "everything but kind:action returns not_found" assumption.
 
 func TestDetectKind(t *testing.T) {
 	cases := []struct {

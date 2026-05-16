@@ -21,6 +21,12 @@ var ErrNoHistory = errors.New("no run history")
 var ErrIndexOutOfRange = errors.New("history index out of range")
 
 // Entry is a single run record written to the log.
+//
+// Schema is additive: fields below the legacy totals (RunID, OpID,
+// Steps) were added with spec-68 wave 2. Pre-wave-2 readers ignore
+// unknown fields; pre-wave-2 entries decode with the new fields at
+// their zero values, which `explain` treats as "no detail available
+// for this entry."
 type Entry struct {
 	TS         time.Time `json:"ts"`
 	Config     string    `json:"config"`
@@ -29,6 +35,26 @@ type Entry struct {
 	Skipped    int       `json:"skipped"`
 	Failed     int       `json:"failed"`
 	DurationMs int64     `json:"duration_ms"`
+
+	// Spec-68 wave 2 additions: run/op identity + per-step detail.
+	RunID string      `json:"run_id,omitempty"`
+	OpID  string      `json:"op_id,omitempty"`
+	Steps []StepEntry `json:"steps,omitempty"`
+}
+
+// StepEntry is one row in Entry.Steps — the post-apply record of a
+// single step. Best-effort: Resource is synthesized from common step
+// params (path / name / dest / unit) per-action; per-step typed Diff
+// is not captured here yet (executor.Result holds plan-time Detail
+// only, not apply-time Diff — that's a follow-up for the wave 2.5
+// PR after spec-22 phase 5 finishes).
+type StepEntry struct {
+	Index      int    `json:"index"`
+	Action     string `json:"action"`
+	Resource   string `json:"resource,omitempty"`
+	Result     string `json:"result"` // changed | ok | skipped | failed
+	DurationMs int64  `json:"duration_ms,omitempty"`
+	Reversible bool   `json:"reversible,omitempty"`
 }
 
 // logPath returns the path to the run log file.
@@ -114,11 +140,21 @@ func At(index int) (Entry, error) {
 	return entries[len(entries)-index], nil
 }
 
-// readAll parses runs.jsonl into a slice in OLDEST-FIRST order (the
+// ReadAll parses runs.jsonl into a slice in OLDEST-FIRST order (the
 // file's native order — entries are appended). Invalid lines are
 // silently skipped so a single garbled write doesn't poison the log.
 // A missing file returns (nil, nil), not ErrNoHistory — callers
 // decide whether emptiness is meaningful.
+//
+// Exported in spec-68 wave 2 so the `mooncake explain r/<id>`
+// resolver can scan the full log directly without going through
+// the newest-first wrappers.
+func ReadAll() ([]Entry, error) {
+	return readAll()
+}
+
+// readAll is the internal implementation used by Last / Recent / At.
+// Kept unexported so refactors of the read path stay private.
 func readAll() ([]Entry, error) {
 	path, err := logPath()
 	if err != nil {
