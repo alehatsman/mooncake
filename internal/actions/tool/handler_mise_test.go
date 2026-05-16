@@ -39,9 +39,9 @@ func newToolCtx(t *testing.T, cwd string) *executor.ExecutionContext {
 		Svc: &executor.RunServices{
 			Template: r,
 			PathUtil: pathutil.NewPathExpander(r),
-			Logger: logger.NewLogger(logger.ErrorLevel),
-			Mode: actions.ModeApply,
-			Stats: executor.NewExecutionStats(),
+			Logger:   logger.NewLogger(logger.ErrorLevel),
+			Mode:     actions.ModeApply,
+			Stats:    executor.NewExecutionStats(),
 		},
 		Scope: &executor.VariableScope{
 			User:    map[string]interface{}{"os": "linux", "arch": "amd64"},
@@ -70,9 +70,9 @@ func TestHandler_MiseExecute_HappyPath(t *testing.T) {
 		t.Fatalf("Validate: %v", err)
 	}
 
-	res, err := h.Execute(newToolCtx(t, cwd), step)
+	res, err := h.Run(newToolCtx(t, cwd), step)
 	if err != nil {
-		t.Fatalf("Execute: %v", err)
+		t.Fatalf("Run: %v", err)
 	}
 	r := res.(*executor.Result)
 	if !r.Changed {
@@ -110,9 +110,9 @@ func TestHandler_MiseExecute_Idempotent(t *testing.T) {
 		Tool: &config.Tool{Name: "node", Version: "24.0.0", Backend: BackendMise},
 	}
 
-	res, err := (&Handler{}).Execute(newToolCtx(t, cwd), step)
+	res, err := (&Handler{}).Run(newToolCtx(t, cwd), step)
 	if err != nil {
-		t.Fatalf("Execute: %v", err)
+		t.Fatalf("Run: %v", err)
 	}
 	r := res.(*executor.Result)
 	if r.Changed {
@@ -147,7 +147,7 @@ func TestHandler_CrossBackendLockRejection(t *testing.T) {
 	step := &config.Step{
 		Tool: &config.Tool{Name: "node", Version: "24.0.0", Backend: BackendMise},
 	}
-	_, err := (&Handler{}).Execute(newToolCtx(t, cwd), step)
+	_, err := (&Handler{}).Run(newToolCtx(t, cwd), step)
 	if err == nil {
 		t.Fatal("expected cross-backend lockfile rejection")
 	}

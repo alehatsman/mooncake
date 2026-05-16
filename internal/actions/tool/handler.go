@@ -59,9 +59,14 @@ func (h *Handler) Validate(step *config.Step) error {
 	return backend.Validate(t)
 }
 
-// Execute installs the tool. Idempotent on (name, version) by virtue of
-// the install dir check inside the install pipeline.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// applyTool is the body of the Spec-16 ModeApply dispatch. Pre-F006
+// this code lived in Handler.Execute alongside a Handler.DryRun
+// shadow path; Run was a thin shell that delegated to either. F006
+// deleted Execute + DryRun and inlined this here.
+//
+// Idempotent on (name, version) by virtue of the install dir check
+// inside the install pipeline.
+func (h *Handler) applyTool(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	t := step.Tool
 
 	ec, ok := ctx.(*executor.ExecutionContext)
@@ -193,25 +198,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	})
 
 	return result, nil
-}
-
-// DryRun reports what would happen without touching the network or filesystem.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	t := step.Tool
-
-	installDir, err := InstallDir(t.Name, t.Version)
-	if err != nil {
-		return err
-	}
-	if backend, err := Get(t.Backend); err == nil {
-		spec := specFromConfig(t)
-		if binPath, locErr := backend.Locate(context.Background(), spec, installDir); locErr == nil && binPath != "" {
-			ctx.GetLogger().Infof("  [DRY-RUN] %s %s already installed at %s", t.Name, t.Version, filepath.Dir(binPath))
-			return nil
-		}
-	}
-	ctx.GetLogger().Infof("  [DRY-RUN] Would install %s %s via %s", t.Name, t.Version, t.Backend)
-	return nil
 }
 
 // specFromConfig converts a YAML-parsed config.Tool into the internal Spec.
@@ -352,11 +338,13 @@ func appendToolVersions(dir, name, version string) error {
 // Run is the Spec 16 unified entry point. Plan mode inspects whether the
 // tool is already installed (mooncake's standard layout for URL-based
 // backends; Backend.Locate for backends that own their layout) and
-// reports already-ok or would-install. Execute mode delegates to the
-// legacy Execute path.
+// reports already-ok or would-install. Apply mode runs the full
+// install pipeline (see applyTool). F006: pre-fix there were two
+// shadow entry points — Execute and DryRun — that this Run delegated
+// to or duplicated; both deleted.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
-		return h.Execute(ctx, step)
+		return h.applyTool(ctx, step)
 	}
 
 	t := step.Tool
