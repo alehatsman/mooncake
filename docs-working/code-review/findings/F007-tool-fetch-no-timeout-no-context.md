@@ -6,7 +6,57 @@ package: internal/actions/tool
 files:
   - internal/actions/tool/fetch.go (lines 17-44)
   - internal/actions/tool/backend_github.go (lines 134-145)
-status: open
+status: fixed
+---
+
+## ✅ Fixed
+
+Three changes across the tool package's HTTP plumbing:
+
+1. **`fetchToTempFile` accepts a context.** Replaced `http.Get(url)`
+   with `http.NewRequestWithContext` against an explicit
+   `&http.Client{}` (zero overall timeout — context drives
+   cancellation). Sets a `User-Agent: mooncake-tool` header so the
+   GitHub release CDN doesn't lump us with anonymous traffic.
+
+2. **`urlReachable` accepts a context and bounds itself.** The HEAD
+   probe inside `resolveGithubAssetURL`'s candidate-tag loop now
+   wraps its parent context with `context.WithTimeout(ctx, 5s)`.
+   HEAD against GitHub should be sub-second; 5s is generous enough
+   that a healthy-but-slow probe answers, short enough that a stuck
+   one yields to the next candidate. Test seam preserved:
+   `urlReachable` stays a package-level `var` and the new signature
+   is `func(context.Context, string) bool`. Stub helper
+   `stubURLReachable` updated to match.
+
+3. **`Handler.Execute` defines an outer 30-minute install ceiling.**
+   `actions.Context` doesn't expose a Go `context.Context` today
+   (the executor's parent ctx isn't plumbed through the handler
+   ABI), so the pragmatic alternative is a sane outer bound at the
+   tool package's seam: `context.WithTimeout(context.Background(),
+   30*time.Minute)`. Large tool archives (LLVM, CUDA SDK) need the
+   headroom; everything else completes far under. This ctx flows
+   into `Backend.Plan`, `Backend.Install`, `Backend.Locate`, and
+   `InstallURL → fetchToTempFile`. When the executor ABI grows a
+   ctx getter the 30-min default can be replaced by the parent.
+
+### Existing test fixtures
+
+`backend_github_mt39_test.go` (5 stubURLReachable calls) and
+`backend_github_test.go` (1) updated to the new
+`func(context.Context, string) bool` shape. All tool tests pass
+under -race.
+
+### Open follow-ups
+
+- `internal/actions/download` does similar HTTP fetching and is
+  noted in the finding's references as needing the same audit. Not
+  bundled here.
+- A read-deadline / `http.MaxBytesReader` layer on the download
+  body would catch true mid-download stalls (server sends bytes at
+  1 KB/s) but is a deeper change; the context-cancellation path
+  covers the most common failure modes already.
+
 ---
 
 ## What

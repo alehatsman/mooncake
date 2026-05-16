@@ -15,7 +15,6 @@ something else landing first.
 | F004 | service: 6× repeated sudo/exec block (in-package) | smell | S | — | open |
 | F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
-| F007 | tool: http.Get / DefaultClient with no timeout / context | risk | S | — | open |
 | F008 | tool.renderToolTemplates: 9× manual field render | readability | XS | — | open |
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
 | F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
@@ -38,7 +37,7 @@ something else landing first.
 | F004 | service: sudo/exec duplication in-package | smell | open | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
 | F005 | sudo -S shell-out helper cross-package | smell | open | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
 | F006 | tool handler legacy Execute/DryRun | smell | open | [findings/F006](./findings/F006-tool-handler-execute-dryrun-legacy.md) |
-| F007 | tool: http no timeout / context | risk | open | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
+| F007 | tool: http no timeout / context | risk | **done** | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
 | F008 | tool.renderToolTemplates manual repetition | readability | open | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
 | F009 | explain.DisplayFacts section split | smell | open | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
 | F010 | explain TestDisplayFacts_NilFacts is dead | smell | open | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |

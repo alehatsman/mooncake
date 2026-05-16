@@ -40,7 +40,7 @@ func TestGitHubReleasePlanDefaultTag(t *testing.T) {
 	// Resolver probes candidate URLs over HTTP — stub out the network
 	// touch so the test stays hermetic. Return true for the v-prefixed
 	// URL (the conventional default) and let the resolver pick it.
-	restore := stubURLReachable(t, func(url string) bool {
+	restore := stubURLReachable(t, func(_ context.Context, url string) bool {
 		return contains(url, "/v1.13.0/")
 	})
 	defer restore()
