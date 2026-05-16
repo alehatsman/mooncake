@@ -5,7 +5,8 @@ severity: bug
 package: internal/fleet
 file: internal/fleet/peers.go
 lines: 230-245
-status: open
+status: done
+resolved: 2026-05-16 — added the two missing branches to `peerDiff` (Roles diff via `stringSlicesEqual`, SSH diff via direct string comparison). `TestUpsert_DiffSurfacesRolesAndSSH` in `peers_upsert_test.go` asserts both fields appear in the diff when changed on an existing peer — regression guard against future "added a Peer field, forgot to update diff." Adjacent merge-policy concern (Upsert blindly replaces Roles/SSH when caller leaves them empty) stays in scope for a separate follow-up; this fix only gives the user a *chance to notice* the silent clear.
 ---
 
 ## What

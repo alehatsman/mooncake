@@ -91,6 +91,45 @@ func TestUpsert_RejectsInvalidPeer(t *testing.T) {
 	}
 }
 
+// TestUpsert_DiffSurfacesRolesAndSSH: spec-50 Roles and the later SSH
+// fallback field were added to Peer without a matching diff branch in
+// peerDiff, so an Upsert that changed only those fields returned an
+// empty diff — the cmd-side then reported "peer X updated" with no
+// detail and the user couldn't notice that re-bootstrap was silently
+// rewriting roles/ssh (F025). This regression locks in the contract:
+// every non-Name Peer field must appear in the diff when it changes.
+func TestUpsert_DiffSurfacesRolesAndSSH(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "peers.toml")
+	first := Peer{
+		Name:      "host1",
+		Addr:      "h:7878",
+		Transport: TransportAgentd,
+		Token:     "tok",
+		Roles:     []string{"primary"},
+		SSH:       "alice@host1:22",
+	}
+	if _, _, err := Upsert(path, first); err != nil {
+		t.Fatalf("first Upsert: %v", err)
+	}
+
+	second := first
+	second.Roles = []string{"primary", "db-replica"}
+	second.SSH = "alice@host1.example.com:2222"
+	_, diff, err := Upsert(path, second)
+	if err != nil {
+		t.Fatalf("second Upsert: %v", err)
+	}
+	if len(diff) == 0 {
+		t.Fatal("diff is empty; expected roles + ssh changes to surface")
+	}
+	joined := strings.Join(diff, "\n")
+	for _, want := range []string{"roles:", "ssh:"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("diff missing %q. Got:\n%s", want, joined)
+		}
+	}
+}
+
 func TestUpsert_AppendsAlongsideExisting(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "peers.toml")
 	p1 := Peer{Name: "a", Addr: "a.lan:7878", Transport: TransportAgentd, Token: "ta"}
