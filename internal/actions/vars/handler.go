@@ -46,77 +46,54 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the vars action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// Run is the Spec 16 entry point. vars steps only mutate the variable
+// scope, not the system. Plan mode reports Checkable=true with
+// WouldChange=false; apply mode merges the vars into scope and emits
+// EventVarsSet.
+//
+// Note: the planner already evaluates vars at plan time and strips
+// them from the step list, so this handler rarely runs in practice.
+// Run is here for completeness and to satisfy the Runner contract.
+//
+// F011: legacy Execute / DryRun pair folded into Run.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	vars := step.Vars
 	if vars == nil {
 		return nil, fmt.Errorf("vars is nil")
 	}
 
-	logger := ctx.GetLogger()
-	logger.Debugf("Handling vars: %+v", vars)
-
-	for k, v := range *vars {
-		logger.Debugf("  %v: %v", k, v)
-	}
-
-	// Merge variables into context via the typed interface
-	ctx.MergeUserVars(*vars)
-
-	// Emit variables.set event
-	keys := make([]string, 0, len(*vars))
-	for k := range *vars {
-		keys = append(keys, k)
-	}
-
-	publisher := ctx.GetEventPublisher()
-	if publisher != nil {
-		publisher.Publish(events.Event{
-			Type: events.EventVarsSet,
-			Data: events.VarsSetData{
-				Count:  len(*vars),
-				Keys:   keys,
-				DryRun: ctx.Mode() == actions.ModePlan,
-			},
-		})
-	}
-
-	// Create result
-	result := executor.NewResult()
-	result.Changed = false // Setting variables doesn't count as "changed"
-
-	return result, nil
-}
-
-// DryRun logs what variables would be set.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	vars := step.Vars
-	if vars == nil {
-		return fmt.Errorf("vars is nil")
-	}
-
-	// Log what would be set
-	ctx.GetLogger().Infof("  [DRY-RUN] Would set %d variables", len(*vars))
-
-	// Still set variables in dry-run mode so subsequent steps can use them
-	ctx.MergeUserVars(*vars)
-
-	return nil
-}
-
-// Run is the Spec 16 entry point. vars steps only mutate the variable
-// scope, not the system. Plan mode reports Checkable=true with
-// WouldChange=false; execute mode delegates.
-//
-// Note: the planner already evaluates vars at plan time and strips
-// them from the step list, so this handler rarely runs in practice.
-// Run is here for completeness and to satisfy the Runner contract.
-func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() == actions.ModePlan {
 		r := executor.NewResult()
 		r.Checkable = true
 		r.Reason = "vars (no system change)"
 		return r, nil
 	}
-	return h.Execute(ctx, step)
+
+	logger := ctx.GetLogger()
+	logger.Debugf("Handling vars: %+v", vars)
+	for k, v := range *vars {
+		logger.Debugf("  %v: %v", k, v)
+	}
+
+	ctx.MergeUserVars(*vars)
+
+	keys := make([]string, 0, len(*vars))
+	for k := range *vars {
+		keys = append(keys, k)
+	}
+
+	if publisher := ctx.GetEventPublisher(); publisher != nil {
+		publisher.Publish(events.Event{
+			Type: events.EventVarsSet,
+			Data: events.VarsSetData{
+				Count:  len(*vars),
+				Keys:   keys,
+				DryRun: false,
+			},
+		})
+	}
+
+	result := executor.NewResult()
+	result.Changed = false // Setting variables doesn't count as "changed"
+	return result, nil
 }

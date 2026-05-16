@@ -43,7 +43,7 @@ func TestTimeout_KillsProcessGroup_NotJustShell(t *testing.T) {
 	}
 	ctx := newCtx(t, false)
 	start := time.Now()
-	res, err := h.Execute(ctx, step)
+	res, err := h.Run(ctx, step)
 	elapsed := time.Since(start)
 
 	if err == nil {

@@ -86,46 +86,6 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the shell action. Action-level creates:/unless: guards are
-// evaluated upstream in the executor's idempotency check, alongside the
-// step-level unless_exists/unless_command — by the time we get here the
-// step is committed to running.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	shellAction := step.Shell
-	shell := strings.Trim(shellAction.Cmd, " \n")
-
-	// Render the command template
-	renderedCommand, err := ctx.GetTemplate().Render(shell, ctx.GetVariables())
-	if err != nil {
-		return nil, fmt.Errorf("failed to render command: %w", err)
-	}
-
-	ctx.GetLogger().Debugf("  Executing: %s", renderedCommand)
-
-	// Execute with retries
-	return h.executeWithRetry(ctx, step, renderedCommand)
-}
-
-// DryRun logs what would be executed.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	shellAction := step.Shell
-	shell := strings.Trim(shellAction.Cmd, " \n")
-
-	// Attempt to render command (but don't fail if it errors)
-	renderedCommand, err := ctx.GetTemplate().Render(shell, ctx.GetVariables())
-	if err != nil {
-		renderedCommand = shell + " (template render would fail)"
-	}
-
-	// Log what would be executed
-	ctx.GetLogger().Infof("  [DRY-RUN] Would execute: %s", renderedCommand)
-	if step.ShouldBecome() {
-		ctx.GetLogger().Infof("  [DRY-RUN] With sudo privileges")
-	}
-
-	return nil
-}
-
 // executeWithRetry wraps command execution with retry logic. MT-48:
 // retry decisions are based on the *raw* exit code, not the post-
 // failed_when verdict — otherwise `retry: 3` + `failed_when: false`
@@ -557,12 +517,14 @@ func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression, fieldN
 // steps mutate state (matching the legacy Execute which always sets
 // Changed=true).
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	shellAction := step.Shell
+	cmd := strings.Trim(shellAction.Cmd, " \n")
+
 	if ctx.Mode() == actions.ModePlan {
 		r := executor.NewResult()
 		r.Checkable = true
 		r.WouldChange = true
 
-		cmd := strings.TrimSpace(step.Shell.Cmd)
 		rendered, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
 		if err != nil {
 			rendered = cmd + " (template render would fail)"
@@ -578,5 +540,18 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		return r, nil
 	}
-	return h.Execute(ctx, step)
+
+	// Apply mode: render command (strict — render failures bail) and
+	// dispatch to the retry-aware runner. Action-level creates / unless
+	// guards are evaluated upstream by the executor's idempotency check
+	// alongside step-level unless_exists/unless_command — by the time
+	// we get here the step is committed to running.
+	//
+	// F011: legacy Execute / DryRun pair folded into Run.
+	renderedCommand, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
+	if err != nil {
+		return nil, fmt.Errorf("failed to render command: %w", err)
+	}
+	ctx.GetLogger().Debugf("  Executing: %s", renderedCommand)
+	return h.executeWithRetry(ctx, step, renderedCommand)
 }
