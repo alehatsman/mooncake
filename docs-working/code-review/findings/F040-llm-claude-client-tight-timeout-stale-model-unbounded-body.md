@@ -5,8 +5,9 @@ severity: smell
 package: internal/pilot/llm
 file: internal/pilot/llm/claude_client.go
 lines: 14-19, 36-39, 42-45, 81-84
-status: open
+status: done
 verified: 2026-05-16 — confirmed real on master @ 649c71f4 after agent→pilot rename. internal/pilot/llm/claude_client.go:16 defaultTimeout=60s, :44 model="claude-sonnet-4-20250514" (stale; current is sonnet-4-6 or opus-4-7), :81 io.ReadAll unbounded body read. Paths refreshed
+post-fix verified: 2026-05-16 on master @ c328abbd — claude_client.go:60 drops httpClient.Timeout; line 27 defaultModel=claude-sonnet-4-6; line 107 io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 ---
 
 ## What
