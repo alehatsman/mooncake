@@ -7,6 +7,7 @@ files:
   - internal/actions/template/handler.go (lines 339-357)
   - internal/actions/download/handler.go (lines 444-461, 482-494)
 status: open
+verified: 2026-05-16 — template/handler.go:339 uses %s (no quoting); download/handler.go:450 uses %q which is Go-quoting, not shell-safe (does not escape backticks, $()). Finding accurate
 ---
 
 ## What
