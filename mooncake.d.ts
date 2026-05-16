@@ -704,9 +704,9 @@ export interface PkgListAction {
 }
 
 /**
- * Manage a third-party package repository (apt; dnf/brew deferred)
+ * Manage a third-party package repository (apt + brew taps; dnf deferred)
  * 
- * @platforms linux
+ * @platforms linux, darwin
  * @requiresSudo true
  * @category system
  */
@@ -1407,7 +1407,8 @@ export interface Step {
    */
   "pkg.list"?: PkgListAction;
   /**
-   * Manage a third-party package repository (apt; dnf/brew deferred)
+   * Manage a third-party package repository (apt + brew taps; dnf
+   * deferred)
    */
   "pkg.repo"?: PkgRepoAction;
   /**
