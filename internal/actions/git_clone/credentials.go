@@ -64,7 +64,7 @@ func credentialEnv(ctx actions.Context, creds *config.GitCredentials) ([]string,
 		if redactor != nil {
 			redactor.AddSensitive(password)
 		}
-		askpass, rm, err := writeAskpass(password)
+		askpass, rm, err := writeAskpass(username, password)
 		if err != nil {
 			cleanup()
 			return nil, func() {}, err
@@ -74,14 +74,6 @@ func credentialEnv(ctx actions.Context, creds *config.GitCredentials) ([]string,
 			"GIT_ASKPASS="+askpass,
 			"GIT_TERMINAL_PROMPT=0",
 		)
-		// Configure the username via the URL credential helper. When the
-		// HTTPS URL is bare (no embedded user), git uses the `Username`
-		// env var, which we surface via the askpass script's first
-		// invocation. The askpass receives the prompt text on argv[1]
-		// and may dispatch on it.
-		if username != "" {
-			env = append(env, "GIT_USERNAME="+username)
-		}
 	}
 
 	if sshKey != "" {
@@ -122,18 +114,26 @@ func redactorFromContext(ctx actions.Context) *security.Redactor {
 	return ec.Svc.Redactor
 }
 
-// writeAskpass emits a small shell script that prints `password` on
-// stdout. Mode 0700 so only the current user can execute it. The
-// returned cleanup func removes the script.
-func writeAskpass(password string) (string, func(), error) {
+// writeAskpass emits a small shell script implementing git's
+// GIT_ASKPASS protocol: argv[1] carries the prompt git would have
+// shown the user, stdout carries the credential. The script
+// dispatches on a leading "Username" to return the username, and
+// otherwise returns the password — covering the bare-URL case
+// (https://host/repo) where git asks for username then password
+// separately. F028. username may be empty: legacy callers that
+// want only-password behavior still pass the password through for
+// embedded-user URLs like https://user@host/repo.
+//
+// Mode 0700 so only the current user can execute it. The returned
+// cleanup func removes the script.
+func writeAskpass(username, password string) (string, func(), error) {
 	f, err := os.CreateTemp("", "mooncake-askpass-*.sh")
 	if err != nil {
 		return "", nil, fmt.Errorf("create askpass: %w", err)
 	}
-	// Single-quote the password so it survives any embedded special
-	// characters except `'`; escape that by closing-and-reopening.
-	escaped := strings.ReplaceAll(password, "'", `'\''`)
-	body := "#!/bin/sh\nprintf '%s' '" + escaped + "'\n"
+	// Single-quote both credentials so they survive embedded special
+	// characters; `'` is escaped via the standard `'\''` shell idiom.
+	body := "#!/bin/sh\ncase \"$1\" in\nUsername*) printf '%s' " + shellEscape(username) + " ;;\n*) printf '%s' " + shellEscape(password) + " ;;\nesac\n"
 	if _, err := f.WriteString(body); err != nil {
 		f.Close() //nolint:errcheck
 		_ = os.Remove(f.Name())
@@ -185,7 +185,7 @@ func isInlineKey(s string) bool {
 
 // shellEscape single-quotes s for safe inclusion in a shell command
 // like GIT_SSH_COMMAND. Embedded single quotes are escaped via the
-// usual `'\''` shell idiom.
+// usual `'\”` shell idiom.
 func shellEscape(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
