@@ -6,54 +6,43 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 )
 
 // CalculateSHA256 calculates the SHA256 checksum of a file.
-func CalculateSHA256(path string) (checksum string, err error) {
-	// #nosec G304 -- File path from user config is intentional functionality
-	file, err := os.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			// Return close error only if operation succeeded
-			err = fmt.Errorf("failed to close file: %w", closeErr)
-		}
-	}()
-
-	hasher := sha256.New()
-	if _, err = io.Copy(hasher, file); err != nil {
-		return "", fmt.Errorf("failed to read file: %w", err)
-	}
-
-	return hex.EncodeToString(hasher.Sum(nil)), nil
+func CalculateSHA256(path string) (string, error) {
+	return hashFile(sha256.New(), path)
 }
 
 // CalculateMD5 calculates the MD5 checksum of a file.
 // Note: MD5 is deprecated for security purposes but still commonly used for integrity checks.
-func CalculateMD5(path string) (checksum string, err error) {
-	// #nosec G304 -- File path from user config is intentional functionality
-	file, err := os.Open(path)
+func CalculateMD5(path string) (string, error) {
+	// #nosec G401 -- MD5 used for integrity checks, not security
+	return hashFile(md5.New(), path)
+}
+
+// hashFile streams path's contents through h and returns the hex
+// digest. Caller owns the hash.Hash so SHA256 / MD5 / future
+// algorithms (blake2, sha1) plug in without copy-pasting the
+// open / io.Copy / close / hex.EncodeToString boilerplate that
+// `dupl` previously flagged between CalculateSHA256 and CalculateMD5.
+func hashFile(h hash.Hash, path string) (checksum string, err error) {
+	// #nosec G304 -- file path from user config is intentional functionality
+	f, err := os.Open(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}
 	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			// Return close error only if operation succeeded
+		if closeErr := f.Close(); closeErr != nil && err == nil {
 			err = fmt.Errorf("failed to close file: %w", closeErr)
 		}
 	}()
-
-	// #nosec G401 -- MD5 used for integrity checks, not security
-	hasher := md5.New()
-	if _, err = io.Copy(hasher, file); err != nil {
+	if _, err = io.Copy(h, f); err != nil {
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
-
-	return hex.EncodeToString(hasher.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // VerifyChecksum verifies a file's checksum against an expected value.
