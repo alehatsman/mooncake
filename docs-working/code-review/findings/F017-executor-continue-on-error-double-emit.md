@@ -5,7 +5,34 @@ severity: bug
 package: internal/executor
 file: internal/executor/executor.go
 lines: 477-523, 561-600, 736-749
-status: open
+status: fixed
+---
+
+## ✅ Fixed
+
+Option A landed: `ExecuteStep` returns `nil` immediately after
+`handleStepError` returned nil (continue_on_error swallow), so the
+success-path bookkeeping (`postExecuteSuccess` → `step.completed` +
+`Stats.Executed++`) no longer runs on the failed path. The
+`Stats.Executed` doc comment ("counts successfully completed steps")
+is now honored — pre-fix, a swallowed failure incremented both Failed
+and Executed for the same step.
+
+Regression test:
+`internal/executor/executor_continue_on_error_test.go::TestContinueOnError_EmitsSingleTerminalEvent`
+— asserts exactly one `EventStepFailed` event, zero
+`EventStepCompleted` events, `Stats.Failed == 1`, `Stats.Executed == 0`
+for a `Shell{Cmd: "exit 1"} + ContinueOnError: true` step. Pre-fix the
+test fails with `EventStepCompleted fired 1 times; want 0` and
+`Stats.Executed = 1, want 0` — verified by stashing the fix and
+re-running.
+
+### Adjacent observation — gocyclo nolint
+
+The finding's parenthetical note about `ExecuteStep`'s stale
+`//nolint:gocyclo` directive is unchanged by this fix and remains
+out of scope. Track separately if needed.
+
 ---
 
 ## What

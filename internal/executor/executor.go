@@ -115,9 +115,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/facts"
-	"github.com/alehatsman/mooncake/internal/metrics"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/metrics"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/plan/filter"
@@ -411,8 +411,6 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 
 	return "", false
 }
-
-
 
 // DispatchStepAction executes the appropriate handler based on step type.
 // All actions are now handled through the actions registry.
@@ -743,6 +741,14 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		if err := handleStepError(step, ec, stepErr, stepID, stepName, depth, stepDuration); err != nil {
 			return err
 		}
+		// F017: handleStepError returning nil means continue_on_error
+		// swallowed the failure. It already emitted step.failed and
+		// updated Stats.Failed; the success-path bookkeeping
+		// (postExecuteSuccess → step.completed + Stats.Executed) must
+		// not also run, or consumers see two terminal events for the
+		// same StepID and the printed recap counts the step as both
+		// failed and successfully executed.
+		return nil
 	}
 
 	postExecuteSuccess(step, ec, stepID, stepName, depth, stepDuration)

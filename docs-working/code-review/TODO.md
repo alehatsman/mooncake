@@ -25,7 +25,6 @@ something else landing first.
 | F014 | fleet.Apply WithoutCancel + GetRun has no timeout — Ctrl-C hangs | risk | XS | — | open |
 | F015 | agentd.Worker: chdir-error path leaks the hub | bug | XS | — | open |
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
-| F017 | executor: continue_on_error emits step.failed AND step.completed | bug | XS | — | open |
 | F018 | shell: bufio.Scanner default 64 KB line cap → silent truncation | bug | S | — | open |
 | F019 | secrets.Resolve doesn't recurse into step.Vars (*map[string]interface{}) | bug | S | — | open |
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
@@ -51,7 +50,7 @@ something else landing first.
 | F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | open | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
 | F015 | agentd.Worker chdir-error hub leak | bug | open | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
 | F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
-| F017 | executor continue_on_error double emit | bug | open | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
+| F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
 | F018 | shell scanner 64KB line cap | bug | open | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
 | F019 | secrets.Resolve misses step.Vars | bug | open | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
