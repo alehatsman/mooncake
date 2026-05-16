@@ -102,7 +102,20 @@ func (h *Handler) Validate(step *config.Step) error {
 }
 
 // Execute executes the preset action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// Run is the Spec 16 entry point. Presets compose other steps; the
+// planner expands them at plan time so this handler rarely runs in
+// practice. Plan mode reports "not checkable"; apply mode expands
+// the preset, executes its expanded steps in sequence, and emits
+// EventPresetExpanded / EventPresetCompleted bookends.
+//
+// F011: legacy Execute / DryRun pair folded into Run.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	if ctx.Mode() == actions.ModePlan {
+		r := executor.NewResult()
+		r.Reason = "not checkable (preset; usually expanded at plan time)"
+		return r, nil
+	}
+
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
 		return nil, fmt.Errorf("invalid context type")
@@ -195,69 +208,4 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	return result, nil
-}
-
-// DryRun logs what the preset would expand.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("invalid context type")
-	}
-
-	invocation := step.Use
-
-	// Try to expand preset to show step count
-	expandedSteps, parametersNamespace, presetBaseDir, err := presets.ExpandPreset(invocation)
-	if err != nil {
-		// If expansion fails, show error
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (expansion failed: %v)", invocation.Name, err)
-		return nil
-	}
-
-	// Merge parameters for full expansion
-	variables := make(map[string]interface{})
-	for k, v := range ec.GetVariables() {
-		variables[k] = v
-	}
-	for k, v := range parametersNamespace {
-		variables[k] = v
-	}
-
-	// Use planner to get final step count
-	planner, err := plan.NewPlanner()
-	if err != nil {
-		// Show initial count if planner creation fails
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, planner creation failed)",
-			invocation.Name, len(expandedSteps))
-		return nil
-	}
-	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, variables, presetBaseDir)
-	if err != nil {
-		// Show initial count if full expansion fails
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (%d steps, full expansion failed)",
-			invocation.Name, len(expandedSteps))
-		return nil
-	}
-
-	paramCount := 0
-	if invocation.With != nil {
-		paramCount = len(invocation.With)
-	}
-
-	ec.Svc.Logger.Infof("  [DRY-RUN] Would expand preset '%s' (parameters: %d, steps: %d)",
-		invocation.Name, paramCount, len(fullyExpandedSteps))
-
-	return nil
-}
-
-// Run is the Spec 16 entry point. Presets compose other steps; the
-// planner expands them at plan time so this handler rarely runs.
-// Plan mode reports "not checkable"; execute mode delegates.
-func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	if ctx.Mode() == actions.ModePlan {
-		r := executor.NewResult()
-		r.Reason = "not checkable (preset; usually expanded at plan time)"
-		return r, nil
-	}
-	return h.Execute(ctx, step)
 }
