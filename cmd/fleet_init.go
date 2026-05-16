@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/term"
 
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet/discovery"
@@ -269,7 +270,7 @@ func promptOneCandidate(w io.Writer, reader *bufio.Reader, cand discovery.Candid
 		return false, err
 	}
 	tagList := parseTagInput(tags)
-	token, err := promptDefault(w, reader, fmt.Sprintf("? %s — paste bearer token (cat /etc/mooncake/agentd.token on %s)", cand.Name, cand.Name), "")
+	token, err := promptSecret(w, reader, fmt.Sprintf("? %s — paste bearer token (cat /etc/mooncake/agentd.token on %s)", cand.Name, cand.Name))
 	if err != nil {
 		return false, err
 	}
@@ -317,6 +318,29 @@ func promptDefault(w io.Writer, reader *bufio.Reader, prompt, def string) (strin
 		return def, nil
 	}
 	return line, nil
+}
+
+// promptSecret reads a value without echoing it to the terminal.
+// When stdin is a TTY, the terminal is put into raw mode for the read.
+// When stdin is not a TTY (pipe, CI), falls back to reading from reader
+// and emits a warning — the caller decides whether to refuse instead.
+func promptSecret(w io.Writer, reader *bufio.Reader, prompt string) (string, error) {
+	fmt.Fprint(w, prompt+": ")
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		fmt.Fprintln(os.Stderr, "(stdin is not a TTY; token may be visible to the terminal)")
+		line, err := reader.ReadString('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", err
+		}
+		return strings.TrimRight(line, "\r\n"), nil
+	}
+	raw, err := term.ReadPassword(fd)
+	fmt.Fprintln(w)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(raw)), nil
 }
 
 // promptYesNo asks a Y/n (or y/N) question and returns the boolean.

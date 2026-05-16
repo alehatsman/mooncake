@@ -10,11 +10,9 @@ something else landing first.
 
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
-| F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
 | F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
 | F011 | Cross-cutting: 10 handlers still have Execute/DryRun (11 done: shell/command/print/vars/include_vars/preset/tool/service/repo_search/repo_tree/file_delete_range/file_replace) | smell | XL | — | open |
 | F041 | artifact_capture.readFileContent unbounded read | smell | S | — | open |
-| F043 | cmd/fleet init prompts for bearer token via plain readline — token echoed to terminal / scrollback / tmux | bug | XS | — | open |
 
 ## Findings index
 
@@ -22,7 +20,7 @@ something else landing first.
 |---|---|---|---|---|
 | F001 | observe_disk Bsize cross-platform cast | risk | **done** | [findings/F001](./findings/F001-observe-disk-bsize-cast.md) |
 | F002 | CLAUDE.md soft-cap list stale | doc | **done** | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
-| F003 | service: legacy Execute/DryRun | smell | open | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
+| F003 | service: legacy Execute/DryRun | smell | **done** | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
 | F004 | service: sudo/exec duplication in-package | smell | **done** | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
 | F005 | sudo -S shell-out helper cross-package | smell | **partial** | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
 | F006 | tool handler legacy Execute/DryRun | smell | **done** | [findings/F006](./findings/F006-tool-handler-execute-dryrun-legacy.md) |
@@ -61,7 +59,7 @@ something else landing first.
 | F040 | llm.ClaudeClient timeout/model/body | smell | **done** | [findings/F040](./findings/F040-llm-claude-client-tight-timeout-stale-model-unbounded-body.md) |
 | F041 | artifact_capture.readFileContent unbounded read | smell | open | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
 | F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
-| F043 | fleet init bearer-token prompt echoes to terminal | bug | open | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
+| F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
 
 ## Queue (next iterations, priority order)
 

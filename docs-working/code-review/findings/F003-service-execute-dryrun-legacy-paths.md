@@ -5,7 +5,8 @@ severity: smell
 package: internal/actions/service
 file: internal/actions/service/handler.go
 lines: 102-172, 1230-1332
-status: open
+status: done
+fixed: 2026-05-16 — service handler confirmed to have only Metadata/Permissions/Validate/Run; Execute and DryRun were already deleted (landed as part of the arch-wins batch). TODO.md updated to reflect.
 ---
 
 ## What

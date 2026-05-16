@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/term"
 
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
@@ -226,10 +227,20 @@ func readToken(c *cli.Context, src string) (string, error) {
 	case src == "stdin":
 		fmt.Fprint(c.App.ErrWriter, "Paste bearer token: ")
 		var tok string
-		if _, err := fmt.Fscanln(c.App.Reader, &tok); err != nil {
-			return "", fmt.Errorf("read stdin: %w", err)
+		fd := int(os.Stdin.Fd())
+		if term.IsTerminal(fd) {
+			raw, err := term.ReadPassword(fd)
+			fmt.Fprintln(c.App.ErrWriter)
+			if err != nil {
+				return "", fmt.Errorf("read stdin: %w", err)
+			}
+			tok = strings.TrimSpace(string(raw))
+		} else {
+			if _, err := fmt.Fscanln(c.App.Reader, &tok); err != nil {
+				return "", fmt.Errorf("read stdin: %w", err)
+			}
+			tok = strings.TrimSpace(tok)
 		}
-		tok = strings.TrimSpace(tok)
 		if tok == "" {
 			return "", errors.New("empty token from stdin")
 		}
