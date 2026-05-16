@@ -118,7 +118,57 @@ func TestGenerateActionDefinitions(t *testing.T) {
 					t.Errorf("Action %s platforms count mismatch", meta.Name)
 				}
 			}
+
+			// proposal-05: the four spec-22 ABI capability bools are
+			// emitted as x-implements-* extensions, sourced from the
+			// metadata Registry.List() now populates.
+			if def.XImplementsDiff != meta.ImplementsDiff {
+				t.Errorf("Action %s XImplementsDiff = %v, want %v", meta.Name, def.XImplementsDiff, meta.ImplementsDiff)
+			}
+			if def.XImplementsCost != meta.ImplementsCost {
+				t.Errorf("Action %s XImplementsCost = %v, want %v", meta.Name, def.XImplementsCost, meta.ImplementsCost)
+			}
+			if def.XImplementsReverse != meta.ImplementsReverse {
+				t.Errorf("Action %s XImplementsReverse = %v, want %v", meta.Name, def.XImplementsReverse, meta.ImplementsReverse)
+			}
+			if def.XImplementsPermissions != meta.ImplementsPermissions {
+				t.Errorf("Action %s XImplementsPermissions = %v, want %v", meta.Name, def.XImplementsPermissions, meta.ImplementsPermissions)
+			}
 		}
+	}
+}
+
+// TestGenerateActionDefinitions_AtLeastOneHandlerImplementsEachABI is a
+// sanity check that the new x-implements-* fields are *actually* set on
+// at least one real shipping handler — guards against a regression where
+// the central population in Registry.List() gets bypassed and every
+// flag silently goes false. spec-22 phases shipped real Diff/Reverse/
+// Cost/Permissions across the standard library, so each must surface
+// somewhere in the registered set.
+func TestGenerateActionDefinitions_AtLeastOneHandlerImplementsEachABI(t *testing.T) {
+	gen := NewGenerator(GeneratorOptions{IncludeExtensions: true, OutputFormat: "json"})
+	schema, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	var anyDiff, anyCost, anyReverse, anyPerms bool
+	for _, def := range schema.Definitions {
+		if def.XImplementsDiff {
+			anyDiff = true
+		}
+		if def.XImplementsCost {
+			anyCost = true
+		}
+		if def.XImplementsReverse {
+			anyReverse = true
+		}
+		if def.XImplementsPermissions {
+			anyPerms = true
+		}
+	}
+	if !anyDiff || !anyCost || !anyReverse || !anyPerms {
+		t.Errorf("expected at least one shipping handler per ABI flag; got diff=%v cost=%v reverse=%v perms=%v",
+			anyDiff, anyCost, anyReverse, anyPerms)
 	}
 }
 

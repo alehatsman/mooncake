@@ -18,7 +18,7 @@ type minimalHandler struct {
 func (m *minimalHandler) Metadata() ActionMetadata {
 	return ActionMetadata{Name: m.name}
 }
-func (m *minimalHandler) Validate(_ *config.Step) error           { return nil }
+func (m *minimalHandler) Validate(_ *config.Step) error { return nil }
 func (m *minimalHandler) Run(_ Context, _ *config.Step) (Result, error) {
 	return nil, nil
 }
@@ -248,5 +248,48 @@ func TestDefaultCoster_ReversibilityCapturedAtConstruction(t *testing.T) {
 	}
 	if dc.reversible {
 		t.Error("defaultCoster.reversible = true, want false")
+	}
+}
+
+// TestRegistry_List_PopulatesABICapabilities — proposal-05: Registry.List()
+// fills ImplementsDiff/Cost/Reverse/Permissions on each returned metadata
+// using the live interface satisfaction, so the actions-list table and the
+// schemagen x-implements-* keys stay honest as new methods land.
+func TestRegistry_List_PopulatesABICapabilities(t *testing.T) {
+	reg := NewRegistry()
+	min := &minimalHandler{name: "minimal"}
+	rich := &richHandler{minimalHandler: minimalHandler{name: "rich"}}
+	revOnly := &reverserOnlyHandler{minimalHandler: minimalHandler{name: "rev-only"}}
+	for _, h := range []Handler{min, rich, revOnly} {
+		if err := reg.Register(h); err != nil {
+			t.Fatalf("Register: %v", err)
+		}
+	}
+	got := make(map[string]ActionMetadata, 3)
+	for _, m := range reg.List() {
+		got[m.Name] = m
+	}
+
+	// minimalHandler implements no sub-interfaces — all four bools false.
+	m := got["minimal"]
+	if m.ImplementsDiff || m.ImplementsCost || m.ImplementsReverse || m.ImplementsPermissions {
+		t.Errorf("minimal got %+v; want all four ABI bools false",
+			[4]bool{m.ImplementsDiff, m.ImplementsCost, m.ImplementsReverse, m.ImplementsPermissions})
+	}
+
+	// richHandler implements all four — all true.
+	r := got["rich"]
+	if !r.ImplementsDiff || !r.ImplementsCost || !r.ImplementsReverse || !r.ImplementsPermissions {
+		t.Errorf("rich got %+v; want all four ABI bools true",
+			[4]bool{r.ImplementsDiff, r.ImplementsCost, r.ImplementsReverse, r.ImplementsPermissions})
+	}
+
+	// reverserOnlyHandler — only Reverse.
+	ro := got["rev-only"]
+	if ro.ImplementsDiff || ro.ImplementsCost || ro.ImplementsPermissions {
+		t.Errorf("rev-only got non-Reverse bools true; want only ImplementsReverse")
+	}
+	if !ro.ImplementsReverse {
+		t.Error("rev-only ImplementsReverse = false; want true")
 	}
 }

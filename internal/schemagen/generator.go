@@ -81,6 +81,7 @@ func (g *Generator) Generate() (*Schema, error) {
 }
 
 // generateStepDefinition creates the step definition with universal fields.
+//
 //nolint:unparam // Error return kept for future error handling
 func (g *Generator) generateStepDefinition() (*Definition, error) {
 	def := &Definition{
@@ -426,6 +427,7 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 }
 
 // generateActionDefinition creates a definition for a specific action.
+//
 //nolint:unparam // Error return kept for future error handling
 func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Definition, error) {
 	def := &Definition{
@@ -447,6 +449,10 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 		}
 		def.XRequiresSudo = meta.RequiresSudo
 		def.XImplementsCheck = meta.ImplementsCheck
+		def.XImplementsDiff = meta.ImplementsDiff
+		def.XImplementsCost = meta.ImplementsCost
+		def.XImplementsReverse = meta.ImplementsReverse
+		def.XImplementsPermissions = meta.ImplementsPermissions
 		def.XCategory = string(meta.Category)
 		def.XSupportsDryRun = meta.SupportsDryRun
 		def.XSupportsBecome = meta.SupportsBecome

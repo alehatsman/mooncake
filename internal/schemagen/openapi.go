@@ -2,18 +2,18 @@ package schemagen
 
 // OpenAPISpec represents an OpenAPI 3.0 specification document.
 type OpenAPISpec struct {
-	OpenAPI    string                `json:"openapi" yaml:"openapi"`
-	Info       OpenAPIInfo           `json:"info" yaml:"info"`
-	Servers    []OpenAPIServer       `json:"servers,omitempty" yaml:"servers,omitempty"`
+	OpenAPI    string                 `json:"openapi" yaml:"openapi"`
+	Info       OpenAPIInfo            `json:"info" yaml:"info"`
+	Servers    []OpenAPIServer        `json:"servers,omitempty" yaml:"servers,omitempty"`
 	Paths      map[string]OpenAPIPath `json:"paths,omitempty" yaml:"paths,omitempty"`
-	Components OpenAPIComponents     `json:"components" yaml:"components"`
+	Components OpenAPIComponents      `json:"components" yaml:"components"`
 }
 
 // OpenAPIInfo contains API metadata.
 type OpenAPIInfo struct {
-	Title       string         `json:"title" yaml:"title"`
-	Description string         `json:"description,omitempty" yaml:"description,omitempty"`
-	Version     string         `json:"version" yaml:"version"`
+	Title       string          `json:"title" yaml:"title"`
+	Description string          `json:"description,omitempty" yaml:"description,omitempty"`
+	Version     string          `json:"version" yaml:"version"`
 	Contact     *OpenAPIContact `json:"contact,omitempty" yaml:"contact,omitempty"`
 	License     *OpenAPILicense `json:"license,omitempty" yaml:"license,omitempty"`
 }
@@ -39,39 +39,39 @@ type OpenAPIServer struct {
 
 // OpenAPIPath represents API path operations.
 type OpenAPIPath struct {
-	Summary     string          `json:"summary,omitempty" yaml:"summary,omitempty"`
-	Description string          `json:"description,omitempty" yaml:"description,omitempty"`
+	Summary     string            `json:"summary,omitempty" yaml:"summary,omitempty"`
+	Description string            `json:"description,omitempty" yaml:"description,omitempty"`
 	Get         *OpenAPIOperation `json:"get,omitempty" yaml:"get,omitempty"`
 	Post        *OpenAPIOperation `json:"post,omitempty" yaml:"post,omitempty"`
 }
 
 // OpenAPIOperation describes a single API operation.
 type OpenAPIOperation struct {
-	Summary     string                    `json:"summary,omitempty" yaml:"summary,omitempty"`
-	Description string                    `json:"description,omitempty" yaml:"description,omitempty"`
-	OperationID string                    `json:"operationId,omitempty" yaml:"operationId,omitempty"`
-	Tags        []string                  `json:"tags,omitempty" yaml:"tags,omitempty"`
-	RequestBody *OpenAPIRequestBody       `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
+	Summary     string                     `json:"summary,omitempty" yaml:"summary,omitempty"`
+	Description string                     `json:"description,omitempty" yaml:"description,omitempty"`
+	OperationID string                     `json:"operationId,omitempty" yaml:"operationId,omitempty"`
+	Tags        []string                   `json:"tags,omitempty" yaml:"tags,omitempty"`
+	RequestBody *OpenAPIRequestBody        `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 	Responses   map[string]OpenAPIResponse `json:"responses" yaml:"responses"`
 }
 
 // OpenAPIRequestBody describes a request body.
 type OpenAPIRequestBody struct {
-	Description string                       `json:"description,omitempty" yaml:"description,omitempty"`
-	Required    bool                         `json:"required,omitempty" yaml:"required,omitempty"`
-	Content     map[string]OpenAPIMediaType  `json:"content" yaml:"content"`
+	Description string                      `json:"description,omitempty" yaml:"description,omitempty"`
+	Required    bool                        `json:"required,omitempty" yaml:"required,omitempty"`
+	Content     map[string]OpenAPIMediaType `json:"content" yaml:"content"`
 }
 
 // OpenAPIResponse describes a response.
 type OpenAPIResponse struct {
-	Description string                       `json:"description" yaml:"description"`
-	Content     map[string]OpenAPIMediaType  `json:"content,omitempty" yaml:"content,omitempty"`
+	Description string                      `json:"description" yaml:"description"`
+	Content     map[string]OpenAPIMediaType `json:"content,omitempty" yaml:"content,omitempty"`
 }
 
 // OpenAPIMediaType describes a media type.
 type OpenAPIMediaType struct {
-	Schema   *OpenAPISchema    `json:"schema,omitempty" yaml:"schema,omitempty"`
-	Example  interface{}       `json:"example,omitempty" yaml:"example,omitempty"`
+	Schema   *OpenAPISchema            `json:"schema,omitempty" yaml:"schema,omitempty"`
+	Example  interface{}               `json:"example,omitempty" yaml:"example,omitempty"`
 	Examples map[string]OpenAPIExample `json:"examples,omitempty" yaml:"examples,omitempty"`
 }
 
@@ -90,15 +90,15 @@ type OpenAPIComponents struct {
 // OpenAPISchema represents a schema (simplified from JSON Schema).
 // OpenAPI 3.0 uses a subset of JSON Schema with some modifications.
 type OpenAPISchema struct {
-	Type        string                   `json:"type,omitempty" yaml:"type,omitempty"`
-	Description string                   `json:"description,omitempty" yaml:"description,omitempty"`
-	Ref         string                   `json:"$ref,omitempty" yaml:"$ref,omitempty"`
+	Type        string                    `json:"type,omitempty" yaml:"type,omitempty"`
+	Description string                    `json:"description,omitempty" yaml:"description,omitempty"`
+	Ref         string                    `json:"$ref,omitempty" yaml:"$ref,omitempty"`
 	Properties  map[string]*OpenAPISchema `json:"properties,omitempty" yaml:"properties,omitempty"`
-	Items       *OpenAPISchema           `json:"items,omitempty" yaml:"items,omitempty"`
-	Required    []string                 `json:"required,omitempty" yaml:"required,omitempty"`
-	Enum        []interface{}            `json:"enum,omitempty" yaml:"enum,omitempty"`
-	Default     interface{}              `json:"default,omitempty" yaml:"default,omitempty"`
-	Example     interface{}              `json:"example,omitempty" yaml:"example,omitempty"`
+	Items       *OpenAPISchema            `json:"items,omitempty" yaml:"items,omitempty"`
+	Required    []string                  `json:"required,omitempty" yaml:"required,omitempty"`
+	Enum        []interface{}             `json:"enum,omitempty" yaml:"enum,omitempty"`
+	Default     interface{}               `json:"default,omitempty" yaml:"default,omitempty"`
+	Example     interface{}               `json:"example,omitempty" yaml:"example,omitempty"`
 
 	// OneOf, AnyOf, AllOf support
 	OneOf []*OpenAPISchema `json:"oneOf,omitempty" yaml:"oneOf,omitempty"`
@@ -107,24 +107,28 @@ type OpenAPISchema struct {
 	Not   *OpenAPISchema   `json:"not,omitempty" yaml:"not,omitempty"`
 
 	// Validation
-	Minimum          *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
-	Maximum          *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
-	MinLength        *int     `json:"minLength,omitempty" yaml:"minLength,omitempty"`
-	MaxLength        *int     `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
-	Pattern          string   `json:"pattern,omitempty" yaml:"pattern,omitempty"`
-	Format           string   `json:"format,omitempty" yaml:"format,omitempty"`
+	Minimum   *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+	Maximum   *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+	MinLength *int     `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+	MaxLength *int     `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+	Pattern   string   `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+	Format    string   `json:"format,omitempty" yaml:"format,omitempty"`
 
 	AdditionalProperties *bool `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
 	// Custom extensions (x- prefixed fields are allowed in OpenAPI)
-	XPlatforms       []string `json:"x-platforms,omitempty" yaml:"x-platforms,omitempty"`
-	XRequiresSudo    bool     `json:"x-requires-sudo,omitempty" yaml:"x-requires-sudo,omitempty"`
-	XImplementsCheck bool     `json:"x-implements-check,omitempty" yaml:"x-implements-check,omitempty"`
-	XCategory        string   `json:"x-category,omitempty" yaml:"x-category,omitempty"`
-	XSupportsDryRun  bool     `json:"x-supports-dry-run,omitempty" yaml:"x-supports-dry-run,omitempty"`
-	XSupportsBecome  bool     `json:"x-supports-become,omitempty" yaml:"x-supports-become,omitempty"`
-	XVersion         string   `json:"x-version,omitempty" yaml:"x-version,omitempty"`
-	XEmitsEvents     []string `json:"x-emits-events,omitempty" yaml:"x-emits-events,omitempty"`
+	XPlatforms             []string `json:"x-platforms,omitempty" yaml:"x-platforms,omitempty"`
+	XRequiresSudo          bool     `json:"x-requires-sudo,omitempty" yaml:"x-requires-sudo,omitempty"`
+	XImplementsCheck       bool     `json:"x-implements-check,omitempty" yaml:"x-implements-check,omitempty"`
+	XImplementsDiff        bool     `json:"x-implements-diff,omitempty" yaml:"x-implements-diff,omitempty"`
+	XImplementsCost        bool     `json:"x-implements-cost,omitempty" yaml:"x-implements-cost,omitempty"`
+	XImplementsReverse     bool     `json:"x-implements-reverse,omitempty" yaml:"x-implements-reverse,omitempty"`
+	XImplementsPermissions bool     `json:"x-implements-permissions,omitempty" yaml:"x-implements-permissions,omitempty"`
+	XCategory              string   `json:"x-category,omitempty" yaml:"x-category,omitempty"`
+	XSupportsDryRun        bool     `json:"x-supports-dry-run,omitempty" yaml:"x-supports-dry-run,omitempty"`
+	XSupportsBecome        bool     `json:"x-supports-become,omitempty" yaml:"x-supports-become,omitempty"`
+	XVersion               string   `json:"x-version,omitempty" yaml:"x-version,omitempty"`
+	XEmitsEvents           []string `json:"x-emits-events,omitempty" yaml:"x-emits-events,omitempty"`
 }
 
 // ConvertToOpenAPI converts a JSON Schema to OpenAPI 3.0 format.
@@ -229,6 +233,10 @@ func convertDefinitionToOpenAPISchema(def *Definition) *OpenAPISchema {
 	schema.XPlatforms = def.XPlatforms
 	schema.XRequiresSudo = def.XRequiresSudo
 	schema.XImplementsCheck = def.XImplementsCheck
+	schema.XImplementsDiff = def.XImplementsDiff
+	schema.XImplementsCost = def.XImplementsCost
+	schema.XImplementsReverse = def.XImplementsReverse
+	schema.XImplementsPermissions = def.XImplementsPermissions
 	schema.XCategory = def.XCategory
 	schema.XSupportsDryRun = def.XSupportsDryRun
 	schema.XSupportsBecome = def.XSupportsBecome
