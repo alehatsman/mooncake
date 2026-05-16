@@ -5,7 +5,8 @@ severity: smell
 package: internal/explain
 file: internal/explain/explain.go
 lines: 55-213
-status: open
+status: done
+resolved: 2026-05-16 — pure extraction. `DisplayFacts` now dispatches to 9 per-section helpers (`printFactsHeader`, `printSystem`, `printCPU`, `printMemory`, `printSoftware`, `printOllamaModels`, `printGPUs`, `printStorage`, `printNetwork`, `printNetworkInterfaces`) in declaration order. Each helper early-returns when its section is empty so trailing blank-line behavior matches the monolithic version. `//nolint:gocyclo` removed; `make budget-status` now reports "✓ all functions under 35". Existing 28 tests in `explain_test.go` pass unchanged because each helper still writes to stdout. Two micro-issues called out in the finding — (a) `filterRelevantCPUFlags` prefix-vs-substring drift and (b) `en/eth/wlan` interface-name allowlist hiding modern systemd names like `wlp*`/`enp*` and all Windows names — left as follow-ups; both are behavior changes deserving their own findings. The interface-allowlist has an inline TODO-style comment now so the next reader trips over it.
 ---
 
 ## What
