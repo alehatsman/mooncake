@@ -6,6 +6,82 @@ package: internal/apply
 file: internal/apply/runner.go
 lines: 154-155, 336-359
 status: open
+verified: 2026-05-16 on master @ 49930fd
+---
+
+## Verification (2026-05-16, master @ 49930fd)
+
+Code shape unchanged from the original finding:
+
+- `internal/apply/runner.go:154` — `stopSig := installSignalHandler()`
+- `internal/apply/runner.go:336-359` — handler body, including
+  `os.Exit(code)` at line 351
+- No `Config.InstallSignalHandler bool` (or equivalent) opt-out
+  flag has been added. The signal handler installation is
+  unconditional for every `apply.Runner.Run` caller.
+
+Three concrete callers of `apply.NewRunner(...).Run(ctx)` today:
+
+| Site | File | Embedded? | Currently broken on SIGTERM? |
+|---|---|---|---|
+| CLI | `cmd/mooncake.go:317` | no | desired (130/143 exit codes) |
+| MCP | `internal/mcp/tools.go:365` | yes | yes |
+| agentd | `internal/agentd/worker.go:178` | yes | yes |
+
+### Race-on-exit in agentd (worth surfacing)
+
+`cmd/agentd.go:124` already does the *correct* CLI-side pattern:
+
+```go
+ctx, stop := signal.NotifyContext(c.Context, syscall.SIGINT, syscall.SIGTERM)
+defer stop()
+return srv.Serve(ctx)
+```
+
+This cancels `ctx` on signal, and `srv.Serve` is documented as
+"the caller is responsible for cancelling ctx (typically on
+SIGTERM/SIGINT) and then waiting for Serve to return."
+`Server.Serve` then calls `s.worker.Shutdown()` (server.go:276)
+which closes the submit channel and waits for the in-flight run
+to drain.
+
+So the daemon's outer shell wants graceful shutdown. But the
+in-flight `apply.Runner.Run` (called from `worker.executeRun` →
+worker.go:178) **also subscribes** via its own `signal.Notify`.
+Both subscribers receive SIGTERM. The apply.Runner goroutine
+wins the race almost every time because its handler is two
+function calls deep (`signal.Stop` → `os.Exit`) while the
+daemon's path is several layers deep (cancel ctx → unblock
+Serve → close listeners → Shutdown → close submit → wait on
+done).
+
+Result: the daemon process exits with code 143 mid-run.
+`worker.Shutdown()` never runs. `RunEventSink.Close()` never
+runs — so `events.jsonl` is not flushed, `result.json` is not
+written, and the F015 unified-defer cleanup (hub.Close +
+delete) is also skipped.
+
+This race is **not** mitigated by the F015 fix; F015 only
+covered the cleanup pattern *when executeRun returns
+normally*. `os.Exit` skips deferred functions, so F015's defer
+doesn't help.
+
+### Why I'm not filing a follow-up finding
+
+The original F020 writeup already names the agentd case
+explicitly (line 38-46). The race-on-exit detail above is a
+sharpening of the existing finding, not a new one. The fix
+sketch (move signal handling to the CLI caller, plumb
+cancellation via ctx) is the right answer for both the simple
+"embedder doesn't want the handler" case and the agentd
+race-on-exit case.
+
+Confirmed: F020 is real, blocking the F015-promised graceful
+shutdown story end-to-end. Severity `risk` still fits — no
+known production trigger today (mooncake-daemon isn't widely
+deployed), but every future daemon deployment will hit it the
+first time SIGTERM arrives during a long apply.
+
 ---
 
 ## What
