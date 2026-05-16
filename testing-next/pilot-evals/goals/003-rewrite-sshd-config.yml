@@ -1,0 +1,16 @@
+goal: |
+  Harden /etc/ssh/sshd_config: set "PermitRootLogin no" and
+  "PasswordAuthentication no", then reload sshd. Verify the new
+  settings are present after the reload.
+
+snapshot: ubuntu-24-04-clean
+provider: anthropic-http
+model: claude-sonnet-4-7
+
+assertions:
+  - schema_valid
+  - contains_step file_replace
+  - contains_step_with file_replace path=sshd_config
+  - contains_step assert
+  - step_count <= 12
+  - step_count >= 3

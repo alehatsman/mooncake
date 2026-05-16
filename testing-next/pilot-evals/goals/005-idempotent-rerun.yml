@@ -1,0 +1,17 @@
+goal: |
+  Ensure /opt/mooncake exists with mode 0755, owned by root, and
+  contains a file `version.txt` whose content is exactly "1.0.0".
+  Re-running the plan on a host that already satisfies these
+  conditions must produce zero changed steps.
+
+snapshot: debian-13-with-tooling
+provider: anthropic-http
+model: claude-sonnet-4-7
+
+assertions:
+  - schema_valid
+  - contains_step file
+  - contains_step_with file path=/opt/mooncake
+  - contains_step_with file path=version.txt
+  - step_count <= 8
+  - no_step shell

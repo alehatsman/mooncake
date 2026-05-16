@@ -1,0 +1,16 @@
+goal: |
+  Find every README.md in the repository whose first heading is
+  "# Mooncake" and append a "Last reviewed: 2026-05-16" line
+  immediately under the heading. Idempotent: do not duplicate the
+  line on re-run.
+
+snapshot: debian-13-with-tooling
+provider: anthropic-http
+model: claude-sonnet-4-7
+
+assertions:
+  - schema_valid
+  - contains_step repo_search
+  - contains_step file_insert
+  - step_count <= 10
+  - step_count >= 2

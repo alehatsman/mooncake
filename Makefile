@@ -180,6 +180,23 @@ ci: lint test-race scan docs-check schema-check ## Run full CI suite (lint + tes
 	@echo ""
 	@echo "✓ All CI checks passed!"
 
+# ==============================================================================
+# Pilot eval harness (spec-67 §14)
+# ==============================================================================
+
+.PHONY: pilot-evals
+pilot-evals: ## Run mooncake pilot evals — REQUIRES MOONCAKE_PILOT_EVAL=1 (costs API tokens)
+	@if [ "$$MOONCAKE_PILOT_EVAL" != "1" ]; then \
+		echo "make pilot-evals: refusing to run — set MOONCAKE_PILOT_EVAL=1 to opt in."; \
+		echo "                  (real LLM calls cost real money. Use 'make pilot-evals-dry' for a no-cost shape check.)"; \
+		exit 2; \
+	fi
+	@go run ./testing-next/pilot-evals/
+
+.PHONY: pilot-evals-dry
+pilot-evals-dry: ## Validate pilot-eval harness (goals, snapshots, assertions, prompt build) without an LLM call
+	@go run ./testing-next/pilot-evals/ -dry-run
+
 .PHONY: ubuntu-ci
 ubuntu-ci: ## Run full CI suite in Ubuntu Docker container (cross-platform verification)
 	@echo "Running CI in Ubuntu Docker container..."

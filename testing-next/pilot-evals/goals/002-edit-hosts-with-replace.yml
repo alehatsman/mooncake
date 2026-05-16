@@ -1,0 +1,15 @@
+goal: |
+  Replace the loopback entry "127.0.0.1 localhost" in /etc/hosts with
+  "127.0.0.1 localhost host.local" so that "host.local" resolves to
+  the loopback interface. Do not duplicate the entry on re-run.
+
+snapshot: ubuntu-24-04-clean
+provider: anthropic-http
+model: claude-sonnet-4-7
+
+assertions:
+  - schema_valid
+  - contains_step file_replace
+  - contains_step_with file_replace path=/etc/hosts
+  - step_count <= 6
+  - no_step shell

@@ -1,0 +1,49 @@
+{
+  "os": {
+    "family": "debian",
+    "distribution": "debian",
+    "version": "13",
+    "codename": "trixie",
+    "kernel": "6.10.0-amd64",
+    "arch": "x86_64"
+  },
+  "hostname": "test-debian",
+  "init_system": "systemd",
+  "package_manager": "apt",
+  "users": {
+    "current": "root",
+    "uid": 0
+  },
+  "paths": {
+    "etc_hosts": "/etc/hosts",
+    "sshd_config": "/etc/ssh/sshd_config",
+    "systemd_units": "/etc/systemd/system",
+    "opt": "/opt"
+  },
+  "installed_packages": [
+    "openssh-server",
+    "apt",
+    "systemd",
+    "coreutils",
+    "git",
+    "curl",
+    "build-essential"
+  ],
+  "running_services": [
+    "ssh",
+    "systemd-networkd",
+    "systemd-resolved"
+  ],
+  "repo": {
+    "root": "/srv/example-repo",
+    "readmes": [
+      "/srv/example-repo/README.md",
+      "/srv/example-repo/docs/README.md"
+    ]
+  },
+  "files": {
+    "/srv/example-repo/README.md": "# Mooncake\n\nDeclarative config management tool.\n",
+    "/srv/example-repo/docs/README.md": "# Mooncake docs\n\nDocs index.\n"
+  },
+  "note": "Canned snapshot for pilot evals; not a live facts dump. Keep small and human-readable."
+}
