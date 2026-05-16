@@ -5,7 +5,50 @@ severity: bug
 package: internal/plan
 file: internal/plan/planner.go
 lines: 787-869
-status: open
+status: fixed
+---
+
+## ✅ Fixed
+
+`walkAndRender`'s `case reflect.Map` now accepts maps with element
+kind `Interface` (not just `String`). For each entry it unwraps the
+`reflect.Interface` to its concrete value; if the concrete is a
+string, render and write back; otherwise pass through unchanged.
+Non-string concretes (numbers, bools, nested maps, lists) leak
+through templates today (the recursive case the finding flagged)
+but the common case — string-valued entries in
+`os.systemd.{Unit,Service,Timer,Socket,Install}`,
+`text.patch.json.{Set,Merge}`, `text.patch.yaml.{Set,Merge}`, and
+`use.With` — is now rendered correctly.
+
+### Regression tests
+
+`internal/plan/planner_f024_test.go`:
+
+- `TestPlanner_RendersOsSystemdServiceSection` — a step with
+  `os.systemd.service.ExecStart = "{{ binary_path }}"` and a
+  defined `binary_path` var. Asserts the planned Service map has
+  the rendered absolute path. Pre-fix the literal `{{ binary_path }}`
+  passed through (verified by stashing the fix and re-running:
+  `Service[ExecStart] = "{{ binary_path }}"` instead of the
+  rendered value).
+- `TestPlanner_OsSystemdNonStringValuesPreserved` — mixed-type
+  Service map (string ExecStart, int TimeoutStopSec, string
+  Restart). Asserts non-string entries pass through unchanged
+  without reflect panics.
+
+### Not in scope
+
+- **Nested `map[string]interface{}` → `map[string]interface{}`**.
+  Mentioned in the finding's note about the strict-correct
+  recursive walk. Not common in practice for the action structs
+  listed above (systemd unit sections are flat key→value). Worth
+  a separate finding if a user hits it.
+- **Defense-in-depth verification pass** (the finding's
+  "errors on any string containing `{{` after rendering" suggestion)
+  is broader than F024 and not bundled here — would catch every
+  future closed-kind-set miss, so worth tracking separately.
+
 ---
 
 ## What
