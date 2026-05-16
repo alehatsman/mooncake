@@ -5,7 +5,8 @@ severity: bug
 package: internal/plan
 file: internal/plan/planner.go
 lines: 325-329, 599-620
-status: open
+status: done
+resolved_by: e604b295
 verified: 2026-05-16 on master @ f2c6a28 (post-F019 merge)
 ---
 
