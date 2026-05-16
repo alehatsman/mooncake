@@ -162,6 +162,12 @@ func AddGlobalVariables(scope *VariableScope) {
 			scope.Env[kv[:i]] = kv[i+1:]
 		}
 	}
+	// proposal-09: stamp the run's start time on the scope so
+	// templates can build `{{ apply_started_at | strftime:... }}`
+	// without each step re-reading the wall clock. Set once here so
+	// both the apply.Runner path and the cmd/step single-step path
+	// pick up the same field automatically.
+	scope.ApplyStartedAt = time.Now()
 }
 
 func handleVars(step config.Step, ec *ExecutionContext) error { //nolint:unused

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/flosch/pongo2/v6"
 )
@@ -79,6 +80,15 @@ func NewPongo2Renderer() (Renderer, error) {
 		if err := pongo2.RegisterFilter("json", toJSONFilter); err != nil {
 			filterRegisterError = fmt.Errorf("failed to register json filter: %w", err)
 		}
+		// proposal-09: `{{ apply_started_at | strftime:"%Y%m%d_%H%M%S" }}`
+		// for rolling-backup / timestamped-dest patterns. Pongo2's
+		// built-in `{% now %}` tag silently no-ops in mooncake's
+		// configuration (echoes the format string back), so playbooks
+		// route through this filter instead and the scope ships an
+		// `apply_started_at` variable set once per run.
+		if err := pongo2.RegisterFilter("strftime", strftimeFilter); err != nil {
+			filterRegisterError = fmt.Errorf("failed to register strftime filter: %w", err)
+		}
 	})
 
 	// Check if filter registration failed
@@ -87,6 +97,124 @@ func NewPongo2Renderer() (Renderer, error) {
 	}
 
 	return r, nil
+}
+
+// strftimeFilter formats a time.Time using POSIX strftime-style codes.
+// Use as `{{ apply_started_at | strftime:"%Y%m%d_%H%M%S" }}`. Unknown
+// codes return a pongo2 error so a typo in the format string fails
+// loudly at render time rather than silently passing through (the
+// proposal-09 design note: the original `{% now %}` tag was silent and
+// the proposal explicitly asks for the opposite).
+//
+// Supported codes are the POSIX/strftime canon most playbooks reach
+// for; see strftimeFormat for the full table. Direct computation
+// (t.Year, t.Month, …) rather than routing through Go's reference
+// time avoids the `2006`/`04`/etc. accidental-match pitfalls when the
+// surrounding literal text contains digits.
+func strftimeFilter(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	t, ok := in.Interface().(time.Time)
+	if !ok {
+		return nil, &pongo2.Error{
+			Sender:    "filter:strftime",
+			OrigError: fmt.Errorf("strftime: input is %T, want time.Time", in.Interface()),
+		}
+	}
+	formatted, err := strftimeFormat(t, param.String())
+	if err != nil {
+		return nil, &pongo2.Error{
+			Sender:    "filter:strftime",
+			OrigError: err,
+		}
+	}
+	return pongo2.AsValue(formatted), nil
+}
+
+// strftimeFormat walks the format string and substitutes each `%X`
+// code with the corresponding piece of t. Literal text passes through
+// unchanged. Returns an error on unknown codes (callers map this to
+// a pongo2.Error so templates fail loudly).
+//
+// The supported set is the standard POSIX strftime subset plus a few
+// common composites — anything a playbook is likely to reach for in
+// a backup-suffix or audit-log filename:
+//
+//	%Y  4-digit year (2026)            %M  minute  (00–59)
+//	%y  2-digit year (26)              %S  second  (00–59)
+//	%m  month   (01–12)                %I  hour    (01–12)
+//	%d  day     (01–31)                %p  AM/PM
+//	%H  hour    (00–23)                %j  day-of-year (001–366)
+//	%a  Mon abbrev (Mon)               %A  weekday  (Monday)
+//	%b  Month abbrev (Jan)             %B  Month    (January)
+//	%Z  TZ abbrev (MST)                %z  TZ offset (-0700)
+//	%F  shortcut for %Y-%m-%d          %T  shortcut for %H:%M:%S
+//	%R  shortcut for %H:%M             %%  literal '%'
+func strftimeFormat(t time.Time, format string) (string, error) {
+	var b strings.Builder
+	b.Grow(len(format) + 8)
+	for i := 0; i < len(format); i++ {
+		if format[i] != '%' {
+			b.WriteByte(format[i])
+			continue
+		}
+		if i+1 >= len(format) {
+			return "", fmt.Errorf("strftime: trailing %% with no code")
+		}
+		i++
+		switch format[i] {
+		case 'Y':
+			fmt.Fprintf(&b, "%04d", t.Year())
+		case 'y':
+			fmt.Fprintf(&b, "%02d", t.Year()%100)
+		case 'm':
+			fmt.Fprintf(&b, "%02d", int(t.Month()))
+		case 'd':
+			fmt.Fprintf(&b, "%02d", t.Day())
+		case 'H':
+			fmt.Fprintf(&b, "%02d", t.Hour())
+		case 'I':
+			h := t.Hour() % 12
+			if h == 0 {
+				h = 12
+			}
+			fmt.Fprintf(&b, "%02d", h)
+		case 'M':
+			fmt.Fprintf(&b, "%02d", t.Minute())
+		case 'S':
+			fmt.Fprintf(&b, "%02d", t.Second())
+		case 'p':
+			if t.Hour() < 12 {
+				b.WriteString("AM")
+			} else {
+				b.WriteString("PM")
+			}
+		case 'j':
+			fmt.Fprintf(&b, "%03d", t.YearDay())
+		case 'a':
+			b.WriteString(t.Weekday().String()[:3])
+		case 'A':
+			b.WriteString(t.Weekday().String())
+		case 'b':
+			b.WriteString(t.Month().String()[:3])
+		case 'B':
+			b.WriteString(t.Month().String())
+		case 'Z':
+			zone, _ := t.Zone()
+			b.WriteString(zone)
+		case 'z':
+			b.WriteString(t.Format("-0700"))
+		case 'F':
+			fmt.Fprintf(&b, "%04d-%02d-%02d", t.Year(), int(t.Month()), t.Day())
+		case 'T':
+			fmt.Fprintf(&b, "%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second())
+		case 'R':
+			fmt.Fprintf(&b, "%02d:%02d", t.Hour(), t.Minute())
+		case '%':
+			b.WriteByte('%')
+		default:
+			return "", fmt.Errorf("strftime: unknown format code %%%c", format[i])
+		}
+	}
+	return b.String(), nil
 }
 
 // toJSONFilter serializes any pongo2 Value as JSON. Use as

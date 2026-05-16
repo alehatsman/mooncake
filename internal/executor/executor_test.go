@@ -3,6 +3,7 @@ package executor_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"
 	_ "github.com/alehatsman/mooncake/internal/actions/command"
@@ -44,12 +45,12 @@ func TestExecutionContext_Copy(t *testing.T) {
 	}
 	original := executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Logger:   testLogger,
-			SudoPass: "secret",
-			Template: renderer,
+			Logger:    testLogger,
+			SudoPass:  "secret",
+			Template:  renderer,
 			Evaluator: evaluator,
-			PathUtil: pathExpander,
-			FileTree: fileTreeWalker,
+			PathUtil:  pathExpander,
+			FileTree:  fileTreeWalker,
 		},
 		Scope:        scope,
 		CurrentDir:   "/work",
@@ -125,6 +126,26 @@ func TestAddGlobalVariables(t *testing.T) {
 	if _, ok := vars["arch"].(string); !ok {
 		t.Errorf("executor.AddGlobalVariables() arch should be string, got %T", vars["arch"])
 	}
+
+	// proposal-09: apply_started_at is stamped on the scope at this
+	// point and surfaces in ToMap as a time.Time.
+	if scope.ApplyStartedAt.IsZero() {
+		t.Error("executor.AddGlobalVariables() should set ApplyStartedAt")
+	}
+	if _, ok := vars["apply_started_at"].(time.Time); !ok {
+		t.Errorf("ToMap() apply_started_at should be time.Time, got %T", vars["apply_started_at"])
+	}
+}
+
+func TestVariableScope_ApplyStartedAt_OmittedWhenZero(t *testing.T) {
+	// A freshly-constructed scope (no AddGlobalVariables) must NOT
+	// expose apply_started_at — keeps test fixtures clean and stops
+	// downstream consumers from seeing the zero time.
+	scope := executor.NewVariableScope()
+	vars := scope.ToMap()
+	if _, present := vars["apply_started_at"]; present {
+		t.Error("ToMap() should omit apply_started_at when zero")
+	}
 }
 
 func TestHandleVars(t *testing.T) {
@@ -173,11 +194,11 @@ func TestHandleWhenExpression(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 
 	tests := []struct {
-		name       string
-		when       string
-		vars       map[string]interface{}
-		wantSkip   bool
-		wantErr    bool
+		name     string
+		when     string
+		vars     map[string]interface{}
+		wantSkip bool
+		wantErr  bool
 	}{
 		{
 			name:     "true condition",
@@ -537,9 +558,6 @@ func TestGetStepDisplayName(t *testing.T) {
 	}
 }
 
-
-
-
 func TestExecuteStep_WithShell(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer, err := template.NewPongo2Renderer()
@@ -662,9 +680,6 @@ func TestExecuteSteps(t *testing.T) {
 	}
 }
 
-
-
-
 func TestDispatchStepAction(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	renderer, err := template.NewPongo2Renderer()
@@ -734,9 +749,6 @@ func TestDryRunLogger(t *testing.T) {
 
 	// If we got here without panicking, the tests pass
 }
-
-
-
 
 func strPtr(s string) *string {
 	return &s
