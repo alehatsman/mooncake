@@ -322,6 +322,36 @@ export interface GitConfigAction {
  * @category network
  */
 export interface HttpRequestAction {
+  auth?: {
+    basic: {
+    pass: string;
+    user: string;
+  };
+    bearer: string;
+    header: {
+    name: string;
+    value: string;
+  };
+  };
+  body?: string;
+  creates_when?: string;
+  expect_status?: number[];
+  file?: string;
+  follow_redirects?: number;
+  form?: Record<string, any>;
+  headers?: Record<string, any>;
+  idempotency_key?: string;
+  json?: any;
+  max_response_bytes?: number;
+  method?: string;
+  redact_body?: boolean;
+  retries?: number;
+  retry_delay?: string;
+  retry_on?: string[];
+  risk?: string;
+  skip_tls_verify?: boolean;
+  timeout?: string;
+  url: string;
 }
 
 /**
