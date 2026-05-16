@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeMooncakeBinary writes a tiny shell script to <dir>/mooncake that
@@ -206,4 +207,46 @@ func TestSelfReplace_RejectsPathOutsideUpgradeDir(t *testing.T) {
 	}
 	// Nothing should have changed in upgrade/.
 	_, _ = os.ReadDir(filepath.Join(cfg.StateDir, "upgrade"))
+}
+
+// TestSanityCheckBinary_HangingBinaryTimesOut: a staged binary that
+// blocks during `--version` must not hang the upgrade handler.
+// F027: before the fix, sanityCheckBinary called exec.CombinedOutput
+// with no deadline; a binary that slept forever held upgradeMu and
+// bricked every /v1/self/* request until daemon restart. After the
+// fix, sanityCheckBinary returns a "timed out" error within
+// sanityCheckBinaryTimeout (5 s) without blocking the caller.
+func TestSanityCheckBinary_HangingBinaryTimesOut(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses POSIX shell")
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mooncake-hangs")
+	// `exec sleep 30` makes sleep replace the shell so they share a PID;
+	// SIGKILL from CommandContext lands on the actual process holding
+	// the stdout pipe and CombinedOutput returns promptly. The real-world
+	// scenario the fix addresses is a single-process binary that
+	// deadlocks (not one that forks subprocesses — that's a harder
+	// problem out of scope).
+	script := "#!/bin/sh\nexec sleep 30\n"
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake binary: %v", err)
+	}
+
+	start := time.Now()
+	err := sanityCheckBinary(path)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error from sanityCheckBinary on hanging binary; got nil")
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Errorf("error should mention timeout; got %q", err.Error())
+	}
+	// Should be near sanityCheckBinaryTimeout (5 s), not the script's 30 s.
+	if elapsed > sanityCheckBinaryTimeout+2*time.Second {
+		t.Errorf("sanityCheckBinary did not honor the timeout (took %s, expected <= %s + slack)",
+			elapsed, sanityCheckBinaryTimeout)
+	}
 }
