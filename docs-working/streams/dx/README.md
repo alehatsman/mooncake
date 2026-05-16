@@ -30,6 +30,10 @@ Recent shipped specs (see commit history for the full receipts):
 - spec-40 — default config discovery + `--dry-run` alias
 - spec-41 — `mooncake doctor` (16 health checks)
 - spec-42 — examples index + `history` + `presets recommend`
+- agent-dx — `AGENT.md` cheat sheet + Makefile targets for sub-second
+  per-package feedback (`build-pkg`, `test-pkg`, `test-fn`, `lint-pkg`,
+  `check-pkg`), gopls structural lookups (`sym`, `doc`, `refs`,
+  `callers`, `impl`), and `budget-status` for soft-cap monitoring.
 
 ## Active specs
 

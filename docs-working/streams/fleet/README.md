@@ -36,6 +36,7 @@ Recent shipped specs (see commit history for the full receipts):
 - spec-56 — Windows fleet bootstrap
 - spec-57 — `windows.firewall_rule` + `windows.scheduled_task`
 - spec-64 — cross-peer `fleet observe`
+- R2.1c — `apply.KernelResult` round-trips over the agentd wire; `FleetKernelResult.Reverse()` now composes against typed Steps from each peer (was `ErrPerPeerKernelResultNotWired`).
 
 Plus three operational features delivered outside the original plan:
 `fleet apply <machine>` (ordered phases), `fleet upgrade` (Linux +
@@ -53,6 +54,7 @@ Windows), and the `fleet doctor` per-peer probe ladder.
 
 ## Open gaps
 
+- **R2.1c phase 2 (ReverseData over the wire).** `Result.ReverseData` is `json:"-"` — handlers that depend on it (git.checkout, git.config, os.ssh_key, os.mount, pkg.repo, os.service, os.firewall, os.systemd) see `ReverseData=nil` after a wire round-trip and surface their refusal path. Requires a per-handler type registry with a discriminator. Purely additive once someone needs per-peer `Reverse()` to work end-to-end.
 - **Enterprise hub.** Intentionally deferred. No active spec until a
   paying user asks for inventory / RBAC / approval gates / audit
   export. The personal-fleet stream proves the wire protocol; the hub

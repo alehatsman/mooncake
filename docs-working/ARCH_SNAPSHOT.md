@@ -165,6 +165,11 @@ cmd -> internal/schemagen
 cmd -> internal/security
 cmd -> internal/snapshot
 cmd -> internal/template
+internal/actions -> internal/config
+internal/actions -> internal/events
+internal/actions -> internal/expression
+internal/actions -> internal/logger
+internal/actions -> internal/template
 internal/actions/artifact_capture -> internal/actions
 internal/actions/artifact_capture -> internal/artifacts
 internal/actions/artifact_capture -> internal/config
@@ -206,6 +211,11 @@ internal/actions/download -> internal/events
 internal/actions/download -> internal/executor
 internal/actions/download -> internal/security
 internal/actions/download -> internal/utils
+internal/actions/file -> internal/actions
+internal/actions/file -> internal/config
+internal/actions/file -> internal/events
+internal/actions/file -> internal/executor
+internal/actions/file -> internal/security
 internal/actions/file_delete_range -> internal/actions
 internal/actions/file_delete_range -> internal/actions/file
 internal/actions/file_delete_range -> internal/config
@@ -218,11 +228,6 @@ internal/actions/file_insert -> internal/config
 internal/actions/file_insert -> internal/events
 internal/actions/file_insert -> internal/executor
 internal/actions/file_insert -> internal/pathutil
-internal/actions/file -> internal/actions
-internal/actions/file -> internal/config
-internal/actions/file -> internal/events
-internal/actions/file -> internal/executor
-internal/actions/file -> internal/security
 internal/actions/file_patch_apply -> internal/actions
 internal/actions/file_patch_apply -> internal/actions/file
 internal/actions/file_patch_apply -> internal/config
@@ -249,11 +254,6 @@ internal/actions/include_vars -> internal/actions
 internal/actions/include_vars -> internal/config
 internal/actions/include_vars -> internal/events
 internal/actions/include_vars -> internal/executor
-internal/actions -> internal/config
-internal/actions -> internal/events
-internal/actions -> internal/expression
-internal/actions -> internal/logger
-internal/actions -> internal/template
 internal/actions/observe_cpu -> internal/actions
 internal/actions/observe_cpu -> internal/config
 internal/actions/observe_cpu -> internal/executor
@@ -446,6 +446,12 @@ internal/actions/windows_scheduled_task -> internal/actions
 internal/actions/windows_scheduled_task -> internal/config
 internal/actions/windows_scheduled_task -> internal/executor
 internal/actions/windows_scheduled_task -> internal/winutil
+internal/agent -> internal/config
+internal/agent -> internal/events
+internal/agent -> internal/executor
+internal/agent -> internal/llm
+internal/agent -> internal/logger
+internal/agent -> internal/snapshot
 internal/agentd -> internal/apply
 internal/agentd -> internal/events
 internal/agentd -> internal/executor
@@ -454,12 +460,6 @@ internal/agentd -> internal/fleet/discovery
 internal/agentd -> internal/logger
 internal/agentd -> internal/mcp
 internal/agentd -> internal/metrics
-internal/agent -> internal/config
-internal/agent -> internal/events
-internal/agent -> internal/executor
-internal/agent -> internal/llm
-internal/agent -> internal/logger
-internal/agent -> internal/snapshot
 internal/apply -> internal/actions
 internal/apply -> internal/config
 internal/apply -> internal/events
@@ -502,15 +502,15 @@ internal/executor -> internal/template
 internal/executor -> internal/utils
 internal/explain -> internal/facts
 internal/filetree -> internal/pathutil
+internal/fleet -> internal/apply
+internal/fleet -> internal/fleet/transport
+internal/fleet -> internal/plan
+internal/fleet -> internal/winutil
 internal/fleet/discovery -> internal/fleet
 internal/fleet/discovery -> internal/fleet/transport
 internal/fleet/exec -> internal/config
 internal/fleet/exec -> internal/fleet
 internal/fleet/exec -> internal/fleet/transport
-internal/fleet -> internal/apply
-internal/fleet -> internal/fleet/transport
-internal/fleet -> internal/plan
-internal/fleet -> internal/winutil
 internal/fleet/observe -> internal/config
 internal/fleet/observe -> internal/fleet
 internal/fleet/observe -> internal/fleet/transport
@@ -528,8 +528,6 @@ internal/mcp -> internal/pathquery
 internal/mcp -> internal/plan
 internal/mcp -> internal/snapshot
 internal/pathutil -> internal/template
-internal/plan/filter -> internal/config
-internal/plan/filter -> internal/plan
 internal/plan -> internal/actions
 internal/plan -> internal/config
 internal/plan -> internal/expression
@@ -539,6 +537,8 @@ internal/plan -> internal/pathutil
 internal/plan -> internal/security
 internal/plan -> internal/template
 internal/plan -> internal/utils
+internal/plan/filter -> internal/config
+internal/plan/filter -> internal/plan
 internal/presets -> internal/config
 internal/recommend -> internal/facts
 internal/register -> internal/actions/artifact_capture
@@ -615,120 +615,42 @@ internal/template -> internal/expression
 ## God files (>500 LOC, non-test)
 
 ```
-   1866 ./internal/config/config.go
-   1516 ./cmd/presets.go
-   1366 ./internal/executor/executor.go
-   1332 ./internal/actions/service/handler.go
-   1300 ./cmd/mooncake.go
-   1210 ./internal/actions/file/handler.go
-    988 ./internal/plan/planner.go
-    901 ./internal/actions/package/handler.go
-    861 ./internal/actions/assert/handler.go
-    745 ./internal/artifacts/writer.go
-    745 ./internal/actions/os_systemd/handler.go
-    743 ./internal/winutil/scheduledtask.go
-    730 ./internal/actions/copy/handler.go
-    693 ./internal/schemagen/generator.go
-    687 ./internal/actions/repo_apply_patchset/handler.go
-    669 ./internal/actions/text_patch_ini/handler.go
-    665 ./cmd/fleet.go
-    664 ./internal/fleet/transport/agentd.go
-    656 ./internal/actions/file_patch_apply/handler.go
-    645 ./internal/actions/unarchive/handler.go
-    640 ./internal/effects/default.go
-    595 ./internal/actions/os_mount/handler.go
-    591 ./internal/expression/functions.go
-    557 ./cmd/fleet_doctor.go
-    556 ./internal/actions/download/handler.go
-    552 ./internal/actions/os_sysctl/handler.go
-    551 ./internal/actions/shell/handler.go
-    541 ./internal/facts/linux.go
-    539 ./internal/actions/os_ssh_key/handler.go
-    530 ./internal/mcp/tools.go
+    1866 ./internal/config/config.go
+    1516 ./cmd/presets.go
+    1366 ./internal/executor/executor.go
+    1332 ./internal/actions/service/handler.go
+    1300 ./cmd/mooncake.go
+    1210 ./internal/actions/file/handler.go
+     988 ./internal/plan/planner.go
+     901 ./internal/actions/package/handler.go
+     861 ./internal/actions/assert/handler.go
+     745 ./internal/artifacts/writer.go
+     745 ./internal/actions/os_systemd/handler.go
+     743 ./internal/winutil/scheduledtask.go
+     730 ./internal/actions/copy/handler.go
+     693 ./internal/schemagen/generator.go
+     687 ./internal/actions/repo_apply_patchset/handler.go
+     669 ./internal/actions/text_patch_ini/handler.go
+     665 ./cmd/fleet.go
+     664 ./internal/fleet/transport/agentd.go
+     656 ./internal/actions/file_patch_apply/handler.go
+     645 ./internal/actions/unarchive/handler.go
+     640 ./internal/effects/default.go
+     595 ./internal/actions/os_mount/handler.go
+     591 ./internal/expression/functions.go
+     557 ./cmd/fleet_doctor.go
+     556 ./internal/actions/download/handler.go
+     552 ./internal/actions/os_sysctl/handler.go
+     551 ./internal/actions/shell/handler.go
+     541 ./internal/facts/linux.go
+     539 ./internal/actions/os_ssh_key/handler.go
+     530 ./internal/mcp/tools.go
 ```
 
-## Cyclomatic hotspots (gocyclo > 15)
+## Cyclomatic hotspots
 
-```
-53 explain DisplayFacts internal/explain/explain.go:14:1
-41 copy (*Handler).Execute internal/actions/copy/handler.go:93:1
-37 executor ExecuteStep internal/executor/executor.go:528:1
-35 artifacts (*Writer).OnEvent internal/artifacts/writer.go:171:1
-34 expression StringFunctions internal/expression/functions.go:19:1
-34 os_systemd computePlan internal/actions/os_systemd/handler.go:448:1
-31 main TestRunCommandArtifactsFlags cmd/cmd_test.go:1828:1
-30 fleet Apply internal/fleet/apply.go:98:1
-30 artifact_validate (*Handler).Execute internal/actions/artifact_validate/handler.go:53:1
-29 plan walkAndRender internal/plan/planner.go:787:1
-29 effects buildHunks internal/effects/diff.go:125:1
-29 os_user planPresent internal/actions/os_user/handler.go:309:1
-29 os_mount computePlan internal/actions/os_mount/handler.go:277:1
-29 artifact_capture (*Handler).Execute internal/actions/artifact_capture/handler.go:76:1
-29 main collectParameters cmd/presets.go:591:1
-28 repo_apply_patchset (*Handler).parsePatchset internal/actions/repo_apply_patchset/handler.go:274:1
-28 os_systemd applyPlan internal/actions/os_systemd/handler.go:569:1
-28 container_run (*Handler).Run internal/actions/container_run/handler.go:79:1
-28 main executePresetInstall cmd/presets.go:724:1
-27 expression CollectionFunctions internal/expression/functions.go:316:1
-27 service (*Handler).Run internal/actions/service/handler.go:1230:1
-27 download (*Handler).downloadFile internal/actions/download/handler.go:333:1
-27 copy (*Handler).Run internal/actions/copy/handler.go:589:1
-26 package_handler TestHandler_BuildUpgradeCommand internal/actions/package/handler_test.go:680:1
-26 os_ssh_key computePlan internal/actions/os_ssh_key/handler.go:390:1
-26 download (*Handler).Execute internal/actions/download/handler.go:98:1
-26 main formatPlanText cmd/mooncake.go:590:1
-26 main fleetUpgradeAction cmd/fleet_upgrade.go:91:1
-25 snapshot (*SystemSnapshot).RenderText internal/snapshot/system.go:117:1
-25 docgen (*Generator).generatePresetExample internal/docgen/presets.go:53:1
-25 artifacts DetectFileType internal/artifacts/metadata.go:214:1
-25 assert (*Handler).executeAssertHTTP internal/actions/assert/handler.go:459:1
-25 main streamRunEvents cmd/runs.go:187:1
-24 plan TestPlanner_WithFileTree_TemplateDeepCopy internal/plan/planner_test.go:1091:1
-23 resolver walkAndResolveSecrets internal/secrets/resolver/resolve.go:51:1
-23 logger findANSIEnd internal/logger/ansi.go:128:1
-23 fleet Bootstrap internal/fleet/bootstrap.go:77:1
-23 facts detectLinuxGPUs internal/facts/linux.go:189:1
-23 text_patch_yaml parsePath internal/actions/text_patch_yaml/pathquery.go:22:1
-23 text_patch_json parsePath internal/actions/text_patch_json/pathquery.go:26:1
-```
+_gocyclo not installed — run `make arch-tools`._
 
-## goda cut — most "load-bearing" packages
+## goda summary
 
-Each row shows a package and what removing it would eliminate from the
-indirect-dependency closure. High `Cut.PackageCount` = removing this package
-prunes many transitive deps. Good targets for boundary-tightening.
-
-Columns: `Package · InDegree · CutPackages · CutBytes · CutLOC`
-
-```
-ID                                                                       InDegree   Cut.PackageCount   Cut.AllFiles.Size   Cut.Go.Lines
-github.com/alehatsman/mooncake/cmd                                       0          100                2.3MB               69709
-github.com/alehatsman/mooncake/internal/actions/testutil                 0          1                  8.2KB               229
-github.com/alehatsman/mooncake/internal/register                         1          64                 1.0MB               30648
-github.com/alehatsman/mooncake/internal/agent                            1          2                  24.7KB              814
-github.com/alehatsman/mooncake/internal/actions/pkg_list                 1          1                  6.8KB               218
-github.com/alehatsman/mooncake/internal/actions/artifact_validate        1          1                  10.6KB              306
-github.com/alehatsman/mooncake/internal/actions/git_checkout             1          1                  15.0KB              427
-github.com/alehatsman/mooncake/internal/errors                           1          1                  3.4KB               114
-github.com/alehatsman/mooncake/internal/actions/read_json                1          1                  4.4KB               149
-github.com/alehatsman/mooncake/internal/schemagen                        1          1                  63.2KB              1684
-github.com/alehatsman/mooncake/internal/actions/print                    1          1                  8.4KB               286
-github.com/alehatsman/mooncake/internal/scaffold                         1          1                  10.1KB              317
-github.com/alehatsman/mooncake/internal/actions/windows_scheduled_task   1          1                  13.4KB              444
-github.com/alehatsman/mooncake/internal/actions/windows_firewall_rule    1          1                  13.1KB              420
-github.com/alehatsman/mooncake/internal/actions/wait_port                1          1                  4.1KB               150
-github.com/alehatsman/mooncake/internal/actions/wait_http                1          1                  5.5KB               200
-github.com/alehatsman/mooncake/internal/actions/wait_file                1          1                  5.1KB               180
-github.com/alehatsman/mooncake/internal/actions/wait_command             1          1                  4.6KB               157
-github.com/alehatsman/mooncake/internal/control                          1          1                  6.5KB               167
-github.com/alehatsman/mooncake/internal/actions/preset                   1          1                  8.3KB               224
-github.com/alehatsman/mooncake/internal/actions/vars                     1          1                  3.3KB               102
-github.com/alehatsman/mooncake/internal/plan/filter                      1          1                  4.5KB               159
-github.com/alehatsman/mooncake/internal/secrets/resolver                 1          1                  6.3KB               175
-github.com/alehatsman/mooncake/internal/actions/pkg_upgrade              1          1                  12.2KB              363
-github.com/alehatsman/mooncake/internal/actions/unarchive                1          1                  29.5KB              853
-github.com/alehatsman/mooncake/internal/llm                              1          1                  5.0KB               183
-github.com/alehatsman/mooncake/internal/actions/text_patch_yaml          1          1                  22.7KB              772
-github.com/alehatsman/mooncake/internal/actions/pkg_repo                 1          1                  21.1KB              676
-github.com/alehatsman/mooncake/internal/actions/text_patch_json          1          1                  27.9KB              982
-```
+_goda not installed — run `make arch-tools`._
