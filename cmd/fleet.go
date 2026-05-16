@@ -405,12 +405,19 @@ func fleetApplyAction(c *cli.Context) error {
 		Writer:          c.App.Writer,
 	}
 
-	res := fleet.NewOrchestrator(cfg).Run(c.Context)
-	if res.Err != nil {
-		return res.Err
-	}
-	if res.ExitCode != 0 {
-		return cli.Exit(res.Message, res.ExitCode)
+	// R2.1b: Orchestrator.Run returns a typed *FleetKernelResult (the
+	// fleet-scope kernel shape from vision/kernel.md). On failure with a
+	// CLI exit code, err is a *fleet.ExitError carrying ExitCode +
+	// Message; other errors flow through unchanged. The recap renderer
+	// can consume result.Summary; we don't render anything here today
+	// because RunApplyPhase already prints the per-peer ok/n line.
+	_, err = fleet.NewOrchestrator(cfg).Run(c.Context)
+	if err != nil {
+		var exitErr *fleet.ExitError
+		if errors.As(err, &exitErr) {
+			return cli.Exit(exitErr.Message, exitErr.ExitCode)
+		}
+		return err
 	}
 	return nil
 }
