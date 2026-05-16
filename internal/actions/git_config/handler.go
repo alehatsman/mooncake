@@ -28,6 +28,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("GitConfigReverseInfo", func() any { return &GitConfigReverseInfo{} })
 }
 
 // Metadata returns the action metadata.

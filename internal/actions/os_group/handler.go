@@ -31,6 +31,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("OsGroupReverseInfo", func() any { return &OsGroupReverseInfo{} })
 }
 
 func (h *Handler) Metadata() actions.ActionMetadata {
