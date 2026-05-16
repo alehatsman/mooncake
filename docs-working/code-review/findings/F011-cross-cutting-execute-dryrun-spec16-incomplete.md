@@ -5,6 +5,18 @@ severity: smell
 package: cross-cutting
 files: internal/actions/{artifact_capture,artifact_validate,assert,command,download,file_insert,file_delete_range,file_patch_apply,file_replace,include_vars,package,preset,print,repo_apply_patchset,repo_search,repo_tree,service,shell,template,tool,unarchive,vars}/handler.go
 status: open
+progress: |
+  Batch 1 (worktree-fix-f011-batch1, 2026-05-16): 5 small handlers
+  migrated — shell, command, print, vars, include_vars. Pattern: Run
+  absorbed Execute's body into its apply branch; DryRun deleted (its
+  log-only "[DRY-RUN] Would …" behavior is superseded by the typed
+  Result.Reason on Run's plan branch). Tests: h.Execute → h.Run
+  (mock contexts default to ModeApply); legacy TestHandler_DryRun
+  blocks deleted where they only asserted log presence. 16 handlers
+  remain: artifact_capture, artifact_validate, assert, download,
+  file_delete_range, file_insert, file_patch_apply, file_replace,
+  package, preset, repo_apply_patchset, repo_search, repo_tree,
+  service (F003), template, tool (F006), unarchive.
 ---
 
 ## What

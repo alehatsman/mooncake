@@ -52,95 +52,15 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the include_vars action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	includeVars := step.VarsLoad
-
-	// We need access to PathUtil which isn't in the Context interface
-	// Cast to concrete type for now
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return nil, fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Expand path (handles ~, variables, relative paths)
-	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		return nil, fmt.Errorf("failed to expand path: %w", err)
-	}
-
-	// Read variables from file
-	vars, err := config.ReadVariables(expandedPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read variables from %s: %w", expandedPath, err)
-	}
-
-	// Merge variables into context via the typed interface
-	ctx.MergeUserVars(vars)
-
-	// Emit variables.loaded event
-	keys := make([]string, 0, len(vars))
-	for k := range vars {
-		keys = append(keys, k)
-	}
-
-	publisher := ctx.GetEventPublisher()
-	if publisher != nil {
-		publisher.Publish(events.Event{
-			Type: events.EventVarsLoaded,
-			Data: events.VarsLoadedData{
-				FilePath: expandedPath,
-				Count:    len(vars),
-				Keys:     keys,
-				DryRun:   ctx.Mode() == actions.ModePlan,
-			},
-		})
-	}
-
-	// Create result
-	result := executor.NewResult()
-	result.Changed = false // Loading variables doesn't count as "changed"
-
-	return result, nil
-}
-
-// DryRun logs what variables would be loaded.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	includeVars := step.VarsLoad
-
-	// Get path (attempt expansion but don't fail)
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		expandedPath = *includeVars
-	}
-
-	// Try to read file to get count
-	vars, err := config.ReadVariables(expandedPath)
-	if err != nil {
-		ctx.GetLogger().Infof("  [DRY-RUN] Would load variables from: %s (file not readable in dry-run)", expandedPath)
-		return nil
-	}
-
-	ctx.GetLogger().Infof("  [DRY-RUN] Would load %d variables from: %s", len(vars), expandedPath)
-
-	// Still load variables in dry-run mode so subsequent steps can use them
-	ctx.MergeUserVars(vars)
-
-	return nil
-}
-
 // Run is the Spec 16 entry point. include_vars only mutates the
 // variable scope (by reading a YAML file), not the system. Plan mode
-// reports Checkable=true with WouldChange=false; execute mode
-// delegates.
+// reports Checkable=true with WouldChange=false; apply mode reads
+// the file and merges its keys into the variable scope.
 //
 // Like vars, the planner usually handles this at plan time; Run is
 // here for completeness.
+//
+// F011: legacy Execute / DryRun pair folded into Run.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() == actions.ModePlan {
 		r := executor.NewResult()
@@ -148,5 +68,46 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		r.Reason = "include_vars (no system change)"
 		return r, nil
 	}
-	return h.Execute(ctx, step)
+
+	includeVars := step.VarsLoad
+
+	// PathUtil isn't on the actions.Context interface; cast to the
+	// concrete ExecutionContext for now.
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return nil, fmt.Errorf("context is not an ExecutionContext")
+	}
+
+	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
+	if err != nil {
+		return nil, fmt.Errorf("failed to expand path: %w", err)
+	}
+
+	vars, err := config.ReadVariables(expandedPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read variables from %s: %w", expandedPath, err)
+	}
+
+	ctx.MergeUserVars(vars)
+
+	keys := make([]string, 0, len(vars))
+	for k := range vars {
+		keys = append(keys, k)
+	}
+
+	if publisher := ctx.GetEventPublisher(); publisher != nil {
+		publisher.Publish(events.Event{
+			Type: events.EventVarsLoaded,
+			Data: events.VarsLoadedData{
+				FilePath: expandedPath,
+				Count:    len(vars),
+				Keys:     keys,
+				DryRun:   false,
+			},
+		})
+	}
+
+	result := executor.NewResult()
+	result.Changed = false
+	return result, nil
 }

@@ -39,7 +39,7 @@ func TestShellHandler_LongLineWithinCap(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestShellHandler_LineOverCapLogsTruncation(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error: %v", err)
 	}

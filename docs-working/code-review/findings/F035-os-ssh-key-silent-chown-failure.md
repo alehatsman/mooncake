@@ -6,6 +6,7 @@ package: internal/actions/os_ssh_key
 file: internal/actions/os_ssh_key/handler.go
 lines: 182-188, 220-228, 506-539
 status: open
+verified: 2026-05-16 — confirmed real on master @ 6edf2b0. handler.go:182-188 logs lookup error at debug level only (-1,-1 sentinel propagates so writeAuthorizedKeys skips chown). handler.go:532-536 ignores chown errors entirely with _ = os.Chown(...). Both paths set Changed=true and report success; sshd StrictModes refuses wrong-owned authorized_keys → silent auth break
 ---
 
 ## What

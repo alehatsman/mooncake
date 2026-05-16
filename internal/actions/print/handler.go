@@ -68,10 +68,34 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute renders the message + structured data, applies the budget,
-// emits the print event, and stores the rendered output on the result.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// Run is the Spec 16 entry point. Plan mode renders the output and
+// surfaces the first line as a Reason preview. Apply mode renders the
+// message + structured data, applies the budget, emits the print event,
+// and stores the rendered output on the result.
+//
+// F011: the legacy Execute / DryRun pair has been folded into Run.
+// Tests that used to call h.Execute now call h.Run with ec.Svc.Mode =
+// ModeApply (the default); tests for the plan-mode preview use
+// Mode = ModePlan.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	la := step.Log
+
+	if ctx.Mode() == actions.ModePlan {
+		r := executor.NewResult()
+		r.Checkable = true
+
+		rendered, err := render(ctx, la)
+		if err != nil {
+			rendered = la.Msg
+		}
+		preview := firstLine(rendered)
+		if preview == "" {
+			r.Reason = "would print message"
+		} else {
+			r.Reason = "would print: " + preview
+		}
+		return r, nil
+	}
 
 	result := executor.NewResult()
 	result.Changed = false
@@ -83,8 +107,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return result, fmt.Errorf("failed to render log: %w", err)
 	}
 
-	publisher := ctx.GetEventPublisher()
-	if publisher != nil {
+	if publisher := ctx.GetEventPublisher(); publisher != nil {
 		publisher.Publish(events.Event{
 			Type:      events.EventPrintMessage,
 			Timestamp: time.Now(),
@@ -99,38 +122,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	result.Stdout = rendered
 	return result, nil
-}
-
-// DryRun logs what would be printed without actually printing.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	rendered, err := render(ctx, step.Log)
-	if err != nil {
-		rendered = step.Log.Msg + " (template render would fail)"
-	}
-	ctx.GetLogger().Infof("  [DRY-RUN] Would print: %s", rendered)
-	return nil
-}
-
-// Run is the Spec 16 entry point. Plan mode renders the output and
-// surfaces the first line as a Reason preview. Execute mode delegates.
-func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	if ctx.Mode() == actions.ModePlan {
-		r := executor.NewResult()
-		r.Checkable = true
-
-		rendered, err := render(ctx, step.Log)
-		if err != nil {
-			rendered = step.Log.Msg
-		}
-		preview := firstLine(rendered)
-		if preview == "" {
-			r.Reason = "would print message"
-		} else {
-			r.Reason = "would print: " + preview
-		}
-		return r, nil
-	}
-	return h.Execute(ctx, step)
 }
 
 // render assembles the final output string from Msg + Title + Data,

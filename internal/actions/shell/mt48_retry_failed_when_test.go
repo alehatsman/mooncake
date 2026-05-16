@@ -28,7 +28,7 @@ func TestRetry_TriggeredEvenWhenFailedWhenIsFalse(t *testing.T) {
 	}
 
 	start := time.Now()
-	res, err := h.Execute(ctx, step)
+	res, err := h.Run(ctx, step)
 	elapsed := time.Since(start)
 
 	// failed_when: false masks the final failure, so Execute should
