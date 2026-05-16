@@ -322,7 +322,7 @@ func readFileContent(path string, maxSize int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only file; close error is not actionable
 	// Read one byte past the cap so truncation is exact rather than guessed.
 	data, err := io.ReadAll(io.LimitReader(f, int64(maxSize)+1))
 	if err != nil {
