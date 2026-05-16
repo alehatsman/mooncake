@@ -124,8 +124,8 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the unarchive action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// runApply runs the unarchive action.
+func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	unarchiveAction := step.FileUnarchive
 
 	// We need ExecutionContext for PathUtil
@@ -255,50 +255,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	return result, nil
-}
-
-// DryRun logs what would be done without actually doing it.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	unarchiveAction := step.FileUnarchive
-
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Render paths
-	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		renderedSrc = unarchiveAction.Src
-	}
-
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		renderedDest = unarchiveAction.Dest
-	}
-
-	// Check if creates path exists
-	if unarchiveAction.Creates != "" {
-		renderedCreates, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.GetVariables())
-		if err == nil {
-			if _, statErr := os.Stat(renderedCreates); statErr == nil {
-				ctx.GetLogger().Infof("  [DRY-RUN] Would skip extraction: creates path exists: %s", renderedCreates)
-				return nil
-			}
-		}
-	}
-
-	// Detect format
-	format := h.detectArchiveFormat(renderedSrc)
-
-	ctx.GetLogger().Infof("  [DRY-RUN] Would extract %s archive: %s -> %s",
-		format.String(), renderedSrc, renderedDest)
-
-	if unarchiveAction.StripComponents > 0 {
-		ctx.GetLogger().Debugf("  Would strip %d leading path components", unarchiveAction.StripComponents)
-	}
-
-	return nil
 }
 
 // Helper functions
@@ -611,7 +567,7 @@ func (h *Handler) extractZipFile(file *zip.File, targetPath string, ctx actions.
 // action.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
-		return h.Execute(ctx, step)
+		return h.runApply(ctx, step)
 	}
 
 	ua := step.FileUnarchive

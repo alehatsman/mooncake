@@ -96,8 +96,8 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the download action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// runApply runs the download action.
+func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	downloadAction := step.FileDownload
 
 	// We need ExecutionContext for PathUtil
@@ -245,72 +245,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	return result, nil
-}
-
-// DryRun logs what would be done without actually doing it.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	downloadAction := step.FileDownload
-
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Render URL
-	renderedURL, err := ctx.GetTemplate().Render(downloadAction.URL, ctx.GetVariables())
-	if err != nil {
-		renderedURL = downloadAction.URL
-	}
-
-	// Render destination path
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		renderedDest = downloadAction.Dest
-	}
-
-	// Check if destination exists
-	_, err = os.Stat(renderedDest)
-	destExists := err == nil
-
-	// Determine if download is needed
-	needsDownload := !destExists || downloadAction.Force
-	if destExists && !downloadAction.Force && downloadAction.Checksum != "" {
-		matches, checksumErr := utils.VerifyChecksum(renderedDest, downloadAction.Checksum)
-		if checksumErr == nil && matches {
-			needsDownload = false
-		}
-	}
-
-	mode := h.parseFileMode(downloadAction.Mode, defaultFileMode)
-
-	if needsDownload {
-		ctx.GetLogger().Infof("  [DRY-RUN] Would download: %s -> %s (mode: %s)",
-			renderedURL, renderedDest, h.formatMode(mode))
-	} else {
-		ctx.GetLogger().Infof("  [DRY-RUN] File already downloaded with correct checksum: %s", renderedDest)
-	}
-
-	if downloadAction.Checksum != "" {
-		ctx.GetLogger().Debugf("  Would verify checksum: %s", downloadAction.Checksum)
-	}
-
-	if len(downloadAction.Headers) > 0 {
-		ctx.GetLogger().Debugf("  Would use %d custom headers", len(downloadAction.Headers))
-	}
-
-	if downloadAction.Timeout != "" {
-		ctx.GetLogger().Debugf("  Would use timeout: %s", downloadAction.Timeout)
-	}
-
-	if downloadAction.Retries > 0 {
-		ctx.GetLogger().Debugf("  Would retry up to %d times", downloadAction.Retries)
-	}
-
-	if downloadAction.Backup && destExists && needsDownload {
-		ctx.GetLogger().Debugf("  Would create backup before overwrite")
-	}
-
-	return nil
 }
 
 // Helper functions
@@ -519,7 +453,7 @@ func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executo
 // legacy Execute path which performs the HTTP fetch.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
-		return h.Execute(ctx, step)
+		return h.runApply(ctx, step)
 	}
 
 	d := step.FileDownload
