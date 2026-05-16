@@ -87,6 +87,22 @@ type Result struct {
 	// Only populated in ModePlan. Not serialised into registered results.
 	Detail any `json:"-"`
 
+	// AppliedDiff is the typed actions.Diff captured at apply time for
+	// handlers that implement actions.Differ. The diff is computed
+	// just before runner.Run executes, so it represents what the
+	// handler intends to change (Before / After of the predicted
+	// mutation). nil for handlers that don't implement Differ or for
+	// plan-mode (where the diff already flows through the StepChecked
+	// event). Lives on Result so the apply.captureSubscriber can
+	// thread it into the spec-68 runlog StepEntry — typed Diff per
+	// step lets `mooncake explain r/<id>` and `explain <resource>`
+	// show what each step did, not just that it ran.
+	//
+	// Kept as `any` (rather than *actions.Diff) to keep the executor
+	// package free of an actions.Differ-payload type dependency; the
+	// apply layer narrows it when projecting to runlog.
+	AppliedDiff any `json:"-"`
+
 	// ReverseData holds action-specific apply-time state captured for
 	// later use by the handler's Reverse() method (spec-22 phase 5).
 	// Typically populated in ModeApply BEFORE the mutation runs so

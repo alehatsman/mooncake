@@ -22,7 +22,10 @@
 // No third-party services.
 package explain
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Kind is the discriminator on Result.
 type Kind string
@@ -182,13 +185,19 @@ type RunTotals struct {
 
 // RunStep is a single row in RunPayload.Steps. Sourced from
 // runlog.StepEntry — see internal/runlog for the writer side.
+//
+// Spec-68 wave 2.5: StartTS (per-step start) + Diff (typed
+// actions.Diff captured at apply time, opaque to this package) are
+// both omitempty so pre-wave-2.5 entries surface cleanly.
 type RunStep struct {
-	Index      int    `json:"index"                yaml:"index"`
-	Action     string `json:"action"               yaml:"action"`
-	Resource   string `json:"resource,omitempty"   yaml:"resource,omitempty"`
-	Result     string `json:"result"               yaml:"result"`
-	DurationMs int64  `json:"duration_ms,omitempty" yaml:"duration_ms,omitempty"`
-	Reversible bool   `json:"reversible,omitempty" yaml:"reversible,omitempty"`
+	Index      int             `json:"index"                 yaml:"index"`
+	Action     string          `json:"action"                yaml:"action"`
+	Resource   string          `json:"resource,omitempty"    yaml:"resource,omitempty"`
+	Result     string          `json:"result"                yaml:"result"`
+	StartTS    time.Time       `json:"start_ts,omitempty"    yaml:"start_ts,omitempty"`
+	DurationMs int64           `json:"duration_ms,omitempty" yaml:"duration_ms,omitempty"`
+	Reversible bool            `json:"reversible,omitempty"  yaml:"reversible,omitempty"`
+	Diff       json.RawMessage `json:"diff,omitempty"        yaml:"-"`
 }
 
 // RunCaveats surfaces the run-level metadata an operator wants
@@ -215,13 +224,15 @@ type ResourcePayload struct {
 // readers a stable ordering key. omitempty so pre-spec-68 runs (no
 // per-step records) keep round-tripping cleanly.
 type ResourceEvent struct {
-	RunID      string    `json:"run_id"                 yaml:"run_id"`
-	OpID       string    `json:"op_id,omitempty"        yaml:"op_id,omitempty"`
-	TS         time.Time `json:"ts"                     yaml:"ts"`
-	StepIndex  int       `json:"step_index,omitempty"   yaml:"step_index,omitempty"`
-	Action     string    `json:"action"                 yaml:"action"`
-	Result     string    `json:"result"                 yaml:"result"`
-	Reversible bool      `json:"reversible,omitempty"   yaml:"reversible,omitempty"`
+	RunID      string          `json:"run_id"                 yaml:"run_id"`
+	OpID       string          `json:"op_id,omitempty"        yaml:"op_id,omitempty"`
+	TS         time.Time       `json:"ts"                     yaml:"ts"`
+	StartTS    time.Time       `json:"start_ts,omitempty"     yaml:"start_ts,omitempty"`
+	StepIndex  int             `json:"step_index,omitempty"   yaml:"step_index,omitempty"`
+	Diff       json.RawMessage `json:"diff,omitempty"         yaml:"-"`
+	Action     string          `json:"action"                 yaml:"action"`
+	Result     string          `json:"result"                 yaml:"result"`
+	Reversible bool            `json:"reversible,omitempty"   yaml:"reversible,omitempty"`
 }
 
 // OpPayload is the kind:op wire shape — "what command was this and

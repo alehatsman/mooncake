@@ -1286,6 +1286,26 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			return err
 		}
 	}
+	// Spec-68 wave 2.5: in apply mode, capture the typed Diff before
+	// the handler runs so we can attach it to the runlog StepEntry
+	// (and from there to `mooncake explain`'s typed-payload output).
+	// Mirrors the plan-mode pattern below at the StepChecked emit but
+	// stores the value on Result instead of routing through an event —
+	// no per-step event fires for apply-mode mutations today, and
+	// adding one is out of scope.
+	//
+	// Errors are swallowed for the same best-effort reason the
+	// plan-mode call swallows them: Diff is auxiliary metadata; the
+	// handler's actual error path is what gates the apply.
+	var preAppliedDiff any
+	if ec.Mode() != actions.ModePlan {
+		if differ, ok := runner.(actions.Differ); ok {
+			if d, dErr := differ.Diff(ec, &step); dErr == nil {
+				preAppliedDiff = &d
+			}
+		}
+	}
+
 	result, err := runner.Run(ec, &step)
 
 	// Capture the result on the context whether or not Run errored,
@@ -1293,6 +1313,9 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	// stdout/stderr from failed shell-like steps.
 	if r, ok := result.(*Result); ok {
 		ec.CurrentResult = r
+		if preAppliedDiff != nil {
+			r.AppliedDiff = preAppliedDiff
+		}
 	} else {
 		ec.CurrentResult = NewResult()
 	}

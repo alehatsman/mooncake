@@ -562,8 +562,46 @@ func renderExplainRunText(w io.Writer, p *explain.RunPayload) {
 				res = "-"
 			}
 			fmt.Fprintf(w, "  %2d. %-20s %-7s  %s%s\n", s.Index, s.Action, s.Result, res, rev)
+			// Spec-68 wave 2.5: one-line typed-Diff summary when the
+			// step's handler captured one. Indented to make the
+			// per-step block scannable without crowding the resource
+			// line above.
+			if summary := summarizeDiff(s.Diff); summary != "" {
+				fmt.Fprintf(w, "      diff: %s\n", summary)
+			}
 		}
 	}
+}
+
+// summarizeDiff condenses a typed actions.Diff JSON payload to a
+// one-line "kind=K op=O" hint. Returns "" when raw is empty or can't
+// be parsed — text mode stays terse and the JSON / YAML formats still
+// carry the full payload for callers that want the detail.
+func summarizeDiff(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var probe struct {
+		Resource struct {
+			Kind       string `json:"kind"`
+			Identifier string `json:"identifier"`
+		} `json:"resource"`
+		Operation string `json:"operation"`
+	}
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return ""
+	}
+	parts := []string{}
+	if probe.Operation != "" {
+		parts = append(parts, "op="+probe.Operation)
+	}
+	if probe.Resource.Kind != "" {
+		parts = append(parts, "kind="+probe.Resource.Kind)
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, " ")
 }
 
 func renderExplainResourceText(w io.Writer, p *explain.ResourcePayload) {
@@ -589,6 +627,12 @@ func renderExplainResourceText(w io.Writer, p *explain.ResourcePayload) {
 		}
 		fmt.Fprintf(w, "  %s  %-20s %-7s  run=%s%s%s\n",
 			h.TS.Format(time.RFC3339), h.Action, h.Result, h.RunID, step, rev)
+		// Spec-68 wave 2.5: typed-Diff summary when available. Same
+		// one-line hint as the run-payload renderer; the indent lines
+		// the diff up under the resource handle it belongs to.
+		if summary := summarizeDiff(h.Diff); summary != "" {
+			fmt.Fprintf(w, "      diff: %s\n", summary)
+		}
 	}
 }
 
