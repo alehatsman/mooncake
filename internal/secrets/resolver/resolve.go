@@ -43,8 +43,14 @@ func Resolve(step *config.Step, redactor *security.Redactor) error {
 
 // walkAndResolveSecrets mirrors the shape of planner.walkAndRender —
 // same set of supported field kinds (string, *string, *struct, []string,
-// map[string]string) — but rewrites only the strings carrying the
-// sentinel marker. Other strings are left alone.
+// map[string]string, map[string]interface{}, and pointers to those
+// maps) — but rewrites only the strings carrying the sentinel marker.
+// Other strings are left alone.
+//
+// The pointer-to-map case is load-bearing: Step.Vars is
+// *map[string]interface{} (spec-23), and a marker landing inside `vars:`
+// must resolve or downstream template renders see the sentinel string
+// verbatim and the redactor never learns the value (F019).
 //
 // Lives in the executor package rather than plan/ because resolution
 // is an apply-time concern and depends on the per-run Redactor.
@@ -79,6 +85,10 @@ func walkAndResolveSecrets(rv reflect.Value, redactor *security.Redactor) error 
 				if err := walkAndResolveSecrets(fv.Elem(), redactor); err != nil {
 					return err
 				}
+			case reflect.Map:
+				if err := resolveMapInPlace(fv.Elem(), sf.Name, redactor); err != nil {
+					return err
+				}
 			}
 
 		case reflect.Slice:
@@ -92,24 +102,56 @@ func walkAndResolveSecrets(rv reflect.Value, redactor *security.Redactor) error 
 			}
 
 		case reflect.Map:
-			if fv.Type().Key().Kind() != reflect.String || fv.Type().Elem().Kind() != reflect.String {
-				continue
-			}
-			for _, k := range fv.MapKeys() {
-				cur := fv.MapIndex(k).String()
-				if !security.IsMarker(cur) {
-					continue
-				}
-				val, _, err := security.ResolveMarker(cur)
-				if err != nil {
-					return fmt.Errorf("%s[%s]: %w", sf.Name, k.String(), err)
-				}
-				if redactor != nil {
-					redactor.AddSensitive(val)
-				}
-				fv.SetMapIndex(k, reflect.ValueOf(val))
+			if err := resolveMapInPlace(fv, sf.Name, redactor); err != nil {
+				return err
 			}
 		}
+	}
+	return nil
+}
+
+// resolveMapInPlace rewrites marker-bearing string values inside a
+// reflect.Value of map kind. Supports map[string]string and
+// map[string]interface{} — the two shapes mooncake's action structs
+// use. Other key or value kinds are silently skipped (no markers can
+// reach them via the YAML pre-pass).
+//
+// For map[string]interface{}, only entries whose dynamic value is a
+// string (and a marker) are touched; non-string entries (numbers,
+// bools, nested maps) pass through untouched. Nested structures inside
+// interface{} are not recursed — at the time of writing no action
+// struct has a use case for deep interface{} trees; revisit if one
+// appears.
+func resolveMapInPlace(fv reflect.Value, fieldName string, redactor *security.Redactor) error {
+	if fv.Type().Key().Kind() != reflect.String {
+		return nil
+	}
+	elemKind := fv.Type().Elem().Kind()
+	if elemKind != reflect.String && elemKind != reflect.Interface {
+		return nil
+	}
+	for _, k := range fv.MapKeys() {
+		entry := fv.MapIndex(k)
+		// Unwrap interface{} to its concrete dynamic value.
+		dyn := entry
+		if dyn.Kind() == reflect.Interface {
+			dyn = dyn.Elem()
+		}
+		if !dyn.IsValid() || dyn.Kind() != reflect.String {
+			continue
+		}
+		cur := dyn.String()
+		if !security.IsMarker(cur) {
+			continue
+		}
+		val, _, err := security.ResolveMarker(cur)
+		if err != nil {
+			return fmt.Errorf("%s[%s]: %w", fieldName, k.String(), err)
+		}
+		if redactor != nil {
+			redactor.AddSensitive(val)
+		}
+		fv.SetMapIndex(k, reflect.ValueOf(val))
 	}
 	return nil
 }
