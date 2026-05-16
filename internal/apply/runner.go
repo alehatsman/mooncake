@@ -158,7 +158,7 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// the apply.Runner is the only caller setting it today.
 	capture := &executor.RunCapture{}
 
-	execErr := executor.Start(executor.StartConfig{
+	execErr := executor.Start(ctx, executor.StartConfig{
 		ConfigFilePath:   r.cfg.ConfigPath,
 		VarsFilePaths:    r.cfg.VarsFiles,
 		SudoPass:         r.cfg.SudoPass,

@@ -62,7 +62,7 @@ func NewRunnerFromPlan(planPath string, opts FromPlanOptions) *Runner {
 // runFromPlan dispatches the saved-plan path. Shape mirrors
 // Runner.Run's config-path body but with a tighter subscriber set
 // and executor.ExecutePlanWithCapture instead of executor.Start.
-func (r *Runner) runFromPlan(_ context.Context) (*KernelResult, error) {
+func (r *Runner) runFromPlan(ctx context.Context) (*KernelResult, error) {
 	planData, loadErr := plan.LoadPlanFromFile(r.fromPlanPath)
 	if loadErr != nil {
 		err := fmt.Errorf("failed to load plan: %w", loadErr)
@@ -111,6 +111,7 @@ func (r *Runner) runFromPlan(_ context.Context) (*KernelResult, error) {
 	capture := &executor.RunCapture{}
 
 	execErr := executor.ExecutePlanWithCapture(
+		ctx,
 		planData,
 		r.fromPlanOpts.SudoPass,
 		actions.ModeApply,

@@ -5,7 +5,9 @@ severity: risk
 package: internal/agentd
 file: internal/agentd/worker.go
 lines: 166-173, 96-99
-status: open
+status: done
+resolved_by: worktree-fix-f016
+shipped: stage-1(a) — ctx threaded worker→apply.Runner→executor.Start; step loop checks ctx between steps; Shutdown cancels runCtx. Stage-3 handler-level audit (shell exec.CommandContext, wait.* honors ctx, etc.) remains a follow-up. Per-run Deadline (stage 2) deferred.
 ---
 
 ## What

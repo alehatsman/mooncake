@@ -20,7 +20,6 @@ something else landing first.
 | F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
-| F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
 | F028 | git_clone askpass returns password for the username prompt too — auth fails for bare HTTPS URLs | bug | S | — | open |
@@ -46,7 +45,7 @@ something else landing first.
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
 | F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
 | F015 | agentd.Worker hub-close cleanup asymmetry | smell | **done** | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
-| F016 | agentd.Worker no-cancel context | risk | open | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
+| F016 | agentd.Worker no-cancel context | risk | **done** | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
 | F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
 | F018 | shell scanner 64KB line cap | bug | **done** | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
 | F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
