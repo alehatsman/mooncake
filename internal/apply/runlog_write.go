@@ -1,6 +1,7 @@
 package apply
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -64,6 +65,20 @@ func buildStepEntries(records []executor.StepRecord) []runlog.StepEntry {
 		if sr.Result != nil {
 			entry.Result = sr.Result.Status()
 			entry.DurationMs = sr.Result.Duration.Milliseconds()
+			if !sr.Result.StartTime.IsZero() {
+				entry.StartTS = sr.Result.StartTime.UTC()
+			}
+			// Spec-68 wave 2.5: marshal the apply-time Diff captured by
+			// the executor when the handler implements Differ. Stored as
+			// RawMessage on the runlog so readers (`mooncake explain`)
+			// decode on demand, and so runlog itself stays free of an
+			// actions-package dependency. Marshal errors are swallowed
+			// — the rest of the StepEntry is still useful.
+			if sr.Result.AppliedDiff != nil {
+				if raw, mErr := json.Marshal(sr.Result.AppliedDiff); mErr == nil {
+					entry.Diff = raw
+				}
+			}
 		} else {
 			entry.Result = "ok"
 		}

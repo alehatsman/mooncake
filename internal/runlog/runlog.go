@@ -46,17 +46,26 @@ type Entry struct {
 
 // StepEntry is one row in Entry.Steps — the post-apply record of a
 // single step. Best-effort: Resource is synthesized from common step
-// params (path / name / dest / unit) per-action; per-step typed Diff
-// is not captured here yet (executor.Result holds plan-time Detail
-// only, not apply-time Diff — that's a follow-up for the wave 2.5
-// PR after spec-22 phase 5 finishes).
+// params (path / name / dest / unit) per-action.
+//
+// Spec-68 wave 2.5 widens this with StartTS (per-step start time,
+// previously only DurationMs was carried) and Diff (the typed
+// actions.Diff captured at apply time when the handler implements
+// Differ — see executor.Result.AppliedDiff). Diff is stored as
+// json.RawMessage so the runlog package stays free of an actions
+// dependency; readers (explain, history) decode on demand.
+//
+// Pre-spec-68 entries decode with these fields at zero values; both
+// carry omitempty so old + new shapes coexist on the wire.
 type StepEntry struct {
-	Index      int    `json:"index"`
-	Action     string `json:"action"`
-	Resource   string `json:"resource,omitempty"`
-	Result     string `json:"result"` // changed | ok | skipped | failed
-	DurationMs int64  `json:"duration_ms,omitempty"`
-	Reversible bool   `json:"reversible,omitempty"`
+	Index      int             `json:"index"`
+	Action     string          `json:"action"`
+	Resource   string          `json:"resource,omitempty"`
+	Result     string          `json:"result"` // changed | ok | skipped | failed
+	StartTS    time.Time       `json:"start_ts,omitempty"`
+	DurationMs int64           `json:"duration_ms,omitempty"`
+	Reversible bool            `json:"reversible,omitempty"`
+	Diff       json.RawMessage `json:"diff,omitempty"`
 }
 
 // logPath returns the path to the run log file.

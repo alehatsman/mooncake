@@ -1,6 +1,7 @@
 package runlog
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -259,3 +260,75 @@ func TestStepEntryRoundTrip(t *testing.T) {
 // import-guard so the new test compiles without explicit deps beyond
 // what the existing tests use.
 var _ = errors.New
+
+// Spec-68 wave 2.5: StartTS + Diff round-trip through StepEntry,
+// and pre-2.5 entries (no StartTS, no Diff) still decode cleanly
+// alongside new ones.
+func TestStepEntryRoundTripWithDiffAndStartTS(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	stepStart := time.Date(2026, 5, 17, 12, 0, 5, 0, time.UTC)
+	diffJSON := json.RawMessage(`{"resource":{"kind":"file","identifier":"/etc/x"},"operation":"update"}`)
+	e := Entry{
+		TS:    time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC),
+		RunID: "r/01HW25",
+		OpID:  "op/01HW25",
+		Steps: []StepEntry{
+			{Index: 1, Action: "file.write", Result: "changed", StartTS: stepStart, Diff: diffJSON},
+			{Index: 2, Action: "shell", Result: "ok"}, // no StartTS / Diff — should omit cleanly
+		},
+	}
+	if err := Append(e); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+	got, err := Last()
+	if err != nil {
+		t.Fatalf("Last: %v", err)
+	}
+	if len(got.Steps) != 2 {
+		t.Fatalf("Steps len = %d, want 2", len(got.Steps))
+	}
+	if !got.Steps[0].StartTS.Equal(stepStart) {
+		t.Errorf("Steps[0].StartTS = %v, want %v", got.Steps[0].StartTS, stepStart)
+	}
+	if string(got.Steps[0].Diff) != string(diffJSON) {
+		t.Errorf("Steps[0].Diff = %s, want %s", got.Steps[0].Diff, diffJSON)
+	}
+	if !got.Steps[1].StartTS.IsZero() {
+		t.Errorf("Steps[1].StartTS = %v, want zero", got.Steps[1].StartTS)
+	}
+	if len(got.Steps[1].Diff) != 0 {
+		t.Errorf("Steps[1].Diff = %s, want empty", got.Steps[1].Diff)
+	}
+}
+
+// Pre-spec-68-wave-2.5 entries (Steps without StartTS / Diff) still
+// decode — the widening is additive.
+func TestLegacyStepEntryDecodes(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	path, _ := logPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"ts":"2026-05-17T12:00:00Z","config":"x.yml","changed":1,"ok":0,"skipped":0,"failed":0,"duration_ms":100,"run_id":"r/01HW","op_id":"op/01HW","steps":[{"index":1,"action":"file.write","resource":"file:/etc/x","result":"changed","reversible":true}]}` + "\n"
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := ReadAll()
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if len(entries) != 1 || len(entries[0].Steps) != 1 {
+		t.Fatalf("decoded entries = %+v", entries)
+	}
+	s := entries[0].Steps[0]
+	if s.Action != "file.write" || s.Resource != "file:/etc/x" || s.Result != "changed" || !s.Reversible {
+		t.Errorf("legacy fields lost: %+v", s)
+	}
+	if !s.StartTS.IsZero() || len(s.Diff) != 0 {
+		t.Errorf("wave-2.5 fields should be zero for legacy step: StartTS=%v Diff=%s", s.StartTS, s.Diff)
+	}
+}
