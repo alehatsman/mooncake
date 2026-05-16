@@ -2,10 +2,16 @@
 # Setup git hooks for mooncake development.
 #
 # Installs:
-#   pre-commit  — fast: regen docs/schema/arch-snapshot if code/YAML staged, stage results.
-#   pre-push    — slow: full `make ci` + arch-snapshot dirty-check.
+#   pre-commit — runs `task ci` (build + test-race + lint + scan +
+#                docs/schema regen-and-check + arch-snapshot + dupl).
+#                One command, one report, before the commit lands. If
+#                any stage fails, the commit is rejected; agents fix
+#                the issue before re-attempting.
 #
-# Bypass: --no-verify on commit or push.
+# Removes any existing pre-push hook — the gate now runs at commit time.
+#
+# Bypass: `git commit --no-verify` (use sparingly; the point of the
+#         hook is to catch quality issues before they hit master).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,96 +28,55 @@ echo "Setting up mooncake development hooks in: $HOOKS_DIR"
 # ----- pre-commit ------------------------------------------------------------
 cat > "$HOOKS_DIR/pre-commit" << 'HOOK_EOF'
 #!/usr/bin/env bash
-# Auto-regenerate derived artifacts when code/config files are staged.
+# Run the full CI pipeline before letting the commit land.
 # Bypass: git commit --no-verify
 set -e
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-# Skip cheaply if nothing relevant is staged.
-if ! git diff --cached --name-only | grep -qE '\.(go|yml|yaml)$'; then
-  echo "pre-commit: no Go/YAML changes — skipping regen."
-  exit 0
-fi
-
-echo "pre-commit: code changes detected, regenerating derived artifacts..."
-
-# Build once (docs-generate and schema-generate need the binary).
-if ! make build >/dev/null 2>&1; then
-  echo "pre-commit: 'make build' failed. Fix the build, then re-commit." >&2
+# Make sure go-task is installed (the only hard prereq of this hook).
+TASK_BIN=""
+if command -v task >/dev/null 2>&1; then
+  TASK_BIN="task"
+elif [ -x "$(go env GOPATH 2>/dev/null)/bin/task" ]; then
+  TASK_BIN="$(go env GOPATH)/bin/task"
+else
+  echo "pre-commit: 'task' (go-task) is required but not installed." >&2
+  echo "            Install with: go install github.com/go-task/task/v3/cmd/task@latest" >&2
+  echo "            Then: task install-tools" >&2
   exit 1
 fi
 
-# Track what we touched so we only print/stage the ones that actually changed.
-regen_targets=(
-  "docs-next/generated/"
-  "internal/config/schema.json"
-  "internal/config/schema.d/"
-  "mooncake.d.ts"
-  "docs-working/ARCH_SNAPSHOT.md"
-)
-
-make docs-generate >/dev/null 2>&1   || { echo "pre-commit: docs-generate failed"   >&2; exit 1; }
-make schema-generate >/dev/null 2>&1 || { echo "pre-commit: schema-generate failed" >&2; exit 1; }
-make arch-snapshot >/dev/null 2>&1   || { echo "pre-commit: arch-snapshot failed"   >&2; exit 1; }
-
-changed=0
-for target in "${regen_targets[@]}"; do
-  if [ -e "$target" ] && ! git diff --quiet -- "$target" 2>/dev/null; then
-    git add "$target"
-    echo "  + staged: $target"
-    changed=1
-  fi
-done
-
-if [ $changed -eq 0 ]; then
-  echo "pre-commit: derived artifacts already up to date."
-else
-  echo "pre-commit: regenerated artifacts have been staged into this commit."
+echo "pre-commit: running 'task ci' (build + test-race + lint + scan + docs/schema + arch + dupl)..."
+if ! "$TASK_BIN" ci; then
+  echo "" >&2
+  echo "pre-commit: ✗ CI gate failed. Fix the issue above and re-commit," >&2
+  echo "            or 'git commit --no-verify' to bypass (not recommended)." >&2
+  exit 1
 fi
 HOOK_EOF
 chmod +x "$HOOKS_DIR/pre-commit"
+echo "  ✓ pre-commit → $HOOKS_DIR/pre-commit"
 
-# ----- pre-push --------------------------------------------------------------
-cat > "$HOOKS_DIR/pre-push" << 'HOOK_EOF'
-#!/usr/bin/env bash
-# Run the full CI gate plus arch-snapshot dirty-check before push.
-# Bypass: git push --no-verify
-set -e
-
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cd "$REPO_ROOT"
-
-echo "pre-push: running 'make ci' (lint + test-race + scan + docs-check + schema-check)..."
-if ! make ci; then
-  echo "pre-push: 'make ci' failed. Fix and re-push (or --no-verify to bypass)." >&2
-  exit 1
+# ----- remove pre-push -------------------------------------------------------
+# The full gate now runs at commit time; pre-push is redundant and
+# slows the push step for no extra coverage.
+if [ -f "$HOOKS_DIR/pre-push" ]; then
+  rm -f "$HOOKS_DIR/pre-push"
+  echo "  ✓ pre-push removed (gate moved to pre-commit)"
 fi
-
-echo "pre-push: regenerating arch-snapshot to verify freshness..."
-make arch-snapshot >/dev/null 2>&1 || { echo "pre-push: arch-snapshot failed" >&2; exit 1; }
-
-if ! git diff --quiet -- docs-working/ARCH_SNAPSHOT.md; then
-  echo "pre-push: docs-working/ARCH_SNAPSHOT.md is out of date." >&2
-  echo "          Run 'make arch-snapshot', commit the result, and re-push." >&2
-  exit 1
-fi
-
-echo "pre-push: ✓ all gates passed."
-HOOK_EOF
-chmod +x "$HOOKS_DIR/pre-push"
 
 cat <<EOM
 
 Installed:
-  pre-commit  → $HOOKS_DIR/pre-commit
-                  Regenerates docs + schema + arch-snapshot on Go/YAML changes
-                  and stages them. ~5-15s on typical commits.
-  pre-push    → $HOOKS_DIR/pre-push
-                  Runs 'make ci' (lint, test-race, scan, docs-check,
-                  schema-check) and an arch-snapshot freshness check.
-                  ~1-2 min — pre-push only, so it doesn't slow commits.
+  pre-commit  → runs 'task ci' (full pipeline). ~1-2 min depending on the
+                test surface. Fails the commit on any failing stage so
+                quality issues are caught before they land.
 
-Bypass either with --no-verify.
+Bypass with 'git commit --no-verify' if you really need it.
+
+If 'task' isn't on PATH yet:
+  go install github.com/go-task/task/v3/cmd/task@latest
+  task install-tools
 EOM
