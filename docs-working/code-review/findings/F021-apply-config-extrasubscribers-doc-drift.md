@@ -6,6 +6,51 @@ package: internal/apply
 file: internal/apply/config.go
 lines: 69-75
 status: open
+verified: 2026-05-16 on master @ 49930fd
+---
+
+## Verification (2026-05-16, master @ 49930fd)
+
+Both contradicting comments are still in place — the doc drift has
+not been resolved by the F015 / F018 / F019 / F022 fix waves.
+
+- **`internal/apply/config.go:73-74`** (the misleading public contract):
+  > Subscribers are closed by the publisher when it closes; callers
+  > must not close them independently.
+- **`internal/apply/runner.go:189-197`** (the actual behavior, with
+  inline comment that admits the contradiction):
+  ```go
+  // ExtraSubscribers may buffer events in their own goroutines
+  // (e.g. RunEventSink's writeLoop). Flush() guarantees all OnEvent
+  // calls are complete, so it is safe to Close them here — their
+  // internal queues drain and flush to backing stores before this
+  // function returns. publisher.Close() (deferred) closes channels
+  // but does NOT call subscriber.Close().
+  for _, sub := range r.cfg.ExtraSubscribers {
+      sub.Close()
+  }
+  ```
+
+### Adjacent: idempotency re-verified (still safe today)
+
+Both concrete `ExtraSubscriber.Close()` implementations are
+idempotent, so a future caller that follows the misleading
+`config.go` contract and tries to double-close won't crash —
+they'll just no-op:
+
+- `internal/agentd/jsonl_sink.go:100-109` — `RunEventSink.Close`
+  guards on `s.closing`; second caller observes `s.closing ==
+  true`, waits for `<-s.writerDone`, returns without re-running
+  the body.
+- `internal/agentd/sse_hub.go` — `Hub.Close` guards on
+  `h.closed`; second caller takes the early return.
+
+Both guards are present on master and unchanged from the
+original finding. **Safety today is coincidental, not
+contractual** — the doc fix should declare idempotency as a
+requirement for any new ExtraSubscriber, not lean on the
+existing implementations.
+
 ---
 
 ## What
