@@ -5,6 +5,7 @@ package artifact_capture
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -312,17 +313,24 @@ func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
 	return nil
 }
 
-// readFileContent reads file content up to maxSize bytes.
+// readFileContent reads up to maxSize bytes from path without loading the
+// full file into memory first. Peak allocation is bounded at maxSize+1
+// regardless of file size (fixes F041).
 func readFileContent(path string, maxSize int) (string, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- path comes from tracked file changes
+	// #nosec G304 -- path comes from tracked file changes
+	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-
+	defer f.Close()
+	// Read one byte past the cap so truncation is exact rather than guessed.
+	data, err := io.ReadAll(io.LimitReader(f, int64(maxSize)+1))
+	if err != nil {
+		return "", err
+	}
 	if len(data) > maxSize {
 		data = data[:maxSize]
 	}
-
 	return string(data), nil
 }
 

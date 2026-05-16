@@ -197,6 +197,67 @@ func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
 }
 
+func TestReadFileContent_BoundsLargeFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "large.txt")
+
+	const fileSize = 100 * 1024 // 100 KB
+	const maxSize = 1024        // 1 KB cap
+
+	data := make([]byte, fileSize)
+	for i := range data {
+		data[i] = byte('a' + i%26)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readFileContent(path, maxSize)
+	if err != nil {
+		t.Fatalf("readFileContent: %v", err)
+	}
+	if len(got) != maxSize {
+		t.Errorf("want %d bytes, got %d", maxSize, len(got))
+	}
+	if got != string(data[:maxSize]) {
+		t.Error("returned bytes don't match file prefix")
+	}
+}
+
+func TestReadFileContent_SmallFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "small.txt")
+	content := []byte("hello world")
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readFileContent(path, 1024)
+	if err != nil {
+		t.Fatalf("readFileContent: %v", err)
+	}
+	if got != string(content) {
+		t.Errorf("want %q, got %q", content, got)
+	}
+}
+
+func TestReadFileContent_ExactSize(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "exact.txt")
+	content := []byte("abcdefghij") // 10 bytes
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readFileContent(path, 10)
+	if err != nil {
+		t.Fatalf("readFileContent: %v", err)
+	}
+	if got != string(content) {
+		t.Errorf("want %q, got %q", content, got)
+	}
+}
+
 func findSubstring(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
