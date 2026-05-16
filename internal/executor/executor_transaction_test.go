@@ -11,6 +11,7 @@ package executor_test
 // would create an import cycle.
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,7 @@ func runConfig(t *testing.T, yamlBody string) error {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	return executor.Start(executor.StartConfig{
+	return executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: configPath,
 	}, testLogger, publisher)
 }
@@ -149,7 +150,7 @@ steps:
 		},
 	})
 
-	_ = executor.Start(executor.StartConfig{
+	_ = executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: configPath,
 	}, logger.NewTestLogger(), publisher)
 

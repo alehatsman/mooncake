@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -61,7 +62,10 @@ func Run(opts RunOptions) (*IterationLog, error) {
 
 	log := logger.NewLogger(logger.ErrorLevel)
 
-	execErr := executor.Start(executor.StartConfig{
+	// F016: agent.Run doesn't currently carry a context; the agent loop
+	// is invoked from CLI and CLI-level signal handling tears down the
+	// process. Use Background until a follow-up plumbs ctx through Run.
+	execErr := executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
 	}, log, publisher)
 

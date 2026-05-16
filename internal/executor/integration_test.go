@@ -1,6 +1,7 @@
 package executor_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,7 +33,7 @@ func TestExecutePlan_BasicExecution(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "", actions.ModeApply, testLogger, publisher)
+	err := executor.ExecutePlan(context.Background(), planData, "", actions.ModeApply, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan failed: %v", err)
 	}
@@ -53,7 +54,7 @@ func TestExecutePlan_WithSudoPass(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "test-sudo-password", actions.ModeApply, testLogger, publisher)
+	err := executor.ExecutePlan(context.Background(), planData, "test-sudo-password", actions.ModeApply, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan failed: %v", err)
 	}
@@ -74,7 +75,7 @@ func TestExecutePlan_DryRun(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.ExecutePlan(planData, "", actions.ModePlan, testLogger, publisher)
+	err := executor.ExecutePlan(context.Background(), planData, "", actions.ModePlan, testLogger, publisher)
 	if err != nil {
 		t.Errorf("ExecutePlan in dry-run failed: %v", err)
 	}
@@ -89,7 +90,7 @@ func TestStart_EmptyConfigPath(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.Start(cfg, testLogger, publisher)
+	err := executor.Start(context.Background(), cfg, testLogger, publisher)
 	if err == nil {
 		t.Error("Start should fail with empty config path")
 	}
@@ -104,7 +105,7 @@ func TestStart_InvalidConfigPath(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.Start(cfg, testLogger, publisher)
+	err := executor.Start(context.Background(), cfg, testLogger, publisher)
 	if err == nil {
 		t.Error("Start should fail with non-existent config file")
 	}
@@ -139,7 +140,7 @@ func TestStart_WithVarsFile(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.Start(cfg, testLogger, publisher)
+	err := executor.Start(context.Background(), cfg, testLogger, publisher)
 	if err != nil {
 		t.Errorf("Start failed: %v", err)
 	}
@@ -160,13 +161,12 @@ func TestStart_DryRun(t *testing.T) {
 
 	cfg := executor.StartConfig{
 		ConfigFilePath: configPath,
-		
 	}
 
 	testLogger := logger.NewTestLogger()
 	publisher := events.NewPublisher()
 
-	err := executor.Start(cfg, testLogger, publisher)
+	err := executor.Start(context.Background(), cfg, testLogger, publisher)
 	if err != nil {
 		t.Errorf("Start in dry-run failed: %v", err)
 	}

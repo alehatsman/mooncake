@@ -132,7 +132,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		publisher := events.NewPublisher()
 		log := logger.NewLogger(logger.ErrorLevel)
 
-		execErr := executor.Start(executor.StartConfig{
+		execErr := executor.Start(context.Background(), executor.StartConfig{
 			ConfigFilePath: tmpFile.Name(),
 		}, log, publisher)
 

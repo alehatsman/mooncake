@@ -100,6 +100,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -756,6 +757,12 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 }
 
 // ExecuteSteps executes a sequence of configuration steps within the given execution context.
+//
+// F016 stage-1(a): the loop checks ec.Svc.Ctx between steps and aborts
+// with ctx.Err() if the context is cancelled. Handler-level
+// cancellation (shell child interrupts, network step short-circuits)
+// is the stage-3 audit and is not done here. nil ec.Svc.Ctx is treated
+// as non-cancellable.
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	ec.Svc.Logger.Debugf("Executing: %v", ec.CurrentFile)
 
@@ -763,6 +770,12 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	ec.TotalSteps = len(steps)
 
 	for i, step := range steps {
+		if ctx := ec.Svc.Ctx; ctx != nil {
+			if err := ctx.Err(); err != nil {
+				ec.Svc.Logger.Infof("execution cancelled by context after %d/%d steps: %v", i, len(steps), err)
+				return err
+			}
+		}
 		ec.CurrentIndex = i
 
 		// If step has origin metadata (from planner), use its directory
@@ -896,7 +909,13 @@ type StartConfig struct {
 // Start begins execution of a mooncake configuration with the given settings.
 // Always goes through the planner to expand loops, includes, and variables.
 // Emits events through the provided publisher for all execution progress.
-func Start(startConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
+//
+// ctx is checked between steps in the step loop (F016 stage-1(a)). A
+// cancelled ctx causes the run to return early with ctx.Err(); the
+// in-flight step (if any) continues to completion — handler-level
+// cancellation is the stage-3 audit. nil ctx is treated as
+// context.Background() — non-cancellable, never aborts.
+func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error {
 	log.Debugf("config: %v", startConfig)
 
 	if startConfig.ConfigFilePath == "" {
@@ -1029,7 +1048,7 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 	startConfig.Capture.setPlan(planData)
 
 	// Execute the plan with event publisher
-	return executePlanWithCapture(planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture)
+	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture)
 }
 
 // ExecutePlan executes a pre-compiled plan.
@@ -1039,8 +1058,11 @@ func Start(startConfig StartConfig, log logger.Logger, publisher events.Publishe
 // use ExecutePlanWithCapture or go through executor.Start with
 // StartConfig.Capture set; this entry point does not surface the
 // per-step records.
-func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
-	return executePlanWithCapture(p, sudoPass, mode, log, publisher, nil)
+//
+// ctx is checked between steps — see Start for the cancellation
+// contract.
+func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil)
 }
 
 // ExecutePlanWithCapture runs a pre-compiled plan and fills the
@@ -1052,14 +1074,17 @@ func ExecutePlan(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Lo
 // path produces the same typed kernel result as the
 // compiled-from-config path. capture may be nil — equivalent to
 // calling ExecutePlan directly.
-func ExecutePlanWithCapture(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
-	return executePlanWithCapture(p, sudoPass, mode, log, publisher, capture)
+//
+// ctx is checked between steps — see Start for the cancellation
+// contract.
+func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture)
 }
 
 // executePlanWithCapture is the shared implementation behind
 // ExecutePlan and Start. Pass capture=nil to disable the
 // kernel-result substrate (legacy callers).
-func executePlanWithCapture(p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
+func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -1144,6 +1169,7 @@ func executePlanWithCapture(p *plan.Plan, sudoPass string, mode actions.Mode, lo
 		Redactor:       redactor,
 		EventPublisher: publisher,
 		Capture:        capture,
+		Ctx:            ctx,
 	}
 	// R1.1b: Capture.Plan was already set by Start; for the direct
 	// ExecutePlan entry point (where capture is nil) this is a no-op.
