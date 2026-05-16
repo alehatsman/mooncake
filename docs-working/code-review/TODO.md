@@ -15,7 +15,6 @@ something else landing first.
 | F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
 | F011 | Cross-cutting: 15 handlers still have Execute/DryRun (6 done across batches 1+2: shell/command/print/vars/include_vars/preset) | smell | XL | — | open |
-| F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
 | F039 | agent.RunLoop defers tmpfile cleanup inside for-body + plan files written 0644 + silent SavePlan errors | smell | S | — | open |
 
 ## Findings index
@@ -47,7 +46,7 @@ something else landing first.
 | F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 | F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
-| F026 | file/copy unbounded os.ReadFile in handler | risk | **partial** | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
+| F026 | file/copy unbounded os.ReadFile in handler | risk | **done** | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
 | F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
 | F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 | F029 | agentd bearer-auth length side-channel | risk | **done** | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |

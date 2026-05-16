@@ -6,8 +6,9 @@ package: internal/actions
 files:
   - internal/actions/file/handler.go (lines 224, 298, 416)
   - internal/actions/copy/handler.go (line 192)
-status: partial
-verified: 2026-05-16 — copy/handler.go:230 now uses ctx.Effects().CopyFile (streaming). file/handler.go still has 3 os.ReadFile sites; partial fix accurate
+status: done
+resolved_by: worktree-fix-f026
+verified: 2026-05-16 — copy/handler.go:230 now uses ctx.Effects().CopyFile (streaming). file/handler.go's 3 remaining os.ReadFile sites are now streaming: snapshotFile() reads once into an 8-MB-capped head + full-file SHA + true size (replaces pre/post-write snapshots); copyFileStreaming() io.Copies the existing target to the backup path (replaces the read-then-write pair). 4 regression tests pin the bounded-buffer contract.
 ---
 
 ## ✅ Partial fix — copy/handler.go now streams
