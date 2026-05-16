@@ -393,9 +393,28 @@ func (h *Handler) executeAndCaptureOutput(command *exec.Cmd, ctx actions.Context
 	return stdoutBuf.String(), stderrBuf.String(), err
 }
 
-// streamOutput streams command output line by line
+// streamOutput streams command output line by line.
+//
+// F018: bufio.Scanner defaults to a 64 KB token cap; lines longer than
+// that triggered Scan()→false, scanner.Err()==bufio.ErrTooLong, and
+// silent truncation of the rest of the stream — the command still
+// reported success and a downstream step consuming `as: out` got an
+// empty or partial stdout with no signal. Two changes:
+//
+//   - Raise the per-line cap to 1 MB via scanner.Buffer. 1 MB is
+//     generous for human-readable output and small enough that a
+//     runaway command can't OOM the daemon. Binary blobs > 1 MB
+//     should be redirected to a file by the playbook, not captured.
+//   - Check scanner.Err() after the loop and surface ErrTooLong (or
+//     any other non-EOF pipe error) via the logger so the user sees
+//     the truncation instead of treating short stdout as authoritative.
+//     The step's exit code is unchanged — log-and-continue is the
+//     least-surprising option, matching the finding's recommendation.
+const shellStreamMaxLineBytes = 1024 * 1024
+
 func (h *Handler) streamOutput(pipe io.Reader, buf *bytes.Buffer, ctx actions.Context, capture bool, stream string) {
 	scanner := bufio.NewScanner(pipe)
+	scanner.Buffer(make([]byte, 64*1024), shellStreamMaxLineBytes)
 	lineNum := 0
 
 	publisher := ctx.GetEventPublisher()
@@ -431,6 +450,18 @@ func (h *Handler) streamOutput(pipe io.Reader, buf *bytes.Buffer, ctx actions.Co
 				},
 			})
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		if log := ctx.GetLogger(); log != nil {
+			log.Errorf("  shell %s stream stopped early (output truncated): %v", stream, err)
+		}
+		// CRITICAL: keep draining the pipe even after Scanner gave up,
+		// otherwise the child process blocks on its write end when the
+		// kernel pipe buffer fills (PIPE_BUF is small) and command.Wait()
+		// hangs forever — turning silent truncation into a process leak.
+		// Discard the rest; capture is best-effort once we've decided
+		// the stream is too long for us.
+		_, _ = io.Copy(io.Discard, pipe)
 	}
 }
 
