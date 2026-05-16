@@ -29,6 +29,8 @@ something else landing first.
 | F022 | mcp/tools.go uses logger.NewTestLogger() in production runConfig + HandleCheckPlan | smell | XS | — | open |
 | F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
 | F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
+| F025 | fleet.peerDiff doesn't include Roles or SSH — Upsert silently rewrites without surfacing | bug | XS | — | open |
+| F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
 
 ## Findings index
 
@@ -58,6 +60,8 @@ something else landing first.
 | F022 | mcp uses NewTestLogger in production | smell | open | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
 | F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
+| F025 | fleet.peerDiff misses Roles + SSH | bug | open | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
+| F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -84,9 +88,11 @@ something else landing first.
     is another F005 hit (no IsBecomeSupported/SudoPass guards).
     Per-package isPackageInstalled is a perf footgun on big
     lists; track separately if it becomes a UX complaint.
-13. **`internal/actions/copy` after the migration** — verify no
-    dead-weight remains after arch-wins.
-14. **`internal/actions/file` after the migration** — same.
+13. ~~`internal/actions/copy` after the migration~~ — done; clean
+    Run-only post-migration (283 LOC). F026 (unbounded ReadFile)
+    is a separate concern.
+14. ~~`internal/actions/file` after the migration~~ — done; clean
+    Run-only post-migration (515 LOC). F026 also applies here.
 15. **`cmd/`** — 10,022 LOC of CLI wiring. Spot-check the largest
     files.
 16. ~~`internal/secrets/resolver`~~ — done → F019 (silent miss).
@@ -122,6 +128,12 @@ something else landing first.
 | 2026-05-16 | `internal/agentd/runs_handler.go` | none (clean — sees the F018 pattern done right) |
 | 2026-05-16 | `internal/fleet/controller.go` / `orchestrator.go` | none (clean — orchestrator uses ctx, unlike apply.Runner per F020) |
 | 2026-05-16 | `internal/plan/planner.go` walkAndRender | F024 |
+| 2026-05-16 | `internal/fleet/multiplex.go` | none (clean) |
+| 2026-05-16 | `internal/fleet/peers.go` | F025 |
+| 2026-05-16 | `internal/snapshot/{minimal,diff}.go` | none (clean) |
+| 2026-05-16 | `internal/actions/{copy,file}` post-migration | F026 (unbounded ReadFile) |
+| 2026-05-16 | `internal/presets/registry/remote.go` | already covered by F012 (http no timeout) |
+| 2026-05-16 | `cmd/presets.go` spot-check | none (clean — preset Type schema matches handler switch) |
 
 ## Cross-cutting themes / patterns to track
 
