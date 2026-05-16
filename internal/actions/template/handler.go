@@ -5,7 +5,6 @@
 package template
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -15,10 +14,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/effects"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/utils"
 )
 
@@ -90,10 +87,6 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Helper functions
 
-func (h *Handler) formatMode(mode os.FileMode) string {
-	return fmt.Sprintf("%#o", mode)
-}
-
 func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	if modeStr == "" {
 		return defaultMode
@@ -105,88 +98,6 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 	}
 
 	return os.FileMode(mode)
-}
-
-func (h *Handler) readAndRenderTemplate(src string, ctx actions.Context, variables map[string]interface{}, _ *executor.ExecutionContext) (string, error) {
-	// #nosec G304 -- Template source path from user config is intentional
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return "", fmt.Errorf("failed to open template: %w", err)
-	}
-	defer func() {
-		if closeErr := srcFile.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("failed to close template file %s: %v", src, closeErr)
-		}
-	}()
-
-	srcBytes, err := io.ReadAll(srcFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read template: %w", err)
-	}
-
-	output, err := ctx.GetTemplate().Render(string(srcBytes), variables)
-	if err != nil {
-		return "", fmt.Errorf("failed to render template: %w", err)
-	}
-
-	return output, nil
-}
-
-func (h *Handler) createFileWithBecome(path string, content []byte, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext) error {
-	if !step.ShouldBecome() {
-		// #nosec G306 -- Mode is user-configurable for provisioning
-		return os.WriteFile(path, content, mode)
-	}
-
-	// Use sudo to write file
-	tmpFile, err := os.CreateTemp("", "mooncake-template-*")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-	defer func() {
-		_ = os.Remove(tmpPath)
-	}()
-
-	// Write content to temp file
-	if err := os.WriteFile(tmpPath, content, 0600); err != nil {
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-
-	// Move with sudo and set permissions
-	return h.executeSudoFileOperation(tmpPath, path, mode, step, ec)
-}
-
-func (h *Handler) executeSudoFileOperation(tmpPath, destPath string, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext) error {
-	// F032: shell-quote every interpolated path. Without quoting, a
-	// dest like "/tmp/x; touch /etc/owned" became `mv /tmp/... /tmp/x;
-	// touch /etc/owned && chmod 0644 /tmp/x; touch /etc/owned` —
-	// arbitrary code execution under sudo. Modern Run() goes through
-	// ctx.Effects().WriteFile which already quotes; the legacy Execute
-	// path is unreachable in production today but is exported on the
-	// Handler type and trivially callable from tests / future SDKs.
-	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
-		effects.ShellQuote(tmpPath),
-		effects.ShellQuote(destPath),
-		h.formatMode(mode),
-		effects.ShellQuote(destPath))
-	return h.executeSudoCommand(cmd, step, ec)
-}
-
-func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
-	// F005 follow-up: route through security.BecomeRunner — see the
-	// matching helper in download/handler.go for the why.
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
-	cmd, err := runner.Command(true, "sh", "-c", command)
-	if err != nil {
-		return err
-	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("sudo command failed: %w (stderr: %s)", err, stderr.String())
-	}
-	return nil
 }
 
 // Run is the Spec 16 unified entry point. Renders the template source
@@ -296,6 +207,3 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	return result, nil
 }
 
-// bytes is referenced indirectly by the rest of the package; keep the
-// import alive across builds that strip unused refs.
-var _ = bytes.Equal

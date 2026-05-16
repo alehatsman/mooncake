@@ -770,40 +770,6 @@ func TestHandler_ParseFileMode(t *testing.T) {
 	}
 }
 
-func TestHandler_FormatMode(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name string
-		mode os.FileMode
-		want string
-	}{
-		{
-			name: "standard file mode",
-			mode: 0644,
-			want: "0644",
-		},
-		{
-			name: "executable mode",
-			mode: 0755,
-			want: "0755",
-		},
-		{
-			name: "restricted mode",
-			mode: 0600,
-			want: "0600",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := h.formatMode(tt.mode)
-			if got != tt.want {
-				t.Errorf("formatMode(%o) = %q, want %q", tt.mode, got, tt.want)
-			}
-		})
-	}
-}
 
 func TestHandler_Run_WithRelativePaths(t *testing.T) {
 	h := &Handler{}

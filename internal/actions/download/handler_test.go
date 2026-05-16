@@ -973,40 +973,6 @@ func TestHandler_parseFileMode(t *testing.T) {
 	}
 }
 
-func TestHandler_formatMode(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name string
-		mode os.FileMode
-		want string
-	}{
-		{
-			name: "standard file mode",
-			mode: 0644,
-			want: "0644",
-		},
-		{
-			name: "executable mode",
-			mode: 0755,
-			want: "0755",
-		},
-		{
-			name: "restrictive mode",
-			mode: 0600,
-			want: "0600",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := h.formatMode(tt.mode)
-			if got != tt.want {
-				t.Errorf("formatMode() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 // TestHandler_Execute_RenderError tests error handling when template rendering fails
 func TestHandler_Run_RenderError(t *testing.T) {

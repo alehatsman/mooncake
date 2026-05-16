@@ -249,10 +249,6 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 // Helper functions
 
-func (h *Handler) formatMode(mode os.FileMode) string {
-	return fmt.Sprintf("%#o", mode)
-}
-
 func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	if modeStr == "" {
 		return defaultMode

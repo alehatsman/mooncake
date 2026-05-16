@@ -727,6 +727,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, err
 	}
 
+	if pkg.NamesExpr != "" {
+		expanded, expandErr := h.resolveNamesExpr(ctx, pkg.NamesExpr)
+		if expandErr != nil {
+			return nil, fmt.Errorf("failed to resolve package names expression %q: %w", pkg.NamesExpr, expandErr)
+		}
+		packages = append(packages, expanded...)
+	}
+
 	if ctx.Mode() == actions.ModePlan {
 		return h.runPlan(ec, manager, state, packages, pkg)
 	}
