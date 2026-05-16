@@ -13,7 +13,13 @@ files:
 status: partial
 ---
 
-## ✅ Partial fix — canonical helper landed; 2 of 6 callers migrated
+## ✅ Partial fix — canonical helper landed; 4 of 6 packages migrated
+
+(Updated 2026-05-16: download + template's `executeSudoCommand`
+also migrated. The remaining `service` inline sites do
+`IsBecomeSupported` + empty-SudoPass validation in surrounding code,
+so migrating them is style-only with no bug-fix value — left for a
+separate cleanup.)
 
 `internal/security/become.go` adds the project-wide
 `BecomeRunner.Command(become, program, args...)`. The helper:
