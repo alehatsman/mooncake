@@ -1,244 +1,150 @@
-// Package explain provides functionality for displaying system information in a human-readable format.
+// Package explain resolves nouns about the mooncake kernel into typed
+// answers. See spec-68 for the full design.
+//
+// Wave 1 (this file): kind: action only.
+//
+//	mooncake explain pkg.install
+//	mooncake explain shell
+//
+// Wave 2 will add run / resource / op resolution; wave 3 wires the
+// MCP `explain` tool. The discriminated-union payload shape below
+// is shared across waves so downstream code (renderers, MCP serde,
+// JSON-schema validation) does not change between waves.
+//
+// Source of truth for wave 1:
+//   - actions.Get(name).Metadata() for action metadata
+//   - the matching node in internal/config/schema.json for the schema
+//   - Differ / Reverser type assertions for diff_shape / reverse_shape
+//   - examples/*.yml for usage excerpts
+//
+// No filesystem reads outside the embedded schema, the registered
+// action set, and the in-tree examples/ directory. No git. No RAG.
+// No third-party services.
 package explain
 
-import (
-	"fmt"
-	"strings"
+// Kind is the discriminator on Result.
+type Kind string
 
-	"github.com/alehatsman/mooncake/internal/facts"
+const (
+	KindAction   Kind = "action"
+	KindRun      Kind = "run"      // implemented in wave 2
+	KindResource Kind = "resource" // implemented in wave 2
+	KindOp       Kind = "op"       // implemented in wave 2
+	KindNotFound Kind = "not_found"
 )
 
-// relevantCPUFlagPrefixes are the CPU flag prefixes shown to users.
-// AVX/SSE matter for ML workloads; FMA/AES matter for crypto.
-var relevantCPUFlagPrefixes = []string{"avx", "sse", "fma", "aes"}
-
-// filterRelevantCPUFlags returns the subset of flags that match
-// relevantCPUFlagPrefixes (case-insensitive prefix/contains match).
-func filterRelevantCPUFlags(flags []string) []string {
-	var out []string
-	for _, flag := range flags {
-		lower := strings.ToLower(flag)
-		for _, prefix := range relevantCPUFlagPrefixes {
-			if strings.HasPrefix(lower, prefix) || strings.Contains(lower, prefix) {
-				out = append(out, flag)
-				break
-			}
-		}
-	}
-	return out
+// Result is the discriminated-union payload returned by Resolve.
+// Exactly one of the kind-named pointer fields is non-nil; Kind
+// names which.
+//
+// JSON / YAML / MCP serialization MUST emit Kind as a top-level
+// "kind" field and inline the populated payload — see render.go and
+// the spec-68 outputSchema for the wire shape.
+type Result struct {
+	Kind     Kind             `json:"kind"               yaml:"kind"`
+	Action   *ActionPayload   `json:"action,omitempty"   yaml:"action,omitempty"`
+	NotFound *NotFoundPayload `json:"not_found,omitempty" yaml:"not_found,omitempty"`
+	// Run / Resource / Op land in wave 2.
 }
 
-// storageTableWidths computes the device/mount/type column widths for
-// the storage table, including minimum header widths and padding.
-func storageTableWidths(disks []facts.Disk) (deviceW, mountW, typeW int) {
-	deviceW, mountW, typeW = len("Device"), len("Mount"), len("Type")
-	for _, d := range disks {
-		if len(d.Device) > deviceW {
-			deviceW = len(d.Device)
-		}
-		if len(d.MountPoint) > mountW {
-			mountW = len(d.MountPoint)
-		}
-		if len(d.Filesystem) > typeW {
-			typeW = len(d.Filesystem)
-		}
-	}
-	deviceW += 2
-	mountW += 2
-	typeW += 2
-	return
+// ActionPayload is the kind:action wire shape.
+//
+// Mirrors spec-68 §"The noun set" §1 verbatim.
+type ActionPayload struct {
+	Name         string         `json:"name"                   yaml:"name"`
+	Metadata     ActionMetadata `json:"metadata"               yaml:"metadata"`
+	Schema       *SchemaSlice   `json:"schema,omitempty"       yaml:"schema,omitempty"`
+	DiffShape    DiffShape      `json:"diff_shape"             yaml:"diff_shape"`
+	ReverseShape ReverseShape   `json:"reverse_shape"          yaml:"reverse_shape"`
+	Examples     []ExampleHit   `json:"examples,omitempty"     yaml:"examples,omitempty"`
+	SpecOrigin   []SpecRef      `json:"spec_origin,omitempty"  yaml:"spec_origin,omitempty"`
 }
 
-// DisplayFacts prints system information in a readable format. The
-// per-section helpers below are pure-extraction from the original
-// monolithic implementation (F009 brought it under the gocyclo 35
-// cap). Behavior is preserved: each section still prints the same
-// lines in the same order with the same blank-line trailers.
-func DisplayFacts(f *facts.Facts) {
-	printFactsHeader()
-	printSystem(f)
-	printCPU(f)
-	printMemory(f)
-	printSoftware(f)
-	printOllamaModels(f)
-	printGPUs(f)
-	printStorage(f)
-	printNetwork(f)
-	printNetworkInterfaces(f)
+// ActionMetadata is the displayable subset of internal/actions.ActionMetadata.
+// We re-declare it here so JSON / YAML field names stay stable
+// independent of the internal struct (which is named for Go conventions,
+// not wire format).
+type ActionMetadata struct {
+	Description        string   `json:"description"                   yaml:"description"`
+	Category           string   `json:"category"                      yaml:"category"`
+	Version            string   `json:"version"                       yaml:"version"`
+	SupportedPlatforms []string `json:"supported_platforms,omitempty" yaml:"supported_platforms,omitempty"`
+	SupportsDryRun     bool     `json:"supports_dry_run"              yaml:"supports_dry_run"`
+	SupportsBecome     bool     `json:"supports_become"               yaml:"supports_become"`
+	RequiresSudo       bool     `json:"requires_sudo"                 yaml:"requires_sudo"`
+	ImplementsCheck    bool     `json:"implements_check"              yaml:"implements_check"`
+	EmitsEvents        []string `json:"emits_events,omitempty"        yaml:"emits_events,omitempty"`
 }
 
-func printFactsHeader() {
-	fmt.Println("╭─────────────────────────────────────────────────────────────────────────────────────╮")
-	fmt.Println("│                              System Information                                     │")
-	fmt.Println("╰─────────────────────────────────────────────────────────────────────────────────────╯")
-	fmt.Println()
+// SchemaSlice carries the per-action node out of schema.json, with
+// the required-and-property subset that's useful for a tool selector.
+// The full JSON Schema node is preserved in Raw for callers that want
+// to validate input against it without re-reading schema.json.
+type SchemaSlice struct {
+	Required   []string                  `json:"required,omitempty"   yaml:"required,omitempty"`
+	Properties map[string]SchemaProperty `json:"properties,omitempty" yaml:"properties,omitempty"`
+	Raw        map[string]any            `json:"-"                    yaml:"-"`
 }
 
-func printSystem(f *facts.Facts) {
-	fmt.Printf("OS:         %s %s\n", f.Distribution, f.DistributionVersion)
-	fmt.Printf("Arch:       %s\n", f.Arch)
-	fmt.Printf("Hostname:   %s\n", f.Hostname)
-	if f.KernelVersion != "" {
-		fmt.Printf("Kernel:     %s\n", f.KernelVersion)
-	}
-	fmt.Println()
+// SchemaProperty is a flattened summary of one property node from
+// the action's schema definition.
+type SchemaProperty struct {
+	Type        string   `json:"type,omitempty"        yaml:"type,omitempty"`
+	Enum        []any    `json:"enum,omitempty"        yaml:"enum,omitempty"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Default     any      `json:"default,omitempty"     yaml:"default,omitempty"`
+	Required    bool     `json:"required,omitempty"    yaml:"required,omitempty"`
+	OneOf       []string `json:"one_of,omitempty"      yaml:"one_of,omitempty"`
 }
 
-func printCPU(f *facts.Facts) {
-	fmt.Println("CPU:")
-	fmt.Printf("  Cores:    %d\n", f.CPUCores)
-	if f.CPUModel != "" {
-		fmt.Printf("  Model:    %s\n", f.CPUModel)
-	}
-	if len(f.CPUFlags) > 0 {
-		if relevant := filterRelevantCPUFlags(f.CPUFlags); len(relevant) > 0 {
-			fmt.Printf("  Flags:    %s\n", strings.Join(relevant, " "))
-		}
-	}
-	fmt.Println()
+// DiffShape is "what kind of typed Diff does this action emit, if any."
+// Wave 1 reports declared vs not-declared; richer shape inspection
+// lands in wave 2 when we have a sample step to feed Differ.Diff.
+type DiffShape struct {
+	Declared bool   `json:"declared"          yaml:"declared"`
+	Note     string `json:"note,omitempty"    yaml:"note,omitempty"`
 }
 
-func printMemory(f *facts.Facts) {
-	fmt.Println("Memory:")
-	fmt.Printf("  Total:    %d MB (%.1f GB)\n", f.MemoryTotalMB, float64(f.MemoryTotalMB)/1024)
-	if f.MemoryFreeMB > 0 {
-		fmt.Printf("  Free:     %d MB (%.1f GB)\n", f.MemoryFreeMB, float64(f.MemoryFreeMB)/1024)
-	}
-	if f.SwapTotalMB > 0 {
-		fmt.Printf("  Swap:     %d MB total, %d MB free\n", f.SwapTotalMB, f.SwapFreeMB)
-	}
-	fmt.Println()
+// ReverseShape is "does this action ship Reverse, and what does the
+// reverse step look like."
+type ReverseShape struct {
+	Declared     bool         `json:"declared"                yaml:"declared"`
+	ProducesStep *ReverseStep `json:"produces_step,omitempty" yaml:"produces_step,omitempty"`
+	Caveat       string       `json:"caveat,omitempty"        yaml:"caveat,omitempty"`
 }
 
-func printSoftware(f *facts.Facts) {
-	if f.PackageManager == "" && f.PythonVersion == "" && f.DockerVersion == "" &&
-		f.GitVersion == "" && f.GoVersion == "" && f.OllamaVersion == "" {
-		return
-	}
-	fmt.Println("Software:")
-	if f.PackageManager != "" {
-		fmt.Printf("  Package Manager: %s\n", f.PackageManager)
-	}
-	if f.PythonVersion != "" {
-		fmt.Printf("  Python:          %s\n", f.PythonVersion)
-	}
-	if f.DockerVersion != "" {
-		fmt.Printf("  Docker:          %s\n", f.DockerVersion)
-	}
-	if f.GitVersion != "" {
-		fmt.Printf("  Git:             %s\n", f.GitVersion)
-	}
-	if f.GoVersion != "" {
-		fmt.Printf("  Go:              %s\n", f.GoVersion)
-	}
-	if f.OllamaVersion != "" {
-		fmt.Printf("  Ollama:          %s\n", f.OllamaVersion)
-	}
-	fmt.Println()
+// ReverseStep is a sketch of the step a Reverser would emit. Wave 1
+// leaves this nil; wave 2 may synthesize it from a sample.
+type ReverseStep struct {
+	Action string         `json:"action"          yaml:"action"`
+	Args   map[string]any `json:"args,omitempty"  yaml:"args,omitempty"`
 }
 
-func printOllamaModels(f *facts.Facts) {
-	if f.OllamaVersion == "" || len(f.OllamaModels) == 0 {
-		return
-	}
-	fmt.Println("Ollama Models:")
-	fmt.Printf("  Endpoint: %s\n", f.OllamaEndpoint)
-	fmt.Printf("  Models:   %d installed\n", len(f.OllamaModels))
-	for _, model := range f.OllamaModels {
-		parts := []string{model.Name, model.Size}
-		if model.ModifiedAt != "" {
-			parts = append(parts, fmt.Sprintf("Modified: %s", model.ModifiedAt))
-		}
-		fmt.Printf("    • %s\n", strings.Join(parts, "  |  "))
-	}
-	fmt.Println()
+// ExampleHit is one excerpt from the examples/ tree showing this
+// action in use.
+type ExampleHit struct {
+	Path    string `json:"path"    yaml:"path"`
+	Excerpt string `json:"excerpt" yaml:"excerpt"`
 }
 
-func printGPUs(f *facts.Facts) {
-	if len(f.GPUs) == 0 {
-		return
-	}
-	fmt.Println("GPUs:")
-	for _, gpu := range f.GPUs {
-		parts := []string{
-			fmt.Sprintf("%s %s", strings.ToUpper(gpu.Vendor), gpu.Model),
-		}
-		if gpu.Memory != "" {
-			parts = append(parts, fmt.Sprintf("Memory: %s", gpu.Memory))
-		}
-		if gpu.Driver != "" {
-			parts = append(parts, fmt.Sprintf("Driver: %s", gpu.Driver))
-		}
-		if gpu.CUDAVersion != "" {
-			parts = append(parts, fmt.Sprintf("CUDA: %s", gpu.CUDAVersion))
-		}
-		fmt.Printf("  • %s\n", strings.Join(parts, ", "))
-	}
-	fmt.Println()
+// SpecRef points at the spec a behavior is grounded in. Empty on
+// wave 1 — populated in a follow-up that wires spec frontmatter.
+type SpecRef struct {
+	Spec string `json:"spec" yaml:"spec"`
+	File string `json:"file" yaml:"file"`
 }
 
-func printStorage(f *facts.Facts) {
-	if len(f.Disks) == 0 {
-		return
-	}
-	fmt.Println("Storage:")
-	deviceW, mountW, typeW := storageTableWidths(f.Disks)
-	fmt.Printf("  %-*s %-*s %-*s %12s %12s %12s\n",
-		deviceW, "Device", mountW, "Mount", typeW, "Type",
-		"Size", "Used", "Avail")
-	fmt.Println("  " + strings.Repeat("─", deviceW+mountW+typeW+40))
-	for _, disk := range f.Disks {
-		fmt.Printf("  %-*s %-*s %-*s %10d GB %10d GB %10d GB\n",
-			deviceW, disk.Device, mountW, disk.MountPoint, typeW, disk.Filesystem,
-			disk.SizeGB, disk.UsedGB, disk.AvailGB)
-	}
-	fmt.Println()
+// NotFoundPayload is the typed not_found response. The candidates
+// list is the agent's hook to recover: "you said X; you might have
+// meant one of these."
+type NotFoundPayload struct {
+	Noun       string          `json:"noun"                 yaml:"noun"`
+	Candidates []NotFoundMatch `json:"candidates,omitempty" yaml:"candidates,omitempty"`
+	Reason     string          `json:"reason,omitempty"     yaml:"reason,omitempty"`
 }
 
-func printNetwork(f *facts.Facts) {
-	fmt.Println("Network:")
-	if f.DefaultGateway != "" {
-		fmt.Printf("  Gateway:  %s\n", f.DefaultGateway)
-	}
-	if len(f.DNSServers) > 0 {
-		fmt.Printf("  DNS:      %s\n", strings.Join(f.DNSServers, ", "))
-	}
-	fmt.Println()
-}
-
-func printNetworkInterfaces(f *facts.Facts) {
-	var relevantIfaces []facts.NetworkInterface
-	for _, iface := range f.NetworkInterfaces {
-		if iface.Up && len(iface.Addresses) > 0 {
-			relevantIfaces = append(relevantIfaces, iface)
-		}
-	}
-	if len(relevantIfaces) == 0 {
-		return
-	}
-	fmt.Println("Network Interfaces:")
-	for _, iface := range relevantIfaces {
-		// Only show main interfaces (en*, eth*, wlan*). NOTE: this
-		// hardcoded allowlist silently drops modern systemd
-		// predictable names (wlp*, enp*-but-passes, wlx*) on common
-		// Linux distros and all Windows interface names. Tracked in
-		// F009 §(b) as a follow-up; the split preserves behavior.
-		if !strings.HasPrefix(iface.Name, "en") &&
-			!strings.HasPrefix(iface.Name, "eth") &&
-			!strings.HasPrefix(iface.Name, "wlan") {
-			continue
-		}
-		parts := []string{iface.Name}
-		if iface.MACAddress != "" {
-			parts = append(parts, fmt.Sprintf("MAC: %s", iface.MACAddress))
-		}
-		if len(iface.Addresses) > 0 {
-			for _, addr := range iface.Addresses {
-				if !strings.Contains(addr, ":") { // Skip IPv6
-					parts = append(parts, addr)
-				}
-			}
-		}
-		fmt.Printf("  • %s\n", strings.Join(parts, "  |  "))
-	}
+// NotFoundMatch is one candidate for a misresolved noun.
+type NotFoundMatch struct {
+	Kind Kind   `json:"kind" yaml:"kind"`
+	ID   string `json:"id"   yaml:"id"`
 }
