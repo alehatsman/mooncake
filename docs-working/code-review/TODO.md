@@ -11,6 +11,9 @@ something else landing first.
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
 | F002 | CLAUDE.md soft-cap list stale | doc | XS | — | open |
+| F003 | service handler still has Execute/DryRun legacy paths | smell | S | — | open |
+| F004 | service: 6× repeated sudo/exec block (in-package) | smell | S | — | open |
+| F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
 
 ## Findings index
 
@@ -18,11 +21,13 @@ something else landing first.
 |---|---|---|---|---|
 | F001 | observe_disk Bsize cross-platform cast | risk | **done** | [findings/F001](./findings/F001-observe-disk-bsize-cast.md) |
 | F002 | CLAUDE.md soft-cap list stale | doc | open | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
+| F003 | service: legacy Execute/DryRun | smell | open | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
+| F004 | service: sudo/exec duplication in-package | smell | open | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
+| F005 | sudo -S shell-out helper cross-package | smell | open | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
 
 ## Queue (next iterations, priority order)
 
-1. **`internal/actions/service`** — 1,607 LOC, over soft-cap. Look
-   for legacy Execute/DryRun like copy/file had.
+1. ~~`internal/actions/service`~~ — done in this iteration → F003, F004, F005.
 2. **`internal/actions/tool`** — 1,676 LOC, over soft-cap.
 3. **`internal/explain` — `DisplayFacts`** — gocyclo 44, only
    non-test function over the gocyclo cap.
@@ -60,12 +65,20 @@ something else landing first.
 | Date | Area | Findings produced |
 |---|---|---|
 | 2026-05-16 | baseline (build/test/lint/budget) | F001, F002 |
+| 2026-05-16 | `internal/actions/service` (1,607 LOC) | F003, F004, F005 |
 
 ## Cross-cutting themes / patterns to track
 
 Updated as the review uncovers patterns.
 
-- _(none yet — first iteration)_
+- **Spec-16 migration incomplete in `service`** (F003). Pattern
+  matches deleted `copy.Execute` / `file.Execute`.
+- **`sudo -S` shell-out reimplemented in 6 packages** (F005).
+  Inconsistent guard handling means become-on-unsupported-host
+  produces 3 different error shapes today.
+- **`make budget-status` is now the truth — CLAUDE.md inline list
+  has drifted** (F002). Reviewers should re-run `make budget-status`
+  before pinning numbers.
 
 ## Notes for future reviewers
 
