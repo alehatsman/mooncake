@@ -132,7 +132,19 @@ func (w *Worker) executeRun(runID string) {
 		w.hubs[runID] = hub
 	}
 	w.hubMu.Unlock()
+	// F015: hub lifetime is tied to executeRun. Every exit path (apply
+	// success / failure / chdir-error / sink-create-error / panic) must
+	// close the hub so subscribers' channels signal end-of-stream — pre-fix
+	// the chdir-error path returned without calling hub.Close(), leaking
+	// SSE subscribers (their goroutines blocked forever on a channel that
+	// would never close). Close BEFORE delete from the map so a subscriber
+	// that called GetHub() concurrently with the delete observes a closed
+	// hub and lands on Subscribe's "already closed" branch (which closes
+	// the subscriber's channel immediately) rather than a stale-but-open
+	// one. Hub.Close is idempotent so the previously-explicit Close on the
+	// sink-create-error path is now redundant — removed.
 	defer func() {
+		hub.Close()
 		w.hubMu.Lock()
 		delete(w.hubs, runID)
 		w.hubMu.Unlock()
@@ -142,7 +154,6 @@ func (w *Worker) executeRun(runID string) {
 	if err != nil {
 		w.log.Error("worker: create sink", "run_id", runID, "err", err)
 		w.markFailed(run, err.Error(), time.Now().UTC())
-		hub.Close()
 		return
 	}
 
@@ -151,7 +162,8 @@ func (w *Worker) executeRun(runID string) {
 		if err := os.Chdir(run.BaseDir); err != nil {
 			w.log.Error("worker: chdir base_dir", "run_id", runID, "base_dir", run.BaseDir, "err", err)
 			// sink was never handed to apply.Runner — close it directly so the
-			// file and hub are released before we return.
+			// file is released before we return. (The hub closes via the
+			// unified defer above.)
 			sink.Close()
 			w.markFailed(run, "chdir base_dir: "+err.Error(), time.Now().UTC())
 			return
