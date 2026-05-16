@@ -69,20 +69,10 @@ function.
 
 ### Today's known violations (tracked, not blocking)
 
-Run `make budget-status` for the current source-of-truth list. As of
-2026-05-16:
-
-- `internal/actions/file` — 2,044 LOC
-- `internal/actions/tool` — 1,676 LOC
-- `internal/actions/service` — 1,607 LOC
-- `internal/actions/package` — 1,216 LOC (within 20% of cap)
-- `explain.DisplayFacts` — gocyclo 53
-- `copy.(*Handler).Execute` — gocyclo 41
-- `executor.ExecuteStep` — gocyclo 37
-- `internal/config.Step` — 36 universal fields (within 20% of cap)
-
-`fleetApplyAction` and `os_systemd.computePlan` were on this list
-previously; both now under the cap (R2.1a refactor + drift).
+Run `make budget-status` for the current source-of-truth list.
+Pinning the list inline here has drifted within a sprint every time
+we've tried it (see code-review finding F002); the script is the
+authoritative source.
 
 These are documented, not hidden. New violations should be
 explicitly defended in the PR description that lands them.
