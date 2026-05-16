@@ -88,3 +88,51 @@ type GroupDiff struct {
 	// System mirrors the system-group flag.
 	System bool `json:"system,omitempty"`
 }
+
+// FirewallDiff is the typed Before/After payload when an actions.Diff
+// describes an os.firewall mutation. The handler reports intent only
+// — rule details are intentionally NOT echoed in After because rule
+// lists may carry security-sensitive ports / source addresses. The
+// renderer surfaces backend + count + state. Consumers dispatch on
+// Resource.Attributes["kind"] == "os.firewall".
+type FirewallDiff struct {
+	// Backend is the firewall backend (v1: "ufw"; "auto" when the
+	// step did not pin one).
+	Backend string `json:"backend,omitempty"`
+
+	// State is the desired terminal state: "present" or "absent".
+	State string `json:"state,omitempty"`
+
+	// RuleCount is the number of rules in the step (1 for single
+	// `rule:` form, len(`rules:`) otherwise). Rule details live in
+	// the step body, not here.
+	RuleCount int `json:"rule_count"`
+}
+
+// ServiceDiff is the typed Before/After payload when an actions.Diff
+// describes an os.systemd mutation. Spec-66 wave 4 targets os.systemd
+// only; the legacy os.service handler keeps its package-local
+// payload until a later wave migrates it. Consumers dispatch on the
+// typed After value (not on Resource.Kind, which is shared with
+// os.service via ResourceService).
+type ServiceDiff struct {
+	// Name is the unit filename with suffix (e.g. "myapp.service").
+	Name string `json:"name,omitempty"`
+
+	// State is the desired terminal state: "present" or "absent".
+	State string `json:"state,omitempty"`
+
+	// Path is the unit directory (default /etc/systemd/system).
+	Path string `json:"path,omitempty"`
+
+	// Sections lists the unit-file sections this step populates
+	// (Unit, Service, Timer, Socket, Install). Lets consumers see
+	// the shape of the unit without surfacing potentially large /
+	// sensitive Exec lines themselves.
+	Sections []string `json:"sections,omitempty"`
+
+	// Enabled / Started mirror the desired lifecycle flags. nil
+	// means "leave alone."
+	Enabled *bool `json:"enabled,omitempty"`
+	Started *bool `json:"started,omitempty"`
+}

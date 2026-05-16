@@ -41,7 +41,7 @@ func TestDiff_PresentIsCreate(t *testing.T) {
 	if d.Resource.Attributes["kind"] != "os.firewall" {
 		t.Errorf("Attributes[kind] = %s, want os.firewall", d.Resource.Attributes["kind"])
 	}
-	after := d.After.(*OsFirewallSnapshot)
+	after := d.After.(*actions.FirewallDiff)
 	if after.RuleCount != 1 {
 		t.Errorf("RuleCount = %d, want 1", after.RuleCount)
 	}
@@ -52,7 +52,7 @@ func TestDiff_MultiRule(t *testing.T) {
 	d, _ := h.Diff(nil, &config.Step{OsFirewall: &config.OsFirewall{
 		Rules: []config.FirewallRule{{Port: 22}, {Port: 80}, {Port: 443}},
 	}})
-	after := d.After.(*OsFirewallSnapshot)
+	after := d.After.(*actions.FirewallDiff)
 	if after.RuleCount != 3 {
 		t.Errorf("RuleCount = %d, want 3", after.RuleCount)
 	}

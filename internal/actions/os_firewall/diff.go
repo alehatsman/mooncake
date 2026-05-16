@@ -8,25 +8,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// OsFirewallSnapshot is the typed Before/After payload for
-// actions.Diff when the resource is an os.firewall step. Describes
-// user INTENT.
-type OsFirewallSnapshot struct {
-	// Backend is the firewall backend (v1: "ufw" only).
-	Backend string `json:"backend,omitempty"`
-
-	// State is "present" or "absent". Empty defaults to "present".
-	State string `json:"state,omitempty"`
-
-	// RuleCount is the number of rules in the step (1 for single,
-	// len(Rules) for multi-rule). The rule details are NOT surfaced
-	// in After to keep the structural surface light; the Diff
-	// Operation + count is enough for plan rendering / cost.
-	RuleCount int `json:"rule_count"`
-}
-
 // Diff implements actions.Differ for os.firewall (spec-22 phase 4 /
-// spec-28 P6).
+// spec-28 P6). The typed Before/After payload is actions.FirewallDiff
+// (spec-66 wave 4); see internal/actions/diff_payloads.go.
 //
 // Operation by state: present→OpCreate, absent→OpDelete.
 //
@@ -69,7 +53,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		},
 		Operation: op,
 		Before:    nil,
-		After: &OsFirewallSnapshot{
+		After: &actions.FirewallDiff{
 			Backend:   backend,
 			State:     state,
 			RuleCount: count,

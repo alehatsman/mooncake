@@ -52,7 +52,7 @@ func TestDiff_PresentIsCreate(t *testing.T) {
 	if d.Resource.Identifier != "myapp.service" {
 		t.Errorf("Identifier = %s, want myapp.service", d.Resource.Identifier)
 	}
-	after := d.After.(*OsSystemdSnapshot)
+	after := d.After.(*actions.ServiceDiff)
 	if len(after.Sections) != 1 || after.Sections[0] != "Service" {
 		t.Errorf("Sections = %v, want [Service]", after.Sections)
 	}
