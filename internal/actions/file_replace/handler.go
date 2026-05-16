@@ -23,7 +23,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/pathutil"
 )
 
 const (
@@ -136,10 +135,7 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
 
-	// Validate path safety (no traversal outside working dir)
-	if pathErr := pathutil.ValidateNoPathTraversal(renderedPath); pathErr != nil {
-		ctx.GetLogger().Debugf("  Path validation warning: %v", pathErr)
-	}
+	// F033: dead-code traversal check removed (see text_patch_ini).
 
 	// Read file content
 	// #nosec G304 -- File path from user config is intentional for configuration management
@@ -386,9 +382,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
-	if pathErr := pathutil.ValidateNoPathTraversal(renderedPath); pathErr != nil {
-		ctx.GetLogger().Debugf("  Path validation warning: %v", pathErr)
-	}
+	// F033: dead-code traversal check removed (see text_patch_ini).
 
 	// #nosec G304 -- file path from user config
 	originalContent, err := os.ReadFile(renderedPath)
