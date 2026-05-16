@@ -77,10 +77,9 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// The following plan tests use stubLookup so they work on all supported platforms.
+
 func TestPlan_CreateWhenAbsent(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
 	stubLookup(t, &userState{exists: false})
 	intp := func(i int) *int { return &i }
 	step := &config.Step{OsUser: &config.OsUser{
@@ -101,9 +100,6 @@ func TestPlan_CreateWhenAbsent(t *testing.T) {
 }
 
 func TestPlan_NoopWhenAlreadyDesired(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
 	stubLookup(t, &userState{
 		exists: true, uid: 1500, gid: 1500,
 		shell:   "/bin/bash",
@@ -128,9 +124,6 @@ func TestPlan_NoopWhenAlreadyDesired(t *testing.T) {
 }
 
 func TestPlan_ModifyFieldsThatDrifted(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
 	stubLookup(t, &userState{
 		exists: true, uid: 1500, gid: 1500,
 		shell:  "/bin/sh",
@@ -156,9 +149,6 @@ func TestPlan_ModifyFieldsThatDrifted(t *testing.T) {
 }
 
 func TestPlan_GroupReplaceWhenAppendFalse(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
 	stubLookup(t, &userState{
 		exists: true, uid: 1500, gid: 1500,
 		shell:  "/bin/bash",
@@ -179,9 +169,6 @@ func TestPlan_GroupReplaceWhenAppendFalse(t *testing.T) {
 }
 
 func TestPlan_AbsentNoopWhenMissing(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
 	stubLookup(t, &userState{exists: false})
 	step := &config.Step{OsUser: &config.OsUser{Name: "deploy", State: "absent"}}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
@@ -192,9 +179,6 @@ func TestPlan_AbsentNoopWhenMissing(t *testing.T) {
 }
 
 func TestPlan_AbsentRemovesWhenPresent(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
 	stubLookup(t, &userState{exists: true, uid: 1500, gid: 1500, home: "/home/deploy", shell: "/bin/bash"})
 	step := &config.Step{OsUser: &config.OsUser{Name: "deploy", State: "absent", RemoveHome: true}}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
@@ -228,8 +212,8 @@ func TestComputePlan_AppendOnlyAddsMissingGroups(t *testing.T) {
 }
 
 func TestUnsupportedOS_ReturnsClearError(t *testing.T) {
-	if runtime.GOOS == "linux" {
-		t.Skip("we test the unsupported path on non-linux only")
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		t.Skip("os.user is supported on this platform; skip the unsupported-OS test")
 	}
 	step := &config.Step{OsUser: &config.OsUser{Name: "x"}}
 	_, err := (&Handler{}).Run(newCtx(t, true), step)

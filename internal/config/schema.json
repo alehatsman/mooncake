@@ -1501,7 +1501,8 @@
       ],
       "additionalProperties": false,
       "x-platforms": [
-        "linux"
+        "linux",
+        "darwin"
       ],
       "x-requires-sudo": true,
       "x-implements-check": true,

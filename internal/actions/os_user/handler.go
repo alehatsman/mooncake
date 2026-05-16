@@ -1,7 +1,8 @@
 // Package os_user implements the os.user action: declarative user
 // account management with field-level idempotency. Reads current state
-// via getent and applies drift via useradd/usermod/userdel. Linux-only
-// in this iteration; macOS (dscl) and Windows are deferred.
+// and applies drift via platform-specific backends:
+//   - Linux: useradd / usermod / userdel + getent
+//   - macOS: dscl (Directory Services command line)
 //
 //nolint:revive // Package name matches action name convention (os_user)
 package os_user
@@ -41,23 +42,21 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
 		Version:            "1.0.0",
-		SupportedPlatforms: []string{"linux"},
+		SupportedPlatforms: []string{"linux", "darwin"},
 		RequiresSudo:       true,
 		ImplementsCheck:    true,
 	}
 }
 
 // Permissions implements actions.Permitter (spec-22 phase 3).
-//
-// os.user always declares Sudo=true: useradd/usermod/userdel modify
-// /etc/passwd, /etc/shadow, and (with create_home) the user's home
-// directory under /home. No Network. The action shells to
-// useradd/usermod/userdel — these are required binaries.
-//
-// FilesystemWrite lists the canonical identity files; consumers
-// that care about the home directory have to infer it from the
-// step's Home field (or the system default).
 func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	if runtime.GOOS == "darwin" {
+		return actions.PermissionSet{
+			Sudo:             true,
+			RequiredBinaries: []string{"dscl"},
+		}
+	}
+	// linux
 	return actions.PermissionSet{
 		Sudo:             true,
 		RequiredBinaries: []string{"useradd", "usermod", "userdel"},
@@ -88,23 +87,19 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	if runtime.GOOS != "linux" {
-		return result, fmt.Errorf("os.user: only Linux is supported in this release; got %s", runtime.GOOS)
-	}
-
-	desired, err := renderDesired(ctx, u)
+	des, err := renderDesired(ctx, u)
 	if err != nil {
 		return result, err
 	}
 
-	current, err := lookupUser(desired.name)
+	current, err := lookupUser(des.name)
 	if err != nil {
-		return result, fmt.Errorf("os.user: lookup %s: %w", desired.name, err)
+		return result, fmt.Errorf("os.user: lookup %s: %w", des.name, err)
 	}
 
-	plan := computePlan(current, desired)
+	plan := computePlan(current, des)
 	result.Data = map[string]interface{}{
-		"name":      desired.name,
+		"name":      des.name,
 		"operation": plan.operation,
 		"changes":   plan.changes,
 	}
@@ -120,22 +115,30 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
-	// Capture pre-apply state for Reverse() BEFORE useradd/usermod/userdel.
-	// `current` is the getent snapshot we already read above.
 	result.ReverseData = &OsUserReverseInfo{
-		Name:         desired.name,
-		AppliedState: desired.state,
+		Name:         des.name,
+		AppliedState: des.state,
 		PriorExisted: current != nil && current.exists,
 		Prior:        snapshotFromState(current),
 	}
 
-	if err := applyPlan(plan, desired); err != nil {
+	if err := applyPlan(plan, current, des); err != nil {
 		return result, err
 	}
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  os.user: %s (%s)", desired.name, plan.operation)
+	ctx.GetLogger().Infof("  os.user: %s (%s)", des.name, plan.operation)
 	return result, nil
+}
+
+// lookupUser and applyPlan are set by platform-specific init() functions
+// in platform_linux.go and platform_darwin.go.
+var lookupUser func(string) (*userState, error) = func(string) (*userState, error) {
+	return nil, fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
+}
+
+var applyPlan func(plan computedPlan, current *userState, d desired) error = func(computedPlan, *userState, desired) error {
+	return fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 
 // desired captures the post-template view of the configured fields.
@@ -228,7 +231,6 @@ func normalizeState(s string) string {
 }
 
 // userState describes what's currently on the system for a given user.
-// nil userState means the user doesn't exist.
 type userState struct {
 	exists  bool
 	uid     int
@@ -239,61 +241,14 @@ type userState struct {
 	groups  []string // supplementary, names, sorted
 }
 
-// lookupUser is the package-level hook used to read current state.
-// Real impl shells out to getent; tests override this to stub.
-var lookupUser = lookupUserViaGetent
-
-func lookupUserViaGetent(name string) (*userState, error) {
-	out, err := capture(exec.Command("getent", "passwd", name))
-	if err != nil {
-		// `getent` returns exit code 2 when the entry doesn't exist.
-		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
-			return &userState{exists: false}, nil
-		}
-		return nil, fmt.Errorf("getent passwd: %w", err)
-	}
-	line := strings.TrimSpace(out)
-	if line == "" {
-		return &userState{exists: false}, nil
-	}
-	fields := strings.Split(line, ":")
-	if len(fields) < 7 {
-		return nil, fmt.Errorf("getent passwd: malformed line %q", line)
-	}
-	uid, _ := strconv.Atoi(fields[2])
-	gid, _ := strconv.Atoi(fields[3])
-	state := &userState{
-		exists:  true,
-		uid:     uid,
-		gid:     gid,
-		comment: fields[4],
-		home:    fields[5],
-		shell:   fields[6],
-	}
-
-	// Supplementary groups via `id -nG`.
-	gout, err := capture(exec.Command("id", "-nG", name))
-	if err != nil {
-		return nil, fmt.Errorf("id -nG: %w", err)
-	}
-	allGroups := strings.Fields(strings.TrimSpace(gout))
-	// First entry is the primary group; the rest are supplementary.
-	if len(allGroups) > 1 {
-		state.groups = allGroups[1:]
-		sort.Strings(state.groups)
-	}
-	return state, nil
-}
-
-// computedPlan describes what changes are needed to reconcile current
-// state with desired state.
+// computedPlan describes what changes are needed.
 type computedPlan struct {
 	changed   bool
 	operation string // create | modify | remove | noop
 	reason    string
 	changes   []string // human-readable change list
 
-	// Pre-computed argument lists for apply.
+	// Linux-specific: pre-computed argument lists for useradd/usermod/userdel.
 	createArgs []string
 	modifyArgs []string
 	removeArgs []string
@@ -373,7 +328,6 @@ func planPresent(current *userState, d desired) computedPlan {
 		want := append([]string(nil), d.groups...)
 		sort.Strings(want)
 		if d.appendGroups {
-			// Drift if any desired group is missing from current.
 			have := stringSet(current.groups)
 			missing := []string{}
 			for _, g := range want {
@@ -422,20 +376,9 @@ func planAbsent(current *userState, d desired) computedPlan {
 	}
 }
 
-func applyPlan(plan computedPlan, _ desired) error {
-	switch plan.operation {
-	case "create":
-		return run("useradd", plan.createArgs...)
-	case "modify":
-		return run("usermod", plan.modifyArgs...)
-	case "remove":
-		return run("userdel", plan.removeArgs...)
-	}
-	return nil
-}
-
-func run(bin string, args ...string) error {
-	// #nosec G204 -- bin is one of useradd/usermod/userdel; args are validated above.
+// runCmd executes a binary and surfaces stderr on failure.
+func runCmd(bin string, args ...string) error {
+	// #nosec G204 -- bin and args are validated by callers.
 	cmd := exec.Command(bin, args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
