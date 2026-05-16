@@ -5,7 +5,54 @@ severity: bug
 package: internal/actions/shell
 file: internal/actions/shell/handler.go
 lines: 396-435
-status: open
+status: fixed
+---
+
+## ✅ Fixed
+
+Three changes in `streamOutput`:
+
+1. **Raised the scanner's max-token cap from 64 KB to 1 MB** via
+   `scanner.Buffer(make([]byte, 64*1024), 1024*1024)`. A 1 MB cap is
+   generous for human-readable output and small enough that a
+   runaway command can't OOM the daemon. Binary blobs > 1 MB should
+   be redirected to a file by the playbook.
+2. **Check `scanner.Err()` after the loop**. On `ErrTooLong` (or any
+   other non-EOF pipe error) the logger receives an `Errorf` so the
+   operator sees the truncation signal — pre-fix the error was
+   swallowed entirely and a `capture: true` step looked successful
+   with empty/short stdout.
+3. **Drain the rest of the pipe after Scanner gave up** —
+   `io.Copy(io.Discard, pipe)`. Discovered during regression-test
+   authoring: without this, the child process blocks on its write
+   end when the kernel pipe buffer fills (PIPE_BUF is small) and
+   `command.Wait()` hangs forever. Silent truncation would have
+   become a process-leak in the fix. The 1-MB line-over-cap test
+   timed out at 60 s until the drain was added.
+
+### Regression tests
+
+`internal/actions/shell/f018_long_line_test.go`:
+
+- `TestShellHandler_LongLineWithinCap` — a 100 KB single line
+  (`awk` BEGIN block) round-trips through `result.Stdout` intact.
+  Pre-fix: captured stdout is the empty string (the first
+  `Scan()` errors out on a 100 KB line, the rest of the stream is
+  discarded). Stashing the fix and re-running reproduces this exactly.
+- `TestShellHandler_LineOverCapLogsTruncation` — a 2 MB line
+  exceeds the new cap; the test asserts the logger receives an
+  `Errorf` about `stdout stream stopped early` and the process
+  doesn't hang.
+
+Both skip on Windows (test uses `awk`).
+
+### Adjacent — total-output cap NOT addressed
+
+The finding's "Adjacent: total-output cap" section (a 64 MB
+`bytes.Buffer` ceiling for streams that emit GB of small lines) is
+a separate concern; not bundled here. Worth a follow-up finding
+since `yes | head -c 10G` still OOMs the daemon today.
+
 ---
 
 ## What
