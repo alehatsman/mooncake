@@ -8,7 +8,9 @@ something unverified. **The largest cluster of findings.**
 > green. They surface in production.
 
 **Post-MT-fix status** (see [`verification-2026-05-15.md`](./verification-2026-05-15.md)):
-- ✅ **CLOSED**: #8 (for_each), #14 (file.download sha256 verify before rename)
+- ✅ **CLOSED**: #8 (for_each), #14 (file.download sha256 verify before rename),
+  #22 (`mooncake step` full result map, `c6e327e`),
+  #83 (`mooncake step` strict-decode, `4e6997e`)
 - 🟡 **PARTIAL**: #2 (nested form fixed; step-level still broken)
 - **NEW**: #44 (file.download silently accepts unknown fields),
   #45 (transaction recap miscounts reverts),
@@ -198,7 +200,40 @@ short-circuits, set result status to `skipped`, not `changed`.
 
 ---
 
-## #22 — `mooncake step` truncates action-specific structured output — HIGH (AI-agent UX)
+## #22 — ✅ FIXED (commit `c6e327e`, verified 2026-05-16)
+
+`mooncake step` now emits `RegisteredResult.ToMap()` — the same shape
+`apply --output-format json` exposes under `result.*`:
+
+```
+$ mkdir -p /tmp/mt22-probe && echo "hello world" > /tmp/mt22-probe/file.txt
+$ mooncake step "repo.search: { path: /tmp/mt22-probe, pattern: hello }"
+{
+  "action": "repo.search",
+  "changed": false,
+  "duration_ms": 0,
+  "failed": false,
+  "rc": 0,
+  "results": [
+    {"file": "file.txt", "line": 1, "column": 1,
+     "match": "hello", "context": "hello world"}
+  ],
+  "skipped": false,
+  "stderr": "",
+  "stdout": "",
+  "total_files": 1,
+  "total_matches": 1
+}
+```
+
+Test coverage in `cmd/step_test.go`:
+`TestBuildStepJSON_SurfacesActionDataMap` (the headline regression),
+`TestBuildStepJSON_ShellShapePreserved` (shell still works),
+`TestBuildStepJSON_PopulatesActionEvenOnNilResult`,
+`TestBuildStepJSON_OmitsErrorWhenNil`,
+`TestBuildStepJSON_DataDoesNotShadowSharedScalars`. Don't regress.
+
+### Original report (now resolved)
 
 **Repro**:
 ```
@@ -394,7 +429,7 @@ honor it. Same fix closes #44 and refines #4.
 | 14 | CRITICAL | ✅ FIXED | `file.download checksum:` | landed `a09e12e` |
 | 15 | HIGH | open | `creates:`/`unless:` on `file.write` | small — extend exec wrapper |
 | 2 | HIGH | 🟡 partial | shell guard recap mark | nested form fixed; step-level still |
-| 22 | HIGH | open | `mooncake step` JSON shape | small — emit full result map |
+| 22 | HIGH | ✅ FIXED | `mooncake step` JSON shape | landed `c6e327e` (full result map) |
 | 24 | HIGH | open | `artifact.capture` | medium — file-change tracking |
 | 28 | MEDIUM | open | `failed_when:` on assert | small — route through wrapper |
 | 40 | HIGH | open | `tool github-release` bare-binary | small — filename heuristic |
@@ -403,6 +438,7 @@ honor it. Same fix closes #44 and refines #4.
 | 46 | MEDIUM | ✅ FIXED | `file.unarchive` not idempotent | landed `1d374c9` |
 | 67 | MEDIUM | open | nested `try:` not recognized | register compound actions in inner path |
 | 54 | HIGH | open | MCP `run_plan` returns all-zero counters despite executing | agent-loop broken |
+| 83 | MEDIUM | ✅ FIXED | `mooncake step` skips `additionalProperties:false` | landed `4e6997e` (KnownFields decode) |
 
 ---
 
@@ -707,7 +743,33 @@ to my missing `.value`.
 
 ---
 
-## #83 — `mooncake step` doesn't enforce `additionalProperties: false`; `apply` does — MEDIUM (regression of #44)
+## #83 — ✅ FIXED (commit `4e6997e`, verified 2026-05-16)
+
+`mooncake step` now runs the inline YAML through
+`yaml.NewDecoder(...).KnownFields(true)` — the same strict-decode
+posture `mooncake apply` uses since MT-44. Unknown fields anywhere
+in the step (top-level or nested action struct) abort parse with a
+diagnostic that names the field and the type:
+
+```
+$ mooncake step "wait.command: { cmd: \"exit 42\", expected_exit: 42 }"
+2026/05/16 ... failed to parse step YAML: yaml: unmarshal errors:
+  line 1: field expected_exit not found in type config.WaitCommand
+# exit 1
+```
+
+Canonical field still works:
+```
+$ mooncake step "wait.command: { cmd: \"exit 42\", expect_exit: 42 }"
+{"action": "wait.command", "success": true, "last_exit": 42, ...}
+```
+
+Step now has the same safety story as YAML-file authors using
+`apply`. Three regressions tests cover the headline repro, an
+unknown top-level field, and the positive canonical case. Don't
+regress.
+
+### Original report (now resolved)
 
 **Repro**:
 ```
