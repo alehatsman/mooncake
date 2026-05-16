@@ -111,29 +111,46 @@ Patterns observed across packages, ordered by leverage.
    Functions that were over the cap and got extracted no longer
    need the suppression; the directive stays.
 
-## Summary of findings
+## Summary of findings (22 total)
 
 | Severity | Count | IDs |
 |---|---:|---|
-| bug | 6 | F015, F017, F018, F019, *((F010 dead test, treated as smell here))* |
-| risk | 6 | F001, F007, F012, F014, F016, F020 |
-| smell | 7 | F003, F004, F005, F006, F009, F010, F011 |
+| bug | 5 | F015, F017 ✅, F018, F019, (F010 dead test) |
+| risk | 6 | F001 ✅, F007, F012, F014, F016, F020 |
+| smell | 8 | F003, F004, F005, F006, F009, F010, F011, F022 |
 | readability | 1 | F008 |
-| doc | 4 | F002, F013, F021, (F009 partial) |
+| doc | 3 | F002 ✅, F013, F021 |
 
-(Counts approximate — some findings span multiple severities.)
+✅ = already fixed by fixer agents during this pass (F001, F002, F017).
 
-The two top-priority fixers should look at:
+The top-priority remaining fixers should look at:
 
 - **F019** (security defense-in-depth): `!secret` silently
   doesn't resolve in `step.Vars`.
 - **F015** (real bug): worker chdir-error leaks hub →
   goroutine leak on SSE side.
-- **F017** (real bug): `continue_on_error` emits both
-  step.failed and step.completed; SSE consumers see the
-  step flip-state.
+- **F018** (real bug): shell.streamOutput's bufio.Scanner
+  silently truncates lines > 64 KB.
 - **F020** (risk): `apply.Runner` calls `os.Exit`, hostile
-  to agentd / MCP.
+  to agentd / MCP — graceful daemon shutdown impossible.
+- **F016** (risk): agentd worker uses `context.Background()`
+  — applies can't be cancelled, daemon shutdown hangs on a
+  stuck run.
 
-Quick-win XS fixes: F002 (CLAUDE.md), F013 (config.Step doc),
-F021 (Config.ExtraSubscribers doc), F010 (dead test).
+Quick-win XS fixes still open: F013 (config.Step doc-drift),
+F021 (Config.ExtraSubscribers doc), F010 (dead test), F022
+(NewTestLogger in production).
+
+## Status at iteration cutoff (this turn)
+
+- **22 findings produced**, of which **3 fixed** by other agents
+  during the pass (F001 lint, F002 CLAUDE.md, F017 continue_on_error).
+- **12 commits** to `worktree-code-review`, all merged to master.
+- **9 packages covered**: actions/{service, tool, shell,
+  observe_disk}, explain, secrets/resolver, agentd/worker, executor,
+  apply, fleet (partial), mcp, plan/filter, config, control.
+- **Remaining areas in queue** (see [TODO.md](./TODO.md)):
+  agentd (rest), fleet (controller / bootstrap / multiplex / peers),
+  cmd/ spot-check, plan, presets/registry, per-action handlers
+  (git_*, os_*, text_*, wait_*, windows_*), snapshot,
+  test-coverage gaps.
