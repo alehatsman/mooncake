@@ -26,7 +26,6 @@ something else landing first.
 | F018 | shell: bufio.Scanner default 64 KB line cap → silent truncation | bug | S | — | open |
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
-| F022 | mcp/tools.go uses logger.NewTestLogger() in production runConfig + HandleCheckPlan | smell | XS | — | open |
 | F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
 | F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
 
@@ -55,7 +54,7 @@ something else landing first.
 | F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
 | F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
-| F022 | mcp uses NewTestLogger in production | smell | open | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
+| F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
 | F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 
