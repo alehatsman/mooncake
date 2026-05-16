@@ -85,153 +85,6 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute executes the assert action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return nil, fmt.Errorf("invalid context type")
-	}
-
-	assert := step.Assert
-
-	var expected, actual string
-	var err error
-
-	// Determine assertion type and execute
-	if assert.Command != nil {
-		expected, actual, err = h.executeAssertCommand(assert.Command, ec)
-	} else if assert.File != nil {
-		expected, actual, err = h.executeAssertFile(assert.File, ec)
-	} else if assert.HTTP != nil {
-		expected, actual, err = h.executeAssertHTTP(assert.HTTP, ec)
-	} else if assert.FileSHA256 != nil {
-		expected, actual, err = h.executeAssertFileSHA256(assert.FileSHA256, ec)
-	} else if assert.GitClean != nil {
-		expected, actual, err = h.executeAssertGitClean(assert.GitClean, ec)
-	} else if assert.GitDiff != nil {
-		expected, actual, err = h.executeAssertGitDiff(assert.GitDiff, ec)
-	}
-
-	// Create result
-	result := executor.NewResult()
-	result.Changed = false // Assertions never change state
-
-	if err != nil {
-		assertionErr, isAssertion := err.(*executor.AssertionError)
-		assertType := ""
-		if isAssertion {
-			assertType = assertionErr.Type
-		}
-
-		// failed_when: lets authors override the default "any error fails the step".
-		// Mirrors the command/shell handlers; without this, assert's hard-coded
-		// failure path bypasses the documented escape hatch.
-		if step.FailedWhen != "" {
-			shouldFail, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
-				"expected": expected,
-				"actual":   actual,
-				"type":     assertType,
-				"failed":   true,
-			})
-			if evalErr != nil {
-				return result, fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
-			}
-			if !shouldFail {
-				// User-suppressed failure: emit a passed event with the
-				// observed expected/actual so the run log still records
-				// what was checked.
-				ec.EmitEvent(events.EventAssertPassed, events.AssertionData{
-					Expected: expected,
-					Actual:   actual,
-					Failed:   false,
-					Type:     assertType,
-				})
-				return result, nil
-			}
-		}
-
-		failureData := events.AssertionData{
-			Expected: expected,
-			Actual:   actual,
-			Failed:   true,
-			Type:     assertType,
-		}
-		ec.EmitEvent(events.EventAssertFailed, failureData)
-		return result, err
-	}
-
-	// Emit success event
-	ec.EmitEvent(events.EventAssertPassed, events.AssertionData{
-		Expected: expected,
-		Actual:   actual,
-		Failed:   false,
-	})
-
-	return result, nil
-}
-
-// DryRun logs what the assertion would check.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("invalid context type")
-	}
-
-	assert := step.Assert
-
-	if assert.Command != nil {
-		cmd := assert.Command.Cmd
-		exitCode := assert.Command.ExitCode
-		if exitCode == 0 {
-			exitCode = 0 // Default expected exit code
-		}
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would assert command exit code: %s (expected: %d)", cmd, exitCode)
-	} else if assert.File != nil {
-		path := assert.File.Path
-		if assert.File.Exists != nil {
-			exists := *assert.File.Exists
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file exists: %s (expected: %v)", path, exists)
-		} else if assert.File.Contains != nil {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file contains: %s", path)
-		} else if assert.File.Content != nil {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file content equals: %s", path)
-		} else if assert.File.Mode != nil {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file mode: %s (expected: %s)", path, *assert.File.Mode)
-		} else {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file: %s", path)
-		}
-	} else if assert.HTTP != nil {
-		url := assert.HTTP.URL
-		method := assert.HTTP.Method
-		if method == "" {
-			method = "GET"
-		}
-		status := assert.HTTP.Status
-		if status == 0 {
-			status = 200
-		}
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would assert HTTP %s %s (expected status: %d)", method, url, status)
-	} else if assert.FileSHA256 != nil {
-		path := assert.FileSHA256.Path
-		checksum := assert.FileSHA256.Checksum
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would assert file SHA256: %s (expected: %s)", path, checksum)
-	} else if assert.GitClean != nil {
-		if assert.GitClean.AllowUntracked {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (untracked files allowed)")
-		} else {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git working tree is clean (no untracked files)")
-		}
-	} else if assert.GitDiff != nil {
-		if assert.GitDiff.Cached {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (cached/staged changes)")
-		} else {
-			ec.Svc.Logger.Infof("  [DRY-RUN] Would assert git diff matches expected (working tree)")
-		}
-	}
-
-	return nil
-}
-
 // executeAssertCommand executes a command assertion.
 func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *executor.ExecutionContext) (string, string, error) {
 	// Render command with variables
@@ -825,24 +678,97 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 }
 
 // Run is the Spec 16 entry point. Assertions don't mutate system state,
-// so plan mode delegates straight to Execute: the assertion is
-// evaluated, and any failure becomes a plan failure (which is the
-// intent — you want plan to catch a broken assertion).
-//
-// Reports Checkable=true and WouldChange=false when the assertion
-// passes; a failure surfaces as a plan-time error.
+// so plan mode evaluates the assertion directly: any failure becomes a
+// plan failure (which is the intent — you want plan to catch a broken
+// assertion). Reports Checkable=true and WouldChange=false when the
+// assertion passes; a failure surfaces as a plan-time error.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	res, err := h.Execute(ctx, step)
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return nil, fmt.Errorf("invalid context type")
+	}
+
+	assert := step.Assert
+
+	var expected, actual string
+	var err error
+
+	// Determine assertion type and execute
+	if assert.Command != nil {
+		expected, actual, err = h.executeAssertCommand(assert.Command, ec)
+	} else if assert.File != nil {
+		expected, actual, err = h.executeAssertFile(assert.File, ec)
+	} else if assert.HTTP != nil {
+		expected, actual, err = h.executeAssertHTTP(assert.HTTP, ec)
+	} else if assert.FileSHA256 != nil {
+		expected, actual, err = h.executeAssertFileSHA256(assert.FileSHA256, ec)
+	} else if assert.GitClean != nil {
+		expected, actual, err = h.executeAssertGitClean(assert.GitClean, ec)
+	} else if assert.GitDiff != nil {
+		expected, actual, err = h.executeAssertGitDiff(assert.GitDiff, ec)
+	}
+
+	// Create result
+	result := executor.NewResult()
+	result.Changed = false // Assertions never change state
+
 	if err != nil {
-		return res, err
-	}
-	if ctx.Mode() == actions.ModePlan {
-		if r, ok := res.(*executor.Result); ok {
-			r.Checkable = true
-			r.Reason = "assertion passed"
+		assertionErr, isAssertion := err.(*executor.AssertionError)
+		assertType := ""
+		if isAssertion {
+			assertType = assertionErr.Type
 		}
+
+		// failed_when: lets authors override the default "any error fails the step".
+		// Mirrors the command/shell handlers; without this, assert's hard-coded
+		// failure path bypasses the documented escape hatch.
+		if step.FailedWhen != "" {
+			shouldFail, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
+				"expected": expected,
+				"actual":   actual,
+				"type":     assertType,
+				"failed":   true,
+			})
+			if evalErr != nil {
+				return result, fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
+			}
+			if !shouldFail {
+				// User-suppressed failure: emit a passed event with the
+				// observed expected/actual so the run log still records
+				// what was checked.
+				ec.EmitEvent(events.EventAssertPassed, events.AssertionData{
+					Expected: expected,
+					Actual:   actual,
+					Failed:   false,
+					Type:     assertType,
+				})
+				return result, nil
+			}
+		}
+
+		failureData := events.AssertionData{
+			Expected: expected,
+			Actual:   actual,
+			Failed:   true,
+			Type:     assertType,
+		}
+		ec.EmitEvent(events.EventAssertFailed, failureData)
+		return result, err
 	}
-	return res, nil
+
+	// Emit success event
+	ec.EmitEvent(events.EventAssertPassed, events.AssertionData{
+		Expected: expected,
+		Actual:   actual,
+		Failed:   false,
+	})
+
+	if ctx.Mode() == actions.ModePlan {
+		result.Checkable = true
+		result.Reason = "assertion passed"
+	}
+
+	return result, nil
 }
 
 // evaluateBoolExpression renders and evaluates a boolean expression

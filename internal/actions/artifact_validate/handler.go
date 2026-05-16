@@ -49,8 +49,112 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute executes the artifact_validate action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// readArtifactMetadata reads artifact metadata from JSON file.
+func readArtifactMetadata(path string) (*artifacts.ArtifactMetadata, error) {
+	data, err := os.ReadFile(path) // #nosec G304 -- path from config
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var metadata artifacts.ArtifactMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return &metadata, nil
+}
+
+// writeArtifactMetadata writes artifact metadata to JSON file.
+func writeArtifactMetadata(path string, metadata *artifacts.ArtifactMetadata) error {
+	data, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil { // #nosec G306 -- standard file permissions
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+// matchGlob checks if a path matches a glob pattern.
+// Supports * and ** wildcards.
+func matchGlob(pattern, path string) bool {
+	// Handle ** (match any number of path components)
+	if strings.Contains(pattern, "**") {
+		// Split pattern by **
+		parts := strings.Split(pattern, "**")
+
+		// For patterns like "src/**/*.go"
+		if len(parts) == 2 {
+			prefix := strings.TrimSuffix(parts[0], "/")
+			suffix := strings.TrimPrefix(parts[1], "/")
+
+			// Check prefix
+			if prefix != "" {
+				if !strings.HasPrefix(path, prefix+"/") && path != prefix {
+					return false
+				}
+				// Remove prefix from path for suffix matching
+				if strings.HasPrefix(path, prefix+"/") {
+					path = path[len(prefix)+1:]
+				}
+			}
+
+			// Check suffix
+			if suffix != "" {
+				// For suffix patterns like "*.go", use filepath.Match
+				if strings.Contains(suffix, "/") {
+					// Multi-part suffix like "pkg/*.go"
+					return strings.HasSuffix(path, "/"+suffix) ||
+						matchSuffixPattern(path, suffix)
+				}
+				// Simple suffix like "*.go"
+				matched, _ := filepath.Match(suffix, filepath.Base(path))
+				return matched
+			}
+
+			return true
+		}
+	}
+
+	// Use filepath.Match for simple patterns
+	matched, err := filepath.Match(pattern, path)
+	if err != nil {
+		return false
+	}
+	return matched
+}
+
+// matchSuffixPattern checks if path ends with a pattern.
+func matchSuffixPattern(path, suffix string) bool {
+	parts := strings.Split(path, "/")
+	suffixParts := strings.Split(suffix, "/")
+
+	if len(parts) < len(suffixParts) {
+		return false
+	}
+
+	// Check each suffix part
+	for i := 0; i < len(suffixParts); i++ {
+		pathPart := parts[len(parts)-len(suffixParts)+i]
+		suffixPart := suffixParts[i]
+
+		matched, _ := filepath.Match(suffixPart, pathPart)
+		if !matched {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Run is the Spec 16 entry point. Artifact validation doesn't mutate
+// state — plan mode delegates straight to the validation logic so the
+// validation runs (a failing validation should fail the plan), reporting
+// Checkable=true when successful.
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
 		return nil, fmt.Errorf("invalid context type")
@@ -198,159 +302,10 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 		len(metadata.Files), metadata.Summary.TotalLinesChanged)
 	result.Stdout = fmt.Sprintf("Validation passed: %d files checked", len(metadata.Files))
 
-	return result, nil
-}
-
-// DryRun logs what the artifact validate would do.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("invalid context type")
-	}
-
-	validate := step.ArtifactValidate
-
-	constraints := make([]string, 0)
-	if validate.MaxFiles != nil {
-		constraints = append(constraints, fmt.Sprintf("max_files=%d", *validate.MaxFiles))
-	}
-	if validate.MaxLinesChanged != nil {
-		constraints = append(constraints, fmt.Sprintf("max_lines=%d", *validate.MaxLinesChanged))
-	}
-	if validate.MaxFileSize != nil {
-		constraints = append(constraints, fmt.Sprintf("max_size=%d", *validate.MaxFileSize))
-	}
-	if validate.RequireTests {
-		constraints = append(constraints, "require_tests=true")
-	}
-	if len(validate.AllowedPaths) > 0 {
-		constraints = append(constraints, fmt.Sprintf("allowed_paths=%d", len(validate.AllowedPaths)))
-	}
-	if len(validate.ForbiddenPaths) > 0 {
-		constraints = append(constraints, fmt.Sprintf("forbidden_paths=%d", len(validate.ForbiddenPaths)))
-	}
-
-	ec.Svc.Logger.Infof("  [DRY-RUN] Would validate artifact '%s' (constraints: %s)",
-		validate.ArtifactFile, strings.Join(constraints, ", "))
-
-	return nil
-}
-
-// readArtifactMetadata reads artifact metadata from JSON file.
-func readArtifactMetadata(path string) (*artifacts.ArtifactMetadata, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- path from config
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	var metadata artifacts.ArtifactMetadata
-	if err := json.Unmarshal(data, &metadata); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON: %w", err)
-	}
-
-	return &metadata, nil
-}
-
-// writeArtifactMetadata writes artifact metadata to JSON file.
-func writeArtifactMetadata(path string, metadata *artifacts.ArtifactMetadata) error {
-	data, err := json.MarshalIndent(metadata, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil { // #nosec G306 -- standard file permissions
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
-
-// matchGlob checks if a path matches a glob pattern.
-// Supports * and ** wildcards.
-func matchGlob(pattern, path string) bool {
-	// Handle ** (match any number of path components)
-	if strings.Contains(pattern, "**") {
-		// Split pattern by **
-		parts := strings.Split(pattern, "**")
-
-		// For patterns like "src/**/*.go"
-		if len(parts) == 2 {
-			prefix := strings.TrimSuffix(parts[0], "/")
-			suffix := strings.TrimPrefix(parts[1], "/")
-
-			// Check prefix
-			if prefix != "" {
-				if !strings.HasPrefix(path, prefix+"/") && path != prefix {
-					return false
-				}
-				// Remove prefix from path for suffix matching
-				if strings.HasPrefix(path, prefix+"/") {
-					path = path[len(prefix)+1:]
-				}
-			}
-
-			// Check suffix
-			if suffix != "" {
-				// For suffix patterns like "*.go", use filepath.Match
-				if strings.Contains(suffix, "/") {
-					// Multi-part suffix like "pkg/*.go"
-					return strings.HasSuffix(path, "/"+suffix) ||
-						matchSuffixPattern(path, suffix)
-				}
-				// Simple suffix like "*.go"
-				matched, _ := filepath.Match(suffix, filepath.Base(path))
-				return matched
-			}
-
-			return true
-		}
-	}
-
-	// Use filepath.Match for simple patterns
-	matched, err := filepath.Match(pattern, path)
-	if err != nil {
-		return false
-	}
-	return matched
-}
-
-// matchSuffixPattern checks if path ends with a pattern.
-func matchSuffixPattern(path, suffix string) bool {
-	parts := strings.Split(path, "/")
-	suffixParts := strings.Split(suffix, "/")
-
-	if len(parts) < len(suffixParts) {
-		return false
-	}
-
-	// Check each suffix part
-	for i := 0; i < len(suffixParts); i++ {
-		pathPart := parts[len(parts)-len(suffixParts)+i]
-		suffixPart := suffixParts[i]
-
-		matched, _ := filepath.Match(suffixPart, pathPart)
-		if !matched {
-			return false
-		}
-	}
-
-	return true
-}
-
-// Run is the Spec 16 entry point. Artifact validation doesn't mutate
-// state — plan mode delegates to Execute so the validation runs (a
-// failing validation should fail the plan), reporting Checkable=true
-// when successful.
-func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	res, err := h.Execute(ctx, step)
-	if err != nil {
-		return res, err
-	}
 	if ctx.Mode() == actions.ModePlan {
-		if r, ok := res.(*executor.Result); ok {
-			r.Checkable = true
-			r.Reason = "artifact validated"
-		}
+		result.Checkable = true
+		result.Reason = "artifact validated"
 	}
-	return res, nil
+
+	return result, nil
 }

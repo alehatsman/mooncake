@@ -333,7 +333,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TarArchive(t *testing.T) {
+func TestHandler_Run_TarArchive(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -351,14 +351,14 @@ func TestHandler_Execute_TarArchive(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult, ok := result.(*executor.Result)
 	if !ok {
-		t.Fatalf("Execute() result is not *executor.Result")
+		t.Fatalf("Run() result is not *executor.Result")
 	}
 
 	if !execResult.Changed {
@@ -424,7 +424,7 @@ func TestHandler_Execute_TarArchive(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TarGzArchive(t *testing.T) {
+func TestHandler_Run_TarGzArchive(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -442,9 +442,9 @@ func TestHandler_Execute_TarGzArchive(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -489,7 +489,7 @@ func TestHandler_Execute_TarGzArchive(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ZipArchive(t *testing.T) {
+func TestHandler_Run_ZipArchive(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -507,9 +507,9 @@ func TestHandler_Execute_ZipArchive(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -554,7 +554,7 @@ func TestHandler_Execute_ZipArchive(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_StripComponents(t *testing.T) {
+func TestHandler_Run_StripComponents(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -593,9 +593,9 @@ func TestHandler_Execute_StripComponents(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -623,7 +623,7 @@ func TestHandler_Execute_StripComponents(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CreatesIdempotency(t *testing.T) {
+func TestHandler_Run_CreatesIdempotency(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -651,9 +651,9 @@ func TestHandler_Execute_CreatesIdempotency(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -671,7 +671,7 @@ func TestHandler_Execute_CreatesIdempotency(t *testing.T) {
 // MT-46: file.unarchive should be idempotent without requiring an
 // explicit creates: marker. Running the same archive against the
 // same dest twice should report Changed=false on the second run.
-func TestHandler_Execute_ContentIdempotency_Tar(t *testing.T) {
+func TestHandler_Run_ContentIdempotency_Tar(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -688,9 +688,9 @@ func TestHandler_Execute_ContentIdempotency_Tar(t *testing.T) {
 	}
 
 	// First run: extract.
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("First Execute() error = %v", err)
+		t.Fatalf("First Run() error = %v", err)
 	}
 	if !result.(*executor.Result).Changed {
 		t.Fatal("First run should report Changed=true (extracting)")
@@ -698,9 +698,9 @@ func TestHandler_Execute_ContentIdempotency_Tar(t *testing.T) {
 
 	// Second run with fresh ec: should skip via content match.
 	ec2 := mockExecutionContext()
-	result2, err := h.Execute(ec2, step)
+	result2, err := h.Run(ec2, step)
 	if err != nil {
-		t.Fatalf("Second Execute() error = %v", err)
+		t.Fatalf("Second Run() error = %v", err)
 	}
 	if result2.(*executor.Result).Changed {
 		t.Error("Second run should report Changed=false (archive contents already present)")
@@ -708,7 +708,7 @@ func TestHandler_Execute_ContentIdempotency_Tar(t *testing.T) {
 }
 
 // MT-46: same shape but tar.gz to confirm the gzip path also gates.
-func TestHandler_Execute_ContentIdempotency_TarGz(t *testing.T) {
+func TestHandler_Run_ContentIdempotency_TarGz(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -724,14 +724,14 @@ func TestHandler_Execute_ContentIdempotency_TarGz(t *testing.T) {
 		},
 	}
 
-	if _, err := h.Execute(ec, step); err != nil {
-		t.Fatalf("First Execute() error = %v", err)
+	if _, err := h.Run(ec, step); err != nil {
+		t.Fatalf("First Run() error = %v", err)
 	}
 
 	ec2 := mockExecutionContext()
-	result2, err := h.Execute(ec2, step)
+	result2, err := h.Run(ec2, step)
 	if err != nil {
-		t.Fatalf("Second Execute() error = %v", err)
+		t.Fatalf("Second Run() error = %v", err)
 	}
 	if result2.(*executor.Result).Changed {
 		t.Error("Second tar.gz run should report Changed=false")
@@ -741,7 +741,7 @@ func TestHandler_Execute_ContentIdempotency_TarGz(t *testing.T) {
 // MT-46: if any extracted file diverges (truncated, modified size),
 // the pre-check must fall through to extract — otherwise drift goes
 // unnoticed.
-func TestHandler_Execute_ContentIdempotency_DivergedFile(t *testing.T) {
+func TestHandler_Run_ContentIdempotency_DivergedFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -758,8 +758,8 @@ func TestHandler_Execute_ContentIdempotency_DivergedFile(t *testing.T) {
 	}
 
 	// Extract once.
-	if _, err := h.Execute(ec, step); err != nil {
-		t.Fatalf("First Execute() error = %v", err)
+	if _, err := h.Run(ec, step); err != nil {
+		t.Fatalf("First Run() error = %v", err)
 	}
 
 	// Mutate one extracted file so its size diverges.
@@ -770,16 +770,16 @@ func TestHandler_Execute_ContentIdempotency_DivergedFile(t *testing.T) {
 
 	// Second run must re-extract (restore content).
 	ec2 := mockExecutionContext()
-	result2, err := h.Execute(ec2, step)
+	result2, err := h.Run(ec2, step)
 	if err != nil {
-		t.Fatalf("Second Execute() error = %v", err)
+		t.Fatalf("Second Run() error = %v", err)
 	}
 	if !result2.(*executor.Result).Changed {
 		t.Error("Second run should re-extract when a target file diverges (Changed=true)")
 	}
 }
 
-func TestHandler_Execute_PathTraversalProtection(t *testing.T) {
+func TestHandler_Run_PathTraversalProtection(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -797,9 +797,9 @@ func TestHandler_Execute_PathTraversalProtection(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on path traversal attempt")
+		t.Error("Run() should error on path traversal attempt")
 	}
 
 	if !strings.Contains(err.Error(), "traversal") {
@@ -818,7 +818,7 @@ func TestHandler_Execute_PathTraversalProtection(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SourceNotFound(t *testing.T) {
+func TestHandler_Run_SourceNotFound(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -832,9 +832,9 @@ func TestHandler_Execute_SourceNotFound(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error when source does not exist")
+		t.Error("Run() should error when source does not exist")
 	}
 
 	execResult := result.(*executor.Result)
@@ -843,7 +843,7 @@ func TestHandler_Execute_SourceNotFound(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
+func TestHandler_Run_SourceIsDirectory(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -862,9 +862,9 @@ func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error when source is a directory")
+		t.Error("Run() should error when source is a directory")
 	}
 
 	if !strings.Contains(err.Error(), "directory") {
@@ -877,7 +877,7 @@ func TestHandler_Execute_SourceIsDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_UnsupportedFormat(t *testing.T) {
+func TestHandler_Run_UnsupportedFormat(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -897,9 +897,9 @@ func TestHandler_Execute_UnsupportedFormat(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on unsupported format")
+		t.Error("Run() should error on unsupported format")
 	}
 
 	if !strings.Contains(err.Error(), "unsupported") {
@@ -912,7 +912,7 @@ func TestHandler_Execute_UnsupportedFormat(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithCustomMode(t *testing.T) {
+func TestHandler_Run_WithCustomMode(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -931,9 +931,9 @@ func TestHandler_Execute_WithCustomMode(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	// Verify directory was created with correct mode
@@ -949,7 +949,7 @@ func TestHandler_Execute_WithCustomMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TemplateRendering(t *testing.T) {
+func TestHandler_Run_TemplateRendering(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -970,9 +970,9 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -987,7 +987,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NoPublisher(t *testing.T) {
+func TestHandler_Run_NoPublisher(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1007,9 +1007,9 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
+		t.Errorf("Run() should not error when publisher is nil, got: %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -1021,151 +1021,6 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	testFile := filepath.Join(extractDir, "test.txt")
 	if _, err := os.Stat(testFile); os.IsNotExist(err) {
 		t.Error("Extracted file does not exist")
-	}
-}
-
-func TestHandler_DryRun(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name    string
-		step    *config.Step
-		setup   func(string) string
-		wantErr bool
-	}{
-		{
-			name: "basic dry-run tar",
-			step: &config.Step{
-				FileUnarchive: &config.Unarchive{
-					Src:  "/tmp/test.tar",
-					Dest: "/tmp/extract",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run tar.gz",
-			step: &config.Step{
-				FileUnarchive: &config.Unarchive{
-					Src:  "/tmp/test.tar.gz",
-					Dest: "/tmp/extract",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run zip",
-			step: &config.Step{
-				FileUnarchive: &config.Unarchive{
-					Src:  "/tmp/test.zip",
-					Dest: "/tmp/extract",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with strip components",
-			step: &config.Step{
-				FileUnarchive: &config.Unarchive{
-					Src:             "/tmp/test.tar.gz",
-					Dest:            "/tmp/extract",
-					StripComponents: 1,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with creates skip",
-			step: &config.Step{
-				FileUnarchive: &config.Unarchive{
-					Src:     "/tmp/test.tar",
-					Dest:    "/tmp/extract",
-					Creates: "/tmp/marker",
-				},
-			},
-			setup: func(tmpDir string) string {
-				markerPath := filepath.Join(tmpDir, "marker")
-				os.WriteFile(markerPath, []byte("exists"), 0644)
-				return markerPath
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run unsupported format",
-			step: &config.Step{
-				FileUnarchive: &config.Unarchive{
-					Src:  "/tmp/test.rar",
-					Dest: "/tmp/extract",
-				},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			ec := mockExecutionContext()
-			ec.CurrentDir = tmpDir
-
-			// Run setup if provided
-			if tt.setup != nil {
-				markerPath := tt.setup(tmpDir)
-				tt.step.FileUnarchive.Creates = markerPath
-			}
-
-			err := h.DryRun(ec, tt.step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			// Check that something was logged
-			log := ec.Svc.Logger.(*testutil.MockLogger)
-			if len(log.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_IdempotentCheck(t *testing.T) {
-	h := &Handler{}
-
-	tmpDir := t.TempDir()
-	markerPath := filepath.Join(tmpDir, "marker.txt")
-
-	// Create marker file
-	if err := os.WriteFile(markerPath, []byte("marker"), 0644); err != nil {
-		t.Fatalf("Failed to create marker: %v", err)
-	}
-
-	ec := mockExecutionContext()
-	step := &config.Step{
-		FileUnarchive: &config.Unarchive{
-			Src:     "/tmp/test.tar.gz",
-			Dest:    tmpDir,
-			Creates: markerPath,
-		},
-	}
-
-	err := h.DryRun(ec, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v", err)
-	}
-
-	// Check log message mentions skip
-	log := ec.Svc.Logger.(*testutil.MockLogger)
-	hasSkipMessage := false
-	for _, msg := range log.Logs {
-		if strings.Contains(msg, "skip") || strings.Contains(msg, "exists") {
-			hasSkipMessage = true
-			break
-		}
-	}
-
-	if !hasSkipMessage {
-		t.Error("DryRun() should log skip message when marker exists")
 	}
 }
 
@@ -1357,7 +1212,7 @@ func TestArchiveFormat_String(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NotExecutionContext(t *testing.T) {
+func TestHandler_Run_NotExecutionContext(t *testing.T) {
 	h := &Handler{}
 
 	ctx := testutil.NewMockContext()
@@ -1368,9 +1223,9 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
-		t.Error("Execute() should error when context is not ExecutionContext")
+		t.Error("Run() should error when context is not ExecutionContext")
 	}
 
 	if !strings.Contains(err.Error(), "ExecutionContext") {
@@ -1378,28 +1233,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
-	h := &Handler{}
-
-	ctx := testutil.NewMockContext()
-	step := &config.Step{
-		FileUnarchive: &config.Unarchive{
-			Src:  "/tmp/test.tar",
-			Dest: "/tmp/extract",
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
-	}
-
-	if !strings.Contains(err.Error(), "ExecutionContext") {
-		t.Errorf("Error should mention ExecutionContext, got: %v", err)
-	}
-}
-
-func TestHandler_Execute_CorruptedArchive(t *testing.T) {
+func TestHandler_Run_CorruptedArchive(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1419,9 +1253,9 @@ func TestHandler_Execute_CorruptedArchive(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on corrupted archive")
+		t.Error("Run() should error on corrupted archive")
 	}
 
 	execResult := result.(*executor.Result)
@@ -1430,7 +1264,7 @@ func TestHandler_Execute_CorruptedArchive(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TarWithSymlink(t *testing.T) {
+func TestHandler_Run_TarWithSymlink(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1477,9 +1311,9 @@ func TestHandler_Execute_TarWithSymlink(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -1499,7 +1333,7 @@ func TestHandler_Execute_TarWithSymlink(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_EmptyArchive(t *testing.T) {
+func TestHandler_Run_EmptyArchive(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1523,9 +1357,9 @@ func TestHandler_Execute_EmptyArchive(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -1546,7 +1380,7 @@ func TestHandler_Execute_EmptyArchive(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RenderError(t *testing.T) {
+func TestHandler_Run_RenderError(t *testing.T) {
 	h := &Handler{}
 
 	ec := mockExecutionContext()
@@ -1557,9 +1391,9 @@ func TestHandler_Execute_RenderError(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on invalid template")
+		t.Error("Run() should error on invalid template")
 	}
 
 	if !strings.Contains(fmt.Sprintf("%v", err), "expand") {

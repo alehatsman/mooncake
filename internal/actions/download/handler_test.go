@@ -172,7 +172,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_BasicDownload(t *testing.T) {
+func TestHandler_Run_BasicDownload(t *testing.T) {
 	h := &Handler{}
 
 	// Create test server
@@ -195,15 +195,15 @@ func TestHandler_Execute_BasicDownload(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	// Check result
 	execResult, ok := result.(*executor.Result)
 	if !ok {
-		t.Fatalf("Execute() result is not *executor.Result")
+		t.Fatalf("Run() result is not *executor.Result")
 	}
 
 	if !execResult.Changed {
@@ -255,7 +255,7 @@ func TestHandler_Execute_BasicDownload(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithChecksum(t *testing.T) {
+func TestHandler_Run_WithChecksum(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "test content for checksum"
@@ -284,9 +284,9 @@ func TestHandler_Execute_WithChecksum(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -300,7 +300,7 @@ func TestHandler_Execute_WithChecksum(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
+func TestHandler_Run_ChecksumMismatch(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "test content"
@@ -324,9 +324,9 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on checksum mismatch")
+		t.Error("Run() should error on checksum mismatch")
 	}
 
 	if !strings.Contains(err.Error(), "checksum mismatch") {
@@ -345,7 +345,7 @@ func TestHandler_Execute_ChecksumMismatch(t *testing.T) {
 // created. The earlier shape verified after the rename and left the
 // mismatched bytes at dest — a silent supply-chain risk. The fix
 // verifies on the temp file before the rename.
-func TestHandler_Execute_ChecksumMismatch_DestNotCreated(t *testing.T) {
+func TestHandler_Run_ChecksumMismatch_DestNotCreated(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "real upstream payload"
@@ -370,7 +370,7 @@ func TestHandler_Execute_ChecksumMismatch_DestNotCreated(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
 		t.Fatal("Execute() should error on checksum mismatch")
 	}
@@ -397,7 +397,7 @@ func TestHandler_Execute_ChecksumMismatch_DestNotCreated(t *testing.T) {
 // counterpart: when the declared checksum matches, the file lands
 // at dest as before. Ensures the MT-14 fix didn't break the happy
 // path.
-func TestHandler_Execute_ChecksumMatch_DestCreated(t *testing.T) {
+func TestHandler_Run_ChecksumMatch_DestCreated(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "correct payload"
@@ -421,7 +421,7 @@ func TestHandler_Execute_ChecksumMatch_DestCreated(t *testing.T) {
 		},
 	}
 
-	if _, err := h.Execute(ec, step); err != nil {
+	if _, err := h.Run(ec, step); err != nil {
 		t.Fatalf("Execute() unexpected error: %v", err)
 	}
 	got, err := os.ReadFile(destPath) // #nosec G304 -- test fixture
@@ -433,7 +433,7 @@ func TestHandler_Execute_ChecksumMatch_DestCreated(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_IdempotencyWithChecksum(t *testing.T) {
+func TestHandler_Run_IdempotencyWithChecksum(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "idempotent content"
@@ -469,9 +469,9 @@ func TestHandler_Execute_IdempotencyWithChecksum(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -484,7 +484,7 @@ func TestHandler_Execute_IdempotencyWithChecksum(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ForceRedownload(t *testing.T) {
+func TestHandler_Run_ForceRedownload(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "forced content"
@@ -513,9 +513,9 @@ func TestHandler_Execute_ForceRedownload(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -534,7 +534,7 @@ func TestHandler_Execute_ForceRedownload(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithCustomHeaders(t *testing.T) {
+func TestHandler_Run_WithCustomHeaders(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "content with auth"
@@ -563,9 +563,9 @@ func TestHandler_Execute_WithCustomHeaders(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	if receivedHeader != expectedHeader {
@@ -573,7 +573,7 @@ func TestHandler_Execute_WithCustomHeaders(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPError(t *testing.T) {
+func TestHandler_Run_HTTPError(t *testing.T) {
 	h := &Handler{}
 
 	// Create test server that returns 404
@@ -594,9 +594,9 @@ func TestHandler_Execute_HTTPError(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on HTTP 404")
+		t.Error("Run() should error on HTTP 404")
 	}
 
 	if !strings.Contains(err.Error(), "404") {
@@ -609,7 +609,7 @@ func TestHandler_Execute_HTTPError(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithTimeout(t *testing.T) {
+func TestHandler_Run_WithTimeout(t *testing.T) {
 	h := &Handler{}
 
 	// Create slow server
@@ -632,9 +632,9 @@ func TestHandler_Execute_WithTimeout(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on timeout")
+		t.Error("Run() should error on timeout")
 	}
 
 	execResult := result.(*executor.Result)
@@ -643,7 +643,7 @@ func TestHandler_Execute_WithTimeout(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithRetry(t *testing.T) {
+func TestHandler_Run_WithRetry(t *testing.T) {
 	h := &Handler{}
 
 	attemptCount := 0
@@ -673,9 +673,9 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() should succeed on retry, got error: %v", err)
+		t.Fatalf("Run() should succeed on retry, got error: %v", err)
 	}
 
 	if attemptCount != 2 {
@@ -693,7 +693,7 @@ func TestHandler_Execute_WithRetry(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RetryExhausted(t *testing.T) {
+func TestHandler_Run_RetryExhausted(t *testing.T) {
 	h := &Handler{}
 
 	// Create server that always fails
@@ -715,9 +715,9 @@ func TestHandler_Execute_RetryExhausted(t *testing.T) {
 		Retry: &config.RetryPolicy{Delay: "10ms"},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error after retries exhausted")
+		t.Error("Run() should error after retries exhausted")
 	}
 
 	execResult := result.(*executor.Result)
@@ -726,7 +726,7 @@ func TestHandler_Execute_RetryExhausted(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithMode(t *testing.T) {
+func TestHandler_Run_WithMode(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "content with mode"
@@ -749,9 +749,9 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	// Check file permissions
@@ -767,7 +767,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SHA256Checksum(t *testing.T) {
+func TestHandler_Run_SHA256Checksum(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "sha256 test"
@@ -795,9 +795,9 @@ func TestHandler_Execute_SHA256Checksum(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -806,7 +806,7 @@ func TestHandler_Execute_SHA256Checksum(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InvalidTimeout(t *testing.T) {
+func TestHandler_Run_InvalidTimeout(t *testing.T) {
 	h := &Handler{}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -827,9 +827,9 @@ func TestHandler_Execute_InvalidTimeout(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on invalid timeout")
+		t.Error("Run() should error on invalid timeout")
 	}
 
 	if !strings.Contains(err.Error(), "timeout") {
@@ -837,7 +837,7 @@ func TestHandler_Execute_InvalidTimeout(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TemplateRendering(t *testing.T) {
+func TestHandler_Run_TemplateRendering(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "templated content"
@@ -866,9 +866,9 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -882,7 +882,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NoPublisher(t *testing.T) {
+func TestHandler_Run_NoPublisher(t *testing.T) {
 	h := &Handler{}
 
 	testContent := "no publisher"
@@ -906,9 +906,9 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
-		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
+		t.Errorf("Run() should not error when publisher is nil, got: %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -919,183 +919,6 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	// Verify file exists
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
 		t.Error("Downloaded file does not exist")
-	}
-}
-
-func TestHandler_DryRun(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name    string
-		step    *config.Step
-		setup   func(*executor.ExecutionContext, string)
-		wantErr bool
-	}{
-		{
-			name: "basic dry-run",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:  "https://example.com/file.txt",
-					Dest: "/tmp/file.txt",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with checksum",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:      "https://example.com/file.txt",
-					Dest:     "/tmp/file.txt",
-					Checksum: "md5:abc123",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with existing file",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:  "https://example.com/file.txt",
-					Dest: "/tmp/existing.txt",
-				},
-			},
-			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				destPath := filepath.Join(tmpDir, "existing.txt")
-				os.WriteFile(destPath, []byte("existing"), 0644)
-				ec.Scope.User["tmpdir"] = tmpDir
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with headers",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:  "https://example.com/file.txt",
-					Dest: "/tmp/file.txt",
-					Headers: map[string]string{
-						"Authorization": "Bearer token",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with timeout",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:     "https://example.com/file.txt",
-					Dest:    "/tmp/file.txt",
-					Timeout: "30s",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with retries",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:     "https://example.com/file.txt",
-					Dest:    "/tmp/file.txt",
-					Retries: 3,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with backup",
-			step: &config.Step{
-				FileDownload: &config.Download{
-					URL:    "https://example.com/file.txt",
-					Dest:   "/tmp/backup.txt",
-					Backup: true,
-				},
-			},
-			setup: func(ec *executor.ExecutionContext, tmpDir string) {
-				destPath := filepath.Join(tmpDir, "backup.txt")
-				os.WriteFile(destPath, []byte("old"), 0644)
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			ec := mockExecutionContext()
-			ec.CurrentDir = tmpDir
-
-			if tt.setup != nil {
-				tt.setup(ec, tmpDir)
-			}
-
-			// Update dest path to use temp dir if it's a template
-			if tt.step.FileDownload.Dest == "/tmp/existing.txt" && tt.setup != nil {
-				tt.step.FileDownload.Dest = filepath.Join(tmpDir, "existing.txt")
-			}
-			if tt.step.FileDownload.Dest == "/tmp/backup.txt" && tt.setup != nil {
-				tt.step.FileDownload.Dest = filepath.Join(tmpDir, "backup.txt")
-			}
-
-			err := h.DryRun(ec, tt.step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			// Check that something was logged
-			log := ec.Svc.Logger.(*testutil.MockLogger)
-			if len(log.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_IdempotentCheck(t *testing.T) {
-	h := &Handler{}
-
-	testContent := "existing content"
-
-	// Calculate checksum
-	hasher := md5.New()
-	hasher.Write([]byte(testContent))
-	md5sum := fmt.Sprintf("md5:%x", hasher.Sum(nil))
-
-	// Create file with correct checksum
-	tmpDir := t.TempDir()
-	destPath := filepath.Join(tmpDir, "idempotent.txt")
-	err := os.WriteFile(destPath, []byte(testContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-
-	ec := mockExecutionContext()
-	step := &config.Step{
-		FileDownload: &config.Download{
-			URL:      "https://example.com/file.txt",
-			Dest:     destPath,
-			Checksum: md5sum,
-		},
-	}
-
-	err = h.DryRun(ec, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v", err)
-	}
-
-	// Check log message mentions already downloaded
-	log := ec.Svc.Logger.(*testutil.MockLogger)
-	hasIdempotentMessage := false
-	for _, msg := range log.Logs {
-		if strings.Contains(msg, "already downloaded") || strings.Contains(msg, "correct checksum") {
-			hasIdempotentMessage = true
-			break
-		}
-	}
-
-	if !hasIdempotentMessage {
-		t.Error("DryRun() should log idempotent message when file exists with correct checksum")
 	}
 }
 
@@ -1186,7 +1009,7 @@ func TestHandler_formatMode(t *testing.T) {
 }
 
 // TestHandler_Execute_RenderError tests error handling when template rendering fails
-func TestHandler_Execute_RenderError(t *testing.T) {
+func TestHandler_Run_RenderError(t *testing.T) {
 	h := &Handler{}
 
 	ec := mockExecutionContext()
@@ -1197,9 +1020,9 @@ func TestHandler_Execute_RenderError(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
-		t.Error("Execute() should error on invalid template")
+		t.Error("Run() should error on invalid template")
 	}
 
 	if !strings.Contains(err.Error(), "render") {
@@ -1207,8 +1030,8 @@ func TestHandler_Execute_RenderError(t *testing.T) {
 	}
 }
 
-// TestHandler_Execute_NotExecutionContext tests handling when context is not ExecutionContext
-func TestHandler_Execute_NotExecutionContext(t *testing.T) {
+// TestHandler_Run_NotExecutionContext tests handling when context is not ExecutionContext
+func TestHandler_Run_NotExecutionContext(t *testing.T) {
 	h := &Handler{}
 
 	ctx := testutil.NewMockContext()
@@ -1219,31 +1042,9 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
-		t.Error("Execute() should error when context is not ExecutionContext")
-	}
-
-	if !strings.Contains(err.Error(), "ExecutionContext") {
-		t.Errorf("Error should mention ExecutionContext, got: %v", err)
-	}
-}
-
-// TestHandler_DryRun_NotExecutionContext tests DryRun handling when context is not ExecutionContext
-func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
-	h := &Handler{}
-
-	ctx := testutil.NewMockContext()
-	step := &config.Step{
-		FileDownload: &config.Download{
-			URL:  "https://example.com/file.txt",
-			Dest: "/tmp/file.txt",
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
+		t.Error("Run() should error when context is not ExecutionContext")
 	}
 
 	if !strings.Contains(err.Error(), "ExecutionContext") {

@@ -73,8 +73,8 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute executes the artifact_capture action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// runApply executes the artifact_capture action.
+func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
 		return nil, fmt.Errorf("invalid context type")
@@ -271,46 +271,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	ec.Svc.Logger.Infof("Artifact capture complete: %d files changed", len(fileChanges))
 
 	return result, nil
-}
-
-// DryRun logs what the artifact capture would do.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("invalid context type")
-	}
-
-	capture := step.ArtifactCapture
-
-	outputDir := capture.OutputDir
-	if outputDir == "" {
-		outputDir = defaultOutputDir
-	}
-	artifactDir := filepath.Join(outputDir, capture.Name)
-
-	// Expand steps to get count
-	planner, err := plan.NewPlanner()
-	if err != nil {
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, planner creation failed)",
-			artifactDir, len(capture.Steps))
-		return nil
-	}
-	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.GetVariables(), ec.CurrentDir)
-	if err != nil {
-		ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (%d steps, expansion failed)",
-			artifactDir, len(capture.Steps))
-		return nil
-	}
-
-	format := capture.Format
-	if format == "" {
-		format = defaultFormat
-	}
-
-	ec.Svc.Logger.Infof("  [DRY-RUN] Would capture artifacts to '%s' (steps: %d, format: %s)",
-		artifactDir, len(expandedSteps), format)
-
-	return nil
 }
 
 // readFileContent reads up to maxSize bytes from path without loading the
@@ -523,7 +483,7 @@ func (t *fileChangeTracker) Close() {
 // the inner steps themselves are not inspected.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
-		return h.Execute(ctx, step)
+		return h.runApply(ctx, step)
 	}
 
 	c := step.ArtifactCapture

@@ -277,12 +277,12 @@ func TestHandler_Execute_TemplatedNames(t *testing.T) {
 	// non-zero for synthetic packages) and then try to install — both fine
 	// for testing the resolution path. We only assert that resolution
 	// itself did not produce an error.
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err != nil {
 		// The error string must not be about resolving names — that's the
 		// failure mode this test is guarding against.
 		if errStr := err.Error(); containsString(errStr, "resolve package names expression") {
-			t.Errorf("Execute() failed to resolve NamesExpr: %v", err)
+			t.Errorf("Run() failed to resolve NamesExpr: %v", err)
 		}
 	}
 }

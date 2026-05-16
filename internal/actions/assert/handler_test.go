@@ -164,7 +164,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CommandAssertion_Success(t *testing.T) {
+func TestHandler_Run_CommandAssertion_Success(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -202,7 +202,7 @@ func TestHandler_Execute_CommandAssertion_Success(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if err != nil {
 				t.Errorf("Execute() error = %v, want nil", err)
 			}
@@ -226,7 +226,7 @@ func TestHandler_Execute_CommandAssertion_Success(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CommandAssertion_Failure(t *testing.T) {
+func TestHandler_Run_CommandAssertion_Failure(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -264,7 +264,7 @@ func TestHandler_Execute_CommandAssertion_Failure(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if err == nil {
 				t.Error("Execute() should return error for failed assertion")
 			}
@@ -301,7 +301,7 @@ func TestHandler_Execute_CommandAssertion_Failure(t *testing.T) {
 // MT-28: failed_when: false on a failing assert must suppress the
 // failure. Before the fix, assert.Execute returned the error
 // unconditionally and the executor's failed_when path never ran.
-func TestHandler_Execute_AssertionFailure_FailedWhenFalse(t *testing.T) {
+func TestHandler_Run_AssertionFailure_FailedWhenFalse(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -316,7 +316,7 @@ func TestHandler_Execute_AssertionFailure_FailedWhenFalse(t *testing.T) {
 		FailedWhen: "false",
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() returned err despite failed_when: false: %v", err)
 	}
@@ -338,7 +338,7 @@ func TestHandler_Execute_AssertionFailure_FailedWhenFalse(t *testing.T) {
 // MT-28: failed_when: predicate inspecting actual/expected should
 // allow conditional suppression. Confirms the evaluation context
 // exposes the assertion's observed values.
-func TestHandler_Execute_AssertionFailure_FailedWhenPredicate(t *testing.T) {
+func TestHandler_Run_AssertionFailure_FailedWhenPredicate(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -354,7 +354,7 @@ func TestHandler_Execute_AssertionFailure_FailedWhenPredicate(t *testing.T) {
 		FailedWhen: `actual != "exit code 1"`,
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() returned err despite failed_when matching predicate: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestHandler_Execute_AssertionFailure_FailedWhenPredicate(t *testing.T) {
 
 // MT-28: failed_when: true must NOT silently suppress when the
 // assertion already failed; the existing failure path should fire.
-func TestHandler_Execute_AssertionFailure_FailedWhenTrue(t *testing.T) {
+func TestHandler_Run_AssertionFailure_FailedWhenTrue(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -380,13 +380,13 @@ func TestHandler_Execute_AssertionFailure_FailedWhenTrue(t *testing.T) {
 		FailedWhen: "true",
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Fatal("Execute() should return error when failed_when: true on a failing assert")
 	}
 }
 
-func TestHandler_Execute_CommandAssertion_NonexistentCommand(t *testing.T) {
+func TestHandler_Run_CommandAssertion_NonexistentCommand(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -400,13 +400,13 @@ func TestHandler_Execute_CommandAssertion_NonexistentCommand(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error for nonexistent command")
 	}
 }
 
-func TestHandler_Execute_CommandAssertion_WithTemplate(t *testing.T) {
+func TestHandler_Run_CommandAssertion_WithTemplate(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -424,7 +424,7 @@ func TestHandler_Execute_CommandAssertion_WithTemplate(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
@@ -435,7 +435,7 @@ func TestHandler_Execute_CommandAssertion_WithTemplate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_Exists(t *testing.T) {
+func TestHandler_Run_FileAssertion_Exists(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -489,7 +489,7 @@ func TestHandler_Execute_FileAssertion_Exists(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -504,7 +504,7 @@ func TestHandler_Execute_FileAssertion_Exists(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_Contains(t *testing.T) {
+func TestHandler_Run_FileAssertion_Contains(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -549,7 +549,7 @@ func TestHandler_Execute_FileAssertion_Contains(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -564,7 +564,7 @@ func TestHandler_Execute_FileAssertion_Contains(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_Content(t *testing.T) {
+func TestHandler_Run_FileAssertion_Content(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -609,7 +609,7 @@ func TestHandler_Execute_FileAssertion_Content(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -624,7 +624,7 @@ func TestHandler_Execute_FileAssertion_Content(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_Mode(t *testing.T) {
+func TestHandler_Run_FileAssertion_Mode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS — Go reports 0666 for any writable file")
 	}
@@ -666,7 +666,7 @@ func TestHandler_Execute_FileAssertion_Mode(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -681,7 +681,7 @@ func TestHandler_Execute_FileAssertion_Mode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_InvalidMode(t *testing.T) {
+func TestHandler_Run_FileAssertion_InvalidMode(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -701,13 +701,13 @@ func TestHandler_Execute_FileAssertion_InvalidMode(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error for invalid mode")
 	}
 }
 
-func TestHandler_Execute_FileAssertion_Owner(t *testing.T) {
+func TestHandler_Run_FileAssertion_Owner(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Owner assertions not supported on Windows")
 	}
@@ -764,7 +764,7 @@ func TestHandler_Execute_FileAssertion_Owner(t *testing.T) {
 				},
 			}
 
-			_, err := h.Execute(ctx, step)
+			_, err := h.Run(ctx, step)
 
 			if tt.shouldPass {
 				if err != nil {
@@ -783,7 +783,7 @@ func TestHandler_Execute_FileAssertion_Owner(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_Group(t *testing.T) {
+func TestHandler_Run_FileAssertion_Group(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Group assertions not supported on Windows")
 	}
@@ -846,7 +846,7 @@ func TestHandler_Execute_FileAssertion_Group(t *testing.T) {
 				},
 			}
 
-			_, err := h.Execute(ctx, step)
+			_, err := h.Run(ctx, step)
 
 			if tt.shouldPass {
 				if err != nil {
@@ -865,7 +865,7 @@ func TestHandler_Execute_FileAssertion_Group(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileAssertion_WithTemplate(t *testing.T) {
+func TestHandler_Run_FileAssertion_WithTemplate(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -891,7 +891,7 @@ func TestHandler_Execute_FileAssertion_WithTemplate(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
@@ -902,7 +902,7 @@ func TestHandler_Execute_FileAssertion_WithTemplate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_Success(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_Success(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -939,7 +939,7 @@ func TestHandler_Execute_HTTPAssertion_Success(t *testing.T) {
 				},
 			}
 
-			result, err := h.Execute(ctx, step)
+			result, err := h.Run(ctx, step)
 			if err != nil {
 				t.Errorf("Execute() error = %v, want nil", err)
 			}
@@ -952,7 +952,7 @@ func TestHandler_Execute_HTTPAssertion_Success(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_StatusMismatch(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_StatusMismatch(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -972,7 +972,7 @@ func TestHandler_Execute_HTTPAssertion_StatusMismatch(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error for status mismatch")
 	}
@@ -983,7 +983,7 @@ func TestHandler_Execute_HTTPAssertion_StatusMismatch(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_Method(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_Method(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1032,7 +1032,7 @@ func TestHandler_Execute_HTTPAssertion_Method(t *testing.T) {
 				},
 			}
 
-			_, err := h.Execute(ctx, step)
+			_, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -1040,7 +1040,7 @@ func TestHandler_Execute_HTTPAssertion_Method(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_Contains(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_Contains(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1080,7 +1080,7 @@ func TestHandler_Execute_HTTPAssertion_Contains(t *testing.T) {
 				},
 			}
 
-			_, err := h.Execute(ctx, step)
+			_, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -1088,7 +1088,7 @@ func TestHandler_Execute_HTTPAssertion_Contains(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_BodyEquals(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_BodyEquals(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1135,7 +1135,7 @@ func TestHandler_Execute_HTTPAssertion_BodyEquals(t *testing.T) {
 				},
 			}
 
-			_, err := h.Execute(ctx, step)
+			_, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -1143,7 +1143,7 @@ func TestHandler_Execute_HTTPAssertion_BodyEquals(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_Headers(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_Headers(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1191,7 +1191,7 @@ func TestHandler_Execute_HTTPAssertion_Headers(t *testing.T) {
 				},
 			}
 
-			_, err := h.Execute(ctx, step)
+			_, err := h.Run(ctx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -1199,7 +1199,7 @@ func TestHandler_Execute_HTTPAssertion_Headers(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_WithBody(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_WithBody(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1229,7 +1229,7 @@ func TestHandler_Execute_HTTPAssertion_WithBody(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
@@ -1240,7 +1240,7 @@ func TestHandler_Execute_HTTPAssertion_WithBody(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_Timeout(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_Timeout(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1261,7 +1261,7 @@ func TestHandler_Execute_HTTPAssertion_Timeout(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
@@ -1272,7 +1272,7 @@ func TestHandler_Execute_HTTPAssertion_Timeout(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_InvalidTimeout(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_InvalidTimeout(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1291,13 +1291,13 @@ func TestHandler_Execute_HTTPAssertion_InvalidTimeout(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error for invalid timeout")
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_RequestFailure(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_RequestFailure(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1310,13 +1310,13 @@ func TestHandler_Execute_HTTPAssertion_RequestFailure(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error for request failure")
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_JSONPathNotImplemented(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_JSONPathNotImplemented(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1337,13 +1337,13 @@ func TestHandler_Execute_HTTPAssertion_JSONPathNotImplemented(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error for JSONPath assertion (not implemented)")
 	}
 }
 
-func TestHandler_Execute_HTTPAssertion_WithTemplate(t *testing.T) {
+func TestHandler_Run_HTTPAssertion_WithTemplate(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 	defer os.RemoveAll(ctx.CurrentDir)
@@ -1373,7 +1373,7 @@ func TestHandler_Execute_HTTPAssertion_WithTemplate(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ctx, step)
+	result, err := h.Run(ctx, step)
 	if err != nil {
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
@@ -1384,7 +1384,7 @@ func TestHandler_Execute_HTTPAssertion_WithTemplate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InvalidContext(t *testing.T) {
+func TestHandler_Run_InvalidContext(t *testing.T) {
 	h := &Handler{}
 	// Use testutil.MockContext which doesn't cast to ExecutionContext
 	ctx := testutil.NewMockContext()
@@ -1398,192 +1398,12 @@ func TestHandler_Execute_InvalidContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when context is not ExecutionContext")
 	}
 	if !strings.Contains(err.Error(), "invalid context") {
 		t.Errorf("Error should mention invalid context, got: %v", err)
-	}
-}
-
-func TestHandler_DryRun_Command(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-	defer os.RemoveAll(ctx.CurrentDir)
-
-	tests := []struct {
-		name     string
-		cmd      string
-		exitCode int
-	}{
-		{
-			name:     "simple command",
-			cmd:      "exit 0",
-			exitCode: 0,
-		},
-		{
-			name:     "command with non-zero exit code",
-			cmd:      "exit 5",
-			exitCode: 5,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			step := &config.Step{
-				Assert: &config.Assert{
-					Command: &config.AssertCommand{
-						Cmd:      tt.cmd,
-						ExitCode: tt.exitCode,
-					},
-				},
-			}
-
-			err := h.DryRun(ctx, step)
-			if err != nil {
-				t.Errorf("DryRun() error = %v, want nil", err)
-			}
-
-			// Check that something was logged
-			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-			if len(mockLog.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_File(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-	defer os.RemoveAll(ctx.CurrentDir)
-
-	tests := []struct {
-		name string
-		file *config.AssertFile
-	}{
-		{
-			name: "file exists",
-			file: &config.AssertFile{
-				Path:   "/tmp/test.txt",
-				Exists: boolPtr(true),
-			},
-		},
-		{
-			name: "file contains",
-			file: &config.AssertFile{
-				Path:     "/tmp/test.txt",
-				Contains: stringPtr("hello"),
-			},
-		},
-		{
-			name: "file content",
-			file: &config.AssertFile{
-				Path:    "/tmp/test.txt",
-				Content: stringPtr("exact content"),
-			},
-		},
-		{
-			name: "file mode",
-			file: &config.AssertFile{
-				Path: "/tmp/test.txt",
-				Mode: stringPtr("0644"),
-			},
-		},
-		{
-			name: "no specific check",
-			file: &config.AssertFile{
-				Path: "/tmp/test.txt",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			step := &config.Step{
-				Assert: &config.Assert{
-					File: tt.file,
-				},
-			}
-
-			err := h.DryRun(ctx, step)
-			if err != nil {
-				t.Errorf("DryRun() error = %v, want nil", err)
-			}
-
-			// Check that something was logged
-			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-			if len(mockLog.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_HTTP(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-	defer os.RemoveAll(ctx.CurrentDir)
-
-	tests := []struct {
-		name   string
-		method string
-		status int
-	}{
-		{
-			name:   "GET request with default status",
-			method: "",
-			status: 0,
-		},
-		{
-			name:   "POST request with custom status",
-			method: "POST",
-			status: 201,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			step := &config.Step{
-				Assert: &config.Assert{
-					HTTP: &config.AssertHTTP{
-						URL:    "http://localhost",
-						Method: tt.method,
-						Status: tt.status,
-					},
-				},
-			}
-
-			err := h.DryRun(ctx, step)
-			if err != nil {
-				t.Errorf("DryRun() error = %v, want nil", err)
-			}
-
-			// Check that something was logged
-			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-			if len(mockLog.Logs) == 0 {
-				t.Error("DryRun() should log something")
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_InvalidContext(t *testing.T) {
-	h := &Handler{}
-	ctx := testutil.NewMockContext()
-
-	step := &config.Step{
-		Assert: &config.Assert{
-			Command: &config.AssertCommand{
-				Cmd: "exit 0",
-			},
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
 	}
 }
 

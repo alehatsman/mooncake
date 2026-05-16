@@ -58,9 +58,9 @@ func TestF033_TraversingPathRefused_LenientMode(t *testing.T) {
 		},
 	}
 
-	_, err = handler.Execute(ctx, step)
+	_, err = handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute lenient mode should not surface a top-level error for a per-file traversal failure; got %v", err)
+		t.Fatalf("Run lenient mode should not surface a top-level error for a per-file traversal failure; got %v", err)
 	}
 
 	// Most importantly: the file outside baseDir is unchanged.
@@ -109,7 +109,7 @@ func TestF033_TraversingPathRefused_StrictMode(t *testing.T) {
 		},
 	}
 
-	_, err = handler.Execute(ctx, step)
+	_, err = handler.Run(ctx, step)
 	if err == nil {
 		t.Fatal("expected strict-mode error for traversing patch; got nil")
 	}

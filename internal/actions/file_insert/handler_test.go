@@ -169,7 +169,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InsertAfter(t *testing.T) {
+func TestHandler_Run_InsertAfter(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -189,9 +189,9 @@ func TestHandler_Execute_InsertAfter(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -214,7 +214,7 @@ func TestHandler_Execute_InsertAfter(t *testing.T) {
 // MT-84: text.insert must be idempotent. Running the same insert
 // against a file that already has the insertion immediately after
 // the anchor must NOT duplicate the line — Changed=false instead.
-func TestHandler_Execute_InsertAfter_Idempotent(t *testing.T) {
+func TestHandler_Run_InsertAfter_Idempotent(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -234,7 +234,7 @@ func TestHandler_Execute_InsertAfter_Idempotent(t *testing.T) {
 	}
 
 	// First run: changes are made.
-	if _, err := handler.Execute(ctx, step); err != nil {
+	if _, err := handler.Run(ctx, step); err != nil {
 		t.Fatalf("first Execute: %v", err)
 	}
 	afterFirst, _ := os.ReadFile(testFile)
@@ -244,7 +244,7 @@ func TestHandler_Execute_InsertAfter_Idempotent(t *testing.T) {
 	}
 
 	// Second run: same step, content already in place — must be no-op.
-	res2, err := handler.Execute(ctx, step)
+	res2, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("second Execute: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestHandler_Execute_InsertAfter_Idempotent(t *testing.T) {
 
 // MT-84: same shape for position=before — the previous line, not
 // the next.
-func TestHandler_Execute_InsertBefore_Idempotent(t *testing.T) {
+func TestHandler_Run_InsertBefore_Idempotent(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -278,7 +278,7 @@ func TestHandler_Execute_InsertBefore_Idempotent(t *testing.T) {
 		},
 	}
 
-	if _, err := handler.Execute(ctx, step); err != nil {
+	if _, err := handler.Run(ctx, step); err != nil {
 		t.Fatalf("first Execute: %v", err)
 	}
 	want := "line1\nimport bar\nimport foo\nline3"
@@ -286,7 +286,7 @@ func TestHandler_Execute_InsertBefore_Idempotent(t *testing.T) {
 		t.Fatalf("after first run:\nwant: %s\ngot:  %s", want, got)
 	}
 
-	res2, err := handler.Execute(ctx, step)
+	res2, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("second Execute: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestHandler_Execute_InsertBefore_Idempotent(t *testing.T) {
 
 // MT-84: multi-line insertion content must check all lines, not
 // just the first.
-func TestHandler_Execute_InsertAfter_Idempotent_MultiLine(t *testing.T) {
+func TestHandler_Run_InsertAfter_Idempotent_MultiLine(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -316,10 +316,10 @@ func TestHandler_Execute_InsertAfter_Idempotent_MultiLine(t *testing.T) {
 		},
 	}
 
-	if _, err := handler.Execute(ctx, step); err != nil {
+	if _, err := handler.Run(ctx, step); err != nil {
 		t.Fatalf("first Execute: %v", err)
 	}
-	res2, err := handler.Execute(ctx, step)
+	res2, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("second Execute: %v", err)
 	}
@@ -335,7 +335,7 @@ func TestHandler_Execute_InsertAfter_Idempotent_MultiLine(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InsertBefore(t *testing.T) {
+func TestHandler_Run_InsertBefore(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -355,7 +355,7 @@ func TestHandler_Execute_InsertBefore(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -377,7 +377,7 @@ func TestHandler_Execute_InsertBefore(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RegexAnchor(t *testing.T) {
+func TestHandler_Run_RegexAnchor(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -398,7 +398,7 @@ func TestHandler_Execute_RegexAnchor(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -420,7 +420,7 @@ func TestHandler_Execute_RegexAnchor(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_AllowMultiple(t *testing.T) {
+func TestHandler_Run_AllowMultiple(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -441,7 +441,7 @@ func TestHandler_Execute_AllowMultiple(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -463,7 +463,7 @@ func TestHandler_Execute_AllowMultiple(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SingleMatch(t *testing.T) {
+func TestHandler_Run_SingleMatch(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -484,7 +484,7 @@ func TestHandler_Execute_SingleMatch(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -506,7 +506,7 @@ func TestHandler_Execute_SingleMatch(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_AnchorNotFound(t *testing.T) {
+func TestHandler_Run_AnchorNotFound(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -529,7 +529,7 @@ func TestHandler_Execute_AnchorNotFound(t *testing.T) {
 	// MT-47: anchor not found is idempotent success — no error, no
 	// change. (Original behavior was fail-loud; that broke re-runs of
 	// playbooks whose first run altered or removed the anchor.)
-	res, err := handler.Execute(ctx, step)
+	res, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Errorf("expected no error on missing anchor (MT-47); got %v", err)
 	}
@@ -542,7 +542,7 @@ func TestHandler_Execute_AnchorNotFound(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_Backup(t *testing.T) {
+func TestHandler_Run_Backup(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -563,7 +563,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -581,14 +581,20 @@ func TestHandler_Execute_Backup(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+func TestHandler_Run_PlanMode(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 	ctx.Svc.Mode = actions.ModePlan
 
+	// Create a real file so Run can read it
+	testFile := filepath.Join(ctx.CurrentDir, "plantest.txt")
+	if err := os.WriteFile(testFile, []byte("import foo\nsome code"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	step := &config.Step{
 		TextInsert: &config.FileInsert{
-			Path:          "/tmp/test.txt",
+			Path:          testFile,
 			Anchor:        "import",
 			Position:      "after",
 			Content:       "new import",
@@ -598,8 +604,8 @@ func TestHandler_DryRun(t *testing.T) {
 		},
 	}
 
-	err := handler.DryRun(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Errorf("DryRun() error = %v", err)
+		t.Errorf("Run(ModePlan) error = %v", err)
 	}
 }

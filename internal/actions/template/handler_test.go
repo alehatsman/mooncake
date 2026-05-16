@@ -162,7 +162,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute(t *testing.T) {
+func TestHandler_Run(t *testing.T) {
 	h := &Handler{}
 
 	tests := []struct {
@@ -280,7 +280,7 @@ func TestHandler_Execute(t *testing.T) {
 			}
 
 			// Execute
-			result, err := h.Execute(execCtx, step)
+			result, err := h.Run(execCtx, step)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -356,7 +356,7 @@ func TestHandler_Execute(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_Idempotency(t *testing.T) {
+func TestHandler_Run_Idempotency(t *testing.T) {
 	h := &Handler{}
 
 	// Create temporary directory
@@ -391,7 +391,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	}
 
 	// First execution - should change
-	result1, err := h.Execute(execCtx, step)
+	result1, err := h.Run(execCtx, step)
 	if err != nil {
 		t.Fatalf("First execution failed: %v", err)
 	}
@@ -405,7 +405,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	ctx.Publisher.Events = []events.Event{}
 
 	// Second execution - should not change (idempotent)
-	result2, err := h.Execute(execCtx, step)
+	result2, err := h.Run(execCtx, step)
 	if err != nil {
 		t.Fatalf("Second execution failed: %v", err)
 	}
@@ -416,7 +416,7 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_MissingTemplateFile(t *testing.T) {
+func TestHandler_Run_MissingTemplateFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir, err := os.MkdirTemp("", "mooncake-template-test-*")
@@ -435,7 +435,7 @@ func TestHandler_Execute_MissingTemplateFile(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(execCtx, step)
+	result, err := h.Run(execCtx, step)
 	if err == nil {
 		t.Error("Execute() should error when template file doesn't exist")
 	}
@@ -448,7 +448,7 @@ func TestHandler_Execute_MissingTemplateFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NoPublisher(t *testing.T) {
+func TestHandler_Run_NoPublisher(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir, err := os.MkdirTemp("", "mooncake-template-test-*")
@@ -475,7 +475,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(execCtx, step)
+	result, err := h.Run(execCtx, step)
 	if err != nil {
 		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
 	}
@@ -496,7 +496,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InvalidContext(t *testing.T) {
+func TestHandler_Run_InvalidContext_ApplyMode(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir, err := os.MkdirTemp("", "mooncake-template-test-*")
@@ -520,9 +520,9 @@ func TestHandler_Execute_InvalidContext(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ctx, step)
+	_, err = h.Run(ctx, step)
 	if err == nil {
-		t.Error("Execute() should error when context is not ExecutionContext")
+		t.Error("Run() should error when context is not ExecutionContext")
 	}
 
 	if err != nil && err.Error() != "context is not an ExecutionContext" {
@@ -530,7 +530,7 @@ func TestHandler_Execute_InvalidContext(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+func TestHandler_Run_PlanMode(t *testing.T) {
 	h := &Handler{}
 
 	tests := []struct {
@@ -632,17 +632,11 @@ func TestHandler_DryRun(t *testing.T) {
 				},
 			}
 
-			// Execute dry-run
-			err = h.DryRun(execCtx, step)
+			// Execute in plan mode
+			_, err = h.Run(execCtx, step)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Run(ModePlan) error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-
-			// Check that something was logged
-			log := ctx.Log.(*testutil.MockLogger)
-			if len(log.Logs) == 0 {
-				t.Error("DryRun() should log something")
 			}
 
 			// Verify dest file was not modified
@@ -652,19 +646,19 @@ func TestHandler_DryRun(t *testing.T) {
 					t.Fatalf("Failed to read dest file: %v", err)
 				}
 				if string(content) != tt.destContent {
-					t.Error("DryRun() should not modify destination file")
+					t.Error("Run(ModePlan) should not modify destination file")
 				}
 			} else {
 				// Verify dest file was not created
 				if _, err := os.Stat(destPath); err == nil {
-					t.Error("DryRun() should not create destination file")
+					t.Error("Run(ModePlan) should not create destination file")
 				}
 			}
 		})
 	}
 }
 
-func TestHandler_DryRun_MissingTemplateFile(t *testing.T) {
+func TestHandler_Run_PlanMode_MissingTemplateFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir, err := os.MkdirTemp("", "mooncake-template-test-*")
@@ -684,19 +678,13 @@ func TestHandler_DryRun_MissingTemplateFile(t *testing.T) {
 		},
 	}
 
-	err = h.DryRun(execCtx, step)
+	_, err = h.Run(execCtx, step)
 	if err == nil {
-		t.Error("DryRun() should error when template file doesn't exist")
-	}
-
-	// Check that error was logged
-	log := ctx.Log.(*testutil.MockLogger)
-	if len(log.Logs) == 0 {
-		t.Error("DryRun() should log error")
+		t.Error("Run(ModePlan) should error when template file doesn't exist")
 	}
 }
 
-func TestHandler_DryRun_InvalidContext(t *testing.T) {
+func TestHandler_Run_InvalidContext(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir, err := os.MkdirTemp("", "mooncake-template-test-*")
@@ -721,9 +709,9 @@ func TestHandler_DryRun_InvalidContext(t *testing.T) {
 		},
 	}
 
-	err = h.DryRun(ctx, step)
+	_, err = h.Run(ctx, step)
 	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
+		t.Error("Run() should error when context is not ExecutionContext")
 	}
 
 	if err != nil && err.Error() != "context is not an ExecutionContext" {
@@ -817,7 +805,7 @@ func TestHandler_FormatMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithRelativePaths(t *testing.T) {
+func TestHandler_Run_WithRelativePaths(t *testing.T) {
 	h := &Handler{}
 
 	// Create temporary directory
@@ -846,7 +834,7 @@ func TestHandler_Execute_WithRelativePaths(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(execCtx, step)
+	result, err := h.Run(execCtx, step)
 	if err != nil {
 		t.Fatalf("Execute() failed with relative paths: %v", err)
 	}
@@ -867,7 +855,7 @@ func TestHandler_Execute_WithRelativePaths(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithPresetBaseDir(t *testing.T) {
+func TestHandler_Run_WithPresetBaseDir(t *testing.T) {
 	h := &Handler{}
 
 	// Create temporary directories
@@ -901,7 +889,7 @@ func TestHandler_Execute_WithPresetBaseDir(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(execCtx, step)
+	result, err := h.Run(execCtx, step)
 	if err != nil {
 		t.Fatalf("Execute() failed with PresetBaseDir: %v", err)
 	}

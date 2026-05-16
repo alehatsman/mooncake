@@ -11,7 +11,7 @@ something else landing first.
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
 | F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
-| F011 | Cross-cutting: 10 handlers still have Execute/DryRun (11 done: shell/command/print/vars/include_vars/preset/tool/service/repo_search/repo_tree/file_delete_range/file_replace) | smell | XL | — | open |
+| F011 | Cross-cutting: Execute/DryRun migration complete — all 21 handlers now Run-only | smell | XL | — | done |
 | F041 | artifact_capture.readFileContent unbounded read | smell | S | — | done |
 
 ## Findings index
@@ -28,7 +28,7 @@ something else landing first.
 | F008 | tool.renderToolTemplates manual repetition | readability | **done** | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
 | F009 | explain.DisplayFacts section split | smell | **done** | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
 | F010 | explain TestDisplayFacts_NilFacts is dead | smell | **done** | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
-| F011 | cross-cutting: 16/21 handlers still have legacy paths (5 done in batch 1) | smell | **partial** | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
+| F011 | cross-cutting: Execute/DryRun migration — all 21 handlers Run-only | smell | **done** | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
 | F012 | cross-cutting: http no timeout (9 pkgs) | risk | **done** | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
 | F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
 | F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |

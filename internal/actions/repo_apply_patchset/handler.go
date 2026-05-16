@@ -80,8 +80,8 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the repo_apply_patchset action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
+// runApply runs the repo_apply_patchset action.
+func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	raps := step.RepoPatch
 
 	// We need ExecutionContext for PathUtil
@@ -193,53 +193,6 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 	})
 
 	return result, nil
-}
-
-// DryRun logs what would happen without making changes.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	raps := step.RepoPatch
-
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Get base directory
-	baseDir := ec.CurrentDir
-	if raps.BaseDir != "" {
-		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
-		if err != nil {
-			ctx.GetLogger().Infof("  [DRY-RUN] Warning: Failed to render base_dir: %v", err)
-			baseDir = raps.BaseDir
-		} else {
-			baseDir = renderedBaseDir
-		}
-	}
-
-	ctx.GetLogger().Infof("  [DRY-RUN] Would apply patchset to files in %s", baseDir)
-
-	if raps.Patchset != "" {
-		lines := strings.Count(raps.Patchset, "\n")
-		ctx.GetLogger().Infof("            Patchset: inline (%d lines)", lines)
-	} else {
-		ctx.GetLogger().Infof("            Patchset file: %s", raps.PatchsetFile)
-	}
-
-	if raps.Strict {
-		ctx.GetLogger().Infof("            Mode: strict (rollback all if any fails)")
-	} else {
-		ctx.GetLogger().Infof("            Mode: lenient (apply what succeeds)")
-	}
-
-	if raps.Backup {
-		ctx.GetLogger().Infof("            Backup: .bak files")
-	}
-
-	if raps.OutputFile != "" {
-		ctx.GetLogger().Infof("            Output: %s", raps.OutputFile)
-	}
-
-	return nil
 }
 
 // FilePatch represents a patch for a single file
@@ -627,7 +580,7 @@ func (h *Handler) writeAtomic(path, content string) error {
 // would-change with a count of affected files.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
-		return h.Execute(ctx, step)
+		return h.runApply(ctx, step)
 	}
 
 	raps := step.RepoPatch

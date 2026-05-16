@@ -124,7 +124,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SingleFile(t *testing.T) {
+func TestHandler_Run_SingleFile(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -150,9 +150,9 @@ func TestHandler_Execute_SingleFile(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -172,7 +172,7 @@ func TestHandler_Execute_SingleFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_MultipleFiles(t *testing.T) {
+func TestHandler_Run_MultipleFiles(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -206,9 +206,9 @@ func TestHandler_Execute_MultipleFiles(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -228,7 +228,7 @@ func TestHandler_Execute_MultipleFiles(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_StrictMode_Rollback(t *testing.T) {
+func TestHandler_Run_StrictMode_Rollback(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -263,7 +263,7 @@ func TestHandler_Execute_StrictMode_Rollback(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err == nil {
 		t.Error("expected error in strict mode when patch fails")
 	}
@@ -275,7 +275,7 @@ func TestHandler_Execute_StrictMode_Rollback(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_LenientMode(t *testing.T) {
+func TestHandler_Run_LenientMode(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -310,9 +310,9 @@ func TestHandler_Execute_LenientMode(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v (lenient mode should not error)", err)
+		t.Fatalf("Run() error = %v (lenient mode should not error)", err)
 	}
 
 	execResult := result.(*executor.Result)
@@ -333,7 +333,7 @@ func TestHandler_Execute_LenientMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_Backup(t *testing.T) {
+func TestHandler_Run_Backup(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -357,9 +357,9 @@ func TestHandler_Execute_Backup(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	// Verify backup file exists
@@ -375,7 +375,7 @@ func TestHandler_Execute_Backup(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_JSONOutput(t *testing.T) {
+func TestHandler_Run_JSONOutput(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -401,9 +401,9 @@ func TestHandler_Execute_JSONOutput(t *testing.T) {
 		},
 	}
 
-	_, err := handler.Execute(ctx, step)
+	_, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	// Verify JSON output file
@@ -430,7 +430,7 @@ func TestHandler_Execute_JSONOutput(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_Idempotency(t *testing.T) {
+func TestHandler_Run_Idempotency(t *testing.T) {
 	handler := &Handler{}
 	ctx := createTestContext(t)
 
@@ -455,35 +455,15 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 		},
 	}
 
-	result, err := handler.Execute(ctx, step)
+	result, err := handler.Run(ctx, step)
 	if err != nil {
-		t.Fatalf("Execute() error = %v", err)
+		t.Fatalf("Run() error = %v", err)
 	}
 
 	execResult := result.(*executor.Result)
 	// Should report unchanged since patch couldn't be applied
 	if execResult.Changed {
 		t.Error("expected result.Changed to be false for already-patched file")
-	}
-}
-
-func TestHandler_DryRun(t *testing.T) {
-	handler := &Handler{}
-	ctx := createTestContext(t)
-	ctx.Svc.Mode = actions.ModePlan
-
-	step := &config.Step{
-		RepoPatch: &config.RepoApplyPatchset{
-			Patchset:   "--- a/file.txt\n+++ b/file.txt\n@@ -1,1 +1,1 @@\n-old\n+new",
-			Strict:     true,
-			Backup:     true,
-			OutputFile: "/tmp/results.json",
-		},
-	}
-
-	err := handler.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v", err)
 	}
 }
 

@@ -213,114 +213,6 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name     string
-		pkg      *config.Package
-		wantErr  bool
-		checkLog func([]string) bool
-	}{
-		{
-			name: "install single package",
-			pkg: &config.Package{
-				Name:  "vim",
-				State: "present",
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-		{
-			name: "install multiple packages",
-			pkg: &config.Package{
-				Names: []string{"vim", "git", "curl"},
-				State: "present",
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-		{
-			name: "remove package",
-			pkg: &config.Package{
-				Name:  "vim",
-				State: "absent",
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-		{
-			name: "upgrade package",
-			pkg: &config.Package{
-				Name:  "vim",
-				State: "latest",
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-		{
-			name: "upgrade all packages",
-			pkg: &config.Package{
-				Upgrade: true,
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-		{
-			name: "update cache",
-			pkg: &config.Package{
-				Name:        "vim",
-				UpdateCache: true,
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-		{
-			name: "explicit package manager",
-			pkg: &config.Package{
-				Name:    "vim",
-				Manager: "apt",
-			},
-			wantErr: false,
-			checkLog: func(logs []string) bool {
-				return len(logs) > 0
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := newMockExecutionContext()
-
-			step := &config.Step{
-				Pkg: tt.pkg,
-			}
-
-			err := h.DryRun(ctx, step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-			if tt.checkLog != nil && !tt.checkLog(mockLog.Logs) {
-				t.Errorf("DryRun() log check failed, logs: %v", mockLog.Logs)
-			}
-		})
-	}
-}
 
 func TestHandler_DeterminePackageManager_Explicit(t *testing.T) {
 	h := &Handler{}
@@ -911,7 +803,7 @@ func TestBuildWingetCommand(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
+func TestHandler_Run_ContextNotExecutionContext(t *testing.T) {
 	h := &Handler{}
 	// Use testutil.MockContext which doesn't cast to ExecutionContext
 	ctx := testutil.NewMockContext()
@@ -922,16 +814,16 @@ func TestHandler_Execute_ContextNotExecutionContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
-		t.Error("Execute() should error when context is not ExecutionContext")
+		t.Error("Run() should error when context is not ExecutionContext")
 	}
 	if !strings.Contains(err.Error(), "ExecutionContext") {
 		t.Errorf("Error should mention ExecutionContext, got: %v", err)
 	}
 }
 
-func TestHandler_Execute_ManagerDetectionFailure(t *testing.T) {
+func TestHandler_Run_ManagerDetectionFailure(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
@@ -948,7 +840,7 @@ func TestHandler_Execute_ManagerDetectionFailure(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 
 	// On platforms with a package manager (Ubuntu/apt, macOS/brew, etc.):
 	// - Detection succeeds
@@ -1011,73 +903,6 @@ func TestHandler_Validate_StateValidation(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun_WithExplicitManager(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-
-	step := &config.Step{
-		Pkg: &config.Package{
-			Name:    "vim",
-			Manager: "apt",
-			State:   "present",
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v, want nil", err)
-	}
-
-	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-	if len(mockLog.Logs) == 0 {
-		t.Error("DryRun() should log something")
-	}
-}
-
-func TestHandler_DryRun_UpgradeOperation(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-
-	step := &config.Step{
-		Pkg: &config.Package{
-			Upgrade: true,
-			Manager: "apt",
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v, want nil", err)
-	}
-
-	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-	if len(mockLog.Logs) == 0 {
-		t.Error("DryRun() should log upgrade operation")
-	}
-}
-
-func TestHandler_DryRun_UpdateCache(t *testing.T) {
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-
-	step := &config.Step{
-		Pkg: &config.Package{
-			Name:        "vim",
-			Manager:     "apt",
-			UpdateCache: true,
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err != nil {
-		t.Errorf("DryRun() error = %v, want nil", err)
-	}
-
-	mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-	if len(mockLog.Logs) == 0 {
-		t.Error("DryRun() should log cache update")
-	}
-}
 
 func TestHandler_Metadata_EventsEmission(t *testing.T) {
 	h := &Handler{}
@@ -1212,42 +1037,6 @@ func TestHandler_DetectWindowsPackageManager(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun_StateOperations(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name  string
-		state string
-	}{
-		{"state present", "present"},
-		{"state absent", "absent"},
-		{"state latest", "latest"},
-		{"empty state (default present)", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := newMockExecutionContext()
-			step := &config.Step{
-				Pkg: &config.Package{
-					Name:    "vim",
-					Manager: "apt",
-					State:   tt.state,
-				},
-			}
-
-			err := h.DryRun(ctx, step)
-			if err != nil {
-				t.Errorf("DryRun() error = %v, want nil", err)
-			}
-
-			mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-			if len(mockLog.Logs) == 0 {
-				t.Error("DryRun() should log operation")
-			}
-		})
-	}
-}
 
 func TestHandler_Validate_ComplexScenarios(t *testing.T) {
 	h := &Handler{}
@@ -1437,7 +1226,7 @@ func TestHandler_InstallPackages(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_UpdateCacheEnabled(t *testing.T) {
+func TestHandler_Run_UpdateCacheEnabled(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
@@ -1449,12 +1238,12 @@ func TestHandler_Execute_UpdateCacheEnabled(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	// Will fail but tests the code path
-	t.Logf("Execute with update_cache error (expected): %v", err)
+	t.Logf("Run with update_cache error (expected): %v", err)
 }
 
-func TestHandler_Execute_UpgradeOperation(t *testing.T) {
+func TestHandler_Run_UpgradeOperation(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
@@ -1465,12 +1254,12 @@ func TestHandler_Execute_UpgradeOperation(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	// Will fail but tests the code path
-	t.Logf("Execute upgrade error (expected): %v", err)
+	t.Logf("Run upgrade error (expected): %v", err)
 }
 
-func TestHandler_Execute_RemoveOperation(t *testing.T) {
+func TestHandler_Run_RemoveOperation(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
@@ -1482,12 +1271,12 @@ func TestHandler_Execute_RemoveOperation(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	// Will fail but tests the code path
-	t.Logf("Execute remove error (expected): %v", err)
+	t.Logf("Run remove error (expected): %v", err)
 }
 
-func TestHandler_Execute_LatestState(t *testing.T) {
+func TestHandler_Run_LatestState(t *testing.T) {
 	h := &Handler{}
 	ctx := newMockExecutionContext()
 
@@ -1499,9 +1288,9 @@ func TestHandler_Execute_LatestState(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	// Will fail but tests the code path
-	t.Logf("Execute latest error (expected): %v", err)
+	t.Logf("Run latest error (expected): %v", err)
 }
 
 func TestHandler_DetectMacOSPackageManager_Coverage(t *testing.T) {
