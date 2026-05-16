@@ -41,6 +41,12 @@ func mockExecutionContext() *executor.ExecutionContext {
 	}
 }
 
+func mockPlanContext() *executor.ExecutionContext {
+	ec := mockExecutionContext()
+	ec.Svc.Mode = actions.ModePlan
+	return ec
+}
+
 func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}
 	meta := h.Metadata()
@@ -206,7 +212,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CreateFile(t *testing.T) {
+func TestHandler_Run_CreateFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -222,7 +228,7 @@ func TestHandler_Execute_CreateFile(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -263,7 +269,7 @@ func TestHandler_Execute_CreateFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_UpdateFile(t *testing.T) {
+func TestHandler_Run_UpdateFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -285,7 +291,7 @@ func TestHandler_Execute_UpdateFile(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -315,7 +321,7 @@ func TestHandler_Execute_UpdateFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_FileIdempotent(t *testing.T) {
+func TestHandler_Run_FileIdempotent(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -336,7 +342,7 @@ func TestHandler_Execute_FileIdempotent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -347,7 +353,7 @@ func TestHandler_Execute_FileIdempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CreateDirectory(t *testing.T) {
+func TestHandler_Run_CreateDirectory(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -361,7 +367,7 @@ func TestHandler_Execute_CreateDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -391,7 +397,7 @@ func TestHandler_Execute_CreateDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_DirectoryIdempotent(t *testing.T) {
+func TestHandler_Run_DirectoryIdempotent(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -411,7 +417,7 @@ func TestHandler_Execute_DirectoryIdempotent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -422,7 +428,7 @@ func TestHandler_Execute_DirectoryIdempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RemoveFile(t *testing.T) {
+func TestHandler_Run_RemoveFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -442,7 +448,7 @@ func TestHandler_Execute_RemoveFile(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -467,7 +473,7 @@ func TestHandler_Execute_RemoveFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RemoveDirectory(t *testing.T) {
+func TestHandler_Run_RemoveDirectory(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -487,7 +493,7 @@ func TestHandler_Execute_RemoveDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -512,7 +518,7 @@ func TestHandler_Execute_RemoveDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_AbsentIdempotent(t *testing.T) {
+func TestHandler_Run_AbsentIdempotent(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -526,7 +532,7 @@ func TestHandler_Execute_AbsentIdempotent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -537,7 +543,7 @@ func TestHandler_Execute_AbsentIdempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TouchCreateFile(t *testing.T) {
+func TestHandler_Run_TouchCreateFile(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -551,7 +557,7 @@ func TestHandler_Execute_TouchCreateFile(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -567,7 +573,7 @@ func TestHandler_Execute_TouchCreateFile(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TouchUpdateTime(t *testing.T) {
+func TestHandler_Run_TouchUpdateTime(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -593,7 +599,7 @@ func TestHandler_Execute_TouchUpdateTime(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -614,7 +620,7 @@ func TestHandler_Execute_TouchUpdateTime(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CreateSymlink(t *testing.T) {
+func TestHandler_Run_CreateSymlink(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -636,7 +642,7 @@ func TestHandler_Execute_CreateSymlink(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -670,7 +676,7 @@ func TestHandler_Execute_CreateSymlink(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SymlinkIdempotent(t *testing.T) {
+func TestHandler_Run_SymlinkIdempotent(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -697,7 +703,7 @@ func TestHandler_Execute_SymlinkIdempotent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -708,7 +714,7 @@ func TestHandler_Execute_SymlinkIdempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SymlinkForce(t *testing.T) {
+func TestHandler_Run_SymlinkForce(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -742,7 +748,7 @@ func TestHandler_Execute_SymlinkForce(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -763,7 +769,7 @@ func TestHandler_Execute_SymlinkForce(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SymlinkNoForce(t *testing.T) {
+func TestHandler_Run_SymlinkNoForce(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -797,7 +803,7 @@ func TestHandler_Execute_SymlinkNoForce(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error when link exists with different target and force is false")
 	}
@@ -807,7 +813,7 @@ func TestHandler_Execute_SymlinkNoForce(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_CreateHardlink(t *testing.T) {
+func TestHandler_Run_CreateHardlink(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -829,7 +835,7 @@ func TestHandler_Execute_CreateHardlink(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -868,7 +874,7 @@ func TestHandler_Execute_CreateHardlink(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_HardlinkIdempotent(t *testing.T) {
+func TestHandler_Run_HardlinkIdempotent(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -895,7 +901,7 @@ func TestHandler_Execute_HardlinkIdempotent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -906,7 +912,7 @@ func TestHandler_Execute_HardlinkIdempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SetPermissions(t *testing.T) {
+func TestHandler_Run_SetPermissions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS (Go's os.Chmod is a no-op there)")
 	}
@@ -930,7 +936,7 @@ func TestHandler_Execute_SetPermissions(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -961,7 +967,7 @@ func TestHandler_Execute_SetPermissions(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_PermissionsIdempotent(t *testing.T) {
+func TestHandler_Run_PermissionsIdempotent(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX mode idempotency check is meaningless on NTFS")
 	}
@@ -985,7 +991,7 @@ func TestHandler_Execute_PermissionsIdempotent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -996,7 +1002,7 @@ func TestHandler_Execute_PermissionsIdempotent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithMode(t *testing.T) {
+func TestHandler_Run_WithMode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS")
 	}
@@ -1014,7 +1020,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1031,7 +1037,7 @@ func TestHandler_Execute_WithMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithBackup(t *testing.T) {
+func TestHandler_Run_WithBackup(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1054,7 +1060,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1081,7 +1087,7 @@ func TestHandler_Execute_WithBackup(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_TemplateRendering(t *testing.T) {
+func TestHandler_Run_TemplateRendering(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1098,7 +1104,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1115,7 +1121,7 @@ func TestHandler_Execute_TemplateRendering(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InvalidTemplate(t *testing.T) {
+func TestHandler_Run_InvalidTemplate(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1129,7 +1135,7 @@ func TestHandler_Execute_InvalidTemplate(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid template")
 	}
@@ -1139,7 +1145,7 @@ func TestHandler_Execute_InvalidTemplate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NoPublisher(t *testing.T) {
+func TestHandler_Run_NoPublisher(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1155,7 +1161,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
 	}
@@ -1171,7 +1177,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NotExecutionContext(t *testing.T) {
+func TestHandler_Run_NotExecutionContext(t *testing.T) {
 	h := &Handler{}
 
 	ctx := testutil.NewMockContext()
@@ -1181,7 +1187,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Error("Execute() should error when context is not ExecutionContext")
 	}
@@ -1191,7 +1197,7 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_UnknownState(t *testing.T) {
+func TestHandler_Run_UnknownState(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1206,7 +1212,7 @@ func TestHandler_Execute_UnknownState(t *testing.T) {
 	}
 
 	// Bypass validation to test runtime behavior
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error on unknown state")
 	}
@@ -1216,219 +1222,50 @@ func TestHandler_Execute_UnknownState(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+func TestHandler_PlanMode(t *testing.T) {
 	h := &Handler{}
+	tmpDir := t.TempDir()
+	// Pre-create a file that perms/link cases need to target.
+	existingFile := filepath.Join(tmpDir, "existing.txt")
+	if err := os.WriteFile(existingFile, []byte("x"), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	tests := []struct {
-		name    string
-		step    *config.Step
-		wantErr bool
+		name string
+		file *config.File
 	}{
-		{
-			name: "dry-run file",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:    "/tmp/test.txt",
-					Content: "test content",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run directory",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/testdir",
-					State: "directory",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run absent",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/test.txt",
-					State: "absent",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run touch",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/test.txt",
-					State: "touch",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run link",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/link",
-					State: "link",
-					Src:   "/tmp/target",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run hardlink",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/link",
-					State: "hardlink",
-					Src:   "/tmp/target",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run perms",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/test.txt",
-					State: "perms",
-					Mode:  "0644",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with owner",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/test.txt",
-					Owner: "root",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "dry-run with group",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/test.txt",
-					Group: "root",
-				},
-			},
-			wantErr: false,
-		},
+		{"file", &config.File{Path: filepath.Join(tmpDir, "f.txt"), Content: "x"}},
+		{"directory", &config.File{Path: filepath.Join(tmpDir, "d"), State: "directory"}},
+		{"absent", &config.File{Path: filepath.Join(tmpDir, "gone.txt"), State: "absent"}},
+		{"touch", &config.File{Path: filepath.Join(tmpDir, "t.txt"), State: "touch"}},
+		{"link", &config.File{Path: filepath.Join(tmpDir, "link"), State: "link", Src: existingFile}},
+		{"perms", &config.File{Path: existingFile, State: "perms", Mode: "0644"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ec := mockExecutionContext()
-
-			err := h.DryRun(ec, tt.step)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			ec := mockPlanContext()
+			result, err := h.Run(ec, &config.Step{FileWrite: tt.file})
+			if err != nil {
+				t.Fatalf("Run() plan mode error = %v", err)
 			}
-
-			// Check that something was logged (if no error expected)
-			if !tt.wantErr {
-				log := ec.Svc.Logger.(*testutil.MockLogger)
-				if len(log.Logs) == 0 {
-					t.Error("DryRun() should log something")
-				}
+			if result == nil {
+				t.Fatal("Run() returned nil result")
 			}
 		})
 	}
 }
 
-func TestHandler_DryRun_NotExecutionContext(t *testing.T) {
-	h := &Handler{}
-
-	ctx := testutil.NewMockContext()
-	step := &config.Step{
-		FileWrite: &config.File{
-			Path: "/tmp/test.txt",
-		},
+func TestDefaultModeFor(t *testing.T) {
+	if defaultModeFor("directory") != 0o755 {
+		t.Errorf("defaultModeFor(directory) = %o, want 0755", defaultModeFor("directory"))
 	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
+	if defaultModeFor("file") != 0o644 {
+		t.Errorf("defaultModeFor(file) = %o, want 0644", defaultModeFor("file"))
 	}
-
-	if !strings.Contains(err.Error(), "ExecutionContext") {
-		t.Errorf("Error should mention ExecutionContext, got: %v", err)
-	}
-}
-
-// TestHandler_DryRun_ReportsCorrectDefaultMode verifies that the dry-run
-// preview reports the same default mode the real Execute path would apply:
-// 0755 for directories, 0644 for files.
-//
-// Regression: DryRun previously hardcoded defaultFileMode (0644) for all
-// states, so it lied about directories — Execute would create them 0755
-// while the preview said 0644.
-func TestHandler_DryRun_ReportsCorrectDefaultMode(t *testing.T) {
-	h := &Handler{}
-
-	tests := []struct {
-		name     string
-		step     *config.Step
-		wantMode string
-	}{
-		{
-			name: "directory without explicit mode defaults to 0755",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/testdir",
-					State: "directory",
-				},
-			},
-			wantMode: "0755",
-		},
-		{
-			name: "file without explicit mode defaults to 0644",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:    "/tmp/test.txt",
-					Content: "hello",
-				},
-			},
-			wantMode: "0644",
-		},
-		{
-			name: "directory respects explicit mode",
-			step: &config.Step{
-				FileWrite: &config.File{
-					Path:  "/tmp/testdir",
-					State: "directory",
-					Mode:  "0700",
-				},
-			},
-			wantMode: "0700",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ec := mockExecutionContext()
-
-			if err := h.DryRun(ec, tt.step); err != nil {
-				t.Fatalf("DryRun() error = %v", err)
-			}
-
-			log := ec.Svc.Logger.(*testutil.MockLogger)
-			needle := "mode: " + tt.wantMode
-			found := false
-			for _, msg := range log.Logs {
-				if strings.Contains(msg, needle) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("DryRun log missing %q; got logs: %v", needle, log.Logs)
-			}
-		})
+	if defaultModeFor("") != 0o644 {
+		t.Errorf("defaultModeFor('') = %o, want 0644", defaultModeFor(""))
 	}
 }
 
@@ -1578,7 +1415,7 @@ func TestHandler_parseGroupID(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_DirectoryWithMode(t *testing.T) {
+func TestHandler_Run_DirectoryWithMode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX mode bits beyond read-only have no meaning on NTFS")
 	}
@@ -1596,7 +1433,7 @@ func TestHandler_Execute_DirectoryWithMode(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1613,7 +1450,7 @@ func TestHandler_Execute_DirectoryWithMode(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NestedDirectory(t *testing.T) {
+func TestHandler_Run_NestedDirectory(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1627,7 +1464,7 @@ func TestHandler_Execute_NestedDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1648,7 +1485,7 @@ func TestHandler_Execute_NestedDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_RemoveNonEmptyDirectory(t *testing.T) {
+func TestHandler_Run_RemoveNonEmptyDirectory(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1674,7 +1511,7 @@ func TestHandler_Execute_RemoveNonEmptyDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1690,7 +1527,7 @@ func TestHandler_Execute_RemoveNonEmptyDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_PathExpansion(t *testing.T) {
+func TestHandler_Run_PathExpansion(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1706,7 +1543,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1728,7 +1565,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InvalidPathExpansion(t *testing.T) {
+func TestHandler_Run_InvalidPathExpansion(t *testing.T) {
 	h := &Handler{}
 
 	ec := mockExecutionContext()
@@ -1738,7 +1575,7 @@ func TestHandler_Execute_InvalidPathExpansion(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error on invalid path template")
 	}
@@ -1748,7 +1585,7 @@ func TestHandler_Execute_InvalidPathExpansion(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_OwnershipLinuxOnly(t *testing.T) {
+func TestHandler_Run_OwnershipLinuxOnly(t *testing.T) {
 	// Skip on non-Linux
 	if runtime.GOOS != "linux" {
 		t.Skip("Ownership test only runs on Linux")
@@ -1778,7 +1615,7 @@ func TestHandler_Execute_OwnershipLinuxOnly(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err == nil {
 		t.Error("Execute() should error when setting ownership without become")
 	}
@@ -1789,7 +1626,7 @@ func TestHandler_Execute_OwnershipLinuxOnly(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_StatError(t *testing.T) {
+func TestHandler_Run_StatError(t *testing.T) {
 	h := &Handler{}
 
 	// Use a path that will cause stat error
@@ -1803,7 +1640,7 @@ func TestHandler_Execute_StatError(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		// On some systems, stat on /proc paths might fail with permission error
 		// This is acceptable behavior
@@ -1814,30 +1651,8 @@ func TestHandler_Execute_StatError(t *testing.T) {
 	}
 }
 
-func TestHandler_DryRun_InvalidPathTemplate(t *testing.T) {
-	h := &Handler{}
 
-	ec := mockExecutionContext()
-	step := &config.Step{
-		FileWrite: &config.File{
-			Path: "{{ invalid template syntax",
-		},
-	}
-
-	err := h.DryRun(ec, step)
-	// Should not error in dry-run mode - path expansion failure is handled
-	if err != nil {
-		t.Errorf("DryRun() should handle path expansion errors gracefully, got: %v", err)
-	}
-
-	// Check that something was still logged
-	log := ec.Svc.Logger.(*testutil.MockLogger)
-	if len(log.Logs) == 0 {
-		t.Error("DryRun() should log something even on path expansion error")
-	}
-}
-
-func TestHandler_Execute_EmptyContent(t *testing.T) {
+func TestHandler_Run_EmptyContent(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1851,7 +1666,7 @@ func TestHandler_Execute_EmptyContent(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1872,7 +1687,7 @@ func TestHandler_Execute_EmptyContent(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_DefaultState(t *testing.T) {
+func TestHandler_Run_DefaultState(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1887,7 +1702,7 @@ func TestHandler_Execute_DefaultState(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1903,7 +1718,7 @@ func TestHandler_Execute_DefaultState(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_ResultTiming(t *testing.T) {
+func TestHandler_Run_ResultTiming(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1917,7 +1732,7 @@ func TestHandler_Execute_ResultTiming(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1945,7 +1760,7 @@ func TestHandler_Execute_ResultTiming(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_MultipleEvents(t *testing.T) {
+func TestHandler_Run_MultipleEvents(t *testing.T) {
 	h := &Handler{}
 
 	tmpDir := t.TempDir()
@@ -1961,7 +1776,7 @@ func TestHandler_Execute_MultipleEvents(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step1)
+	_, err := h.Run(ec, step1)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -1974,7 +1789,7 @@ func TestHandler_Execute_MultipleEvents(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step2)
+	_, err = h.Run(ec, step2)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -2019,7 +1834,7 @@ func TestHandler_CreateDirectoryWithBecome(t *testing.T) {
 	}
 
 	// Will fail without actual sudo, but tests the code path
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	t.Logf("createDirectoryWithBecome error (expected): %v", err)
 }
 
@@ -2044,7 +1859,7 @@ func TestHandler_CreateFileWithBecome(t *testing.T) {
 	}
 
 	// Will fail without actual sudo, but tests the code path
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	t.Logf("createFileWithBecome error (expected): %v", err)
 }
 
@@ -2075,7 +1890,7 @@ func TestHandler_RemoveWithBecome(t *testing.T) {
 	}
 
 	// Will fail without actual sudo, but tests the code path
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	t.Logf("removeWithBecome error (expected): %v", err)
 }
 
@@ -2111,7 +1926,7 @@ func TestHandler_SetOwnership(t *testing.T) {
 	}
 
 	// This should work if we're setting ownership to ourselves
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil && !strings.Contains(err.Error(), "permission") {
 		t.Logf("setOwnership error (may be expected): %v", err)
 	}
@@ -2150,7 +1965,7 @@ func TestHandler_ChownWithBecome(t *testing.T) {
 	}
 
 	// Will fail without actual sudo, but tests the code path
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	t.Logf("chownWithBecome error (expected): %v", err)
 }
 
@@ -2201,13 +2016,13 @@ func TestHandler_TouchFile_WithOwnership(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Logf("touchFile with ownership error (may be expected): %v", err)
 	}
 }
 
-func TestHandler_Execute_RecursiveDirectory(t *testing.T) {
+func TestHandler_Run_RecursiveDirectory(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 
@@ -2223,7 +2038,7 @@ func TestHandler_Execute_RecursiveDirectory(t *testing.T) {
 		},
 	}
 
-	result, err := h.Execute(ec, step)
+	result, err := h.Run(ec, step)
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -2239,7 +2054,7 @@ func TestHandler_Execute_RecursiveDirectory(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_SymlinkWithOwnership(t *testing.T) {
+func TestHandler_Run_SymlinkWithOwnership(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping symlink test on Windows")
 	}
@@ -2272,13 +2087,13 @@ func TestHandler_Execute_SymlinkWithOwnership(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Logf("symlink with ownership error (may be expected): %v", err)
 	}
 }
 
-func TestHandler_Execute_HardlinkWithOwnership(t *testing.T) {
+func TestHandler_Run_HardlinkWithOwnership(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping hardlink test on Windows")
 	}
@@ -2311,13 +2126,13 @@ func TestHandler_Execute_HardlinkWithOwnership(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Logf("hardlink with ownership error (may be expected): %v", err)
 	}
 }
 
-func TestHandler_Execute_PermsWithOwnership(t *testing.T) {
+func TestHandler_Run_PermsWithOwnership(t *testing.T) {
 	h := &Handler{}
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "perms-ownership.txt")
@@ -2345,7 +2160,7 @@ func TestHandler_Execute_PermsWithOwnership(t *testing.T) {
 		},
 	}
 
-	_, err = h.Execute(ec, step)
+	_, err = h.Run(ec, step)
 	if err != nil {
 		t.Logf("perms with ownership error (may be expected): %v", err)
 	}

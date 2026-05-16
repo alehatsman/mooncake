@@ -89,269 +89,6 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute runs the copy action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	copyAction := step.FileCopy
-
-	// We need ExecutionContext for PathUtil
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return nil, fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Render paths
-	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		return nil, fmt.Errorf("failed to expand src path: %w", err)
-	}
-
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		return nil, fmt.Errorf("failed to expand dest path: %w", err)
-	}
-
-	// Create result
-	result := executor.NewResult()
-	result.StartTime = time.Now()
-	result.Changed = false
-
-	defer func() {
-		result.EndTime = time.Now()
-		result.Duration = result.EndTime.Sub(result.StartTime)
-	}()
-
-	// Verify source exists. MT-51: when follow_symlinks=false, use
-	// Lstat so a symlink at src reports as a symlink (not its target).
-	followSymlinks := true
-	if copyAction.FollowSymlinks != nil {
-		followSymlinks = *copyAction.FollowSymlinks
-	}
-	var srcInfo os.FileInfo
-	if followSymlinks {
-		srcInfo, err = os.Stat(renderedSrc)
-	} else {
-		srcInfo, err = os.Lstat(renderedSrc)
-	}
-	if err != nil {
-		result.Failed = true
-		return result, fmt.Errorf("failed to stat source: %w", err)
-	}
-	srcIsSymlink := !followSymlinks && srcInfo.Mode()&os.ModeSymlink != 0
-	if srcInfo.IsDir() {
-		result.Failed = true
-		return result, fmt.Errorf("src %q is a directory; mooncake's file.copy is single-file only. Use `shell: cp -r ...` to recurse, or copy each file with a `for_each_file:` loop", renderedSrc)
-	}
-
-	// Verify source checksum if provided
-	if copyAction.Checksum != "" {
-		ctx.GetLogger().Debugf("  Verifying source checksum: %s", copyAction.Checksum)
-		matches, checksumErr := utils.VerifyChecksum(renderedSrc, copyAction.Checksum)
-		if checksumErr != nil {
-			result.Failed = true
-			return result, fmt.Errorf("failed to verify source checksum: %w", checksumErr)
-		}
-		if !matches {
-			result.Failed = true
-			return result, fmt.Errorf("source checksum mismatch")
-		}
-	}
-
-	// Check if destination exists. MT-51: when follow_symlinks=false
-	// we Lstat dest so an existing symlink reports as itself, not as
-	// whatever it points to — that lets the idempotency check below
-	// compare symlink targets directly.
-	var destInfo os.FileInfo
-	if followSymlinks {
-		destInfo, err = os.Stat(renderedDest)
-	} else {
-		destInfo, err = os.Lstat(renderedDest)
-	}
-	destExists := err == nil
-
-	// Determine if copy is needed
-	needsCopy := !destExists || copyAction.Force
-	if destExists && !copyAction.Force {
-		switch {
-		case srcIsSymlink && destInfo.Mode()&os.ModeSymlink != 0:
-			// Both src and dest are symlinks: compare targets.
-			srcTarget, srcErr := os.Readlink(renderedSrc)
-			destTarget, dstErr := os.Readlink(renderedDest)
-			needsCopy = srcErr != nil || dstErr != nil || srcTarget != destTarget
-		case srcIsSymlink && destInfo.Mode()&os.ModeSymlink == 0:
-			// Source is a symlink, dest is a regular file — replace.
-			needsCopy = true
-		default:
-			// Regular-file path: compare sizes and modtimes.
-			if destInfo.Size() == srcInfo.Size() && destInfo.ModTime().Equal(srcInfo.ModTime()) {
-				needsCopy = false
-			} else {
-				needsCopy = true
-			}
-		}
-	}
-
-	// Parse mode (use source mode if not specified)
-	mode := h.parseFileMode(copyAction.Mode, srcInfo.Mode()&os.ModePerm)
-
-	if !needsCopy {
-		ctx.GetLogger().Debugf("  File already up to date: %s", renderedDest)
-		return result, nil
-	}
-
-	result.Changed = true
-
-	// Create backup if requested and dest exists
-	if copyAction.Backup && destExists {
-		ctx.GetLogger().Debugf("  Creating backup of: %s", renderedDest)
-		backupPath, err := utils.CreateBackup(renderedDest)
-		if err != nil {
-			result.Failed = true
-			return result, fmt.Errorf("failed to create backup: %w", err)
-		}
-		ctx.GetLogger().Debugf("  Backup created: %s", backupPath)
-	}
-
-	// MT-51: when follow_symlinks=false and the source is a symlink,
-	// recreate the symlink at dest with the same target string rather
-	// than copying the file content. Skip the rest of the file-copy
-	// pipeline (checksum verify, ownership chown) since those don't
-	// apply meaningfully to a symlink.
-	if srcIsSymlink {
-		target, readErr := os.Readlink(renderedSrc)
-		if readErr != nil {
-			result.Failed = true
-			return result, fmt.Errorf("failed to read symlink target: %w", readErr)
-		}
-		// Remove an existing dest so Symlink doesn't fail with EEXIST.
-		// Idempotency was already decided above (needsCopy).
-		if destExists {
-			if rmErr := os.Remove(renderedDest); rmErr != nil {
-				result.Failed = true
-				return result, fmt.Errorf("failed to remove existing dest before symlink: %w", rmErr)
-			}
-		}
-		if symErr := os.Symlink(target, renderedDest); symErr != nil {
-			result.Failed = true
-			return result, fmt.Errorf("failed to create symlink: %w", symErr)
-		}
-		ctx.GetLogger().Debugf("  Preserved symlink: %s -> %s (target: %s)", renderedSrc, renderedDest, target)
-		return result, nil
-	}
-
-	// Copy file
-	ctx.GetLogger().Debugf("  Copying file: %s -> %s", renderedSrc, renderedDest)
-	if err := h.copyFile(renderedSrc, renderedDest, mode, step, ec, ctx); err != nil {
-		result.Failed = true
-		return result, err
-	}
-
-	// Set ownership if specified
-	if copyAction.Owner != "" || copyAction.Group != "" {
-		ctx.GetLogger().Debugf("  Setting ownership: %s (owner: %s, group: %s)", renderedDest, copyAction.Owner, copyAction.Group)
-		if err := h.setOwnership(renderedDest, copyAction.Owner, copyAction.Group, step, ec); err != nil {
-			result.Failed = true
-			return result, fmt.Errorf("failed to set ownership: %w", err)
-		}
-	}
-
-	// Verify destination checksum if provided
-	if copyAction.Checksum != "" {
-		ctx.GetLogger().Debugf("  Verifying destination checksum: %s", copyAction.Checksum)
-		matches, err := utils.VerifyChecksum(renderedDest, copyAction.Checksum)
-		if err != nil {
-			result.Failed = true
-			return result, fmt.Errorf("failed to verify destination checksum: %w", err)
-		}
-		if !matches {
-			result.Failed = true
-			return result, fmt.Errorf("destination checksum mismatch after copy")
-		}
-	}
-
-	// Emit event
-	publisher := ctx.GetEventPublisher()
-	if publisher != nil {
-		publisher.Publish(events.Event{
-			Type: events.EventFileCopied,
-			Data: events.FileCopiedData{
-				Src:       renderedSrc,
-				Dest:      renderedDest,
-				SizeBytes: srcInfo.Size(),
-				Mode:      mode.String(),
-				Checksum:  copyAction.Checksum,
-				DryRun:    ctx.Mode() == actions.ModePlan,
-			},
-		})
-	}
-
-	return result, nil
-}
-
-// DryRun logs what would be done without actually doing it.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	copyAction := step.FileCopy
-
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("context is not an ExecutionContext")
-	}
-
-	// Render paths
-	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(copyAction.Src, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		renderedSrc = copyAction.Src
-	}
-
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(copyAction.Dest, ec.CurrentDir, ctx.GetVariables())
-	if err != nil {
-		renderedDest = copyAction.Dest
-	}
-
-	// Check if source exists
-	srcInfo, err := os.Stat(renderedSrc)
-	if err != nil {
-		ctx.GetLogger().Errorf("  [DRY-RUN] Source file not found: %s", renderedSrc)
-		return fmt.Errorf("source not found: %s", renderedSrc)
-	}
-
-	// Check if destination exists
-	destInfo, err := os.Stat(renderedDest)
-	destExists := err == nil
-
-	// Determine if copy is needed
-	needsCopy := !destExists || copyAction.Force
-	if destExists && !copyAction.Force {
-		if destInfo.Size() == srcInfo.Size() && destInfo.ModTime().Equal(srcInfo.ModTime()) {
-			needsCopy = false
-		} else {
-			needsCopy = true
-		}
-	}
-
-	mode := h.parseFileMode(copyAction.Mode, srcInfo.Mode()&os.ModePerm)
-
-	if needsCopy {
-		ctx.GetLogger().Infof("  [DRY-RUN] Would copy file: %s -> %s (size: %d bytes, mode: %s)",
-			renderedSrc, renderedDest, srcInfo.Size(), h.formatMode(mode))
-	} else {
-		ctx.GetLogger().Infof("  [DRY-RUN] File already up to date: %s", renderedDest)
-	}
-
-	if copyAction.Checksum != "" {
-		ctx.GetLogger().Debugf("  Would verify checksum: %s", copyAction.Checksum)
-	}
-
-	if copyAction.Backup && destExists && needsCopy {
-		ctx.GetLogger().Debugf("  Would create backup before overwrite")
-	}
-
-	if copyAction.Owner != "" || copyAction.Group != "" {
-		ctx.GetLogger().Debugf("  Would set ownership: owner=%s group=%s", copyAction.Owner, copyAction.Group)
-	}
-
-	return nil
-}
-
 // Helper functions
 
 func (h *Handler) formatMode(mode os.FileMode) string {
@@ -611,7 +348,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
-	srcInfo, err := os.Stat(src)
+	followSymlinks := cp.FollowSymlinks == nil || *cp.FollowSymlinks
+	var srcInfo os.FileInfo
+	if followSymlinks {
+		srcInfo, err = os.Stat(src)
+	} else {
+		srcInfo, err = os.Lstat(src)
+	}
 	if err != nil {
 		result.Failed = true
 		return result, fmt.Errorf("failed to stat source: %w", err)
@@ -619,6 +362,31 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if srcInfo.IsDir() {
 		result.Failed = true
 		return result, fmt.Errorf("src %q is a directory; mooncake's file.copy is single-file only. Use `shell: cp -r ...` to recurse, or copy each file with a `for_each_file:` loop", src)
+	}
+
+	// Symlink-source path: when follow_symlinks=false and source is a
+	// symlink, create a symlink at dest pointing to the same target.
+	if !followSymlinks && srcInfo.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(src)
+		if err != nil {
+			result.Failed = true
+			return result, fmt.Errorf("failed to read symlink target: %w", err)
+		}
+		if ctx.Mode() == actions.ModeApply {
+			result.ReverseData = filehandler.CaptureReverseInfo(dest, "")
+		}
+		eff := ctx.Effects().Symlink(target, dest, actions.PerformerOpts{Become: step.ShouldBecome()})
+		if eff.Err != nil {
+			result.Failed = true
+			return result, eff.Err
+		}
+		if ctx.Mode() == actions.ModePlan {
+			result.WouldChange = eff.WouldChange
+			result.Reason = eff.Reason
+		} else {
+			result.Changed = eff.Performed
+		}
+		return result, nil
 	}
 
 	// Source checksum verification (pre-copy). Failing here is a hard

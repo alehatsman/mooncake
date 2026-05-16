@@ -1283,6 +1283,24 @@ func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // Step represents a single configuration step that can perform various actions.
 //
+// # Field categories
+//
+// USER-INPUT FIELDS — set by the operator in config YAML, never modified by
+// the planner or executor. Validated by Validate(). These are the fields a
+// human or generator writes when authoring a plan file.
+//
+// COMPOUND-STEP CONTAINERS — also user-input, but structurally exclusive with
+// action fields: a step with Transaction, Try, or both is a compound wrapper
+// node and must have no action pointer set. Validated by Validate(). The
+// planner expands the children as siblings; the compound step itself becomes
+// a structural marker (no-op in ExecuteStep).
+//
+// PLANNER-INTERNAL FIELDS — populated by plan expansion, never present in
+// config YAML (all tagged yaml:"-" or omitempty). Carry context the executor
+// needs to route compound-step children correctly (TryRole, TxnRole) or to
+// correlate events (ID, TriggeredBy). Treat as read-only after the planner
+// runs; writing to them in handler code is a bug.
+//
 // MT-75: every YAML tag carries `,omitempty` so `plan -o plan.yaml`
 // doesn't print 60+ `null` action members for each step. The JSON tags
 // already had it, but `gopkg.in/yaml.v3` honors omitempty independently
@@ -1310,7 +1328,13 @@ type Step struct {
 	Unless  *string `yaml:"unless,omitempty"  json:"unless,omitempty"`              // Alias: skip if command succeeds
 
 
-	// Actions (exactly one required).
+	// ── USER-INPUT ────────────────────────────────────────────────────────────
+
+	// Actions (exactly one required — enforced at runtime by Validate()).
+	// The Go type system cannot express this as a compile-time union: all
+	// 74 pointers live on the struct and exactly one must be non-nil. Use
+	// DetermineActionType() to recover the action name; never switch on the
+	// fields directly.
 	// Action keys are dot-namespaced by domain (spec-21):
 	//   file.*    — file & content management
 	//   text.*    — structured text editing
@@ -1410,6 +1434,8 @@ type Step struct {
 	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 	As   string   `yaml:"as,omitempty" json:"as,omitempty"`
 
+	// ── COMPOUND-STEP CONTAINERS ─────────────────────────────────────────────
+
 	// Reactive triggers (spec-23 §1). Children run iff the parent step's
 	// outputs reported `changed: true`. Otherwise skipped with reason
 	// "parent didn't change". Children execute in declaration order; a
@@ -1452,6 +1478,8 @@ type Step struct {
 	// declare themselves irreversible at apply time. Default false so
 	// plans that mix in a `shell:` step fail loudly at plan time.
 	AllowIrreversible bool `yaml:"allow_irreversible,omitempty" json:"allow_irreversible,omitempty"`
+
+	// ── PLANNER-INTERNAL ─────────────────────────────────────────────────────
 
 	// Plan metadata (populated during plan expansion, omitted in config files)
 	ID             string        `yaml:"id,omitempty" json:"id,omitempty"`
