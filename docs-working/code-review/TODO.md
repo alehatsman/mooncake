@@ -28,6 +28,8 @@ something else landing first.
 | F017 | executor: continue_on_error emits step.failed AND step.completed | bug | XS | — | open |
 | F018 | shell: bufio.Scanner default 64 KB line cap → silent truncation | bug | S | — | open |
 | F019 | secrets.Resolve doesn't recurse into step.Vars (*map[string]interface{}) | bug | S | — | open |
+| F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
+| F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 
 ## Findings index
 
@@ -52,6 +54,8 @@ something else landing first.
 | F017 | executor continue_on_error double emit | bug | open | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
 | F018 | shell scanner 64KB line cap | bug | open | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
 | F019 | secrets.Resolve misses step.Vars | bug | open | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
+| F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
+| F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -69,8 +73,9 @@ something else landing first.
    package (controller, bootstrap, multiplex, peers) still queued.
 9. **`internal/agentd`** — 3,100 LOC, growing fast in the last 24h.
 10. **`internal/plan`** — planner, including the new `plan/filter`.
-11. **`internal/apply/runner.go`** — kernel entrypoint. Verify the
-    Subscribers + Close lifecycle change actually closes.
+11. ~~`internal/apply/runner.go`~~ — done → F020 (signal-handler
+    hostile to embedded callers), F021 (Config.ExtraSubscribers
+    doc-drift).
 12. **`internal/actions/package`** — 1,216 LOC, within-20% warning.
 13. **`internal/actions/copy` after the migration** — verify no
     dead-weight remains after arch-wins.
@@ -102,6 +107,7 @@ something else landing first.
 | 2026-05-16 | `internal/executor/executor.go` (partial) | F017 |
 | 2026-05-16 | `internal/actions/shell/handler.go` | F018 |
 | 2026-05-16 | `internal/secrets/resolver/resolve.go` | F019 |
+| 2026-05-16 | `internal/apply/runner.go` + `config.go` | F020, F021 |
 
 ## Cross-cutting themes / patterns to track
 
