@@ -18,7 +18,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
-// newMockExecutionContext creates a mock that can be cast to *executor.ExecutionContext
+// newMockExecutionContext creates a mock for apply-mode testing.
 func newMockExecutionContext() *executor.ExecutionContext {
 	tmpl, err := template.NewPongo2Renderer()
 	if err != nil {
@@ -26,18 +26,26 @@ func newMockExecutionContext() *executor.ExecutionContext {
 	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: expression.NewExprEvaluator(),
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Logger: &testutil.MockLogger{Logs: []string{}},
+			Template:       tmpl,
+			Evaluator:      expression.NewExprEvaluator(),
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Logger:         &testutil.MockLogger{Logs: []string{}},
 			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-			Redactor: security.NewRedactor(),
-			SudoPass: "",
-			Stats: executor.NewExecutionStats(),
+			Redactor:       security.NewRedactor(),
+			SudoPass:       "",
+			Stats:          executor.NewExecutionStats(),
+			Mode:           actions.ModeApply,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 	}
+}
+
+// newMockPlanContext creates a mock for plan-mode (dry-run) testing.
+func newMockPlanContext() *executor.ExecutionContext {
+	ec := newMockExecutionContext()
+	ec.Svc.Mode = actions.ModePlan
+	return ec
 }
 
 func TestHandler_Metadata(t *testing.T) {
@@ -189,7 +197,7 @@ func TestHandler_Validate(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_InvalidContext(t *testing.T) {
+func TestHandler_Run_InvalidContext(t *testing.T) {
 	h := &Handler{}
 	ctx := testutil.NewMockContext()
 
@@ -200,16 +208,19 @@ func TestHandler_Execute_InvalidContext(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
-		t.Error("Execute() should error when context is not ExecutionContext")
+		t.Error("Run() should error when context is not ExecutionContext")
 	}
 	if !strings.Contains(err.Error(), "invalid context type") {
 		t.Errorf("Error should mention invalid context type, got: %v", err)
 	}
 }
 
-func TestHandler_DryRun(t *testing.T) {
+func TestHandler_Run_PlanMode(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("service plan mode is Linux-only")
+	}
 	h := &Handler{}
 
 	tests := []struct {
@@ -295,45 +306,26 @@ func TestHandler_DryRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := newMockExecutionContext()
+			ctx := newMockPlanContext()
 			ctx.Scope.User["service_name"] = "nginx"
 
-			err := h.DryRun(ctx, tt.step)
+			result, err := h.Run(ctx, tt.step)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DryRun() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
-			if !tt.wantErr {
-				// Check that something was logged
-				mockLog := ctx.Svc.Logger.(*testutil.MockLogger)
-				if len(mockLog.Logs) == 0 {
-					t.Error("DryRun() should log something")
-				}
+			if !tt.wantErr && result == nil {
+				t.Error("Run() plan mode returned nil result")
 			}
 		})
 	}
 }
 
-func TestHandler_DryRun_InvalidContext(t *testing.T) {
-	h := &Handler{}
-	ctx := testutil.NewMockContext()
-
-	step := &config.Step{
-		OsService: &config.ServiceAction{
-			Name:  "nginx",
-			State: ServiceStateStarted,
-		},
+func TestHandler_Run_PlanMode_TemplateRenderFailure(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("service plan mode is Linux-only")
 	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Error("DryRun() should error when context is not ExecutionContext")
-	}
-}
-
-func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
 	h := &Handler{}
-	ctx := newMockExecutionContext()
+	ctx := newMockPlanContext()
 
 	step := &config.Step{
 		OsService: &config.ServiceAction{
@@ -342,9 +334,9 @@ func TestHandler_DryRun_TemplateRenderFailure(t *testing.T) {
 		},
 	}
 
-	err := h.DryRun(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
-		t.Error("DryRun() should error on invalid template syntax")
+		t.Error("Run() should error on invalid template syntax")
 	}
 }
 
