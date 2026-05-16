@@ -241,6 +241,12 @@ func peerDiff(old, newer Peer) []string {
 	if !stringSlicesEqual(old.Tags, newer.Tags) {
 		out = append(out, fmt.Sprintf("tags: %v → %v", old.Tags, newer.Tags))
 	}
+	if !stringSlicesEqual(old.Roles, newer.Roles) {
+		out = append(out, fmt.Sprintf("roles: %v → %v", old.Roles, newer.Roles))
+	}
+	if old.SSH != newer.SSH {
+		out = append(out, fmt.Sprintf("ssh: %s → %s", old.SSH, newer.SSH))
+	}
 	return out
 }
 
