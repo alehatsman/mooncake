@@ -104,10 +104,9 @@ func (r *Runner) runFromPlan(_ context.Context) (*KernelResult, error) {
 	// Minimal logger for internal use (errors, etc.)
 	internalLog := logger.NewLogger(level)
 
-	// issue-87: SIGINT/SIGTERM handler. Same shape as the
-	// config-path Runner.
-	stopSig := installSignalHandler()
-	defer stopSig()
+	// F020: signal handling lives in the CLI caller — same contract as
+	// the config-path Runner. Embedded callers cancel ctx via their
+	// own shutdown paths.
 
 	capture := &executor.RunCapture{}
 

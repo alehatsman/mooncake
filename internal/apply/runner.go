@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -51,16 +49,22 @@ func NewRunner(cfg *Config) *Runner {
 }
 
 // Run validates the Config, sets up the event substrate (publisher
-// + subscribers), installs SIGINT/SIGTERM handling, dispatches to
-// executor.Start, and returns a typed *KernelResult plus the run's
-// error (R1.1b). The returned *KernelResult is never nil — on a
-// validation failure or pre-plan error it carries a populated
-// Summary with Success=false and a non-empty ErrorMessage; callers
-// inspecting it after a non-nil error get a consistent shape.
+// + subscribers), dispatches to executor.Start, and returns a typed
+// *KernelResult plus the run's error (R1.1b). The returned
+// *KernelResult is never nil — on a validation failure or pre-plan
+// error it carries a populated Summary with Success=false and a
+// non-empty ErrorMessage; callers inspecting it after a non-nil error
+// get a consistent shape.
+//
+// Signal handling is the *caller's* responsibility (F020): the CLI
+// wraps ctx with signal.NotifyContext, agentd has its own shutdown
+// path, MCP / SDK callers cancel ctx as they see fit. Run never calls
+// os.Exit — if it did, an embedded caller's graceful shutdown could
+// not survive a SIGTERM mid-apply.
 //
 // Context is wired through for future cancellation (the executor
-// does not yet observe it; SIGINT/SIGTERM handling is installed
-// separately). Direct callers (MCP, agent loop) get the same surface.
+// does not yet observe it). Direct callers (MCP, agent loop) get the
+// same surface.
 func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// R1.1c: dispatch to the saved-plan path when constructed via
 	// NewRunnerFromPlan. The two paths share publisher / capture /
@@ -143,16 +147,10 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// Minimal logger for internal use (errors, etc.)
 	internalLog := logger.NewLogger(level)
 
-	// issue-87: install a SIGINT/SIGTERM handler so Ctrl-C actually
-	// terminates the run. Pre-fix the shell child died (process-group
-	// signal delivery) but mooncake's own process stayed alive — the
-	// executor caught the canceled-step error and proceeded as if the
-	// step had merely failed, then sat in the next step waiting on
-	// its shell etc. We exit on the first signal (after stopping the
-	// handler so a follow-up Ctrl-C during shutdown can still
-	// hard-kill).
-	stopSig := installSignalHandler()
-	defer stopSig()
+	// F020: signal handling lives in the CLI caller (cmd/mooncake.go
+	// wraps ctx with signal.NotifyContext). The kernel does not call
+	// os.Exit; embedded callers (agentd, MCP, SDK) cancel ctx via their
+	// own shutdown paths.
 
 	// R1.1b: hand executor.Start a *RunCapture so the kernel result
 	// carries the compiled plan and per-step records. Without this
@@ -325,35 +323,4 @@ func writeFactsJSON(f *facts.Facts, path string) error {
 		return fmt.Errorf("write file: %w", err)
 	}
 	return nil
-}
-
-// installSignalHandler installs a SIGINT/SIGTERM handler that
-// terminates the apply with the standard exit code (130 for SIGINT,
-// 143 for SIGTERM). issue-87.
-//
-// The returned stop func unregisters the handler — caller defers it
-// so signals after a clean apply don't keep the goroutine spinning.
-func installSignalHandler() (stop func()) {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		select {
-		case sig := <-sigCh:
-			fmt.Fprintf(os.Stderr, "\n⚠ received %s, aborting apply\n", sig)
-			// Stop listening so a follow-up signal during shutdown
-			// can hit the default handler and hard-kill if we hang.
-			signal.Stop(sigCh)
-			code := 130 // SIGINT
-			if sig == syscall.SIGTERM {
-				code = 143
-			}
-			os.Exit(code)
-		case <-done:
-		}
-	}()
-	return func() {
-		signal.Stop(sigCh)
-		close(done)
-	}
 }

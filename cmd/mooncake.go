@@ -2,13 +2,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
@@ -314,8 +317,10 @@ func run(c *cli.Context) error {
 		MaxOutputLines:    c.Int("max-output-lines"),
 		FactsJSONPath:     c.String("facts-json"),
 	}
-	_, runErr := apply.NewRunner(cfg).Run(c.Context)
-	return runErr
+	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
+		_, runErr := apply.NewRunner(cfg).Run(ctx)
+		return runErr
+	})
 }
 
 // runFromPlan is now a CLI shim over apply.NewRunnerFromPlan (R1.1c).
@@ -323,12 +328,63 @@ func run(c *cli.Context) error {
 // live in internal/apply alongside the config-path Runner so both
 // apply entry points produce the same typed *KernelResult.
 func runFromPlan(c *cli.Context, planPath string) error {
-	_, err := apply.NewRunnerFromPlan(planPath, apply.FromPlanOptions{
-		SudoPass:   c.String("sudo-pass"),
-		LogLevel:   c.String("log-level"),
-		MaxPlanAge: c.Duration("max-plan-age"),
-		AllowStale: c.Bool("allow-stale"),
-	}).Run(c.Context)
+	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
+		_, err := apply.NewRunnerFromPlan(planPath, apply.FromPlanOptions{
+			SudoPass:   c.String("sudo-pass"),
+			LogLevel:   c.String("log-level"),
+			MaxPlanAge: c.Duration("max-plan-age"),
+			AllowStale: c.Bool("allow-stale"),
+		}).Run(ctx)
+		return err
+	})
+}
+
+// runWithSignalCtx wires SIGINT/SIGTERM handling for CLI-launched
+// applies and translates a received signal into the standard exit code
+// (130 for SIGINT, 143 for SIGTERM). Signal handling lives here, in
+// the CLI, rather than in apply.Runner — F020. Embedded callers
+// (agentd, MCP, future SDK) call apply.Runner directly and drive
+// their own shutdown without going through this wrapper.
+//
+// On signal the goroutine prints a friendly stderr message and calls
+// os.Exit immediately — the same shape as the pre-F020 kernel handler,
+// just relocated to the CLI. Hard-exit is required today because the
+// executor's hot loop does not yet observe ctx cancellation, so a
+// running shell child (e.g. `sleep 30`) would otherwise block apply
+// for its full duration after a Ctrl-C. F016 is the follow-up to
+// thread ctx through executor → handler → exec.CommandContext so the
+// apply can drain on signal instead of being killed by os.Exit.
+//
+// ctx is wired through to the body so future cancellation-aware
+// handlers observe the signal as a cancelled context.
+func runWithSignalCtx(parent context.Context, body func(context.Context) error) error {
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
+	done := make(chan struct{})
+	go func() {
+		select {
+		case sig := <-sigCh:
+			fmt.Fprintf(os.Stderr, "\n⚠ received %s, aborting apply\n", sig)
+			// Stop listening so a follow-up signal during shutdown hits
+			// the default handler and hard-kills if we hang anywhere.
+			signal.Stop(sigCh)
+			cancel()
+			code := 130 // SIGINT
+			if sig == syscall.SIGTERM {
+				code = 143
+			}
+			os.Exit(code)
+		case <-done:
+		}
+	}()
+
+	err := body(ctx)
+	close(done)
 	return err
 }
 

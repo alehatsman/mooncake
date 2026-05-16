@@ -5,7 +5,9 @@ severity: risk
 package: internal/apply
 file: internal/apply/runner.go
 lines: 154-155, 336-359
-status: open
+status: done
+resolved_by: worktree-fix-f020
+follow_up: F016 (executor.Start does not observe ctx; signal still routes through os.Exit until ctx threads through executor → handler → exec.CommandContext)
 ---
 
 ## What
