@@ -5,7 +5,8 @@ severity: risk
 package: internal/agentd
 file: internal/agentd/middleware.go
 lines: 97-110
-status: open
+status: done
+resolved_by: worktree-fix-f029
 ---
 
 ## What
