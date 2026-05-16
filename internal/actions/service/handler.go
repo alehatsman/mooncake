@@ -98,20 +98,6 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// Execute executes the service action.
-func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return nil, fmt.Errorf("invalid context type")
-	}
-
-	// Same reverse-capture wrap as Run's apply path (v6). Execute
-	// is the legacy Spec-1 entry point; Run is the Spec-16 one.
-	// Either can dispatch depending on registration shape, so both
-	// share runApply.
-	return runApply(step, ec)
-}
-
 // runApply wraps HandleService with reverse-capture: on Linux, it
 // queries systemctl is-active / is-enabled BEFORE delegating, then
 // bolts the captured snapshot onto ec.CurrentResult.ReverseData
@@ -130,45 +116,6 @@ func runApply(step *config.Step, ec *executor.ExecutionContext) (actions.Result,
 		ec.CurrentResult.ReverseData = priorInfo
 	}
 	return ec.CurrentResult, err
-}
-
-// DryRun logs what the service operation would do.
-func (h *Handler) DryRun(ctx actions.Context, step *config.Step) error {
-	ec, ok := ctx.(*executor.ExecutionContext)
-	if !ok {
-		return fmt.Errorf("invalid context type")
-	}
-
-	serviceAction := step.OsService
-	if serviceAction == nil {
-		return fmt.Errorf("service action requires service configuration")
-	}
-
-	// Render service name
-	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.GetVariables())
-	if err != nil {
-		return err
-	}
-
-	// Log what would be done
-	ec.Svc.Logger.Infof("  [DRY-RUN] Would manage service: %s", renderedName)
-	if serviceAction.State != "" {
-		ec.Svc.Logger.Infof("    State: %s", serviceAction.State)
-	}
-	if serviceAction.Enabled != nil {
-		ec.Svc.Logger.Infof("    Enabled: %v", *serviceAction.Enabled)
-	}
-	if serviceAction.Unit != nil {
-		ec.Svc.Logger.Infof("    Unit file: managed")
-	}
-	if serviceAction.Dropin != nil {
-		ec.Svc.Logger.Infof("    Drop-in: %s", serviceAction.Dropin.Name)
-	}
-	if serviceAction.DaemonReload {
-		ec.Svc.Logger.Infof("    Daemon reload: yes")
-	}
-
-	return nil
 }
 
 // HandleService manages services across different platforms (systemd, launchd, Windows).
@@ -1223,10 +1170,10 @@ func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode {
 	return os.FileMode(mode)
 }
 
-// Run is the Spec 16 unified entry point. Plan mode queries
-// systemctl is-active / is-enabled to predict state and enabled-flag
-// changes, and compares unit / dropin file contents against the
-// rendered templates. Execute mode delegates to HandleService.
+// Run is the unified entry point. Plan mode queries systemctl
+// is-active / is-enabled to predict state and enabled-flag changes,
+// and compares unit / dropin file contents against the rendered
+// templates. Apply mode delegates to HandleService via runApply.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
