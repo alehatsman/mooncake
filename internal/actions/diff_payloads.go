@@ -136,3 +136,47 @@ type ServiceDiff struct {
 	Enabled *bool `json:"enabled,omitempty"`
 	Started *bool `json:"started,omitempty"`
 }
+
+// CronDiff is the typed Before/After payload when an actions.Diff
+// describes an os.cron mutation. The handler reports intent only
+// (no /etc/cron.d read at plan time). Consumers dispatch on
+// Resource.Attributes["kind"] == "os.cron".
+type CronDiff struct {
+	// Name is the cron entry's filename in /etc/cron.d (identity).
+	Name string `json:"name,omitempty"`
+
+	// State is the desired terminal state: "present" or "absent".
+	State string `json:"state,omitempty"`
+
+	// User the command runs as. Empty maps to root.
+	User string `json:"user,omitempty"`
+
+	// Schedule is the rendered cron schedule (five whitespace-
+	// joined fields when the step uses minute/hour/... pieces).
+	Schedule string `json:"schedule,omitempty"`
+
+	// Command is the command line the entry will execute.
+	Command string `json:"command,omitempty"`
+}
+
+// MountDiff is the typed Before/After payload when an actions.Diff
+// describes an os.mount mutation. The handler reports intent only
+// (no /etc/fstab or /proc/mounts read at plan time). Consumers
+// dispatch on Resource.Attributes["kind"] == "os.mount".
+type MountDiff struct {
+	// Src is the device / spec (UUID=..., LABEL=..., tmpfs, etc.).
+	Src string `json:"src,omitempty"`
+
+	// Dest is the mount point (the idempotency identity).
+	Dest string `json:"dest,omitempty"`
+
+	// FSType is the filesystem type (ext4, xfs, tmpfs, nfs, ...).
+	FSType string `json:"fstype,omitempty"`
+
+	// State is mounted | unmounted | fstab_only | absent. Empty
+	// defaults to "mounted" by handler convention.
+	State string `json:"state,omitempty"`
+
+	// Options is the mount-options list (defaults, noatime, ...).
+	Options []string `json:"options,omitempty"`
+}

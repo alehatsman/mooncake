@@ -40,7 +40,7 @@ func TestDiff_PresentIsCreate(t *testing.T) {
 	if d.Resource.Identifier != "backup" {
 		t.Errorf("Identifier = %s, want backup", d.Resource.Identifier)
 	}
-	after := d.After.(*OsCronSnapshot)
+	after := d.After.(*actions.CronDiff)
 	if after.Schedule != "* 3 * * *" {
 		t.Errorf("Schedule = %q, want '* 3 * * *'", after.Schedule)
 	}
@@ -61,7 +61,7 @@ func TestDiff_ExplicitSchedule(t *testing.T) {
 		Schedule: "@daily",
 		Command:  "x",
 	}})
-	after := d.After.(*OsCronSnapshot)
+	after := d.After.(*actions.CronDiff)
 	if after.Schedule != "@daily" {
 		t.Errorf("Schedule = %q, want @daily", after.Schedule)
 	}
