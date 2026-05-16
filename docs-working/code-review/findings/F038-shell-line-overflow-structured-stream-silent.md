@@ -8,6 +8,7 @@ lines: 454-465
 status: done
 resolved_by: worktree-fix-f038
 verified: 2026-05-16 on master @ 49930fd (post-F018 merge)
+post-fix verified 2026-05-16 on master @ 0c7009cc — repro /tmp/f018-overflow.yml 1.5MB step now reports stdout_len=100 with content 'mooncake: stdout stream truncated (line exceeded 1048576-byte limit): bufio.Scanner: token too long\n' (pre-fix stdout_len=0); programmatic consumers see the signal
 ---
 
 ## What
