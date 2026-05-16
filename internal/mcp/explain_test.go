@@ -150,6 +150,46 @@ func TestHandleExplain_ExamplesLimit(t *testing.T) {
 	}
 }
 
+// F044: schema declares minimum:0 / maximum:10. The handler must
+// reject values outside that range — the schema alone is advisory,
+// and a less-strict client (or a direct call) could otherwise sneak
+// in 100 example excerpts past the cap.
+func TestHandleExplain_ExamplesLimit_OverMaxRejected(t *testing.T) {
+	_, err := HandleExplain(context.Background(),
+		json.RawMessage(`{"noun":"file.write","examples_limit":11}`))
+	if err == nil {
+		t.Fatal("expected error for examples_limit > 10, got nil")
+	}
+	if !strings.Contains(err.Error(), "examples_limit") {
+		t.Errorf("error should mention examples_limit; got %v", err)
+	}
+}
+
+func TestHandleExplain_ExamplesLimit_NegativeRejected(t *testing.T) {
+	_, err := HandleExplain(context.Background(),
+		json.RawMessage(`{"noun":"file.write","examples_limit":-1}`))
+	if err == nil {
+		t.Fatal("expected error for examples_limit < 0, got nil")
+	}
+	if !strings.Contains(err.Error(), "examples_limit") {
+		t.Errorf("error should mention examples_limit; got %v", err)
+	}
+}
+
+// F044: omitted vs explicit-zero are different. Omitted falls through
+// to the default of 3; explicit zero means "no examples please". Both
+// are valid per the schema; both must produce a non-error response.
+func TestHandleExplain_ExamplesLimit_OmittedUsesDefault(t *testing.T) {
+	out, err := HandleExplain(context.Background(),
+		json.RawMessage(`{"noun":"file.write"}`))
+	if err != nil {
+		t.Fatalf("HandleExplain (omitted): %v", err)
+	}
+	if !strings.Contains(out, `"kind": "action"`) {
+		t.Errorf("expected kind:action; got %s", out)
+	}
+}
+
 // TestExplainViaToolsCall — RegisterAllTools wires HandleExplain so
 // MCP tools/call dispatch resolves the noun and returns the typed JSON
 // inside the standard content envelope.

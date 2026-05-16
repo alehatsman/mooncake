@@ -5,7 +5,7 @@ severity: bug
 package: internal/mcp
 file: internal/mcp/tools.go
 lines: 128-139, 456-486
-status: open
+status: fixed
 ---
 
 ## What

@@ -5,7 +5,7 @@ severity: smell
 package: internal/explain
 file: internal/explain/resolve_w2.go, internal/explain/explain.go, cmd/mooncake.go
 lines: resolve_w2.go:68-83, explain.go:210-218, mooncake.go:556-571
-status: open
+status: fixed
 ---
 
 ## What

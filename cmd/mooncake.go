@@ -473,8 +473,20 @@ func explainCommand(c *cli.Context) error {
 		return fmt.Errorf("invalid format: %s (use 'text', 'json', or 'yaml')", format)
 	}
 
+	// F044: mirror the MCP-side validation. The flag default is 3 so
+	// users who omit the flag never hit this; users who pass an
+	// out-of-range value get a clear rejection.
+	limit := c.Int("examples-limit")
+	const explainExamplesLimitMax = 10
+	if limit < 0 {
+		return fmt.Errorf("--examples-limit must be >= 0 (got %d)", limit)
+	}
+	if limit > explainExamplesLimitMax {
+		return fmt.Errorf("--examples-limit must be <= %d (got %d)", explainExamplesLimitMax, limit)
+	}
+
 	result := explain.Resolve(noun, explain.Options{
-		ExamplesLimit: c.Int("examples-limit"),
+		ExamplesLimit: limit,
 	})
 
 	// not_found on action lookups is an agent-recoverable signal, but on the
@@ -565,8 +577,17 @@ func renderExplainResourceText(w io.Writer, p *explain.ResourcePayload) {
 		if h.Reversible {
 			rev = " (reversible)"
 		}
-		fmt.Fprintf(w, "  %s  %-20s %-7s  run=%s%s\n",
-			h.TS.Format(time.RFC3339), h.Action, h.Result, h.RunID, rev)
+		// F045: when the same run touched this resource multiple times,
+		// the rows would otherwise be visually identical (same TS, same
+		// RunID, same Action, same Result). step=N gives readers a
+		// stable ordering key. Pre-spec-68 runs have no step index;
+		// omit the suffix there.
+		step := ""
+		if h.StepIndex > 0 {
+			step = fmt.Sprintf(" step=%d", h.StepIndex)
+		}
+		fmt.Fprintf(w, "  %s  %-20s %-7s  run=%s%s%s\n",
+			h.TS.Format(time.RFC3339), h.Action, h.Result, h.RunID, step, rev)
 	}
 }
 

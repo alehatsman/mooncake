@@ -20,6 +20,12 @@ import (
 	"github.com/alehatsman/mooncake/internal/snapshot"
 )
 
+// explainExamplesLimitMax is the inclusive upper bound on the
+// `examples_limit` argument for the MCP `explain` tool and the CLI
+// `--examples-limit` flag. Lifted to a const so the input-schema
+// literal and the handler validation can't drift (F044).
+const explainExamplesLimitMax = 10
+
 // RegisterAllTools registers every tool returned by AllTools() on srv with
 // the package's default handlers. Both `mooncake mcp` (stdio) and the daemon's
 // /v1/mcp endpoint use this so the tool surface stays in one place.
@@ -133,8 +139,8 @@ func AllTools() []ToolDef {
 				"examples_limit": map[string]interface{}{
 					"type":        "integer",
 					"minimum":     0,
-					"maximum":     10,
-					"description": "Cap on example excerpts returned for kind:action. Default 3.",
+					"maximum":     explainExamplesLimitMax,
+					"description": "Cap on example excerpts returned for kind:action. Omit to use the default of 3; set to 0 for none.",
 				},
 			}, []string{"noun"}),
 		},
@@ -459,9 +465,14 @@ func HandleRunPlan(ctx context.Context, args json.RawMessage) (string, error) {
 // which reads only ~/.mooncake/{runs,ops}.jsonl, the embedded schema, and the
 // in-tree actions registry.
 func HandleExplain(_ context.Context, args json.RawMessage) (string, error) {
+	// ExamplesLimit is a pointer so we can distinguish "client sent no
+	// examples_limit at all" (→ default of 3) from "client explicitly
+	// asked for zero" (→ no example excerpts) (F044). The inputSchema
+	// declares min 0 / max explainExamplesLimitMax; enforce that here
+	// too — schema-side bounds are advisory unless the handler clamps.
 	var params struct {
 		Noun          string `json:"noun"`
-		ExamplesLimit int    `json:"examples_limit"`
+		ExamplesLimit *int   `json:"examples_limit"`
 	}
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
@@ -472,8 +483,22 @@ func HandleExplain(_ context.Context, args json.RawMessage) (string, error) {
 		return "", fmt.Errorf("noun parameter required")
 	}
 
+	// -1 is the "no preference" sentinel; explain.findExamples reads
+	// any value < 0 as "use the default 3."
+	examplesLimit := -1
+	if params.ExamplesLimit != nil {
+		v := *params.ExamplesLimit
+		if v < 0 {
+			return "", fmt.Errorf("examples_limit must be >= 0 (got %d)", v)
+		}
+		if v > explainExamplesLimitMax {
+			return "", fmt.Errorf("examples_limit must be <= %d (got %d)", explainExamplesLimitMax, v)
+		}
+		examplesLimit = v
+	}
+
 	result := explain.Resolve(params.Noun, explain.Options{
-		ExamplesLimit: params.ExamplesLimit,
+		ExamplesLimit: examplesLimit,
 	})
 
 	var buf bytes.Buffer

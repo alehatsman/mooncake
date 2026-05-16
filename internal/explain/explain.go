@@ -208,13 +208,20 @@ type ResourcePayload struct {
 }
 
 // ResourceEvent is one row in a resource's history.
+//
+// StepIndex (F045) is the 1-based index of the step within its run.
+// Same-run rows on the same resource were previously indistinguishable
+// (same TS, same RunID, same Action, same Result); the index gives
+// readers a stable ordering key. omitempty so pre-spec-68 runs (no
+// per-step records) keep round-tripping cleanly.
 type ResourceEvent struct {
-	RunID      string    `json:"run_id"                yaml:"run_id"`
-	OpID       string    `json:"op_id,omitempty"       yaml:"op_id,omitempty"`
-	TS         time.Time `json:"ts"                    yaml:"ts"`
-	Action     string    `json:"action"                yaml:"action"`
-	Result     string    `json:"result"                yaml:"result"`
-	Reversible bool      `json:"reversible,omitempty"  yaml:"reversible,omitempty"`
+	RunID      string    `json:"run_id"                 yaml:"run_id"`
+	OpID       string    `json:"op_id,omitempty"        yaml:"op_id,omitempty"`
+	TS         time.Time `json:"ts"                     yaml:"ts"`
+	StepIndex  int       `json:"step_index,omitempty"   yaml:"step_index,omitempty"`
+	Action     string    `json:"action"                 yaml:"action"`
+	Result     string    `json:"result"                 yaml:"result"`
+	Reversible bool      `json:"reversible,omitempty"   yaml:"reversible,omitempty"`
 }
 
 // OpPayload is the kind:op wire shape — "what command was this and

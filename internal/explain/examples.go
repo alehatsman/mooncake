@@ -20,9 +20,17 @@ import (
 // Limited by Options.ExamplesLimit (default 3). The cap protects
 // MCP-tool output budget; the agent can re-call with a higher limit.
 func findExamples(noun string, opts Options) []ExampleHit {
+	// F044: zero is a valid request meaning "no examples please"; any
+	// negative value (including the zero-Options sentinel) means
+	// "caller has no preference — use the default of 3." This matches
+	// the MCP/CLI wire contract where the schema declares minimum: 0
+	// and the absent-or-omitted case maps to <0 at the boundary.
 	limit := opts.ExamplesLimit
-	if limit <= 0 {
+	if limit < 0 {
 		limit = 3
+	}
+	if limit == 0 {
+		return nil
 	}
 
 	root := opts.ExamplesRoot
