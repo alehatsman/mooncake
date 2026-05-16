@@ -1,0 +1,79 @@
+# Dogfood: this project's `make build`, `make test-race`, and `make ci`,
+# expressed as a mooncake config — every step typed, observable, replayable.
+#
+# This is a credibility artifact, NOT a Makefile replacement. The Makefile
+# still owns the canonical build; this file proves the kernel can carry
+# its own build through itself. See README.md in this directory for the
+# framing.
+#
+# Run:
+#   mooncake plan  --config examples/dogfood/mooncake.yml
+#   mooncake apply --config examples/dogfood/mooncake.yml
+#
+# Steps run sequentially, so step N+1 implicitly depends on step N. If
+# `build mooncake binary` fails, the schema-check and docs-check steps
+# (which invoke ./out/mooncake) will not be reached.
+
+version: "1.0"
+
+vars:
+  binary: out/mooncake
+  pkg: ./...
+
+steps:
+  # ---------------------------------------------------------------------------
+  # `make build` — `go build -v -o out/mooncake ./cmd`
+  # ---------------------------------------------------------------------------
+  - name: build mooncake binary
+    shell: go build -v -o {{ binary }} ./cmd
+
+  # ---------------------------------------------------------------------------
+  # `make test-race` — `go test -race ./...`
+  # ---------------------------------------------------------------------------
+  - name: run go test with race detector
+    shell: go test -race {{ pkg }}
+
+  # ---------------------------------------------------------------------------
+  # `make ci` — lint + test-race + scan + docs-check + schema-check.
+  # test-race already ran above; the remaining steps mirror the rest of CI.
+  # ---------------------------------------------------------------------------
+
+  - name: lint with golangci-lint
+    shell: golangci-lint run {{ pkg }}
+
+  - name: govulncheck (part of `make scan`)
+    shell: govulncheck {{ pkg }}
+
+  - name: schema-check (regenerate JSON schema, refuse drift)
+    shell: |
+      set -euo pipefail
+      mkdir -p .tmp/dogfood-schema
+      ./{{ binary }} schema generate --format json \
+        --output .tmp/dogfood-schema/schema.json --strict >/dev/null
+      diff -q internal/config/schema.json .tmp/dogfood-schema/schema.json
+      rm -rf .tmp/dogfood-schema
+
+  - name: docs-check (regenerate generated docs, refuse drift)
+    shell: |
+      set -euo pipefail
+      mkdir -p .tmp/dogfood-docs
+      ./{{ binary }} docs generate --section all \
+        --output .tmp/dogfood-docs/actions.md >/dev/null 2>&1
+      ./{{ binary }} docs generate --section schema \
+        --output .tmp/dogfood-docs/schema.md >/dev/null 2>&1
+      ./{{ binary }} docs generate --section action-properties \
+        --output .tmp/dogfood-docs/properties.md >/dev/null 2>&1
+      failed=0
+      for f in actions.md schema.md properties.md; do
+        grep -v '^Generated: ' "docs-next/generated/$f" \
+          > ".tmp/dogfood-docs/current-$f" 2>/dev/null || true
+        grep -v '^Generated: ' ".tmp/dogfood-docs/$f" \
+          > ".tmp/dogfood-docs/new-$f" 2>/dev/null || true
+        if ! diff -q ".tmp/dogfood-docs/current-$f" \
+                     ".tmp/dogfood-docs/new-$f" >/dev/null 2>&1; then
+          echo "drift in docs-next/generated/$f"
+          failed=1
+        fi
+      done
+      rm -rf .tmp/dogfood-docs
+      exit "$failed"

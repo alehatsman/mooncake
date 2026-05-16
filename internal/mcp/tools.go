@@ -68,26 +68,26 @@ func AllTools() []ToolDef {
 	return []ToolDef{
 		{
 			Name:        "get_facts",
-			Description: "Return system facts as JSON (OS, CPU, memory, installed tools, etc.)",
+			Description: "Inspect the user's machine before you touch it — OS, CPU, memory, installed tools, package manager. Returns JSON. Read-only.",
 			InputSchema: objSchema(nil, nil),
 		},
 		{
 			Name:        "get_snapshot",
-			Description: "Return a compact machine state summary",
+			Description: "One-glance summary of the user's machine state — same view a human sees from `mooncake snapshot`. Use it to orient yourself before proposing changes. Read-only.",
 			InputSchema: objSchema(map[string]interface{}{
 				"format": strProp("Output format: 'text' (default) or 'json'"),
 			}, nil),
 		},
 		{
 			Name:        "fact_query",
-			Description: "Query a specific fact by dot-path key (e.g. go_version, python_version)",
+			Description: "Look up one fact about the user's machine by dotted key (e.g. `go_version`, `os_distribution`). Cheaper than `get_facts` when you only need a single value. Read-only.",
 			InputSchema: objSchema(map[string]interface{}{
 				"query": strProp("Dot-path key to look up (use _ not . between segments)"),
 			}, []string{"query"}),
 		},
 		{
 			Name:        "run_plan",
-			Description: "Run a mooncake config file and return structured results",
+			Description: "Apply a mooncake config to the user's system. Every step is typed and rolls back automatically on failure — safer than running raw shell. Mutates the system; preview with `check_plan` first.",
 			InputSchema: objSchema(map[string]interface{}{
 				"config":  strProp("Path to mooncake config YAML file"),
 				"dry_run": boolProp("If true, simulate without making changes"),
@@ -95,14 +95,14 @@ func AllTools() []ToolDef {
 		},
 		{
 			Name:        "check_plan",
-			Description: "Dry-run a mooncake config file and return what would change",
+			Description: "Preview what a mooncake config will do before you let it run — per-step structured diff, no side effects. Run this before `run_plan`.",
 			InputSchema: objSchema(map[string]interface{}{
 				"config": strProp("Path to mooncake config YAML file"),
 			}, []string{"config"}),
 		},
 		{
 			Name:        "get_metrics",
-			Description: "Return live system metrics (CPU/GPU/memory/load/network) as JSON. Cached per-metric with TTLs ~2-5s. Use fields=[...] to restrict the response; use refresh=true to force re-sample.",
+			Description: "Sample the user's live system metrics (CPU, GPU, memory, load, network) as JSON — what `top` and `nvidia-smi` show right now. Cached 2–5s per metric; pass `fields=[...]` to narrow the response or `refresh=true` to bypass the cache. Read-only.",
 			InputSchema: objSchema(map[string]interface{}{
 				"fields": map[string]interface{}{
 					"type":        "array",
@@ -114,7 +114,7 @@ func AllTools() []ToolDef {
 		},
 		{
 			Name:        "query_file",
-			Description: "Read a JSON or YAML file and extract a value by dotted path. Mirrors the `mooncake query` CLI. Returns {found:bool, value:any, format:string}. Path syntax: dotted keys (a.b.c) and bracketed integer indices (a[0]).",
+			Description: "Read a value out of a JSON or YAML file on disk — give it a path and a dotted query, get `{found, value, format}` back. Mirrors the `mooncake query` CLI. Path syntax: dotted keys (`a.b.c`) and bracketed integer indices (`a[0]`). Read-only.",
 			InputSchema: objSchema(map[string]interface{}{
 				"path":      strProp("Absolute or relative path to the file"),
 				"query":     strProp("Optional dotted path to extract. Empty returns the whole document."),
