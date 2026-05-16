@@ -19,9 +19,9 @@ something else landing first.
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
-| F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
 | F031 | cmd/fleet.readToken: `literal:` accepts token w/o --insecure flag; `file:` doesn't check perms | smell | S | — | open |
+| F032 | template/download legacy Execute path builds sudo shell commands without quoting — shell injection on dest path | risk | S | — | open |
 | F033 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
 | F034 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
 
@@ -49,7 +49,7 @@ something else landing first.
 | F018 | shell scanner 64KB line cap | bug | **done** | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
 | F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | **done** | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
-| F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
+| F021 | apply.Config.ExtraSubscribers doc-drift | doc | **done** | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 | F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
 | F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
@@ -60,6 +60,7 @@ something else landing first.
 | F029 | agentd bearer-auth length side-channel | risk | **done** | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
 | F030 | security.FilePasswordProvider mode exact-equality | smell | **done** | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
 | F031 | cmd/fleet.readToken no perms/insecure-flag check | smell | open | [findings/F031](./findings/F031-fleet-readToken-no-perms-check-no-insecure-flag-for-literal.md) |
+| F032 | template/download legacy Execute shell injection | risk | open | [findings/F032](./findings/F032-template-download-legacy-shell-injection.md) |
 | F033 | vars action bypasses secrets resolver | bug | open | [findings/F033](./findings/F033-vars-action-bypasses-secrets-resolver.md) |
 | F034 | shell line-overflow structured stream silent | bug | open | [findings/F034](./findings/F034-shell-line-overflow-structured-stream-silent.md) |
 
@@ -143,6 +144,7 @@ something else landing first.
 | 2026-05-16 | `internal/scaffold` | none (clean — atomic write, embed.FS, idempotent .gitignore) |
 | 2026-05-16 | `internal/actions/wait_http`, `internal/actions/wait_command` | none (clean — proper ctx + timeouts) |
 | 2026-05-16 | `cmd/fleet.go` (readToken) | F031 |
+| 2026-05-16 | `internal/actions/{template,download}` legacy Execute | F032 (latent shell injection) |
 
 ## Cross-cutting themes / patterns to track
 
