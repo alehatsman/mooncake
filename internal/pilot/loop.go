@@ -95,6 +95,17 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}, nil
 		}
 
+		wrappedBytes, err := WrapInTransaction(planBytes)
+		if err != nil {
+			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "wrap_failed", err.Error())
+			iterations = append(iterations, *log)
+			return &LoopResult{
+				Iterations: iterations,
+				StopReason: StopFailed,
+				FinalLog:   log,
+			}, err
+		}
+
 		tmpFile, err := os.CreateTemp("", "mooncake-plan-*.yml")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create temp file: %w", err)
@@ -103,7 +114,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			_ = os.Remove(tmpFile.Name())
 		}()
 
-		if _, writeErr := tmpFile.Write(planBytes); writeErr != nil {
+		if _, writeErr := tmpFile.Write(wrappedBytes); writeErr != nil {
 			return nil, fmt.Errorf("failed to write temp file: %w", writeErr)
 		}
 		if closeErr := tmpFile.Close(); closeErr != nil {

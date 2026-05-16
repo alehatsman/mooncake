@@ -26,7 +26,16 @@ func Run(opts RunOptions) (*IterationLog, error) {
 
 	planBytes = stripMarkdownFences(planBytes)
 
+	// Hash the LLM's raw output, not the wrapped form — RunLoop's
+	// no-progress check wants to detect "the model emitted the same
+	// plan again", which is a property of the model's output, not
+	// pilot's deterministic wrap.
 	planHash := ComputePlanHash(planBytes)
+
+	wrappedBytes, err := WrapInTransaction(planBytes)
+	if err != nil {
+		return nil, writeFailureLog(opts.RepoRoot, iterNum, opts.Goal, planHash, fmt.Errorf("transaction wrap failed: %w", err))
+	}
 
 	_, err = snapshot.Collect(opts.RepoRoot)
 	if err != nil {
@@ -41,7 +50,7 @@ func Run(opts RunOptions) (*IterationLog, error) {
 		_ = os.Remove(tmpFile.Name())
 	}()
 
-	if _, writeErr := tmpFile.Write(planBytes); writeErr != nil {
+	if _, writeErr := tmpFile.Write(wrappedBytes); writeErr != nil {
 		return nil, fmt.Errorf("failed to write temp file: %w", writeErr)
 	}
 	if closeErr := tmpFile.Close(); closeErr != nil {

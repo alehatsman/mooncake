@@ -11,9 +11,9 @@ does not silently regress plan quality.
 For each `(goal, snapshot, assertions)` tuple in `goals/`:
 
 1. Load the snapshot referenced by `snapshot:` from `snapshots/`.
-2. Build a system+user prompt via `internal/agent.BuildPrompt` (the
+2. Build a system+user prompt via `internal/pilot.BuildPrompt` (the
    same call path the live pilot loop uses).
-3. Call `internal/llm.NewClient().GeneratePlan(...)` against the
+3. Call `internal/pilot/llm.NewClient().GeneratePlan(...)` against the
    provider/model named in the goal file.
 4. Parse the returned YAML plan.
 5. Run the assertions listed in the goal file against the parsed plan.
@@ -36,7 +36,7 @@ MOONCAKE_PILOT_EVAL=1 go run ./testing-next/pilot-evals/
 
 A valid provider must be configured: either `claude` on `$PATH` (the
 CLI client takes precedence) or `CLAUDE_API_KEY` set in the
-environment (HTTP client fallback). See `internal/llm/client.go`.
+environment (HTTP client fallback). See `internal/pilot/llm/client.go`.
 
 ### Dry-run
 
