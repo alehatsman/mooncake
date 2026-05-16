@@ -5,7 +5,8 @@ severity: bug
 package: internal/actions/os_ssh_key
 file: internal/actions/os_ssh_key/handler.go
 lines: 182-188, 220-228, 506-539
-status: open
+status: done
+resolved: 2026-05-16 — three paths plugged: (a) `lookupOwnership` runs BEFORE `writeAuthorizedKeys`; if it returns an error, Run returns immediately with `os.ssh_key: cannot determine uid/gid for user <name>: <err> (create the user first, or set `path:`...)`. (b) `chownFn` (package-level var, defaults to `os.Chown`) replaces the silent `_ = os.Chown(...)` on the file path; EPERM surfaces as a wrapped error with a "run with sudo" remediation hint, other errors surface unchanged. Parent-dir chown stays best-effort because the parent is typically pre-owned correctly and `MkdirAll` doesn't re-own. (c) `os.Chmod(parent, sshDirMode)` runs unconditionally after `MkdirAll` (with an EPERM escape for non-root callers managing an existing parent), replacing the `if createParentMode { _ = chmod }` branch that only fired on first-create — a pre-existing 0755 .ssh dir now gets tightened to 0700. Regression tests in `f035_test.go`: `TestRun_UserLookupFailureRefusesWrite` (no file written on lookup error), `TestRun_ChownEPERMSurfacesAsError` (stubs chownFn to EPERM, asserts error + sudo hint + no swallow), `TestRun_TightensExistingSshDirMode` (pre-creates parent at 0755, asserts final mode is 0700).
 ---
 
 ## What
