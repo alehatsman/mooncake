@@ -20,6 +20,7 @@ something else landing first.
 | F035 | os.ssh_key: silently writes authorized_keys with wrong ownership on lookup failure or chown EPERM — breaks sshd auth | bug | S | — | open |
 | F037 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
 | F038 | shell line-overflow surfaces only via human logger — structured event/result stays silent above 1 MB | bug | XS | — | open |
+| F039 | agent.RunLoop defers tmpfile cleanup inside for-body + plan files written 0644 + silent SavePlan errors | smell | S | — | open |
 
 ## Findings index
 
@@ -62,6 +63,7 @@ something else landing first.
 | F035 | os.ssh_key silent chown failure | bug | open | [findings/F035](./findings/F035-os-ssh-key-silent-chown-failure.md) |
 | F037 | vars action bypasses secrets resolver | bug | open | [findings/F037](./findings/F037-vars-action-bypasses-secrets-resolver.md) |
 | F038 | shell line-overflow structured stream silent | bug | open | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
+| F039 | agent.RunLoop defer-in-loop + plan perms + silent save | smell | open | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -148,6 +150,7 @@ something else landing first.
 | 2026-05-16 | `internal/actions/pkg_repo` | F034 (real silent security bypass) |
 | 2026-05-16 | `internal/actions/os_ssh_key` | F035 (silent ownership failure) |
 | 2026-05-16 | `internal/actions/container_image` | none locally (F016-family ctx.Background, already tracked) |
+| 2026-05-16 | `internal/agent/loop.go` | F039 (defer-in-loop, 0644 plan files, silent save errors) |
 
 ## Cross-cutting themes / patterns to track
 
