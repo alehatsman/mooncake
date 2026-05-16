@@ -1,6 +1,10 @@
 package executor
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -92,11 +96,13 @@ type Result struct {
 	// ReverseData is apply-time capture, distinct lifetimes and
 	// consumers.
 	//
-	// Not serialised into registered results because the captured
-	// payload may contain raw bytes (e.g. pre-write file content for
-	// the overwrite reverse case in phase 5b) that don't belong in
-	// JSON output. Lives only for the lifetime of the result object
-	// until a transaction layer or test calls Reverse.
+	// Wire encoding (R2.1c phase 2): the field is serialised through
+	// a discriminator envelope (`{"type": "<go-type-name>", "data":
+	// {...}}`) so it round-trips through the agentd /v1/runs/{id}/
+	// result endpoint and fleet-wide Reverse() can compose against
+	// the captured pre-state of each peer. The default `json:"-"` is
+	// gone — Result.MarshalJSON / UnmarshalJSON handle the envelope
+	// explicitly via the registry in reverse_registry.go.
 	ReverseData any `json:"-"`
 
 	// Timing information
@@ -248,4 +254,116 @@ func (r *Result) SetData(data map[string]interface{}) {
 	for k, v := range data {
 		r.Data[k] = v
 	}
+}
+
+// --- R2.1c phase 2: ReverseData wire encoding ------------------------------
+
+// reverseDataEnvelope is the wire shape for a typed ReverseData
+// payload. Type is the discriminator registered via
+// RegisterReverseDataType (conventionally the Go type name, e.g.
+// "FileReverseInfo"); Data is the raw JSON of the concrete payload.
+// Keeping Data as json.RawMessage so the second-pass unmarshal into
+// the concrete type doesn't re-allocate or re-decode the wrapping
+// envelope.
+type reverseDataEnvelope struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
+// resultJSON is a type alias of Result that strips method receivers
+// (specifically MarshalJSON/UnmarshalJSON below) so the default
+// encoder can serialise every other field via its json tag without
+// infinite recursion. ReverseData on the alias keeps its `json:"-"`
+// — the envelope is injected explicitly in MarshalJSON / read
+// explicitly in UnmarshalJSON.
+type resultJSON Result
+
+// resultWire is the on-the-wire encoded shape. Same field list as
+// Result via the alias, plus the discriminator envelope for
+// ReverseData. Using embedding (rather than a flat re-declaration)
+// keeps the tag-keyed fields in lockstep with Result automatically
+// — adding a future field to Result that should round-trip just
+// works via the alias.
+type resultWire struct {
+	resultJSON
+	ReverseData *reverseDataEnvelope `json:"reverse_data,omitempty"`
+}
+
+// MarshalJSON serialises Result with ReverseData wrapped in a
+// discriminator envelope when populated. The discriminator is the
+// payload's Go type name (e.g. "FileReverseInfo"); the receiver
+// must be a pointer to a registered type so the decode side can
+// look it up.
+//
+// When ReverseData is nil, the output matches the pre-phase-2
+// shape — no `reverse_data` key at all. Old daemons / clients that
+// don't know about the field are unaffected on the read side, and
+// new code that consumes them sees `nil` ReverseData (which the
+// existing "ReverseData is nil" refusal in handlers' Reverse()
+// already handles).
+func (r *Result) MarshalJSON() ([]byte, error) {
+	w := resultWire{resultJSON: resultJSON(*r)}
+	if r.ReverseData != nil {
+		typeName := reverseDataTypeName(r.ReverseData)
+		if typeName == "" {
+			return nil, fmt.Errorf("executor.Result.MarshalJSON: cannot derive type name for ReverseData %T (must be a pointer to a named struct)", r.ReverseData)
+		}
+		raw, err := json.Marshal(r.ReverseData)
+		if err != nil {
+			return nil, fmt.Errorf("executor.Result.MarshalJSON: marshal ReverseData: %w", err)
+		}
+		w.ReverseData = &reverseDataEnvelope{Type: typeName, Data: raw}
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON deserialises Result, looking up the ReverseData
+// payload type via the registry and materialising the concrete type
+// when known. Unknown discriminators decode to nil ReverseData —
+// forward compatibility for newer daemons whose handler types this
+// binary doesn't know about. Returns an error only when the
+// envelope itself is malformed or the concrete type's Unmarshal
+// fails (the latter signals real corruption, not unknown types).
+func (r *Result) UnmarshalJSON(b []byte) error {
+	if bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
+		return nil
+	}
+	var w resultWire
+	if err := json.Unmarshal(b, &w); err != nil {
+		return err
+	}
+	*r = Result(w.resultJSON)
+	if w.ReverseData == nil || w.ReverseData.Type == "" {
+		return nil
+	}
+	target, ok := newReverseData(w.ReverseData.Type)
+	if !ok {
+		// Unknown type — leave ReverseData nil. Handlers'
+		// Reverse() will surface "no ReverseData captured" and the
+		// transaction layer treats that the same as a pre-phase-2
+		// peer. Logging is intentionally absent: a fleet of mixed
+		// versions would spam.
+		return nil
+	}
+	if err := json.Unmarshal(w.ReverseData.Data, target); err != nil {
+		return fmt.Errorf("executor.Result.UnmarshalJSON: decode ReverseData payload %q: %w", w.ReverseData.Type, err)
+	}
+	r.ReverseData = target
+	return nil
+}
+
+// reverseDataTypeName returns the Go type name of a ReverseData
+// payload. Convention: payloads are passed as pointers to named
+// structs (e.g. `*FileReverseInfo`), so we strip one indirection
+// and read the element's Name(). Returns "" when the input isn't
+// a pointer to a named type — MarshalJSON treats that as an error.
+func reverseDataTypeName(v any) string {
+	t := reflect.TypeOf(v)
+	if t == nil {
+		return ""
+	}
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	return t.Name()
 }

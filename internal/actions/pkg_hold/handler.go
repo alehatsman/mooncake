@@ -44,6 +44,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("PkgHoldReverseInfo", func() any { return &PkgHoldReverseInfo{} })
 }
 
 func (h *Handler) Metadata() actions.ActionMetadata {

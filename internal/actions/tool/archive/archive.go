@@ -1,4 +1,11 @@
-package tool
+// Package archive extracts tool downloads (tar.gz / tar / zip) into a
+// destination directory, honoring `strip_components` and rejecting
+// entries that would escape via path traversal.
+//
+// Lifted out of internal/actions/tool to keep that package under the
+// 1500-LOC handler soft cap (CLAUDE.md §1). The contract is small —
+// one exported entry point, Extract — so the seam stays narrow.
+package archive
 
 import (
 	"archive/tar"
@@ -11,17 +18,17 @@ import (
 	"strings"
 )
 
-// archiveFormat is the detected kind of a downloaded archive.
-type archiveFormat int
+// format is the detected kind of a downloaded archive.
+type format int
 
 const (
-	formatUnknown archiveFormat = iota
+	formatUnknown format = iota
 	formatTarGz
 	formatTar
 	formatZip
 )
 
-func detectFormat(path string) archiveFormat {
+func detectFormat(path string) format {
 	lower := strings.ToLower(path)
 	switch {
 	case strings.HasSuffix(lower, ".tar.gz"), strings.HasSuffix(lower, ".tgz"):
@@ -34,10 +41,18 @@ func detectFormat(path string) archiveFormat {
 	return formatUnknown
 }
 
-// extractArchive extracts srcPath into destDir, honoring stripComponents
+// IsArchive reports whether path looks like a recognised archive
+// (`.tar.gz` / `.tgz` / `.tar` / `.zip`). Callers use this to choose
+// between Extract and a bare-binary install path — many GitHub
+// releases ship the latter (jq, hadolint, kubectl, gh, …).
+func IsArchive(path string) bool {
+	return detectFormat(path) != formatUnknown
+}
+
+// Extract decompresses srcPath into destDir, honoring stripComponents
 // (top-level directories to skip). destDir must already exist. The
 // archive format is detected from the srcPath extension.
-func extractArchive(srcPath, destDir string, stripComponents int) error {
+func Extract(srcPath, destDir string, stripComponents int) error {
 	switch detectFormat(srcPath) {
 	case formatTarGz:
 		return extractTarGz(srcPath, destDir, stripComponents)

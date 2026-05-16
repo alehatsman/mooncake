@@ -33,6 +33,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("OsServiceReverseInfo", func() any { return &OsServiceReverseInfo{} })
 }
 
 // Metadata returns the action metadata.

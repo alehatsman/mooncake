@@ -130,6 +130,7 @@ type Handler struct{}
 // Register this handler on import
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("FileReverseInfo", func() any { return &FileReverseInfo{} })
 }
 
 // Permissions implements actions.Permitter (spec-22). Declares the

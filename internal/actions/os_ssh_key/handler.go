@@ -39,6 +39,7 @@ type Handler struct{}
 
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("OsSSHKeyReverseInfo", func() any { return &OsSSHKeyReverseInfo{} })
 }
 
 func (h *Handler) Metadata() actions.ActionMetadata {

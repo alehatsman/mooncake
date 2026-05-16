@@ -7,27 +7,11 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// OsMountSnapshot is the typed Before/After payload for actions.Diff
-// when the resource is an os.mount step. Describes user INTENT.
-type OsMountSnapshot struct {
-	// Src is the device / spec (UUID=..., LABEL=..., tmpfs, etc.).
-	Src string `json:"src,omitempty"`
-
-	// Dest is the mount point (the identity).
-	Dest string `json:"dest,omitempty"`
-
-	// FSType is the filesystem type.
-	FSType string `json:"fstype,omitempty"`
-
-	// State is mounted | unmounted | fstab_only | absent.
-	State string `json:"state,omitempty"`
-
-	// Options is the mount-options list.
-	Options []string `json:"options,omitempty"`
-}
-
 // Diff implements actions.Differ for os.mount (spec-22 phase 4 /
-// spec-28 P6).
+// spec-28 P6). The typed Before/After payload is actions.MountDiff
+// (spec-66 wave 5); see internal/actions/diff_payloads.go. Note
+// that OsMountSnapshotEntry in reverse.go is a different type used
+// for ReverseData and is unrelated to this Diff payload.
 //
 // Operation by state:
 //
@@ -65,7 +49,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		},
 		Operation: op,
 		Before:    nil,
-		After: &OsMountSnapshot{
+		After: &actions.MountDiff{
 			Src:     m.Src,
 			Dest:    m.Dest,
 			FSType:  m.FSType,

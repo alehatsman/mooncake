@@ -61,6 +61,7 @@ type Handler struct{}
 // Register this handler on import
 func init() {
 	actions.Register(&Handler{})
+	executor.RegisterReverseDataType("PkgReverseInfo", func() any { return &PkgReverseInfo{} })
 }
 
 // Metadata returns metadata about the package action.

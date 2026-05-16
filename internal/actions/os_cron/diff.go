@@ -7,29 +7,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// OsCronSnapshot is the typed Before/After payload for actions.Diff
-// when the resource is an os.cron step. Describes user INTENT.
-type OsCronSnapshot struct {
-	// Name is the cron entry's filename in /etc/cron.d (identity).
-	Name string `json:"name,omitempty"`
-
-	// State is "present" or "absent". Empty defaults to "present".
-	State string `json:"state,omitempty"`
-
-	// User the command runs as. Empty maps to root.
-	User string `json:"user,omitempty"`
-
-	// Schedule is the rendered cron schedule. When the step uses
-	// the individual minute/hour/... fields, those are folded into
-	// one whitespace-joined string here for consumer simplicity.
-	Schedule string `json:"schedule,omitempty"`
-
-	// Command is the command line to run.
-	Command string `json:"command,omitempty"`
-}
-
 // Diff implements actions.Differ for os.cron (spec-22 phase 4 /
-// spec-28 P6).
+// spec-28 P6). The typed Before/After payload is actions.CronDiff
+// (spec-66 wave 5); see internal/actions/diff_payloads.go.
 //
 // Operation by state: present→OpCreate, absent→OpDelete. Diff
 // doesn't read the existing file at plan time; the runtime
@@ -75,7 +55,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		},
 		Operation: op,
 		Before:    nil,
-		After: &OsCronSnapshot{
+		After: &actions.CronDiff{
 			Name:     c.Name,
 			State:    state,
 			User:     c.User,
