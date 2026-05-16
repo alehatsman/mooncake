@@ -14,7 +14,7 @@ something else landing first.
 | F004 | service: 6× repeated sudo/exec block (in-package) | smell | S | — | open |
 | F005 | Cross-package: 6 implementations of "sudo -S shell-out" | smell | M | — | open |
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
-| F011 | Cross-cutting: 16 handlers still have Execute/DryRun (5 done in batch 1: shell/command/print/vars/include_vars) | smell | XL | — | open |
+| F011 | Cross-cutting: 15 handlers still have Execute/DryRun (6 done across batches 1+2: shell/command/print/vars/include_vars/preset) | smell | XL | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
 | F039 | agent.RunLoop defers tmpfile cleanup inside for-body + plan files written 0644 + silent SavePlan errors | smell | S | — | open |
 

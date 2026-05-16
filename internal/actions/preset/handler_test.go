@@ -241,7 +241,7 @@ func TestHandler_Execute_InvalidContextType(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ctx, step)
+	_, err := h.Run(ctx, step)
 	if err == nil {
 		t.Fatal("Execute() should error for invalid context type")
 	}
@@ -265,7 +265,7 @@ func TestHandler_Execute_NonexistentPreset(t *testing.T) {
 		},
 	}
 
-	_, err := h.Execute(ec, step)
+	_, err := h.Run(ec, step)
 	if err == nil {
 		t.Fatal("Execute() should error for nonexistent preset")
 	}
@@ -396,75 +396,6 @@ func TestPresetExpansion(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestHandler_DryRun(t *testing.T) {
-	cleanup := setupTestPresets(t)
-	defer cleanup()
-
-	tests := []struct {
-		name      string
-		preset    *config.PresetInvocation
-		checkLogs bool
-	}{
-		{
-			name: "nonexistent preset dry-run",
-			preset: &config.PresetInvocation{
-				Name: "does-not-exist",
-			},
-			checkLogs: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := &Handler{}
-			ec := mockExecutionContext(nil)
-			ec.Svc.Mode = actions.ModePlan
-
-			step := &config.Step{
-				Name: "Test dry-run",
-				Use:  tt.preset,
-			}
-
-			// DryRun should not error even for nonexistent presets
-			err := h.DryRun(ec, step)
-			if err != nil {
-				t.Errorf("DryRun() unexpected error = %v", err)
-			}
-
-			if tt.checkLogs {
-				logger := ec.Svc.Logger.(*testutil.MockLogger)
-				if len(logger.Logs) == 0 {
-					t.Error("DryRun() should log something")
-				}
-			}
-		})
-	}
-}
-
-func TestHandler_DryRun_InvalidContextType(t *testing.T) {
-	h := &Handler{}
-
-	// Use MockContext instead of ExecutionContext
-	ctx := testutil.NewMockContext()
-	ctx.CurrentMode = actions.ModePlan
-
-	step := &config.Step{
-		Name: "Test dry-run invalid context",
-		Use: &config.PresetInvocation{
-			Name: "simple-test",
-		},
-	}
-
-	err := h.DryRun(ctx, step)
-	if err == nil {
-		t.Fatal("DryRun() should error for invalid context type")
-	}
-
-	if !contains(err.Error(), "invalid context type") {
-		t.Errorf("Error message should mention invalid context type, got: %v", err)
 	}
 }
 

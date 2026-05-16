@@ -12,11 +12,13 @@ progress: |
   log-only "[DRY-RUN] Would …" behavior is superseded by the typed
   Result.Reason on Run's plan branch). Tests: h.Execute → h.Run
   (mock contexts default to ModeApply); legacy TestHandler_DryRun
-  blocks deleted where they only asserted log presence. 16 handlers
-  remain: artifact_capture, artifact_validate, assert, download,
-  file_delete_range, file_insert, file_patch_apply, file_replace,
-  package, preset, repo_apply_patchset, repo_search, repo_tree,
-  service (F003), template, tool (F006), unarchive.
+  blocks deleted where they only asserted log presence.
+  Batch 2 (worktree-fix-f011-batch2, 2026-05-16): +1 handler —
+  preset. Same pattern. Service was migrated separately by another
+  agent in the interim. 15 handlers remain: artifact_capture,
+  artifact_validate, assert, download, file_delete_range, file_insert,
+  file_patch_apply, file_replace, package, repo_apply_patchset,
+  repo_search, repo_tree, template, tool (F006), unarchive.
 verified: 2026-05-16 — batch 1 (936751f) confirmed: zero Execute/DryRun methods in shell/command/print/vars/include_vars handler.go; tests green; 16/21 handlers remain to migrate per finding progress note
 ---
 
