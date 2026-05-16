@@ -14,11 +14,19 @@ progress: |
   (mock contexts default to ModeApply); legacy TestHandler_DryRun
   blocks deleted where they only asserted log presence.
   Batch 2 (worktree-fix-f011-batch2, 2026-05-16): +1 handler —
-  preset. Same pattern. Service was migrated separately by another
-  agent in the interim. 15 handlers remain: artifact_capture,
-  artifact_validate, assert, download, file_delete_range, file_insert,
-  file_patch_apply, file_replace, package, repo_apply_patchset,
-  repo_search, repo_tree, template, tool (F006), unarchive.
+  preset. Same pattern. Service + tool were migrated separately by
+  other agents in the interim.
+  Batch 3 (worktree-fix-f011-batch3, 2026-05-16): +4 handlers —
+  repo_search, repo_tree, file_delete_range, file_replace. Pattern
+  variants observed: file_delete_range + file_replace had Run as the
+  authoritative apply body already (Execute was dead) — just deleted
+  Execute + DryRun + the legacy TestHandler_DryRun that pointed at a
+  non-existent /tmp path. repo_search + repo_tree's Run delegated to
+  Execute via plan-mode result patching — Execute renamed to private
+  runImpl, Run calls runImpl + stamps Checkable/Reason on plan mode.
+  10 handlers remain: artifact_capture, artifact_validate, assert,
+  download, file_insert, file_patch_apply, package, repo_apply_patchset,
+  template, unarchive.
 verified: 2026-05-16 — batches 1 (936751f, 5 handlers) + 2 (f05a052e, preset) both confirmed: zero Execute/DryRun methods in shell/command/print/vars/include_vars/preset handler.go; tests green; ~15 handlers remain
 ---
 

@@ -62,7 +62,7 @@ func TestMT23_IncludeFilesDefaultsToTrue(t *testing.T) {
 			if err := h.Validate(step); err != nil {
 				t.Fatalf("validate: %v", err)
 			}
-			res, err := h.Execute(ec, step)
+			res, err := h.Run(ec, step)
 			if err != nil {
 				t.Fatalf("execute: %v", err)
 			}
