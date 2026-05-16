@@ -235,7 +235,7 @@ func renderKV(v any) string {
 // scalarOrJSON renders scalars natively; nested maps/slices compact to
 // single-line JSON so the parent kv block stays aligned.
 func scalarOrJSON(v any) string {
-	switch v.(type) {
+	switch vv := v.(type) {
 	case map[string]any, []any:
 		b, err := json.Marshal(v)
 		if err != nil {
@@ -243,7 +243,7 @@ func scalarOrJSON(v any) string {
 		}
 		return string(b)
 	case string:
-		return v.(string)
+		return vv
 	case nil:
 		return "null"
 	default:

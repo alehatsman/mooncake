@@ -54,10 +54,7 @@ func (p *Planner) expandTry(step config.Step, ctx *ExpansionContext, plan *Plan,
 	if err := p.expandTryBranch(catchChildren, parentID, "catch", step.Name, ctx, plan); err != nil {
 		return err
 	}
-	if err := p.expandTryBranch(finallyChildren, parentID, "finally", step.Name, ctx, plan); err != nil {
-		return err
-	}
-	return nil
+	return p.expandTryBranch(finallyChildren, parentID, "finally", step.Name, ctx, plan)
 }
 
 func (p *Planner) expandTryBranch(children []config.Step, parentID, role, parentName string, ctx *ExpansionContext, plan *Plan) error {

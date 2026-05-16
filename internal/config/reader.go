@@ -239,7 +239,7 @@ func suppressRedundantOneOfWhenUnknownField(diags []Diagnostic) []Diagnostic {
 // error is surfaced as one error-severity Diagnostic; the YAML
 // library reports the first unknown field per decode pass, so users
 // fix one, retry, see the next.
-func validateKnownFields(rootNode *yaml.Node, locationMap *LocationMap, path string) []Diagnostic {
+func validateKnownFields(rootNode *yaml.Node, _ *LocationMap, path string) []Diagnostic {
 	buf, err := yaml.Marshal(rootNode)
 	if err != nil {
 		// Should be unreachable — rootNode came from yaml.Decode and

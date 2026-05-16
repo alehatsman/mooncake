@@ -31,11 +31,11 @@ type ApplyConfig struct {
 	// orchestrator just consumes the results)
 	SelectedPeers   []Peer // ResolvePeers output, post --peer
 	UnknownPeers    []string
-	AllPeers        []Peer            // peers.toml full set, for machine-mode dispatch
-	PeerFilter      func(Peer) bool   // nil = accept-all
-	VarsFilesRel    []string          // --vars-file values, raw (relative or absolute)
-	StepFilterTags  []string          // resolved tags from --step-filter
-	StepFilterNames []string          // resolved names from --step-filter
+	AllPeers        []Peer          // peers.toml full set, for machine-mode dispatch
+	PeerFilter      func(Peer) bool // nil = accept-all
+	VarsFilesRel    []string        // --vars-file values, raw (relative or absolute)
+	StepFilterTags  []string        // resolved tags from --step-filter
+	StepFilterNames []string        // resolved names from --step-filter
 
 	// Execution knobs
 	MaxSyncBytes int64

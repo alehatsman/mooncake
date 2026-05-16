@@ -63,7 +63,6 @@ func parseTags(tagsStr string) []string {
 	return tags
 }
 
-
 // hostnameForLocalOverlays returns os.Hostname() with the first DNS label
 // only. macOS reports "MacBook-Air.local"; this trims to "MacBook-Air" so
 // the corresponding overlay file an operator would commit is
@@ -430,6 +429,13 @@ func displayActionsTable(actionsList []actions.ActionMetadata) {
 	}
 }
 
+// writeFactsJSON is preserved for cmd/cmd_test.go's coverage of the
+// snake_case marshal pattern. The live caller moved to
+// internal/apply/runner.go's writeFactsJSON in R1.1a; this cmd-side
+// copy stays so the existing TestWriteFactsJSON* suite keeps pinning
+// the contract.
+//
+//nolint:unused // covered by cmd/cmd_test.go; lint runs with tests:false.
 func writeFactsJSON(f *facts.Facts, path string) error {
 	// MT-74: marshal via ToMap() so keys are snake_case, matching the
 	// daemon's /v1/facts endpoint and the template scope (`{{ os }}`).
@@ -701,10 +707,11 @@ func formatCostSummary(c *actions.CostEstimate) string {
 
 // riskBand maps a numeric risk score (1..10) to the band label
 // the spec-22 phase 6 contract documents:
-//   1–3   safe (read-only, idempotent writes to scratch)
-//   4–6   routine (config writes, package installs)
-//   7–9   high impact (service restarts, kernel params)
-//   10    destructive (deletes, drops, rm -rf)
+//
+//	1–3   safe (read-only, idempotent writes to scratch)
+//	4–6   routine (config writes, package installs)
+//	7–9   high impact (service restarts, kernel params)
+//	10    destructive (deletes, drops, rm -rf)
 func riskBand(r int) string {
 	switch {
 	case r >= 10:
@@ -848,8 +855,8 @@ func validateCommand(c *cli.Context) error {
 	if format == outputFormatJSON {
 		// JSON output
 		type ValidationResult struct {
-			Valid       bool                  `json:"valid"`
-			Diagnostics []config.Diagnostic   `json:"diagnostics,omitempty"`
+			Valid       bool                `json:"valid"`
+			Diagnostics []config.Diagnostic `json:"diagnostics,omitempty"`
 		}
 		result := ValidationResult{
 			Valid:       !hasErrors,

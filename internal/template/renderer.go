@@ -318,7 +318,7 @@ func annotateFilterArgError(template string, err error) error {
 	if !looksLikeFilterCall(template) {
 		return err
 	}
-	return fmt.Errorf("%w\n  hint: Pongo2 uses `{{ x | filter:value }}` (colon), not Jinja2's `filter(value)` (parens). Example: `{{ x | default:'fallback' }}`.", err)
+	return fmt.Errorf("%w\n  hint: pongo2 uses `{{ x | filter:value }}` (colon), not Jinja2's `filter(value)` (parens). Example: `{{ x | default:'fallback' }}`", err)
 }
 
 // looksLikeFilterCall returns true when the template contains a

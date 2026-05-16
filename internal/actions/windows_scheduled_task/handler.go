@@ -258,17 +258,16 @@ func toTask(t *config.WindowsScheduledTask) (winutil.Task, error) {
 		})
 	}
 
+	// When t.Principal is nil, the UserID is filled in by the caller via
+	// env vars resolved at apply-time; we can't know it here. Caller must
+	// provide it or accept the default empty (which Task.Validate will
+	// reject — surface that early).
 	if t.Principal != nil {
 		tk.Principal = winutil.Principal{
 			UserID:    t.Principal.User,
 			LogonType: winutil.LogonType(titleCase(t.Principal.LogonType)),
 			RunLevel:  winutil.RunLevel(runLevelMap(t.Principal.RunLevel)),
 		}
-	} else {
-		// Default UserID is filled in by the caller via env vars
-		// resolved at apply-time; we can't know it here. Caller must
-		// provide it or accept the default empty (which Task.Validate
-		// will reject — surface that early).
 	}
 
 	if t.Settings != nil {

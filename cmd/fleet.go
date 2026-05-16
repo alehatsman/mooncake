@@ -67,7 +67,7 @@ func fleetBootstrapCommand() *cli.Command {
 			&cli.StringFlag{Name: "binary", Usage: "Path to mooncake binary to upload (default: this process)"},
 			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.BoolFlag{
-				Name:  "upgrade",
+				Name: "upgrade",
 				Usage: "Replace an already-installed mooncake of a different version. " +
 					"Without this, version mismatch on the target errors out.",
 			},
@@ -275,7 +275,7 @@ func fleetApplyCommand() *cli.Command {
 				Value: 100 << 20,
 			},
 			&cli.StringFlag{
-				Name:  "plan-dir",
+				Name: "plan-dir",
 				Usage: "Root directory to sync to each peer (default: directory of the plan file). " +
 					"Use this when the plan imports siblings via `../` — point at the repo root.",
 			},
@@ -536,6 +536,12 @@ func peerMatchesFilters(p fleet.Peer, groups [][]filterTerm, osFor peerOSResolve
 // peerFilterGroupsUseKey reports whether any term in groups uses key. Lets
 // the caller skip the os-probe pass entirely when no `os=` predicate is
 // present.
+//
+// Non-test code now drives the same decision off the raw --peer values
+// via peerFlagsReferenceOSKey (avoids the parse step). This helper stays
+// because fleet_filter_test.go pins the post-parse predicate semantics.
+//
+//nolint:unused // exercised by cmd/fleet_filter_test.go; lint runs with tests:false.
 func peerFilterGroupsUseKey(groups [][]filterTerm, key string) bool {
 	for _, g := range groups {
 		for _, t := range g {

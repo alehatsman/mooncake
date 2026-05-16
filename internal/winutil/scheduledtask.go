@@ -114,17 +114,17 @@ type Principal struct {
 // Settings is the <Settings> block. Sensible defaults are applied in
 // withDefaults() so callers can leave most of these zero.
 type Settings struct {
-	StartWhenAvailable          *bool
-	AllowStartIfOnBatteries     *bool
-	DontStopIfGoingOnBatteries  *bool
-	RunOnlyIfNetworkAvailable   *bool
-	MultipleInstancesPolicy     MultipleInstances
-	ExecutionTimeLimit          time.Duration // 0 = unbounded
-	RestartCount                int
-	RestartInterval             time.Duration // ignored when RestartCount==0
-	Hidden                      *bool
-	DisallowStartIfOnBatteries  *bool // shadow of AllowStartIfOnBatteries for legacy keys
-	RestartOnIdle               *bool
+	StartWhenAvailable         *bool
+	AllowStartIfOnBatteries    *bool
+	DontStopIfGoingOnBatteries *bool
+	RunOnlyIfNetworkAvailable  *bool
+	MultipleInstancesPolicy    MultipleInstances
+	ExecutionTimeLimit         time.Duration // 0 = unbounded
+	RestartCount               int
+	RestartInterval            time.Duration // ignored when RestartCount==0
+	Hidden                     *bool
+	DisallowStartIfOnBatteries *bool // shadow of AllowStartIfOnBatteries for legacy keys
+	RestartOnIdle              *bool
 }
 
 // Task is the full declarative description of a scheduled task: the
@@ -488,9 +488,8 @@ func durationToISO8601(d time.Duration) string {
 			b.WriteString(fmt.Sprintf("%dS", secs))
 		}
 	}
-	if b.Len() == 1 {
-		// pure-days case: P1D, no T.
-	}
+	// b.Len() == 1 is the pure-days case (P1D, no T); the string is already
+	// in its final shape so no extra append is needed.
 	return b.String()
 }
 
