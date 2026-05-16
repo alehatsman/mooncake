@@ -2,11 +2,12 @@
 id: F039
 title: agent.RunLoop defers tmpfile cleanup inside the for-body (resource leak per iteration); SavePlan writes 0644
 severity: smell
-package: internal/agent
-file: internal/agent/loop.go
-lines: 98-104, 203-212
-status: open
-verified: 2026-05-16 — confirmed real on master @ b48a11e. loop.go:98-104 creates tmpfile inside for-body with defer-in-loop (cleanup pushed onto goroutine defer stack, tempfiles stay on disk through RunLoop). loop.go:207 SavePlan writes 0644 — world-readable for files that may contain resolved secret values
+package: internal/pilot
+file: internal/pilot/loop.go
+lines: 109-115, 214-223
+status: partial
+verified: 2026-05-16 — confirmed real on master @ b48a11e. pilot/loop.go:109-115 (renamed from agent/loop.go since the finding was filed) creates tmpfile inside for-body with defer-in-loop (cleanup pushed onto goroutine defer stack, tempfiles stay on disk through RunLoop). pilot/loop.go:218 SavePlan writes 0644 — world-readable for files that may contain resolved secret values
+resolved: 2026-05-16 — F039(c) + F039(d) shipped: `SavePlan` now `os.MkdirAll(dir, 0o700)` + `os.WriteFile(filename, body, 0o600)` and returns `(string, error)` instead of swallowing failures into an empty string. Caller in `RunLoop` logs the error via `log.Errorf` so failed-to-persist iterations are no longer silent. The 0700/0600 perms match the rest of mooncake's state-dir convention (`internal/agentd/store.go`); plan files can contain resolved `!secret` values (post-F037 the planner expands markers BEFORE serialization), so 0644 was a real leak on shared hosts. Regression tests in `loop_test.go`: `TestSavePlan_FilePerms` (0600/0700), `TestSavePlan_CreatesIterationsDir` (the dir is now actually MkdirAll'd — pre-fix this was a latent bug: `os.WriteFile` would fail silently if the dir didn't exist), `TestSavePlan_ReturnsErrorOnFailure` (occupied-path triggers an error mentioning "create iterations dir"). Out of scope (left for separate fix): F039(a) defer-in-loop extraction — needs an iteration-body helper function refactor; the resource accumulation is bounded by MaxIterations today so this is non-urgent. F039(b) variable-capture is a non-issue under Go 1.22+ semantics.
 ---
 
 ## What

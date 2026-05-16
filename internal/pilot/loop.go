@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -152,7 +153,14 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		changedFiles, _ := CollectChangedFiles(opts.RepoRoot)
 		diffStat, _ := CollectDiffStat(opts.RepoRoot)
 
-		planPath := savePlan(opts.RepoRoot, iterNum, planBytes)
+		planPath, savePlanErr := savePlan(opts.RepoRoot, iterNum, planBytes)
+		if savePlanErr != nil {
+			// Plan already executed via the tempfile path; failure to
+			// persist the artifact is non-fatal to the iteration. Surface
+			// it so the operator notices instead of seeing a silent
+			// missing-artifact in the iteration log (F039).
+			log.Errorf("pilot: save plan iteration %d: %v", iterNum, savePlanErr)
+		}
 
 		iterLog := &IterationLog{
 			Iteration:    iterNum,
@@ -211,18 +219,34 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	}, nil
 }
 
-func SavePlan(repoRoot string, iterNum int, planBytes []byte) string {
-	dir := fmt.Sprintf("%s/.mooncake/iterations", repoRoot)
-	filename := fmt.Sprintf("%s/%05d.plan.yml", dir, iterNum)
-
-	if err := os.WriteFile(filename, planBytes, 0644); err != nil { // #nosec G306 -- standard file permissions
-		return ""
+// SavePlan persists an LLM-generated plan to `<repoRoot>/.mooncake/
+// iterations/<n>.plan.yml` and returns the path. The directory is
+// created at 0700 and the file at 0600 — plan artifacts can contain
+// resolved !secret values (F037 resolves markers at plan time before
+// the YAML is serialized) and the operator's goal/prompt, so world-
+// readable permissions on a shared host (CI runner, dev box with
+// multiple users) would leak them. Matches the 0700/0600 convention
+// already in use by internal/agentd/store.go for run state (F039).
+//
+// Returns the saved path on success, or an empty string and an error
+// on failure. The error is non-fatal to the loop iteration (the plan
+// already ran via the tempfile path); callers should log+continue.
+func SavePlan(repoRoot string, iterNum int, planBytes []byte) (string, error) {
+	dir := filepath.Join(repoRoot, ".mooncake", "iterations")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("create iterations dir: %w", err)
 	}
-
-	return filename
+	filename := filepath.Join(dir, fmt.Sprintf("%05d.plan.yml", iterNum))
+	if err := os.WriteFile(filename, planBytes, 0o600); err != nil {
+		return "", fmt.Errorf("write plan: %w", err)
+	}
+	return filename, nil
 }
 
-func savePlan(repoRoot string, iterNum int, planBytes []byte) string {
+// savePlan is the internal call site used by RunLoop. Kept as a thin
+// wrapper so the caller doesn't have to import the same package as
+// itself when testing the loop with a different persistence policy.
+func savePlan(repoRoot string, iterNum int, planBytes []byte) (string, error) {
 	return SavePlan(repoRoot, iterNum, planBytes)
 }
 
