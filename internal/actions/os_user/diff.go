@@ -7,39 +7,10 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// OsUserSnapshot is the typed Before/After payload for actions.Diff
-// when the resource kind is ResourceOther and the underlying action
-// is os.user. Mirrors PkgSnapshot in shape: describes user INTENT
-// (the named account and the requested attributes), not measured
-// pre-state. Before stays nil — Diff doesn't shell to getent at
-// plan time.
-type OsUserSnapshot struct {
-	// Name is the account name (the identity for idempotency).
-	Name string `json:"name,omitempty"`
-
-	// State is the desired state: "present" or "absent". Empty maps
-	// to "present" by handler convention.
-	State string `json:"state,omitempty"`
-
-	// UID, when set, is the requested numeric uid.
-	UID *int `json:"uid,omitempty"`
-
-	// Shell is the requested login shell.
-	Shell string `json:"shell,omitempty"`
-
-	// Home is the requested home dir path.
-	Home string `json:"home,omitempty"`
-
-	// Groups is the supplementary group list (Group field, the
-	// primary, is folded in here as the first entry when present).
-	Groups []string `json:"groups,omitempty"`
-
-	// System mirrors the system-user flag.
-	System bool `json:"system,omitempty"`
-}
-
 // Diff implements actions.Differ for os.user (spec-22 phase 4 /
-// spec-27 P4).
+// spec-27 P4). The typed Before/After payload is actions.UserDiff
+// (spec-66 wave 3); see internal/actions/diff_payloads.go for the
+// wire shape.
 //
 // Operation classification by state:
 //
@@ -82,7 +53,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		},
 		Operation: op,
 		Before:    nil,
-		After: &OsUserSnapshot{
+		After: &actions.UserDiff{
 			Name:   u.Name,
 			State:  state,
 			UID:    u.UID,
