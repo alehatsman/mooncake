@@ -1313,7 +1313,9 @@ type Step struct {
 	// Conditionals
 	When string `yaml:"when,omitempty" json:"when,omitempty"`
 
-	// Idempotency controls
+	// Idempotency controls (4 fields total; UnlessExists/UnlessCommand are
+	// the canonical names and Creates/Unless are friendly aliases — see
+	// F013 in docs-working/code-review for the policy rationale).
 	UnlessExists  *string `yaml:"unless_exists,omitempty" json:"unless_exists,omitempty"`   // Skip if path exists
 	UnlessCommand *string `yaml:"unless_command,omitempty" json:"unless_command,omitempty"` // Skip if command succeeds
 
@@ -1331,10 +1333,11 @@ type Step struct {
 	// ── USER-INPUT ────────────────────────────────────────────────────────────
 
 	// Actions (exactly one required — enforced at runtime by Validate()).
-	// The Go type system cannot express this as a compile-time union: all
-	// 74 pointers live on the struct and exactly one must be non-nil. Use
-	// DetermineActionType() to recover the action name; never switch on the
-	// fields directly.
+	// The Go type system cannot express this as a compile-time union:
+	// all action pointers live on the struct (run `make budget-status`
+	// for the current count) and exactly one must be non-nil. Use
+	// DetermineActionType() to recover the action name; never switch on
+	// the fields directly.
 	// Action keys are dot-namespaced by domain (spec-21):
 	//   file.*    — file & content management
 	//   text.*    — structured text editing

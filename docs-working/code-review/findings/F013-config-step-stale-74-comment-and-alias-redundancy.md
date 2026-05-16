@@ -5,7 +5,8 @@ severity: doc
 package: internal/config
 file: internal/config/config.go
 lines: 1309-1532
-status: open
+status: done
+resolved: 2026-05-16 — (a) replaced stale "74 pointers" with a pointer at `make budget-status`; (b) annotated the Idempotency-controls block to mark UnlessExists/UnlessCommand canonical vs Creates/Unless friendly aliases, with a link back to F013. Comment-only on `internal/config/config.go`; build + `go test ./internal/config/...` green.
 ---
 
 ## What
