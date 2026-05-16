@@ -16,7 +16,6 @@ something else landing first.
 | F006 | tool handler: Execute/DryRun legacy paths | smell | S | — | open |
 | F011 | Cross-cutting: 15 handlers still have Execute/DryRun (6 done across batches 1+2: shell/command/print/vars/include_vars/preset) | smell | XL | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
-| F039 | agent.RunLoop defers tmpfile cleanup inside for-body + plan files written 0644 + silent SavePlan errors | smell | S | — | open |
 
 ## Findings index
 
@@ -59,7 +58,7 @@ something else landing first.
 | F035 | os.ssh_key silent chown failure | bug | **done** | [findings/F035](./findings/F035-os-ssh-key-silent-chown-failure.md) |
 | F037 | vars action bypasses secrets resolver | bug | **done** | [findings/F037](./findings/F037-vars-action-bypasses-secrets-resolver.md) |
 | F038 | shell line-overflow structured stream silent | bug | **done** | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
-| F039 | agent.RunLoop defer-in-loop + plan perms + silent save | smell | open | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
+| F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **partial** | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
 
 ## Queue (next iterations, priority order)
 
