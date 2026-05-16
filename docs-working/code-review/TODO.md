@@ -29,6 +29,7 @@ something else landing first.
 | F019 | secrets.Resolve doesn't recurse into step.Vars (*map[string]interface{}) | bug | S | — | open |
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
+| F022 | mcp/tools.go uses logger.NewTestLogger() in production runConfig + HandleCheckPlan | smell | XS | — | open |
 
 ## Findings index
 
@@ -55,6 +56,7 @@ something else landing first.
 | F019 | secrets.Resolve misses step.Vars | bug | open | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
 | F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
+| F022 | mcp uses NewTestLogger in production | smell | open | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -63,8 +65,8 @@ something else landing first.
 3. ~~`internal/explain` — `DisplayFacts`~~ — done → F009, F010.
 4. ~~`internal/config.Step`~~ — done → F013.
 5. ~~`internal/agentd/worker`~~ — done → F015, F016.
-6. **`internal/mcp/tools`** — same question after the runCollector
-   deletion.
+6. ~~`internal/mcp/tools`~~ — done → F022 (NewTestLogger in
+   production). apply.Runner integration looks clean post-refactor.
 7. ~~`internal/executor/executor`~~ — partial → F017
    (continue_on_error double-emit). Other extractions look clean.
 8. **`internal/fleet`** — biggest non-cmd package (4,245 LOC).
@@ -107,6 +109,8 @@ something else landing first.
 | 2026-05-16 | `internal/actions/shell/handler.go` | F018 |
 | 2026-05-16 | `internal/secrets/resolver/resolve.go` | F019 |
 | 2026-05-16 | `internal/apply/runner.go` + `config.go` | F020, F021 |
+| 2026-05-16 | `internal/mcp/tools.go` | F022 |
+| 2026-05-16 | `internal/plan/filter/tags.go` | none (clean) |
 
 ## Cross-cutting themes / patterns to track
 
