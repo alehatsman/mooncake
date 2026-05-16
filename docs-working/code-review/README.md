@@ -57,6 +57,83 @@ suggested fix, and verification steps.
 
 ## Cross-cutting themes (running list)
 
-Updated as patterns emerge.
+Patterns observed across packages, ordered by leverage.
 
-- _(pending — first iteration in progress)_
+1. **Spec-16 migration incomplete in 24 handlers** (F011). The
+   `Execute` / `DryRun` / `Run` triple still ships in every
+   action package except `copy` and `file` (which arch-wins
+   migrated). ~1,000 LOC of deletable legacy code; the
+   `actions.Handler` interface can shrink once the migration
+   finishes.
+
+2. **Unbounded HTTP** (F012, F007, F014). 9 packages use
+   `http.Get` / `http.DefaultClient` / `http.NewRequest` with
+   no timeout, no context. Mooncake runs as a CI / provisioning
+   agent; any hung HTTP call blocks an apply. `internal/httputil`
+   helper + per-call migration is the consolidated fix.
+
+3. **Cancellation invariant broken from the kernel boundary
+   inward** (F016, F020). `apply.Runner.Run(ctx)` accepts a
+   context but doesn't observe it; the executor doesn't either.
+   `apply.Runner.installSignalHandler` does `os.Exit` on
+   SIGTERM, hostile to agentd / MCP. End-state: SIGTERM hangs
+   or aborts mid-run depending on caller.
+
+4. **`sudo -S` shell-out reimplemented 6 ways** (F005, F004).
+   Inconsistent guards mean become-unsupported produces 3
+   different error shapes. `internal/security.BecomeRunner`
+   would consolidate.
+
+5. **Documentation drift around tracked numbers** (F002, F013,
+   F021). Counts, action lists, lifecycle contracts pinned in
+   doc-strings drift within days. Lean on `make budget-status`
+   and on inline-derived counts; never pin a number in two
+   places.
+
+6. **Reflection-based walkers with closed kind sets** (F019).
+   The secret resolver walks struct fields by kind; the closed
+   set misses `*map[string]interface{}` (step.Vars). New shapes
+   added in the future will silently pass through. A
+   verification-walk at the end of `Resolve()` would catch
+   missed markers loudly.
+
+7. **Cleanup invariants in agentd worker not enforced** (F015,
+   F016, F017). "Every exit path of executeRun must run the
+   same cleanup" isn't symmetric across paths — F015 found one
+   missed close. Defer-based cleanup pattern is the fix.
+
+8. **Unbounded buffer / scanner sizes** (F018). `bufio.Scanner`
+   default 64 KB max-line, `bytes.Buffer` with no cap.
+   Subprocess-output capture path is the worst offender; audit
+   `shell`, `assert`, `observe_logs`, `wait_command`.
+
+9. **Stale `//nolint:gocyclo` directives** (F017 adjacent obs).
+   Functions that were over the cap and got extracted no longer
+   need the suppression; the directive stays.
+
+## Summary of findings
+
+| Severity | Count | IDs |
+|---|---:|---|
+| bug | 6 | F015, F017, F018, F019, *((F010 dead test, treated as smell here))* |
+| risk | 6 | F001, F007, F012, F014, F016, F020 |
+| smell | 7 | F003, F004, F005, F006, F009, F010, F011 |
+| readability | 1 | F008 |
+| doc | 4 | F002, F013, F021, (F009 partial) |
+
+(Counts approximate — some findings span multiple severities.)
+
+The two top-priority fixers should look at:
+
+- **F019** (security defense-in-depth): `!secret` silently
+  doesn't resolve in `step.Vars`.
+- **F015** (real bug): worker chdir-error leaks hub →
+  goroutine leak on SSE side.
+- **F017** (real bug): `continue_on_error` emits both
+  step.failed and step.completed; SSE consumers see the
+  step flip-state.
+- **F020** (risk): `apply.Runner` calls `os.Exit`, hostile
+  to agentd / MCP.
+
+Quick-win XS fixes: F002 (CLAUDE.md), F013 (config.Step doc),
+F021 (Config.ExtraSubscribers doc), F010 (dead test).
