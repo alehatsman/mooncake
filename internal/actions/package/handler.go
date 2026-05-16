@@ -140,12 +140,9 @@ func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Build package list and render template variables in names.
 	// TODO: consider moving this into the plan phase so plan output shows expanded names.
-	packages := h.buildPackageList(pkg)
-	for i, name := range packages {
-		rendered, renderErr := ctx.GetTemplate().Render(name, ctx.GetVariables())
-		if renderErr == nil {
-			packages[i] = rendered
-		}
+	packages, err := h.renderPackageNames(ctx, h.buildPackageList(pkg))
+	if err != nil {
+		return nil, err
 	}
 
 	// Resolve templated names expression (when YAML `names:` was a scalar).
@@ -310,6 +307,24 @@ func (h *Handler) buildPackageList(pkg *config.Package) []string {
 		packages = append(packages, pkg.Names...)
 	}
 	return packages
+}
+
+// renderPackageNames renders each entry in `names` against the template
+// engine using ctx variables. Returns the error from the first failing
+// entry so a missing-variable template doesn't reach apt/yum as a
+// literal `{{ var }}-tools` (F023) — apt would surface a confusing
+// "unable to locate package {{ var }}-tools" error instead of a clear
+// template-render failure.
+func (h *Handler) renderPackageNames(ctx actions.Context, names []string) ([]string, error) {
+	rendered := make([]string, len(names))
+	for i, name := range names {
+		out, err := ctx.GetTemplate().Render(name, ctx.GetVariables())
+		if err != nil {
+			return nil, fmt.Errorf("render package name %q: %w", name, err)
+		}
+		rendered[i] = out
+	}
+	return rendered, nil
 }
 
 // resolveNamesExpr renders pkg.NamesExpr against the current variables and
@@ -819,11 +834,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		state = statePresent
 	}
 
-	packages := h.buildPackageList(pkg)
-	for i, name := range packages {
-		if rendered, rerr := ctx.GetTemplate().Render(name, ctx.GetVariables()); rerr == nil {
-			packages[i] = rendered
-		}
+	packages, err := h.renderPackageNames(ctx, h.buildPackageList(pkg))
+	if err != nil {
+		return nil, err
 	}
 
 	if ctx.Mode() == actions.ModePlan {
