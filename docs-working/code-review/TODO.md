@@ -29,6 +29,7 @@ something else landing first.
 | F022 | mcp/tools.go uses logger.NewTestLogger() in production runConfig + HandleCheckPlan | smell | XS | — | open |
 | F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
 | F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
+| F025 | vars action leaks !secret sentinel — planner pre-evaluates vars, bypasses resolver.Resolve | bug | S | — | open |
 
 ## Findings index
 
@@ -58,6 +59,7 @@ something else landing first.
 | F022 | mcp uses NewTestLogger in production | smell | open | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
 | F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
+| F025 | vars action bypasses secrets resolver | bug | open | [findings/F025](./findings/F025-vars-action-bypasses-secrets-resolver.md) |
 
 ## Queue (next iterations, priority order)
 
