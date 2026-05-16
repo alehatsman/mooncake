@@ -18,6 +18,18 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
+// newBodyReader returns the io.Reader passed to http.NewRequest.
+// Empty body deliberately maps to http.NoBody so GET requests match
+// the pre-proposal-10 behaviour exactly (some servers / proxies
+// treat NoBody differently from an empty strings.Reader, e.g. the
+// Content-Length header gets omitted).
+func newBodyReader(body string) io.Reader {
+	if body == "" {
+		return http.NoBody
+	}
+	return strings.NewReader(body)
+}
+
 const (
 	defaultTimeout      = 60 * time.Second
 	defaultPollInterval = time.Second
@@ -81,6 +93,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, &executor.RenderError{Field: "wait.http.body_contains", Cause: err}
 	}
 
+	// proposal-10: rendered once outside the poll loop so each
+	// iteration re-uses the same string (a fresh strings.NewReader is
+	// fine to re-create per request — the underlying bytes are
+	// shared).
+	body, err := ctx.GetTemplate().Render(w.Body, ctx.GetVariables())
+	if err != nil {
+		return nil, &executor.RenderError{Field: "wait.http.body", Cause: err}
+	}
+
 	headers, err := renderHeaders(ctx, w.Headers)
 	if err != nil {
 		return nil, err
@@ -90,7 +111,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		r := executor.NewResult()
 		r.Checkable = true
 		r.WouldChange = true
-		r.Reason = fmt.Sprintf("would wait for %s %s (status %v)", method, url, accepted)
+		bodyHint := ""
+		if body != "" {
+			bodyHint = fmt.Sprintf(", body=%d bytes", len(body))
+		}
+		r.Reason = fmt.Sprintf("would wait for %s %s (status %v%s)", method, url, accepted, bodyHint)
 		return r, nil
 	}
 
@@ -116,7 +141,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	check := func() bool {
 		iterations++
-		req, reqErr := http.NewRequestWithContext(pollCtx, method, url, http.NoBody)
+		req, reqErr := http.NewRequestWithContext(pollCtx, method, url, newBodyReader(body))
 		if reqErr != nil {
 			return false
 		}

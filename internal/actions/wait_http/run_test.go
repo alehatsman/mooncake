@@ -1,6 +1,7 @@
 package wait_http
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -175,5 +176,126 @@ func TestRun_Apply_Headers(t *testing.T) {
 	r := res.(*executor.Result)
 	if r.Data["last_status"].(int) != 200 {
 		t.Errorf("expected last_status=200; got %v", r.Data["last_status"])
+	}
+}
+
+// TestRun_Apply_POSTWithBody — proposal-10: POST with a JSON body
+// delivers the body to the server every poll, the same way curl -d
+// would. The server here checks both the method and the body shape
+// before answering 200, so a misrouted body or a method mix-up would
+// flip the result to 'timeout'.
+func TestRun_Apply_POSTWithBody(t *testing.T) {
+	var lastBody atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(405)
+			return
+		}
+		buf, _ := io.ReadAll(r.Body)
+		lastBody.Store(string(buf))
+		if !strings.Contains(string(buf), `"input":"ping"`) {
+			w.WriteHeader(400)
+			return
+		}
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	step := &config.Step{WaitHTTP: &config.WaitHTTP{
+		URL:     srv.URL,
+		Method:  "POST",
+		Headers: map[string]string{"Content-Type": "application/json"},
+		Body:    `{"input":"ping","model":"qwen3-embedding"}`,
+		Timeout: "2s",
+	}}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.Data["success"] != true {
+		t.Errorf("success != true; data=%v", r.Data)
+	}
+	if r.Data["method"] != "POST" {
+		t.Errorf("method = %v, want POST", r.Data["method"])
+	}
+	got, _ := lastBody.Load().(string)
+	if !strings.Contains(got, `"model":"qwen3-embedding"`) {
+		t.Errorf("server saw body %q; want full JSON payload", got)
+	}
+}
+
+// TestRun_Apply_BodyTemplateRendered — body goes through the same
+// pongo2 path as URL/headers, so `{{ var }}` is substituted from the
+// scope before each poll.
+func TestRun_Apply_BodyTemplateRendered(t *testing.T) {
+	var seen atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, _ := io.ReadAll(r.Body)
+		seen.Store(string(buf))
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	ec := newCtx(t, false)
+	ec.Scope.User["model_name"] = "qwen3-embedding"
+
+	step := &config.Step{WaitHTTP: &config.WaitHTTP{
+		URL:     srv.URL,
+		Method:  "POST",
+		Body:    `{"model":"{{ model_name }}"}`,
+		Timeout: "2s",
+	}}
+	if _, err := (&Handler{}).Run(ec, step); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got, _ := seen.Load().(string)
+	if got != `{"model":"qwen3-embedding"}` {
+		t.Errorf("server saw body %q; want template-rendered payload", got)
+	}
+}
+
+// TestRun_Apply_GETNoBody — empty Body keeps the request body
+// http.NoBody so GET requests behave exactly as they did pre-proposal-10
+// (Content-Length is unset, server sees no body). Guards against a
+// regression where strings.NewReader("") leaks into the path.
+func TestRun_Apply_GETNoBody(t *testing.T) {
+	var sawContentLength atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength > 0 {
+			sawContentLength.Store(true)
+		}
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	step := &config.Step{WaitHTTP: &config.WaitHTTP{
+		URL:     srv.URL,
+		Timeout: "2s",
+	}}
+	if _, err := (&Handler{}).Run(newCtx(t, false), step); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if sawContentLength.Load() {
+		t.Error("server saw Content-Length on GET; want http.NoBody (no body, no Content-Length)")
+	}
+}
+
+// TestRun_Plan_BodyHintInReason — plan mode includes a "body=N bytes"
+// hint when a body is present, so `mooncake plan` output makes the
+// difference between a GET and a POST-with-body request explicit.
+func TestRun_Plan_BodyHintInReason(t *testing.T) {
+	step := &config.Step{WaitHTTP: &config.WaitHTTP{
+		URL:    "http://localhost/embed",
+		Method: "POST",
+		Body:   `{"x":1}`,
+	}}
+	res, err := (&Handler{}).Run(newCtx(t, true), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if !strings.Contains(r.Reason, "body=7 bytes") {
+		t.Errorf("plan reason missing body-size hint; got %q", r.Reason)
 	}
 }
