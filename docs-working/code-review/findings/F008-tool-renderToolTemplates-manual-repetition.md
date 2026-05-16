@@ -5,7 +5,8 @@ severity: readability
 package: internal/actions/tool
 file: internal/actions/tool/handler.go
 lines: 231-269
-status: open
+status: done
+resolved: 2026-05-16 — replaced the 9× copy-paste render-and-wrap block in `renderToolTemplates` with a `{name, src, *dst}` table + `for` loop. Adding a new templatable field is now one struct-literal row instead of an if/wrap/assign paste. Error semantics preserved: each field still surfaces as `<field>: <render err>` in declaration order. `specFromConfig` (lines 208-224) is the assignment-only sibling and is left untouched — no error handling to drop, and turning a 9-line copy block into a 9-line table would be churn without payoff.
 ---
 
 ## What
