@@ -19,6 +19,10 @@ something else landing first.
 | F008 | tool.renderToolTemplates: 9× manual field render | readability | XS | — | open |
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
 | F010 | explain test: TestDisplayFacts_NilFacts is dead (no call) | smell | XS | — | open |
+| F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
+| F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
+| F013 | config.Step "74 pointers" comment is stale (actual 64) | doc | XS | — | open |
+| F014 | fleet.Apply WithoutCancel + GetRun has no timeout — Ctrl-C hangs | risk | XS | — | open |
 
 ## Findings index
 
@@ -34,22 +38,26 @@ something else landing first.
 | F008 | tool.renderToolTemplates manual repetition | readability | open | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
 | F009 | explain.DisplayFacts section split | smell | open | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
 | F010 | explain TestDisplayFacts_NilFacts is dead | smell | open | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
+| F011 | cross-cutting: 24 handlers w/ legacy paths | smell | open | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
+| F012 | cross-cutting: http no timeout (9 pkgs) | risk | open | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
+| F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | open | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
+| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | open | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
 
 ## Queue (next iterations, priority order)
 
 1. ~~`internal/actions/service`~~ — done in this iteration → F003, F004, F005.
 2. ~~`internal/actions/tool`~~ — done → F006, F007, F008.
 3. ~~`internal/explain` — `DisplayFacts`~~ — done → F009, F010.
-4. **`internal/config.Step`** — 36/40 field count, growing. Look
-   for fields that could be planner-private already.
+4. ~~`internal/config.Step`~~ — done → F013.
 5. **`internal/agentd/worker`** — has it landed cleanly on
    `apply.Runner`? Anything still hand-wired?
 6. **`internal/mcp/tools`** — same question after the runCollector
    deletion.
 7. **`internal/executor/executor`** — `ExecuteStep` after the
    extractions. Anything else heavy?
-8. **`internal/fleet`** — biggest non-cmd package (4,245 LOC),
-   never deep-reviewed at function level.
+8. **`internal/fleet`** — biggest non-cmd package (4,245 LOC).
+   Partial: F014 (apply.go post-stream recovery). Rest of the
+   package (controller, bootstrap, multiplex, peers) still queued.
 9. **`internal/agentd`** — 3,100 LOC, growing fast in the last 24h.
 10. **`internal/plan`** — planner, including the new `plan/filter`.
 11. **`internal/apply/runner.go`** — kernel entrypoint. Verify the
@@ -77,6 +85,9 @@ something else landing first.
 | 2026-05-16 | `internal/actions/service` (1,607 LOC) | F003, F004, F005 |
 | 2026-05-16 | `internal/actions/tool` (1,676 LOC) | F006, F007, F008 |
 | 2026-05-16 | `internal/explain.DisplayFacts` (gocyclo 44) | F009, F010 |
+| 2026-05-16 | cross-cutting audit (Execute/DryRun + HTTP timeouts) | F011, F012 |
+| 2026-05-16 | `internal/config.Step` doc-drift | F013 |
+| 2026-05-16 | `internal/fleet/apply.go` (partial) | F014 |
 
 ## Cross-cutting themes / patterns to track
 
@@ -87,9 +98,14 @@ Updated as the review uncovers patterns.
   every handler that still has `Execute`/`DryRun` is technical
   debt of the same kind. Audit remaining: `internal/actions/{copy,
   file, service, tool, ...}` grep `func \(.*\) Execute\(`.
-- **HTTP calls without timeouts/context** (F007). Audit other
-  packages that use `http.Get` / `http.DefaultClient`: `download`,
-  `wait_http`, `mcp`, `llm`. Same pattern likely recurs.
+- **HTTP calls without timeouts/context** (F007, F012, F014).
+  Now confirmed in 9 packages. F012 proposes the cross-cutting
+  fix; F014 documents the at-call-site fix for `fleet.Apply`'s
+  WithoutCancel pattern.
+- **Stale doc-strings track action / field counts** (F002 in
+  CLAUDE.md, F013 in config.go). Pattern: pin the number → it
+  drifts within the next sprint. Lean on `make budget-status`
+  and `make handler-list` (if it exists; if not, worth adding).
 - **`sudo -S` shell-out reimplemented in 6 packages** (F005).
   Inconsistent guard handling means become-on-unsupported-host
   produces 3 different error shapes today.
