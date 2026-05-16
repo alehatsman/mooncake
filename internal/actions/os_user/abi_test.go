@@ -1,6 +1,7 @@
 package os_user //nolint:revive // package name follows action convention
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -18,7 +19,13 @@ func TestPermissions_AlwaysSudo(t *testing.T) {
 	if ps.Network {
 		t.Errorf("Network must be false; got %+v", ps)
 	}
-	wantBins := []string{"useradd", "usermod", "userdel"}
+	var wantBins []string
+	switch runtime.GOOS {
+	case "darwin":
+		wantBins = []string{"dscl"}
+	default: // linux
+		wantBins = []string{"useradd", "usermod", "userdel"}
+	}
 	if len(ps.RequiredBinaries) != len(wantBins) {
 		t.Errorf("RequiredBinaries = %v, want %v", ps.RequiredBinaries, wantBins)
 	}
