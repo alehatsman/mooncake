@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions/tool/archive"
+	"github.com/alehatsman/mooncake/internal/actions/tool/fetch"
+	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/lockfile"
 )
 
@@ -30,13 +32,13 @@ type Outcome struct {
 // is recorded after a successful install. The handler is responsible
 // for calling lock.Save afterwards.
 func InstallURL(ctx context.Context, spec Spec, plan Plan, facts FactSnapshot, lock *lockfile.Lock) (Outcome, error) {
-	installDir, err := InstallDir(spec.Name, spec.Version)
+	installDir, err := store.InstallDir(spec.Name, spec.Version)
 	if err != nil {
 		return Outcome{}, err
 	}
 
 	// Idempotency: populated install dir means we're done.
-	populated, err := installDirIsPopulated(installDir)
+	populated, err := store.IsPopulated(installDir)
 	if err != nil {
 		return Outcome{}, fmt.Errorf("stat install dir: %w", err)
 	}
@@ -64,25 +66,25 @@ func InstallURL(ctx context.Context, spec Spec, plan Plan, facts FactSnapshot, l
 	}
 
 	// Download.
-	root, err := StoreRoot()
+	root, err := store.Root()
 	if err != nil {
 		return Outcome{}, err
 	}
 	if mkErr := os.MkdirAll(root, 0o755); mkErr != nil {
 		return Outcome{}, fmt.Errorf("create store root: %w", mkErr)
 	}
-	tmpFile, err := fetchToTempFile(ctx, plan.URL, root)
+	tmpFile, err := fetch.ToTempFile(ctx, plan.URL, root)
 	if err != nil {
 		return Outcome{}, err
 	}
 	defer func() { _ = os.Remove(tmpFile) }()
 
 	// Verify or compute checksum.
-	got, err := hashFileSHA256(tmpFile)
+	got, err := fetch.SHA256(tmpFile)
 	if err != nil {
 		return Outcome{}, err
 	}
-	if expected != "" && !checksumsEqual(expected, got) {
+	if expected != "" && !fetch.ChecksumsEqual(expected, got) {
 		return Outcome{}, fmt.Errorf("checksum mismatch for %s: expected %s, got %s", plan.URL, expected, got)
 	}
 	finalChecksum := got // always record the computed one (canonical form)

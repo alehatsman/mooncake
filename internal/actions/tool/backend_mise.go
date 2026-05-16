@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
@@ -179,7 +180,7 @@ func (realMiseRunner) resolveMisePath() (string, error) {
 // that's fine, and if multiple versions are present, any one works
 // (mise's own resolver picks per-project versions).
 func findMooncakeManagedMise() string {
-	root, err := StoreRoot()
+	root, err := store.Root()
 	if err != nil {
 		return ""
 	}
@@ -203,7 +204,7 @@ func findMooncakeManagedMise() string {
 // mooncakeMiseGlobHint is the human-readable path used in error messages
 // pointing at where mooncake would expect a bootstrapped mise binary.
 func mooncakeMiseGlobHint() string {
-	root, err := StoreRoot()
+	root, err := store.Root()
 	if err != nil {
 		return "~/.local/share/mooncake/tools/mise/*/bin/mise"
 	}

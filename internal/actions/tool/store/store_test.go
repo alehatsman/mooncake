@@ -1,4 +1,4 @@
-package tool
+package store
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 )
 
 // MT-60: when bin is unset and the install dir contains exactly one
-// executable file, locateInInstallDir should auto-resolve to that
+// executable file, LocateInInstallDir should auto-resolve to that
 // file — the common github-release bare-binary case. Before this
 // fix the function returned the install dir, which is not executable
 // and produces "Is a directory" when invoked.
@@ -18,9 +18,9 @@ func TestLocateInInstallDir_BinUnset_SingleExecutableAutoResolves(t *testing.T) 
 		t.Fatalf("write bin: %v", err)
 	}
 
-	got, err := locateInInstallDir("", dir)
+	got, err := LocateInInstallDir("", dir)
 	if err != nil {
-		t.Fatalf("locateInInstallDir: %v", err)
+		t.Fatalf("LocateInInstallDir: %v", err)
 	}
 	if got != binPath {
 		t.Errorf("expected auto-resolve to %q, got %q", binPath, got)
@@ -39,9 +39,9 @@ func TestLocateInInstallDir_BinUnset_MultipleExecutablesFallBackToDir(t *testing
 		}
 	}
 
-	got, err := locateInInstallDir("", dir)
+	got, err := LocateInInstallDir("", dir)
 	if err != nil {
-		t.Fatalf("locateInInstallDir: %v", err)
+		t.Fatalf("LocateInInstallDir: %v", err)
 	}
 	if got != dir {
 		t.Errorf("expected fallback to install dir %q, got %q", dir, got)
@@ -61,9 +61,9 @@ func TestLocateInInstallDir_BinUnset_IgnoresNonExecutables(t *testing.T) {
 		t.Fatalf("write readme: %v", err)
 	}
 
-	got, err := locateInInstallDir("", dir)
+	got, err := LocateInInstallDir("", dir)
 	if err != nil {
-		t.Fatalf("locateInInstallDir: %v", err)
+		t.Fatalf("LocateInInstallDir: %v", err)
 	}
 	if got != binPath {
 		t.Errorf("expected auto-resolve to %q (README ignored), got %q", binPath, got)
@@ -79,9 +79,9 @@ func TestLocateInInstallDir_BinSet_ExplicitWins(t *testing.T) {
 		t.Fatalf("write bin: %v", err)
 	}
 
-	got, err := locateInInstallDir("jq", dir)
+	got, err := LocateInInstallDir("jq", dir)
 	if err != nil {
-		t.Fatalf("locateInInstallDir: %v", err)
+		t.Fatalf("LocateInInstallDir: %v", err)
 	}
 	want := filepath.Join(dir, "jq")
 	if got != want {

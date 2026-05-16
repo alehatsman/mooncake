@@ -1,4 +1,11 @@
-package tool
+// Package fetch downloads tool archives over HTTP and hashes them for
+// integrity verification. Lifted out of internal/actions/tool to keep
+// that package under the 1500-LOC handler soft cap (CLAUDE.md §1).
+//
+// Exported surface is intentionally narrow — ToTempFile (download) +
+// SHA256 (digest). The internal helpers (normalize / suffix / equal)
+// stay unexported because they were only ever used inside fetch.go.
+package fetch
 
 import (
 	"context"
@@ -13,21 +20,21 @@ import (
 	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
-// fetchToTempFile downloads url into a temp file (created via
-// os.CreateTemp in dir) and returns the temp file path. The caller is
-// responsible for os.Remove on the returned path. The temp file name
-// preserves the URL's archive extension so format detection works.
+// ToTempFile downloads url into a temp file (created via os.CreateTemp
+// in dir) and returns the temp file path. The caller is responsible
+// for os.Remove on the returned path. The temp file name preserves
+// the URL's archive extension so format detection works.
 //
-// F007: the request now carries a context so the caller can cancel the
+// F007: the request carries a context so the caller can cancel the
 // download (Ctrl-C, step timeout, parent cancellation) and a User-Agent
 // so GitHub's release CDN doesn't lump us with anonymous traffic.
 //
-// F012: route through httputil.Client so the dial / TLS-handshake /
+// F012: routes through httputil.Client so the dial / TLS-handshake /
 // response-headers timeouts apply even on long-running archive
-// downloads. No overall Client.Timeout — large tool archives
-// (LLVM / CUDA SDK) exceed any reasonable wall-clock cap; ctx drives
-// total cancellation, transport drives per-phase deadlines.
-func fetchToTempFile(ctx context.Context, url, dir string) (string, error) {
+// downloads. No overall Client.Timeout — large tool archives (LLVM /
+// CUDA SDK) exceed any reasonable wall-clock cap; ctx drives total
+// cancellation, transport drives per-phase deadlines.
+func ToTempFile(ctx context.Context, url, dir string) (string, error) {
 	// #nosec G304 -- dir is a mooncake-managed temp location
 	tmp, err := os.CreateTemp(dir, "mooncake-tool-*"+archiveSuffix(url))
 	if err != nil {
@@ -62,10 +69,10 @@ func fetchToTempFile(ctx context.Context, url, dir string) (string, error) {
 	return tmpName, nil
 }
 
-// hashFileSHA256 returns the sha256 hex digest of the file at path,
-// prefixed with "sha256:" to match mooncake's checksum conventions
-// (see internal/utils/checksum.go).
-func hashFileSHA256(path string) (string, error) {
+// SHA256 returns the sha256 hex digest of the file at path, prefixed
+// with "sha256:" to match mooncake's checksum conventions (see
+// internal/utils/checksum.go).
+func SHA256(path string) (string, error) {
 	// #nosec G304 -- path is a mooncake-managed temp file
 	f, err := os.Open(path)
 	if err != nil {
@@ -79,9 +86,17 @@ func hashFileSHA256(path string) (string, error) {
 	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// ChecksumsEqual compares two checksums tolerantly of the "sha256:"
+// prefix and case. Used by install.go to compare a freshly-computed
+// SHA256 against either a user-declared checksum or a lockfile-stored
+// one.
+func ChecksumsEqual(a, b string) bool {
+	return normalizeChecksum(a) == normalizeChecksum(b)
+}
+
 // archiveSuffix returns the archive extension for url, suitable for use
-// as a temp-file suffix so detectFormat picks the right extractor.
-// Falls back to ".bin" for URLs we don't recognize.
+// as a temp-file suffix so the archive format detector picks the right
+// extractor. Falls back to ".bin" for URLs we don't recognize.
 func archiveSuffix(url string) string {
 	low := strings.ToLower(url)
 	switch {
@@ -105,10 +120,4 @@ func normalizeChecksum(s string) string {
 	s = strings.TrimPrefix(s, "sha256:")
 	s = strings.TrimPrefix(s, "SHA256:")
 	return strings.ToLower(s)
-}
-
-// checksumsEqual compares two checksums tolerantly of the "sha256:"
-// prefix and case.
-func checksumsEqual(a, b string) bool {
-	return normalizeChecksum(a) == normalizeChecksum(b)
 }
