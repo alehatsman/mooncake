@@ -7,6 +7,7 @@ file: CLAUDE.md
 lines: 70–86
 status: done
 resolved_by: b237604
+verified: 2026-05-16 — CLAUDE.md no longer pins inline list; `make budget-status` is authoritative source-of-truth
 ---
 
 ## What
