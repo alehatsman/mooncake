@@ -112,16 +112,16 @@ func TestRun_RenderErrorOnPackageName_Plan(t *testing.T) {
 // TestExecute_RenderErrorOnPackageName: same contract on the legacy
 // Execute() path. Kept as a separate regression because Execute is
 // still wired in for backward compatibility (F011).
-func TestExecute_RenderErrorOnPackageName(t *testing.T) {
+func TestRun_RenderErrorOnPackageName(t *testing.T) {
 	step := &config.Step{
 		Pkg: &config.Package{
 			Manager: "pacman",
 			Name:    "{{ unclosed-tools",
 		},
 	}
-	_, err := (&Handler{}).Execute(newCtx(t, false), step)
+	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
-		t.Fatal("expected render error from Execute; got nil")
+		t.Fatal("expected render error from Run; got nil")
 	}
 	if !strings.Contains(err.Error(), "render package name") {
 		t.Errorf("error should name the source of failure; got %q", err.Error())
