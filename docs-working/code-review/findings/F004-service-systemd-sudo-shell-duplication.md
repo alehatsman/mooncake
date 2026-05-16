@@ -5,7 +5,8 @@ severity: smell
 package: internal/actions/service
 file: internal/actions/service/handler.go
 lines: 457-493, 528-565, 568-588, 591-647, 650-672, 1024-1071
-status: open
+status: done
+resolved_by: worktree-fix-f004 (0a8e4eff / 97f111a3)
 verified: 2026-05-16 — confirmed fix shape on master @ 97f111a3. becomeAwareCommand + runBecomeAware helpers used at 13 call sites; only 3 ShouldBecome checks remain (was 6 in original); LOC 1607→1202 (back under 1500 soft-cap); tests green
 ---
 
