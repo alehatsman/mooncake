@@ -25,6 +25,8 @@ something else landing first.
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
+| F027 | agentd.sanityCheckBinary runs staged binary without timeout — hang blocks upgrade handler forever | risk | XS | — | open |
+| F028 | git_clone askpass returns password for the username prompt too — auth fails for bare HTTPS URLs | bug | S | — | open |
 
 ## Findings index
 
@@ -56,6 +58,8 @@ something else landing first.
 | F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 | F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
 | F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
+| F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | open | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
+| F028 | git_clone askpass returns password for username prompt | bug | open | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -128,6 +132,9 @@ something else landing first.
 | 2026-05-16 | `internal/actions/{copy,file}` post-migration | F026 (unbounded ReadFile) |
 | 2026-05-16 | `internal/presets/registry/remote.go` | already covered by F012 (http no timeout) |
 | 2026-05-16 | `cmd/presets.go` spot-check | none (clean — preset Type schema matches handler switch) |
+| 2026-05-16 | `internal/agentd/store.go` | none (clean — ULID-validated, atomic writes, daemon-restart reconcile) |
+| 2026-05-16 | `internal/agentd/self_upgrade.go` | F027 (sanityCheckBinary no-timeout) |
+| 2026-05-16 | `internal/actions/git_clone` | F028 (askpass username bug) |
 
 ## Cross-cutting themes / patterns to track
 
