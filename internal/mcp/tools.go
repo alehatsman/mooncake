@@ -12,6 +12,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/explain"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/metrics"
@@ -39,6 +40,8 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleGetMetrics)
 		case "query_file":
 			srv.RegisterTool(def, HandleQueryFile)
+		case "explain":
+			srv.RegisterTool(def, HandleExplain)
 		}
 	}
 }
@@ -121,6 +124,19 @@ func AllTools() []ToolDef {
 				"format":    strProp("Optional format override: 'json' or 'yaml'. Default: auto-detect from extension."),
 				"max_bytes": map[string]interface{}{"type": "integer", "description": "Optional. Refuse to load files larger than this size in bytes. Default: 4194304."},
 			}, []string{"path"}),
+		},
+		{
+			Name:        "explain",
+			Description: "Look up typed information about a mooncake noun — an action verb (e.g. `pkg.install`), a run id (`r/...`), a resource handle (`file:/path`, `pkg:apt/name`, `user:name`, `service:unit`), or an operation id (`op/...`). Returns the typed schema, applicable examples, the Diff and Reverse shapes, and a typed `not_found` with candidates when the noun does not resolve. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"noun": strProp("One of: an action verb (e.g. 'pkg.install'); a run id ('r/...'); a resource handle ('<kind>:<id>'); an op id ('op/...')."),
+				"examples_limit": map[string]interface{}{
+					"type":        "integer",
+					"minimum":     0,
+					"maximum":     10,
+					"description": "Cap on example excerpts returned for kind:action. Default 3.",
+				},
+			}, []string{"noun"}),
 		},
 	}
 }
@@ -435,6 +451,38 @@ func HandleRunPlan(ctx context.Context, args json.RawMessage) (string, error) {
 		return "", fmt.Errorf("config parameter required")
 	}
 	return runConfig(ctx, params.Config)
+}
+
+// HandleExplain resolves a noun (action verb, run id, resource handle, op id)
+// and returns the typed payload as indented JSON. Mirrors `mooncake explain
+// <noun> --format json` over MCP. Read-only — delegates to explain.Resolve,
+// which reads only ~/.mooncake/{runs,ops}.jsonl, the embedded schema, and the
+// in-tree actions registry.
+func HandleExplain(_ context.Context, args json.RawMessage) (string, error) {
+	var params struct {
+		Noun          string `json:"noun"`
+		ExamplesLimit int    `json:"examples_limit"`
+	}
+	if len(args) > 0 {
+		if err := json.Unmarshal(args, &params); err != nil {
+			return "", fmt.Errorf("invalid arguments: %w", err)
+		}
+	}
+	if strings.TrimSpace(params.Noun) == "" {
+		return "", fmt.Errorf("noun parameter required")
+	}
+
+	result := explain.Resolve(params.Noun, explain.Options{
+		ExamplesLimit: params.ExamplesLimit,
+	})
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(result); err != nil {
+		return "", fmt.Errorf("marshal explain result: %w", err)
+	}
+	return strings.TrimRight(buf.String(), "\n"), nil
 }
 
 // HandleCheckPlan builds the plan and inspects it without applying.

@@ -51,7 +51,7 @@ func TestDispatchBytesToolsList(t *testing.T) {
 	if len(resp.Result.Tools) == 0 {
 		t.Errorf("expected non-empty tools list")
 	}
-	wantTools := []string{"get_facts", "get_metrics", "fact_query", "get_snapshot", "check_plan", "run_plan"}
+	wantTools := []string{"get_facts", "get_metrics", "fact_query", "get_snapshot", "check_plan", "run_plan", "query_file", "explain"}
 	have := map[string]bool{}
 	for _, tt := range resp.Result.Tools {
 		have[tt.Name] = true
