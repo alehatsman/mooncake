@@ -50,16 +50,6 @@ type ApplyConfig struct {
 	Pwd string
 }
 
-// ApplyRunResult is the structured outcome of Orchestrator.Run. The cmd
-// layer translates ExitCode != 0 into cli.Exit / os.Exit at the boundary;
-// Err (when non-nil) is the wrapped runtime error from RunApplyPhase that
-// the legacy CLI surface returned via errors.Join.
-type ApplyRunResult struct {
-	ExitCode int
-	Message  string
-	Err      error
-}
-
 // Orchestrator is the kernel-side entry point for `fleet apply` and
 // `fleet apply <machine>`. Frontends (CLI, future MCP, agent loop) build
 // an ApplyConfig and call Run().
@@ -77,17 +67,31 @@ func NewOrchestrator(cfg *ApplyConfig) *Orchestrator {
 // Run drives the full apply cycle: resolves plan-arg/machine convention,
 // computes vars stack, installs SIGINT handling, and dispatches to
 // RunApplyPhase (single-phase) or RunMachineApply (multi-phase machine
-// manifest). Returns the structured result; the cmd boundary maps
-// ExitCode/Message to cli.Exit and Err to errors.Join.
-func (o *Orchestrator) Run(ctx context.Context) ApplyRunResult {
-	planAbs, planDir, machine, machineManifest, res := o.resolvePlan()
-	if res.ExitCode != 0 || res.Err != nil {
-		return res
+// manifest).
+//
+// Returns a *FleetKernelResult (the typed fleet-scope kernel shape from
+// vision/kernel.md §"renderings, not products") and an error. On
+// success, error is nil. On failure with a CLI-relevant exit code, the
+// returned error is a *fleet.ExitError carrying ExitCode + Message; the
+// cmd boundary asserts on it via errors.As and translates to cli.Exit.
+// Other errors (setup failures, controller-id issues) are returned
+// directly; the cmd boundary surfaces them via errors.Join, matching
+// the legacy CLI behaviour.
+//
+// Today (R2.1b sub-scope, "Option B"): the result's per-peer entries
+// carry RunID + Status + Sync stats + EventsCount but the
+// apply.KernelResult tail per peer is NIL — the SSE wire schema
+// doesn't surface typed Steps + ReverseData back to the controller
+// yet. See FleetKernelResult.Reverse() for the implication.
+func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error) {
+	planAbs, planDir, machine, machineManifest, setupErr := o.resolvePlan()
+	if setupErr != nil {
+		return nil, setupErr
 	}
 
 	controllerID, err := EnsureControllerID()
 	if err != nil {
-		return ApplyRunResult{Err: fmt.Errorf("controller id: %w", err)}
+		return nil, fmt.Errorf("controller id: %w", err)
 	}
 
 	varsAbs := o.resolveVars(planDir, machine)
@@ -107,7 +111,19 @@ func (o *Orchestrator) Run(ctx context.Context) ApplyRunResult {
 			o.cfg.MaxSyncBytes, o.cfg.Parallel, controllerID,
 			o.cfg.PeerFilter,
 		)
-		return ApplyRunResult{ExitCode: mr.ExitCode, Message: mr.Message}
+		// Multi-phase: per-phase peers live inside RunMachineApply;
+		// fleet-scope KernelResult collapses to Summary only. Plan is
+		// nil because there is no single plan.Plan that spans phases.
+		result := &FleetKernelResult{
+			Peers: map[PeerID]*PeerResult{},
+			Summary: FleetSummary{
+				FailedNames: mr.PhaseFailures,
+			},
+		}
+		if mr.ExitCode != 0 {
+			return result, &ExitError{ExitCode: mr.ExitCode, Message: mr.Message}
+		}
+		return result, nil
 	}
 
 	return o.runSinglePhase(applyCtx, w, useColor, planAbs, planDir, varsAbs, controllerID)
@@ -115,15 +131,17 @@ func (o *Orchestrator) Run(ctx context.Context) ApplyRunResult {
 
 // resolvePlan resolves PlanArg into (planAbs, planDir, machine name,
 // machineManifest). Detects the machine convention (bare name → look
-// for machines/<name>/{fleet.yml, index.yml}). Returns a non-zero
-// ApplyRunResult on resolution failure.
-func (o *Orchestrator) resolvePlan() (planAbs, planDir, machine string, manifest *MachineManifest, res ApplyRunResult) {
+// for machines/<name>/{fleet.yml, index.yml}). Returns nil on success
+// or an error: setup errors (filesystem failures) are returned bare;
+// user-recoverable issues with a known exit code (machine manifest
+// load failure) are wrapped in *ExitError.
+func (o *Orchestrator) resolvePlan() (planAbs, planDir, machine string, manifest *MachineManifest, err error) {
 	planArg := o.cfg.PlanArg
 	planDir = o.cfg.PlanDirHint
 	if planDir != "" {
-		abs, err := filepath.Abs(planDir)
-		if err != nil {
-			res = ApplyRunResult{Err: fmt.Errorf("resolve plan-dir: %w", err)}
+		abs, absErr := filepath.Abs(planDir)
+		if absErr != nil {
+			err = fmt.Errorf("resolve plan-dir: %w", absErr)
 			return
 		}
 		planDir = abs
@@ -141,13 +159,13 @@ func (o *Orchestrator) resolvePlan() (planAbs, planDir, machine string, manifest
 		}
 		manifestPath, found, lookupErr := LookupMachineManifest(root, planArg)
 		if lookupErr != nil {
-			res = ApplyRunResult{ExitCode: 2, Message: "fleet apply: " + lookupErr.Error()}
+			err = &ExitError{ExitCode: 2, Message: "fleet apply: " + lookupErr.Error()}
 			return
 		}
 		if found {
-			m, err := LoadMachineManifest(manifestPath)
-			if err != nil {
-				res = ApplyRunResult{ExitCode: 2, Message: "fleet apply: " + err.Error()}
+			m, loadErr := LoadMachineManifest(manifestPath)
+			if loadErr != nil {
+				err = &ExitError{ExitCode: 2, Message: "fleet apply: " + loadErr.Error()}
 				return
 			}
 			machine = planArg
@@ -158,7 +176,7 @@ func (o *Orchestrator) resolvePlan() (planAbs, planDir, machine string, manifest
 			planArg = manifestPath
 		} else {
 			entry := filepath.Join(root, "machines", planArg, "index.yml")
-			if st, err := os.Stat(entry); err == nil && !st.IsDir() {
+			if st, statErr := os.Stat(entry); statErr == nil && !st.IsDir() {
 				machine = planArg
 				planArg = entry
 				if planDir == "" {
@@ -168,9 +186,9 @@ func (o *Orchestrator) resolvePlan() (planAbs, planDir, machine string, manifest
 		}
 	}
 
-	abs, err := filepath.Abs(planArg)
-	if err != nil {
-		res = ApplyRunResult{Err: fmt.Errorf("resolve plan path: %w", err)}
+	abs, absErr := filepath.Abs(planArg)
+	if absErr != nil {
+		err = fmt.Errorf("resolve plan path: %w", absErr)
 		return
 	}
 	planAbs = abs
@@ -235,10 +253,13 @@ func (o *Orchestrator) installSignalHandler(applyCtx context.Context, cancel con
 	}()
 }
 
-// runSinglePhase handles the non-machine-manifest path: split SelectedPeers
-// into agentd-transport and skipped, bail out if none remain, run one
-// phase via RunApplyPhase, translate outcome to ApplyRunResult.
-func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, useColor bool, planAbs, planDir string, varsAbs []string, controllerID string) ApplyRunResult {
+// runSinglePhase handles the non-machine-manifest path: split
+// SelectedPeers into agentd-transport and skipped, bail out if none
+// remain, run one phase via RunApplyPhase, assemble the per-peer
+// outcomes into a *FleetKernelResult, and translate aggregate outcome
+// to an error (typed *ExitError with cli-exit semantics or wrapped
+// FirstErr).
+func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, useColor bool, planAbs, planDir string, varsAbs []string, controllerID string) (*FleetKernelResult, error) {
 	agentdPeers := make([]Peer, 0, len(o.cfg.SelectedPeers))
 	var skippedPeers []Peer
 	for _, p := range o.cfg.SelectedPeers {
@@ -249,7 +270,7 @@ func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, use
 		agentdPeers = append(agentdPeers, p)
 	}
 	if len(agentdPeers) == 0 {
-		return ApplyRunResult{ExitCode: 1, Message: "fleet apply: no agentd-transport peers selected"}
+		return nil, &ExitError{ExitCode: 1, Message: "fleet apply: no agentd-transport peers selected"}
 	}
 
 	out := RunApplyPhase(applyCtx, w, useColor, ApplyPhaseInput{
@@ -267,16 +288,49 @@ func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, use
 		BannerHeading: fmt.Sprintf("fleet apply: %s → %d peer(s)", planAbs, len(agentdPeers)),
 	})
 
+	// Assemble the typed fleet-scope kernel shape. Per-peer
+	// KernelResult is nil today (wire gap; see result.go); RunID and
+	// Status come straight from the per-peer ApplyResult slice once
+	// RunApplyPhase surfaces them — currently only OK / FailedNames
+	// counters are exposed, so we mark FailedNames as "failed" and
+	// the rest implicitly OK. Once RunApplyPhase returns the slice,
+	// populate RunID + Sync + EventsCount per peer.
+	peers := make(map[PeerID]*PeerResult, len(agentdPeers))
+	for _, p := range agentdPeers {
+		peers[p.Name] = &PeerResult{}
+	}
+	for _, name := range out.FailedNames {
+		if pr, ok := peers[name]; ok {
+			pr.Status = "failed"
+		}
+	}
+	result := &FleetKernelResult{
+		Peers: peers,
+		Summary: FleetSummary{
+			TotalPeers:  len(agentdPeers),
+			OK:          out.OK,
+			RunFailed:   out.RunFailed,
+			Unreachable: out.Unreachable,
+			FailedNames: out.FailedNames,
+		},
+	}
+
 	switch {
 	case out.Unreachable > 0:
-		return ApplyRunResult{ExitCode: 2, Message: "fleet apply: unreachable peer(s): " + strings.Join(out.FailedNames, ", ")}
+		return result, &ExitError{
+			ExitCode: 2,
+			Message:  "fleet apply: unreachable peer(s): " + strings.Join(out.FailedNames, ", "),
+		}
 	case out.RunFailed > 0:
-		return ApplyRunResult{ExitCode: 1, Message: "fleet apply: failed on peer(s): " + strings.Join(out.FailedNames, ", ")}
+		return result, &ExitError{
+			ExitCode: 1,
+			Message:  "fleet apply: failed on peer(s): " + strings.Join(out.FailedNames, ", "),
+		}
 	}
 	if out.FirstErr != nil {
-		return ApplyRunResult{Err: errors.Join(out.FirstErr)}
+		return result, errors.Join(out.FirstErr)
 	}
-	return ApplyRunResult{}
+	return result, nil
 }
 
 // NoPeersConfiguredError formats the message fleetApplyAction used to emit
