@@ -5,7 +5,9 @@ severity: bug
 package: internal/mcp
 file: internal/mcp/tools.go
 lines: 128-139, 456-486
-status: fixed
+status: done
+fixed: 2026-05-17 — landed in two parallel passes. Narrow fix `1568376a fix(mcp): F044 — enforce examples_limit bounds in HandleExplain` (merged via de19f709) lifted `explainExamplesLimitMax = 10` to a package const wired into both the inputSchema literal (`internal/mcp/tools.go:136`) and the handler's range check (lines 493-494). Broader fix `e88f7f42 fix(explain): F044 + F045 — bound examples_limit + carry step index` then rebased + merged on top, adding CLI-side validation in `cmd/mooncake.go explainCommand` (`--examples-limit < 0 / > 10` → reject) and switching `internal/explain/examples.go findExamples` from `<= 0` to `< 0` so `0` means literally zero examples, with `*int` semantics in the MCP handler so absent vs. explicit-zero are distinguishable. Tests: `TestHandleExplain_ExamplesLimit_OverMaxRejected`, `_NegativeRejected`, `_BoundaryAccepted` (=10 inclusive), `_OmittedUsesDefault`.
+verified: 2026-05-17 — confirmed fixed on master @ 099ee336. (a) MCP `tools/call` smoke: `examples_limit:11` returns `-32000 examples_limit must be <= 10`; `examples_limit:-1` returns `-32000 examples_limit must be >= 0`; `examples_limit:10` returns 10 examples (boundary inclusive); absent → 3 (default). (b) CLI smoke: `mooncake explain file.write --examples-limit 11` → `--examples-limit must be <= 10 (got 11)`, exit 1; `--examples-limit -1` → `must be >= 0 (got -1)`, exit 1. Both questions called out in the original finding's "Suggested fix" got answered: over-cap is a hard error (not a silent clamp), and `0` was given literal-zero semantics with absent handled via `*int`.
 ---
 
 ## What

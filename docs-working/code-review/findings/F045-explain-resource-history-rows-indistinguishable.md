@@ -5,7 +5,9 @@ severity: smell
 package: internal/explain
 file: internal/explain/resolve_w2.go, internal/explain/explain.go, cmd/mooncake.go
 lines: resolve_w2.go:68-83, explain.go:210-218, mooncake.go:556-571
-status: fixed
+status: done
+fixed: 2026-05-17 — commit `e88f7f42 fix(explain): F044 + F045 — bound examples_limit + carry step index` (merged at 099ee336 via 6e0c757c + 099ee336). Three-spot fix matches the finding's suggested shape: (1) `ResourceEvent` (`internal/explain/explain.go:211-218`) grows `StepIndex int` with `json:"step_index,omitempty" yaml:"step_index,omitempty"`, (2) `resolveResource` (`internal/explain/resolve_w2.go`) populates `StepIndex: s.Index`, (3) `renderExplainResourceText` (`cmd/mooncake.go`) appends `step=N` to each row when `StepIndex > 0`. omitempty preserves pre-spec-68 round-trip cleanly. Test `TestResolveResource_PreservesStepIndex` covers the canonical 3-step-1-run repro with descending `[3, 2, 1]` after newest-first reversal. Field name was `StepIndex` (not `Index` as sketched in the finding) to avoid namespace collision with `RunStep.Index`.
+verified: 2026-05-17 — confirmed fixed on master @ 099ee336. End-to-end repro: three `file.write` steps in one apply, same target path, then `mooncake explain file:/tmp/v45/target.txt` prints rows with `step=3 (reversible) / step=2 / step=1` in newest-first order — exactly the disambiguation the finding asked for. JSON and YAML formats include `step_index` key on each history row. Out-of-scope items (per-step TS, step Name, history pagination) intentionally not addressed — flagged in the finding's "Out of scope" section as separate work.
 ---
 
 ## What
