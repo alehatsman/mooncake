@@ -150,6 +150,51 @@ func TestHandleExplain_ExamplesLimit(t *testing.T) {
 	}
 }
 
+// TestHandleExplain_ExamplesLimit_OverMaxRejected — F044: the
+// inputSchema advertises maximum:10 for examples_limit, and the
+// handler must enforce it. Pre-fix any positive value above the cap
+// silently succeeded (e.g. examples_limit:1000 returned 1000
+// excerpts). Now the call should fail loudly so an MCP client
+// can't blow past the budget the schema advertised.
+func TestHandleExplain_ExamplesLimit_OverMaxRejected(t *testing.T) {
+	_, err := HandleExplain(context.Background(),
+		mustJSON(t, map[string]any{"noun": "file.write", "examples_limit": 11}))
+	if err == nil {
+		t.Fatal("expected rejection for examples_limit > max; got nil")
+	}
+	if !strings.Contains(err.Error(), "examples_limit") {
+		t.Errorf("error = %q; want it to mention examples_limit", err.Error())
+	}
+}
+
+// TestHandleExplain_ExamplesLimit_NegativeRejected — F044: the
+// inputSchema advertises minimum:0. Pre-fix a negative value
+// silently fell back to the default (3) because findExamples
+// treated any non-positive as "use default". Now the call should
+// fail loudly so a client passing a sentinel "skip this option"
+// value can't get a result it didn't ask for.
+func TestHandleExplain_ExamplesLimit_NegativeRejected(t *testing.T) {
+	_, err := HandleExplain(context.Background(),
+		mustJSON(t, map[string]any{"noun": "file.write", "examples_limit": -1}))
+	if err == nil {
+		t.Fatal("expected rejection for negative examples_limit; got nil")
+	}
+	if !strings.Contains(err.Error(), "examples_limit") {
+		t.Errorf("error = %q; want it to mention examples_limit", err.Error())
+	}
+}
+
+// TestHandleExplain_ExamplesLimit_BoundaryAccepted — exactly the
+// advertised maximum must be accepted (the schema's maximum is
+// inclusive). Guards against an off-by-one in the comparison.
+func TestHandleExplain_ExamplesLimit_BoundaryAccepted(t *testing.T) {
+	_, err := HandleExplain(context.Background(),
+		mustJSON(t, map[string]any{"noun": "file.write", "examples_limit": explainExamplesLimitMax}))
+	if err != nil {
+		t.Errorf("examples_limit=%d (== max) should be accepted; got %v", explainExamplesLimitMax, err)
+	}
+}
+
 // TestExplainViaToolsCall — RegisterAllTools wires HandleExplain so
 // MCP tools/call dispatch resolves the noun and returns the typed JSON
 // inside the standard content envelope.

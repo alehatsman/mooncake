@@ -133,7 +133,7 @@ func AllTools() []ToolDef {
 				"examples_limit": map[string]interface{}{
 					"type":        "integer",
 					"minimum":     0,
-					"maximum":     10,
+					"maximum":     explainExamplesLimitMax,
 					"description": "Cap on example excerpts returned for kind:action. Default 3.",
 				},
 			}, []string{"noun"}),
@@ -453,6 +453,14 @@ func HandleRunPlan(ctx context.Context, args json.RawMessage) (string, error) {
 	return runConfig(ctx, params.Config)
 }
 
+// explainExamplesLimitMax is the upper bound advertised in the
+// `explain` tool's inputSchema (`maximum: 10`) and enforced by
+// HandleExplain. Lifted to a package-level constant so the schema
+// literal and the handler check share one source of truth — F044
+// shipped because the cap existed in the schema but not in the
+// handler.
+const explainExamplesLimitMax = 10
+
 // HandleExplain resolves a noun (action verb, run id, resource handle, op id)
 // and returns the typed payload as indented JSON. Mirrors `mooncake explain
 // <noun> --format json` over MCP. Read-only — delegates to explain.Resolve,
@@ -470,6 +478,20 @@ func HandleExplain(_ context.Context, args json.RawMessage) (string, error) {
 	}
 	if strings.TrimSpace(params.Noun) == "" {
 		return "", fmt.Errorf("noun parameter required")
+	}
+	// F044: the inputSchema advertises minimum:0 / maximum:10 for
+	// examples_limit. Pre-fix nothing on the wire path enforced
+	// either bound — examples_limit:-1 silently fell back to the
+	// default 3, and examples_limit:1000 returned 1000 excerpts.
+	// Reject loudly so MCP clients that don't pre-validate the
+	// schema can't blow past the cap. Matches the codebase's
+	// argument-validation style (see "noun parameter required"
+	// above) — schema violations are errors, not silent clamps.
+	if params.ExamplesLimit < 0 {
+		return "", fmt.Errorf("examples_limit must be >= 0")
+	}
+	if params.ExamplesLimit > explainExamplesLimitMax {
+		return "", fmt.Errorf("examples_limit must be <= %d", explainExamplesLimitMax)
 	}
 
 	result := explain.Resolve(params.Noun, explain.Options{
