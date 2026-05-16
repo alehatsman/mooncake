@@ -155,6 +155,37 @@ func TestResolveResource_HistoryNewestFirst(t *testing.T) {
 	}
 }
 
+// F045: when one run touches the same resource multiple times, the
+// emitted ResourceEvents must carry the step index so readers can
+// tell them apart (same TS / RunID / Action / Result otherwise).
+func TestResolveResource_PreservesStepIndex(t *testing.T) {
+	ts := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	entries := []runlog.Entry{
+		{TS: ts, RunID: "r/A", OpID: "op/A", Steps: []runlog.StepEntry{
+			{Index: 1, Action: "file.write", Resource: "file:/tmp/multi", Result: "changed", Reversible: true},
+			{Index: 2, Action: "file.write", Resource: "file:/tmp/multi", Result: "changed", Reversible: true},
+			{Index: 3, Action: "file.write", Resource: "file:/tmp/multi", Result: "changed", Reversible: true},
+		}},
+	}
+	opts := Options{RunsReader: fixedRuns(entries)}
+	r := Resolve("file:/tmp/multi", opts)
+	if r.Kind != KindResource {
+		t.Fatalf("kind = %q, want resource (notfound=%+v)", r.Kind, r.NotFound)
+	}
+	if len(r.Resource.History) != 3 {
+		t.Fatalf("history len = %d, want 3", len(r.Resource.History))
+	}
+	// History is newest-first; within a single run the file-order is
+	// preserved through the reverse, so the *last* step in the run
+	// ends up at history[0].
+	wantIndices := []int{3, 2, 1}
+	for i, want := range wantIndices {
+		if got := r.Resource.History[i].StepIndex; got != want {
+			t.Errorf("history[%d].StepIndex = %d, want %d", i, got, want)
+		}
+	}
+}
+
 func TestResolveResource_EmptyHistory(t *testing.T) {
 	opts := Options{RunsReader: fixedRuns(nil)}
 	r := Resolve("file:/etc/never-touched", opts)

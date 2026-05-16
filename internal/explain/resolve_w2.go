@@ -75,6 +75,7 @@ func resolveResource(noun string, opts Options) Result {
 				RunID:      e.RunID,
 				OpID:       e.OpID,
 				TS:         e.TS,
+				StepIndex:  s.Index,
 				Action:     s.Action,
 				Result:     s.Result,
 				Reversible: s.Reversible,
