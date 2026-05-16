@@ -44,6 +44,13 @@ func buildStepJSON(actionType string, result *executor.Result, execErr error) ma
 	payload["action"] = actionType
 	if execErr != nil {
 		payload["error"] = execErr.Error()
+		// MT-61: keep `failed` consistent with the presence of an
+		// error. Without this `mooncake step` emits {failed: false,
+		// error: "..."} on wait.* timeouts (and any handler that
+		// returns an error without first setting result.Failed),
+		// which agents parsing the JSON read as success. Apply
+		// mode already marks the step failed; step mode now matches.
+		payload["failed"] = true
 	}
 	return payload
 }
