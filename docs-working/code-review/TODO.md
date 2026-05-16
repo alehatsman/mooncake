@@ -17,9 +17,8 @@ something else landing first.
 | F009 | explain.DisplayFacts: gocyclo 44, split into sections | smell | S | — | open |
 | F011 | Cross-cutting: 24 handlers still have Execute/DryRun/Run | smell | XL | — | open |
 | F012 | Cross-cutting: 9 packages with http.Get / no timeout | risk | M | — | open |
-| F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
+| F026 | file/copy handlers use unbounded os.ReadFile — copy streamed via new Performer.CopyFile; file/handler.go 3 sites remain | risk | M | — | partial |
 | F031 | cmd/fleet.readToken: `literal:` accepts token w/o --insecure flag; `file:` doesn't check perms | smell | S | — | open |
-| F032 | template/download legacy Execute path builds sudo shell commands without quoting — shell injection on dest path | risk | S | — | open |
 
 ## Findings index
 
@@ -50,13 +49,13 @@ something else landing first.
 | F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 | F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
-| F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
+| F026 | file/copy unbounded os.ReadFile in handler | risk | **partial** | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
 | F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
 | F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
 | F029 | agentd bearer-auth length side-channel | risk | **done** | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
 | F030 | security.FilePasswordProvider mode exact-equality | smell | **done** | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
 | F031 | cmd/fleet.readToken no perms/insecure-flag check | smell | open | [findings/F031](./findings/F031-fleet-readToken-no-perms-check-no-insecure-flag-for-literal.md) |
-| F032 | template/download legacy Execute shell injection | risk | open | [findings/F032](./findings/F032-template-download-legacy-shell-injection.md) |
+| F032 | template/download legacy Execute shell injection | risk | **done** | [findings/F032](./findings/F032-template-download-legacy-shell-injection.md) |
 
 ## Queue (next iterations, priority order)
 
