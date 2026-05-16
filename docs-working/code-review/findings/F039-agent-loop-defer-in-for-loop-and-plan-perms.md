@@ -2,9 +2,9 @@
 id: F039
 title: agent.RunLoop defers tmpfile cleanup inside the for-body (resource leak per iteration); SavePlan writes 0644
 severity: smell
-package: internal/agent
-file: internal/agent/loop.go
-lines: 98-104, 203-212
+package: internal/pilot
+file: internal/pilot/loop.go
+lines: 109-113, 214-220 (rebased after S-pilot-rename)
 status: open
 verified: 2026-05-16 — confirmed real on master @ b48a11e. loop.go:98-104 creates tmpfile inside for-body with defer-in-loop (cleanup pushed onto goroutine defer stack, tempfiles stay on disk through RunLoop). loop.go:207 SavePlan writes 0644 — world-readable for files that may contain resolved secret values
 ---

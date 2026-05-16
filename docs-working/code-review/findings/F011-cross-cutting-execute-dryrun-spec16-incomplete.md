@@ -19,7 +19,7 @@ progress: |
   artifact_validate, assert, download, file_delete_range, file_insert,
   file_patch_apply, file_replace, package, repo_apply_patchset,
   repo_search, repo_tree, template, tool (F006), unarchive.
-verified: 2026-05-16 — batch 1 (936751f) confirmed: zero Execute/DryRun methods in shell/command/print/vars/include_vars handler.go; tests green; 16/21 handlers remain to migrate per finding progress note
+verified: 2026-05-16 — batches 1 (936751f, 5 handlers) + 2 (f05a052e, preset) both confirmed: zero Execute/DryRun methods in shell/command/print/vars/include_vars/preset handler.go; tests green; ~15 handlers remain
 ---
 
 ## What
