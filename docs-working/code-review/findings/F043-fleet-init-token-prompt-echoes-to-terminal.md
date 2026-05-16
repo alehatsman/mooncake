@@ -6,6 +6,7 @@ package: cmd
 file: cmd/fleet_init.go
 lines: 272-275, 305-320
 status: open
+verified: 2026-05-16 — confirmed real on master @ e78553ae. cmd/fleet_init.go:272 reads bearer token via promptDefault (line 303-320), which uses reader.ReadString at line 311 — no terminal echo suppression. Token characters land in tmux capture / scrollback / screen share. Fix: term.ReadPassword(int(os.Stdin.Fd())) on the token-prompt path
 ---
 
 ## What
