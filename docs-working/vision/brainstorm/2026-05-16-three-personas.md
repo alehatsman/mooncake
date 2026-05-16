@@ -1193,3 +1193,703 @@ treat them as resolved.
   use is settled (yes). Whether `mooncake.yml` should aspire to
   replace `make` for repos that don't ship Mooncake itself is
   open and probably the wrong question for now.
+
+---
+
+## Innovator's second pass
+
+Re-read the synthesis. Three things to register: one place it
+moved too quickly, one place it was right and I should concede
+cleanly, and one lateral idea the synthesis itself surfaced that
+I missed in round 1.
+
+### α. Where the synthesis was too quick — the `op_id` correlation answer
+
+The Architect resolved my oplog-vs-runlog question with:
+
+> Extend runlog records with an `op_id` correlation field first.
+> The two-log split is what jj needed *because* jj's mutations
+> are commits and its operations are commands-on-commits — two
+> genuinely different domains. In mooncake, runs *are* the
+> typed-mutation domain and operations are commands that
+> triggered runs; the correlation field on the existing record
+> is sufficient until a user wants "show me every `replay` I've
+> ever run" as a first-class query. Don't pre-split.
+
+The "don't pre-split" call is right for v1. The reasoning
+underneath it isn't.
+
+The Architect's premise: ops and runs are 1:1 in mooncake (one
+command triggers one run), so a correlation field suffices. That
+premise holds today and breaks the moment three things ship —
+all three of which are *already in the synthesis's commit list*
+or trivially derivable from it:
+
+1. **`mooncake plan` produces an op with no run.** A plan-mode
+   invocation generates a plan artifact + a typed Diff; nothing
+   is mutated, so no runlog entry exists. The op happened; the
+   run didn't. A correlation field on the (nonexistent) run
+   record cannot represent it. Today this is implicit (plans
+   don't appear in `mooncake history`). Once `mooncake explain
+   <op-id>` ships (synthesis line 1144) and an agent calls
+   `inspect_plan` over MCP, the op needs an identity that doesn't
+   have to go through a run record.
+
+2. **`mooncake rollback` is one op that reverses N prior runs.**
+   What's the `op_id` on the rollback's run record? Its own op?
+   The op of the original failed run? The op of each reversed
+   step? All three are useful for different queries:
+   - "show me my last rollback" → own op
+   - "show me every attempt to apply this plan" → original op
+   - "show me every reverse step ever executed against this
+     resource" → per-step
+   One correlation field is one answer; the query surface is
+   three.
+
+3. **`mooncake replay <run-id>` is an op-on-an-op.** Replay-of-a-
+   replay-of-an-apply needs a chain, not a parent pointer. A flat
+   correlation field can hold one predecessor; the third replay
+   loses the first.
+
+The closer analogy isn't jj/git — it's **Postgres WAL +
+`pg_stat_statements`**. The WAL is the transaction log (runs);
+statements is the operation log (commands that triggered
+transactions). Same database, two log surfaces, both useful,
+neither subsumes the other. Postgres didn't pre-split because
+someone read a paper; it split because writing statement metadata
+into the WAL would have made the WAL useless for its actual job.
+
+The pragmatic version of my position: **ship the `op_id`
+correlation field in v1 (Architect's call), but design it knowing
+it's the cheap shape**. The schema decision worth making now,
+inside the explain spec: is `op_id` (a) a column on the run
+record, or (b) a foreign-key into a separate `ops` table where
+the rest of the op metadata could later live? (b) is two extra
+lines of migration today and saves a destructive change later.
+(a) is the truly minimal version but paints us into a corner
+where "an op without a run can't be queried."
+
+The fifth-property debate the synthesis deferred to a decision
+doc deserved that treatment because both Determinism and
+Provenance are net-new property columns and neither ships in
+2026. The op-log debate doesn't have that out — the correlation
+field ships *as part of the explain spec*, and the schema choice
+is load-bearing for everything downstream. Worth ten lines in the
+spec preamble, not a full second debate.
+
+### β. Where the synthesis was right and I should concede cleanly
+
+**The 8-week calendar (§S.6) was the right cut.** I'd pushed the
+`mooncake-vscode` extension into my §E top-3. The synthesis
+adjudicated (§"Disagreement 4"): Loom first (1 afternoon), explain
+second (week 3), extension week-6 prototype optional. My ordering
+was wrong; the leverage argument is correct. **`mooncake explain`
+reaches every MCP-aware agent — Cursor, Claude Code, Codex, Zed —
+the moment it ships. The VSCode extension reaches one IDE's users
+at a time at 4× the build cost.** Conceded without hedging.
+
+The cuts the Startaper made are what I'd defend hardest if
+pressure to reopen them arrived. **Forbidden, not deferred** is
+the right discipline. "Deferred" attracts spec-shaped optimism
+every six weeks; "forbidden" closes the question. Enterprise-
+hub-forbidden and fifth-property-forbidden-in-2026 are the two
+strongest moves in the whole brainstorm.
+
+One small refinement worth flagging, not a pushback: the calendar
+reads as serial. With more than one pair of hands (the
+worktree+claims structure suggests this is already the operating
+model), the dependency graph is:
+
+- Weeks 1–3 sequential: Loom → dogfood blog draft → explain ship.
+- Week 4 gated on weeks 1 + 3 (Loom + working explain to attach
+  in the cold-DM).
+- Weeks 5–8 partially parallel: case-study #1 || extension
+  prototype || HN submission prep.
+
+Naming the dependency graph matters once a second contributor
+picks up the calendar. Currently the calendar reads as one
+person; the parallelizable surface is real.
+
+### γ. The lateral idea the synthesis exposed that I missed
+
+The Architect's adjudication of the homepage one-sentence
+(§"Disagreement 3") landed on **both, with explicit scopes**:
+
+- "Typed mutation kernel" — for contributors, reviewers, spec
+  preambles.
+- "Rollback button for AI agents touching your system" — for the
+  homepage, README hero, cold-DM, Loom voiceover, HN title.
+
+The synthesis names this an *internal-vs-external-canonical-
+sentence* problem and proposes a one-page
+`docs-working/positioning.md` to pin which sentence lives where.
+
+I missed this entirely in round 1. The move I missed isn't the
+pin itself — it's that **MCP tool descriptions are an external-
+canonical-sentence surface, sized to per-tool granularity**.
+
+Every MCP tool description is consumed by an LLM at runtime to
+decide whether to reach for the tool. That description string
+*is* Startaper's homepage-tweet shape, just narrower in scope.
+Today these descriptions are almost certainly engineer-written:
+
+> "Returns the typed Diff for a step in the current plan."
+
+That's correct, kernel-accurate, and *useless as a selection
+signal*. The Startaper-voice version:
+
+> "Preview what this change will do before you let the agent run
+> it."
+
+The kernel doesn't change. The schema doesn't change. The strings
+change. The agent's reasoning about which tool to reach for
+changes immediately.
+
+This generalizes. The right shape for `positioning.md` is **a
+catalog of string surfaces and the voice each one speaks in**,
+not just the two-sentence pin:
+
+| Surface | Voice | Read by |
+|---|---|---|
+| `kernel.md`, spec preambles, comparison tables | Architect | Contributors |
+| Homepage, README hero, Loom voiceover, HN title | Startaper | Strangers |
+| **MCP tool descriptions** | **Startaper** | **Agents (at tool-selection time)** |
+| CLI `--help` | Startaper for the one-liner, Architect for flags | Humans + completion tooling |
+| Plan-output recap ("max-risk=9, 3 steps need sudo") | Architect, terse | Operators making go/no-go |
+| Error messages | Rust-compiler-diagnostic — neither voice; structured | Humans + machines |
+| Telemetry / event names | Internal-canonical only | Contributors |
+
+The single highest-ROI move from this catalog is **a Startaper-
+voice rewrite of every MCP tool description**, before any new
+MCP work lands. It's a string-replace PR. It teaches agents which
+tool to reach for. It's the part of the kernel claim that's
+currently invisible to the actor we most want to reach.
+
+This fits inside the 8-week window — week 3 already plans to ship
+`mooncake explain` + MCP exposure; adding "audit every MCP
+description through the Startaper voice" to that scope costs <1
+day and is precisely the kind of work where the kernel claim
+becomes legible to the lighthouse user without a single new
+feature.
+
+### δ. Three sharp questions
+
+For the **Architect**:
+
+1. **When does the v1 `op_id` correlation field stop being
+   sufficient?** I named three failure modes in §α (plan-with-no-
+   run, rollback-as-one-op-reversing-N-runs, replay-of-replay).
+   Which of those does the existing runlog schema already handle,
+   and which would force a destructive migration if we discover
+   them after `explain` ships? If two or more would force a
+   migration, the "FK into a separate `ops` table" choice should
+   land in the explain spec preamble — not as a side note.
+
+For the **Startaper**:
+
+2. **Does the dual-vocabulary insight extend to every string
+   surface (§γ catalog), or is the homepage-vs-spec-preamble pin
+   enough?** My read is that **MCP tool descriptions are the
+   highest-ROI application** — the lighthouse agent dev's tool
+   selection happens through those strings, not through the
+   homepage. But cataloging seven surfaces adds scope to
+   `positioning.md` and pulls it from "one page" to "small
+   reference doc." Worth it, or distraction from the 8-week
+   calendar?
+
+For **both**:
+
+3. **What's the explicit trigger that flips "GTM voice wins on
+   shipping order" back to "kernel voice wins"?** The synthesis
+   named the time-local truth (§"The pattern this brainstorm
+   exposed") but not the inversion condition. Without a recorded
+   trigger, the next brainstorm in 2027 has to re-derive it from
+   scratch. Candidate: "the first paying user request that
+   requires a fifth typed property." Where does the trigger get
+   recorded — in `positioning.md`, in a new `bottleneck.md`, or
+   buried in this doc's "Open items"? Whichever choice you make,
+   make it explicit; the discipline of *naming the bottleneck at
+   the start of the next brainstorm* is what keeps these
+   adjudications cheap to redo.
+
+---
+
+*End of Innovator's second pass. No new lateral riffs after this
+one without a triggering event — either a published artifact from
+the 8-week calendar, or a real user request that breaks an
+assumption registered above.*
+
+---
+
+## Startaper's second pass
+
+I've read the Synthesis and Innovator's second pass. Round 2's job
+is convergence — so I'll lead with the four things I'm conceding
+or revising, then push at the two places the doc is still soft,
+then close with three questions.
+
+### S2.1 What I'm conceding (round 1 → round 2 deltas)
+
+**1. Innovator's §γ is the best move in the entire brainstorm and
+I missed it in round 1.** Conceded without hedging.
+
+The insight: **MCP tool descriptions are an external-canonical-
+sentence surface, consumed at runtime by the LLM that picks which
+tool to call.** That string is read by *exactly the actor we want
+to convert* — the agent-inside-Cursor-or-Claude. Today those
+descriptions are engineer-written ("Returns the typed Diff for a
+step in the current plan"). They are correct *and useless as a
+selection signal*.
+
+Rewriting every MCP tool description in Startaper voice is a
+**string-replace PR, sub-1-day**, and it makes the kernel claim
+*operative inside the agent's reasoning loop*. This is GTM work
+hiding in the engineering layer. **It should land in week 3 of the
+calendar alongside the `explain` ship**, not as a follow-up.
+
+I was thinking of external-canonical-sentence as
+homepage-vs-internals. Innovator caught a missing scope: **the
+LLM is a third audience with its own canonical strings, sized per
+tool**. Adopting it fully.
+
+**2. The 8-week calendar reads as serial; Innovator is right that
+weeks 5–8 parallelize.** Revising the calendar to a dependency
+graph:
+
+```
+Week 1: Loom v1 (blocking)
+Week 2: dogfood mooncake.yml + blog draft (parallel-OK with 3)
+Week 3: explain + MCP exposure + MCP-description-audit
+        (gates on schema decision in S2.3 below; blocks week 4)
+Week 4: cold-DM lighthouse shortlist (gates on week 1 + week 3)
+Weeks 5-8 PARALLEL TRACKS:
+   Track A: case-study #1 draft (gates on a converted DM)
+   Track B: mooncake-vscode prototype (Innovator)
+   Track C: HN submission prep (gates on dogfood blog)
+   Track D: agent-vendor outreach (gates on case-study draft)
+```
+
+Renamed: **the calendar is a dependency graph, not a timeline.**
+The 8-week ceiling holds; the path through it isn't single-file.
+
+**3. "Forbidden, not deferred" — Innovator pushed this as the
+strongest move in the synthesis. Agree.** Adding it to my own
+discipline: every "we'll revisit when..." in this doc must have a
+*specific event* attached, not a date. "Q4 2026" without a
+triggering event is just a slow deferral. The fifth-property
+review and the hub re-open both have triggering events named
+(real user ask). Anywhere else this pattern appears, force the
+same shape.
+
+**4. The kernel-vs-GTM ratio.** The Synthesis named it as 70/30
+GTM/kernel for the next four months. I said "ships-in-90-days" in
+round 1 but never quantified. **70/30 is the right number.** It
+also names what *isn't* zero: 30% kernel maintenance covers the
+R-series refactor, the explain spec schema, the
+positioning-string discipline, and bug-fix bandwidth. Not zero,
+not the bottleneck.
+
+### S2.2 Where the Synthesis is still soft — the `op_id` schema decision
+
+Innovator's §α is correct and the Synthesis under-restricted here.
+
+The Synthesis put `mooncake explain` on the spec list with
+Architect as owner. **That spec has a schema decision baked into
+it** — Innovator named three failure modes (plan-with-no-run,
+rollback-reversing-N-runs, replay-of-replay) where a flat
+`op_id` column on the run record paints us into a corner.
+
+From a GTM lens: this is the kind of decision that, if wrong,
+costs **us** nothing visible for six months and then costs **a
+lighthouse user** a destructive migration *during* their case
+study. That is the worst possible time to ship the migration —
+the user concludes "mooncake isn't stable" and the case study
+becomes a counter-example.
+
+**Position:** the `op_id` decision (flat column vs FK into a
+separate `ops` table) is **kernel-shaped work that ships inside
+the 8-week window**, sized to ~1 day of design work in the
+explain spec preamble. It is *not* the fifth-property debate
+(which we forbade); it is a schema-shape decision on a v1 surface.
+
+Convergence ask: the Synthesis should add a row to its "what
+turns into a spec" table —
+
+| `op_id` schema shape in explain spec | Decided in spec preamble (FK to `ops` table favored per Innovator §α) | Architect, week 3 |
+
+If this lands, the schema-shape question is closed before any
+user request can force it.
+
+### S2.3 The "rollback button" homepage sentence — still right, but undersized
+
+A second look, after Innovator's MCP-description insight: my
+homepage sentence is correct *for that one surface*. What I got
+wrong was implying it's *the* Startaper-voice sentence.
+
+The right model is **a hierarchy of Startaper-voice strings, each
+sized to its scope:**
+
+- Homepage / cold-DM / HN title (broadest): "Mooncake is the
+  rollback button for AI agents touching your system."
+- README hero / Loom voiceover (one breath narrower): "Let your
+  agent run `apt install` and `systemctl` — without losing
+  Saturday to a botched config."
+- MCP tool description (per-tool, narrowest): "Preview what this
+  change will do before you let the agent run it." (Innovator's
+  example for `Diff`.) Each MCP tool gets its own.
+
+The discipline isn't "two canonical sentences." It's "every
+external string surface gets a Startaper-voice sentence sized to
+its scope, *derived from the same wedge framing*." The wedge is
+agent-rollback; the strings are renderings of it at different
+granularities.
+
+This sharpens `docs-working/positioning.md` (Synthesis line 1147)
+into a deliverable shape:
+
+1. The wedge frame (one paragraph): why agent-rollback, why now.
+2. The string catalog (Innovator's §γ table, with one column
+   added: **the wedge-derivation** — how each surface's voice
+   *traces back* to the wedge).
+3. The forbid-list: any string surface drifting to a *different*
+   wedge is the failure pattern; cite the kernel doc's R2 risk.
+
+One mild pushback on Innovator's §γ table: **error messages are
+not a third voice.** "Rust-compiler-diagnostic" sounds structured
+but in practice produces wall-of-text. Error messages are
+Startaper-voice too — terse, actionable, oriented at the stuck
+human — with a structured *suffix* for tooling. Don't carve out
+a third register; we don't have the bandwidth and the carve-out
+attracts cruft.
+
+### S2.4 The lighthouse-user shortlist — sharpened
+
+The Synthesis named this as the highest-priority gap and the most
+important finding of the brainstorm. Agree. After round 2 I'd
+sharpen one thing: **the shortlist is two-tracked, not single-
+tracked**.
+
+After Innovator's MCP-description insight, the lighthouse-user
+target widens slightly:
+
+- **Track 1 — "agent burns prod" track** (my round 1 framing).
+  Independent dev, 10k–100k reach, has publicly said "and then
+  it deleted my X." Hook: the rollback Loom.
+- **Track 2 — "agent tool quality" track.** Someone who builds,
+  evaluates, or audits MCP-driven agents and posts about agent
+  *capability* and *legibility* (not breakage). Hook: a
+  before/after of MCP tool descriptions on a real agent's
+  tool-selection behavior.
+
+Track 1 produces the visceral case study (Saturday saved). Track
+2 produces the *credibility* case study (an agent-tooling person
+endorsing the tool the agent reaches for). They are
+complementary; the cold-DM scripts are different.
+
+**Operational discipline:** the shortlist still does not live in
+a public doc. It lives in a private file (`~/.mooncake/
+lighthouse-shortlist.md`, or wherever — not in the worktree, not
+committed). Per-track, three handles each, total six. Dated.
+Built before week 1. The calendar's week-4 DM step cannot
+proceed without it; if it doesn't exist by then, the
+brainstorm's most important finding (Synthesis line 1131)
+flipped from "highest-priority gap" to "the project's actual
+bottleneck."
+
+### S2.5 Where I won't move — the wedge ordering stays one-track
+
+Innovator gracefully conceded solo-vs-agent-dev wedge ordering in
+the Synthesis. Worth saying out loud: that concession should not
+soften into "actually solo dev gets parallel investment for the
+on-ramp UX." It doesn't. The on-ramp UX gets *only* what falls
+out of agent-dev work for free.
+
+Specifically:
+
+- `mooncake init` stays as-is. No polish budget.
+- Drift detection stays as-is. No polish budget.
+- Multi-machine sync stays as-is. Personal fleet is already 99%
+  there per `goals.md §2`; the remaining 1% is not on the
+  calendar.
+
+If a solo dev experience improvement is *also* required for an
+agent-dev case study, fine — fund it on that grounds. Otherwise,
+no. Round 2 should converge on this: **one wedge, one funnel, one
+calendar**, and a hard refusal of "but also solo dev needs..."
+side asks for the next 8 weeks.
+
+### S2.6 Convergence summary
+
+What round 2 produces (delta from Synthesis):
+
+| Item | Round 2 disposition |
+|---|---|
+| MCP tool description Startaper-voice rewrite | **Ship in week 3 alongside `explain`**, not as a follow-up. <1 day. (Innovator §γ, adopted.) |
+| `op_id` schema in explain spec | **Decided in spec preamble, week 3.** FK to `ops` table favored. (Innovator §α, accepted.) |
+| 8-week calendar | **Reframe as dependency graph**, not timeline. Weeks 5–8 parallel. |
+| Homepage sentence ("rollback button") | **Still right, scope corrected.** It's the broadest Startaper-voice string; narrower surfaces (MCP, README hero, Loom) derive from it. |
+| `positioning.md` shape | **Wedge-frame + string-catalog + forbid-list**, not just a two-sentence pin. Error messages folded into Startaper voice; no third register. |
+| Lighthouse shortlist | **Two-tracked** (rollback + tool-quality), six handles total, private file, built before week 1. |
+| Solo-dev wedge | **Funnel only.** No parallel polish budget for 8 weeks. |
+| Enterprise hub, fifth-property | **Forbidden.** Holds. |
+| The inversion trigger (Innovator Q3) | Addressed in S2.7 below. |
+
+### S2.7 The inversion trigger — answering Innovator's Q3
+
+Innovator asked: what's the explicit trigger that flips
+"GTM-voice-wins-on-shipping-order" back to "kernel-voice-wins"?
+
+My answer: **the first paid customer (or two unpaid lighthouse
+users compounded) asks for a feature that genuinely requires
+kernel column expansion.**
+
+Operational definition:
+
+- "Genuinely requires kernel column expansion" means the request
+  cannot be served by adding a handler, a CLI command, a flag,
+  a fact producer, or a rendering. It requires a new typed
+  property on every action — i.e., it forces the comparison
+  table in `kernel.md` to grow a column.
+- "Paid customer" excludes us; excludes Innovator; excludes the
+  Architect; excludes any reviewer of this doc. External money or
+  external public commitment, no internal advocacy.
+- Two unpaid lighthouse users compounded = two *case-study-
+  generating* users who both independently surface the same
+  fifth-property need within a 90-day window. One can be
+  coincidence; two compounded is signal.
+
+Where it lives: **a new top-level `BOTTLENECK.md`**, not buried
+in this brainstorm doc. One page. Three sections: (1) current
+bottleneck (today: adoption); (2) the inversion trigger; (3)
+what happens when it fires. Read at the start of every future
+brainstorm. The discipline Innovator named ("naming the
+bottleneck at the start of the next brainstorm is what keeps
+these adjudications cheap to redo") *is* the deliverable.
+
+Updates to that file are themselves load-bearing events; the
+edit log of `BOTTLENECK.md` becomes the project's strategic
+diary.
+
+### S2.8 Three sharp questions for round 3 (or for the synthesis update)
+
+For the **Architect**:
+
+1. **Does the `op_id` schema decision (FK to `ops` table vs flat
+   column on run record) ship inside the explain spec preamble in
+   week 3, or as a separate spec?** Innovator's §α made the case;
+   I argued for in-spec. If you'd rather extract it to its own
+   spec, that's two specs in the calendar and the week-3 ship-
+   date slips. The convergence question: **stay one spec, decided
+   in preamble** — yes or no?
+
+For **Innovator**:
+
+2. **The MCP-description audit (§γ) — what's the kill criterion?**
+   If we rewrite every MCP tool description in Startaper voice
+   and 30 days later no agent's tool-selection behavior visibly
+   improves, what's the evidence shape that says "this didn't
+   work, revert"? I'm asking because the rewrite is cheap enough
+   that "ship and see" feels right, but cheap-and-no-falsifier
+   accumulates into a graveyard of plausible-sounding small wins
+   that nobody can prove paid off. Name the falsifier.
+
+For **both**:
+
+3. **`BOTTLENECK.md` as a top-level file, read at the start of
+   every future brainstorm — agree or argue?** This is my answer
+   to Innovator's Q3 (where the inversion trigger gets
+   recorded). The discipline only works if every future
+   brainstorm *starts* by reading it. Architect, you control
+   contributor-facing docs; does this earn top-level placement,
+   or does it live under `docs-working/strategy/`? Innovator, is
+   one-page-strategic-diary the right shape, or does this need
+   the catalog treatment from your §γ?
+
+### S2.9 What I refuse to revisit
+
+Per round 2 discipline: not repeating round 1. Specifically:
+
+- I will not re-litigate the wedge ordering. One-track,
+  agent-dev, settled.
+- I will not re-litigate "forbidden vs deferred." Forbidden,
+  settled.
+- I will not propose a new artifact for the 8-week window. The
+  calendar is dense; the answer to "should we also do X" between
+  now and week 8 is no, with one exception: anything that
+  *removes* work from the calendar (e.g., "the dogfood blog can
+  be a 5-tweet thread instead of a long post") is welcome.
+
+The next brainstorm should happen *after* one of the 8-week
+calendar artifacts ships and produces feedback, not before.
+
+---
+
+## Round-2 Synthesis
+
+Architect-led, post-second-pass. Round 2's job was convergence,
+not expansion. Both Innovator and Startaper conceded round-1
+positions cleanly where the other was right, and one substantive
+new insight landed (Innovator's §γ on MCP-tool-description
+strings) that both then adopted. The remaining adjudications
+below are small.
+
+### What round 2 settled (no further debate)
+
+Direct concessions both voices signed:
+
+1. **MCP tool description rewrite ships in week 3 alongside
+   `mooncake explain`.** Innovator's §γ exposed an external-
+   canonical-string surface neither round-1 pass saw: the LLM
+   reads tool descriptions at selection time, so every
+   description is a per-tool Startaper-voice tweet whether we
+   wrote it that way or not. Sub-1-day string-replace PR. Both
+   passes adopted; calendar absorbs it without slipping.
+
+2. **8-week calendar reframes as a dependency graph, not a
+   timeline.** Innovator named the parallelizable surface in
+   weeks 5–8; Startaper renamed and locked the graph (S2.1
+   paragraph 2). The 8-week ceiling holds; the path through it
+   isn't single-file.
+
+3. **`op_id` schema decision lands in the explain spec preamble
+   in week 3 — one spec, not two.** Both voices arrived here from
+   different angles: Innovator from "the flat correlation field
+   paints us into a corner" (§α, three failure modes), Startaper
+   from "a schema migration during a lighthouse case study is the
+   worst possible time" (S2.2). My answer to Startaper's S2.8 Q1
+   is **yes, one spec, decided in preamble**. The FK-to-`ops`-
+   table shape is two extra lines of migration today and saves a
+   destructive change later. Architect-as-spec-owner accepts.
+
+4. **`positioning.md` shape is wedge-frame + string-catalog +
+   forbid-list.** Startaper's S2.3 sharpened the round-1 "two-
+   sentence pin" into a three-section deliverable. Adopted as
+   stated.
+
+5. **`BOTTLENECK.md` lands as a top-level file with an inversion
+   trigger.** Both passes (Innovator Q3, Startaper S2.7) arrived
+   at the same shape: name the current bottleneck (adoption),
+   name the trigger that flips priority back to kernel work
+   (first paid customer OR two unpaid lighthouse users compounded
+   asking for a feature that *genuinely* requires kernel-column
+   expansion), commit to reading it at the start of every future
+   brainstorm. My answer to S2.8 Q3: **top-level placement, not
+   `docs-working/strategy/`**. The discipline only works if it's
+   visible. The placement *is* part of the deliverable.
+
+6. **Lighthouse shortlist is two-tracked.** Startaper's S2.4
+   widened the single-track ("agent burns prod") to add a
+   tool-quality track. Six handles total, private file, built
+   before week 1. The week-4 cold-DM step cannot proceed without
+   it; if it doesn't exist by week 1, the gap *is* the
+   bottleneck.
+
+7. **Solo-dev wedge stays funnel-only.** Startaper S2.5 refused
+   "actually solo dev gets parallel polish budget" softening;
+   Innovator didn't push back. Settled.
+
+8. **Error messages are Startaper voice, not a third register.**
+   Innovator's §γ catalog put errors in a "neither voice;
+   structured" register; Startaper's S2.3 pushed back. I side
+   with Startaper: the Rust-compiler-diagnostic framing in
+   `good_lessons_from_other_tools.md` is about *shape*
+   (structured + suggested fix), not voice. Voice stays
+   Startaper; the suffix stays structured. No third register;
+   the carve-out attracts cruft.
+
+### The one open question round 2 didn't close
+
+**Kill criterion for the MCP-description rewrite (Startaper Q2
+to Innovator).** Startaper named the failure pattern correctly:
+cheap-and-no-falsifier accumulates plausible-sounding small wins
+that nobody can prove paid off.
+
+I'd answer it provisionally so the work doesn't block on
+Innovator's reply: **the kill criterion is whether, in a 30-day
+window after the rewrite ships, an MCP-aware agent's tool-
+selection trajectory measurably changes on a fixed task set.**
+Operationally: pick three representative agent tasks (one
+read-only inspection, one mutation, one rollback), run them
+through Claude Code + Cursor against pre-rewrite descriptions,
+record which tools the agent reaches for and in what order, then
+run the same tasks against post-rewrite descriptions. If
+tool-selection order doesn't shift on at least two of three
+tasks, the rewrite is theater and the descriptions revert.
+
+This is GTM hypothesis-testing inside a kernel-shaped change —
+exactly the work the 70/30 ratio is meant to enable. ~2 hours of
+recording per agent. Add to the week-3 ship: rewrite the strings,
+record the before/after, publish the recording as a *secondary*
+GTM artifact. Two birds.
+
+If Innovator's reply names a sharper falsifier, swap mine for
+theirs.
+
+### Updated deliverables table (round 2 deltas in bold)
+
+| Item | Type | Owner | When |
+|---|---|---|---|
+| `spec-XX-explain` (`mooncake explain <noun>` + MCP tool **+ `op_id` FK-to-`ops`-table schema in preamble**) | Spec | Architect | Week 3 |
+| **MCP tool description Startaper-voice rewrite + before/after recording** | String-PR + GTM artifact | Architect + Startaper review | **Week 3, alongside explain ship** |
+| `examples/dogfood/mooncake.yml` | Release-blocker example | Next-minor owner | Week 2 |
+| `docs-next/decision-2026-fifth-property.md` | Decision doc (no code) | Architect | Stays deferred to Q4 2026 minimum |
+| **`docs-working/positioning.md` (wedge + string catalog + forbid-list, error messages folded into Startaper voice)** | Doc | Architect | Inside 8-week window |
+| **`BOTTLENECK.md` top-level (current bottleneck + inversion trigger + what-happens-when-it-fires)** | Top-level doc | Architect | Inside 8-week window |
+| `facts.repo_index` Tier 2 | Spec, gated on `explain` shipping first | Innovator follow-up | After 8-week window |
+| `mooncake rehearse <plan>` (OrbStack/Lima) | Stays in brainstorm doc; revisit if a case study asks | — | — |
+| `mooncake-vscode` / Zed extension | Prototype only (Track B in weeks 5–8 graph) | Innovator if motivated | Week 5–8 parallel |
+| OTel rendering of runlog | Stays in brainstorm doc; first paying-user ask gates it | — | — |
+| Enterprise hub (L4) | **Forbidden** until two written agent-dev case studies exist | — | — |
+| Fifth-property kernel column | **Forbidden in 2026**; review gated on `BOTTLENECK.md` inversion trigger | — | — |
+| **Lighthouse shortlist (two tracks × 3 handles, private file)** | Operational prerequisite | Whoever builds the funnel | **Before week 1** |
+
+### The pattern round 2 sharpened
+
+Round 1's pattern was *"when GTM disagreed with kernel-shaped
+voices, GTM was right."* Round 2 sharpened it: **the strongest
+single move came from the lateral voice (Innovator §γ) crossing
+into GTM territory** (MCP descriptions are LLM-read marketing
+copy). The kernel-vs-GTM dichotomy is real but porous in exactly
+this way — kernel-shaped infrastructure carries Startaper-voice
+strings; the discipline is naming which strings are which voice,
+not pretending the surfaces are separate.
+
+The convergence in round 2 also vindicates the round-1 synthesis
+call that "the next brainstorm should happen after one of the
+8-week artifacts ships and produces feedback." Round 2 produced
+useful sharpening; a hypothetical round 3 would almost certainly
+not. **No further brainstorm passes before week 4 of the
+calendar at the earliest, and only if the lighthouse-shortlist
+homework surfaces something none of the three passes anticipated.**
+
+### Round 2's residue — what stays explicitly open
+
+Two items round 2 raised that round 2 itself can't close:
+
+1. **The MCP-description kill criterion** above is provisional;
+   Innovator should swap it for a sharper falsifier if one
+   exists, or sign off on mine.
+
+2. **Whether `BOTTLENECK.md` should be the project's strategic
+   diary (Startaper S2.7 final paragraph) or stay a one-page
+   current-state-only doc.** Startaper proposed "the edit log of
+   `BOTTLENECK.md` becomes the project's strategic diary." That
+   conflates two functions: a discipline doc (read at brainstorm
+   start) and an archive (referenceable history). Both useful;
+   different shapes. **My call:** keep `BOTTLENECK.md` one-page,
+   current-state-only. Strategic-diary function lives elsewhere
+   (the brainstorm-doc directory `docs-working/vision/brainstorm/`
+   already serves that role; this very file is the first entry).
+   Don't double-purpose the bottleneck doc — the discipline of
+   reading it at brainstorm start only works if it's short.
+
+### Closing call
+
+Round 2 converged. The 8-week calendar is the next move. The
+work to start *today*, in order: (1) lighthouse shortlist (S2.4),
+(2) Loom v1 (week 1, blocking everything else), (3) draft
+`BOTTLENECK.md` (1 page, ships inside week 1–2).
+
+After that, every artifact in the 8-week window earns its place
+on the calendar; nothing else gets added without removing
+something. The brainstorm closes here.
