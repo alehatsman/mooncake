@@ -27,6 +27,8 @@ something else landing first.
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
 | F022 | mcp/tools.go uses logger.NewTestLogger() in production runConfig + HandleCheckPlan | smell | XS | — | open |
+| F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
+| F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
 
 ## Findings index
 
@@ -54,6 +56,8 @@ something else landing first.
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
 | F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 | F022 | mcp uses NewTestLogger in production | smell | open | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
+| F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
+| F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 
 ## Queue (next iterations, priority order)
 
@@ -70,11 +74,16 @@ something else landing first.
    Partial: F014 (apply.go post-stream recovery). Rest of the
    package (controller, bootstrap, multiplex, peers) still queued.
 9. **`internal/agentd`** — 3,100 LOC, growing fast in the last 24h.
-10. **`internal/plan`** — planner, including the new `plan/filter`.
+10. ~~`internal/plan`~~ — partial → F024 (walkAndRender same
+    closed-kind-set bug as F019, planner side).
 11. ~~`internal/apply/runner.go`~~ — done → F020 (signal-handler
     hostile to embedded callers), F021 (Config.ExtraSubscribers
     doc-drift).
-12. **`internal/actions/package`** — 1,216 LOC, within-20% warning.
+12. ~~`internal/actions/package`~~ — partial → F023
+    (template-render swallow). 901 LOC handler.go; runCmd
+    is another F005 hit (no IsBecomeSupported/SudoPass guards).
+    Per-package isPackageInstalled is a perf footgun on big
+    lists; track separately if it becomes a UX complaint.
 13. **`internal/actions/copy` after the migration** — verify no
     dead-weight remains after arch-wins.
 14. **`internal/actions/file` after the migration** — same.
@@ -108,6 +117,11 @@ something else landing first.
 | 2026-05-16 | `internal/apply/runner.go` + `config.go` | F020, F021 |
 | 2026-05-16 | `internal/mcp/tools.go` | F022 |
 | 2026-05-16 | `internal/plan/filter/tags.go` | none (clean) |
+| 2026-05-16 | `internal/actions/package` (901 LOC) | F023 |
+| 2026-05-16 | `internal/agentd/files_handler.go` | none (clean — sec-conscious) |
+| 2026-05-16 | `internal/agentd/runs_handler.go` | none (clean — sees the F018 pattern done right) |
+| 2026-05-16 | `internal/fleet/controller.go` / `orchestrator.go` | none (clean — orchestrator uses ctx, unlike apply.Runner per F020) |
+| 2026-05-16 | `internal/plan/planner.go` walkAndRender | F024 |
 
 ## Cross-cutting themes / patterns to track
 
