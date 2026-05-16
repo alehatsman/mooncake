@@ -25,7 +25,6 @@ something else landing first.
 | F016 | agentd.Worker: context.Background → applies cannot be cancelled | risk | M | — | open |
 | F020 | apply.Runner calls os.Exit on signals — hostile to agentd / MCP | risk | M | — | open |
 | F021 | apply.Config.ExtraSubscribers doc claims publisher closes them; runner does | doc | XS | — | open |
-| F023 | package handler silently swallows template-render errors on names → confusing apt error | bug | XS | — | open |
 | F024 | plan.walkAndRender doesn't render map[string]interface{} fields — os.systemd / text.patch.* templates silently pass through | bug | S | — | open |
 | F025 | fleet.peerDiff doesn't include Roles or SSH — Upsert silently rewrites without surfacing | bug | XS | — | open |
 | F026 | file/copy handlers use unbounded os.ReadFile on user paths — large files load entire content into RAM | risk | M | — | open |
@@ -56,7 +55,7 @@ something else landing first.
 | F020 | apply.Runner os.Exit hostile to embedded callers | risk | open | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
 | F021 | apply.Config.ExtraSubscribers doc-drift | doc | open | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
 | F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
-| F023 | package handler swallows template-render errors | bug | open | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
+| F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
 | F024 | planner walkAndRender misses map[string]interface{} | bug | open | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
 | F025 | fleet.peerDiff misses Roles + SSH | bug | open | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
 | F026 | file/copy unbounded os.ReadFile in handler | risk | open | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
