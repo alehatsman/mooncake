@@ -807,6 +807,19 @@
       "x-supports-dry-run": true,
       "x-version": "1.0.0"
     },
+    "http.request": {
+      "type": "object",
+      "description": "Issue an HTTP request; capture the response as a registered fact",
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-implements-permissions": true,
+      "x-category": "network",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "http.requested"
+      ]
+    },
     "import": {
       "type": "string",
       "description": "Import steps from another file"
@@ -2284,6 +2297,10 @@
           "description": "Idempotently manage git config keys at local, global, or system scope",
           "$ref": "#/definitions/git.config"
         },
+        "http.request": {
+          "description": "Issue an HTTP request; capture the response as a registered fact",
+          "$ref": "#/definitions/http.request"
+        },
         "import": {
           "type": "string",
           "description": "Path to YAML file with steps to import"
@@ -2662,6 +2679,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -2992,6 +3014,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -3330,6 +3357,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -3660,6 +3692,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -3998,6 +4035,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -4328,6 +4370,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -4666,6 +4713,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -4996,6 +5048,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -5334,6 +5391,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -5664,6 +5726,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -6002,6 +6069,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -6332,6 +6404,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -6670,6 +6747,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -7000,6 +7082,350 @@
               {
                 "required": [
                   "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "http.request"
+          ],
+          "properties": {
+            "http.request": {
+              "$ref": "#/definitions/http.request"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
                 ]
               },
               {
@@ -7343,6 +7769,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "log"
                 ]
               },
@@ -7673,6 +8104,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -8011,6 +8447,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -8341,6 +8782,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -8679,6 +9125,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -9009,6 +9460,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -9347,6 +9803,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -9677,6 +10138,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -10015,6 +10481,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -10345,6 +10816,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -10683,6 +11159,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -11013,6 +11494,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -11351,6 +11837,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -11681,6 +12172,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -12019,6 +12515,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -12349,6 +12850,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -12687,6 +13193,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -13017,6 +13528,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -13355,6 +13871,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -13685,6 +14206,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -14023,6 +14549,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -14353,6 +14884,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -14691,6 +15227,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -15021,6 +15562,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -15359,6 +15905,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -15689,6 +16240,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -16027,6 +16583,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -16357,6 +16918,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -16695,6 +17261,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -17025,6 +17596,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -17370,6 +17946,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -17700,6 +18281,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -18038,6 +18624,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -18368,6 +18959,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -18706,6 +19302,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -19036,6 +19637,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -19374,6 +19980,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -19704,6 +20315,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -20042,6 +20658,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -20372,6 +20993,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -20708,6 +21334,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -21036,6 +21667,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -21381,6 +22017,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -21711,6 +22352,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -22049,6 +22695,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -22379,6 +23030,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -22717,6 +23373,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -23047,6 +23708,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {
@@ -23385,6 +24051,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -23719,6 +24390,11 @@
               },
               {
                 "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
                   "import"
                 ]
               },
@@ -24049,6 +24725,11 @@
               {
                 "required": [
                   "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
                 ]
               },
               {

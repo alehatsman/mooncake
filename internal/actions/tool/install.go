@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions/tool/archive"
 	"github.com/alehatsman/mooncake/internal/lockfile"
 )
 
@@ -97,13 +98,13 @@ func InstallURL(ctx context.Context, spec Spec, plan Plan, facts FactSnapshot, l
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return Outcome{}, fmt.Errorf("create tmp install dir: %w", err)
 	}
-	if detectFormat(tmpFile) == formatUnknown {
+	if !archive.IsArchive(tmpFile) {
 		if err := installBareBinary(tmpFile, tmpDir, spec, plan); err != nil {
 			_ = os.RemoveAll(tmpDir)
 			return Outcome{}, fmt.Errorf("install bare binary: %w", err)
 		}
 	} else {
-		if err := extractArchive(tmpFile, tmpDir, plan.StripComponents); err != nil {
+		if err := archive.Extract(tmpFile, tmpDir, plan.StripComponents); err != nil {
 			_ = os.RemoveAll(tmpDir)
 			return Outcome{}, fmt.Errorf("extract: %w", err)
 		}

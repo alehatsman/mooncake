@@ -5,7 +5,9 @@ severity: bug
 package: internal/actions/shell
 file: internal/actions/shell/handler.go
 lines: 396-435
-status: fixed
+status: done
+fixed: 2026-05-16 — original fix raises the per-line cap via `scanner.Buffer(make([]byte, 64*1024), shellStreamMaxLineBytes)` at handler.go:377; subsequent commit `6565252d fix(shell): F038 — surface line-overflow truncation in result.Stdout/Stderr + a synthetic step.stderr event` made the truncation visible (was previously human-logger-only). F018 markers in-code at handler.go:358 + 419.
+verified: 2026-05-17 — confirmed fixed on master @ 099ee336. Dedicated test file `internal/actions/shell/f018_long_line_test.go`; `TestShellHandler_LongLineWithinCap` passes (line longer than the default 64KB but within the new 1MB cap survives without truncation). The F038 follow-on tests cover the surfacing path for over-cap lines.
 ---
 
 ## ✅ Fixed

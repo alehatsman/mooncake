@@ -40,6 +40,7 @@ These are brainstormed proposals, not specs.
 | [13](./proposal-13-action-process.md) | `process` action — supervised long-running processes | S | Medium-High | Fills the gap between `shell:` (fire-and-forget) and `service:` (OS-installed) |
 | [14](./proposal-14-action-watch.md) | `watch` action — reactive triggers for the maintain loop | M | Medium-High | Event-driven heals + agent reflexes; cron replacement |
 | [15](./proposal-15-action-plan-recurse.md) | `plan` action — recursive sub-plan execution | M | Medium-High | Composition primitive; unlocks shared heals, conditional flows, per-branch perms |
+| [16](./proposal-16-http-request-action.md) | `http.request` action — first-class HTTP with idempotency contract | M | High | The general HTTP primitive `notify` and `llm` sit on top of; `download`/`observe.http`/`wait.http` are GET-shaped specializations |
 
 ## Recommended order
 
