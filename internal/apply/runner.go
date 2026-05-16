@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/ops"
 )
 
 // Valid output-format values for Config.OutputFormat. Kept private —
@@ -112,8 +114,15 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// Always emit structured JSON errors to stderr on step failures.
 	publisher.Subscribe(logger.NewStderrErrorSubscriber())
 
-	// Always record run history (best-effort).
-	publisher.Subscribe(logger.NewRunLogSubscriber(r.cfg.ConfigPath))
+	// Always record run history (best-effort). When the caller minted an
+	// op_id we write an enriched entry post-flush (spec-68 wave 2) and
+	// skip the totals-only subscriber to avoid double-writing.
+	var runID string
+	if r.cfg.OpID != "" {
+		runID = ops.NewRunID()
+	} else {
+		publisher.Subscribe(logger.NewRunLogSubscriber(r.cfg.ConfigPath))
+	}
 
 	// One-shot next-step hint after the first successful run on this
 	// host. The subscriber is self-suppressing for non-text formats
@@ -192,6 +201,14 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// but does NOT call subscriber.Close().
 	for _, sub := range r.cfg.ExtraSubscribers {
 		sub.Close()
+	}
+
+	// Spec-68 wave 2: when the caller minted an op_id, write the
+	// enriched runlog entry (totals + RunID + OpID + per-step records).
+	// The totals-only subscriber path is suppressed above; this is the
+	// single Append site for op-aware runs.
+	if r.cfg.OpID != "" {
+		writeEnrichedRunlog(filepath.Base(r.cfg.ConfigPath), r.cfg.OpID, runID, tail, capture)
 	}
 
 	return assembleResult(capture, tail, execErr), execErr

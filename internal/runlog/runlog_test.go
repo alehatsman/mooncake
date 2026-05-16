@@ -184,3 +184,78 @@ func TestAt_EmptyLog(t *testing.T) {
 		t.Errorf("expected ErrNoHistory on empty log, got %v", err)
 	}
 }
+
+// TestLegacyEntryStillDecodes verifies the wave-2 widening is purely
+// additive: an entry written before RunID/OpID/Steps existed still
+// parses, with the new fields at zero values.
+func TestLegacyEntryStillDecodes(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	// Hand-write a legacy-shape line into runs.jsonl — no RunID,
+	// no OpID, no Steps.
+	path, err := logPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"ts":"2026-05-17T00:00:00Z","config":"old.yml","changed":2,"ok":5,"skipped":1,"failed":0,"duration_ms":1234}` + "\n"
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := ReadAll()
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("ReadAll = %d entries, want 1", len(entries))
+	}
+	got := entries[0]
+	if got.Config != "old.yml" || got.Changed != 2 || got.DurationMs != 1234 {
+		t.Errorf("legacy fields decoded wrong: %+v", got)
+	}
+	if got.RunID != "" || got.OpID != "" || got.Steps != nil {
+		t.Errorf("wave-2 fields should be zero for legacy entry: %+v", got)
+	}
+}
+
+// TestStepEntryRoundTrip verifies that a wave-2 entry with Steps
+// round-trips through JSON intact.
+func TestStepEntryRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	e := Entry{
+		TS:         time.Date(2026, 5, 17, 0, 0, 0, 0, time.UTC),
+		Config:     "x.yml",
+		Changed:    1,
+		Ok:         1,
+		DurationMs: 100,
+		RunID:      "r/01HVTEST",
+		OpID:       "op/01HVTEST",
+		Steps: []StepEntry{
+			{Index: 1, Action: "file.write", Resource: "file:/tmp/x", Result: "changed", Reversible: true},
+			{Index: 2, Action: "shell", Resource: "", Result: "ok"},
+		},
+	}
+	if err := Append(e); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+	got, err := Last()
+	if err != nil {
+		t.Fatalf("Last: %v", err)
+	}
+	if got.RunID != e.RunID || got.OpID != e.OpID {
+		t.Errorf("ID roundtrip mismatch: got run=%q op=%q", got.RunID, got.OpID)
+	}
+	if len(got.Steps) != 2 || got.Steps[0].Resource != "file:/tmp/x" || !got.Steps[0].Reversible {
+		t.Errorf("Steps roundtrip mismatch: %+v", got.Steps)
+	}
+}
+
+// import-guard so the new test compiles without explicit deps beyond
+// what the existing tests use.
+var _ = errors.New

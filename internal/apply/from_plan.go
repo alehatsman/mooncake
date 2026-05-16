@@ -3,12 +3,14 @@ package apply
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/ops"
 	"github.com/alehatsman/mooncake/internal/plan"
 )
 
@@ -37,6 +39,11 @@ type FromPlanOptions struct {
 	// true. Zero MaxPlanAge disables the age check.
 	MaxPlanAge time.Duration
 	AllowStale bool
+
+	// OpID, when non-empty, links this from-plan apply to a row in
+	// ops.jsonl (spec-68 wave 2). Same semantics as Config.OpID on
+	// the config-path Runner — minted by the CLI before invocation.
+	OpID string
 }
 
 // NewRunnerFromPlan constructs a Runner that loads + validates a
@@ -94,8 +101,15 @@ func (r *Runner) runFromPlan(ctx context.Context) (*KernelResult, error) {
 	publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormatText))
 
 	// Record run history (best-effort) keyed by the plan file the
-	// user pointed at, mirroring the pre-extraction behavior.
-	publisher.Subscribe(logger.NewRunLogSubscriber(r.fromPlanPath))
+	// user pointed at, mirroring the pre-extraction behavior. When the
+	// caller minted an op_id we write the enriched entry post-flush
+	// instead (spec-68 wave 2).
+	var runID string
+	if r.fromPlanOpts.OpID != "" {
+		runID = ops.NewRunID()
+	} else {
+		publisher.Subscribe(logger.NewRunLogSubscriber(r.fromPlanPath))
+	}
 
 	// Structured JSON errors to stderr on step failures — matches
 	// the config-path Runner so consumers get a consistent surface.
@@ -123,6 +137,11 @@ func (r *Runner) runFromPlan(ctx context.Context) (*KernelResult, error) {
 	// Drain pending events so the audit tail is complete before we
 	// build the KernelResult.
 	publisher.Flush()
+
+	// Spec-68 wave 2: enriched runlog when an op_id was minted.
+	if r.fromPlanOpts.OpID != "" {
+		writeEnrichedRunlog(filepath.Base(r.fromPlanPath), r.fromPlanOpts.OpID, runID, tail, capture)
+	}
 
 	// The from-plan path skips compilation, so capture.Plan() may
 	// still be nil — populate it from planData so the KernelResult

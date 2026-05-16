@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/apply"
@@ -24,6 +25,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/factsfmt"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/ops"
 	"github.com/alehatsman/mooncake/internal/pilot"
 	"github.com/alehatsman/mooncake/internal/plan"
 	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
@@ -318,6 +320,7 @@ func run(c *cli.Context) error {
 		MaxOutputBytes:    c.Int("max-output-bytes"),
 		MaxOutputLines:    c.Int("max-output-lines"),
 		FactsJSONPath:     c.String("facts-json"),
+		OpID:              recordOp("apply", configPath, false),
 	}
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
 		_, runErr := apply.NewRunner(cfg).Run(ctx)
@@ -330,12 +333,14 @@ func run(c *cli.Context) error {
 // live in internal/apply alongside the config-path Runner so both
 // apply entry points produce the same typed *KernelResult.
 func runFromPlan(c *cli.Context, planPath string) error {
+	opID := recordOp("apply", planPath, false)
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
 		_, err := apply.NewRunnerFromPlan(planPath, apply.FromPlanOptions{
 			SudoPass:   c.String("sudo-pass"),
 			LogLevel:   c.String("log-level"),
 			MaxPlanAge: c.Duration("max-plan-age"),
 			AllowStale: c.Bool("allow-stale"),
+			OpID:       opID,
 		}).Run(ctx)
 		return err
 	})
@@ -357,6 +362,39 @@ func runFromPlan(c *cli.Context, planPath string) error {
 // thread ctx through executor → handler → exec.CommandContext so the
 // apply can drain on signal instead of being killed by os.Exit.
 //
+// recordOp mints an op_id, writes an ops.jsonl entry, and returns the
+// minted id so callers can stamp it onto apply.Config / FromPlanOptions
+// / plan-mode metadata (spec-68 wave 2). Best-effort: when the append
+// fails we still return the id so the run can proceed; the missing
+// ops.jsonl row just means `mooncake explain op/<id>` won't resolve.
+//
+// Lives at the CLI layer because actor / args / config-path are CLI
+// concerns; the apply / plan packages take an already-minted opID as
+// input and don't reach back here.
+func recordOp(command, configPath string, planOnly bool) string {
+	opID := ops.NewOpID()
+	user := os.Getenv("USER")
+	if user == "" {
+		user = "unknown"
+	}
+	// os.Args[0] is the binary path; skip it so Args is just the
+	// post-binary flags the user typed.
+	var args []string
+	if len(os.Args) > 1 {
+		args = append(args, os.Args[1:]...)
+	}
+	_ = ops.Append(ops.Entry{
+		TS:       time.Now().UTC(),
+		OpID:     opID,
+		Command:  command,
+		Args:     args,
+		Actor:    "user:" + user,
+		Config:   configPath,
+		PlanOnly: planOnly,
+	})
+	return opID
+}
+
 // ctx is wired through to the body so future cancellation-aware
 // handlers observe the signal as a cancelled context.
 func runWithSignalCtx(parent context.Context, body func(context.Context) error) error {
@@ -469,10 +507,95 @@ func renderExplainText(w io.Writer, r explain.Result) {
 	switch r.Kind {
 	case explain.KindAction:
 		renderExplainActionText(w, r.Action)
+	case explain.KindRun:
+		renderExplainRunText(w, r.Run)
+	case explain.KindResource:
+		renderExplainResourceText(w, r.Resource)
+	case explain.KindOp:
+		renderExplainOpText(w, r.Op)
 	case explain.KindNotFound:
 		renderExplainNotFoundText(w, r.NotFound)
 	default:
-		fmt.Fprintf(w, "kind: %s (no text renderer in wave 1)\n", r.Kind)
+		fmt.Fprintf(w, "kind: %s (no text renderer)\n", r.Kind)
+	}
+}
+
+func renderExplainRunText(w io.Writer, p *explain.RunPayload) {
+	fmt.Fprintf(w, "run: %s\n", p.RunID)
+	if p.OpID != "" {
+		fmt.Fprintf(w, "  op:       %s\n", p.OpID)
+	}
+	fmt.Fprintf(w, "  ts:       %s\n", p.TS.Format(time.RFC3339))
+	if p.Config != "" {
+		fmt.Fprintf(w, "  config:   %s\n", p.Config)
+	}
+	if p.DurationMs > 0 {
+		fmt.Fprintf(w, "  duration: %dms\n", p.DurationMs)
+	}
+	fmt.Fprintf(w, "  totals:   changed=%d ok=%d skipped=%d failed=%d\n",
+		p.Totals.Changed, p.Totals.Ok, p.Totals.Skipped, p.Totals.Failed)
+	if p.Caveats.IrreversibleStepCount > 0 {
+		fmt.Fprintf(w, "  caveats:  %d irreversible step(s)\n", p.Caveats.IrreversibleStepCount)
+	}
+	if len(p.Steps) > 0 {
+		fmt.Fprintln(w, "\nsteps:")
+		for _, s := range p.Steps {
+			rev := ""
+			if s.Reversible {
+				rev = " (reversible)"
+			}
+			res := s.Resource
+			if res == "" {
+				res = "-"
+			}
+			fmt.Fprintf(w, "  %2d. %-20s %-7s  %s%s\n", s.Index, s.Action, s.Result, res, rev)
+		}
+	}
+}
+
+func renderExplainResourceText(w io.Writer, p *explain.ResourcePayload) {
+	fmt.Fprintf(w, "resource: %s\n", p.Resource)
+	if len(p.History) == 0 {
+		fmt.Fprintln(w, "  history: (none — this resource has not been touched by any logged run)")
+		return
+	}
+	fmt.Fprintln(w, "\nhistory (newest first):")
+	for _, h := range p.History {
+		rev := ""
+		if h.Reversible {
+			rev = " (reversible)"
+		}
+		fmt.Fprintf(w, "  %s  %-20s %-7s  run=%s%s\n",
+			h.TS.Format(time.RFC3339), h.Action, h.Result, h.RunID, rev)
+	}
+}
+
+func renderExplainOpText(w io.Writer, p *explain.OpPayload) {
+	fmt.Fprintf(w, "op: %s\n", p.OpID)
+	fmt.Fprintf(w, "  ts:       %s\n", p.TS.Format(time.RFC3339))
+	fmt.Fprintf(w, "  command:  %s\n", p.Command)
+	if len(p.Args) > 0 {
+		fmt.Fprintf(w, "  args:     %s\n", strings.Join(p.Args, " "))
+	}
+	if p.Actor != "" {
+		fmt.Fprintf(w, "  actor:    %s\n", p.Actor)
+	}
+	if p.Parent != "" {
+		fmt.Fprintf(w, "  parent:   %s\n", p.Parent)
+	}
+	if p.Config != "" {
+		fmt.Fprintf(w, "  config:   %s\n", p.Config)
+	}
+	if p.PlanOnly {
+		fmt.Fprintln(w, "  plan_only: true")
+	}
+	if len(p.Runs) > 0 {
+		fmt.Fprintln(w, "\nruns:")
+		for _, r := range p.Runs {
+			fmt.Fprintf(w, "  - %s\n", r)
+		}
+	} else if !p.PlanOnly {
+		fmt.Fprintln(w, "  runs:     (none yet)")
 	}
 }
 
@@ -650,6 +773,12 @@ func planCommand(c *cli.Context) error {
 		}
 		return err
 	}
+	// Spec-68 wave 2: every `mooncake plan` invocation produces an
+	// ops.jsonl entry with PlanOnly=true and Runs=[]. No runs.jsonl
+	// row is written for a plan-only op. The id is discarded here
+	// because the plan path doesn't surface it back to the user yet;
+	// future iterations may print it alongside the plan summary.
+	_ = recordOp("plan", configPath, true)
 	// Spec 51: prepend local overlay vars. For standalone `plan`, --host
 	// and --overlays aren't registered as flags; the helper falls through
 	// to the derived hostname and the default on-state, so behavior matches

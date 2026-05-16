@@ -2,12 +2,13 @@ package explain
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/ops"
+	"github.com/alehatsman/mooncake/internal/runlog"
 )
 
 // Options tune the resolver. Zero value is the typical agent call.
@@ -24,6 +25,13 @@ type Options struct {
 	// SchemaJSON overrides the embedded schema. Tests use this to feed
 	// a fake schema without touching the global registry.
 	SchemaJSON []byte
+
+	// RunsReader / OpsReader override the default JSONL readers
+	// (~/.mooncake/runs.jsonl and ~/.mooncake/ops.jsonl). Tests inject
+	// these to feed fixtures; production callers leave both nil and get
+	// the default reader.
+	RunsReader func() ([]runlog.Entry, error)
+	OpsReader  func() ([]ops.Entry, error)
 }
 
 // Resolve takes a noun and returns a typed Result. Wave 1: action only;
@@ -37,12 +45,12 @@ func Resolve(noun string, opts Options) Result {
 	switch detectKind(noun) {
 	case KindAction:
 		return resolveAction(noun, opts)
-	case KindRun, KindResource, KindOp:
-		// Wave 2 territory. Surface a typed not_found that tells the
-		// caller "we recognised the shape but don't have a resolver yet"
-		// rather than silently lying.
-		return notFound(noun, fmt.Sprintf(
-			"%s nouns are not yet implemented (wave 2)", detectKind(noun)), nil)
+	case KindRun:
+		return resolveRun(noun, opts)
+	case KindOp:
+		return resolveOp(noun, opts)
+	case KindResource:
+		return resolveResource(noun, opts)
 	default:
 		return notFound(noun, "unrecognised noun shape", nil)
 	}

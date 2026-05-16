@@ -66,6 +66,14 @@ type Config struct {
 	// logged but does not abort the run.
 	FactsJSONPath string
 
+	// OpID, when non-empty, links this apply to a row in ops.jsonl —
+	// the CLI / MCP / SDK caller mints it before invoking the Runner so
+	// `mooncake explain op/<id>` works while the run is in-flight. Empty
+	// is allowed (legacy callers + tests): the Runner falls back to a
+	// runlog entry without op linkage, indistinguishable from the
+	// pre-spec-68-wave-2 shape.
+	OpID string
+
 	// ExtraSubscribers are additional event subscribers injected into the
 	// publisher before the run starts. Useful for callers (e.g. agentd)
 	// that need daemon-specific sinks (SSE hub, events.jsonl writer) that
