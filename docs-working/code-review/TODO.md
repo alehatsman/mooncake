@@ -12,7 +12,7 @@ something else landing first.
 |---|---|---|---|---|---|
 | F005 | Cross-package sudo helper — BecomeRunner landed; effects+package+download+template migrated; service inline sites pre-validated (style-only cleanup remains) | smell | M | — | partial |
 | F011 | Cross-cutting: 10 handlers still have Execute/DryRun (11 done: shell/command/print/vars/include_vars/preset/tool/service/repo_search/repo_tree/file_delete_range/file_replace) | smell | XL | — | open |
-| F041 | artifact_capture.readFileContent unbounded read | smell | S | — | open |
+| F041 | artifact_capture.readFileContent unbounded read | smell | S | — | done |
 
 ## Findings index
 
@@ -57,7 +57,7 @@ something else landing first.
 | F038 | shell line-overflow structured stream silent | bug | **done** | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
 | F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **done** | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
 | F040 | llm.ClaudeClient timeout/model/body | smell | **done** | [findings/F040](./findings/F040-llm-claude-client-tight-timeout-stale-model-unbounded-body.md) |
-| F041 | artifact_capture.readFileContent unbounded read | smell | open | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
+| F041 | artifact_capture.readFileContent unbounded read | smell | **done** | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
 | F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
 | F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
 
