@@ -10,7 +10,6 @@
 package package_handler
 
 import (
-	"bytes"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -20,6 +19,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -394,15 +394,22 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, bec
 }
 
 // runCmd executes a command, wrapping with sudo -S when become is true.
+//
+// F005: now uses security.BecomeRunner so IsBecomeSupported +
+// SudoPass-not-empty validation matches every other become-aware
+// helper. Pre-fix runCmd checked neither — a Windows operator
+// invoking `pkg: ... become: true` hit "executable file not found"
+// from exec.Command("sudo", ...) instead of a clean
+// ErrBecomeUnsupported; an empty SudoPass produced an unprintable
+// `"\n"` on sudo's stdin and let sudo hang on its TTY prompt.
 func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []string) ([]byte, error) {
-	var cmd *exec.Cmd
-	if become {
-		// #nosec G204 - sudo wrapping for privilege escalation
-		cmd = exec.Command("sudo", append([]string{"-S"}, cmdArgs...)...)
-		cmd.Stdin = bytes.NewBufferString(ec.Svc.SudoPass + "\n")
-	} else {
-		// #nosec G204 - Package manager commands are validated
-		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	if len(cmdArgs) == 0 {
+		return nil, fmt.Errorf("pkg.runCmd: cmdArgs must not be empty")
+	}
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	cmd, err := runner.Command(become, cmdArgs[0], cmdArgs[1:]...)
+	if err != nil {
+		return nil, err
 	}
 	return cmd.CombinedOutput()
 }

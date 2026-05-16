@@ -14,11 +14,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
@@ -714,13 +712,18 @@ func (p *defaultPerformer) Chown(path, owner, group string, opts actions.Perform
 
 // runSudo executes a shell command via sudo using the password supplied
 // to NewPerformer. Errors include captured stderr.
+//
+// F005: implementation now delegates to security.BecomeRunner so the
+// "become unsupported" and "no SudoPass configured" validation
+// matches every other call site project-wide. Pre-fix the latter
+// case (SudoPass="") was not caught — the runner happily wrote
+// `"\n"` to sudo's stdin and let sudo hang on its password prompt.
 func (p *defaultPerformer) runSudo(command string) error {
-	if !security.IsBecomeSupported() {
-		return errors.New("become not supported on this platform")
+	runner := security.BecomeRunner{SudoPass: p.sudoPass}
+	cmd, err := runner.Command(true, "sh", "-c", command)
+	if err != nil {
+		return err
 	}
-	// #nosec G204 — provisioning tool intentionally runs caller-provided commands
-	cmd := exec.Command("sudo", "-S", "sh", "-c", command)
-	cmd.Stdin = bytes.NewBufferString(p.sudoPass + "\n")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

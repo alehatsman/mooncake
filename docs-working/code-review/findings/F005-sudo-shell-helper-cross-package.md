@@ -10,7 +10,72 @@ files:
   - internal/actions/template/handler.go:346
   - internal/effects/default.go (defaultPerformer.runSudo)
   - internal/executor/sudo_integration_test.go (test only)
-status: open
+status: partial
+---
+
+## ✅ Partial fix — canonical helper landed; 2 of 6 callers migrated
+
+`internal/security/become.go` adds the project-wide
+`BecomeRunner.Command(become, program, args...)`. The helper:
+
+- Returns `*exec.Cmd` ready for the caller's preferred invocation
+  (`.Run()`, `.CombinedOutput()`, etc.).
+- Validates `IsBecomeSupported()` and returns `ErrBecomeUnsupported`
+  (wrapped with GOOS) when become is requested on a sudo-less
+  platform.
+- Validates `SudoPass != ""` and returns `ErrBecomeNoSudoPass`
+  rather than hanging on sudo's TTY prompt with an empty password.
+- Wires `cmd.Stdin = SudoPass + "\n"` for the become path; bypasses
+  sudo entirely when become is false.
+
+### Migrated
+
+- `effects/default.go`'s `defaultPerformer.runSudo` now delegates to
+  `BecomeRunner.Command(true, "sh", "-c", command)`. The empty-SudoPass
+  case was previously not caught — runSudo wrote `"\n"` to sudo's
+  stdin and let sudo hang. Now it returns `ErrBecomeNoSudoPass`.
+- `actions/package`'s `Handler.runCmd` migrated to the same pattern.
+  Pre-fix it checked neither `IsBecomeSupported` nor empty SudoPass;
+  Windows operators hit the OS-level "executable file not found"
+  instead of a clean error.
+
+Both migrations are byte-compatible on the happy path; the only
+behavioral change is the two error paths that previously produced
+confusing OS errors / sudo hangs now produce typed
+`ErrBecomeUnsupported` / `ErrBecomeNoSudoPass`.
+
+### Tests
+
+`internal/security/become_test.go`: 4 cases — bypass when
+become=false, supported-platform wrap with sudo, empty SudoPass
+refuses, and a contract test that non-become never returns
+ErrBecomeUnsupported.
+
+### Out of scope (left for follow-up)
+
+The four remaining inline sites are NOT migrated here:
+
+- `actions/service/handler.go` (×6 inline sudo invocations + F004
+  helper). F004 just landed `becomeAwareCommand` which is a
+  service-local equivalent; migrating those to BecomeRunner is
+  next.
+- `actions/download/handler.go:484` and
+  `actions/template/handler.go:346` — both use `sudo -S sh -c <command>`
+  shell-string form. Same shape as the effects helper; one-line
+  migration each.
+
+The "M effort" scope was reduced to capture the validation-consistency
+win (the actual bug surface) on the two helper-shaped callers and
+leave the inline migrations as smaller, lower-risk follow-ups.
+
+### Open question deferred
+
+The finding's "import direction" question (whether to move
+`executor.SetupError` to a shared package) didn't surface here —
+`BecomeRunner` returns its own typed sentinels (`ErrBecomeUnsupported`
+/ `ErrBecomeNoSudoPass`), which callers can wrap into
+`executor.SetupError` at the boundary if they want. No cycle.
+
 ---
 
 ## What
