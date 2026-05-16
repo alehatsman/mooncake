@@ -2,6 +2,7 @@
 package pilot
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,10 @@ type LoopResult struct {
 func RunLoop(opts RunOptions) (*LoopResult, error) {
 	if opts.MaxIterations <= 0 {
 		opts.MaxIterations = defaultMaxIterations
+	}
+
+	if opts.AutoApply {
+		fmt.Fprintln(os.Stderr, AutoApplyWarning)
 	}
 
 	client, err := llm.NewClient()
@@ -139,6 +144,56 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 				ErrorMessage: errMsg,
 			}
 			continue
+		}
+
+		// Plan-confirm gate (spec-67 §10). Skipped when --auto-apply.
+		if !opts.AutoApply {
+			if err := EnsureInteractive(os.Stdin); err != nil {
+				return &LoopResult{Iterations: iterations, StopReason: StopFailed}, err
+			}
+			result, gateErr := ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+			if gateErr != nil {
+				return &LoopResult{Iterations: iterations, StopReason: StopFailed}, gateErr
+			}
+			switch result.Outcome {
+			case OutcomeReject:
+				const msg = "operator rejected plan at confirm gate"
+				log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "user_rejected", msg)
+				iterations = append(iterations, *log)
+				lastIteration = &IterationSummary{
+					Iteration:    iterNum,
+					PlanHash:     planHash,
+					Status:       "user_rejected",
+					ErrorMessage: msg,
+				}
+				continue
+			case OutcomeAbort:
+				const msg = "operator aborted at confirm gate"
+				log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "aborted", msg)
+				iterations = append(iterations, *log)
+				return &LoopResult{
+					Iterations: iterations,
+					StopReason: StopAborted,
+					FinalLog:   log,
+				}, nil
+			case OutcomeApply:
+				if !bytes.Equal(result.PlanBytes, planBytes) {
+					// Operator edited the plan. Re-wrap with the edited
+					// content and overwrite the tempfile that executor.Start
+					// will read. ConfirmPlan already re-validated the
+					// edited form, so we can trust the new bytes here.
+					planBytes = result.PlanBytes
+					wrappedBytes, err = WrapInTransaction(planBytes)
+					if err != nil {
+						return &LoopResult{Iterations: iterations, StopReason: StopFailed},
+							fmt.Errorf("re-wrap edited plan: %w", err)
+					}
+					if err := os.WriteFile(tmpFile.Name(), wrappedBytes, 0o600); err != nil {
+						return &LoopResult{Iterations: iterations, StopReason: StopFailed},
+							fmt.Errorf("rewrite tempfile with edited plan: %w", err)
+					}
+				}
+			}
 		}
 
 		publisher := events.NewPublisher()

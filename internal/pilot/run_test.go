@@ -102,9 +102,10 @@ func TestRunIntegration(t *testing.T) {
 	}
 
 	opts := RunOptions{
-		Goal:     "test goal",
-		PlanPath: planPath,
-		RepoRoot: tmpDir,
+		Goal:      "test goal",
+		PlanPath:  planPath,
+		RepoRoot:  tmpDir,
+		AutoApply: true, // tests run non-interactively; gate refuses w/o TTY
 	}
 
 	log, err := Run(opts)

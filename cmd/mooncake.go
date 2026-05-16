@@ -821,6 +821,7 @@ func pilotRunCommand(c *cli.Context) error {
 		Provider:      provider,
 		Model:         model,
 		MaxIterations: maxIterations,
+		AutoApply:     c.Bool("auto-apply"),
 	}
 
 	if provider == "claude" {
@@ -1191,6 +1192,10 @@ func createApp() *cli.App {
 								Name:  "max-iterations",
 								Value: 5,
 								Usage: "Maximum iterations for loop mode",
+							},
+							&cli.BoolFlag{
+								Name:  "auto-apply",
+								Usage: "Skip the plan-confirm gate (required for unattended/CI runs; spec-67 §10)",
 							},
 						},
 						Action: pilotRunCommand,

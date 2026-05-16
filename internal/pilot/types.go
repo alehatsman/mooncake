@@ -37,6 +37,9 @@ type RunOptions struct {
 	Provider      string
 	Model         string
 	MaxIterations int
+	// AutoApply skips the plan-confirm gate (spec-67 §10). Required for
+	// unattended runs (CI, scripted). Emits a warning at thread start.
+	AutoApply bool
 }
 
 type PlanInput struct {
@@ -61,4 +64,7 @@ const (
 	StopNoChange   StopReason = "no_change"
 	StopFailed     StopReason = "failed"
 	StopMaxReached StopReason = "max_iterations"
+	// StopAborted is set when the operator picks `abort` at the plan-
+	// confirm gate (spec-67 §10).
+	StopAborted StopReason = "aborted"
 )

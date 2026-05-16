@@ -169,7 +169,7 @@ linters:
       # fmt.Fprintf/Fprintln to operator-facing writers in internal/fleet/
       # and a few other display helpers — best-effort writes to terminal
       # output; ignoring the error is idiomatic Go CLI code.
-      - path: internal/(doctor/render_text|fleet/.+|logger/first_run_subscriber|scaffold/scaffold)\.go
+      - path: internal/(doctor/render_text|fleet/.+|logger/first_run_subscriber|pilot/confirm|scaffold/scaffold)\.go
         linters: [errcheck]
         text: "Error return value of `fmt\\.F"
 

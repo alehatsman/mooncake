@@ -1,7 +1,9 @@
 package pilot
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -14,6 +16,10 @@ import (
 )
 
 func Run(opts RunOptions) (*IterationLog, error) {
+	if opts.AutoApply {
+		fmt.Fprintln(os.Stderr, AutoApplyWarning)
+	}
+
 	iterNum, err := NextIterationNumber(opts.RepoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get next iteration number: %w", err)
@@ -64,6 +70,36 @@ func Run(opts RunOptions) (*IterationLog, error) {
 
 	if config.HasErrors(diagnostics) {
 		return nil, writeFailureLog(opts.RepoRoot, iterNum, opts.Goal, planHash, fmt.Errorf("config has validation errors: %s", config.FormatDiagnostics(diagnostics)))
+	}
+
+	// Plan-confirm gate (spec-67 §10). Skipped when --auto-apply.
+	// Single-shot mode: reject and abort both terminate the run; only
+	// apply proceeds to executor.Start.
+	if !opts.AutoApply {
+		if err := EnsureInteractive(os.Stdin); err != nil {
+			return nil, err
+		}
+		result, gateErr := ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+		if gateErr != nil {
+			return nil, gateErr
+		}
+		switch result.Outcome {
+		case OutcomeReject:
+			return nil, errors.New("plan rejected at confirm gate")
+		case OutcomeAbort:
+			return nil, errors.New("plan aborted at confirm gate")
+		case OutcomeApply:
+			if !bytes.Equal(result.PlanBytes, planBytes) {
+				planBytes = result.PlanBytes
+				wrappedBytes, err = WrapInTransaction(planBytes)
+				if err != nil {
+					return nil, fmt.Errorf("re-wrap edited plan: %w", err)
+				}
+				if err := os.WriteFile(tmpFile.Name(), wrappedBytes, 0o600); err != nil {
+					return nil, fmt.Errorf("rewrite tempfile with edited plan: %w", err)
+				}
+			}
+		}
 	}
 
 	publisher := events.NewPublisher()
