@@ -2131,7 +2131,7 @@
     },
     "pkg.list": {
       "type": "object",
-      "description": "Return the installed packages and versions (read-only; apt on linux, brew on darwin)",
+      "description": "Return the installed packages and versions (read-only; apt + dnf on linux, brew on darwin)",
       "properties": {
         "manager": {
           "type": "string"
@@ -2824,7 +2824,7 @@
           "$ref": "#/definitions/pkg.hold"
         },
         "pkg.list": {
-          "description": "Return the installed packages and versions (read-only; apt on linux, brew on darwin)",
+          "description": "Return the installed packages and versions (read-only; apt + dnf on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.list"
         },
         "pkg.repo": {

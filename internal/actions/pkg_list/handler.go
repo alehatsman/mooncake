@@ -1,9 +1,9 @@
 // Package pkg_list implements the pkg.list action: a read-only query
 // that returns the currently installed packages and their versions.
 // No side effects in any mode; Changed is always false. Supports apt
-// (via dpkg-query) on linux and brew (via brew list --versions) on
-// darwin. Auto-detects when manager is unset; explicit manager:
-// overrides routing.
+// (via dpkg-query) and dnf/yum (via rpm -qa) on linux, and brew (via
+// brew list --versions) on darwin. Auto-detects when manager is
+// unset; explicit manager: overrides routing.
 //
 //nolint:revive // Package name matches action name convention (pkg_list)
 package pkg_list
@@ -25,6 +25,7 @@ import (
 const (
 	actionName  = "pkg.list"
 	managerApt  = "apt"
+	managerDnf  = "dnf"
 	managerBrew = "brew"
 )
 
@@ -32,6 +33,7 @@ const (
 // replace these to keep apply/plan hermetic.
 var (
 	dpkgQuery = realDpkgQuery // func() (string, error)
+	rpmQuery  = realRpmQuery  // func() (string, error)
 	brewList  = realBrewList  // func() (string, error)
 	lookPath  = exec.LookPath // override in tests for manager detection
 )
@@ -46,7 +48,7 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Return the installed packages and versions (read-only; apt on linux, brew on darwin)",
+		Description:        "Return the installed packages and versions (read-only; apt + dnf on linux, brew on darwin)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     false,
@@ -60,12 +62,26 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // Permissions implements actions.Permitter (spec-22 phase 3).
 //
 // pkg.list is a read-only query: no Sudo, no Network. The required
-// binary differs per host: dpkg-query on linux (apt path), brew on
-// darwin. Spec-44 doctor reports the right one for the local box.
-func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+// binary depends on the (explicit-or-default) manager: dpkg-query for
+// apt, rpm for dnf/yum, brew for brew. When manager: is unset we fall
+// back to the platform default (dpkg-query on linux, brew on darwin)
+// — a RHEL host without an explicit `manager: dnf` will see doctor
+// flag dpkg-query as missing; the natural fix is to make the manager
+// explicit. Spec-44 doctor reports the right binary for the routing.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	bin := "dpkg-query"
 	if runtime.GOOS == "darwin" {
 		bin = "brew"
+	}
+	if step != nil && step.PkgList != nil {
+		switch strings.ToLower(strings.TrimSpace(step.PkgList.Manager)) {
+		case managerApt:
+			bin = "dpkg-query"
+		case managerDnf, "yum":
+			bin = "rpm"
+		case managerBrew:
+			bin = "brew"
+		}
 	}
 	return actions.PermissionSet{
 		RequiredBinaries: []string{bin},
@@ -102,6 +118,16 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return result, fmt.Errorf("pkg.list: dpkg-query: %w", err)
 		}
 		pkgs = parseDpkgQuery(out, manager)
+	case managerDnf, "yum":
+		out, err := rpmQuery()
+		if err != nil {
+			return result, fmt.Errorf("pkg.list: rpm -qa: %w", err)
+		}
+		// Canonicalize to "dnf" in the result regardless of whether
+		// the operator wrote `manager: yum` or `manager: dnf`; rpm
+		// is the same database on both managers.
+		pkgs = parseRpmQuery(out, managerDnf)
+		manager = managerDnf
 	case managerBrew:
 		out, err := brewList()
 		if err != nil {
@@ -109,7 +135,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		pkgs = parseBrewList(out, manager)
 	default:
-		return result, fmt.Errorf("pkg.list: unsupported manager %q (supported: apt, brew)", manager)
+		return result, fmt.Errorf("pkg.list: unsupported manager %q (supported: apt, dnf, brew)", manager)
 	}
 
 	sort.Slice(pkgs, func(i, j int) bool {
@@ -159,11 +185,13 @@ func parseDpkgQuery(stdout, manager string) []map[string]interface{} {
 
 // resolveManager picks the package manager to query. Explicit
 // manager: in the YAML wins over auto-detection. Auto-detection
-// prefers apt (dpkg-query) when available, then brew. The order
-// matters on multi-manager hosts (e.g. macOS with Linuxbrew under
-// /home/linuxbrew/.linuxbrew/bin/brew installed alongside a system
-// dpkg-query) — apt-the-installed is the more authoritative system
-// list when both exist, since brew under /home/linuxbrew is per-user.
+// prefers apt (dpkg-query) when available, then dnf (rpm), then brew.
+// The order matters on multi-manager hosts (e.g. macOS with Linuxbrew
+// under /home/linuxbrew/.linuxbrew/bin/brew installed alongside a
+// system dpkg-query, or a RHEL host that happens to have apt-the-rpm
+// shipped in EPEL but isn't a dpkg system) — apt-the-installed is the
+// more authoritative system list when it's the native manager, and
+// rpm beats per-user brew on every dnf/yum distro.
 func resolveManager(requested string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	if requested != "" {
@@ -172,10 +200,13 @@ func resolveManager(requested string) (string, error) {
 	if _, err := lookPath("dpkg-query"); err == nil {
 		return managerApt, nil
 	}
+	if _, err := lookPath("rpm"); err == nil {
+		return managerDnf, nil
+	}
 	if _, err := lookPath("brew"); err == nil {
 		return managerBrew, nil
 	}
-	return "", fmt.Errorf("pkg.list: cannot auto-detect package manager (no dpkg-query or brew on PATH); set manager explicitly")
+	return "", fmt.Errorf("pkg.list: cannot auto-detect package manager (no dpkg-query, rpm, or brew on PATH); set manager explicitly")
 }
 
 func realDpkgQuery() (string, error) {
@@ -192,6 +223,63 @@ func realDpkgQuery() (string, error) {
 		return "", err
 	}
 	return stdout.String(), nil
+}
+
+// realRpmQuery shells out to `rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\n'`.
+// Wired into the rpmQuery package var by default; tests substitute
+// their own. Tab-separated to match the dpkg-query shape so the
+// parsers stay identical.
+//
+// Works on both dnf (RHEL 8+/Fedora) and yum (RHEL 7) hosts: the rpm
+// binary is the same database on both, and the format string is
+// portable across rpm versions back to RHEL 6 — no version probing
+// needed.
+func realRpmQuery() (string, error) {
+	// #nosec G204 -- fixed rpm binary.
+	cmd := exec.Command("rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\n")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return "", fmt.Errorf("%w: %s", err, msg)
+		}
+		return "", err
+	}
+	return stdout.String(), nil
+}
+
+// parseRpmQuery is identical in shape to parseDpkgQuery: tab-separated
+// `name<TAB>version-release`. Split here instead of reusing
+// parseDpkgQuery so the result entries carry the right `manager`
+// field (the canonical "dnf") without forcing the apt path to know
+// about its sibling.
+func parseRpmQuery(stdout, manager string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, 256)
+	sc := bufio.NewScanner(strings.NewReader(stdout))
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for sc.Scan() {
+		line := sc.Text()
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		name := strings.TrimSpace(parts[0])
+		version := strings.TrimSpace(parts[1])
+		if name == "" {
+			continue
+		}
+		out = append(out, map[string]interface{}{
+			"name":    name,
+			"version": version,
+			"manager": manager,
+		})
+	}
+	return out
 }
 
 func realBrewList() (string, error) {
