@@ -609,6 +609,88 @@ func (c *Client) UploadBinary(ctx context.Context, binPath, binSHA256, targetOS,
 	return &out, nil
 }
 
+// MACResponse mirrors the daemon's GET /v1/self/mac body.
+type MACResponse struct {
+	MAC       string `json:"mac"`
+	Interface string `json:"interface"`
+}
+
+// GetMAC fetches the peer's hardware address — specifically, the MAC
+// of the interface that owns the inbound TCP connection's local IP,
+// which is the MAC the controller wants for Wake-on-LAN. Returns the
+// daemon's 404 "no_mac" as a wrapped error when the peer has no
+// usable non-loopback NIC.
+func (c *Client) GetMAC(ctx context.Context) (*MACResponse, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/self/mac", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("GET /v1/self/mac", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("GET /v1/self/mac: read body", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.httpErr("GET /v1/self/mac", resp.StatusCode, body)
+	}
+	var out MACResponse
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, c.wrap("GET /v1/self/mac: decode", err)
+	}
+	return &out, nil
+}
+
+// ShutdownResponse mirrors the daemon's 202 JSON from
+// POST /v1/self/shutdown.
+type ShutdownResponse struct {
+	DaemonPID      int `json:"daemon_pid"`
+	ScheduledInSec int `json:"scheduled_in_sec"`
+}
+
+// Shutdown asks the peer to power off. Returns 202 BEFORE the
+// shutdown actually runs (mirrors SelfReplace's pre-exec ack pattern)
+// — the caller should not expect any liveness signal from the peer
+// afterwards. The daemon refuses with 409 runs_in_flight when an
+// active run is in progress unless force is true.
+func (c *Client) Shutdown(ctx context.Context, force bool) (*ShutdownResponse, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	body, err := json.Marshal(struct {
+		Force bool `json:"force,omitempty"`
+	}{force})
+	if err != nil {
+		return nil, c.wrap("POST /v1/self/shutdown: marshal", err)
+	}
+	req, err := c.authReq(ctx, http.MethodPost, c.BaseURL+"/v1/self/shutdown", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, c.wrap("POST /v1/self/shutdown", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	respBody, err := readSmallBody(resp)
+	if err != nil {
+		return nil, c.wrap("POST /v1/self/shutdown: read body", err)
+	}
+	if resp.StatusCode != http.StatusAccepted {
+		return nil, c.httpErr("POST /v1/self/shutdown", resp.StatusCode, respBody)
+	}
+	var out ShutdownResponse
+	if err := json.Unmarshal(respBody, &out); err != nil {
+		return nil, c.wrap("POST /v1/self/shutdown: decode", err)
+	}
+	return &out, nil
+}
+
 // SelfReplaceResponse mirrors the daemon's 202 JSON from
 // POST /v1/self/replace.
 type SelfReplaceResponse struct {

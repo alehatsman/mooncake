@@ -39,6 +39,9 @@ func fleetCommand() *cli.Command {
 			fleetDiscoverCommand(),
 			fleetInitCommand(),
 			fleetUpgradeCommand(),
+			fleetShutdownCommand(),
+			fleetUpCommand(),
+			fleetMACRefreshCommand(),
 		},
 	}
 }

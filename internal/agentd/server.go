@@ -324,6 +324,8 @@ func (s *Server) routes() *http.ServeMux {
 	mux.HandleFunc("HEAD /v1/files", s.headFileHandler)
 	mux.HandleFunc("PUT /v1/self/binary", s.selfBinaryHandler)
 	mux.HandleFunc("POST /v1/self/replace", s.selfReplaceHandler)
+	mux.HandleFunc("GET /v1/self/mac", s.selfMACHandler)
+	mux.HandleFunc("POST /v1/self/shutdown", s.selfShutdownHandler)
 	mux.HandleFunc("/", notFoundHandler)
 	return mux
 }

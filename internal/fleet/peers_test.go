@@ -156,6 +156,44 @@ func TestPeer_Validate_AcceptsValid(t *testing.T) {
 	}
 }
 
+func TestPeer_Validate_NormalizesMAC(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"AA:BB:CC:DD:EE:FF", "aa:bb:cc:dd:ee:ff"},
+		{"aa-bb-cc-dd-ee-ff", "aa:bb:cc:dd:ee:ff"},
+		{"  aa:bb:cc:dd:ee:ff  ", "aa:bb:cc:dd:ee:ff"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			p := Peer{Name: "ok", Addr: "h:1", Token: "t", MAC: tc.in}
+			if err := p.Validate(); err != nil {
+				t.Fatalf("Validate: %v", err)
+			}
+			if p.MAC != tc.want {
+				t.Errorf("MAC = %q, want %q", p.MAC, tc.want)
+			}
+		})
+	}
+}
+
+func TestPeer_Validate_RejectsBadMAC(t *testing.T) {
+	cases := []string{
+		"not a mac",
+		"aa:bb:cc:dd:ee",          // five octets
+		"01:02:03:04:05:06:07:08", // EUI-64 (8 bytes) — rejected: WoL only defines 6-byte MACs
+	}
+	for _, tc := range cases {
+		t.Run(tc, func(t *testing.T) {
+			p := Peer{Name: "ok", Addr: "h:1", Token: "t", MAC: tc}
+			if err := p.Validate(); err == nil {
+				t.Fatalf("want error for MAC %q, got nil", tc)
+			}
+		})
+	}
+}
+
 func TestConfig_Validate_RejectsDuplicates(t *testing.T) {
 	cfg := &Config{Peers: []Peer{
 		{Name: "x", Addr: "h:1", Token: "t"},
