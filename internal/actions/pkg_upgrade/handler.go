@@ -349,12 +349,9 @@ func realAptAutoremove() error {
 func realDnfUpgrade(names []string) error {
 	bin := dnfBinary()
 	args := append([]string{"upgrade", "-y"}, names...)
-	// #nosec G204 -- args derived from validated YAML names.
-	cmd := exec.Command(bin, args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, bin, args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
@@ -366,13 +363,9 @@ func realDnfUpgrade(names []string) error {
 // realDnfAutoremove shells out to `dnf autoremove -y`. Available on
 // dnf since RHEL 8 + Fedora; yum (RHEL 7) supports the same verb.
 func realDnfAutoremove() error {
-	bin := dnfBinary()
-	// #nosec G204 -- fixed dnf/yum binary.
-	cmd := exec.Command(bin, "autoremove", "-y")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, dnfBinary(), "autoremove", "-y")
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
@@ -406,19 +399,13 @@ func dnfBinary() string {
 // --noconfirm is required for non-interactive operation; without it
 // pacman will prompt for confirmation and block the apply.
 func realPacmanUpgrade(names []string) error {
-	var cmd *exec.Cmd
-	if len(names) == 0 {
-		// #nosec G204 -- fixed pacman binary, fixed args.
-		cmd = exec.Command("pacman", "-Syu", "--noconfirm")
-	} else {
-		args := append([]string{"-S", "--noconfirm"}, names...)
-		// #nosec G204 -- args derived from validated YAML names.
-		cmd = exec.Command("pacman", args...)
+	args := []string{"-Syu", "--noconfirm"}
+	if len(names) > 0 {
+		args = append([]string{"-S", "--noconfirm"}, names...)
 	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "pacman", args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
@@ -465,12 +452,9 @@ func realPacmanAutoremove() error {
 	}
 	// Step 2: remove orphans + their unused deps + config files.
 	args := append([]string{"-Rns", "--noconfirm"}, orphans...)
-	// #nosec G204 -- orphans came from pacman -Qtdq, validated package names.
-	rm := exec.Command("pacman", args...)
-	var rmStderr bytes.Buffer
-	rm.Stderr = &rmStderr
-	if err := rm.Run(); err != nil {
-		msg := strings.TrimSpace(rmStderr.String())
+	out, err := privRunner.Run(nil, "pacman", args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
