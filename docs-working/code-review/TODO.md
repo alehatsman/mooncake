@@ -8,11 +8,12 @@ Queue**, produces a finding (or several), and the queue updates.
 | | Count |
 |---|---:|
 | ✅ Findings filed and resolved (F001–F047, F036 skipped) | **46** |
-| 🟡 Findings open / in progress | **0** |
+| 🟡 Findings open / in progress | **1** (F048) |
 | 📋 Packages still queued for review | see below |
 
-**All filed findings are done.** Nothing in this folder needs
-fixing. The remaining work is *review*: read more packages,
+**One finding open**: F048 (fleet machine manifest YAML strictness).
+Rest of the queue is *review* work — read more packages, file new
+findings if you spot smells. The remaining work is *review*: read more packages,
 file new findings if you spot smells. The companion manual-test
 queue at `docs-working/archive/analysis/findings-2026-05-15/` is
 also closed — see that folder's README.
@@ -63,6 +64,7 @@ also closed — see that folder's README.
 | F041 | artifact_capture.readFileContent unbounded read | smell | **done** | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
 | F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
 | F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
+| F048 | fleet machine manifest YAML non-strict | bug | **open** | [findings/F048](./findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
 
 ## Still to review
 
@@ -72,9 +74,9 @@ Packages no reviewer has read in this pass. Absence of findings
 
 | # | Package / area | Notes |
 |---|---|---|
-| 1 | `internal/fleet/machine.go` | bootstrap-target lookup; recent churn |
+| 1 | ~~`internal/fleet/machine.go`~~ | reviewed 2026-05-17 → F048 (non-strict YAML) |
 | 2 | `internal/fleet/bootstrap_windows_target.go` | Windows-only; not exercised on Linux CI |
-| 3 | `internal/agentd/persistence.go` | the one agentd file not read; ULID/atomic-write disciplines done in `store.go` need confirming here |
+| 3 | `internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}.go` | not read in the original pass; `self_mac` + `self_shutdown*` are brand-new from the fleet WoL+shutdown work landing 2026-05-17 |
 | 4 | `internal/presets/registry` (rest) | only `remote.go` covered (via F012); loader / validator / expander unread |
 | 5 | `internal/actions/git_*` (except `git_clone`) | `git_checkout`, `git_config` — Reverse-capture pattern landed here, worth a read |
 | 6 | `internal/actions/os_*` (except `service`, `systemd`, `ssh_key`) | `os_user`, `os_group`, `os_cron`, `os_mount`, `os_sysctl`, `os_firewall` — darwin parity just landed, skim for shared smells |
@@ -128,6 +130,7 @@ Packages no reviewer has read in this pass. Absence of findings
 | 2026-05-16 | `internal/actions/os_ssh_key` | F035 (silent ownership failure) |
 | 2026-05-16 | `internal/actions/container_image` | none locally (F016-family ctx.Background, already tracked) |
 | 2026-05-16 | `internal/agent/loop.go` | F039 (defer-in-loop, 0644 plan files, silent save errors) |
+| 2026-05-17 | `internal/fleet/machine.go` | F048 (non-strict YAML — fleet.yml silently accepts unknown fields) |
 
 ## Cross-cutting themes / patterns to track
 
