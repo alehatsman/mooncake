@@ -8,7 +8,9 @@
 # Quick reference:
 #   task                  # list available tasks
 #   task install-tools    # install every static-analysis tool the project needs
-#   task ci               # full pre-commit gate: build + test + lint + scan + analysis + arch
+#   task ci               # full pre-push gate: build + test + lint + scan + analysis + arch
+#   task ci:fast          # fast pre-commit gate: vet + fmt + ai-lint + budget
+#   task ai-lint          # AI-smell sweep on staged Go files
 #   task build / test / lint / scan
 version: '3'
 
@@ -161,13 +163,79 @@ tasks:
     silent: true
 
   # ---------------------------------------------------------------------------
-  # CI — the one command that runs everything an agent should green
-  # before committing. Steps run in dependency order; first failure stops
-  # the pipeline and exits non-zero. Echoes a per-stage banner so the
-  # output is easy to scan in CI logs and pre-commit transcripts.
+  # AI-smell sweep — patterns LLM agents tend to leave behind (stub panics,
+  # agent-tagged TODOs, comments that reference the prompt). Runs as part
+  # of `ci:fast` on pre-commit. See scripts/ai-lint.sh for the rule list
+  # and the rationale for what's intentionally NOT flagged.
+  # ---------------------------------------------------------------------------
+  ai-lint:
+    desc: 'AI-smell sweep on staged Go files (stub panics, agent TODOs, prompt artifacts)'
+    cmds:
+      - bash ./scripts/ai-lint.sh
+
+  ai-lint-all:
+    desc: 'AI-smell sweep on every tracked Go file'
+    cmds:
+      - bash ./scripts/ai-lint.sh --all
+
+  # ---------------------------------------------------------------------------
+  # Fast gate — runs at pre-commit time. Cheap checks only (<5s on warm
+  # cache) so agents iterate without reaching for --no-verify. The
+  # heavyweight build + race tests + lint + scan live in `ci` and run at
+  # pre-push time.
+  # ---------------------------------------------------------------------------
+  ci:fast:
+    desc: 'Fast pre-commit gate: vet + gofmt (staged) + ai-lint (staged) + budget'
+    cmds:
+      - task: ci-fast:vet
+      - task: ci-fast:fmt
+      - task: ci-fast:ai-lint
+      - task: ci-fast:budget
+      - echo ""
+      - echo "✓ Fast checks green — full 'task ci' gate runs on push."
+
+  ci-fast:vet:
+    internal: true
+    cmds:
+      - 'echo "[1/4] go vet"'
+      - go vet {{.PKG}}
+
+  ci-fast:fmt:
+    internal: true
+    cmds:
+      - 'echo "[2/4] gofmt (staged Go files)"'
+      - |
+        staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go' || true)
+        if [ -z "$staged" ]; then echo "  (no staged Go files)"; exit 0; fi
+        bad=$(echo "$staged" | xargs gofmt -l 2>/dev/null || true)
+        if [ -n "$bad" ]; then
+          echo "  ✗ gofmt would change:" >&2
+          echo "$bad" | sed 's/^/    /' >&2
+          echo "  fix with: gofmt -w <files>" >&2
+          exit 1
+        fi
+        echo "  ✓ all staged files formatted"
+
+  ci-fast:ai-lint:
+    internal: true
+    cmds:
+      - 'echo "[3/4] ai-lint (staged Go files)"'
+      - bash ./scripts/ai-lint.sh
+
+  ci-fast:budget:
+    internal: true
+    cmds:
+      - 'echo "[4/4] CLAUDE.md soft-cap budget"'
+      - bash ./scripts/budget-status.sh | sed 's/^/  /'
+
+  # ---------------------------------------------------------------------------
+  # CI — the full gate. Runs at pre-push time (and in CI). Steps run in
+  # dependency order; first failure stops the pipeline and exits non-zero.
+  # Echoes a per-stage banner so the output is easy to scan in CI logs and
+  # pre-push transcripts.
   # ---------------------------------------------------------------------------
   ci:
-    desc: 'Full pre-commit gate: build + test-race + lint + scan + docs/schema + arch + budget + dupl'
+    desc: 'Full pre-push gate: build + test-race + lint + scan + docs/schema + arch + budget + dupl'
     cmds:
       - task: ci:build
       - task: ci:test
