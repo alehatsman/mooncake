@@ -2152,7 +2152,7 @@
     },
     "pkg.repo": {
       "type": "object",
-      "description": "Manage a third-party package repository (apt + brew taps; dnf deferred)",
+      "description": "Manage a third-party package repository (apt, dnf/yum, brew taps)",
       "properties": {
         "apt": {
           "type": "object",
@@ -2214,19 +2214,33 @@
           "type": "object",
           "properties": {
             "baseurl": {
-              "type": "string",
-              "minLength": 1
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
             },
             "gpg_check": {
               "type": "boolean"
             },
+            "gpg_key_fingerprint": {
+              "type": "string"
+            },
             "gpg_key_url": {
               "type": "string"
+            },
+            "metalink": {
+              "type": "string"
+            },
+            "mirrorlist": {
+              "type": "string"
+            },
+            "update_cache": {
+              "type": "boolean"
             }
           },
-          "required": [
-            "baseurl"
-          ],
           "additionalProperties": false
         },
         "name": {
@@ -2814,7 +2828,7 @@
           "$ref": "#/definitions/pkg.list"
         },
         "pkg.repo": {
-          "description": "Manage a third-party package repository (apt + brew taps; dnf deferred)",
+          "description": "Manage a third-party package repository (apt, dnf/yum, brew taps)",
           "$ref": "#/definitions/pkg.repo"
         },
         "pkg.upgrade": {

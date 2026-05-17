@@ -1,8 +1,11 @@
 // Package pkg_repo implements the pkg.repo action: declarative
-// third-party package repository management. v1 ships an apt driver
-// (DEB822 source list + keyring) and a brew driver for taps (macOS
-// + Homebrew on Linux); the dnf block is accepted in YAML but
-// returns a clear "not yet implemented" error.
+// third-party package repository management. Ships three drivers:
+//   - apt: DEB822 source list at /etc/apt/sources.list.d/<name>.sources +
+//     keyring at /etc/apt/keyrings/<name>.gpg (Debian / Ubuntu).
+//   - dnf: INI .repo file at /etc/yum.repos.d/<name>.repo + keyring at
+//     /etc/pki/rpm-gpg/RPM-GPG-KEY-<name> (Fedora / RHEL / Rocky /
+//     AlmaLinux / Amazon Linux).
+//   - brew: Homebrew tap (macOS + Homebrew on Linux).
 //
 //nolint:revive // Package name matches action name convention (pkg_repo)
 package pkg_repo
@@ -76,7 +79,7 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Manage a third-party package repository (apt + brew taps; dnf deferred)",
+		Description:        "Manage a third-party package repository (apt, dnf/yum, brew taps)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
@@ -92,12 +95,12 @@ var nameRE = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
 // Permissions implements actions.Permitter (spec-22 phase 3).
 //
-// Per-driver: apt writes under /etc and uses sudo + apt-get; brew
-// runs as the invoking user against the Homebrew prefix (no sudo)
-// and reaches the network on every `brew tap` (it fetches the tap's
-// git remote). Defaults to the apt shape when no driver block is
-// set so a malformed step still surfaces an apt-flavoured
-// permission preflight.
+// Per-driver: apt writes under /etc and uses sudo + apt-get; dnf
+// writes under /etc and uses sudo + dnf/yum; brew runs as the
+// invoking user against the Homebrew prefix (no sudo) and reaches
+// the network on every `brew tap` (it fetches the tap's git remote).
+// Defaults to the apt shape when no driver block is set so a
+// malformed step still surfaces an apt-flavoured permission preflight.
 func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	if step == nil || step.PkgRepo == nil {
 		return actions.PermissionSet{
@@ -121,6 +124,20 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 			RequiredBinaries: []string{"brew"},
 		}
 	}
+	if r.Dnf != nil {
+		ps := actions.PermissionSet{
+			Sudo:             true,
+			RequiredBinaries: []string{"dnf"},
+			FilesystemWrite: []string{
+				dnf.reposDir + "/" + r.Name + ".repo",
+				dnf.keyringDir + "/RPM-GPG-KEY-" + r.Name,
+			},
+		}
+		if state == statePresent && r.Dnf.GPGKeyURL != "" {
+			ps.Network = true
+		}
+		return ps
+	}
 	ps := actions.PermissionSet{
 		Sudo:             true,
 		RequiredBinaries: []string{"apt-get"},
@@ -128,8 +145,6 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	if state == statePresent && r.Apt != nil && r.Apt.GPGKeyURL != "" {
 		ps.Network = true
 	}
-	// FilesystemWrite lists the canonical apt paths; dnf is a
-	// reserved driver and we don't pretend to know its layout yet.
 	ps.FilesystemWrite = []string{
 		apt.sourcesDir + "/" + r.Name + ".sources",
 		apt.keyringsDir + "/" + r.Name + ".gpg",
@@ -181,6 +196,27 @@ func (h *Handler) Validate(step *config.Step) error {
 			}
 		}
 	}
+	if r.Dnf != nil && state == statePresent {
+		sources := 0
+		if strings.TrimSpace(r.Dnf.BaseURL) != "" {
+			sources++
+		}
+		if strings.TrimSpace(r.Dnf.Metalink) != "" {
+			sources++
+		}
+		if strings.TrimSpace(r.Dnf.Mirrorlist) != "" {
+			sources++
+		}
+		if sources == 0 {
+			return fmt.Errorf("pkg.repo.dnf: one of baseurl/metalink/mirrorlist is required when state=present")
+		}
+		if sources > 1 {
+			return fmt.Errorf("pkg.repo.dnf: only one of baseurl/metalink/mirrorlist may be set per step")
+		}
+		if r.Dnf.GPGKeyURL != "" && dnfGPGCheckEnabled(r.Dnf) && strings.TrimSpace(r.Dnf.GPGKeyFingerprint) == "" {
+			return fmt.Errorf("pkg.repo.dnf: gpg_key_fingerprint is required when gpg_check is true (set gpg_check: false to opt out)")
+		}
+	}
 	if r.Brew != nil && state == statePresent {
 		// state=absent is allowed without a tap name only because
 		// state=absent without a name doesn't make sense generally —
@@ -201,7 +237,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result.Checkable = true
 
 	if r.Dnf != nil {
-		return result, fmt.Errorf("pkg.repo: dnf driver is not yet implemented (apt + brew supported)")
+		return runDnf(ctx, r, result)
 	}
 	if r.Brew != nil {
 		return runBrew(ctx, r, result)

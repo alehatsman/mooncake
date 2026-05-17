@@ -331,22 +331,11 @@ func TestPlan_DoesNotWrite(t *testing.T) {
 	}
 }
 
-// TestDnf_ReturnClearError — dnf driver is still deferred; the
-// handler must surface a clean "not yet implemented" message
-// instead of a hidden nil-pointer or an apt fallback. The brew
-// branch of this test moved to brew_test.go once the proposal-08
-// driver shipped (see TestBrew_*).
-func TestDnf_ReturnClearError(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
-	_ = newStubFS(t)
-	step := &config.Step{PkgRepo: &config.PkgRepo{Name: "x", Dnf: &config.PkgRepoDnf{BaseURL: "https://x"}}}
-	_, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err == nil || !strings.Contains(err.Error(), "dnf driver is not yet implemented") {
-		t.Errorf("expected dnf not-implemented error; got %v", err)
-	}
-}
+// Dnf driver shipped 2026-05-17 — see TestDnf_* in dnf_test.go for
+// the per-operation coverage. The original `TestDnf_ReturnClearError`
+// (which pinned the "not yet implemented" stub) was removed when the
+// driver landed; if dnf ever needs a temporary kill-switch the test
+// should live alongside that switch's commit, not here.
 
 // TestApply_FingerprintMismatchRefuses — F034. When the operator
 // supplies a `gpg_key_fingerprint` and the fetched key doesn't carry
