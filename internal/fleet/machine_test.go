@@ -177,3 +177,54 @@ func TestLoadMachineManifest_MalformedYAMLErrors(t *testing.T) {
 		t.Fatalf("expected parse error")
 	}
 }
+
+// TestLoadMachineManifest_StrictRejectsUnknownPhaseField is the
+// F048 regression. yaml.Unmarshal accepts unknown fields silently;
+// the strict decoder rejects them. Without this guard, a typo like
+// `vrs:` (intended: `vars:`) loads a phase with an empty Vars
+// slice and the plan runs without the shared variables — a quiet
+// failure mode that surfaces as "the wrong values were templated"
+// hours later.
+func TestLoadMachineManifest_StrictRejectsUnknownPhaseField(t *testing.T) {
+	root := t.TempDir()
+	body := `phases:
+  - name: bad-typo
+    peer: box1
+    plan: ./win.yml
+    vrs:
+      - ./shared-vars.yml
+`
+	path := writeMachineFile(t, root, "m", MachineManifestName, body)
+	_, err := LoadMachineManifest(path)
+	if err == nil {
+		t.Fatal("expected error for unknown field `vrs:`; got nil")
+	}
+	// yaml.v3's strict-decode error mentions the bad field name in
+	// the form `field vrs not found in type ...`. Substring-checking
+	// the field name is enough to confirm the message is actionable.
+	if !strings.Contains(err.Error(), "vrs") {
+		t.Errorf("error must mention the bad field name `vrs`; got: %v", err)
+	}
+}
+
+// TestLoadMachineManifest_StrictRejectsUnknownTopLevelField pairs
+// with the phase-field test: catches typos at the manifest's top
+// level (e.g. `phasses:` for `phases:`). yaml.v3 walks the type
+// tree in field order, so this case proves the strict mode is
+// applied to the outer struct as well as nested ones.
+func TestLoadMachineManifest_StrictRejectsUnknownTopLevelField(t *testing.T) {
+	root := t.TempDir()
+	body := `phasses:
+  - name: x
+    peer: y
+    plan: ./z.yml
+`
+	path := writeMachineFile(t, root, "m", MachineManifestName, body)
+	_, err := LoadMachineManifest(path)
+	if err == nil {
+		t.Fatal("expected error for unknown top-level field `phasses:`; got nil")
+	}
+	if !strings.Contains(err.Error(), "phasses") {
+		t.Errorf("error must mention `phasses`; got: %v", err)
+	}
+}

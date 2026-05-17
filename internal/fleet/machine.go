@@ -1,8 +1,10 @@
 package fleet
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -79,13 +81,22 @@ func LookupMachineManifest(planDir, machine string) (path string, found bool, er
 // Returns a fully-resolved manifest where each Plan / Vars entry is an
 // absolute path on the controller (so callers don't need to remember the
 // manifest's own location to compose paths downstream).
+//
+// Parsing is strict: unknown top-level or per-phase fields fail with a
+// `field <name> not found in type` error rather than silently zero-
+// valuing. This mirrors `internal/config/reader.go`'s plan-side
+// behaviour and catches operator typos (`vrs:` for `vars:`,
+// `peers:` for `peer:`) at load time instead of letting them produce
+// a manifest that runs the wrong machine config. F048.
 func LoadMachineManifest(path string) (*MachineManifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 	var m MachineManifest
-	if err := yaml.Unmarshal(data, &m); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(&m); err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
 	if err := m.Validate(); err != nil {

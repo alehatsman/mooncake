@@ -5,7 +5,9 @@ severity: bug
 package: internal/fleet
 file: internal/fleet/machine.go
 lines: 82-104
-status: open
+status: done
+fixed: 2026-05-17 — `LoadMachineManifest` switched from `yaml.Unmarshal` to `yaml.NewDecoder(bytes.NewReader(data))` with `dec.KnownFields(true)`. Mirrors `internal/config/reader.go`'s plan-side strictness so the manifest parser fails fast on unknown fields instead of silently zero-valuing them. The `errors.Is(err, io.EOF)` guard handles the empty-document edge case the strict decoder also raises.
+verified: 2026-05-17 — two regression tests in `internal/fleet/machine_test.go` pin the new behaviour: `TestLoadMachineManifest_StrictRejectsUnknownPhaseField` reproduces the finding's `vrs:`-for-`vars:` typo and asserts the error mentions the bad field name; `TestLoadMachineManifest_StrictRejectsUnknownTopLevelField` covers the same class at the manifest's top level (`phasses:` for `phases:`). Both fail without the strict-decoder change. Pre-existing `TestLoadMachineManifest_*` tests still pass — known-good manifests are unaffected.
 ---
 
 ## What
