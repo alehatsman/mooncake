@@ -133,6 +133,15 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` on a pkg.upgrade step actually retries — useful when an
+// apt mirror flakes or a dpkg lock is briefly held. Run is
+// idempotent in practice (apt-get upgrade is no-op when nothing's
+// pending; brew/dnf/pacman same).
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	p := step.PkgUpgrade
 	result := executor.NewResult()

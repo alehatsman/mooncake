@@ -712,6 +712,14 @@ func (h *Handler) buildUpgradeCommand(manager string, extra []string) []string {
 //
 // The shared preamble (manager detection, package-list building,
 // template rendering, state normalization) runs once for both modes,
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` on a pkg step actually retries — useful when apt locks
+// or mirror flakes cause transient failures. Run is idempotent
+// (state=present skips already-installed pkgs).
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 // eliminating any chance of the plan preview disagreeing with what
 // execute would actually do.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {

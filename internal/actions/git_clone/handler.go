@@ -84,6 +84,16 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
+// RunRaw signals to the executor that git.clone wants to participate
+// in spec-69's centralized retry. The clone operation is idempotent
+// (inspectDest short-circuits on an existing matching checkout), so
+// retrying after a transient network failure is safe and useful.
+// Users declaring `retry:` on git.clone in their YAML actually
+// retry now instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	g := step.GitClone
 
