@@ -169,15 +169,19 @@ func TestApply_ExplicitManagerApt(t *testing.T) {
 	}
 }
 
-func TestRun_OnlyAptSupported(t *testing.T) {
+// TestRun_UnsupportedManagerRejected — non-{apt,dnf,brew} routing
+// produces a clear error. The original "only apt is supported" test
+// became stale once the dnf driver shipped; now we just pin the
+// negative path against a manager we don't ship a driver for.
+func TestRun_UnsupportedManagerRejected(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
 	stubDpkgQuery(t, "")
-	step := &config.Step{PkgList: &config.PkgList{Manager: "dnf"}}
+	step := &config.Step{PkgList: &config.PkgList{Manager: "pacman"}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
-		t.Fatal("expected error for non-apt manager")
+		t.Fatal("expected error for unsupported manager")
 	}
 }
 
@@ -344,6 +348,220 @@ func TestParseBrewList_DirectShapes(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			got := parseBrewList(c.in, "brew")
+			if len(got) != len(c.wantNames) {
+				t.Fatalf("got %d, want %d: %v", len(got), len(c.wantNames), got)
+			}
+			for i, n := range c.wantNames {
+				if got[i]["name"] != n {
+					t.Errorf("[%d].name = %v, want %s", i, got[i]["name"], n)
+				}
+			}
+		})
+	}
+}
+
+// stubRpmQuery replaces the rpm binary call + makes lookPath resolve
+// `rpm` (but NOT `dpkg-query`, so auto-detection picks dnf instead of
+// falling through to apt). Mirrors stubBrewList.
+func stubRpmQuery(t *testing.T, stdout string) {
+	t.Helper()
+	origRpm := rpmQuery
+	origLook := lookPath
+	rpmQuery = func() (string, error) { return stdout, nil }
+	lookPath = func(name string) (string, error) {
+		if name == "rpm" {
+			return "/usr/bin/rpm", nil
+		}
+		return "", exec.ErrNotFound
+	}
+	t.Cleanup(func() {
+		rpmQuery = origRpm
+		lookPath = origLook
+	})
+}
+
+const sampleRpm = "bash\t5.1.8-9.el9\n" +
+	"curl\t7.76.1-26.el9_3.2\n" +
+	"\n" + // blank line ignored
+	"malformed-no-tab\n" + // skipped
+	"glibc\t2.34-83.el9_3.7\n" +
+	"systemd\t252-18.el9_3.4\n"
+
+// TestApply_Dnf_ReturnsSortedPackages — rpm detection + parse + sort.
+// Mirrors TestApply_ReturnsSortedPackages for the RHEL family. Stubs
+// make the test host-agnostic (runs on any Linux with go test).
+func TestApply_Dnf_ReturnsSortedPackages(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubRpmQuery(t, sampleRpm)
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Changed {
+		t.Errorf("pkg.list must never report Changed")
+	}
+	pkgs, ok := r.Data["packages"].([]map[string]interface{})
+	if !ok {
+		t.Fatalf("expected packages []map[string]interface{}; got %T", r.Data["packages"])
+	}
+	wantNames := []string{"bash", "curl", "glibc", "systemd"}
+	if len(pkgs) != len(wantNames) {
+		t.Fatalf("expected %d packages; got %d (%v)", len(wantNames), len(pkgs), pkgs)
+	}
+	for i, want := range wantNames {
+		if pkgs[i]["name"] != want {
+			t.Errorf("packages[%d].name = %v; want %s", i, pkgs[i]["name"], want)
+		}
+		if v, ok := pkgs[i]["version"].(string); !ok || v == "" {
+			t.Errorf("packages[%d].version missing", i)
+		}
+		if pkgs[i]["manager"] != "dnf" {
+			t.Errorf("packages[%d].manager = %v; want dnf", i, pkgs[i]["manager"])
+		}
+	}
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager fact = %v, want dnf", r.Data["manager"])
+	}
+}
+
+// TestApply_Dnf_VersionReleaseJoined — rpm versions are reported as
+// `version-release` (e.g. `5.1.8-9.el9`). The parser must keep them
+// joined; splitting on the dash would corrupt names containing dashes
+// in their version-release component.
+func TestApply_Dnf_VersionReleaseJoined(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubRpmQuery(t, "openssl\t3.0.7-25.el9_3\n")
+	r := mustRun(t, false, &config.Step{PkgList: &config.PkgList{}})
+	pkgs := r.Data["packages"].([]map[string]interface{})
+	if len(pkgs) != 1 || pkgs[0]["version"] != "3.0.7-25.el9_3" {
+		t.Errorf("expected openssl 3.0.7-25.el9_3; got %v", pkgs)
+	}
+}
+
+// TestApply_ExplicitManagerDnf — explicit `manager: dnf` routes
+// through the rpm branch even when dpkg-query is on PATH.
+func TestApply_ExplicitManagerDnf(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubRpmQuery(t, "vim\t9.0.1879-1\n")
+	// Force lookPath to find BOTH binaries — explicit manager must
+	// win regardless of detection order.
+	origLook := lookPath
+	lookPath = func(_ string) (string, error) { return "/usr/bin/x", nil }
+	t.Cleanup(func() { lookPath = origLook })
+
+	step := &config.Step{PkgList: &config.PkgList{Manager: "dnf"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf", r.Data["manager"])
+	}
+}
+
+// TestApply_YumAlias — `manager: yum` is a synonym for `manager: dnf`
+// since rpm is the same database on both. The result canonicalizes to
+// "dnf" so downstream consumers don't need to handle two spellings.
+func TestApply_YumAlias(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubRpmQuery(t, "yum-utils\t4.3.0-13.el9\n")
+	origLook := lookPath
+	lookPath = func(_ string) (string, error) { return "/usr/bin/x", nil }
+	t.Cleanup(func() { lookPath = origLook })
+
+	step := &config.Step{PkgList: &config.PkgList{Manager: "yum"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf (yum canonicalizes to dnf)", r.Data["manager"])
+	}
+	pkgs := r.Data["packages"].([]map[string]interface{})
+	if len(pkgs) != 1 || pkgs[0]["manager"] != "dnf" {
+		t.Errorf("per-package manager should be dnf; got %v", pkgs)
+	}
+}
+
+// TestAutoDetect_DnfWhenNoApt — auto-detect picks dnf on a host with
+// rpm but no dpkg-query. Pins the order apt > dnf > brew so a Linux
+// box without apt routes to the rpm path instead of erroring.
+func TestAutoDetect_DnfWhenNoApt(t *testing.T) {
+	stubRpmQuery(t, "kernel\t5.14.0-362.18.1.el9_3\n")
+	// stubRpmQuery's lookPath only resolves `rpm`; dpkg-query + brew
+	// both return ErrNotFound. Auto-detect must land on dnf.
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf (auto-detect must fall through apt→dnf when apt is absent)", r.Data["manager"])
+	}
+}
+
+// TestAutoDetect_PrefersAptOverDnf — on the very rare host with BOTH
+// dpkg-query and rpm (e.g. someone running apt-rpm hybrid setups, or
+// a Debian-on-rpm experiment), apt wins. Symmetric to
+// TestAutoDetect_PrefersAptWhenBoth (apt vs brew).
+func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
+	stubDpkgQuery(t, "apt-pkg\t1.0\n")
+	rpmStub := func() (string, error) {
+		t.Errorf("rpm should not be queried when dpkg-query is available")
+		return "", nil
+	}
+	origRpm := rpmQuery
+	rpmQuery = rpmStub
+	t.Cleanup(func() { rpmQuery = origRpm })
+
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "apt" {
+		t.Errorf("manager = %v, want apt (auto-detect must prefer apt over dnf)", r.Data["manager"])
+	}
+}
+
+// TestPermissions_BinaryByManager — explicit manager: dnf advertises
+// `rpm`, manager: apt advertises `dpkg-query`. Closes the doctor-
+// preflight gap for dnf hosts that pre-fix would always report
+// dpkg-query missing.
+func TestPermissions_BinaryByManager(t *testing.T) {
+	cases := []struct {
+		manager string
+		wantBin string
+	}{
+		{"apt", "dpkg-query"},
+		{"dnf", "rpm"},
+		{"yum", "rpm"},
+		{"brew", "brew"},
+	}
+	for _, c := range cases {
+		t.Run(c.manager, func(t *testing.T) {
+			step := &config.Step{PkgList: &config.PkgList{Manager: c.manager}}
+			ps := Handler{}.Permissions(step)
+			if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != c.wantBin {
+				t.Errorf("manager=%s: RequiredBinaries = %v, want [%s]", c.manager, ps.RequiredBinaries, c.wantBin)
+			}
+		})
+	}
+}
+
+// TestParseRpmQuery_DirectShapes pins the parser without going
+// through Run, so output-format regressions surface at the parsing
+// level instead of as a mis-sorted Data["packages"].
+func TestParseRpmQuery_DirectShapes(t *testing.T) {
+	cases := []struct {
+		name      string
+		in        string
+		wantNames []string
+	}{
+		{"empty", "", nil},
+		{"single", "foo\t1.0-1\n", []string{"foo"}},
+		{"trailing newline", "foo\t1.0-1\nbar\t2.0-1\n", []string{"foo", "bar"}},
+		{"skip blank", "  \nfoo\t1.0-1\n", []string{"foo"}},
+		{"skip orphan", "noversion\nfoo\t1.0-1\n", []string{"foo"}},
+		{"dot-suffixed release", "openssl\t3.0.7-25.el9_3\n", []string{"openssl"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := parseRpmQuery(c.in, "dnf")
 			if len(got) != len(c.wantNames) {
 				t.Fatalf("got %d, want %d: %v", len(got), len(c.wantNames), got)
 			}

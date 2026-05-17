@@ -805,7 +805,7 @@ export interface PkgHoldAction {
 }
 
 /**
- * Return the installed packages and versions (read-only; apt on linux, brew on darwin)
+ * Return the installed packages and versions (read-only; apt + dnf on linux, brew on darwin)
  * 
  * @platforms linux, darwin
  * @category system
@@ -851,7 +851,7 @@ export interface PkgRepoAction {
 }
 
 /**
- * Upgrade named packages or all installed packages (apt on linux, brew on darwin)
+ * Upgrade named packages or all installed packages (apt + dnf on linux, brew on darwin)
  * 
  * @platforms linux, darwin
  * @requiresSudo true
@@ -1524,8 +1524,8 @@ export interface Step {
    */
   "pkg.hold"?: PkgHoldAction;
   /**
-   * Return the installed packages and versions (read-only; apt on linux,
-   * brew on darwin)
+   * Return the installed packages and versions (read-only; apt + dnf on
+   * linux, brew on darwin)
    */
   "pkg.list"?: PkgListAction;
   /**
@@ -1533,8 +1533,8 @@ export interface Step {
    */
   "pkg.repo"?: PkgRepoAction;
   /**
-   * Upgrade named packages or all installed packages (apt on linux, brew
-   * on darwin)
+   * Upgrade named packages or all installed packages (apt + dnf on linux,
+   * brew on darwin)
    */
   "pkg.upgrade"?: PkgUpgradeAction;
   /**

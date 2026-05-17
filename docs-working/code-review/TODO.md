@@ -3,21 +3,19 @@
 Living queue. Each iteration consumes one entry from **In progress /
 Queue**, produces a finding (or several), and the queue updates.
 
-> **Status 2026-05-17: all F001–F047 findings are status=done.** The
-> "Unblocked — ready for fix" table below is empty. Remaining queue
-> entries below are review-tasks (find new smells), not bugs with a
-> known fix. The companion manual-test queue at
-> `docs-working/archive/analysis/findings-2026-05-15/` is also closed —
-> see that folder's README for the rollup.
+## At-a-glance status (2026-05-17)
 
-## Unblocked — ready for fix
+| | Count |
+|---|---:|
+| ✅ Findings filed and resolved (F001–F047, F036 skipped) | **46** |
+| 🟡 Findings open / in progress | **0** |
+| 📋 Packages still queued for review | see below |
 
-Findings that have a complete fix description and don't depend on
-something else landing first.
-
-| ID | Title | Severity | Effort | Owner | Status |
-|---|---|---|---|---|---|
-| (empty) | All F-NNN findings are done as of 2026-05-17 | — | — | — | — |
+**All filed findings are done.** Nothing in this folder needs
+fixing. The remaining work is *review*: read more packages,
+file new findings if you spot smells. The companion manual-test
+queue at `docs-working/archive/analysis/findings-2026-05-15/` is
+also closed — see that folder's README.
 
 ## Findings index
 
@@ -66,47 +64,25 @@ something else landing first.
 | F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
 | F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
 
-## Queue (next iterations, priority order)
+## Still to review
 
-1. ~~`internal/actions/service`~~ — done in this iteration → F003, F004, F005.
-2. ~~`internal/actions/tool`~~ — done → F006, F007, F008.
-3. ~~`internal/explain` — `DisplayFacts`~~ — done → F009, F010.
-4. ~~`internal/config.Step`~~ — done → F013.
-5. ~~`internal/agentd/worker`~~ — done → F015, F016.
-6. ~~`internal/mcp/tools`~~ — done → F022 (NewTestLogger in
-   production). apply.Runner integration looks clean post-refactor.
-7. ~~`internal/executor/executor`~~ — partial → F017
-   (continue_on_error double-emit). Other extractions look clean.
-8. **`internal/fleet`** — biggest non-cmd package (4,245 LOC).
-   Partial: F014 (apply.go post-stream recovery). Rest of the
-   package (controller, bootstrap, multiplex, peers) still queued.
-9. **`internal/agentd`** — 3,100 LOC, growing fast in the last 24h.
-10. ~~`internal/plan`~~ — partial → F024 (walkAndRender same
-    closed-kind-set bug as F019, planner side).
-11. ~~`internal/apply/runner.go`~~ — done → F020 (signal-handler
-    hostile to embedded callers), F021 (Config.ExtraSubscribers
-    doc-drift).
-12. ~~`internal/actions/package`~~ — partial → F023
-    (template-render swallow). 901 LOC handler.go; runCmd
-    is another F005 hit (no IsBecomeSupported/SudoPass guards).
-    Per-package isPackageInstalled is a perf footgun on big
-    lists; track separately if it becomes a UX complaint.
-13. ~~`internal/actions/copy` after the migration~~ — done; clean
-    Run-only post-migration (283 LOC). F026 (unbounded ReadFile)
-    is a separate concern.
-14. ~~`internal/actions/file` after the migration~~ — done; clean
-    Run-only post-migration (515 LOC). F026 also applies here.
-15. **`cmd/`** — 10,022 LOC of CLI wiring. Spot-check the largest
-    files.
-16. ~~`internal/secrets/resolver`~~ — done → F019 (silent miss).
-17. ~~`internal/control`~~ — reviewed, no findings (clean
-    foundation-tier package).
-18. **`internal/plan/filter`** — new.
-19. **`internal/presets/registry`** — renamed but otherwise old.
-20. **Per-action handlers not above** — git_*, os_*, text_*, wait_*,
-    windows_*. Skim for shared smells.
-21. **`internal/snapshot`** — minimal_test recently churned.
-22. **Tests** — coverage gaps in changed packages.
+Packages no reviewer has read in this pass. Absence of findings
+≠ clean — just unread. Pick any entry, read it cold, file
+`findings/F<NNN>-<slug>.md` if you spot something.
+
+| # | Package / area | Notes |
+|---|---|---|
+| 1 | `internal/fleet/machine.go` | bootstrap-target lookup; recent churn |
+| 2 | `internal/fleet/bootstrap_windows_target.go` | Windows-only; not exercised on Linux CI |
+| 3 | `internal/agentd/persistence.go` | the one agentd file not read; ULID/atomic-write disciplines done in `store.go` need confirming here |
+| 4 | `internal/presets/registry` (rest) | only `remote.go` covered (via F012); loader / validator / expander unread |
+| 5 | `internal/actions/git_*` (except `git_clone`) | `git_checkout`, `git_config` — Reverse-capture pattern landed here, worth a read |
+| 6 | `internal/actions/os_*` (except `service`, `systemd`, `ssh_key`) | `os_user`, `os_group`, `os_cron`, `os_mount`, `os_sysctl`, `os_firewall` — darwin parity just landed, skim for shared smells |
+| 7 | `internal/actions/text_*` | `text_line`, `text_patch_ini`, `text_patch_yaml` (json done via F033) |
+| 8 | `internal/actions/wait_*` (except `wait_http`, `wait_command`) | `wait_file`, `wait_port` |
+| 9 | `internal/actions/windows_*` | `windows_firewall_rule`, `windows_scheduled_task` — shipped in spec-57, never reviewed |
+| 10 | `cmd/*` (rest of CLI wiring) | ~10K LOC. Only `cmd/presets.go` + `cmd/fleet.go::readToken` spot-checked. Big files: `mooncake.go`, `fleet.go`, `step.go`, `tool.go` |
+| 11 | Test-coverage gaps in churned packages | spec-66 wave 5, proposal-16 wave 3, R2.1c phase 2 — recently changed without tests catching up |
 
 ## Reviewed (done)
 

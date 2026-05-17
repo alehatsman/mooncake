@@ -165,9 +165,13 @@ func TestPlan_DoesNotInvoke(t *testing.T) {
 	}
 }
 
+// TestRun_UnsupportedManagerErrors — pacman / zypper / apk aren't
+// shipped yet; the error message names the supported set. The
+// pre-fix repro used `manager: dnf`, which became valid once the
+// dnf driver landed.
 func TestRun_UnsupportedManagerErrors(t *testing.T) {
 	_ = newStub(t)
-	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"x"}, Manager: "dnf"}}
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"x"}, Manager: "pacman"}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
 		t.Fatal("expected error for unsupported manager")
@@ -312,5 +316,175 @@ func TestMetadata_AdvertisesLinuxAndDarwin(t *testing.T) {
 		if !got[want] {
 			t.Errorf("SupportedPlatforms missing %s: %v", want, m.SupportedPlatforms)
 		}
+	}
+}
+
+// dnfStub captures the calls made through the dnf hooks. Parallel to
+// stub (apt) and brewStub.
+type dnfStub struct {
+	upgradeCalls    [][]string
+	autoremoveCalls int
+}
+
+// newDnfStub wires the dnf hooks + makes lookPath resolve `dnf` (and
+// nothing else). Apt-get + brew both report "not found" so
+// auto-detect picks dnf.
+func newDnfStub(t *testing.T) *dnfStub {
+	t.Helper()
+	s := &dnfStub{}
+	origUp := dnfUpgrade
+	origAr := dnfAutoremove
+	origLookPath := lookPath
+	dnfUpgrade = func(names []string) error {
+		cp := append([]string(nil), names...)
+		s.upgradeCalls = append(s.upgradeCalls, cp)
+		return nil
+	}
+	dnfAutoremove = func() error {
+		s.autoremoveCalls++
+		return nil
+	}
+	lookPath = func(name string) (string, error) {
+		if name == "dnf" {
+			return "/usr/bin/dnf", nil
+		}
+		return "", errNotFound{}
+	}
+	t.Cleanup(func() {
+		dnfUpgrade = origUp
+		dnfAutoremove = origAr
+		lookPath = origLookPath
+	})
+	return s
+}
+
+// TestApply_Dnf_NamedUpgrade — explicit subset upgrade through the
+// dnf driver. Mirrors TestApply_Brew_NamedUpgrade.
+func TestApply_Dnf_NamedUpgrade(t *testing.T) {
+	s := newDnfStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"bash", "openssl"}}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one dnf upgrade call; got %v", s.upgradeCalls)
+	}
+	got := s.upgradeCalls[0]
+	if len(got) != 2 || got[0] != "bash" || got[1] != "openssl" {
+		t.Errorf("expected [bash openssl]; got %v", got)
+	}
+	if s.autoremoveCalls != 0 {
+		t.Errorf("expected no autoremove; got %d", s.autoremoveCalls)
+	}
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager fact = %v, want dnf", r.Data["manager"])
+	}
+}
+
+// TestApply_Dnf_FullUpgrade_NoNames — Names empty → upgrade all.
+func TestApply_Dnf_FullUpgrade_NoNames(t *testing.T) {
+	s := newDnfStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one upgrade call; got %v", s.upgradeCalls)
+	}
+	if len(s.upgradeCalls[0]) != 0 {
+		t.Errorf("expected empty names slice (full upgrade); got %v", s.upgradeCalls[0])
+	}
+}
+
+// TestApply_Dnf_Autoremove — Autoremove: true triggers a follow-up
+// dnf autoremove call after the upgrade. Same shape as apt/brew.
+func TestApply_Dnf_Autoremove(t *testing.T) {
+	s := newDnfStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Autoremove: true}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if s.autoremoveCalls != 1 {
+		t.Errorf("expected one autoremove call; got %d", s.autoremoveCalls)
+	}
+}
+
+// TestApply_YumAlias — `manager: yum` is canonicalized to "dnf" in
+// the result. Same rpm-family driver; just the older CLI spelling.
+func TestApply_YumAlias(t *testing.T) {
+	s := newDnfStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Manager: "yum", Names: []string{"bash"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf (yum canonicalizes to dnf)", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestAutoDetect_PrefersAptOverDnf — multi-manager hosts (very rare
+// in the wild but possible with apt-rpm experiments or chroots): apt
+// still wins. Sentinel: dnf must not be touched.
+func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
+	s := newStub(t)
+	origDnf := dnfUpgrade
+	dnfUpgrade = func(names []string) error {
+		t.Errorf("dnf should not be invoked when apt-get is on PATH; got %v", names)
+		return nil
+	}
+	t.Cleanup(func() { dnfUpgrade = origDnf })
+
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"bash"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "apt" {
+		t.Errorf("manager = %v, want apt", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Errorf("expected apt upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestAutoDetect_DnfWhenNoApt — auto-detect lands on dnf on a host
+// with dnf but no apt. Pins the order apt > dnf > brew.
+func TestAutoDetect_DnfWhenNoApt(t *testing.T) {
+	s := newDnfStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"kernel"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Errorf("expected dnf upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestPermissions_BinaryByManager — explicit manager: dnf advertises
+// `dnf`; yum alias also advertises `dnf` (the binary preflight; yum
+// hosts auto-fall-through to yum at runtime). Apt + brew unchanged.
+func TestPermissions_BinaryByManager(t *testing.T) {
+	cases := []struct {
+		manager string
+		wantBin string
+	}{
+		{"apt", "apt-get"},
+		{"dnf", "dnf"},
+		{"yum", "dnf"},
+		{"brew", "brew"},
+	}
+	for _, c := range cases {
+		t.Run(c.manager, func(t *testing.T) {
+			step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Manager: c.manager}}
+			ps := Handler{}.Permissions(step)
+			if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != c.wantBin {
+				t.Errorf("manager=%s: RequiredBinaries = %v, want [%s]", c.manager, ps.RequiredBinaries, c.wantBin)
+			}
+			if !ps.Sudo || !ps.Network {
+				t.Errorf("manager=%s: Sudo + Network must remain true; got %+v", c.manager, ps)
+			}
+		})
 	}
 }
