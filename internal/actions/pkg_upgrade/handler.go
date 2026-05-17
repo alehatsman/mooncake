@@ -1,7 +1,8 @@
 // Package pkg_upgrade implements the pkg.upgrade action: upgrade
 // named packages or all packages, optionally followed by autoremove.
-// Ships an apt driver (apt-get upgrade / install --only-upgrade) and
-// a brew driver (brew upgrade, brew autoremove).
+// Ships an apt driver (apt-get upgrade / install --only-upgrade), a
+// dnf driver (dnf upgrade / dnf autoremove; yum fallback for RHEL 7),
+// and a brew driver (brew upgrade, brew autoremove).
 //
 // Per spec-24, upgrade is "partially idempotent": predicting whether
 // the manager would actually move a package without running it (or
@@ -30,6 +31,7 @@ import (
 const (
 	actionName  = "pkg.upgrade"
 	managerApt  = "apt"
+	managerDnf  = "dnf"
 	managerBrew = "brew"
 )
 
@@ -38,6 +40,8 @@ const (
 var (
 	aptUpgrade     = realAptUpgrade     // func(names []string) error
 	aptAutoremove  = realAptAutoremove  // func() error
+	dnfUpgrade     = realDnfUpgrade     // func(names []string) error
+	dnfAutoremove  = realDnfAutoremove  // func() error
 	brewUpgrade    = realBrewUpgrade    // func(names []string) error
 	brewAutoremove = realBrewAutoremove // func() error
 	lookPath       = exec.LookPath      // override in tests for manager detection
@@ -53,7 +57,7 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Upgrade named packages or all installed packages (apt on linux, brew on darwin)",
+		Description:        "Upgrade named packages or all installed packages (apt + dnf on linux, brew on darwin)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
@@ -71,12 +75,24 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // Sudo and Network always. Subset-upgrade (Names != nil) and
 // full-upgrade (Names empty) share the same permission surface —
 // both shell to the manager under sudo and pull from configured
-// repos. RequiredBinaries are host-correct: apt-get on linux, brew
-// on darwin.
-func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+// repos. RequiredBinaries follow the (explicit-or-default) manager:
+// apt-get for apt, dnf for dnf/yum, brew for brew. When manager: is
+// unset we fall back to the platform default (apt-get on linux, brew
+// on darwin); a RHEL host should make the manager explicit.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	bin := "apt-get"
 	if runtime.GOOS == "darwin" {
 		bin = "brew"
+	}
+	if step != nil && step.PkgUpgrade != nil {
+		switch strings.ToLower(strings.TrimSpace(step.PkgUpgrade.Manager)) {
+		case managerApt:
+			bin = "apt-get"
+		case managerDnf, "yum":
+			bin = "dnf"
+		case managerBrew:
+			bin = "brew"
+		}
 	}
 	return actions.PermissionSet{
 		Sudo:             true,
@@ -109,8 +125,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, err
 	}
-	if manager != managerApt && manager != managerBrew {
-		return result, fmt.Errorf("pkg.upgrade: unsupported manager %q (supported: apt, brew)", manager)
+	// Canonicalize the "yum" alias to "dnf" — rpm-family hosts run the
+	// same upgrade against the same database regardless of which CLI
+	// binary the operator referenced.
+	if manager == "yum" {
+		manager = managerDnf
+	}
+	if manager != managerApt && manager != managerDnf && manager != managerBrew {
+		return result, fmt.Errorf("pkg.upgrade: unsupported manager %q (supported: apt, dnf, brew)", manager)
 	}
 
 	names, err := renderNames(ctx, p)
@@ -192,9 +214,10 @@ func renderNames(ctx actions.Context, p *config.PkgUpgrade) ([]string, error) {
 }
 
 // resolveManager honours explicit manager, otherwise auto-detects.
-// Same precedence as pkg.list / pkg.hold: apt first (system-level,
-// authoritative on Debian-family hosts), brew second (per-user on
-// macOS, or Linuxbrew). Operators can override either way.
+// Precedence: apt > dnf > brew. Apt wins on Debian-family hosts
+// (authoritative system manager); dnf wins on RHEL-family hosts
+// (where apt-get is absent); brew wins on macOS or as a per-user
+// fallback. Operators can override with manager: in the YAML.
 func resolveManager(requested string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	if requested != "" {
@@ -203,10 +226,19 @@ func resolveManager(requested string) (string, error) {
 	if _, err := lookPath("apt-get"); err == nil {
 		return managerApt, nil
 	}
+	if _, err := lookPath("dnf"); err == nil {
+		return managerDnf, nil
+	}
+	if _, err := lookPath("yum"); err == nil {
+		// RHEL 7 hosts where dnf isn't on PATH yet — yum is the same
+		// upgrade vocabulary, just via the older CLI. Canonicalize
+		// upward so callers always see "dnf" in the result.
+		return managerDnf, nil
+	}
 	if _, err := lookPath("brew"); err == nil {
 		return managerBrew, nil
 	}
-	return "", fmt.Errorf("pkg.upgrade: cannot auto-detect package manager (no apt-get or brew on PATH); set manager explicitly")
+	return "", fmt.Errorf("pkg.upgrade: cannot auto-detect package manager (no apt-get, dnf, yum, or brew on PATH); set manager explicitly")
 }
 
 // runUpgrade dispatches to the per-manager upgrade hook. Keeps the
@@ -215,6 +247,8 @@ func runUpgrade(manager string, names []string) error {
 	switch manager {
 	case managerApt:
 		return aptUpgrade(names)
+	case managerDnf:
+		return dnfUpgrade(names)
 	case managerBrew:
 		return brewUpgrade(names)
 	}
@@ -225,6 +259,8 @@ func runAutoremove(manager string) error {
 	switch manager {
 	case managerApt:
 		return aptAutoremove()
+	case managerDnf:
+		return dnfAutoremove()
 	case managerBrew:
 		return brewAutoremove()
 	}
@@ -268,6 +304,65 @@ func realAptAutoremove() error {
 		return err
 	}
 	return nil
+}
+
+// realDnfUpgrade shells out to `dnf upgrade -y` (full) or
+// `dnf upgrade -y <name>...` (subset). Falls back to `yum` when dnf
+// isn't on PATH so the driver works on RHEL 7 hosts as well as
+// Fedora / RHEL 8+.
+//
+// Like apt + brew, the driver always invokes the manager and treats
+// success as Changed=true (per spec-24 "partially idempotent").
+// "Nothing to do" is a non-error in both dnf and yum, so the
+// no-actual-upgrade case still reports Changed=true — matches
+// caller expectations across managers.
+func realDnfUpgrade(names []string) error {
+	bin := dnfBinary()
+	args := append([]string{"upgrade", "-y"}, names...)
+	// #nosec G204 -- args derived from validated YAML names.
+	cmd := exec.Command(bin, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return fmt.Errorf("%w: %s", err, msg)
+		}
+		return err
+	}
+	return nil
+}
+
+// realDnfAutoremove shells out to `dnf autoremove -y`. Available on
+// dnf since RHEL 8 + Fedora; yum (RHEL 7) supports the same verb.
+func realDnfAutoremove() error {
+	bin := dnfBinary()
+	// #nosec G204 -- fixed dnf/yum binary.
+	cmd := exec.Command(bin, "autoremove", "-y")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return fmt.Errorf("%w: %s", err, msg)
+		}
+		return err
+	}
+	return nil
+}
+
+// dnfBinary returns "dnf" when on PATH, otherwise "yum" if yum is
+// present, otherwise "dnf" (so the resulting exec error message names
+// the modern manager). Kept tiny on purpose — the real preflight
+// happens at Permissions() time.
+func dnfBinary() string {
+	if _, err := lookPath("dnf"); err == nil {
+		return "dnf"
+	}
+	if _, err := lookPath("yum"); err == nil {
+		return "yum"
+	}
+	return "dnf"
 }
 
 // realBrewUpgrade shells out to `brew upgrade` (full) or
