@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/dscl"
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
@@ -155,28 +156,11 @@ func hasSystemFlag(args []string) bool {
 	return false
 }
 
-// nextAvailableGID walks `dscl . -list /Groups PrimaryGroupID` and
-// returns the lowest unused GID in [minBound, maxBound]. maxBound=0
-// means "no upper bound" (regular-group case).
+// nextAvailableGID returns the lowest unused GID in [minBound,
+// maxBound] via the shared dscl helper. maxBound=0 means "no upper
+// bound" (regular-group case).
 func nextAvailableGID(minBound, maxBound int) (int, error) {
-	out, err := capture(exec.Command("dscl", ".", "-list", "/Groups", "PrimaryGroupID"))
-	if err != nil {
-		return 0, fmt.Errorf("dscl list gids: %w", err)
-	}
-	used := map[int]bool{}
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
-		if fields := strings.Fields(line); len(fields) >= 2 {
-			if gid, err := strconv.Atoi(fields[1]); err == nil {
-				used[gid] = true
-			}
-		}
-	}
-	for gid := minBound; maxBound == 0 || gid <= maxBound; gid++ {
-		if !used[gid] {
-			return gid, nil
-		}
-	}
-	return 0, fmt.Errorf("no available GID in range [%d, %d]", minBound, maxBound)
+	return dscl.NextAvailableID("/Groups", "PrimaryGroupID", "GID", minBound, maxBound)
 }
 
 // dsclGroupRun is the write-side analogue of dsclGroupField. Goes
