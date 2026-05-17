@@ -205,6 +205,17 @@ func HandleService(step config.Step, ec *executor.ExecutionContext) error {
 	}
 }
 
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` on an os.service step actually retries — useful when a
+// systemctl race, slow unit startup, or transient PolicyKit denial
+// causes a flaky failure. Run handles its own escalation via
+// shared.BecomeAwareCommand (spec-69 phase-5-audit exemption — see
+// service/shared.go); RunRaw just opts the action into the
+// executor's centralized retry loop without disturbing that path.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 // Run is the unified entry point. Plan mode queries systemctl
 // is-active / is-enabled to predict state and enabled-flag changes,
 // and compares unit / dropin file contents against the rendered

@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/actions"
 )
 
 func init() {
@@ -149,7 +151,14 @@ func listUserLocalGroups(name string) ([]string, error) {
 	return groups, nil
 }
 
-func applyPlanWindows(plan computedPlan, current *userState, d desired) error {
+// applyPlanWindows accepts the spec-69 PrivilegedRunner argument for
+// signature parity with linux/darwin but ignores it. Windows admin
+// elevation isn't a sudo wrap; PowerShell escalates via UAC or
+// `runAs`, both of which the daemon process model handles outside
+// this action. `security.PrivilegedRunner.Run` on Windows would
+// return ErrBecomeUnsupported, so threading the runner through here
+// would break the existing PS-cmdlet path.
+func applyPlanWindows(_ actions.PrivilegedRunner, plan computedPlan, current *userState, d desired) error {
 	switch plan.operation {
 	case "create":
 		return createUserWindows(d)
