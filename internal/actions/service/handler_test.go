@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/service/darwin"
+	"github.com/alehatsman/mooncake/internal/actions/service/shared"
+	windowspkg "github.com/alehatsman/mooncake/internal/actions/service/windows"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -466,22 +468,20 @@ func TestGetLaunchdDomain(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			domain := getLaunchdDomain(tt.isSystem)
+			domain := darwin.GetDomain(tt.isSystem)
 
 			if tt.isSystem && domain != "system" {
-				t.Errorf("getLaunchdDomain(true) = %q, want 'system'", domain)
+				t.Errorf("darwin.GetDomain(true) = %q, want 'system'", domain)
 			}
 
 			if !tt.isSystem && !strings.HasPrefix(domain, "gui/") {
-				t.Errorf("getLaunchdDomain(false) = %q, want prefix 'gui/'", domain)
+				t.Errorf("darwin.GetDomain(false) = %q, want prefix 'gui/'", domain)
 			}
 		})
 	}
 }
 
 func TestGetLaunchdPlistPath(t *testing.T) {
-	ctx := newMockExecutionContext()
-
 	tests := []struct {
 		name        string
 		serviceName string
@@ -516,7 +516,7 @@ func TestGetLaunchdPlistPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := getLaunchdPlistPath(tt.serviceName, tt.unit, tt.isSystem, ctx)
+			path := darwin.GetPlistPath(tt.serviceName, tt.unit, tt.isSystem)
 
 			if !strings.Contains(path, tt.wantPattern) {
 				t.Errorf("getLaunchdPlistPath() = %q, want to contain %q", path, tt.wantPattern)
@@ -560,9 +560,9 @@ func TestParseFileMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseFileMode(tt.modeStr, tt.defaultMode)
+			got := shared.ParseFileMode(tt.modeStr, tt.defaultMode)
 			if got != tt.want {
-				t.Errorf("parseFileMode(%q, %o) = %o, want %o", tt.modeStr, tt.defaultMode, got, tt.want)
+				t.Errorf("shared.ParseFileMode(%q, %o) = %o, want %o", tt.modeStr, tt.defaultMode, got, tt.want)
 			}
 		})
 	}
@@ -572,13 +572,13 @@ func TestRenderTemplateOrContent_InlineContent(t *testing.T) {
 	ctx := newMockExecutionContext()
 	ctx.Scope.User["key"] = "value"
 
-	content, err := renderTemplateOrContent("", "static content", "test", ctx)
+	content, err := shared.RenderTemplateOrContent("", "static content", "test", ctx)
 	if err != nil {
-		t.Fatalf("renderTemplateOrContent() error = %v", err)
+		t.Fatalf("shared.RenderTemplateOrContent() error = %v", err)
 	}
 
 	if content != "static content" {
-		t.Errorf("renderTemplateOrContent() = %q, want 'static content'", content)
+		t.Errorf("shared.RenderTemplateOrContent() = %q, want 'static content'", content)
 	}
 }
 
@@ -586,22 +586,22 @@ func TestRenderTemplateOrContent_InlineContentWithTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 	ctx.Scope.User["key"] = "rendered_value"
 
-	content, err := renderTemplateOrContent("", "{{ key }}", "test", ctx)
+	content, err := shared.RenderTemplateOrContent("", "{{ key }}", "test", ctx)
 	if err != nil {
-		t.Fatalf("renderTemplateOrContent() error = %v", err)
+		t.Fatalf("shared.RenderTemplateOrContent() error = %v", err)
 	}
 
 	if content != "rendered_value" {
-		t.Errorf("renderTemplateOrContent() = %q, want 'rendered_value'", content)
+		t.Errorf("shared.RenderTemplateOrContent() = %q, want 'rendered_value'", content)
 	}
 }
 
 func TestRenderTemplateOrContent_NoContentOrTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
-	_, err := renderTemplateOrContent("", "", "test", ctx)
+	_, err := shared.RenderTemplateOrContent("", "", "test", ctx)
 	if err == nil {
-		t.Error("renderTemplateOrContent() should error when no content or template provided")
+		t.Error("shared.RenderTemplateOrContent() should error when no content or template provided")
 	}
 
 	if !strings.Contains(err.Error(), "either src_template or content is required") {
@@ -613,18 +613,18 @@ func TestRenderTemplateOrContent_TemplateFileNotFound(t *testing.T) {
 	ctx := newMockExecutionContext()
 	ctx.CurrentDir = "/tmp"
 
-	_, err := renderTemplateOrContent("/nonexistent/template.txt", "", "test", ctx)
+	_, err := shared.RenderTemplateOrContent("/nonexistent/template.txt", "", "test", ctx)
 	if err == nil {
-		t.Error("renderTemplateOrContent() should error when template file not found")
+		t.Error("shared.RenderTemplateOrContent() should error when template file not found")
 	}
 }
 
 func TestRenderTemplateOrContent_InvalidTemplate(t *testing.T) {
 	ctx := newMockExecutionContext()
 
-	_, err := renderTemplateOrContent("", "{{ invalid.syntax", "test", ctx)
+	_, err := shared.RenderTemplateOrContent("", "{{ invalid.syntax", "test", ctx)
 	if err == nil {
-		t.Error("renderTemplateOrContent() should error on invalid template syntax")
+		t.Error("shared.RenderTemplateOrContent() should error on invalid template syntax")
 	}
 }
 
@@ -721,21 +721,21 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 // TestHandleWindowsService_MissingServiceErrors pins the v1
 // behaviour now that windows is implemented: a service that
 // doesn't exist in SCM returns a SetupError with a clear hint
-// rather than silently no-op. Stubs windowsExec to simulate
+// rather than silently no-op. Stubs windowspkg.Exec to simulate
 // Get-Service returning empty (= missing service) so the test
 // runs on any CI host without needing a real PowerShell.
 func TestHandleWindowsService_MissingServiceErrors(t *testing.T) {
-	prev := windowsExec
-	windowsExec = func(string) (string, error) { return "", nil }
-	t.Cleanup(func() { windowsExec = prev })
+	prev := windowspkg.Exec
+	windowspkg.Exec = func(string) (string, error) { return "", nil }
+	t.Cleanup(func() { windowspkg.Exec = prev })
 
 	ctx := newMockExecutionContext()
 	step := config.Step{
 		OsService: &config.ServiceAction{Name: "test", State: "started"},
 	}
-	err := handleWindowsService("test", step.OsService, step, ctx)
+	err := windowspkg.Handle("test", step.OsService, step, ctx)
 	if err == nil {
-		t.Fatal("handleWindowsService() should error when service is missing")
+		t.Fatal("windowspkg.Handle() should error when service is missing")
 	}
 	if !strings.Contains(err.Error(), "not found") {
 		t.Errorf("Error should mention 'not found'; got: %v", err)
@@ -749,19 +749,19 @@ func TestMarkStepFailed(t *testing.T) {
 		As: "test_result",
 	}
 
-	markStepFailed(result, step, ctx)
+	shared.MarkStepFailed(result, step, ctx)
 
 	if !result.Failed {
-		t.Error("markStepFailed() should set Failed to true")
+		t.Error("shared.MarkStepFailed() should set Failed to true")
 	}
 
 	if result.Rc != 1 {
-		t.Errorf("markStepFailed() should set Rc to 1, got %d", result.Rc)
+		t.Errorf("shared.MarkStepFailed() should set Rc to 1, got %d", result.Rc)
 	}
 
 	// Check that result was registered in Scope.Results
 	if reg, ok := ctx.Scope.Results["test_result"]; !ok {
-		t.Error("markStepFailed() should register result")
+		t.Error("shared.MarkStepFailed() should register result")
 	} else if !reg.Failed {
 		t.Error("Registered result should have Failed=true")
 	}
@@ -772,179 +772,6 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-// Additional tests for uncovered functions
-
-func TestIsLaunchdServiceLoaded(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	step := config.Step{}
-
-	// Test with a service that doesn't exist
-	loaded, err := isLaunchdServiceLoaded("com.nonexistent.test", step, ctx)
-	if err != nil {
-		// Error is acceptable - launchctl might not work in test environment
-		t.Logf("isLaunchdServiceLoaded error (expected in test env): %v", err)
-	} else {
-		// Should return false for nonexistent service
-		if loaded {
-			t.Error("isLaunchdServiceLoaded() should return false for nonexistent service")
-		}
-	}
-}
-
-func TestLaunchdBootstrap(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	tmpDir := t.TempDir()
-	plistPath := filepath.Join(tmpDir, "test.plist")
-
-	// Create a minimal plist
-	plistContent := `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>com.test.bootstrap</string>
-</dict>
-</plist>`
-
-	err := os.WriteFile(plistPath, []byte(plistContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create plist: %v", err)
-	}
-
-	step := config.Step{}
-	// Try bootstrap - will fail but tests the code path
-	err = launchdBootstrap("gui/501", plistPath, step, ctx)
-	// Error expected in test environment
-	t.Logf("launchdBootstrap error (expected): %v", err)
-}
-
-func TestExecuteLaunchctlCommand_Error(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	step := config.Step{}
-
-	// Test with invalid command that should fail
-	err := executeLaunchctlCommand("invalid-subcommand", "gui/501", "/tmp/test.plist", step, ctx, nil, "success", "error")
-	if err == nil {
-		t.Log("executeLaunchctlCommand with invalid command succeeded (unexpected)")
-	} else {
-		t.Logf("executeLaunchctlCommand error (expected): %v", err)
-	}
-}
-
-func TestManageLaunchdServiceState_Started(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	tmpDir := t.TempDir()
-	plistPath := filepath.Join(tmpDir, "test-started.plist")
-
-	plistContent := `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>com.test.started</string>
-</dict>
-</plist>`
-
-	err := os.WriteFile(plistPath, []byte(plistContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create plist: %v", err)
-	}
-
-	step := config.Step{}
-	// Test starting service
-	changed, err := manageLaunchdServiceState("com.test.started", "gui/501/com.test.started", plistPath, "gui/501", ServiceStateStarted, false, step, ctx)
-	// Error expected in test environment
-	t.Logf("manageLaunchdServiceState result: changed=%v, err=%v", changed, err)
-}
-
-func TestManageLaunchdServiceEnabled(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	tmpDir := t.TempDir()
-	plistPath := filepath.Join(tmpDir, "test-enabled.plist")
-
-	plistContent := `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>com.test.enabled</string>
-</dict>
-</plist>`
-
-	err := os.WriteFile(plistPath, []byte(plistContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create plist: %v", err)
-	}
-
-	step := config.Step{}
-	// Test enabling service
-	changed, err := manageLaunchdServiceEnabled("gui/501/com.test.enabled", plistPath, "gui/501", true, false, step, ctx)
-	// Error expected in test environment
-	t.Logf("manageLaunchdServiceEnabled result: changed=%v, err=%v", changed, err)
-}
-
-func TestLaunchdBootout(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	step := config.Step{}
-
-	// Test bootout - will fail but tests the code path
-	err := launchdBootout("gui/501", "/tmp/nonexistent.plist", step, ctx)
-	// Error expected
-	t.Logf("launchdBootout error (expected): %v", err)
-}
-
-func TestLaunchdKickstart(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	step := config.Step{}
-
-	// Test kickstart - will fail but tests the code path
-	err := launchdKickstart("gui/501/com.test.service", false, step, ctx)
-	// Error expected
-	t.Logf("launchdKickstart error (expected): %v", err)
-}
-
-func TestLaunchdKill(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Skipping launchd test on non-macOS")
-	}
-
-	ctx := newMockExecutionContext()
-	step := config.Step{}
-
-	// Test kill - will fail but tests the code path
-	err := launchdKill("gui/501/com.test.service", step, ctx)
-	// Error expected
-	t.Logf("launchdKill error (expected): %v", err)
-}
-
 // TestWrapBecomeErrorAsSetup locks the F005-final-mile error translation
 // shape: security.ErrBecomeUnsupported / security.ErrBecomeNoSudoPass
 // must become *executor.SetupError with the historical Component values
@@ -952,7 +779,7 @@ func TestLaunchdKill(t *testing.T) {
 // error passes through unchanged.
 func TestWrapBecomeErrorAsSetup(t *testing.T) {
 	t.Run("ErrBecomeUnsupported -> SetupError component=become", func(t *testing.T) {
-		got := wrapBecomeErrorAsSetup(fmt.Errorf("wrapped: %w", security.ErrBecomeUnsupported))
+		got := shared.WrapBecomeErrorAsSetup(fmt.Errorf("wrapped: %w", security.ErrBecomeUnsupported))
 		var setupErr *executor.SetupError
 		if !errors.As(got, &setupErr) {
 			t.Fatalf("want *executor.SetupError, got %T (%v)", got, got)
@@ -966,7 +793,7 @@ func TestWrapBecomeErrorAsSetup(t *testing.T) {
 	})
 
 	t.Run("ErrBecomeNoSudoPass -> SetupError component=sudo", func(t *testing.T) {
-		got := wrapBecomeErrorAsSetup(security.ErrBecomeNoSudoPass)
+		got := shared.WrapBecomeErrorAsSetup(security.ErrBecomeNoSudoPass)
 		var setupErr *executor.SetupError
 		if !errors.As(got, &setupErr) {
 			t.Fatalf("want *executor.SetupError, got %T (%v)", got, got)
@@ -981,7 +808,7 @@ func TestWrapBecomeErrorAsSetup(t *testing.T) {
 
 	t.Run("unrelated error passes through", func(t *testing.T) {
 		orig := errors.New("disk full")
-		got := wrapBecomeErrorAsSetup(orig)
+		got := shared.WrapBecomeErrorAsSetup(orig)
 		if !errors.Is(got, orig) {
 			t.Errorf("want passthrough of original error, got %v", got)
 		}
