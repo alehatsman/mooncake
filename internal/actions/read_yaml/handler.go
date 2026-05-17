@@ -10,14 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/read_common"
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 const actionName = "read.yaml"
@@ -47,52 +45,7 @@ func (Handler) Validate(step *config.Step) error {
 }
 
 func (h Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	rf := step.ReadYAML
-	patterns, err := read_common.CompileRedactPatterns(rf.Redact)
-	if err != nil {
-		return nil, err
-	}
-	maxBytes := int64(0)
-	if rf.MaxBytes != nil {
-		maxBytes = *rf.MaxBytes
-	}
-
-	result := executor.NewResult()
-	result.StartTime = time.Now()
-	defer func() {
-		result.EndTime = time.Now()
-		result.Duration = result.EndTime.Sub(result.StartTime)
-	}()
-
-	out, err := read_common.Read(ctx, read_common.Opts{
-		Path:       rf.Path,
-		Query:      rf.Query,
-		MaxBytes:   maxBytes,
-		Redact:     patterns,
-		Parse:      parseYAML,
-		FormatName: "YAML",
-	})
-	if err != nil {
-		return result, err
-	}
-
-	result.SetData(map[string]any{
-		"path":       out.Path,
-		"query":      out.Query,
-		"found":      out.Found,
-		"value":      out.Value,
-		"bytes_read": out.BytesRead,
-	})
-	result.Changed = false
-	if ctx.Mode() == actions.ModePlan {
-		result.Checkable = true
-		if out.Found {
-			result.Reason = fmt.Sprintf("would read %d bytes from %s", out.BytesRead, out.Path)
-		} else {
-			result.Reason = fmt.Sprintf("would read %d bytes from %s; query path missed", out.BytesRead, out.Path)
-		}
-	}
-	return result, nil
+	return read_common.RunRead(ctx, step.ReadYAML, parseYAML, "YAML")
 }
 
 // parseYAML decodes the first document, then refuses to continue if a

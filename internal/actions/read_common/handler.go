@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -146,6 +147,62 @@ func readBounded(path string, limit int64) ([]byte, int64, error) {
 		return nil, read, fmt.Errorf("read: %s exceeds max_bytes=%d (set explicit max_bytes: to allow)", path, limit)
 	}
 	return data, read, nil
+}
+
+// RunRead is the full Handler.Run wrapper shared by read.json and
+// read.yaml: it compiles redact patterns, wires the per-format Parse
+// + FormatName into Opts, drives Read, and populates a typed
+// executor.Result (Data + plan-mode Reason). The sibling handlers are
+// one-liners on top.
+//
+// Note: callers pass rf already dereferenced from the parent Step;
+// Validate guarantees rf is non-nil by the time Run reaches this path.
+func RunRead(ctx actions.Context, rf *config.ReadFile, parse func([]byte, *any) error, formatName string) (actions.Result, error) {
+	patterns, err := CompileRedactPatterns(rf.Redact)
+	if err != nil {
+		return nil, err
+	}
+	maxBytes := int64(0)
+	if rf.MaxBytes != nil {
+		maxBytes = *rf.MaxBytes
+	}
+
+	result := executor.NewResult()
+	result.StartTime = time.Now()
+	defer func() {
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime)
+	}()
+
+	out, err := Read(ctx, Opts{
+		Path:       rf.Path,
+		Query:      rf.Query,
+		MaxBytes:   maxBytes,
+		Redact:     patterns,
+		Parse:      parse,
+		FormatName: formatName,
+	})
+	if err != nil {
+		return result, err
+	}
+
+	result.SetData(map[string]any{
+		"path":       out.Path,
+		"query":      out.Query,
+		"found":      out.Found,
+		"value":      out.Value,
+		"bytes_read": out.BytesRead,
+	})
+	result.Changed = false
+	if ctx.Mode() == actions.ModePlan {
+		result.Checkable = true
+		if out.Found {
+			result.Reason = fmt.Sprintf("would read %d bytes from %s", out.BytesRead, out.Path)
+		} else {
+			result.Reason = fmt.Sprintf("would read %d bytes from %s; query path missed", out.BytesRead, out.Path)
+		}
+	}
+	return result, nil
 }
 
 // CompileRedactPatterns is a tiny shim used by handlers to pre-compile
