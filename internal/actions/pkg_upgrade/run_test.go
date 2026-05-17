@@ -165,13 +165,14 @@ func TestPlan_DoesNotInvoke(t *testing.T) {
 	}
 }
 
-// TestRun_UnsupportedManagerErrors — pacman / zypper / apk aren't
-// shipped yet; the error message names the supported set. The
-// pre-fix repro used `manager: dnf`, which became valid once the
-// dnf driver landed.
+// TestRun_UnsupportedManagerErrors — zypper / apk aren't shipped yet;
+// the error message names the supported set. The pre-fix repro used
+// `manager: dnf` (now valid since the dnf driver landed) and then
+// `manager: pacman` (also now valid). `zypper` is the canonical "still
+// missing" stand-in.
 func TestRun_UnsupportedManagerErrors(t *testing.T) {
 	_ = newStub(t)
-	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"x"}, Manager: "pacman"}}
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"x"}, Manager: "zypper"}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
 		t.Fatal("expected error for unsupported manager")
@@ -465,6 +466,7 @@ func TestAutoDetect_DnfWhenNoApt(t *testing.T) {
 // TestPermissions_BinaryByManager — explicit manager: dnf advertises
 // `dnf`; yum alias also advertises `dnf` (the binary preflight; yum
 // hosts auto-fall-through to yum at runtime). Apt + brew unchanged.
+// Pacman + yay/paru rows pinned in TestPermissions_BinaryByManager_Pacman.
 func TestPermissions_BinaryByManager(t *testing.T) {
 	cases := []struct {
 		manager string
@@ -474,6 +476,190 @@ func TestPermissions_BinaryByManager(t *testing.T) {
 		{"dnf", "dnf"},
 		{"yum", "dnf"},
 		{"brew", "brew"},
+	}
+	for _, c := range cases {
+		t.Run(c.manager, func(t *testing.T) {
+			step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Manager: c.manager}}
+			ps := Handler{}.Permissions(step)
+			if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != c.wantBin {
+				t.Errorf("manager=%s: RequiredBinaries = %v, want [%s]", c.manager, ps.RequiredBinaries, c.wantBin)
+			}
+			if !ps.Sudo || !ps.Network {
+				t.Errorf("manager=%s: Sudo + Network must remain true; got %+v", c.manager, ps)
+			}
+		})
+	}
+}
+
+// pacmanStub captures the calls made through the pacman hooks.
+// Parallel to stub (apt), dnfStub, and brewStub.
+type pacmanStub struct {
+	upgradeCalls    [][]string
+	autoremoveCalls int
+}
+
+// newPacmanStub wires the pacman hooks + makes lookPath resolve only
+// `pacman`. Apt-get + dnf + brew all report "not found" so auto-detect
+// picks pacman.
+func newPacmanStub(t *testing.T) *pacmanStub {
+	t.Helper()
+	s := &pacmanStub{}
+	origUp := pacmanUpgrade
+	origAr := pacmanAutoremove
+	origLookPath := lookPath
+	pacmanUpgrade = func(names []string) error {
+		cp := append([]string(nil), names...)
+		s.upgradeCalls = append(s.upgradeCalls, cp)
+		return nil
+	}
+	pacmanAutoremove = func() error {
+		s.autoremoveCalls++
+		return nil
+	}
+	lookPath = func(name string) (string, error) {
+		if name == "pacman" {
+			return "/usr/bin/pacman", nil
+		}
+		return "", errNotFound{}
+	}
+	t.Cleanup(func() {
+		pacmanUpgrade = origUp
+		pacmanAutoremove = origAr
+		lookPath = origLookPath
+	})
+	return s
+}
+
+// TestApply_Pacman_NamedUpgrade — explicit subset upgrade through
+// pacman. Mirrors TestApply_Dnf_NamedUpgrade.
+func TestApply_Pacman_NamedUpgrade(t *testing.T) {
+	s := newPacmanStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"bash", "linux"}}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one pacman upgrade call; got %v", s.upgradeCalls)
+	}
+	got := s.upgradeCalls[0]
+	if len(got) != 2 || got[0] != "bash" || got[1] != "linux" {
+		t.Errorf("expected [bash linux]; got %v", got)
+	}
+	if s.autoremoveCalls != 0 {
+		t.Errorf("expected no autoremove; got %d", s.autoremoveCalls)
+	}
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager fact = %v, want pacman", r.Data["manager"])
+	}
+}
+
+// TestApply_Pacman_FullUpgrade_NoNames — Names empty → upgrade all
+// via pacman -Syu. The hook receives an empty slice; how it composes
+// the actual command is a unit-of-realPacmanUpgrade detail.
+func TestApply_Pacman_FullUpgrade_NoNames(t *testing.T) {
+	s := newPacmanStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one upgrade call; got %v", s.upgradeCalls)
+	}
+	if len(s.upgradeCalls[0]) != 0 {
+		t.Errorf("expected empty names slice (full upgrade); got %v", s.upgradeCalls[0])
+	}
+}
+
+// TestApply_Pacman_Autoremove — Autoremove: true triggers a follow-up
+// pacman -Rns orphans call after the upgrade.
+func TestApply_Pacman_Autoremove(t *testing.T) {
+	s := newPacmanStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Autoremove: true}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if s.autoremoveCalls != 1 {
+		t.Errorf("expected one autoremove call; got %d", s.autoremoveCalls)
+	}
+}
+
+// TestApply_Pacman_YayAlias / TestApply_Pacman_ParuAlias — `manager:
+// yay` and `manager: paru` are canonicalized to "pacman" in the
+// result. Same /var/lib/pacman db, just AUR-wrapper CLIs on top.
+func TestApply_Pacman_YayAlias(t *testing.T) {
+	s := newPacmanStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Manager: "yay", Names: []string{"google-chrome"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager = %v, want pacman (yay canonicalizes)", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+func TestApply_Pacman_ParuAlias(t *testing.T) {
+	s := newPacmanStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Manager: "paru", Names: []string{"firefox"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager = %v, want pacman (paru canonicalizes)", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestAutoDetect_PacmanWhenNoAptOrDnf — auto-detect lands on pacman
+// when apt-get + dnf + yum are absent. Pins the order
+// apt > dnf > pacman > brew.
+func TestAutoDetect_PacmanWhenNoAptOrDnf(t *testing.T) {
+	s := newPacmanStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"linux"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager = %v, want pacman", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Errorf("expected pacman upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestAutoDetect_PrefersDnfOverPacman — symmetric to apt-over-dnf:
+// dnf wins on the very rare host with BOTH dnf and pacman. Sentinel:
+// pacman must not be touched.
+func TestAutoDetect_PrefersDnfOverPacman(t *testing.T) {
+	s := newDnfStub(t)
+	origPacman := pacmanUpgrade
+	pacmanUpgrade = func(names []string) error {
+		t.Errorf("pacman should not be invoked when dnf is on PATH; got %v", names)
+		return nil
+	}
+	t.Cleanup(func() { pacmanUpgrade = origPacman })
+
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"bash"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Errorf("expected dnf upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestPermissions_BinaryByManager_Pacman extends the per-manager
+// binary preflight matrix to cover pacman + yay + paru.
+func TestPermissions_BinaryByManager_Pacman(t *testing.T) {
+	cases := []struct {
+		manager string
+		wantBin string
+	}{
+		{"pacman", "pacman"},
+		{"yay", "pacman"},
+		{"paru", "pacman"},
 	}
 	for _, c := range cases {
 		t.Run(c.manager, func(t *testing.T) {

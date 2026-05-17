@@ -2275,7 +2275,7 @@
     },
     "pkg.upgrade": {
       "type": "object",
-      "description": "Upgrade named packages or all installed packages (apt + dnf on linux, brew on darwin)",
+      "description": "Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin)",
       "properties": {
         "autoremove": {
           "type": "boolean"
@@ -2832,7 +2832,7 @@
           "$ref": "#/definitions/pkg.repo"
         },
         "pkg.upgrade": {
-          "description": "Upgrade named packages or all installed packages (apt + dnf on linux, brew on darwin)",
+          "description": "Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.upgrade"
         },
         "read.json": {

@@ -2,7 +2,9 @@
 // named packages or all packages, optionally followed by autoremove.
 // Ships an apt driver (apt-get upgrade / install --only-upgrade), a
 // dnf driver (dnf upgrade / dnf autoremove; yum fallback for RHEL 7),
-// and a brew driver (brew upgrade, brew autoremove).
+// a pacman driver (pacman -Syu / pacman -Rns orphans; yay/paru
+// aliases share the pacman path since they read the same db), and a
+// brew driver (brew upgrade, brew autoremove).
 //
 // Per spec-24, upgrade is "partially idempotent": predicting whether
 // the manager would actually move a package without running it (or
@@ -29,22 +31,25 @@ import (
 )
 
 const (
-	actionName  = "pkg.upgrade"
-	managerApt  = "apt"
-	managerDnf  = "dnf"
-	managerBrew = "brew"
+	actionName    = "pkg.upgrade"
+	managerApt    = "apt"
+	managerDnf    = "dnf"
+	managerPacman = "pacman"
+	managerBrew   = "brew"
 )
 
 // Package-level hooks for side-effectful binary calls. Tests replace
 // these to keep apply-mode hermetic.
 var (
-	aptUpgrade     = realAptUpgrade     // func(names []string) error
-	aptAutoremove  = realAptAutoremove  // func() error
-	dnfUpgrade     = realDnfUpgrade     // func(names []string) error
-	dnfAutoremove  = realDnfAutoremove  // func() error
-	brewUpgrade    = realBrewUpgrade    // func(names []string) error
-	brewAutoremove = realBrewAutoremove // func() error
-	lookPath       = exec.LookPath      // override in tests for manager detection
+	aptUpgrade       = realAptUpgrade       // func(names []string) error
+	aptAutoremove    = realAptAutoremove    // func() error
+	dnfUpgrade       = realDnfUpgrade       // func(names []string) error
+	dnfAutoremove    = realDnfAutoremove    // func() error
+	pacmanUpgrade    = realPacmanUpgrade    // func(names []string) error
+	pacmanAutoremove = realPacmanAutoremove // func() error
+	brewUpgrade      = realBrewUpgrade      // func(names []string) error
+	brewAutoremove   = realBrewAutoremove   // func() error
+	lookPath         = exec.LookPath        // override in tests for manager detection
 )
 
 // Handler implements pkg.upgrade.
@@ -57,7 +62,7 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Upgrade named packages or all installed packages (apt + dnf on linux, brew on darwin)",
+		Description:        "Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
@@ -90,6 +95,8 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 			bin = "apt-get"
 		case managerDnf, "yum":
 			bin = "dnf"
+		case managerPacman, "yay", "paru":
+			bin = "pacman"
 		case managerBrew:
 			bin = "brew"
 		}
@@ -125,14 +132,18 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, err
 	}
-	// Canonicalize the "yum" alias to "dnf" — rpm-family hosts run the
-	// same upgrade against the same database regardless of which CLI
-	// binary the operator referenced.
-	if manager == "yum" {
+	// Canonicalize aliases:
+	//   yum  → dnf    (same rpm database; modern dnf CLI is canonical)
+	//   yay  → pacman (AUR wrapper; reads same /var/lib/pacman db)
+	//   paru → pacman (ditto)
+	switch manager {
+	case "yum":
 		manager = managerDnf
+	case "yay", "paru":
+		manager = managerPacman
 	}
-	if manager != managerApt && manager != managerDnf && manager != managerBrew {
-		return result, fmt.Errorf("pkg.upgrade: unsupported manager %q (supported: apt, dnf, brew)", manager)
+	if manager != managerApt && manager != managerDnf && manager != managerPacman && manager != managerBrew {
+		return result, fmt.Errorf("pkg.upgrade: unsupported manager %q (supported: apt, dnf, pacman, brew)", manager)
 	}
 
 	names, err := renderNames(ctx, p)
@@ -214,10 +225,10 @@ func renderNames(ctx actions.Context, p *config.PkgUpgrade) ([]string, error) {
 }
 
 // resolveManager honours explicit manager, otherwise auto-detects.
-// Precedence: apt > dnf > brew. Apt wins on Debian-family hosts
-// (authoritative system manager); dnf wins on RHEL-family hosts
-// (where apt-get is absent); brew wins on macOS or as a per-user
-// fallback. Operators can override with manager: in the YAML.
+// Precedence: apt > dnf > pacman > brew. Apt wins on Debian-family
+// hosts; dnf wins on RHEL-family; pacman wins on Arch-family; brew
+// wins on macOS or as a per-user fallback. Operators can override
+// with manager: in the YAML.
 func resolveManager(requested string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	if requested != "" {
@@ -235,10 +246,13 @@ func resolveManager(requested string) (string, error) {
 		// upward so callers always see "dnf" in the result.
 		return managerDnf, nil
 	}
+	if _, err := lookPath("pacman"); err == nil {
+		return managerPacman, nil
+	}
 	if _, err := lookPath("brew"); err == nil {
 		return managerBrew, nil
 	}
-	return "", fmt.Errorf("pkg.upgrade: cannot auto-detect package manager (no apt-get, dnf, yum, or brew on PATH); set manager explicitly")
+	return "", fmt.Errorf("pkg.upgrade: cannot auto-detect package manager (no apt-get, dnf, yum, pacman, or brew on PATH); set manager explicitly")
 }
 
 // runUpgrade dispatches to the per-manager upgrade hook. Keeps the
@@ -249,6 +263,8 @@ func runUpgrade(manager string, names []string) error {
 		return aptUpgrade(names)
 	case managerDnf:
 		return dnfUpgrade(names)
+	case managerPacman:
+		return pacmanUpgrade(names)
 	case managerBrew:
 		return brewUpgrade(names)
 	}
@@ -261,6 +277,8 @@ func runAutoremove(manager string) error {
 		return aptAutoremove()
 	case managerDnf:
 		return dnfAutoremove()
+	case managerPacman:
+		return pacmanAutoremove()
 	case managerBrew:
 		return brewAutoremove()
 	}
@@ -363,6 +381,90 @@ func dnfBinary() string {
 		return "yum"
 	}
 	return "dnf"
+}
+
+// realPacmanUpgrade shells out to `pacman -Syu --noconfirm` (full,
+// matching the "upgrade everything" semantic of apt/dnf/brew) or
+// `pacman -S --noconfirm <names>` (named — pacman's `-S` reinstalls
+// to the latest version, which is the closest equivalent to apt's
+// `install --only-upgrade`). The named path implicitly refreshes the
+// sync db too — same shape as apt-get install pulling new package
+// metadata when needed.
+//
+// --noconfirm is required for non-interactive operation; without it
+// pacman will prompt for confirmation and block the apply.
+func realPacmanUpgrade(names []string) error {
+	var cmd *exec.Cmd
+	if len(names) == 0 {
+		// #nosec G204 -- fixed pacman binary, fixed args.
+		cmd = exec.Command("pacman", "-Syu", "--noconfirm")
+	} else {
+		args := append([]string{"-S", "--noconfirm"}, names...)
+		// #nosec G204 -- args derived from validated YAML names.
+		cmd = exec.Command("pacman", args...)
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return fmt.Errorf("%w: %s", err, msg)
+		}
+		return err
+	}
+	return nil
+}
+
+// realPacmanAutoremove removes orphaned packages — dependencies no
+// longer required by any explicitly-installed package. Equivalent to
+// apt-get autoremove / dnf autoremove.
+//
+// pacman has no single-command autoremove. The idiom is:
+//
+//	pacman -Qtdq | pacman -Rns --noconfirm -
+//
+// where -Qtdq lists orphans, and -Rns removes packages + unused deps
+// + their config files. We do it in two steps to avoid pipe semantics
+// in exec.Cmd. If -Qtdq returns nothing (no orphans), that's a
+// non-error noop — match apt/dnf's "nothing to do" behaviour.
+func realPacmanAutoremove() error {
+	// Step 1: list orphans.
+	// #nosec G204 -- fixed pacman binary, fixed args.
+	list := exec.Command("pacman", "-Qtdq")
+	var listStdout, listStderr bytes.Buffer
+	list.Stdout = &listStdout
+	list.Stderr = &listStderr
+	if err := list.Run(); err != nil {
+		// pacman -Qtdq exits 1 when there are no orphans. That's not
+		// an error from our perspective — the action's contract is
+		// "remove any orphans", which is trivially satisfied.
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 && listStdout.Len() == 0 {
+			return nil
+		}
+		msg := strings.TrimSpace(listStderr.String())
+		if msg != "" {
+			return fmt.Errorf("pacman -Qtdq: %w: %s", err, msg)
+		}
+		return fmt.Errorf("pacman -Qtdq: %w", err)
+	}
+	orphans := strings.Fields(listStdout.String())
+	if len(orphans) == 0 {
+		return nil
+	}
+	// Step 2: remove orphans + their unused deps + config files.
+	args := append([]string{"-Rns", "--noconfirm"}, orphans...)
+	// #nosec G204 -- orphans came from pacman -Qtdq, validated package names.
+	rm := exec.Command("pacman", args...)
+	var rmStderr bytes.Buffer
+	rm.Stderr = &rmStderr
+	if err := rm.Run(); err != nil {
+		msg := strings.TrimSpace(rmStderr.String())
+		if msg != "" {
+			return fmt.Errorf("%w: %s", err, msg)
+		}
+		return err
+	}
+	return nil
 }
 
 // realBrewUpgrade shells out to `brew upgrade` (full) or

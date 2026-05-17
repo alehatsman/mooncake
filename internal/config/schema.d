@@ -851,7 +851,7 @@ export interface PkgRepoAction {
 }
 
 /**
- * Upgrade named packages or all installed packages (apt + dnf on linux, brew on darwin)
+ * Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin)
  * 
  * @platforms linux, darwin
  * @requiresSudo true
@@ -1533,8 +1533,8 @@ export interface Step {
    */
   "pkg.repo"?: PkgRepoAction;
   /**
-   * Upgrade named packages or all installed packages (apt + dnf on linux,
-   * brew on darwin)
+   * Upgrade named packages or all installed packages (apt + dnf + pacman
+   * on linux, brew on darwin)
    */
   "pkg.upgrade"?: PkgUpgradeAction;
   /**
