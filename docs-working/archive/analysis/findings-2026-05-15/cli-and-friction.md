@@ -219,9 +219,8 @@ this too.
 
 ## Summary table
 
-**Status rollup as of 2026-05-17: all CLI/friction findings ✅ FIXED
-except #11 (curated tools list — design decision, not a bug) and
-#59 (fuzzy hint polish, low priority).**
+**Status rollup as of 2026-05-18: all CLI/friction findings ✅ FIXED
+except #11 (curated tools list — design decision, not a bug).**
 
 | # | Sev | Status | Area | Fix |
 |---|---|---|---|---|
@@ -240,7 +239,7 @@ except #11 (curated tools list — design decision, not a bug) and
 | 56 | LOW | ✅ FIXED | `runs list --format json` | JSON output added `db5648b1` / `9dfa978d` |
 | 57 | LOW | ✅ FIXED | `runs <subcommand>` error format | suggests nearest command `68c474f7` |
 | 58 | LOW | ✅ FIXED | `--skip-tags` exclusion flag | added `3efa25da` |
-| 59 | LOW | open (polish) | fuzzy hint on `--tags` typo | low-priority DX nit; `--tags X` already errors loudly |
+| 59 | LOW | ✅ FIXED | fuzzy hint on `--tags` typo | `closestTag` (Levenshtein) suggests nearest match — `internal/plan/filter/tags.go:103-123`; covered by `TestMT19_UnmatchedTagsError/typo errors with suggestion` |
 | 61 | MEDIUM | ✅ FIXED | `error:` populated + `failed:false` | `step` sets failed=true on handler error `e516b220`; observe.process slice `37a6ddef` |
 | 65 | LOW | ✅ FIXED | `--max-plan-age` boundary | sub-second precision in error `8dc0145d` |
 | 66 | LOW | ✅ FIXED | bad CLI flag dumps help | suppress help on flag parse error `e9c9f342` |
@@ -902,7 +901,15 @@ coexist (`--tags deploy --skip-tags slow` = include deploy, exclude slow).
 
 ---
 
-## #59 — MT-19 error lists tags but doesn't suggest the closest match — LOW (DX polish)
+## #59 — ✅ FIXED (already implemented at MT-19 landing, verified 2026-05-18)
+
+`closestTag` (Levenshtein) runs against the plan's tag inventory and
+appends `Did you mean: <best>?` when the typo is within distance
+threshold. Verified at `internal/plan/filter/tags.go:103-123`; covered
+by `TestMT19_UnmatchedTagsError/typo errors with suggestion` which
+asserts `Did you mean: deploy` for input `deplly`.
+
+### Original report (now resolved)
 
 **Repro** (post-MT-19):
 ```

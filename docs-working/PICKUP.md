@@ -1,9 +1,8 @@
 # Pickup — what to work on, right now
 
-**Last curated:** 2026-05-17 (refresh when the table goes stale).
+**Last curated:** 2026-05-18 (refresh when the table goes stale).
 
-If you have **<5 minutes**, do **item 1**. It's a 1-line code change
-with a written-up finding.
+If you have **<5 minutes**, take **item 1** (small code-review reads).
 If you have **more**, scan the table and pick the highest-rank
 entry that isn't already claimed.
 
@@ -21,13 +20,11 @@ entry that isn't already claimed.
 
 | # | Task | Stream | Effort | Where to read | Claim slug |
 |---|---|---|---:|---|---|
-| 1 | **F048 — fleet.yml strict YAML** — one-line: `yaml.Unmarshal` → `yaml.NewDecoder + KnownFields(true)` in `internal/fleet/machine.go:88`. Add a unit test asserting unknown fields are rejected. | code-review | XS | [`docs-working/code-review/findings/F048-fleet-machine-manifest-non-strict-yaml.md`](./code-review/findings/F048-fleet-machine-manifest-non-strict-yaml.md) | `fix-F048` |
-| 2 | **`service` handler split** — package is at 1844 LOC (~23% over the 1500 soft cap). Split into `internal/actions/service/{linux,darwin,windows}` sub-packages, mirroring the per-OS pattern already used by `os_user`/`os_group`. | core | M | [`CLAUDE.md` §1](../CLAUDE.md), `make budget-status`, `internal/actions/service/` | `service-split` |
+| 1 | **Continue the code-review cold-read** — 10 packages still unread (item-3 in `TODO.md`). Recently merged candidates: `internal/agentd/{handlers,jsonl_sink,respond,config*}.go`, `internal/presets/registry/{loader,validator,expander}.go`, `internal/actions/text_*`. Read cold, file `findings/F<NNN>` if a smell appears. | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Still to review" | `review-<pkg>` |
+| 2 | **proposal-16 `expect_json_schema`** — closes the last open piece of the http.request proposal. Adds full-JSON-schema response validation (the broader sibling of `expect_json_keys`, which shipped 2026-05-17). Note: deferred pending validator-library + schema-loading design conversation; pick this up only if you want to drive that decision. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md), `internal/actions/http_request/` | `http-expect-schema` |
 | 3 | **spec-58 fleet drift** — drafted, nobody's touching it. README calls it "the single feature that would turn Mooncake from config management tool into fleet operating system." Start with the `InspectPlan` periodic loop. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
 | 4 | **Draft an agent-safety spec** — agent stream has zero un-specced safety primitives. Pick one: policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps", [`VISION.md`](../VISION.md) | `agent-spec-<topic>` |
-| 5 | **Continue the code-review cold-read** — 11 packages still unread. `internal/fleet/machine.go` was item 1 → produced F048. Try `internal/agentd/self_mac.go` + `self_shutdown*.go` next (brand-new from today's WoL work; no review yet). | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Still to review" | `review-<pkg>` |
-| 6 | **proposal-16 `expect_json_schema`** — closes the last open piece of the http.request proposal. Adds full-JSON-schema response validation (the broader sibling of `expect_json_keys`, which shipped today). | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md), `internal/actions/http_request/` | `http-expect-schema` |
-| 7 | **Reverse-capture rollout to refusing handlers** — `os.*` family, `pkg.repo`, `pkg.hold`, `os.service` still return refusal stubs from `Reverse()`. Pattern is spec-26 reverse-capture v1 (already done for `git.checkout`/`git.config`); one PR per handler. | core | S each (×13) | [`streams/core/README.md`](./streams/core/README.md) "Open gaps", `internal/actions/git_checkout/` for the reference impl | `reverse-capture-<handler>` |
+| 5 | **Audit Reverse() coverage** — `streams/core/README.md` open-gaps still says `os.*`, `pkg.repo`, `pkg.hold`, `os.service` "return refusal stubs"; spot-checks (`pkg_repo/reverse.go`, `service/reverse.go`) show full implementations. Walk every `internal/actions/*/reverse.go`, list the actual gaps (if any), then update or close the open-gap line in `streams/core/README.md`. | core | S | [`streams/core/README.md`](./streams/core/README.md), `internal/actions/*/reverse.go` | `reverse-audit` |
 
 ---
 

@@ -1,12 +1,11 @@
 # Manual Test Findings — 2026-05-15
 
-> **Status as of 2026-05-17: the MT-N queue is closed.** Every CRITICAL,
-> HIGH, and MEDIUM finding from the original 43-item audit (and the later
-> rounds that extended into the 50s/60s/70s/80s) has been fixed and
-> verified in source. The only items still showing as open in the
-> per-file tables are: #11 (curated snapshot tool inventory — a design
-> decision, not a bug) and #59 (fuzzy-hint polish on `--tags` typo —
-> low-priority DX nit). Per-finding commit refs live in each file's
+> **Status as of 2026-05-18: the MT-N queue is closed.** Every CRITICAL,
+> HIGH, MEDIUM, and LOW finding from the original 43-item audit (and the
+> later rounds that extended into the 50s/60s/70s/80s) has been fixed
+> and verified in source. The only item still showing as open in the
+> per-file tables is #11 (curated snapshot tool inventory — a design
+> decision, not a bug). Per-finding commit refs live in each file's
 > summary table; original repros are kept under `### Original report`
 > sections so historical context is preserved.
 >
@@ -41,12 +40,12 @@ self-contained; severity-sorted within.
 
 ## Severity rollup
 
-| Severity | Original | After MT fixes (2026-05-15 same-session) | Final (2026-05-17) |
+| Severity | Original | After MT fixes (2026-05-15 same-session) | Final (2026-05-18) |
 |---|---:|---:|---:|
 | **CRITICAL** | 2 | **0** | **0** |
 | **HIGH** | 7 | 5 | **0** |
 | **MEDIUM** | 9 | 8 | **0** |
-| **LOW** | 19 | 14 | **1** (#59 fuzzy-hint polish — DX nit) |
+| **LOW** | 19 | 14 | **0** |
 | **(design decision, not a bug)** | — | — | **1** (#11 curated tools list) |
 | **(positive — keep)** | ≥12 | ≥14 | ≥30 (MT fixes themselves now belong here) |
 
