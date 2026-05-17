@@ -463,9 +463,8 @@ func TestRegistry_ThreadSafety(t *testing.T) {
 				metadata: ActionMetadata{Name: fmt.Sprintf("concurrent_%d", idx)},
 			}
 			if err := reg.Register(handler); err != nil {
-
-				t.Fatalf("Register failed: %v", err)
-
+				t.Errorf("Register failed: %v", err)
+				return
 			}
 		}(i)
 	}
