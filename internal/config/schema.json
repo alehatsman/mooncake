@@ -862,6 +862,12 @@
         "creates_when": {
           "type": "string"
         },
+        "expect_json_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "expect_status": {
           "type": "array",
           "items": {
@@ -945,6 +951,12 @@
             },
             "creates_when": {
               "type": "string"
+            },
+            "expect_json_keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
             "expect_status": {
               "type": "array",
@@ -1090,6 +1102,12 @@
             },
             "creates_when": {
               "type": "string"
+            },
+            "expect_json_keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
             "expect_status": {
               "type": "array",

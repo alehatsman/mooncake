@@ -335,6 +335,7 @@ export interface HttpRequestAction {
   };
   body?: string;
   creates_when?: string;
+  expect_json_keys?: string[];
   expect_status?: number[];
   file?: string;
   follow_redirects?: number;
@@ -358,6 +359,7 @@ export interface HttpRequestAction {
   };
     body: string;
     creates_when: string;
+    expect_json_keys: string[];
     expect_status: number[];
     file: string;
     follow_redirects: number;
@@ -397,6 +399,7 @@ export interface HttpRequestAction {
   };
     body: string;
     creates_when: string;
+    expect_json_keys: string[];
     expect_status: number[];
     file: string;
     follow_redirects: number;

@@ -39,6 +39,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -230,6 +231,11 @@ func validateStructural(r *config.HTTPRequest, fieldPrefix string) error {
 	}
 	if r.MaxResponseBytes < 0 {
 		return fmt.Errorf("%s: %s must be >= 0", actionName, at("max_response_bytes"))
+	}
+	for i, k := range r.ExpectJSONKeys {
+		if strings.TrimSpace(k) == "" {
+			return fmt.Errorf("%s: %s[%d] is empty", actionName, at("expect_json_keys"), i)
+		}
 	}
 	return nil
 }
@@ -617,6 +623,20 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 	// methods don't count as changes.
 	res.Changed = !readMethods[rr.method]
 
+	// Narrow wave-3 piece: assert response.json contains the
+	// operator's declared top-level keys. Independent from the
+	// (deferred) full JSON-schema validation — this is the common
+	// "prove the API returned an id" assertion. The check happens
+	// AFTER status validation so a 200-with-malformed-body fails
+	// with a clear "missing keys" message rather than a generic
+	// status-mismatch.
+	if len(step.HTTPRequest.ExpectJSONKeys) > 0 {
+		if err := checkExpectJSONKeys(step.HTTPRequest.ExpectJSONKeys, data); err != nil {
+			res.Failed = true
+			return res, fmt.Errorf("%s: %w", actionName, err)
+		}
+	}
+
 	// Wave 3: persist the response body to save_to when set. The path
 	// is template-rendered so callers can interpolate response facts
 	// (e.g. `save_to: "/var/cache/hooks/{{ response.json.id }}.json"`).
@@ -902,4 +922,34 @@ func writeResponseBody(ctx actions.Context, pathTemplate string, body []byte, re
 		return "", fmt.Errorf("write %s: %w", rendered, err)
 	}
 	return rendered, nil
+}
+
+// checkExpectJSONKeys verifies the parsed-JSON response fact has all
+// listed top-level keys. data["json"] is the auto-parsed payload —
+// when the Content-Type wasn't application/json, this stays nil and
+// the check fails with a clear "response was not JSON" message
+// rather than a confusing "missing key X" on a string body.
+//
+// Missing keys are reported as a deterministic sorted list so the
+// error message diffs cleanly across reruns.
+func checkExpectJSONKeys(want []string, data map[string]interface{}) error {
+	raw, ok := data["json"]
+	if !ok || raw == nil {
+		return fmt.Errorf("expect_json_keys: response was not JSON (Content-Type did not auto-parse); declare a JSON-returning endpoint or drop expect_json_keys")
+	}
+	obj, ok := raw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("expect_json_keys: response JSON is %T, want object", raw)
+	}
+	var missing []string
+	for _, k := range want {
+		if _, present := obj[k]; !present {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return fmt.Errorf("expect_json_keys: missing key(s) %v in response.json", missing)
+	}
+	return nil
 }

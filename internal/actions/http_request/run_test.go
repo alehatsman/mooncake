@@ -775,3 +775,123 @@ func TestRun_Apply_SaveTo_WriteFailureFailsStep(t *testing.T) {
 		t.Errorf("error should mention save_to; got: %v", err)
 	}
 }
+
+// TestRun_Apply_ExpectJSONKeys_AllPresent — happy path: every
+// declared key exists on the parsed JSON object, step succeeds.
+func TestRun_Apply_ExpectJSONKeys_AllPresent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"abc","url":"https://x","secret":"s"}`))
+	}))
+	defer srv.Close()
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:            srv.URL,
+		Timeout:        "2s",
+		ExpectJSONKeys: []string{"id", "url"},
+	}}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.Failed {
+		t.Errorf("expected success; got failed result: %+v", r)
+	}
+}
+
+// TestRun_Apply_ExpectJSONKeys_MissingKeyFails — one or more keys
+// missing fails the step with a deterministic, sorted error message.
+func TestRun_Apply_ExpectJSONKeys_MissingKeyFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Returns id but NOT url + secret.
+		_, _ = w.Write([]byte(`{"id":"abc"}`))
+	}))
+	defer srv.Close()
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:            srv.URL,
+		Timeout:        "2s",
+		ExpectJSONKeys: []string{"id", "secret", "url"},
+	}}
+	_, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatal("expected error for missing keys")
+	}
+	if !strings.Contains(err.Error(), "expect_json_keys") {
+		t.Errorf("error should mention expect_json_keys; got: %v", err)
+	}
+	// Missing keys reported in sorted order so diffs stay stable.
+	if !strings.Contains(err.Error(), "secret") || !strings.Contains(err.Error(), "url") {
+		t.Errorf("error should list missing keys [secret url]; got: %v", err)
+	}
+	if strings.Index(err.Error(), "secret") > strings.Index(err.Error(), "url") {
+		t.Errorf("missing keys must be sorted (secret before url); got: %v", err)
+	}
+}
+
+// TestRun_Apply_ExpectJSONKeys_NonJSONResponseFails — content-type
+// isn't JSON → data["json"] is nil → explicit error rather than a
+// confusing "missing key X" against a string body.
+func TestRun_Apply_ExpectJSONKeys_NonJSONResponseFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("plain text body"))
+	}))
+	defer srv.Close()
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:            srv.URL,
+		Timeout:        "2s",
+		ExpectJSONKeys: []string{"id"},
+	}}
+	_, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatal("expected error for non-JSON response")
+	}
+	if !strings.Contains(err.Error(), "not JSON") {
+		t.Errorf("error should explain non-JSON cause; got: %v", err)
+	}
+}
+
+// TestRun_Apply_ExpectJSONKeys_NonObjectFails — JSON parses but is
+// an array, not an object. The narrow check only covers objects;
+// arrays/scalars fail with a clear "want object" message.
+func TestRun_Apply_ExpectJSONKeys_NonObjectFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`["a","b","c"]`))
+	}))
+	defer srv.Close()
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:            srv.URL,
+		Timeout:        "2s",
+		ExpectJSONKeys: []string{"id"},
+	}}
+	_, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatal("expected error for non-object JSON")
+	}
+	if !strings.Contains(err.Error(), "want object") {
+		t.Errorf("error should mention 'want object'; got: %v", err)
+	}
+}
+
+// TestValidate_ExpectJSONKeys_RejectsEmptyEntry guards against
+// `expect_json_keys: [""]` silently no-op'ing — easy operator typo
+// that would otherwise pass Validate and accept any response.
+func TestValidate_ExpectJSONKeys_RejectsEmptyEntry(t *testing.T) {
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:            "http://x",
+		ExpectJSONKeys: []string{"id", "   ", "url"},
+	}}
+	err := (&Handler{}).Validate(step)
+	if err == nil {
+		t.Fatal("expected Validate to reject whitespace-only key")
+	}
+	if !strings.Contains(err.Error(), "expect_json_keys[1]") {
+		t.Errorf("error should pinpoint the bad index; got: %v", err)
+	}
+}
