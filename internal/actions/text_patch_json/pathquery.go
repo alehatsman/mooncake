@@ -1,101 +1,23 @@
-// Package text_patch_json — path parser / walker for the tiny dotted +
-// indexed subset (a.b.c, a[0], a.b[3].c). No wildcards, filters, or
-// recursion: this matches the spec-38 future shared package surface.
+// Package text_patch_json — node walker / patch operations on top
+// of the shared dotted+indexed path parser in internal/textpatchpath.
 //
 //nolint:revive // package name follows action convention
 package text_patch_json
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
+
+	"github.com/alehatsman/mooncake/internal/textpatchpath"
 )
 
-// segment is one element of a parsed path. Either a field name (Key)
-// or an array index (Index >= 0). IsIndex distinguishes the two.
-type segment struct {
-	Key     string
-	Index   int
-	IsIndex bool
-}
+// segment is a package-local alias for textpatchpath.Segment so the
+// walker/patch operations below read naturally without spelling out
+// the import each time.
+type segment = textpatchpath.Segment
 
-// parsePath splits the supplied path string into segments. Returns
-// an error for unsupported syntax: wildcards, filters, leading or
-// trailing dots, empty segments, negative indices, unmatched
-// brackets.
-func parsePath(path string) ([]segment, error) {
-	if strings.TrimSpace(path) == "" {
-		return nil, fmt.Errorf("path is empty")
-	}
-	if strings.ContainsAny(path, "*$?@") {
-		return nil, fmt.Errorf("unsupported syntax in %q (only dotted + indexed paths are supported)", path)
-	}
-	if strings.Contains(path, "..") {
-		return nil, fmt.Errorf("empty segment in %q", path)
-	}
-	if strings.HasPrefix(path, ".") || strings.HasSuffix(path, ".") {
-		return nil, fmt.Errorf("leading or trailing dot in %q", path)
-	}
+func parsePath(path string) ([]segment, error) { return textpatchpath.Parse(path) }
 
-	var out []segment
-	i := 0
-	for i < len(path) {
-		// Collect a key up to the next '.', '[', or end.
-		j := i
-		for j < len(path) && path[j] != '.' && path[j] != '[' {
-			j++
-		}
-		if j > i {
-			out = append(out, segment{Key: path[i:j]})
-		}
-		if j >= len(path) {
-			break
-		}
-		switch path[j] {
-		case '.':
-			i = j + 1
-			if i >= len(path) {
-				return nil, fmt.Errorf("trailing dot in %q", path)
-			}
-		case '[':
-			end := strings.IndexByte(path[j+1:], ']')
-			if end < 0 {
-				return nil, fmt.Errorf("unmatched '[' in %q", path)
-			}
-			inside := path[j+1 : j+1+end]
-			if inside == "" {
-				return nil, fmt.Errorf("empty bracket in %q", path)
-			}
-			idx, err := strconv.Atoi(inside)
-			if err != nil {
-				return nil, fmt.Errorf("non-integer index %q in %q", inside, path)
-			}
-			if idx < 0 {
-				return nil, fmt.Errorf("negative index %d in %q", idx, path)
-			}
-			out = append(out, segment{Index: idx, IsIndex: true})
-			i = j + 1 + end + 1
-			// Allow optional '.' or '[' after the closing bracket.
-			if i < len(path) && path[i] == '.' {
-				i++
-				if i >= len(path) {
-					return nil, fmt.Errorf("trailing dot in %q", path)
-				}
-			}
-		}
-	}
-	if len(out) == 0 {
-		return nil, fmt.Errorf("path %q has no segments", path)
-	}
-	return out, nil
-}
-
-// validatePath is the path-parser wrapped to ignore the result; lets
-// callers reject unsupported syntax at validation time.
-func validatePath(path string) error {
-	_, err := parsePath(path)
-	return err
-}
+func validatePath(path string) error { return textpatchpath.Validate(path) }
 
 // walk traverses the tree along segs and returns the addressed node
 // plus the parent and final-segment so callers can mutate. Returns
