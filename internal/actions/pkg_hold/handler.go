@@ -1,9 +1,15 @@
 // Package pkg_hold implements the pkg.hold action: mark or unmark
 // packages as held so the package manager refuses to upgrade or remove
-// them. Ships an apt driver (apt-mark hold/unhold/showhold) and a brew
-// driver (brew pin/unpin, brew list --pinned). Brew's `pin` only works
-// on formulae, not casks — passing a cask name falls through to brew's
-// own error message, which the surrounding wrapping preserves.
+// them. Ships three drivers:
+//   - apt: apt-mark hold/unhold/showhold (Debian/Ubuntu).
+//   - dnf: dnf versionlock add/delete/list via the versionlock plugin
+//     (Fedora/RHEL 8+; falls back to `yum versionlock` on RHEL 7).
+//     Requires dnf-plugin-versionlock to be installed; the driver
+//     surfaces a targeted error if the plugin is missing.
+//   - brew: brew pin/unpin, brew list --pinned (macOS). Brew's `pin`
+//     only works on formulae, not casks — passing a cask name falls
+//     through to brew's own error message, which the surrounding
+//     wrapping preserves.
 //
 //nolint:revive // Package name matches action name convention (pkg_hold)
 package pkg_hold
@@ -13,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -28,6 +35,7 @@ const (
 	stateHeld   = "held"
 	stateUnheld = "unheld"
 	managerApt  = "apt"
+	managerDnf  = "dnf"
 	managerBrew = "brew"
 	managerAuto = ""
 )
@@ -35,13 +43,16 @@ const (
 // Package-level hooks for the side-effectful binary calls. Tests
 // replace these with recorders to keep apply-mode hermetic.
 var (
-	aptMarkShowHold = realAptMarkShowHold // func() (map[string]bool, error)
-	aptMarkHold     = realAptMarkHold     // func(pkgs []string) error
-	aptMarkUnhold   = realAptMarkUnhold   // func(pkgs []string) error
-	brewListPinned  = realBrewListPinned  // func() (map[string]bool, error)
-	brewPin         = realBrewPin         // func(pkgs []string) error
-	brewUnpin       = realBrewUnpin       // func(pkgs []string) error
-	lookPath        = exec.LookPath       // override in tests to fake manager detection
+	aptMarkShowHold    = realAptMarkShowHold    // func() (map[string]bool, error)
+	aptMarkHold        = realAptMarkHold        // func(pkgs []string) error
+	aptMarkUnhold      = realAptMarkUnhold      // func(pkgs []string) error
+	dnfVersionlockShow = realDnfVersionlockShow // func() (map[string]bool, error)
+	dnfVersionlockAdd  = realDnfVersionlockAdd  // func(pkgs []string) error
+	dnfVersionlockDel  = realDnfVersionlockDel  // func(pkgs []string) error
+	brewListPinned     = realBrewListPinned     // func() (map[string]bool, error)
+	brewPin            = realBrewPin            // func(pkgs []string) error
+	brewUnpin          = realBrewUnpin          // func(pkgs []string) error
+	lookPath           = exec.LookPath          // override in tests to fake manager detection
 )
 
 // Handler implements pkg.hold.
@@ -55,7 +66,7 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Mark or unmark packages as held to prevent upgrade/removal (apt on linux, brew on darwin)",
+		Description:        "Mark or unmark packages as held to prevent upgrade/removal (apt + dnf on linux, brew on darwin)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
@@ -70,15 +81,26 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // Permissions implements actions.Permitter (spec-22 phase 3).
 //
 // pkg.hold always declares Sudo=true on linux: apt-mark hold/unhold
-// writes dpkg state. On darwin, brew pin writes to the local Cellar
-// — typically owned by the operator's account, but `become: true`
-// + brew is a common multi-user pattern, and conservatively
-// advertising Sudo=true keeps spec-44 doctor honest. No Network.
-// RequiredBinaries vary by host: apt-mark on linux, brew on darwin.
-func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+// and dnf versionlock both write system state. On darwin, brew pin
+// writes to the local Cellar — typically owned by the operator's
+// account, but `become: true` + brew is a common multi-user pattern,
+// and conservatively advertising Sudo=true keeps spec-44 doctor
+// honest. No Network. RequiredBinaries follow the (explicit-or-
+// default) manager: apt-mark for apt, dnf for dnf/yum, brew for brew.
+func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	bin := "apt-mark"
 	if runtime.GOOS == "darwin" {
 		bin = "brew"
+	}
+	if step != nil && step.PkgHold != nil {
+		switch strings.ToLower(strings.TrimSpace(step.PkgHold.Manager)) {
+		case managerApt:
+			bin = "apt-mark"
+		case managerDnf, "yum":
+			bin = "dnf"
+		case managerBrew:
+			bin = "brew"
+		}
 	}
 	return actions.PermissionSet{
 		Sudo:             true,
@@ -120,8 +142,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, err
 	}
-	if manager != managerApt && manager != managerBrew {
-		return result, fmt.Errorf("pkg.hold: unsupported manager %q (supported: apt, brew)", manager)
+	// Canonicalize the "yum" alias to "dnf" — the rpm-family driver
+	// handles both transparently (yum fallback for RHEL 7).
+	if manager == "yum" {
+		manager = managerDnf
+	}
+	if manager != managerApt && manager != managerDnf && manager != managerBrew {
+		return result, fmt.Errorf("pkg.hold: unsupported manager %q (supported: apt, dnf, brew)", manager)
 	}
 
 	pkgs, err := renderPackages(ctx, p)
@@ -272,10 +299,10 @@ func renderPackages(ctx actions.Context, p *config.PkgHold) ([]string, error) {
 }
 
 // resolveManager honours an explicit manager, otherwise auto-detects
-// from PATH. apt is preferred over brew on multi-manager hosts
-// (Linuxbrew installed alongside apt on Debian-family boxes): system-
-// level package state is more authoritative than per-user brew.
-// Operators can override either way via explicit manager:.
+// from PATH. Precedence: apt > dnf > brew. Apt wins on Debian-family
+// hosts (authoritative system manager); dnf wins on RHEL-family hosts
+// (where apt-mark is absent); brew wins on macOS or as a per-user
+// fallback. Operators can override either way via explicit manager:.
 func resolveManager(requested string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	if requested != "" {
@@ -284,10 +311,19 @@ func resolveManager(requested string) (string, error) {
 	if _, err := lookPath("apt-mark"); err == nil {
 		return managerApt, nil
 	}
+	if _, err := lookPath("dnf"); err == nil {
+		return managerDnf, nil
+	}
+	if _, err := lookPath("yum"); err == nil {
+		// RHEL 7: yum is the modern-equivalent CLI; the canonical
+		// result manager stays "dnf" so callers don't need to handle
+		// two spellings.
+		return managerDnf, nil
+	}
 	if _, err := lookPath("brew"); err == nil {
 		return managerBrew, nil
 	}
-	return "", fmt.Errorf("pkg.hold: cannot auto-detect package manager (no apt-mark or brew on PATH); set manager explicitly")
+	return "", fmt.Errorf("pkg.hold: cannot auto-detect package manager (no apt-mark, dnf, yum, or brew on PATH); set manager explicitly")
 }
 
 // readCurrentHolds returns the set of currently-held package names
@@ -297,6 +333,8 @@ func readCurrentHolds(manager string) (map[string]bool, error) {
 	switch manager {
 	case managerApt:
 		return aptMarkShowHold()
+	case managerDnf:
+		return dnfVersionlockShow()
 	case managerBrew:
 		return brewListPinned()
 	}
@@ -307,6 +345,8 @@ func runHold(manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
 		return aptMarkHold(pkgs)
+	case managerDnf:
+		return dnfVersionlockAdd(pkgs)
 	case managerBrew:
 		return brewPin(pkgs)
 	}
@@ -317,6 +357,8 @@ func runUnhold(manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
 		return aptMarkUnhold(pkgs)
+	case managerDnf:
+		return dnfVersionlockDel(pkgs)
 	case managerBrew:
 		return brewUnpin(pkgs)
 	}
@@ -445,6 +487,131 @@ func runBrew(verb string, pkgs []string) error {
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return fmt.Errorf("%w: %s", err, msg)
+		}
+		return err
+	}
+	return nil
+}
+
+// dnfBinary returns "dnf" if on PATH, else "yum" if yum is present
+// (RHEL 7 fallback), else "dnf" so any subsequent exec error names
+// the modern manager. Kept identical in spirit to the helper in
+// pkg.upgrade's handler.go; duplicated rather than promoted to a
+// shared package because the pkg_* handlers are intentionally
+// per-action and the function body is two lines.
+func dnfBinary() string {
+	if _, err := lookPath("dnf"); err == nil {
+		return "dnf"
+	}
+	if _, err := lookPath("yum"); err == nil {
+		return "yum"
+	}
+	return "dnf"
+}
+
+// versionlockEntryRE matches the boundary between the package name
+// and its `epoch:version-release.arch` suffix in `dnf versionlock
+// list` output. Format: `bash-0:5.1.8-9.el9.*` → name="bash". The
+// epoch is always present in dnf-plugin-versionlock output (defaults
+// to 0 when not explicit), so the `-<digits>:` anchor is reliable.
+var versionlockEntryRE = regexp.MustCompile(`-\d+:`)
+
+// versionlockMissingPluginRE detects the dnf/yum error that surfaces
+// when the versionlock plugin isn't installed. Both managers emit
+// substantially similar messages — match the discriminating fragments
+// so we can produce a targeted "install dnf-plugin-versionlock" hint
+// instead of leaking a bare exec error.
+var versionlockMissingPluginRE = regexp.MustCompile(`(?i)no such command|unknown command|argument command: invalid choice: 'versionlock'`)
+
+// realDnfVersionlockShow runs `dnf versionlock list` and returns the
+// set of currently-locked package names. Falls back to `yum
+// versionlock list` on RHEL 7. Skips dnf's metadata-expiration
+// header and any non-entry lines by accepting only those that contain
+// the canonical `-<epoch>:` boundary.
+//
+// If the versionlock plugin isn't installed (the most common
+// preflight failure on a fresh box), the error is rewrapped with a
+// targeted install hint pointing at dnf-plugin-versionlock /
+// yum-plugin-versionlock — saves the operator a doc round-trip.
+func realDnfVersionlockShow() (map[string]bool, error) {
+	bin := dnfBinary()
+	// #nosec G204 -- fixed dnf/yum binary.
+	cmd := exec.Command(bin, "versionlock", "list")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if versionlockMissingPluginRE.MatchString(msg) {
+			return nil, fmt.Errorf("pkg.hold: %s versionlock plugin not installed — run `pkg.install: { name: %s-plugin-versionlock, state: present }` first", bin, bin)
+		}
+		if msg != "" {
+			return nil, fmt.Errorf("%w: %s", err, msg)
+		}
+		return nil, err
+	}
+	held := map[string]bool{}
+	sc := bufio.NewScanner(&stdout)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" {
+			continue
+		}
+		if name := parseVersionlockEntry(line); name != "" {
+			held[name] = true
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("scan %s versionlock list: %w", bin, err)
+	}
+	return held, nil
+}
+
+// parseVersionlockEntry extracts the package name from a single
+// `dnf versionlock list` entry. The expected shape is
+// `<name>-<epoch>:<version>-<release>.<arch>` (e.g.
+// `bash-0:5.1.8-9.el9.*`). Lines that don't match this shape (header
+// metadata, plugin warnings, etc.) return "" so the caller's loop
+// silently skips them — header filtering by structure, not by string
+// matching, is more robust against dnf version drift.
+func parseVersionlockEntry(line string) string {
+	line = strings.TrimSuffix(line, ".*")
+	if loc := versionlockEntryRE.FindStringIndex(line); loc != nil {
+		return line[:loc[0]]
+	}
+	return ""
+}
+
+func realDnfVersionlockAdd(pkgs []string) error {
+	return runDnfVersionlock("add", pkgs)
+}
+
+func realDnfVersionlockDel(pkgs []string) error {
+	return runDnfVersionlock("delete", pkgs)
+}
+
+// runDnfVersionlock shells out to `dnf versionlock add|delete <pkgs>`.
+// Stderr is folded into the returned error so the operator sees the
+// dnf message verbatim. The plugin-missing path is detected here too
+// (the showhold equivalent), turning a bare exec failure into a
+// targeted install hint.
+func runDnfVersionlock(verb string, pkgs []string) error {
+	if len(pkgs) == 0 {
+		return nil
+	}
+	bin := dnfBinary()
+	args := append([]string{"versionlock", verb}, pkgs...)
+	// #nosec G204 -- args are validated package names from YAML.
+	cmd := exec.Command(bin, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if versionlockMissingPluginRE.MatchString(msg) {
+			return fmt.Errorf("pkg.hold: %s versionlock plugin not installed — run `pkg.install: { name: %s-plugin-versionlock, state: present }` first", bin, bin)
+		}
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}

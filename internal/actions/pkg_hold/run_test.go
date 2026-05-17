@@ -222,9 +222,13 @@ func TestPlan_ReportsTargetsButDoesNotCall(t *testing.T) {
 	}
 }
 
+// TestRun_UnsupportedManagerErrors — pacman/zypper/apk aren't shipped
+// yet. The pre-fix repro used `manager: dnf` which became valid when
+// the versionlock driver landed; pacman is the canonical "still
+// missing" stand-in.
 func TestRun_UnsupportedManagerErrors(t *testing.T) {
 	_ = newStub(t, map[string]bool{})
-	step := &config.Step{PkgHold: &config.PkgHold{Name: "x", Manager: "dnf"}}
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "x", Manager: "pacman"}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
 		t.Fatal("expected error for unsupported manager")
@@ -405,5 +409,214 @@ func TestMetadata_AdvertisesLinuxAndDarwin(t *testing.T) {
 		if !got[want] {
 			t.Errorf("SupportedPlatforms missing %s: %v", want, m.SupportedPlatforms)
 		}
+	}
+}
+
+// dnfStub captures the calls made through the dnf versionlock hooks.
+// Mirrors stub (apt) and brewStub: an in-memory "currently locked"
+// set + per-call recorders. Auto-detect picks dnf because lookPath
+// only resolves the dnf binary.
+type dnfStub struct {
+	locked      map[string]bool
+	addCalls    [][]string
+	deleteCalls [][]string
+}
+
+func newDnfStub(t *testing.T, locked map[string]bool) *dnfStub {
+	t.Helper()
+	s := &dnfStub{locked: locked}
+	origShow := dnfVersionlockShow
+	origAdd := dnfVersionlockAdd
+	origDel := dnfVersionlockDel
+	origLookPath := lookPath
+	dnfVersionlockShow = func() (map[string]bool, error) {
+		out := make(map[string]bool, len(s.locked))
+		for k, v := range s.locked {
+			out[k] = v
+		}
+		return out, nil
+	}
+	dnfVersionlockAdd = func(pkgs []string) error {
+		cp := append([]string(nil), pkgs...)
+		s.addCalls = append(s.addCalls, cp)
+		for _, p := range cp {
+			s.locked[p] = true
+		}
+		return nil
+	}
+	dnfVersionlockDel = func(pkgs []string) error {
+		cp := append([]string(nil), pkgs...)
+		s.deleteCalls = append(s.deleteCalls, cp)
+		for _, p := range cp {
+			delete(s.locked, p)
+		}
+		return nil
+	}
+	lookPath = func(name string) (string, error) {
+		if name == "dnf" {
+			return "/usr/bin/dnf", nil
+		}
+		return "", errNotFound{}
+	}
+	t.Cleanup(func() {
+		dnfVersionlockShow = origShow
+		dnfVersionlockAdd = origAdd
+		dnfVersionlockDel = origDel
+		lookPath = origLookPath
+	})
+	return s
+}
+
+func TestApply_Dnf_HoldAlreadyLocked_Noop(t *testing.T) {
+	s := newDnfStub(t, map[string]bool{"bash": true})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "bash"}}
+	r := mustRun(t, false, step)
+	if r.Changed {
+		t.Errorf("expected no-op when already locked; reason=%q", r.Reason)
+	}
+	if len(s.addCalls) != 0 || len(s.deleteCalls) != 0 {
+		t.Errorf("expected no dnf calls; add=%v del=%v", s.addCalls, s.deleteCalls)
+	}
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager fact = %v, want dnf", r.Data["manager"])
+	}
+}
+
+func TestApply_Dnf_HoldWhenUnlocked_Locks(t *testing.T) {
+	s := newDnfStub(t, map[string]bool{})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "bash"}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	if len(s.addCalls) != 1 || len(s.addCalls[0]) != 1 || s.addCalls[0][0] != "bash" {
+		t.Errorf("expected single add call for bash; got %v", s.addCalls)
+	}
+}
+
+func TestApply_Dnf_UnholdWhenLocked_Deletes(t *testing.T) {
+	s := newDnfStub(t, map[string]bool{"kernel": true})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "kernel", State: "unheld"}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	if len(s.deleteCalls) != 1 || s.deleteCalls[0][0] != "kernel" {
+		t.Errorf("expected single delete call for kernel; got %v", s.deleteCalls)
+	}
+}
+
+func TestApply_Dnf_MultiPackage_OnlyDriftActedOn(t *testing.T) {
+	s := newDnfStub(t, map[string]bool{"bash": true})
+	step := &config.Step{PkgHold: &config.PkgHold{Names: []string{"bash", "openssl"}}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	if len(s.addCalls) != 1 || len(s.addCalls[0]) != 1 || s.addCalls[0][0] != "openssl" {
+		t.Errorf("expected single add call for openssl only; got %v", s.addCalls)
+	}
+}
+
+// TestApply_YumAlias_CanonicalizesToDnf — `manager: yum` routes
+// through the dnf driver and the result's manager field is "dnf".
+func TestApply_YumAlias_CanonicalizesToDnf(t *testing.T) {
+	s := newDnfStub(t, map[string]bool{})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "bash", Manager: "yum"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf (yum canonicalizes)", r.Data["manager"])
+	}
+	if len(s.addCalls) != 1 {
+		t.Errorf("expected dnf add call; got %v", s.addCalls)
+	}
+}
+
+// TestAutoDetect_PrefersAptOverDnf — same precedent as pkg.list /
+// pkg.upgrade: apt-mark wins when both are on PATH.
+func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
+	s := newStub(t, map[string]bool{}) // sets lookPath to find everything
+	origDnfAdd := dnfVersionlockAdd
+	dnfVersionlockAdd = func(pkgs []string) error {
+		t.Errorf("dnf should not be invoked when apt-mark is on PATH; got %v", pkgs)
+		return nil
+	}
+	t.Cleanup(func() { dnfVersionlockAdd = origDnfAdd })
+
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "bash"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "apt" {
+		t.Errorf("manager = %v, want apt", r.Data["manager"])
+	}
+	if len(s.holdCalls) != 1 {
+		t.Errorf("expected apt-mark hold call; got %v", s.holdCalls)
+	}
+}
+
+// TestAutoDetect_DnfWhenNoApt — auto-detect lands on dnf when apt-mark
+// is absent. Pins the order apt > dnf > brew.
+func TestAutoDetect_DnfWhenNoApt(t *testing.T) {
+	s := newDnfStub(t, map[string]bool{})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "kernel"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf", r.Data["manager"])
+	}
+	if len(s.addCalls) != 1 {
+		t.Errorf("expected dnf add call; got %v", s.addCalls)
+	}
+}
+
+// TestPermissions_BinaryByManager — explicit manager surfaces the
+// right binary for spec-44 doctor. Closes the preflight gap for
+// dnf hosts.
+func TestPermissions_BinaryByManager(t *testing.T) {
+	cases := []struct {
+		manager string
+		wantBin string
+	}{
+		{"apt", "apt-mark"},
+		{"dnf", "dnf"},
+		{"yum", "dnf"},
+		{"brew", "brew"},
+	}
+	for _, c := range cases {
+		t.Run(c.manager, func(t *testing.T) {
+			step := &config.Step{PkgHold: &config.PkgHold{Manager: c.manager}}
+			ps := Handler{}.Permissions(step)
+			if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != c.wantBin {
+				t.Errorf("manager=%s: RequiredBinaries = %v, want [%s]", c.manager, ps.RequiredBinaries, c.wantBin)
+			}
+			if !ps.Sudo {
+				t.Errorf("manager=%s: Sudo must remain true; got %+v", c.manager, ps)
+			}
+		})
+	}
+}
+
+// TestParseVersionlockEntry_DirectShapes pins the parser against the
+// dnf versionlock list output shapes we expect in the wild. Header
+// lines must return "" so the show-holds loop skips them silently.
+func TestParseVersionlockEntry_DirectShapes(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"basic", "bash-0:5.1.8-9.el9.*", "bash"},
+		{"name-with-dashes", "gtk-doc-0:1.33.2-6.el9.*", "gtk-doc"},
+		{"long-name", "python3-dnf-plugin-versionlock-0:4.0.21-23.el9.*", "python3-dnf-plugin-versionlock"},
+		{"nonzero-epoch", "openssl-1:3.0.7-25.el9_3.*", "openssl"},
+		{"no-arch-glob", "bash-0:5.1.8-9.el9", "bash"},
+		{"header-skipped", "Last metadata expiration check: 0:00:23 ago on Mon May 17 2026.", ""},
+		{"empty", "", ""},
+		{"no-epoch-boundary", "garbage line", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := parseVersionlockEntry(c.in); got != c.want {
+				t.Errorf("parseVersionlockEntry(%q) = %q; want %q", c.in, got, c.want)
+			}
+		})
 	}
 }
