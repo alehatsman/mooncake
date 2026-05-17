@@ -5,9 +5,11 @@
 #
 #   pre-commit → task ci:fast
 #     Fast gate (target <5s on warm cache): go vet, gofmt on staged files,
-#     ai-lint on staged files, soft-cap budget report. Catches the cheap
-#     mistakes that should never reach a commit (unformatted code, stub
-#     panics, agent-tagged TODOs) without blocking iteration speed.
+#     ai-lint on staged files, soft-cap budget report, docs/schema regen
+#     auto-stage when handler/config Go files are staged. Catches the
+#     cheap mistakes that should never reach a commit (unformatted code,
+#     stub panics, agent-tagged TODOs, generated-doc drift) without
+#     blocking iteration speed.
 #
 #   pre-push → task ci
 #     Full gate: build + test-race + lint + scan + docs/schema regen +
@@ -49,7 +51,7 @@ else
   exit 1
 fi
 
-echo "pre-commit: running 'task ci:fast' (vet + gofmt + ai-lint + budget)..."
+echo "pre-commit: running 'task ci:fast' (vet + gofmt + ai-lint + budget + docs-regen)..."
 if ! "$TASK_BIN" ci:fast; then
   echo "" >&2
   echo "pre-commit: ✗ fast gate failed. Fix the issue above and re-commit," >&2
@@ -95,8 +97,11 @@ cat <<EOM
 
 Installed:
   pre-commit  → 'task ci:fast' (~seconds). Catches stub panics, agent
-                TODOs, unformatted code, and soft-cap regressions before
-                they land in a commit.
+                TODOs, unformatted code, soft-cap regressions, and
+                generated-doc drift before they land in a commit.
+                Auto-stages docs-next/generated/* + schema.json when a
+                handler/config Go file is staged and the generator
+                emits new content.
   pre-push    → 'task ci'      (~1-2 min). Full build + test-race + lint
                 + scan + docs/schema regen + arch + dupl before the
                 commits leave the machine.
