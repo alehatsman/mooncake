@@ -115,31 +115,49 @@ type Version struct {
 // peer's SyncedRoot (needed to compute the plan_path it later submits) and
 // for liveness checks in spec-46's fleet status.
 func (c *Client) GetVersion(ctx context.Context) (*Version, error) {
+	var v Version
+	if err := getJSON(ctx, c, "GET /v1/version", "/v1/version", &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
+// getJSON is the shared GET-small-JSON helper for endpoints that
+// return a typed JSON body on 200 and a structured error on
+// anything else. Wraps with-timeout-context, authReq, http.Do, the
+// 1 MiB body cap, status check, and json.Unmarshal in one place so
+// the per-endpoint methods become ~5-line one-liners.
+//
+// opLabel ("GET /v1/version", "GET /v1/self/mac", …) is the prefix
+// used for c.wrap()/c.httpErr() so error messages keep their
+// existing wire shape. Endpoints that need special status handling
+// (e.g. GetRunResult's 404 → ErrRunResultNotReady) or a different
+// body cap (GetRunResult uses readMediumBody) stay open-coded.
+func getJSON[T any](ctx context.Context, c *Client, opLabel, path string, out *T) error {
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
 
-	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/version", nil)
+	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+path, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, c.wrap("GET /v1/version", err)
+		return c.wrap(opLabel, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := readSmallBody(resp)
 	if err != nil {
-		return nil, c.wrap("GET /v1/version: read body", err)
+		return c.wrap(opLabel+": read body", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, c.httpErr("GET /v1/version", resp.StatusCode, body)
+		return c.httpErr(opLabel, resp.StatusCode, body)
 	}
-	var v Version
-	if err := json.Unmarshal(body, &v); err != nil {
-		return nil, c.wrap("GET /v1/version: decode", err)
+	if err := json.Unmarshal(body, out); err != nil {
+		return c.wrap(opLabel+": decode", err)
 	}
-	return &v, nil
+	return nil
 }
 
 // Head reports whether the peer already has a byte-identical copy of the
@@ -422,27 +440,9 @@ func (c *Client) ListRunsWith(ctx context.Context, opts ListRunsOpts) ([]RunReco
 // so we transfer the full payload (typically a few KB) and let the caller
 // cherry-pick os / arch / os_version / etc.
 func (c *Client) GetFacts(ctx context.Context) (map[string]any, error) {
-	ctx, cancel := withTimeout(ctx)
-	defer cancel()
-	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/facts", nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, c.wrap("GET /v1/facts", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, err := readSmallBody(resp)
-	if err != nil {
-		return nil, c.wrap("GET /v1/facts: read body", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, c.httpErr("GET /v1/facts", resp.StatusCode, body)
-	}
 	var out map[string]any
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, c.wrap("GET /v1/facts: decode", err)
+	if err := getJSON(ctx, c, "GET /v1/facts", "/v1/facts", &out); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -621,27 +621,9 @@ type MACResponse struct {
 // daemon's 404 "no_mac" as a wrapped error when the peer has no
 // usable non-loopback NIC.
 func (c *Client) GetMAC(ctx context.Context) (*MACResponse, error) {
-	ctx, cancel := withTimeout(ctx)
-	defer cancel()
-	req, err := c.authReq(ctx, http.MethodGet, c.BaseURL+"/v1/self/mac", nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, c.wrap("GET /v1/self/mac", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, err := readSmallBody(resp)
-	if err != nil {
-		return nil, c.wrap("GET /v1/self/mac: read body", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, c.httpErr("GET /v1/self/mac", resp.StatusCode, body)
-	}
 	var out MACResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, c.wrap("GET /v1/self/mac: decode", err)
+	if err := getJSON(ctx, c, "GET /v1/self/mac", "/v1/self/mac", &out); err != nil {
+		return nil, err
 	}
 	return &out, nil
 }
