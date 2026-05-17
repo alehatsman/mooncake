@@ -718,21 +718,27 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 	}
 }
 
-func TestHandleWindowsService(t *testing.T) {
+// TestHandleWindowsService_MissingServiceErrors pins the v1
+// behaviour now that windows is implemented: a service that
+// doesn't exist in SCM returns a SetupError with a clear hint
+// rather than silently no-op. Stubs windowsExec to simulate
+// Get-Service returning empty (= missing service) so the test
+// runs on any CI host without needing a real PowerShell.
+func TestHandleWindowsService_MissingServiceErrors(t *testing.T) {
+	prev := windowsExec
+	windowsExec = func(string) (string, error) { return "", nil }
+	t.Cleanup(func() { windowsExec = prev })
+
 	ctx := newMockExecutionContext()
 	step := config.Step{
-		OsService: &config.ServiceAction{
-			Name: "test",
-		},
+		OsService: &config.ServiceAction{Name: "test", State: "started"},
 	}
-
-	err := handleWindowsService("test", &config.ServiceAction{Name: "test"}, step, ctx)
+	err := handleWindowsService("test", step.OsService, step, ctx)
 	if err == nil {
-		t.Error("handleWindowsService() should error (not implemented)")
+		t.Fatal("handleWindowsService() should error when service is missing")
 	}
-
-	if !strings.Contains(err.Error(), "Windows service support not yet implemented") {
-		t.Errorf("Error should mention not implemented, got: %v", err)
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Error should mention 'not found'; got: %v", err)
 	}
 }
 

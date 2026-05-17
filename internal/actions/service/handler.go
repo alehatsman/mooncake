@@ -1030,13 +1030,12 @@ func launchdKill(serviceID string, step config.Step, ec *executor.ExecutionConte
 	return nil
 }
 
-// handleWindowsService manages Windows services (placeholder).
-func handleWindowsService(_ string, _ *config.ServiceAction, _ config.Step, _ *executor.ExecutionContext) error {
-	return &executor.SetupError{
-		Component: "windows service",
-		Issue:     "Windows service support not yet implemented",
-	}
-}
+// handleWindowsService lives in service_windows_impl.go. Kept as a
+// separate file (rather than inline here) because the v1 windows
+// surface is materially smaller than systemd/launchd — state +
+// enabled only, no unit-file management — and keeping it in its
+// own file makes the v1 → v2 expansion (when os.windows_service or
+// equivalent lands) a single-file diff.
 
 // markStepFailed marks a step as failed and registers the result.
 func markStepFailed(result *executor.Result, step config.Step, ec *executor.ExecutionContext) {
