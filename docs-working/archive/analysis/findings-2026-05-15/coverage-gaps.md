@@ -149,15 +149,24 @@ support missing).
 
 ## Summary table
 
-| # | Sev | Area | Fix |
-|---|---|---|---|
-| 3 | MEDIUM | jq preset (and probably others) | audit `presets/*/tasks/install.yml` |
-| 23 | MEDIUM | `repo.tree` default | descend by default |
-| 37 | MEDIUM | `presets search` | consult local first |
-| 38 | LOW | `presets list --format json` | add JSON output mode |
-| 39 | MEDIUM | `tool github-release` tag prefix | try multiple prefixes |
-| 33 | LOW | `git.clone` `repo:` vs `url:` | accept alias |
-| 40 | HIGH | `tool github-release` bare binaries | see silent-success-bugs.md |
+**Status rollup as of 2026-05-17: all coverage-gap findings ✅ FIXED or
+out-of-scope (presets/ directory removed).**
+
+| # | Sev | Status | Area | Fix |
+|---|---|---|---|---|
+| 3 | MEDIUM | n/a (obsolete) | jq preset cross-platform branches | top-level `presets/` directory was removed; per-preset cross-platform coverage is now an external concern |
+| 23 | MEDIUM | ✅ FIXED | `repo.tree` default | `include_files` defaults to true `17642f81` |
+| 37 | MEDIUM | ✅ FIXED | `presets search` | consults local search paths first `7e1554e3` |
+| 38 | LOW | ✅ FIXED | `presets list --format json` | JSON output added |
+| 39 | MEDIUM | ✅ FIXED | `tool github-release` tag prefix | resolves tag when unset, doesn't hardcode v-prefix `e63851d7` |
+| 33 | LOW | ✅ FIXED | `git.clone` `repo:` vs `url:` | accepts `url:` alias `f3feca10` |
+| 40 | HIGH | ✅ FIXED | `tool github-release` bare binaries | landed `cb6b21bb` — see silent-success-bugs.md |
+| 50 | LOW | ✅ FIXED | `file.copy` directory error | names concrete alternative `f1f2f7f8` |
+| 51 | LOW | ✅ FIXED | `file.copy` symlink follow | `follow_symlinks:` parameter, default true `5a6d4c9d` |
+| 52 | LOW | ✅ FIXED | `git.*` path param parity | `git.config` accepts `dest:` alias `7defabe2` |
+| 60 | LOW | ✅ FIXED | `tool which` when `bin:` unset | auto-resolve single executable `2e1e5840` |
+| 63 | MEDIUM | ✅ FIXED | `container: state: stopped` no-op when absent | `269246a3` |
+| 64 | HIGH | ✅ FIXED | `container:` inspect template fields | uses `.Config.Image` not `.ImageName` `8d477ddd` |
 
 ---
 

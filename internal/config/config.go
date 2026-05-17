@@ -1395,6 +1395,22 @@ type HTTPRequest struct {
 	// audit story; declare save_to on the top-level request
 	// instead.
 	SaveTo string `yaml:"save_to,omitempty" json:"save_to,omitempty"`
+
+	// ExpectJSONKeys lists top-level keys that the auto-parsed
+	// response JSON object must contain. After a successful response
+	// (status accepted), the handler asserts response.json is a
+	// JSON object AND each listed key is present (regardless of
+	// value type). A missing key fails the step with a clear error
+	// listing what's missing.
+	//
+	// This is deliberately a narrower contract than the full JSON-
+	// schema validation deferred under expect_json_schema (file
+	// path → draft-07 validator). The narrow check covers the most
+	// common "I called POST /hooks, prove the server returned an id
+	// and url" assertion without taking on a JSONSchema dependency.
+	// Empty/whitespace-only entries are rejected by Validate so
+	// `expect_json_keys: [""]` doesn't silently no-op.
+	ExpectJSONKeys []string `yaml:"expect_json_keys,omitempty" json:"expect_json_keys,omitempty"`
 }
 
 // HTTPAuth is the one-of credential block for HTTPRequest. Set at

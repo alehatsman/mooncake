@@ -1,5 +1,12 @@
 # Fix Verification — 2026-05-15
 
+> **2026-05-17 update: the MT-N queue is closed.** Every entry that was
+> ✅, 🟡 partial, or still open below has since been fully fixed and verified
+> in source. The "What to fix next" list at the bottom of this file is
+> obsolete; see each finding file's summary table for per-issue commit refs.
+> #2 step-level (last 🟡 partial) was confirmed closed by the MT-15 /
+> MT-77 fixes — regression tests pinned in `f3bb10f2`.
+
 After the initial 43 findings were filed, the project author landed fixes
 for 9 of them (commits prefixed `MT-N fix` or `fix(...): MT-N`). I
 rebuilt the static binary from `HEAD` and re-ran each repro. Results
