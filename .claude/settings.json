@@ -1,4 +1,7 @@
 {
+  "env": {
+    "GOWORK": "off"
+  },
   "hooks": {
     "PostToolUse": [
       {
