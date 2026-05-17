@@ -723,14 +723,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// Mirrors the command/shell handlers; without this, assert's hard-coded
 		// failure path bypasses the documented escape hatch.
 		if step.FailedWhen != "" {
-			shouldFail, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
+			shouldFail, evalErr := actions.EvaluateBoolExpression(ctx, "failed_when", step.FailedWhen, map[string]interface{}{
 				"expected": expected,
 				"actual":   actual,
 				"type":     assertType,
 				"failed":   true,
 			})
 			if evalErr != nil {
-				return result, fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
+				return result, evalErr
 			}
 			if !shouldFail {
 				// User-suppressed failure: emit a passed event with the
@@ -769,24 +769,4 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	return result, nil
-}
-
-// evaluateBoolExpression renders and evaluates a boolean expression
-// against the supplied context, mirroring the helper used by the
-// command and shell handlers. Used by Execute to honor failed_when:
-// on assertions.
-func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string, evalContext map[string]interface{}) (bool, error) {
-	rendered, err := ctx.GetTemplate().Render(expression, evalContext)
-	if err != nil {
-		return false, fmt.Errorf("failed to render expression: %w", err)
-	}
-	result, err := ctx.GetEvaluator().Evaluate(rendered, evalContext)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate expression: %w", err)
-	}
-	boolResult, ok := result.(bool)
-	if !ok {
-		return false, fmt.Errorf("expression evaluated to %T, expected bool", result)
-	}
-	return boolResult, nil
 }

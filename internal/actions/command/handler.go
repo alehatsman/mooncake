@@ -103,24 +103,24 @@ func (h *Handler) executeCommandRaw(ctx actions.Context, step *config.Step, rend
 // it once after all attempts finish.
 func (h *Handler) applyOverrides(ctx actions.Context, step *config.Step, result *executor.Result) error {
 	if step.FailedWhen != "" {
-		failed, evalErr := h.evaluateBoolExpression(ctx, step.FailedWhen, map[string]interface{}{
+		failed, evalErr := actions.EvaluateBoolExpression(ctx, "failed_when", step.FailedWhen, map[string]interface{}{
 			"rc":     result.Rc,
 			"stdout": result.Stdout,
 			"stderr": result.Stderr,
 		})
 		if evalErr != nil {
-			return fmt.Errorf("failed to evaluate failed_when: %w", evalErr)
+			return evalErr
 		}
 		result.Failed = failed
 	}
 	if step.ChangedWhen != "" {
-		changed, evalErr := h.evaluateBoolExpression(ctx, step.ChangedWhen, map[string]interface{}{
+		changed, evalErr := actions.EvaluateBoolExpression(ctx, "changed_when", step.ChangedWhen, map[string]interface{}{
 			"rc":     result.Rc,
 			"stdout": result.Stdout,
 			"stderr": result.Stderr,
 		})
 		if evalErr != nil {
-			return fmt.Errorf("failed to evaluate changed_when: %w", evalErr)
+			return evalErr
 		}
 		result.Changed = changed
 	}
@@ -256,29 +256,6 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 	}
 
 	return command, nil
-}
-
-// evaluateBoolExpression evaluates an expression that should return a boolean value.
-func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string, evalContext map[string]interface{}) (bool, error) {
-	// Render the expression with variables
-	renderedExpr, err := ctx.GetTemplate().Render(expression, evalContext)
-	if err != nil {
-		return false, fmt.Errorf("failed to render expression: %w", err)
-	}
-
-	// Evaluate the expression
-	result, err := ctx.GetEvaluator().Evaluate(renderedExpr, evalContext)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate expression: %w", err)
-	}
-
-	// Cast to bool
-	boolResult, ok := result.(bool)
-	if !ok {
-		return false, fmt.Errorf("expression evaluated to %T, expected bool", result)
-	}
-
-	return boolResult, nil
 }
 
 // Run is the Spec 16 entry point. Like shell, command actions can't be

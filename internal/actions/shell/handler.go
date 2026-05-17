@@ -461,7 +461,7 @@ func (h *Handler) evaluateResultOverrides(ctx actions.Context, step *config.Step
 
 	// Evaluate changed_when
 	if step.ChangedWhen != "" {
-		boolResult, err := h.evaluateBoolExpression(ctx, step.ChangedWhen, "changed_when", evalContext)
+		boolResult, err := actions.EvaluateBoolExpression(ctx, "changed_when", step.ChangedWhen, evalContext)
 		if err != nil {
 			return err
 		}
@@ -475,7 +475,7 @@ func (h *Handler) evaluateResultOverrides(ctx actions.Context, step *config.Step
 	// downstream error-message path detects Rc==0 && Failed==true and
 	// emits a failed-by-failed_when message instead of an exit-code lie.
 	if step.FailedWhen != "" {
-		boolResult, err := h.evaluateBoolExpression(ctx, step.FailedWhen, "failed_when", evalContext)
+		boolResult, err := actions.EvaluateBoolExpression(ctx, "failed_when", step.FailedWhen, evalContext)
 		if err != nil {
 			return err
 		}
@@ -483,26 +483,6 @@ func (h *Handler) evaluateResultOverrides(ctx actions.Context, step *config.Step
 	}
 
 	return nil
-}
-
-// evaluateBoolExpression renders and evaluates a boolean expression
-func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression, fieldName string, evalContext map[string]interface{}) (bool, error) {
-	renderedExpr, err := ctx.GetTemplate().Render(expression, evalContext)
-	if err != nil {
-		return false, fmt.Errorf("failed to render %s: %w", fieldName, err)
-	}
-
-	result, err := ctx.GetEvaluator().Evaluate(renderedExpr, evalContext)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate %s: %w", fieldName, err)
-	}
-
-	boolResult, ok := result.(bool)
-	if !ok {
-		return false, fmt.Errorf("%s expression evaluated to %T, expected bool", fieldName, result)
-	}
-
-	return boolResult, nil
 }
 
 // Run is the Spec 16 entry point. Shell commands can't be predicted
