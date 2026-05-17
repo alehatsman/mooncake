@@ -5,7 +5,9 @@ severity: bug
 package: cmd
 file: cmd/mooncake.go
 lines: 788-857
-status: open
+status: done
+fixed: 2026-05-17 — commit `533c15e8 fix(cmd): F047 — actions show now enriches descriptions + enums (and stamp F046 done)`. Two-part change: (a) the one-line option flip the finding called for — `StrictValidation: true` added to the GeneratorOptions literal so the schemagen's description / enum / pattern enrichment runs. (b) extracted the registry-lookup + generator-invocation body into a new helper `loadActionShowDefinition(name) (*ActionMetadata, *Definition, error)` so the regression test can drive the real lookup path. The "Suggested fix" wrapper sketch the finding asked for (`runActionsShow(&buf, "file.write", "json")`) was implemented as this helper rather than as a stdout-capture wrapper — same testability, less plumbing.
+verified: 2026-05-17 — confirmed fixed on master @ 533c15e8. (a) Regression test `TestLoadActionShowDefinition_PopulatesDescriptions` exercises the real registry → schemagen pipeline and asserts that at least one of {group, owner, mode} on `file.write` has a non-empty description; with `StrictValidation: true` it passes, without it would fail (the test is asymmetric: any single enriched field passes, so it's tolerant of future schema additions but still catches the bug class). (b) Sibling test `TestLoadActionShowDefinition_UnknownActionErrors` locks in the "unknown action" error message through the same helper. Manual smoke (per the finding's suggestion): `mooncake actions show file.write` now shows "File group (groupname or GID)" / "File owner (username or UID)" on the corresponding parameter rows instead of `—`. The "Adjacent" follow-up the finding flagged (split `StrictValidation` into a separate `EnrichDescriptions` flag, or make enrichment unconditional in the generator so future callers can't hit the same trap) is deferred — explicitly out of scope per the finding itself.
 ---
 
 ## What
