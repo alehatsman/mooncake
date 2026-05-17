@@ -1335,7 +1335,14 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		// because the retry loop above branched on raw err, not the
 		// post-override verdict. failed_when:false may mask the final
 		// failure entirely; changed_when overrides Changed.
-		if r, rok := result.(*Result); rok {
+		//
+		// The `r != nil` guard handles the typed-nil case: a handler
+		// returning (*Result)(nil) alongside an err satisfies the
+		// *Result type assertion (rok==true) but would nil-deref on
+		// r.Failed. Treat that the same as a non-*Result return — the
+		// err carries the outcome; there's nothing to apply overrides
+		// to.
+		if r, rok := result.(*Result); rok && r != nil {
 			if oErr := applyResultOverrides(ec, &step, r); oErr != nil {
 				err = oErr
 			} else if r.Failed {
@@ -1348,11 +1355,19 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 				if err == nil {
 					err = fmt.Errorf("step failed (failed_when=true)")
 				}
-			} else if err != nil {
+			} else if err != nil && step.FailedWhen != "" {
 				// failed_when masked the failure: clear err so the
 				// step reports success. This is the documented
 				// "retry N times, then don't fail the run no matter
-				// what" pattern (MT-48).
+				// what" pattern (MT-48). Gated on FailedWhen being
+				// set — otherwise a RawRunner returning (non-nil
+				// *Result with Failed=false, non-nil err) silently
+				// reports the step as ok=1 changed=0. Most spec-69-
+				// migrated handlers (os.user, os.cron, pkg.upgrade,
+				// …) return errors that way: they construct the
+				// Result up-front and don't set result.Failed=true on
+				// error. See docs-working/specs/spec-69-followups.md
+				// finding B0.
 				err = nil
 			}
 		}

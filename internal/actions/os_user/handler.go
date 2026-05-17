@@ -146,7 +146,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		Prior:        snapshotFromState(current),
 	}
 
-	if err := applyPlan(plan, current, des); err != nil {
+	// Spec-69 phase 5: runner is per-Run, threaded into applyPlan so
+	// useradd/usermod/userdel (linux) and dscl writes (darwin) escalate
+	// via the centralized PrivilegedRunner rather than bare exec.Command.
+	// Windows applyPlanWindows accepts the runner and ignores it — PS
+	// admin elevation is a separate mechanism.
+	runner := ctx.Privileged()
+
+	if err := applyPlan(runner, plan, current, des); err != nil {
 		return result, err
 	}
 	result.Changed = true
@@ -161,7 +168,7 @@ var lookupUser func(string) (*userState, error) = func(string) (*userState, erro
 	return nil, fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 
-var applyPlan func(plan computedPlan, current *userState, d desired) error = func(computedPlan, *userState, desired) error {
+var applyPlan func(runner actions.PrivilegedRunner, plan computedPlan, current *userState, d desired) error = func(actions.PrivilegedRunner, computedPlan, *userState, desired) error {
 	return fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 
@@ -398,22 +405,6 @@ func planAbsent(current *userState, d desired) computedPlan {
 		changes:    []string{"remove"},
 		removeArgs: args,
 	}
-}
-
-// runCmd executes a binary and surfaces stderr on failure.
-func runCmd(bin string, args ...string) error {
-	// #nosec G204 -- bin and args are validated by callers.
-	cmd := exec.Command(bin, args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg != "" {
-			return fmt.Errorf("%s %s: %w: %s", bin, strings.Join(args, " "), err, msg)
-		}
-		return fmt.Errorf("%s %s: %w", bin, strings.Join(args, " "), err)
-	}
-	return nil
 }
 
 func capture(cmd *exec.Cmd) (string, error) {

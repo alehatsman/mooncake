@@ -3,11 +3,15 @@
 package os_user //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 func init() {
@@ -55,14 +59,34 @@ func lookupUserViaGetent(name string) (*userState, error) {
 	return state, nil
 }
 
-func applyPlanLinux(plan computedPlan, _ *userState, _ desired) error {
+func applyPlanLinux(runner actions.PrivilegedRunner, plan computedPlan, _ *userState, _ desired) error {
 	switch plan.operation {
 	case "create":
-		return runCmd("useradd", plan.createArgs...)
+		return runLinuxCmd(runner, "useradd", plan.createArgs...)
 	case "modify":
-		return runCmd("usermod", plan.modifyArgs...)
+		return runLinuxCmd(runner, "usermod", plan.modifyArgs...)
 	case "remove":
-		return runCmd("userdel", plan.removeArgs...)
+		return runLinuxCmd(runner, "userdel", plan.removeArgs...)
+	}
+	return nil
+}
+
+// runLinuxCmd shells out via the PrivilegedRunner so useradd/usermod/
+// userdel escalate to root when mooncake isn't already root. nil
+// runner falls back to a zero-value security.PrivilegedRunner — same
+// shape used by os_group/platform_linux.go's runLinuxCmd. Mirrors the
+// spec-69 "tests can pass nil and still get a usable runner" pattern.
+func runLinuxCmd(runner actions.PrivilegedRunner, bin string, args ...string) error {
+	if runner == nil {
+		runner = security.PrivilegedRunner{}
+	}
+	out, err := runner.Run(context.TODO(), bin, args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg != "" {
+			return fmt.Errorf("%s %s: %w: %s", bin, strings.Join(args, " "), err, msg)
+		}
+		return fmt.Errorf("%s %s: %w", bin, strings.Join(args, " "), err)
 	}
 	return nil
 }

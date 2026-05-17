@@ -3,12 +3,16 @@
 package os_user //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 func init() {
@@ -76,22 +80,22 @@ func dsclField(name, key string) (string, error) {
 	return "", nil
 }
 
-func applyPlanDarwin(plan computedPlan, current *userState, d desired) error {
+func applyPlanDarwin(runner actions.PrivilegedRunner, plan computedPlan, current *userState, d desired) error {
 	switch plan.operation {
 	case "create":
-		return createUserDarwin(d)
+		return createUserDarwin(runner, d)
 	case "modify":
-		return modifyUserDarwin(current, d)
+		return modifyUserDarwin(runner, current, d)
 	case "remove":
-		return removeUserDarwin(d)
+		return removeUserDarwin(runner, d)
 	}
 	return nil
 }
 
-func createUserDarwin(d desired) error {
+func createUserDarwin(runner actions.PrivilegedRunner, d desired) error {
 	base := "/Users/" + d.name
 
-	if err := dsclRun("-create", base); err != nil {
+	if err := dsclRun(runner, "-create", base); err != nil {
 		return err
 	}
 
@@ -110,14 +114,14 @@ func createUserDarwin(d desired) error {
 			return fmt.Errorf("os.user create: assign uid: %w", err)
 		}
 	}
-	if err := dsclRun("-create", base, "UniqueID", strconv.Itoa(uid)); err != nil {
+	if err := dsclRun(runner, "-create", base, "UniqueID", strconv.Itoa(uid)); err != nil {
 		return err
 	}
 
 	// Primary group: explicit gid > group name > default (staff=20).
 	switch {
 	case d.gid != nil:
-		if err := dsclRun("-create", base, "PrimaryGroupID", strconv.Itoa(*d.gid)); err != nil {
+		if err := dsclRun(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(*d.gid)); err != nil {
 			return err
 		}
 	case d.group != "":
@@ -125,17 +129,17 @@ func createUserDarwin(d desired) error {
 		if err != nil {
 			return fmt.Errorf("os.user create: lookup group %q: %w", d.group, err)
 		}
-		if err := dsclRun("-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
+		if err := dsclRun(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
 			return err
 		}
 	default:
-		if err := dsclRun("-create", base, "PrimaryGroupID", "20"); err != nil { // staff
+		if err := dsclRun(runner, "-create", base, "PrimaryGroupID", "20"); err != nil { // staff
 			return err
 		}
 	}
 
 	if d.shell != "" {
-		if err := dsclRun("-create", base, "UserShell", d.shell); err != nil {
+		if err := dsclRun(runner, "-create", base, "UserShell", d.shell); err != nil {
 			return err
 		}
 	}
@@ -144,24 +148,24 @@ func createUserDarwin(d desired) error {
 	if home == "" {
 		home = "/Users/" + d.name
 	}
-	if err := dsclRun("-create", base, "NFSHomeDirectory", home); err != nil {
+	if err := dsclRun(runner, "-create", base, "NFSHomeDirectory", home); err != nil {
 		return err
 	}
 
 	if d.comment != "" {
-		if err := dsclRun("-create", base, "RealName", d.comment); err != nil {
+		if err := dsclRun(runner, "-create", base, "RealName", d.comment); err != nil {
 			return err
 		}
 	}
 
 	if d.createHome {
-		if err := runCmd("createhomedir", "-c", "-u", d.name); err != nil {
+		if err := runDarwinCmd(runner, "createhomedir", "-c", "-u", d.name); err != nil {
 			return err
 		}
 	}
 
 	for _, g := range d.groups {
-		if err := dsclRun("-append", "/Groups/"+g, "GroupMembership", d.name); err != nil {
+		if err := dsclRun(runner, "-append", "/Groups/"+g, "GroupMembership", d.name); err != nil {
 			return err
 		}
 	}
@@ -169,37 +173,37 @@ func createUserDarwin(d desired) error {
 	return nil
 }
 
-func modifyUserDarwin(current *userState, d desired) error {
+func modifyUserDarwin(runner actions.PrivilegedRunner, current *userState, d desired) error {
 	base := "/Users/" + d.name
 
 	if d.uid != nil && *d.uid != current.uid {
-		if err := dsclRun("-create", base, "UniqueID", strconv.Itoa(*d.uid)); err != nil {
+		if err := dsclRun(runner, "-create", base, "UniqueID", strconv.Itoa(*d.uid)); err != nil {
 			return err
 		}
 	}
 	if d.gid != nil && *d.gid != current.gid {
-		if err := dsclRun("-create", base, "PrimaryGroupID", strconv.Itoa(*d.gid)); err != nil {
+		if err := dsclRun(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(*d.gid)); err != nil {
 			return err
 		}
 	}
 	if d.shell != "" && d.shell != current.shell {
-		if err := dsclRun("-create", base, "UserShell", d.shell); err != nil {
+		if err := dsclRun(runner, "-create", base, "UserShell", d.shell); err != nil {
 			return err
 		}
 	}
 	if d.home != "" && d.home != current.home {
-		if err := dsclRun("-create", base, "NFSHomeDirectory", d.home); err != nil {
+		if err := dsclRun(runner, "-create", base, "NFSHomeDirectory", d.home); err != nil {
 			return err
 		}
 	}
 	if d.comment != "" && d.comment != current.comment {
-		if err := dsclRun("-create", base, "RealName", d.comment); err != nil {
+		if err := dsclRun(runner, "-create", base, "RealName", d.comment); err != nil {
 			return err
 		}
 	}
 
 	if len(d.groups) > 0 {
-		if err := applyGroupsDarwin(d.name, current.groups, d.groups, d.appendGroups); err != nil {
+		if err := applyGroupsDarwin(runner, d.name, current.groups, d.groups, d.appendGroups); err != nil {
 			return err
 		}
 	}
@@ -207,20 +211,20 @@ func modifyUserDarwin(current *userState, d desired) error {
 	return nil
 }
 
-func removeUserDarwin(d desired) error {
+func removeUserDarwin(runner actions.PrivilegedRunner, d desired) error {
 	// Read home dir before the record is gone, in case we need to remove it.
 	var home string
 	if d.removeHome {
 		home, _ = dsclField(d.name, "NFSHomeDirectory")
 	}
 
-	if err := dsclRun("-delete", "/Users/"+d.name); err != nil {
+	if err := dsclRun(runner, "-delete", "/Users/"+d.name); err != nil {
 		return err
 	}
 
 	if d.removeHome && home != "" {
 		// #nosec G204 -- home is read from the directory service, not user input.
-		if err := runCmd("rm", "-rf", home); err != nil {
+		if err := runDarwinCmd(runner, "rm", "-rf", home); err != nil {
 			return err
 		}
 	}
@@ -229,7 +233,7 @@ func removeUserDarwin(d desired) error {
 
 // applyGroupsDarwin reconciles supplementary group membership.
 // When appendGroups is false, groups not in desired are removed first.
-func applyGroupsDarwin(username string, currentGroups, desiredGroups []string, appendGroups bool) error {
+func applyGroupsDarwin(runner actions.PrivilegedRunner, username string, currentGroups, desiredGroups []string, appendGroups bool) error {
 	have := stringSet(currentGroups)
 	want := stringSet(desiredGroups)
 
@@ -237,14 +241,14 @@ func applyGroupsDarwin(username string, currentGroups, desiredGroups []string, a
 		for g := range have {
 			if !want[g] {
 				// Best-effort — ignore errors (user may not actually be in the group record).
-				_ = dsclRun("-delete", "/Groups/"+g, "GroupMembership", username)
+				_ = dsclRun(runner, "-delete", "/Groups/"+g, "GroupMembership", username)
 			}
 		}
 	}
 
 	for _, g := range desiredGroups {
 		if !have[g] {
-			if err := dsclRun("-append", "/Groups/"+g, "GroupMembership", username); err != nil {
+			if err := dsclRun(runner, "-append", "/Groups/"+g, "GroupMembership", username); err != nil {
 				return err
 			}
 		}
@@ -252,19 +256,41 @@ func applyGroupsDarwin(username string, currentGroups, desiredGroups []string, a
 	return nil
 }
 
-// dsclRun executes a dscl command against the local directory node.
-func dsclRun(args ...string) error {
+// dsclRun executes a dscl write against the local directory node
+// through the PrivilegedRunner. dscl writes to /Local/Default need
+// root; the runner takes care of the sudo wrap when mooncake isn't
+// already running as root. Empty stderr on success; non-zero exit
+// surfaces with the captured output for diagnosis.
+func dsclRun(runner actions.PrivilegedRunner, args ...string) error {
+	if runner == nil {
+		runner = security.PrivilegedRunner{}
+	}
 	fullArgs := append([]string{"."}, args...)
-	// #nosec G204 -- args are field names and validated record values.
-	cmd := exec.Command("dscl", fullArgs...)
-	var out strings.Builder
-	cmd.Stderr = &out
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(out.String())
+	out, err := runner.Run(context.TODO(), "dscl", fullArgs...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("dscl %s: %w: %s", strings.Join(args, " "), err, msg)
 		}
 		return fmt.Errorf("dscl %s: %w", strings.Join(args, " "), err)
+	}
+	return nil
+}
+
+// runDarwinCmd is the createhomedir / rm escape hatch — same shape
+// as dsclRun but for the non-dscl helpers Darwin's apply path still
+// needs root for.
+func runDarwinCmd(runner actions.PrivilegedRunner, bin string, args ...string) error {
+	if runner == nil {
+		runner = security.PrivilegedRunner{}
+	}
+	out, err := runner.Run(context.TODO(), bin, args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg != "" {
+			return fmt.Errorf("%s %s: %w: %s", bin, strings.Join(args, " "), err, msg)
+		}
+		return fmt.Errorf("%s %s: %w", bin, strings.Join(args, " "), err)
 	}
 	return nil
 }
