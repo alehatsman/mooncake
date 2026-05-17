@@ -600,7 +600,7 @@ export interface OsFirewallAction {
 /**
  * Declaratively manage a Unix group
  * 
- * @platforms linux
+ * @platforms linux, darwin
  * @requiresSudo true
  * @category system
  */

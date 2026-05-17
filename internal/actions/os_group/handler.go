@@ -1,8 +1,11 @@
 // Package os_group implements the os.group action: declarative Unix
-// group management. Reads current state via `getent group` and applies
-// drift via groupadd/groupmod/groupdel. Refuses GID renumbering (would
-// silently change on-disk ownership) and refuses to remove a group
-// that still has members. Linux-only; macOS/Windows deferred.
+// group management. The platform-agnostic plan (renderDesired →
+// lookupGroup → computePlan → applyPlan) lives here; per-OS lookup +
+// apply functions live in platform_<goos>.go files behind build tags
+// and register themselves into the package-level lookupGroup /
+// applyPlan vars via init(). Refuses GID renumbering (would silently
+// change on-disk ownership) and refuses to remove a group that still
+// has members.
 //
 //nolint:revive // Package name matches action name convention (os_group)
 package os_group
@@ -42,7 +45,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
 		Version:            "1.0.0",
-		SupportedPlatforms: []string{"linux"},
+		SupportedPlatforms: []string{"linux", "darwin"},
 		RequiresSudo:       true,
 		ImplementsCheck:    true,
 	}
@@ -50,11 +53,20 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Permissions implements actions.Permitter (spec-22 phase 3).
 //
-// os.group always declares Sudo=true: groupadd/groupdel writes
-// /etc/group. No Network. RequiredBinaries=[groupadd, groupdel]
-// (groupmod isn't used today — the kernel refuses gid renumbering
-// to avoid silent ownership cascades).
+// os.group always declares Sudo=true: it edits the system directory
+// (groupadd/groupdel writes /etc/group on Linux; dscl . writes the
+// local OpenDirectory node on macOS — both need root). No Network.
+// RequiredBinaries vary by host so spec-44 doctor reports useful
+// findings on each platform.
 func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	if runtime.GOOS == "darwin" {
+		return actions.PermissionSet{
+			Sudo:             true,
+			RequiredBinaries: []string{"dscl"},
+			// macOS's directory store isn't a file — leave
+			// FilesystemWrite empty rather than misrepresent it.
+		}
+	}
 	return actions.PermissionSet{
 		Sudo:             true,
 		RequiredBinaries: []string{"groupadd", "groupdel"},
@@ -81,10 +93,6 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	g := step.OsGroup
 	result := executor.NewResult()
 	result.Checkable = true
-
-	if runtime.GOOS != "linux" {
-		return result, fmt.Errorf("os.group: only Linux is supported in this release; got %s", runtime.GOOS)
-	}
 
 	desired, err := renderDesired(ctx, g)
 	if err != nil {
@@ -177,34 +185,17 @@ type groupState struct {
 	members []string
 }
 
-// lookupGroup is the package-level hook for current state. Real impl
-// shells out to `getent group`; tests override this.
-var lookupGroup = lookupGroupViaGetent
+// lookupGroup and applyPlan are package-level hooks set by the
+// platform-specific init() in platform_linux.go / platform_darwin.go.
+// Tests override these to inject deterministic state without shelling
+// out. On unsupported GOOS, the default implementations return a
+// clear error rather than a panic.
+var lookupGroup func(string) (*groupState, error) = func(string) (*groupState, error) {
+	return nil, fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
+}
 
-func lookupGroupViaGetent(name string) (*groupState, error) {
-	out, err := capture(exec.Command("getent", "group", name))
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
-			return &groupState{exists: false}, nil
-		}
-		return nil, fmt.Errorf("getent group: %w", err)
-	}
-	line := strings.TrimSpace(out)
-	if line == "" {
-		return &groupState{exists: false}, nil
-	}
-	// Format: name:passwd:gid:user1,user2,...
-	fields := strings.Split(line, ":")
-	if len(fields) < 4 {
-		return nil, fmt.Errorf("getent group: malformed line %q", line)
-	}
-	gid, _ := strconv.Atoi(fields[2])
-	state := &groupState{exists: true, gid: gid}
-	memberField := strings.TrimSpace(fields[3])
-	if memberField != "" {
-		state.members = strings.Split(memberField, ",")
-	}
-	return state, nil
+var applyPlan func(plan computedPlan) error = func(computedPlan) error {
+	return fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
 }
 
 // computedPlan describes the diff between current and desired.
@@ -281,33 +272,9 @@ func planAbsent(current *groupState, d desired) (computedPlan, error) {
 	}, nil
 }
 
-func applyPlan(plan computedPlan) error {
-	switch plan.operation {
-	case "create":
-		return run("groupadd", plan.createArgs...)
-	case "modify":
-		return run("groupmod", plan.modifyArgs...)
-	case "remove":
-		return run("groupdel", plan.removeArgs...)
-	}
-	return nil
-}
-
-func run(bin string, args ...string) error {
-	// #nosec G204 -- bin is one of groupadd/groupmod/groupdel; args are validated above.
-	cmd := exec.Command(bin, args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg != "" {
-			return fmt.Errorf("%s %s: %w: %s", bin, strings.Join(args, " "), err, msg)
-		}
-		return fmt.Errorf("%s %s: %w", bin, strings.Join(args, " "), err)
-	}
-	return nil
-}
-
+// capture runs cmd and returns its stdout. Shared helper for the
+// platform-specific lookup/apply paths; lives here (not behind a build
+// tag) so tests on any host can construct the type-level mock.
 func capture(cmd *exec.Cmd) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

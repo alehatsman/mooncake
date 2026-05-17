@@ -1,6 +1,7 @@
 package os_group //nolint:revive // package name follows action convention
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -17,6 +18,51 @@ func TestPermissions_AlwaysSudo(t *testing.T) {
 	}
 	if ps.Network {
 		t.Errorf("Network must be false; got %+v", ps)
+	}
+}
+
+// TestPermissions_RequiredBinariesVaryByGOOS pins the host-shaped
+// permission set so spec-44 doctor reports usable findings on each
+// platform. Linux needs groupadd/groupdel + /etc/group write; darwin
+// needs dscl and no concrete filesystem path (the directory store
+// isn't a file). Mirrors os_user's abi_test_GOOS check.
+func TestPermissions_RequiredBinariesVaryByGOOS(t *testing.T) {
+	h := Handler{}
+	ps := h.Permissions(&config.Step{OsGroup: &config.OsGroup{Name: "docker"}})
+	var wantBins []string
+	switch runtime.GOOS {
+	case "darwin":
+		wantBins = []string{"dscl"}
+		if len(ps.FilesystemWrite) != 0 {
+			t.Errorf("darwin: FilesystemWrite should be empty (no path-shaped store); got %v", ps.FilesystemWrite)
+		}
+	default:
+		wantBins = []string{"groupadd", "groupdel"}
+	}
+	if len(ps.RequiredBinaries) != len(wantBins) {
+		t.Fatalf("RequiredBinaries = %v, want %v", ps.RequiredBinaries, wantBins)
+	}
+	for i, b := range wantBins {
+		if ps.RequiredBinaries[i] != b {
+			t.Errorf("RequiredBinaries[%d] = %q, want %q", i, ps.RequiredBinaries[i], b)
+		}
+	}
+}
+
+// TestMetadata_AdvertisesLinuxAndDarwin guards SupportedPlatforms.
+// If a future change drops darwin (or adds another platform), this
+// test fails and forces docs / finder UX updates in lockstep.
+func TestMetadata_AdvertisesLinuxAndDarwin(t *testing.T) {
+	m := (&Handler{}).Metadata()
+	want := map[string]bool{"linux": true, "darwin": true}
+	got := map[string]bool{}
+	for _, p := range m.SupportedPlatforms {
+		got[p] = true
+	}
+	for p := range want {
+		if !got[p] {
+			t.Errorf("SupportedPlatforms missing %s: %v", p, m.SupportedPlatforms)
+		}
 	}
 }
 
