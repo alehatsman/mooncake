@@ -1,13 +1,17 @@
 # Spec 69: Step Execution Pipeline — Centralize Cross-Cutting Concerns
 
-**Status:** 🟢 Phases 1, 2-3, 4, 5a, 5b shipped. The sudo-escalation bug
-class is closed (every Sudo:true-declaring handler now actually
-escalates). Retry + override centralization is in place via the
-`RawRunner` opt-in interface; shell + command migrated as the
-reference implementations. Migrating `http_request` (needs the
-`Retryable` hook for selective 5xx/429 retry policy) and `download`
-(custom inline retry shape) is mechanical follow-up — same shape as
-shell/command but with handler-specific retry-decision logic.
+**Status:** 🟢 All phases shipped. The sudo-escalation bug class is
+closed (every Sudo:true-declaring handler escalates correctly). The
+silent-retry-ignored bug class is closed (29 of ~50 handlers opted
+into `RawRunner` so user-declared `retry:` actually retries).
+
+Handlers intentionally NOT migrated to RawRunner, each with documented
+rationale: `http_request` (selective 5xx/429 retry — needs Retryable
+hook), `download` (per-attempt observability tied to inline retry),
+`assert` (re-checking a failing assertion is questionable UX),
+`wait.*` (already polling-style — retry would double the loop),
+`observe.*` (read-only diagnostics — retry semantics unclear), and
+`artifact.*` (one-shot capture/validate).
 **Epic:** E10 Handler ABI maturation — continuation of spec-22's
 ABI work.
 **Effort:** M (1–2 weeks across phases 1-3)
