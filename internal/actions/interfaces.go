@@ -276,12 +276,20 @@ type RawRunner interface {
 }
 
 // Retryable is an optional companion to RawRunner. Handlers that
-// implement it can decide per-error whether a retry should be
-// attempted — useful for actions like http.request where 5xx/429/
+// implement it can decide per-attempt whether a retry should be
+// tried — useful for actions like http.request where 5xx/429/
 // timeout errors are retryable but 4xx errors aren't.
 //
-// When absent, the executor's retry loop treats every non-nil error
+// The decision input is (result, err, step):
+//   - result: whatever RunRaw returned. May be nil on pre-exec
+//     failures. Carries Data which handlers like http.request
+//     populate with status_code so retry policy can branch on it
+//     without inventing a typed-error wrapper.
+//   - err:    the raw outcome of the most recent attempt.
+//   - step:   the YAML step (retry policy fields, action config).
+//
+// When absent, the executor's retry loop treats every non-nil err
 // as retryable up to step.RetryAttempts().
 type Retryable interface {
-	IsRetryable(err error, step *config.Step) bool
+	IsRetryable(result Result, err error, step *config.Step) bool
 }

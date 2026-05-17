@@ -1324,9 +1324,9 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		err    error
 	)
 	if rr, ok := runner.(actions.RawRunner); ok && ec.Mode() != actions.ModePlan {
-		isRetryable := func(error) bool { return true }
+		isRetryable := func(actions.Result, error) bool { return true }
 		if rd, ok := runner.(actions.Retryable); ok {
-			isRetryable = func(e error) bool { return rd.IsRetryable(e, &step) }
+			isRetryable = func(res actions.Result, e error) bool { return rd.IsRetryable(res, e, &step) }
 		}
 		result, err = runWithRetry(&step, ec.GetLogger(), func(_ int) (actions.Result, error) {
 			return rr.RunRaw(ec, &step)

@@ -63,7 +63,7 @@ func runWithRetry(
 	step *config.Step,
 	log logger.Logger,
 	attemptFn func(attempt int) (actions.Result, error),
-	isRetryable func(error) bool,
+	isRetryable func(actions.Result, error) bool,
 ) (actions.Result, error) {
 	maxAttempts := step.RetryAttempts() + 1
 	if maxAttempts < 1 {
@@ -86,7 +86,7 @@ func runWithRetry(
 		lastResult = result
 		lastErr = err
 
-		if isRetryable != nil && !isRetryable(err) {
+		if isRetryable != nil && !isRetryable(result, err) {
 			break
 		}
 

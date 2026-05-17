@@ -6,12 +6,27 @@ silent-retry-ignored bug class is closed (29 of ~50 handlers opted
 into `RawRunner` so user-declared `retry:` actually retries).
 
 Handlers intentionally NOT migrated to RawRunner, each with documented
-rationale: `http_request` (selective 5xx/429 retry — needs Retryable
-hook), `download` (per-attempt observability tied to inline retry),
-`assert` (re-checking a failing assertion is questionable UX),
-`wait.*` (already polling-style — retry would double the loop),
-`observe.*` (read-only diagnostics — retry semantics unclear), and
-`artifact.*` (one-shot capture/validate).
+rationale:
+
+- **`http_request`** — keeps internal retry by design. The action
+  publishes a single `EventHTTPRequested` per request carrying an
+  aggregate `attempts` count, and the result's `Data["attempts"]`
+  reports the total across retries. Migrating to executor-level retry
+  would split that into per-attempt event emissions and lose the
+  aggregate. The `Retryable` interface was extended to take
+  `(result, err, step)` (not just `(err, step)`) precisely so a future
+  migration can inspect `result.Data["status_code"]` for the
+  5xx/429-only policy — but the observability redesign is its own
+  spec.
+- **`download`** — has its own `downloadAction.Retries` config
+  distinct from `step.retry`. Migrating would either deprecate the
+  action-level field (breaking change) or nest the two retry loops
+  (confusing semantics). Keeps internal retry until the dual-config
+  question is resolved.
+- **`assert`** — re-checking a failing assertion is questionable UX.
+- **`wait.*`** — already polling-style; retry would double the loop.
+- **`observe.*`** — read-only diagnostics; retry semantics unclear.
+- **`artifact.*`** — one-shot capture/validate.
 **Epic:** E10 Handler ABI maturation — continuation of spec-22's
 ABI work.
 **Effort:** M (1–2 weeks across phases 1-3)
