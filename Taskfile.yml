@@ -365,6 +365,7 @@ tasks:
 
   ci:dupl:
     internal: true
+    silent: true
     cmds:
       - 'echo "[8/8] dupl (production-code duplication report)"'
       - |
