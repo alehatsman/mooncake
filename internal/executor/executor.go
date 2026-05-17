@@ -416,6 +416,14 @@ func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
 		return step.Name, true
 	}
 
+	// dx proposal-01: synthesize a label from the action type + key
+	// field so unnamed steps don't render as a glyph with empty
+	// body. The synthesized label flows through StepStartedData.Name
+	// to both the human renderer and the JSON event channel.
+	if synth := synthesizeStepName(step); synth != "" {
+		return synth, true
+	}
+
 	return "", false
 }
 
