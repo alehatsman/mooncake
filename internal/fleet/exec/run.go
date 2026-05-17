@@ -2,8 +2,6 @@ package exec
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -104,7 +102,7 @@ func Exec(ctx context.Context, opts ExecOptions) ([]PeerOutcome, error) {
 
 	// Stage the synthesized plan to a local temp file once; every peer
 	// uploads the same content.
-	planPath, planSha, err := writeStagedPlan(opts.PlanBytes)
+	planPath, planSha, err := fleet.WriteStagedPlan(opts.PlanBytes, "mooncake-fleet-exec-*.yml", "exec")
 	if err != nil {
 		return nil, err
 	}
@@ -314,27 +312,6 @@ func drainSink(
 	}
 }
 
-// writeStagedPlan dumps plan bytes to a temp file on the controller and
-// returns the absolute path plus the file's sha256. The caller is
-// responsible for `os.Remove(planPath)` when done.
-func writeStagedPlan(plan []byte) (string, string, error) {
-	f, err := os.CreateTemp("", "mooncake-fleet-exec-*.yml")
-	if err != nil {
-		return "", "", fmt.Errorf("exec: create scratch: %w", err)
-	}
-	if _, err := f.Write(plan); err != nil {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-		return "", "", fmt.Errorf("exec: write scratch: %w", err)
-	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(f.Name())
-		return "", "", fmt.Errorf("exec: close scratch: %w", err)
-	}
-	sum := sha256.Sum256(plan)
-	return f.Name(), hex.EncodeToString(sum[:]), nil
-}
-
 // scopeFor returns the daemon-side scope for one exec invocation.
 // Shape: `exec/<controller-id>`. Stays within the daemon's
 // max-two-segments / 128-byte-cap constraints (validateScope in
@@ -439,4 +416,3 @@ func Summary(outs []PeerOutcome) string {
 	}
 	return sb.String()
 }
-

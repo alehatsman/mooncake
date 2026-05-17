@@ -2,11 +2,8 @@ package observe
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/rand"
 	"os"
 	"path"
@@ -71,7 +68,7 @@ func Observe(ctx context.Context, opts Options) ([]PeerOutcome, error) {
 		return nil, errors.New("observe: ControllerID is required")
 	}
 
-	planPath, planSha, err := writeStagedPlan(opts.PlanBytes)
+	planPath, planSha, err := fleet.WriteStagedPlan(opts.PlanBytes, "mooncake-fleet-observe-*.yml", "observe")
 	if err != nil {
 		return nil, err
 	}
@@ -217,27 +214,6 @@ func drain(sink <-chan transport.Event, out *PeerOutcome) {
 			return
 		}
 	}
-}
-
-// writeStagedPlan dumps plan bytes to a temp file on the controller and
-// returns the absolute path plus the file's sha256. Mirrors exec's
-// helper; kept here to avoid an export from internal/fleet/exec.
-func writeStagedPlan(plan []byte) (string, string, error) {
-	f, err := os.CreateTemp("", "mooncake-fleet-observe-*.yml")
-	if err != nil {
-		return "", "", fmt.Errorf("observe: create scratch: %w", err)
-	}
-	if _, err := f.Write(plan); err != nil {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-		return "", "", fmt.Errorf("observe: write scratch: %w", err)
-	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(f.Name())
-		return "", "", fmt.Errorf("observe: close scratch: %w", err)
-	}
-	sum := sha256.Sum256(plan)
-	return f.Name(), hex.EncodeToString(sum[:]), nil
 }
 
 // scopeFor returns the daemon-side scope for one observe invocation.
