@@ -453,11 +453,24 @@ type PkgRepoApt struct {
 	UpdateCache       *bool    `yaml:"update_cache" json:"update_cache,omitempty"`               // Run apt-get update after change (default: true)
 }
 
-// PkgRepoDnf is the dnf/yum driver block. Reserved for a future phase.
+// PkgRepoDnf is the dnf/yum driver block for pkg.repo. Written as an
+// INI-style .repo file to /etc/yum.repos.d/<name>.repo with the
+// optional keyring at /etc/pki/rpm-gpg/RPM-GPG-KEY-<name>.
+//
+// Exactly one of baseurl/metalink/mirrorlist must be set when
+// state=present. Mirroring the apt driver's security posture,
+// `gpg_key_fingerprint` is required when `gpg_check` is true (the
+// default); set `gpg_check: false` to opt out of key pinning.
 type PkgRepoDnf struct {
-	BaseURL   string `yaml:"baseurl" json:"baseurl"`
-	GPGKeyURL string `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`
-	GPGCheck  *bool  `yaml:"gpg_check" json:"gpg_check,omitempty"`
+	BaseURL           string `yaml:"baseurl" json:"baseurl,omitempty"`                         // Direct mirror URL (mutually exclusive with metalink/mirrorlist)
+	Metalink          string `yaml:"metalink" json:"metalink,omitempty"`                       // Fedora-style metalink URL
+	Mirrorlist        string `yaml:"mirrorlist" json:"mirrorlist,omitempty"`                   // Text mirrorlist URL
+	Description       string `yaml:"description" json:"description,omitempty"`                 // Human-readable `name=` field (defaults to repo name)
+	Enabled           *bool  `yaml:"enabled" json:"enabled,omitempty"`                         // Default: true
+	GPGKeyURL         string `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`                 // URL to .gpg/.asc public key (fetched and pinned locally)
+	GPGKeyFingerprint string `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true
+	GPGCheck          *bool  `yaml:"gpg_check" json:"gpg_check,omitempty"`                     // Default: true
+	UpdateCache       *bool  `yaml:"update_cache" json:"update_cache,omitempty"`               // Run dnf clean expire-cache after change (default: true)
 }
 
 // PkgRepoBrew is the homebrew driver block. Reserved for a future phase.

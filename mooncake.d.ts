@@ -812,7 +812,7 @@ export interface PkgListAction {
 }
 
 /**
- * Manage a third-party package repository (apt + brew taps; dnf deferred)
+ * Manage a third-party package repository (apt, dnf/yum, brew taps)
  * 
  * @platforms linux, darwin
  * @requiresSudo true
@@ -834,8 +834,14 @@ export interface PkgRepoAction {
   };
   dnf?: {
     baseurl: string;
+    description: string;
+    enabled: boolean;
     gpg_check: boolean;
+    gpg_key_fingerprint: string;
     gpg_key_url: string;
+    metalink: string;
+    mirrorlist: string;
+    update_cache: boolean;
   };
   name: string;
   state?: string;
@@ -1520,8 +1526,7 @@ export interface Step {
    */
   "pkg.list"?: PkgListAction;
   /**
-   * Manage a third-party package repository (apt + brew taps; dnf
-   * deferred)
+   * Manage a third-party package repository (apt, dnf/yum, brew taps)
    */
   "pkg.repo"?: PkgRepoAction;
   /**
