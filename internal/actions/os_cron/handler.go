@@ -41,6 +41,12 @@ var cronPaths = struct {
 	dir: "/etc/cron.d",
 }
 
+// eff is the spec-69 sudo-aware Performer used by applyPlan. Set by
+// Run() from ctx.Effects() before dispatch; the Performer's phase 5b
+// try-direct-then-sudo semantic makes Become: true work against both
+// /etc/cron.d (production, needs sudo) and a t.TempDir (tests).
+var eff actions.Performer
+
 // Handler implements os.cron.
 type Handler struct{}
 
@@ -120,6 +126,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if runtime.GOOS != "linux" {
 		return result, fmt.Errorf("os.cron: only Linux is supported; got %s", runtime.GOOS)
 	}
+
+	// Wire the spec-69 Performer; applyPlan uses it for the mkdir +
+	// file write + remove with sudo fallback on EACCES.
+	eff = ctx.Effects()
 
 	rendered, err := renderCron(ctx, c)
 	if err != nil {
@@ -356,17 +366,18 @@ func renderCronFile(r renderedCron) string {
 }
 
 func applyPlan(plan cronPlan) error {
+	pOpts := actions.PerformerOpts{Become: true}
 	if plan.operation == "delete" {
-		if err := os.Remove(plan.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("os.cron: remove %s: %w", plan.path, err)
+		if e := eff.Remove(plan.path, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+			return fmt.Errorf("os.cron: remove %s: %w", plan.path, e.Err)
 		}
 		return nil
 	}
-	if err := os.MkdirAll(cronPaths.dir, 0o755); err != nil {
-		return fmt.Errorf("os.cron: mkdir %s: %w", cronPaths.dir, err)
+	if e := eff.Mkdir(cronPaths.dir, 0o755, pOpts); e.Err != nil {
+		return fmt.Errorf("os.cron: mkdir %s: %w", cronPaths.dir, e.Err)
 	}
-	if err := writeAtomic(plan.path, []byte(plan.wantContent), 0o644); err != nil {
-		return fmt.Errorf("os.cron: write %s: %w", plan.path, err)
+	if e := eff.WriteFile(plan.path, []byte(plan.wantContent), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+		return fmt.Errorf("os.cron: write %s: %w", plan.path, e.Err)
 	}
 	return nil
 }
@@ -393,4 +404,3 @@ func writeAtomic(path string, content []byte, mode os.FileMode) error {
 	}
 	return nil
 }
-

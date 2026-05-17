@@ -9,7 +9,6 @@
 package os_firewall
 
 import (
-	"bytes"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -20,6 +19,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 const (
@@ -42,10 +42,16 @@ const (
 // shell-out for an in-memory ruleset. ufwLookPath gates "is ufw
 // installed" so backend=auto can fail cleanly in tests.
 var (
-	ufwRun       = realUFWRun
-	ufwStatus    = realUFWStatus
-	ufwLookPath  = realUFWLookPath
+	ufwRun      = realUFWRun
+	ufwStatus   = realUFWStatus
+	ufwLookPath = realUFWLookPath
 )
+
+// privRunner is the spec-69 sudo-aware runner. ufw needs root for
+// both rule-mutation and rule-listing (the status output includes
+// PRIVATE per-IP rules) so we wrap both realUFWRun and realUFWStatus.
+// Set by Run() from ctx.Privileged() before dispatch.
+var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
 
 // Handler implements os.firewall.
 type Handler struct{}
@@ -124,6 +130,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("os.firewall: only Linux is supported; got %s", runtime.GOOS)
 	}
 
+	// Wire spec-69 runner for the ufw shell-outs.
+	privRunner = ctx.Privileged()
+
 	backend := normalizeBackend(f.Backend)
 	if backend == backendAuto {
 		if _, err := ufwLookPath(); err != nil {
@@ -165,10 +174,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// populated per apply (state=present only adds, state=absent only
 	// removes), so the reverse is always single-direction.
 	result.ReverseData = &OsFirewallReverseInfo{
-		Backend:        backend,
-		AppliedState:   normalizeState(f.State),
-		AddedRules:     ruleSliceToSnapshot(plan.toAdd),
-		RemovedRules:   ruleSliceToSnapshot(plan.toRemove),
+		Backend:      backend,
+		AppliedState: normalizeState(f.State),
+		AddedRules:   ruleSliceToSnapshot(plan.toAdd),
+		RemovedRules: ruleSliceToSnapshot(plan.toRemove),
 	}
 
 	if err := applyPlan(plan); err != nil {
@@ -447,15 +456,13 @@ func normalizeSource(s string) string {
 	return low
 }
 
-// realUFWRun shells out to `ufw <args>`. The action is registered as
-// RequiresSudo: true so the executor handles privilege escalation
-// through its as_user / sudo plumbing.
+// realUFWRun shells out to `ufw <args>` via ctx.Privileged(). The
+// action is registered as RequiresSudo: true; the wrapper handles
+// escalation when mooncake runs as a non-root user.
 func realUFWRun(args ...string) error {
-	cmd := exec.Command("ufw", args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "ufw", args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
@@ -465,18 +472,15 @@ func realUFWRun(args ...string) error {
 }
 
 func realUFWStatus() (string, error) {
-	cmd := exec.Command("ufw", "status", "numbered")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "ufw", "status", "numbered")
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return "", fmt.Errorf("%w: %s", err, msg)
 		}
 		return "", err
 	}
-	return stdout.String(), nil
+	return string(out), nil
 }
 
 func realUFWLookPath() (string, error) {

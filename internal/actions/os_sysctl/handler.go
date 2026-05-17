@@ -22,6 +22,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 const (
@@ -45,6 +46,17 @@ var (
 	sysctlGet   = realSysctlGet
 	sysctlApply = realSysctlApply
 )
+
+// privRunner is the spec-69 sudo-aware runner used by realSysctlApply
+// for the live-kernel write (`sysctl -w …` writes to /proc/sys/* —
+// needs root). realSysctlGet is read-only so it stays on bare exec.
+// Set by Run() from ctx.Privileged() before dispatch.
+var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
+
+// eff is the spec-69 sudo-aware Performer used by applyPlan() for
+// the persist-file write under /etc/sysctl.d. Set by Run() from
+// ctx.Effects() before dispatch.
+var eff actions.Performer
 
 // Handler implements os.sysctl.
 type Handler struct{}
@@ -120,6 +132,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if runtime.GOOS != "linux" {
 		return result, fmt.Errorf("os.sysctl: only Linux is supported; got %s", runtime.GOOS)
 	}
+
+	// Wire spec-69 primitives for the persist-file write + the
+	// live-kernel `sysctl -w` apply.
+	privRunner = ctx.Privileged()
+	eff = ctx.Effects()
 
 	rendered, err := renderSysctl(ctx, s)
 	if err != nil {
@@ -381,19 +398,20 @@ func renderPersistFile(lines []string) string {
 }
 
 func applyPlan(plan sysctlPlan, r renderedSysctl) error {
+	pOpts := actions.PerformerOpts{Become: true}
 	if plan.touchesFile {
 		if plan.wantContent == "" || !hasContentLines(plan.wantContent) {
 			// All managed lines removed — drop the file rather than
 			// leave a stray header behind.
-			if err := os.Remove(sysctlPaths.persistFile); err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return fmt.Errorf("os.sysctl: remove %s: %w", sysctlPaths.persistFile, err)
+			if e := eff.Remove(sysctlPaths.persistFile, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+				return fmt.Errorf("os.sysctl: remove %s: %w", sysctlPaths.persistFile, e.Err)
 			}
 		} else {
-			if err := os.MkdirAll(filepath.Dir(sysctlPaths.persistFile), 0o755); err != nil {
-				return fmt.Errorf("os.sysctl: mkdir %s: %w", filepath.Dir(sysctlPaths.persistFile), err)
+			if e := eff.Mkdir(filepath.Dir(sysctlPaths.persistFile), 0o755, pOpts); e.Err != nil {
+				return fmt.Errorf("os.sysctl: mkdir %s: %w", filepath.Dir(sysctlPaths.persistFile), e.Err)
 			}
-			if err := writeAtomic(sysctlPaths.persistFile, []byte(plan.wantContent), 0o644); err != nil {
-				return fmt.Errorf("os.sysctl: write %s: %w", sysctlPaths.persistFile, err)
+			if e := eff.WriteFile(sysctlPaths.persistFile, []byte(plan.wantContent), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+				return fmt.Errorf("os.sysctl: write %s: %w", sysctlPaths.persistFile, e.Err)
 			}
 		}
 	}
@@ -537,13 +555,12 @@ func realSysctlGet(name string) (string, error) {
 }
 
 // realSysctlApply runs `sysctl -w name=value` to push the value to the
-// running kernel.
+// running kernel. Goes through ctx.Privileged() — writing /proc/sys/*
+// requires root.
 func realSysctlApply(name, value string) error {
-	cmd := exec.Command("sysctl", "-w", name+"="+value)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "sysctl", "-w", name+"="+value)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}

@@ -28,7 +28,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// privRunner is the spec-69 sudo-aware runner used by the apt-mark and
+// dnf versionlock helpers (both need root for write ops). Brew runs
+// as the invoking user (Homebrew never under sudo), and the read-only
+// apt-mark showhold / brew list --pinned stay bare-exec — no
+// privilege needed. Set by Run() from ctx.Privileged() before
+// dispatch.
+var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
 
 const (
 	actionName  = "pkg.hold"
@@ -137,6 +146,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	p := step.PkgHold
 	result := executor.NewResult()
 	result.Checkable = true
+
+	// Wire the spec-69 sudo-aware runner for apt-mark hold/unhold and
+	// dnf versionlock add/del. Read-only paths + brew bypass it.
+	privRunner = ctx.Privileged()
 
 	manager, err := resolveManager(p.Manager)
 	if err != nil {
@@ -416,12 +429,9 @@ func runAptMark(verb string, pkgs []string) error {
 		return nil
 	}
 	args := append([]string{verb}, pkgs...)
-	// #nosec G204 -- args are validated package names from YAML.
-	cmd := exec.Command("apt-mark", args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "apt-mark", args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
@@ -603,12 +613,9 @@ func runDnfVersionlock(verb string, pkgs []string) error {
 	}
 	bin := dnfBinary()
 	args := append([]string{"versionlock", verb}, pkgs...)
-	// #nosec G204 -- args are validated package names from YAML.
-	cmd := exec.Command(bin, args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, bin, args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if versionlockMissingPluginRE.MatchString(msg) {
 			return fmt.Errorf("pkg.hold: %s versionlock plugin not installed — run `pkg.install: { name: %s-plugin-versionlock, state: present }` first", bin, bin)
 		}
