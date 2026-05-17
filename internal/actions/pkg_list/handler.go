@@ -122,7 +122,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		if err != nil {
 			return result, fmt.Errorf("pkg.list: dpkg-query: %w", err)
 		}
-		pkgs = parseDpkgQuery(out, manager)
+		pkgs = parseTabSeparatedQuery(out, manager)
 	case managerDnf, "yum":
 		out, err := rpmQuery()
 		if err != nil {
@@ -131,7 +131,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// Canonicalize to "dnf" in the result regardless of whether
 		// the operator wrote `manager: yum` or `manager: dnf`; rpm
 		// is the same database on both managers.
-		pkgs = parseRpmQuery(out, managerDnf)
+		pkgs = parseTabSeparatedQuery(out, managerDnf)
 		manager = managerDnf
 	case managerPacman, "yay", "paru":
 		out, err := pacmanQuery()
@@ -168,10 +168,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	return result, nil
 }
 
-// parseDpkgQuery parses the tab-separated output of
-// `dpkg-query -W -f='${Package}\t${Version}\n'`. Lines missing a
-// version field or a name are skipped.
-func parseDpkgQuery(stdout, manager string) []map[string]interface{} {
+// parseTabSeparatedQuery parses tab-separated `<name>\t<version>` output.
+// Shared by the apt (dpkg-query -W -f='${Package}\t${Version}\n') and
+// dnf/yum (rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\n') paths —
+// both binaries emit the same shape on purpose so the result entries
+// carry their distinguishing manager via the caller-supplied
+// `manager` argument. Lines without a tab or with an empty name are
+// skipped; an empty trailing newline is tolerated.
+func parseTabSeparatedQuery(stdout, manager string) []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, 256)
 	sc := bufio.NewScanner(strings.NewReader(stdout))
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -244,8 +248,8 @@ func realDpkgQuery() (string, error) {
 
 // realRpmQuery shells out to `rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\n'`.
 // Wired into the rpmQuery package var by default; tests substitute
-// their own. Tab-separated to match the dpkg-query shape so the
-// parsers stay identical.
+// their own. Tab-separated to match the dpkg-query shape so the same
+// parseTabSeparatedQuery helper handles both paths.
 //
 // Works on both dnf (RHEL 8+/Fedora) and yum (RHEL 7) hosts: the rpm
 // binary is the same database on both, and the format string is
@@ -265,38 +269,6 @@ func realRpmQuery() (string, error) {
 		return "", err
 	}
 	return stdout.String(), nil
-}
-
-// parseRpmQuery is identical in shape to parseDpkgQuery: tab-separated
-// `name<TAB>version-release`. Split here instead of reusing
-// parseDpkgQuery so the result entries carry the right `manager`
-// field (the canonical "dnf") without forcing the apt path to know
-// about its sibling.
-func parseRpmQuery(stdout, manager string) []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, 256)
-	sc := bufio.NewScanner(strings.NewReader(stdout))
-	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for sc.Scan() {
-		line := sc.Text()
-		if line == "" {
-			continue
-		}
-		parts := strings.SplitN(line, "\t", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		name := strings.TrimSpace(parts[0])
-		version := strings.TrimSpace(parts[1])
-		if name == "" {
-			continue
-		}
-		out = append(out, map[string]interface{}{
-			"name":    name,
-			"version": version,
-			"manager": manager,
-		})
-	}
-	return out
 }
 
 // realPacmanQuery shells out to `pacman -Q`, which prints `<name>

@@ -543,10 +543,13 @@ func TestPermissions_BinaryByManager(t *testing.T) {
 	}
 }
 
-// TestParseRpmQuery_DirectShapes pins the parser without going
-// through Run, so output-format regressions surface at the parsing
-// level instead of as a mis-sorted Data["packages"].
-func TestParseRpmQuery_DirectShapes(t *testing.T) {
+// TestParseTabSeparatedQuery_DirectShapes pins the shared apt/dnf parser
+// without going through Run, so output-format regressions surface at the
+// parsing level instead of as a mis-sorted Data["packages"]. The rpm
+// release-tag shape is the more demanding of the two inputs (the
+// dnf-canonical `version-release` form), so the table fixtures here use
+// it; the dpkg path goes through the same code.
+func TestParseTabSeparatedQuery_DirectShapes(t *testing.T) {
 	cases := []struct {
 		name      string
 		in        string
@@ -561,7 +564,7 @@ func TestParseRpmQuery_DirectShapes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := parseRpmQuery(c.in, "dnf")
+			got := parseTabSeparatedQuery(c.in, "dnf")
 			if len(got) != len(c.wantNames) {
 				t.Fatalf("got %d, want %d: %v", len(got), len(c.wantNames), got)
 			}
