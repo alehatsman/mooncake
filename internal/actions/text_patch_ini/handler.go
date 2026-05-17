@@ -10,9 +10,7 @@
 package text_patch_ini
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"sort"
 	"strings"
@@ -22,6 +20,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/textfile"
 )
 
 const (
@@ -110,7 +109,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// returns absolute; check would always fire its "absolute path not
 	// allowed" branch into a debug log; handler proceeded anyway).
 
-	original, fileExists, mode, err := readOriginal(path)
+	original, fileExists, mode, err := textfile.ReadOriginal(path, "text.patch.ini")
 	if err != nil {
 		return result, err
 	}
@@ -631,25 +630,6 @@ func bytesEqual(a, b []byte) bool {
 // ---------------------------------------------------------------------
 // file I/O
 // ---------------------------------------------------------------------
-
-func readOriginal(path string) (content string, exists bool, mode os.FileMode, err error) {
-	info, statErr := os.Stat(path)
-	if errors.Is(statErr, fs.ErrNotExist) {
-		return "", false, defaultFileMode, nil
-	}
-	if statErr != nil {
-		return "", false, 0, fmt.Errorf("text.patch.ini: stat %s: %w", path, statErr)
-	}
-	if info.IsDir() {
-		return "", false, 0, fmt.Errorf("text.patch.ini: %s is a directory", path)
-	}
-	// #nosec G304 -- file path from user config.
-	data, readErr := os.ReadFile(path)
-	if readErr != nil {
-		return "", false, 0, fmt.Errorf("text.patch.ini: read %s: %w", path, readErr)
-	}
-	return string(data), true, info.Mode().Perm(), nil
-}
 
 func writeAtomic(path string, content []byte, mode os.FileMode) error {
 	tmp := path + atomicTempSuffix

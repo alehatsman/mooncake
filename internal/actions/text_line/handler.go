@@ -7,9 +7,7 @@
 package text_line
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"regexp"
 	"strings"
@@ -19,6 +17,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/textfile"
 )
 
 const (
@@ -134,7 +133,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	original, fileExists, mode, err := readOriginal(path)
+	original, fileExists, mode, err := textfile.ReadOriginal(path, "text.line")
 	if err != nil {
 		return result, err
 	}
@@ -250,25 +249,6 @@ func normalizeState(s string) string {
 		return statePresent
 	}
 	return strings.ToLower(s)
-}
-
-func readOriginal(path string) (content string, exists bool, mode os.FileMode, err error) {
-	info, statErr := os.Stat(path)
-	if errors.Is(statErr, fs.ErrNotExist) {
-		return "", false, defaultFileMode, nil
-	}
-	if statErr != nil {
-		return "", false, 0, fmt.Errorf("text.line: stat %s: %w", path, statErr)
-	}
-	if info.IsDir() {
-		return "", false, 0, fmt.Errorf("text.line: %s is a directory", path)
-	}
-	// #nosec G304 -- file path from user config.
-	data, readErr := os.ReadFile(path)
-	if readErr != nil {
-		return "", false, 0, fmt.Errorf("text.line: read %s: %w", path, readErr)
-	}
-	return string(data), true, info.Mode().Perm(), nil
 }
 
 // computedPlan is the predicted outcome shared by plan and apply modes.
