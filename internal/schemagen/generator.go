@@ -618,6 +618,7 @@ var actionStructByName = map[string]any{
 	"text.patch.yaml":        &config.TextPatchYAML{},
 	"windows.firewall_rule":  &config.WindowsFirewallRule{},
 	"windows.scheduled_task": &config.WindowsScheduledTask{},
+	"http.request":           &config.HTTPRequest{},
 
 	"observe.port":    &config.ObservePort{},
 	"observe.process": &config.ObserveProcess{},

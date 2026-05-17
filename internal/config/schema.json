@@ -810,6 +810,121 @@
     "http.request": {
       "type": "object",
       "description": "Issue an HTTP request; capture the response as a registered fact",
+      "properties": {
+        "auth": {
+          "type": "object",
+          "properties": {
+            "basic": {
+              "type": "object",
+              "properties": {
+                "pass": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "user": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "user",
+                "pass"
+              ],
+              "additionalProperties": false
+            },
+            "bearer": {
+              "type": "string"
+            },
+            "header": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "string"
+        },
+        "creates_when": {
+          "type": "string"
+        },
+        "expect_status": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "file": {
+          "type": "string"
+        },
+        "follow_redirects": {
+          "type": "integer"
+        },
+        "form": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "json": {},
+        "max_response_bytes": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "redact_body": {
+          "type": "boolean"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "retry_delay": {
+          "type": "string"
+        },
+        "retry_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risk": {
+          "type": "string"
+        },
+        "skip_tls_verify": {
+          "type": "boolean"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "url"
+      ],
       "additionalProperties": false,
       "x-implements-check": true,
       "x-implements-permissions": true,

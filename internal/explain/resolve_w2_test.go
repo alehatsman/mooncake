@@ -1,6 +1,7 @@
 package explain
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -183,6 +184,79 @@ func TestResolveResource_PreservesStepIndex(t *testing.T) {
 		if got := r.Resource.History[i].StepIndex; got != want {
 			t.Errorf("history[%d].StepIndex = %d, want %d", i, got, want)
 		}
+	}
+}
+
+// Spec-68 wave 2.5: per-step Diff + StartTS round-trip through the
+// resolver into RunStep + ResourceEvent. Diff stays as opaque
+// json.RawMessage; the resolver doesn't need to know the shape.
+func TestResolveRun_CarriesDiffAndStartTS(t *testing.T) {
+	runTS := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	stepTS := time.Date(2026, 5, 17, 12, 0, 2, 0, time.UTC)
+	diffJSON := []byte(`{"resource":{"kind":"file","identifier":"/etc/x"},"operation":"update","before":{"size":100},"after":{"size":110}}`)
+	entries := []runlog.Entry{{
+		TS:     runTS,
+		RunID:  "r/01HW25",
+		OpID:   "op/01HW25",
+		Config: "main.yml",
+		Steps: []runlog.StepEntry{{
+			Index:   1,
+			Action:  "file.write",
+			Result:  "changed",
+			StartTS: stepTS,
+			Diff:    json.RawMessage(diffJSON),
+		}},
+	}}
+	opts := Options{RunsReader: fixedRuns(entries)}
+
+	r := Resolve("r/01HW25", opts)
+	if r.Kind != KindRun {
+		t.Fatalf("kind = %q, want run (notfound=%+v)", r.Kind, r.NotFound)
+	}
+	if len(r.Run.Steps) != 1 {
+		t.Fatalf("steps len = %d, want 1", len(r.Run.Steps))
+	}
+	got := r.Run.Steps[0]
+	if !got.StartTS.Equal(stepTS) {
+		t.Errorf("StartTS = %v, want %v", got.StartTS, stepTS)
+	}
+	if string(got.Diff) != string(diffJSON) {
+		t.Errorf("Diff payload mismatch:\n got:  %s\n want: %s", got.Diff, diffJSON)
+	}
+}
+
+func TestResolveResource_CarriesDiffAndStartTS(t *testing.T) {
+	runTS := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	stepTS := time.Date(2026, 5, 17, 12, 0, 5, 0, time.UTC)
+	diffJSON := []byte(`{"resource":{"kind":"pkg","identifier":"apt/curl"},"operation":"create"}`)
+	entries := []runlog.Entry{{
+		TS:    runTS,
+		RunID: "r/A",
+		OpID:  "op/A",
+		Steps: []runlog.StepEntry{{
+			Index:    1,
+			Action:   "pkg",
+			Resource: "pkg:apt/curl",
+			Result:   "changed",
+			StartTS:  stepTS,
+			Diff:     json.RawMessage(diffJSON),
+		}},
+	}}
+	opts := Options{RunsReader: fixedRuns(entries)}
+
+	r := Resolve("pkg:apt/curl", opts)
+	if r.Kind != KindResource {
+		t.Fatalf("kind = %q, want resource (notfound=%+v)", r.Kind, r.NotFound)
+	}
+	if len(r.Resource.History) != 1 {
+		t.Fatalf("history len = %d, want 1", len(r.Resource.History))
+	}
+	got := r.Resource.History[0]
+	if !got.StartTS.Equal(stepTS) {
+		t.Errorf("StartTS = %v, want %v", got.StartTS, stepTS)
+	}
+	if string(got.Diff) != string(diffJSON) {
+		t.Errorf("Diff payload mismatch:\n got:  %s\n want: %s", got.Diff, diffJSON)
 	}
 }
 

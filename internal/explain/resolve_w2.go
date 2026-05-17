@@ -75,7 +75,9 @@ func resolveResource(noun string, opts Options) Result {
 				RunID:      e.RunID,
 				OpID:       e.OpID,
 				TS:         e.TS,
+				StartTS:    s.StartTS,
 				StepIndex:  s.Index,
+				Diff:       s.Diff,
 				Action:     s.Action,
 				Result:     s.Result,
 				Reversible: s.Reversible,
@@ -114,8 +116,10 @@ func runPayloadFrom(e runlog.Entry) *RunPayload {
 			Action:     s.Action,
 			Resource:   s.Resource,
 			Result:     s.Result,
+			StartTS:    s.StartTS,
 			DurationMs: s.DurationMs,
 			Reversible: s.Reversible,
+			Diff:       s.Diff,
 		})
 	}
 	return &RunPayload{

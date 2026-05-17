@@ -367,3 +367,74 @@ func TestVarsAndIncludeVarsSpecialCases(t *testing.T) {
 		t.Errorf("vars.load should be string type, got %s", varsLoadDef.Type)
 	}
 }
+
+// TestGenerateActionDefinitions_EveryRegisteredActionHasPopulatedSchema
+// — F046 regression guard. The bug: an action is in actions.List()
+// (registry) but missing from generator.go's actionStructByName map.
+// schemagen then emits `{type:object, properties:{}, additionalProperties:false}`
+// for the action and every YAML invocation fails validation with
+// "Unknown field 'X'" before the handler runs.
+//
+// The pre-existing schema-check gate only diffs regenerated against
+// committed schema.json — when both are wrong in the same way the
+// diff is clean. This test closes that gap: walk every action the
+// registry surfaces and assert its generated definition is usable
+// (has either properties, oneOf alternatives, a primitive type, or
+// is in the documented exception list for plan-level constructs).
+func TestGenerateActionDefinitions_EveryRegisteredActionHasPopulatedSchema(t *testing.T) {
+	opts := GeneratorOptions{
+		IncludeExtensions: true,
+		OutputFormat:      "json",
+	}
+	gen := NewGenerator(opts)
+	schema, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("Generate() failed: %v", err)
+	}
+
+	// Actions that legitimately have empty / non-property-shaped
+	// schemas. Two families:
+	//   - Plan-level constructs validated through a different code
+	//     path: `vars` (free-form object), `vars.load` / `import`
+	//     (inline strings), `shell` (top-level string form).
+	//   - Parameter-less actions whose config struct has zero
+	//     exported fields by design: `observe.cpu`, `observe.memory`
+	//     read shared metrics with no per-step knobs, so
+	//     `observe.cpu: {}` (or even `observe.cpu:`) is the only
+	//     valid invocation and an empty schema is correct.
+	allowedNoProperties := map[string]bool{
+		"vars":           true,
+		"vars.load":      true,
+		"import":         true,
+		"shell":          true,
+		"observable":     true,
+		"observe.cpu":    true,
+		"observe.memory": true,
+	}
+
+	for _, md := range actions.List() {
+		name := md.Name
+		def, ok := schema.Definitions[name]
+		if !ok {
+			t.Errorf("registered action %q has no schema definition. "+
+				"Likely missing from actionStructByName in generator.go.",
+				name)
+			continue
+		}
+		// A populated definition has at least one of: properties,
+		// oneOf alternatives, a non-object primitive type. The
+		// classic F046 shape is type=object + empty properties +
+		// additionalProperties=false — that combination is the bug.
+		hasProperties := len(def.Properties) > 0
+		hasOneOf := len(def.OneOf) > 0
+		isNonObjectType := def.Type != "" && def.Type != "object"
+		if !hasProperties && !hasOneOf && !isNonObjectType && !allowedNoProperties[name] {
+			t.Errorf("registered action %q has an empty schema definition "+
+				"(type=%q, properties={}, oneOf=nil). YAML plans using "+
+				"this action will fail validation with \"Unknown field\" "+
+				"errors before reaching the handler. Add an entry to "+
+				"actionStructByName in internal/schemagen/generator.go.",
+				name, def.Type)
+		}
+	}
+}
