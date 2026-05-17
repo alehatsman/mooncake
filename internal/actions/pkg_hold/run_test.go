@@ -42,7 +42,7 @@ func planMode(b bool) actions.Mode {
 
 // stub captures the calls made through the apt-mark hooks.
 type stub struct {
-	held       map[string]bool
+	held        map[string]bool
 	holdCalls   [][]string
 	unholdCalls [][]string
 	managerOK   bool
@@ -222,14 +222,188 @@ func TestPlan_ReportsTargetsButDoesNotCall(t *testing.T) {
 	}
 }
 
-func TestRun_OnlyAptSupported(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
+func TestRun_UnsupportedManagerErrors(t *testing.T) {
 	_ = newStub(t, map[string]bool{})
 	step := &config.Step{PkgHold: &config.PkgHold{Name: "x", Manager: "dnf"}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
-		t.Fatal("expected error for non-apt manager")
+		t.Fatal("expected error for unsupported manager")
+	}
+}
+
+// brewStub captures the calls made through the brew hooks. Parallel
+// to stub for the apt path; tests use whichever stub matches the
+// manager under test.
+type brewStub struct {
+	pinned     map[string]bool
+	pinCalls   [][]string
+	unpinCalls [][]string
+}
+
+func newBrewStub(t *testing.T, pinned map[string]bool) *brewStub {
+	t.Helper()
+	s := &brewStub{pinned: pinned}
+	origListPinned := brewListPinned
+	origPin := brewPin
+	origUnpin := brewUnpin
+	origLookPath := lookPath
+	brewListPinned = func() (map[string]bool, error) {
+		out := make(map[string]bool, len(s.pinned))
+		for k, v := range s.pinned {
+			out[k] = v
+		}
+		return out, nil
+	}
+	brewPin = func(pkgs []string) error {
+		cp := append([]string(nil), pkgs...)
+		s.pinCalls = append(s.pinCalls, cp)
+		for _, p := range cp {
+			s.pinned[p] = true
+		}
+		return nil
+	}
+	brewUnpin = func(pkgs []string) error {
+		cp := append([]string(nil), pkgs...)
+		s.unpinCalls = append(s.unpinCalls, cp)
+		for _, p := range cp {
+			delete(s.pinned, p)
+		}
+		return nil
+	}
+	// Brew-only on PATH: apt-mark missing forces auto-detect to
+	// pick brew when manager: is unset.
+	lookPath = func(name string) (string, error) {
+		if name == "brew" {
+			return "/opt/homebrew/bin/brew", nil
+		}
+		return "", errNotFound{}
+	}
+	t.Cleanup(func() {
+		brewListPinned = origListPinned
+		brewPin = origPin
+		brewUnpin = origUnpin
+		lookPath = origLookPath
+	})
+	return s
+}
+
+func TestApply_Brew_PinAlreadyPinned_Noop(t *testing.T) {
+	s := newBrewStub(t, map[string]bool{"git": true})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "git"}}
+	r := mustRun(t, false, step)
+	if r.Changed {
+		t.Errorf("expected no-op when already pinned; reason=%q", r.Reason)
+	}
+	if len(s.pinCalls) != 0 || len(s.unpinCalls) != 0 {
+		t.Errorf("expected no brew calls; pin=%v unpin=%v", s.pinCalls, s.unpinCalls)
+	}
+	if r.Data["manager"] != "brew" {
+		t.Errorf("manager fact = %v, want brew", r.Data["manager"])
+	}
+}
+
+func TestApply_Brew_PinWhenUnpinned_Pins(t *testing.T) {
+	s := newBrewStub(t, map[string]bool{})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "git"}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	if len(s.pinCalls) != 1 || len(s.pinCalls[0]) != 1 || s.pinCalls[0][0] != "git" {
+		t.Errorf("expected single pin call for git; got %v", s.pinCalls)
+	}
+}
+
+func TestApply_Brew_UnpinWhenPinned_Unpins(t *testing.T) {
+	s := newBrewStub(t, map[string]bool{"node": true})
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "node", State: "unheld"}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	if len(s.unpinCalls) != 1 || s.unpinCalls[0][0] != "node" {
+		t.Errorf("expected single unpin call for node; got %v", s.unpinCalls)
+	}
+}
+
+func TestApply_Brew_MultiPackage_OnlyDriftActedOn(t *testing.T) {
+	s := newBrewStub(t, map[string]bool{"git": true})
+	step := &config.Step{PkgHold: &config.PkgHold{Names: []string{"git", "jq"}}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	if len(s.pinCalls) != 1 || len(s.pinCalls[0]) != 1 || s.pinCalls[0][0] != "jq" {
+		t.Errorf("expected single pin call for jq; got %v", s.pinCalls)
+	}
+}
+
+// TestApply_ExplicitManagerBrew_OnLinuxBox — explicit manager: brew
+// routes through the brew driver even when apt-mark is also on PATH.
+// Pins the operator-override semantic across both managers.
+func TestApply_ExplicitManagerBrew_OnLinuxBox(t *testing.T) {
+	// Both binaries on PATH; brew set as explicit manager.
+	bs := newBrewStub(t, map[string]bool{})
+	// Override lookPath to ALSO find apt-mark so we know we picked
+	// brew on intent, not on detection.
+	origLook := lookPath
+	lookPath = func(name string) (string, error) { return "/usr/bin/" + name, nil }
+	t.Cleanup(func() { lookPath = origLook })
+
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "git", Manager: "brew"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "brew" {
+		t.Errorf("manager = %v, want brew", r.Data["manager"])
+	}
+	if len(bs.pinCalls) != 1 {
+		t.Errorf("expected pin call via brew; got %v", bs.pinCalls)
+	}
+}
+
+// TestAutoDetect_PrefersAptOverBrew — same multi-manager precedent
+// as pkg.list: apt-mark wins auto-detection when both are on PATH.
+func TestAutoDetect_PrefersAptOverBrew(t *testing.T) {
+	s := newStub(t, map[string]bool{}) // sets lookPath to find everything
+	// Sentinel: any brew call fails the test.
+	origBrewPin := brewPin
+	brewPin = func(pkgs []string) error {
+		t.Errorf("brew should not be invoked when apt-mark is on PATH; got pin %v", pkgs)
+		return nil
+	}
+	t.Cleanup(func() { brewPin = origBrewPin })
+
+	step := &config.Step{PkgHold: &config.PkgHold{Name: "git"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "apt" {
+		t.Errorf("manager = %v, want apt (auto-detect must prefer apt)", r.Data["manager"])
+	}
+	if len(s.holdCalls) != 1 {
+		t.Errorf("expected apt-mark hold call; got %v", s.holdCalls)
+	}
+}
+
+// TestPermissions_BinaryByGOOS pins the host-shaped RequiredBinaries.
+func TestPermissions_BinaryByGOOS(t *testing.T) {
+	ps := (Handler{}).Permissions(nil)
+	wantBin := "apt-mark"
+	if runtime.GOOS == "darwin" {
+		wantBin = "brew"
+	}
+	if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != wantBin {
+		t.Errorf("RequiredBinaries = %v, want [%s]", ps.RequiredBinaries, wantBin)
+	}
+}
+
+// TestMetadata_AdvertisesLinuxAndDarwin guards SupportedPlatforms.
+func TestMetadata_AdvertisesLinuxAndDarwin(t *testing.T) {
+	m := (&Handler{}).Metadata()
+	got := map[string]bool{}
+	for _, p := range m.SupportedPlatforms {
+		got[p] = true
+	}
+	for _, want := range []string{"linux", "darwin"} {
+		if !got[want] {
+			t.Errorf("SupportedPlatforms missing %s: %v", want, m.SupportedPlatforms)
+		}
 	}
 }

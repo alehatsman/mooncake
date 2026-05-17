@@ -788,9 +788,9 @@ export interface PkgAction {
 }
 
 /**
- * Mark or unmark packages as held to prevent upgrade/removal (apt only in v1)
+ * Mark or unmark packages as held to prevent upgrade/removal (apt on linux, brew on darwin)
  * 
- * @platforms linux
+ * @platforms linux, darwin
  * @requiresSudo true
  * @category system
  */
@@ -1510,8 +1510,8 @@ export interface Step {
    */
   pkg?: PkgAction;
   /**
-   * Mark or unmark packages as held to prevent upgrade/removal (apt only
-   * in v1)
+   * Mark or unmark packages as held to prevent upgrade/removal (apt on
+   * linux, brew on darwin)
    */
   "pkg.hold"?: PkgHoldAction;
   /**

@@ -2073,7 +2073,7 @@
     },
     "pkg.hold": {
       "type": "object",
-      "description": "Mark or unmark packages as held to prevent upgrade/removal (apt only in v1)",
+      "description": "Mark or unmark packages as held to prevent upgrade/removal (apt on linux, brew on darwin)",
       "properties": {
         "manager": {
           "type": "string"
@@ -2093,7 +2093,8 @@
       },
       "additionalProperties": false,
       "x-platforms": [
-        "linux"
+        "linux",
+        "darwin"
       ],
       "x-requires-sudo": true,
       "x-implements-check": true,
@@ -2785,7 +2786,7 @@
           "$ref": "#/definitions/pkg"
         },
         "pkg.hold": {
-          "description": "Mark or unmark packages as held to prevent upgrade/removal (apt only in v1)",
+          "description": "Mark or unmark packages as held to prevent upgrade/removal (apt on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.hold"
         },
         "pkg.list": {
