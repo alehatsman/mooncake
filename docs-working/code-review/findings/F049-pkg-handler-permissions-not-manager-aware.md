@@ -3,6 +3,7 @@
 **Filed**: 2026-05-17 by aleh (from main_pc / WSL, while migrating dotfiles `platforms/arch/packages.yml` AUR shell)
 **Severity**: Medium (blocks a real, declared, supported user path)
 **Component**: `internal/actions/package/handler.go`
+**Status**: **done** (2026-05-18) — `pkg.Permissions()` now reads `step.Pkg.Manager` and returns `Sudo:false` for `yay`/`paru`/`brew`. Empty manager (auto-detect resolves at apply-time, post-preflight) stays `Sudo:true`. Regression test `TestPermissions_SudoByManager` covers the per-manager matrix.
 
 ---
 

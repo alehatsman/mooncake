@@ -3,20 +3,20 @@
 Living queue. Each iteration consumes one entry from **In progress /
 Queue**, produces a finding (or several), and the queue updates.
 
-## At-a-glance status (2026-05-17)
+## At-a-glance status (2026-05-18)
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F047, F036 skipped) | **46** |
-| 🟡 Findings open / in progress | **1** (F048) |
+| ✅ Findings filed and resolved (F001–F049, F036 skipped) | **48** |
+| 🟡 Findings open / in progress | **0** |
 | 📋 Packages still queued for review | see below |
 
-**One finding open**: F048 (fleet machine manifest YAML strictness).
-Rest of the queue is *review* work — read more packages, file new
-findings if you spot smells. The remaining work is *review*: read more packages,
-file new findings if you spot smells. The companion manual-test
-queue at `docs-working/archive/analysis/findings-2026-05-15/` is
-also closed — see that folder's README.
+**Queue clean**: F048 (fleet.yml strict YAML) shipped at `a6cb7741`;
+F049 (pkg.Permissions manager-aware) shipped 2026-05-18. The
+remaining work is *review*: read more packages, file new findings
+if you spot smells. The companion manual-test queue at
+`docs-working/archive/analysis/findings-2026-05-15/` is also closed
+— see that folder's README.
 
 ## Findings index
 
@@ -64,7 +64,8 @@ also closed — see that folder's README.
 | F041 | artifact_capture.readFileContent unbounded read | smell | **done** | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
 | F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
 | F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
-| F048 | fleet machine manifest YAML non-strict | bug | **open** | [findings/F048](./findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
+| F048 | fleet machine manifest YAML non-strict | bug | **done** | [findings/F048](./findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
+| F049 | pkg.Permissions not manager-aware | bug | **done** | [findings/F049](./findings/F049-pkg-handler-permissions-not-manager-aware.md) |
 
 ## Still to review
 

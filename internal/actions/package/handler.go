@@ -97,10 +97,36 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // auto-detects the manager and ships fallbacks. Demanding a specific
 // binary on PATH would break detection. Per-manager preflight (e.g.
 // "apt-get exists") happens inside Run.
+//
+// F049: Sudo depends on the resolved manager. yay/paru (AUR
+// wrappers) and brew (user-prefix installer) refuse root by design;
+// declaring Sudo:true for them makes the preflight reject any
+// non-elevated invocation and forces operators into an as_user:root
+// workaround that the manager itself then refuses at runtime. Empty
+// manager (auto-detect) keeps Sudo:true — auto-detection resolves at
+// apply-time after preflight, and Sudo:true is the safer-for-most-
+// targets default; operators on Arch hosts who want yay should be
+// explicit.
 func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	manager := ""
+	if step != nil && step.Pkg != nil {
+		manager = step.Pkg.Manager
+	}
 	return actions.PermissionSet{
-		Sudo:    true,
+		Sudo:    managerRequiresSudo(manager),
 		Network: true,
+	}
+}
+
+// managerRequiresSudo encodes the per-manager elevation policy used
+// by Permissions(). Exposed for tests; the auto-detect (empty) case
+// returns true so the preflight refuses unelevated runs.
+func managerRequiresSudo(manager string) bool {
+	switch manager {
+	case "yay", "paru", "brew":
+		return false
+	default:
+		return true
 	}
 }
 

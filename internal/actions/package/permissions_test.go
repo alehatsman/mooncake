@@ -7,14 +7,12 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// TestPermissions_AlwaysSudoAndNetwork locks in the spec-22 contract
-// for pkg: BOTH Sudo and Network are unconditionally true. The action
-// type is the indicator — pkg always mutates system state via a root-
-// privileged package manager AND fetches from remote repos. Even
-// degenerate inputs (nil step, empty Names, state=absent) must keep
-// the flags on so a policy layer that gates these can't be sidestepped
-// by a malformed step.
-func TestPermissions_AlwaysSudoAndNetwork(t *testing.T) {
+// TestPermissions_NetworkAlways pkg always fetches from a remote
+// repo, so Network must stay on regardless of resolved manager or
+// step shape. Even degenerate inputs (nil step, empty Names,
+// state=absent) keep the flag on so a policy layer can't be
+// sidestepped by a malformed step.
+func TestPermissions_NetworkAlways(t *testing.T) {
 	h := &Handler{}
 	cases := []*config.Step{
 		nil,
@@ -23,15 +21,48 @@ func TestPermissions_AlwaysSudoAndNetwork(t *testing.T) {
 		{Pkg: &config.Package{Name: "vim"}},
 		{Pkg: &config.Package{Name: "vim", State: "absent"}},
 		{Pkg: &config.Package{Names: []string{"a", "b", "c"}}},
+		{Pkg: &config.Package{Manager: "yay", Names: []string{"git-delta"}}},
+		{Pkg: &config.Package{Manager: "brew", Names: []string{"jq"}}},
 	}
 	for i, step := range cases {
 		got := h.Permissions(step)
-		if !got.Sudo {
-			t.Errorf("case %d: Sudo = false, must be true regardless of step shape", i)
-		}
 		if !got.Network {
 			t.Errorf("case %d: Network = false, must be true regardless of step shape", i)
 		}
+	}
+}
+
+// TestPermissions_SudoByManager — F049: pkg.Permissions must read
+// step.Pkg.Manager and refuse to declare Sudo:true for managers that
+// refuse root by design (yay/paru — AUR wrappers; brew — user-prefix
+// installer). Empty manager (auto-detect resolves at apply-time)
+// stays Sudo:true so the preflight remains the safer default; a
+// regression that flips that would silently allow unelevated `pkg:`
+// against system managers.
+func TestPermissions_SudoByManager(t *testing.T) {
+	h := &Handler{}
+	cases := []struct {
+		manager  string
+		wantSudo bool
+	}{
+		{"", true},       // auto-detect: safer default
+		{"apt", true},    // dpkg-based, writes /var/lib/dpkg
+		{"dnf", true},    // rpm-based
+		{"yum", true},    // rpm-based, RHEL 7
+		{"pacman", true}, // system manager on Arch
+		{"yay", false},   // AUR wrapper, refuses root
+		{"paru", false},  // AUR wrapper, refuses root
+		{"brew", false},  // user-prefix install
+		{"choco", true},  // Windows; preflight already platform-gated
+	}
+	for _, c := range cases {
+		t.Run(c.manager, func(t *testing.T) {
+			step := &config.Step{Pkg: &config.Package{Manager: c.manager}}
+			got := h.Permissions(step)
+			if got.Sudo != c.wantSudo {
+				t.Errorf("manager=%q: Sudo = %v, want %v", c.manager, got.Sudo, c.wantSudo)
+			}
+		})
 	}
 }
 
