@@ -99,16 +99,28 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// runApply wraps HandleService with reverse-capture: on Linux, it
-// queries systemctl is-active / is-enabled BEFORE delegating, then
-// bolts the captured snapshot onto ec.CurrentResult.ReverseData
-// after HandleService returns (HandleService writes its Result via
-// a deferred side-effect into ec.CurrentResult — we don't change
-// that contract). Non-Linux paths skip capture; their Reverse refuses.
+// runApply wraps HandleService with reverse-capture: BEFORE
+// delegating, query the platform-appropriate "what's the prior
+// state?" probe, then bolt the captured snapshot onto
+// ec.CurrentResult.ReverseData after HandleService returns
+// (HandleService writes its Result via a deferred side-effect
+// into ec.CurrentResult — we don't change that contract).
+//
+// Dispatch by runtime.GOOS:
+//   - linux  → captureSystemdPriorState (systemctl is-active / is-enabled)
+//   - darwin → captureLaunchdPriorState (launchctl print loaded?)
+//   - other  → no capture; Reverse() will return (nil, nil) for the
+//     nil-ReverseData case (Windows apply is itself a stub today,
+//     so reverse has nothing to invert there).
 func runApply(step *config.Step, ec *executor.ExecutionContext) (actions.Result, error) {
 	var priorInfo *OsServiceReverseInfo
-	if runtime.GOOS == "linux" && step.OsService != nil {
-		priorInfo = captureSystemdPriorState(step.OsService.Name, *step, ec)
+	if step.OsService != nil {
+		switch runtime.GOOS {
+		case "linux":
+			priorInfo = captureSystemdPriorState(step.OsService.Name, *step, ec)
+		case "darwin":
+			priorInfo = captureLaunchdPriorState(step.OsService.Name, *step, ec)
+		}
 	}
 
 	err := HandleService(*step, ec)
