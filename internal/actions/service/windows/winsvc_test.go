@@ -1,4 +1,4 @@
-package service
+package windows
 
 import (
 	"errors"
@@ -6,15 +6,48 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
+	"github.com/alehatsman/mooncake/internal/template"
 )
 
-// TestQuoteWindowsPS_EscapesSingleQuote pins the only injection
-// surface in service_windows_impl.go. Single-quote PS strings are
-// literal — no expansion, no backtick escapes — so doubling an
-// embedded single quote is the safe escape.
-func TestQuoteWindowsPS_EscapesSingleQuote(t *testing.T) {
+// newMockExecutionContext builds a hermetic ExecutionContext for
+// windows-only tests. Duplicated from the parent service package's
+// test helper (Go test packages can't import helpers from a sibling
+// package without a separate testutil layer).
+func newMockExecutionContext() *executor.ExecutionContext {
+	tmpl, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template:       tmpl,
+			Evaluator:      expression.NewExprEvaluator(),
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Logger:         &testutil.MockLogger{Logs: []string{}},
+			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
+			Redactor:       security.NewRedactor(),
+			SudoPass:       "",
+			Stats:          executor.NewExecutionStats(),
+			Mode:           actions.ModeApply,
+		},
+		Scope:         executor.NewVariableScope(),
+		CurrentStepID: "step-1",
+	}
+}
+
+// TestQuotePS_EscapesSingleQuote pins the only injection surface in
+// winsvc.go. Single-quote PS strings are literal — no expansion, no
+// backtick escapes — so doubling an embedded single quote is the
+// safe escape.
+func TestQuotePS_EscapesSingleQuote(t *testing.T) {
 	cases := []struct {
 		in, want string
 	}{
@@ -26,35 +59,34 @@ func TestQuoteWindowsPS_EscapesSingleQuote(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.in, func(t *testing.T) {
-			if got := quoteWindowsPS(c.in); got != c.want {
-				t.Errorf("quoteWindowsPS(%q) = %q, want %q", c.in, got, c.want)
+			if got := QuotePS(c.in); got != c.want {
+				t.Errorf("QuotePS(%q) = %q, want %q", c.in, got, c.want)
 			}
 		})
 	}
 }
 
-// stubWindowsExec replaces the powershell hook with a recorder.
-// Returns the recorded scripts so tests can pin the exact
-// PowerShell invoked. The replyFn lets a test return different
-// stdout per script (used for the multi-call probe→write flow).
-func stubWindowsExec(t *testing.T, replyFn func(script string) (string, error)) *[]string {
+// stubExec replaces the powershell hook with a recorder. Returns
+// the recorded scripts so tests can pin the exact PowerShell
+// invoked. The replyFn lets a test return different stdout per
+// script (used for the multi-call probe→write flow).
+func stubExec(t *testing.T, replyFn func(script string) (string, error)) *[]string {
 	t.Helper()
 	calls := []string{}
-	prev := windowsExec
-	windowsExec = func(script string) (string, error) {
+	prev := Exec
+	Exec = func(script string) (string, error) {
 		calls = append(calls, script)
 		return replyFn(script)
 	}
-	t.Cleanup(func() { windowsExec = prev })
+	t.Cleanup(func() { Exec = prev })
 	return &calls
 }
 
-// TestHandleWindowsService_RefusesUnit pins the v1 scope: Unit
-// declarations on windows error with a clear "use sc.exe create
-// first" message rather than silently no-op or generate confusing
-// SCM errors.
-func TestHandleWindowsService_RefusesUnit(t *testing.T) {
-	stubWindowsExec(t, func(string) (string, error) {
+// TestHandle_RefusesUnit pins the v1 scope: Unit declarations on
+// windows error with a clear "use sc.exe create first" message
+// rather than silently no-op or generate confusing SCM errors.
+func TestHandle_RefusesUnit(t *testing.T) {
+	stubExec(t, func(string) (string, error) {
 		t.Errorf("PowerShell must not be invoked when Unit is set on windows")
 		return "", nil
 	})
@@ -64,7 +96,7 @@ func TestHandleWindowsService_RefusesUnit(t *testing.T) {
 			Unit: &config.ServiceUnit{Content: "..."},
 		},
 	}
-	err := handleWindowsService("MyService", step.OsService, step, newMockExecutionContext())
+	err := Handle("MyService", step.OsService, step, newMockExecutionContext())
 	if err == nil {
 		t.Fatal("expected SetupError refusing unit on windows")
 	}
@@ -77,21 +109,20 @@ func TestHandleWindowsService_RefusesUnit(t *testing.T) {
 	}
 }
 
-// TestHandleWindowsService_RefusesMissingService pins the v1 scope
-// for the "service doesn't exist" path. Get-Service returns nothing
-// → SetupError with a hint pointing at sc.exe create. Avoids the
+// TestHandle_RefusesMissingService pins the v1 scope for the
+// "service doesn't exist" path. Get-Service returns nothing →
+// SetupError with a hint pointing at sc.exe create. Avoids the
 // silent-no-op trap where a typo in the service name reports
 // success.
-func TestHandleWindowsService_RefusesMissingService(t *testing.T) {
-	stubWindowsExec(t, func(script string) (string, error) {
-		// Get-Service returns empty for missing services.
+func TestHandle_RefusesMissingService(t *testing.T) {
+	stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return "", nil
 		}
 		return "", nil
 	})
 	step := config.Step{OsService: &config.ServiceAction{Name: "DoesNotExist", State: "started"}}
-	err := handleWindowsService("DoesNotExist", step.OsService, step, newMockExecutionContext())
+	err := Handle("DoesNotExist", step.OsService, step, newMockExecutionContext())
 	if err == nil {
 		t.Fatal("expected error for missing service")
 	}
@@ -100,11 +131,11 @@ func TestHandleWindowsService_RefusesMissingService(t *testing.T) {
 	}
 }
 
-// TestHandleWindowsService_StartAlreadyRunning_Noop verifies the
-// idempotent path: service is Running, state=started → Changed=false,
-// no Start-Service call.
-func TestHandleWindowsService_StartAlreadyRunning_Noop(t *testing.T) {
-	calls := stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_StartAlreadyRunning_Noop verifies the idempotent path:
+// service is Running, state=started → Changed=false, no
+// Start-Service call.
+func TestHandle_StartAlreadyRunning_Noop(t *testing.T) {
+	calls := stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"MyService","DisplayName":"My","Status":4,"StartType":2,"CanStop":true}`, nil
 		}
@@ -113,24 +144,23 @@ func TestHandleWindowsService_StartAlreadyRunning_Noop(t *testing.T) {
 	})
 	step := config.Step{OsService: &config.ServiceAction{Name: "MyService", State: "started"}}
 	ec := newMockExecutionContext()
-	err := handleWindowsService("MyService", step.OsService, step, ec)
+	err := Handle("MyService", step.OsService, step, ec)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if ec.CurrentResult == nil || ec.CurrentResult.Changed {
 		t.Errorf("expected Changed=false; got %+v", ec.CurrentResult)
 	}
-	// One call only (Get-Service).
 	if len(*calls) != 1 {
 		t.Errorf("expected 1 PowerShell call; got %d: %v", len(*calls), *calls)
 	}
 }
 
-// TestHandleWindowsService_StartWhenStopped invokes Start-Service
-// when the service is in Stopped state. Verifies the script shape
-// matches what the operator would expect to see in audit logs.
-func TestHandleWindowsService_StartWhenStopped(t *testing.T) {
-	calls := stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_StartWhenStopped invokes Start-Service when the
+// service is in Stopped state. Verifies the script shape matches
+// what the operator would expect to see in audit logs.
+func TestHandle_StartWhenStopped(t *testing.T) {
+	calls := stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"MyService","Status":1,"StartType":2,"CanStop":true}`, nil
 		}
@@ -141,7 +171,7 @@ func TestHandleWindowsService_StartWhenStopped(t *testing.T) {
 	})
 	step := config.Step{OsService: &config.ServiceAction{Name: "MyService", State: "started"}}
 	ec := newMockExecutionContext()
-	err := handleWindowsService("MyService", step.OsService, step, ec)
+	err := Handle("MyService", step.OsService, step, ec)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -156,13 +186,10 @@ func TestHandleWindowsService_StartWhenStopped(t *testing.T) {
 	}
 }
 
-// TestHandleWindowsService_StopNotStoppable refuses to stop a
-// service whose CanStop flag is false. Spec-22 fail-loudly rule:
-// running Stop-Service on a non-stoppable service emits a
-// PowerShell error anyway, but catching it locally lets us return
-// a more useful diagnostic.
-func TestHandleWindowsService_StopNotStoppable(t *testing.T) {
-	stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_StopNotStoppable refuses to stop a service whose
+// CanStop flag is false.
+func TestHandle_StopNotStoppable(t *testing.T) {
+	stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"CriticalSvc","Status":4,"StartType":2,"CanStop":false}`, nil
 		}
@@ -170,7 +197,7 @@ func TestHandleWindowsService_StopNotStoppable(t *testing.T) {
 		return "", nil
 	})
 	step := config.Step{OsService: &config.ServiceAction{Name: "CriticalSvc", State: "stopped"}}
-	err := handleWindowsService("CriticalSvc", step.OsService, step, newMockExecutionContext())
+	err := Handle("CriticalSvc", step.OsService, step, newMockExecutionContext())
 	if err == nil {
 		t.Fatal("expected error for non-stoppable service")
 	}
@@ -179,13 +206,11 @@ func TestHandleWindowsService_StopNotStoppable(t *testing.T) {
 	}
 }
 
-// TestHandleWindowsService_Restart_AlwaysChanged_AlwaysRuns.
-// Restart-Service deliberately bounces the service even if it
-// wasn't running pre-call (it stops if running, then starts).
-// We always report Changed=true so plans that pin state: restarted
-// have an unambiguous signal in the run log.
-func TestHandleWindowsService_Restart_AlwaysChanged(t *testing.T) {
-	stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_Restart_AlwaysChanged_AlwaysRuns. Restart-Service
+// deliberately bounces the service even if it wasn't running
+// pre-call (it stops if running, then starts).
+func TestHandle_Restart_AlwaysChanged(t *testing.T) {
+	stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"MyService","Status":4,"StartType":2,"CanStop":true}`, nil
 		}
@@ -193,7 +218,7 @@ func TestHandleWindowsService_Restart_AlwaysChanged(t *testing.T) {
 	})
 	step := config.Step{OsService: &config.ServiceAction{Name: "MyService", State: "restarted"}}
 	ec := newMockExecutionContext()
-	if err := handleWindowsService("MyService", step.OsService, step, ec); err != nil {
+	if err := Handle("MyService", step.OsService, step, ec); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if !ec.CurrentResult.Changed {
@@ -201,18 +226,16 @@ func TestHandleWindowsService_Restart_AlwaysChanged(t *testing.T) {
 	}
 }
 
-// TestHandleWindowsService_Reload_Refused — SCM has no reload
-// analog. The Linux/macOS path supports reloaded (HUP, launchctl
-// kickstart -k), but on Windows we refuse rather than approximate.
-func TestHandleWindowsService_Reload_Refused(t *testing.T) {
-	stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_Reload_Refused — SCM has no reload analog.
+func TestHandle_Reload_Refused(t *testing.T) {
+	stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"MyService","Status":4,"StartType":2,"CanStop":true}`, nil
 		}
 		return "", nil
 	})
 	step := config.Step{OsService: &config.ServiceAction{Name: "MyService", State: "reloaded"}}
-	err := handleWindowsService("MyService", step.OsService, step, newMockExecutionContext())
+	err := Handle("MyService", step.OsService, step, newMockExecutionContext())
 	if err == nil {
 		t.Fatal("expected error for reloaded state on windows")
 	}
@@ -221,10 +244,10 @@ func TestHandleWindowsService_Reload_Refused(t *testing.T) {
 	}
 }
 
-// TestHandleWindowsService_EnabledTrue_FromDisabled flips
-// StartType Disabled → Automatic via Set-Service.
-func TestHandleWindowsService_EnabledTrue_FromDisabled(t *testing.T) {
-	calls := stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_EnabledTrue_FromDisabled flips StartType
+// Disabled → Automatic via Set-Service.
+func TestHandle_EnabledTrue_FromDisabled(t *testing.T) {
+	calls := stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"MyService","Status":1,"StartType":4,"CanStop":true}`, nil
 		}
@@ -233,7 +256,7 @@ func TestHandleWindowsService_EnabledTrue_FromDisabled(t *testing.T) {
 	enabled := true
 	step := config.Step{OsService: &config.ServiceAction{Name: "MyService", Enabled: &enabled}}
 	ec := newMockExecutionContext()
-	if err := handleWindowsService("MyService", step.OsService, step, ec); err != nil {
+	if err := Handle("MyService", step.OsService, step, ec); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if !ec.CurrentResult.Changed {
@@ -244,14 +267,11 @@ func TestHandleWindowsService_EnabledTrue_FromDisabled(t *testing.T) {
 	}
 }
 
-// TestCaptureWindowsPriorState_TagsPlatform pins the windows
-// branch of runApply's reverse-capture: the snapshot must carry
+// TestCapturePriorState_TagsPlatform pins the windows branch of
+// runApply's reverse-capture: the snapshot must carry
 // Platform="windows" so Reverse() picks the enabled-only policy.
-// PriorEnabled maps from StartType=Automatic (true) vs anything
-// else (false) — Manual and Disabled both count as "not enabled
-// on boot".
-func TestCaptureWindowsPriorState_TagsPlatform(t *testing.T) {
-	stubWindowsExec(t, func(string) (string, error) {
+func TestCapturePriorState_TagsPlatform(t *testing.T) {
+	stubExec(t, func(string) (string, error) {
 		return `{"Name":"MSSQL","Status":4,"StartType":2,"CanStop":true}`, nil
 	})
 	enabled := true
@@ -260,9 +280,9 @@ func TestCaptureWindowsPriorState_TagsPlatform(t *testing.T) {
 		State:   "started",
 		Enabled: &enabled,
 	}}
-	info := captureWindowsPriorState("MSSQL", step, newMockExecutionContext())
+	info := CapturePriorState("MSSQL", step, newMockExecutionContext())
 	if info == nil {
-		t.Fatal("captureWindowsPriorState returned nil")
+		t.Fatal("CapturePriorState returned nil")
 	}
 	if info.Platform != "windows" {
 		t.Errorf("Platform = %q, want windows", info.Platform)
@@ -279,11 +299,10 @@ func TestCaptureWindowsPriorState_TagsPlatform(t *testing.T) {
 	}
 }
 
-// TestCaptureWindowsPriorState_StartTypeMapping pins the
+// TestCapturePriorState_StartTypeMapping pins the
 // StartType→PriorEnabled mapping: Automatic (2) → true; Manual (3)
-// and Disabled (4) → false. Only Automatic counts as "enabled on
-// boot" — the semantic the operator's Enabled bool expresses.
-func TestCaptureWindowsPriorState_StartTypeMapping(t *testing.T) {
+// and Disabled (4) → false.
+func TestCapturePriorState_StartTypeMapping(t *testing.T) {
 	for _, c := range []struct {
 		name      string
 		startType int
@@ -294,10 +313,10 @@ func TestCaptureWindowsPriorState_StartTypeMapping(t *testing.T) {
 		{"disabled", 4, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			stubWindowsExec(t, func(string) (string, error) {
+			stubExec(t, func(string) (string, error) {
 				return fmt.Sprintf(`{"Name":"S","Status":1,"StartType":%d,"CanStop":true}`, c.startType), nil
 			})
-			info := captureWindowsPriorState("S", config.Step{
+			info := CapturePriorState("S", config.Step{
 				OsService: &config.ServiceAction{Name: "S"},
 			}, newMockExecutionContext())
 			if info.PriorEnabled != c.want {
@@ -307,20 +326,18 @@ func TestCaptureWindowsPriorState_StartTypeMapping(t *testing.T) {
 	}
 }
 
-// TestCaptureWindowsPriorState_MissingServiceReturnsZeroValues
-// pins the best-effort contract: probe failure / missing service
-// yields a tagged info with zero values (NOT nil, NOT an error).
-// Matches the linux/darwin behaviour — probe failure shouldn't
-// gate the apply, only the eventual reverse.
-func TestCaptureWindowsPriorState_MissingServiceReturnsZeroValues(t *testing.T) {
-	stubWindowsExec(t, func(string) (string, error) {
-		return "", nil // empty stdout = service not found
+// TestCapturePriorState_MissingServiceReturnsZeroValues pins the
+// best-effort contract: probe failure / missing service yields a
+// tagged info with zero values (NOT nil, NOT an error).
+func TestCapturePriorState_MissingServiceReturnsZeroValues(t *testing.T) {
+	stubExec(t, func(string) (string, error) {
+		return "", nil
 	})
-	info := captureWindowsPriorState("Missing", config.Step{
+	info := CapturePriorState("Missing", config.Step{
 		OsService: &config.ServiceAction{Name: "Missing"},
 	}, newMockExecutionContext())
 	if info == nil {
-		t.Fatal("captureWindowsPriorState must never return nil")
+		t.Fatal("CapturePriorState must never return nil")
 	}
 	if info.Platform != "windows" {
 		t.Errorf("Platform = %q, want windows", info.Platform)
@@ -330,10 +347,10 @@ func TestCaptureWindowsPriorState_MissingServiceReturnsZeroValues(t *testing.T) 
 	}
 }
 
-// TestHandleWindowsService_EnabledAlreadyDisabled_Noop pins the
-// idempotent path on the enabled side.
-func TestHandleWindowsService_EnabledAlreadyDisabled_Noop(t *testing.T) {
-	calls := stubWindowsExec(t, func(script string) (string, error) {
+// TestHandle_EnabledAlreadyDisabled_Noop pins the idempotent path
+// on the enabled side.
+func TestHandle_EnabledAlreadyDisabled_Noop(t *testing.T) {
+	calls := stubExec(t, func(script string) (string, error) {
 		if strings.Contains(script, "Get-Service") {
 			return `{"Name":"MyService","Status":1,"StartType":4,"CanStop":true}`, nil
 		}
@@ -343,7 +360,7 @@ func TestHandleWindowsService_EnabledAlreadyDisabled_Noop(t *testing.T) {
 	enabled := false
 	step := config.Step{OsService: &config.ServiceAction{Name: "MyService", Enabled: &enabled}}
 	ec := newMockExecutionContext()
-	if err := handleWindowsService("MyService", step.OsService, step, ec); err != nil {
+	if err := Handle("MyService", step.OsService, step, ec); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if ec.CurrentResult.Changed {
